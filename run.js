@@ -43,6 +43,8 @@ async function main() {
 
   // Sort the matches such that `utils` modules are compiled first,
   // because other packages may rely on them
+  // We also need to ensure that `now-client` is built before the CLI
+
   matches.sort((a, b) => {
     if (a.endsWith('-utils') && !b.endsWith('-utils')) {
       return -1;
@@ -50,12 +52,18 @@ async function main() {
     if (b.endsWith('-utils') && !a.endsWith('-utils')) {
       return 1;
     }
+    if (a === 'now-cli' && b !== 'now-cli') {
+      return 1;
+    }
+    if (b === 'now-cli' && a !== 'now-cli') {
+      return -1;
+    }
     return b - a;
   });
 
   console.log(matches.join('\n') + '\n');
 
-  for (let pkgName of matches) {
+  for (const pkgName of matches) {
     await runScript(pkgName, script);
   }
 }

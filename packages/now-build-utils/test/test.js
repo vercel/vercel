@@ -1,13 +1,9 @@
-/* global beforeAll, expect, it, jest */
 const path = require('path');
 const fs = require('fs-extra');
-// eslint-disable-next-line import/no-extraneous-dependencies
 const execa = require('execa');
 const assert = require('assert');
 const { createZip } = require('../dist/lambda');
-const {
-  glob, download, detectBuilders, detectRoutes,
-} = require('../');
+const { glob, download, detectBuilders, detectRoutes } = require('../');
 const {
   getSupportedNodeVersion,
   defaultSelection,
@@ -86,33 +82,33 @@ it('should match all semver ranges', () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(getSupportedNodeVersion('10.0.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('10.x')).resolves.toHaveProperty('major', 10);
   expect(getSupportedNodeVersion('>=10')).resolves.toHaveProperty('major', 10);
   expect(getSupportedNodeVersion('>=10.3.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('8.5.0 - 10.5.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('>=9.0.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('>=9.5.0 <=10.5.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('~10.5.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
   expect(getSupportedNodeVersion('^10.5.0')).resolves.toHaveProperty(
     'major',
-    10,
+    10
   );
 });
 
@@ -162,8 +158,8 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     await expect(
       testDeployment(
         { builderUrl, buildUtilsUrl },
-        path.join(fixturesPath, fixture),
-      ),
+        path.join(fixturesPath, fixture)
+      )
     ).resolves.toBeDefined();
   });
 }
@@ -176,7 +172,7 @@ const buildersToTestWith = ['now-next', 'now-node', 'now-static-build'];
 for (const builder of buildersToTestWith) {
   const fixturesPath2 = path.resolve(
     __dirname,
-    `../../${builder}/test/fixtures`,
+    `../../${builder}/test/fixtures`
   );
 
   // eslint-disable-next-line no-restricted-syntax
@@ -188,8 +184,8 @@ for (const builder of buildersToTestWith) {
         await expect(
           testDeployment(
             { builderUrl, buildUtilsUrl },
-            path.join(fixturesPath2, fixture),
-          ),
+            path.join(fixturesPath2, fixture)
+          )
         ).resolves.toBeDefined();
       });
     }
@@ -489,6 +485,23 @@ it('Test `detectBuilders`', async () => {
     expect(builders[2].use).toBe('@now/next@haha');
     expect(builders.length).toBe(3);
   }
+
+  {
+    // next.js pages/api + api
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const files = ['api/user.js', 'pages/api/user.js'];
+
+    const { warnings, errors, builders } = await detectBuilders(files, pkg);
+    expect(errors).toBe(null);
+    expect(warnings[0].code).toBe('conflicting_files');
+    expect(builders).toBeDefined();
+    expect(builders.length).toBe(2);
+    expect(builders[0].use).toBe('@now/node');
+    expect(builders[1].use).toBe('@now/next');
+  }
 });
 
 it('Test `detectRoutes`', async () => {
@@ -592,7 +605,7 @@ it('Test `detectRoutes`', async () => {
 
     expect(defaultRoutes.length).toBe(3);
     expect(defaultRoutes[0].src).toBe(
-      '^/api/date(\\/|\\/index|\\/index\\.js)?$',
+      '^/api/date(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/date/index.js');
     expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
@@ -607,7 +620,7 @@ it('Test `detectRoutes`', async () => {
 
     expect(defaultRoutes.length).toBe(3);
     expect(defaultRoutes[0].src).toBe(
-      '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$',
+      '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/[date]/index.js?date=$1');
     expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
@@ -686,12 +699,12 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };
   await fs.writeFile(
     path.join(fixture, 'now.json'),
-    JSON.stringify(nowConfig, null, 2),
+    JSON.stringify(nowConfig, null, 2)
   );
 
   const deployment = await testDeployment(
     { builderUrl, buildUtilsUrl },
-    fixture,
+    fixture
   );
   expect(deployment).toBeDefined();
 });
@@ -768,12 +781,12 @@ it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };
   await fs.writeFile(
     path.join(fixture, 'now.json'),
-    JSON.stringify(nowConfig, null, 2),
+    JSON.stringify(nowConfig, null, 2)
   );
 
   const deployment = await testDeployment(
     { builderUrl, buildUtilsUrl },
-    fixture,
+    fixture
   );
   expect(deployment).toBeDefined();
 });

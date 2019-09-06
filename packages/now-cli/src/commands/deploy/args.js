@@ -10,7 +10,9 @@ export const latestHelp = () => `
 
     ${chalk.dim('Basic')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold('(default)')}
+      deploy               [path]      Performs a deployment ${chalk.bold(
+        '(default)'
+      )}
       dev                              Start a local development server
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
@@ -18,7 +20,6 @@ export const latestHelp = () => `
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       switch               [scope]     Switches between teams and your personal account
-      update                           Updates Now CLI to the latest version
       help                 [cmd]       Displays complete help for [cmd]
 
     ${chalk.dim('Advanced')}
@@ -29,7 +30,6 @@ export const latestHelp = () => `
       certs                [cmd]       Manages your SSL certificates
       secrets              [name]      Manages your secret environment variables
       logs                 [url]       Displays the logs for a deployment
-      scale                [args]      Scales the instance count of a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
@@ -115,7 +115,7 @@ export const latestArgs = {
   '-e': '--env',
   '-b': '--build-env',
   '-C': '--no-clipboard',
-  '-m': '--meta'
+  '-m': '--meta',
 };
 
 export const legacyArgsMri = {
@@ -126,7 +126,7 @@ export const legacyArgsMri = {
     'meta',
     'session-affinity',
     'regions',
-    'dotenv'
+    'dotenv',
   ],
   boolean: [
     'help',
@@ -143,11 +143,11 @@ export const legacyArgsMri = {
     'public',
     'no-scale',
     'no-verify',
-    'dotenv'
+    'dotenv',
   ],
   default: {
     C: false,
-    clipboard: true
+    clipboard: true,
   },
   alias: {
     env: 'e',
@@ -164,8 +164,8 @@ export const legacyArgsMri = {
     'session-affinity': 'S',
     name: 'n',
     project: 'P',
-    alias: 'a'
-  }
+    alias: 'a',
+  },
 };
 
 // The following arg parsing is simply to make it compatible

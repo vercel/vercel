@@ -2,7 +2,6 @@ import inquirer from 'inquirer';
 import stripAnsi from 'strip-ansi';
 import eraseLines from '../output/erase-lines';
 
-// eslint-disable-next-line import/no-unassigned-import
 import './patch-inquirer';
 
 function getLength(string) {

@@ -17,8 +17,10 @@ import getTargetsForAlias from '../../util/alias/get-targets-for-alias';
 import humanizePath from '../../util/humanize-path';
 import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
+import { isValidName } from '../../util/is-valid-name';
 import upsertPathAlias from '../../util/alias/upsert-path-alias';
 import handleCertError from '../../util/certs/handle-cert-error';
+import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 
 type Options = {
   '--debug': boolean;
@@ -36,7 +38,7 @@ export default async function set(
   const {
     authConfig: { token },
     config,
-    localConfig
+    localConfig,
   } = ctx;
 
   const { currentTeam } = config;
@@ -46,14 +48,14 @@ export default async function set(
   const {
     '--debug': debugEnabled,
     '--no-verify': noVerify,
-    '--rules': rulesPath
+    '--rules': rulesPath,
   } = opts;
 
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
   let user = null;
@@ -74,6 +76,18 @@ export default async function set(
     output.error(
       `${cmd('now alias <deployment> <target>')} accepts at most two arguments`
     );
+    return 1;
+  }
+
+  if (args.length >= 1 && !isValidName(args[0])) {
+    output.error(
+      `The provided argument "${args[0]}" is not a valid deployment`
+    );
+    return 1;
+  }
+
+  if (args.length >= 2 && !isValidName(args[1])) {
+    output.error(`The provided argument "${args[1]}" is not a valid domain`);
     return 1;
   }
 
@@ -200,6 +214,7 @@ export default async function set(
   for (const target of targets) {
     output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
+    const isWildcard = isWildcardAlias(target);
     const record = await assignAlias(
       output,
       client,
@@ -210,14 +225,18 @@ export default async function set(
     );
     const handleResult = handleSetupDomainError(
       output,
-      handleCreateAliasError(output, record)
+      handleCreateAliasError(output, record),
+      isWildcard
     );
     if (handleResult === 1) {
       return 1;
     }
+
+    const prefix = isWildcard ? '' : 'https://';
+
     console.log(
       `${chalk.cyan('> Success!')} ${chalk.bold(
-        `https://${handleResult.alias}`
+        `${prefix}${handleResult.alias}`
       )} now points to https://${deployment.url} ${setStamp()}`
     );
   }
@@ -231,10 +250,15 @@ type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
 
 function handleSetupDomainError<T>(
   output: Output,
-  error: SetupDomainError | T
+  error: SetupDomainError | T,
+  isWildcard: boolean = false
 ): T | 1 {
-  if (error instanceof ERRORS.DomainVerificationFailed) {
-    const { nsVerification, txtVerification, domain } = error.meta;
+  if (
+    error instanceof ERRORS.DomainVerificationFailed ||
+    error instanceof ERRORS.DomainNsNotVerifiedForWildcard
+  ) {
+    const { nsVerification, domain } = error.meta;
+
     output.error(
       `We could not alias since the domain ${domain} could not be verified due to the following reasons:\n`
     );
@@ -250,25 +274,34 @@ function handleSetupDomainError<T>(
         { extraSpace: '     ' }
       )}\n\n`
     );
-    output.print(
-      `  ${chalk.gray(
-        'b)'
-      )} DNS TXT verification failed since found no matching records.`
-    );
-    output.print(
-      `\n${formatDnsTable(
-        [['_now', 'TXT', txtVerification.verificationRecord]],
-        { extraSpace: '     ' }
-      )}\n\n`
-    );
-    output.print(
-      `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${cmd(
-        'now domains verify <domain>'
-      )}.\n`
-    );
-    output.print(
-      `  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`
-    );
+    if (error instanceof ERRORS.DomainVerificationFailed && !isWildcard) {
+      const { txtVerification } = error.meta;
+      output.print(
+        `  ${chalk.gray(
+          'b)'
+        )} DNS TXT verification failed since found no matching records.`
+      );
+      output.print(
+        `\n${formatDnsTable(
+          [['_now', 'TXT', txtVerification.verificationRecord]],
+          { extraSpace: '     ' }
+        )}\n\n`
+      );
+      output.print(
+        `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${cmd(
+          'now domains verify <domain>'
+        )}.\n`
+      );
+      output.print(
+        `  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`
+      );
+    } else {
+      output.print(
+        `  Once your domain uses the nameservers from above, run again ${cmd(
+          'now domains verify <domain>'
+        )}.\n`
+      );
+    }
     output.print('  Read more: https://err.sh/now/domain-verification\n');
     return 1;
   }
@@ -334,9 +367,7 @@ function handleSetupDomainError<T>(
 
   if (error instanceof ERRORS.DomainPurchasePending) {
     output.error(
-      `The domain ${
-        error.meta.domain
-      } is processing and will be available once the order is completed.`
+      `The domain ${error.meta.domain} is processing and will be available once the order is completed.`
     );
     output.print(
       `  An email will be sent upon completion so you can alias to your new domain.\n`
@@ -452,9 +483,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.ForbiddenScaleMinInstances) {
     output.error(
-      `You can't scale to more than ${
-        error.meta.max
-      } min instances with your current plan.`
+      `You can't scale to more than ${error.meta.max} min instances with your current plan.`
     );
     return 1;
   }
@@ -475,9 +504,7 @@ function handleCreateAliasError<T>(
 
   if (error instanceof ERRORS.CertMissing) {
     output.error(
-      `There is no certificate for the domain ${
-        error.meta.domain
-      } and it could not be created.`
+      `There is no certificate for the domain ${error.meta.domain} and it could not be created.`
     );
     output.log(
       `Please generate a new certificate manually with ${cmd(

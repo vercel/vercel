@@ -1,5 +1,6 @@
 import { intersects } from 'semver';
 import { NodeVersion } from '../types';
+import debug from '../debug';
 
 const supportedOptions: NodeVersion[] = [
   { major: 10, range: '10.x', runtime: 'nodejs10.x' },
@@ -20,7 +21,7 @@ export async function getSupportedNodeVersion(
 
   if (!engineRange) {
     if (!silent) {
-      console.log(
+      debug(
         'missing `engines` in `package.json`, using default range: ' +
           selection.range
       );
@@ -34,7 +35,7 @@ export async function getSupportedNodeVersion(
     });
     if (found) {
       if (!silent) {
-        console.log(
+        debug(
           'Found `engines` in `package.json`, selecting range: ' +
             selection.range
         );

@@ -117,7 +117,7 @@ if (!process.env.CI) {
   tmpDir = tmp.dirSync({
     // This ensures the directory gets
     // deleted even if it has contents
-    unsafeCleanup: true
+    unsafeCleanup: true,
   });
 
   defaultArgs.push('-Q', path.join(tmpDir.name, '.now'));
@@ -126,16 +126,16 @@ if (!process.env.CI) {
 const execute = (args, options) =>
   execa(binaryPath, [...defaultArgs, ...args], {
     ...defaultOptions,
-    ...options
+    ...options,
   });
 
 const apiFetch = (url, { headers, ...options } = {}) => {
   return fetch(`https://api.zeit.co${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
-      ...(headers || {})
+      ...(headers || {}),
     },
-    ...options
+    ...options,
   });
 };
 
@@ -172,12 +172,34 @@ test.before(async () => {
   }
 });
 
+test('login', async t => {
+  // Delete the current token
+  const logoutOutput = await execute(['logout']);
+  t.is(logoutOutput.code, 0, formatOutput(logoutOutput));
+
+  const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
+  t.is(loginOutput.code, 0, formatOutput(loginOutput));
+  t.regex(
+    loginOutput.stdout,
+    /You are now logged in\./gm,
+    formatOutput(loginOutput)
+  );
+
+  // Save the new token
+  const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+  const auth = JSON.parse(await readFile(path.join(location, 'auth.json')));
+
+  token = auth.token;
+
+  t.is(typeof token, 'string');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, code } = await execa(
     binaryPath,
     ['help', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -194,7 +216,7 @@ test('output the version', async t => {
     binaryPath,
     ['--version', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -235,7 +257,7 @@ test('detect update command', async t => {
     const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
 
     const installResult = await execa('npm', ['i', '-g', pkgPath], {
-      env: process.env
+      env: process.env,
     });
     t.is(installResult.code, 0);
 
@@ -243,24 +265,20 @@ test('detect update command', async t => {
       path.join(binPrefix, 'now'),
       ['update'],
       {
-        env: process.env
+        env: process.env,
       }
     );
 
-    t.regex(
-      stderr,
-      /npm i -g now@/gm,
-      `Received:\n"${stderr}"\n"${stdout}"`
-    );
+    t.regex(stderr, /npm i -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
   }
 });
 
-test('log in', async t => {
+test('login with unregisterd user', async t => {
   const { stdout, code } = await execa(
     binaryPath,
     ['login', `${session}@${session}.com`, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -279,7 +297,7 @@ test('deploy a node microservice', async t => {
     binaryPath,
     [target, '--public', '--name', session, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -300,9 +318,13 @@ test('deploy a node microservice', async t => {
   t.is(content.id, contextName);
 
   // Test that it can be deleted via `now rm`
-  ({ stdout, stderr, code } = await execa(binaryPath, ['rm', '--yes', href, ...defaultArgs], {
-    reject: false
-  }));
+  ({ stdout, stderr, code } = await execa(
+    binaryPath,
+    ['rm', '--yes', href, ...defaultArgs],
+    {
+      reject: false,
+    }
+  ));
   t.is(code, 0, formatOutput({ stdout, stderr }));
 
   // Give 2 seconds for the proxy purge to propagate
@@ -319,7 +341,7 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
     binaryPath,
     [target, '--public', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -334,19 +356,18 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 test('deploy a dockerfile project', async t => {
   const target = fixture('dockerfile');
 
+  // Add the "name" field to the `now.json` file
+  const jsonPath = path.join(target, 'now.json');
+  const json = JSON.parse(await readFile(jsonPath, 'utf8'));
+  json.name = session;
+  await writeFile(jsonPath, JSON.stringify(json));
+
   const { stdout, code } = await execa(
     binaryPath,
-    [
-      target,
-      '--public',
-      '--name',
-      session,
-      '--docker',
-      '--no-verify',
-      ...defaultArgs
-    ],
+    ['--public', '--docker', '--no-verify', ...defaultArgs],
     {
-      reject: false
+      cwd: target,
+      reject: false,
     }
   );
 
@@ -362,8 +383,8 @@ test('deploy a dockerfile project', async t => {
   // Send a test request to the deployment
   const response = await fetch(href, {
     headers: {
-      Accept: 'application/json'
-    }
+      Accept: 'application/json',
+    },
   });
   t.is(response.status, 200);
   const contentType = response.headers.get('content-type');
@@ -380,35 +401,34 @@ test('deploy a dockerfile project', async t => {
 
   t.is(contentType, 'application/json; charset=utf-8');
   t.is(content.id, contextName);
+
+  context.deployment = host;
 });
 
 test('find deployment in list', async t => {
-  const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
-    reject: false
+  const output = await execa(binaryPath, ['--debug', 'ls', ...defaultArgs], {
+    reject: false,
   });
 
-  const deployments = parseList(stdout);
+  const deployments = parseList(output.stdout);
 
-  t.true(deployments.length > 0);
-  t.is(code, 0);
+  t.true(deployments.length > 0, formatOutput(output));
+  t.is(output.code, 0, formatOutput(output));
 
   const target = deployments.find(deployment =>
     deployment.includes(`${session}-`)
   );
 
-  t.truthy(target);
-
-  if (target) {
-    context.deployment = target;
-  }
+  t.truthy(target, formatOutput(output));
+  t.is(target, context.deployment, formatOutput(output));
 });
 
 test('find deployment in list with mixed args', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['--debug', 'ls', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -421,30 +441,25 @@ test('find deployment in list with mixed args', async t => {
     deployment.includes(`${session}-`)
   );
 
-  t.truthy(target);
-
-  if (target) {
-    context.deployment = target;
-  }
+  t.truthy(target, formatOutput({ stdout, stderr }));
+  t.is(target, context.deployment, formatOutput({ stdout, stderr }));
 });
 
-test('create alias for deployment', async t => {
+test('create an explicit alias for deployment', async t => {
   const hosts = {
     deployment: context.deployment,
-    alias: `${session}.now.sh`
+    alias: `${session}.now.sh`,
   };
 
   const { stdout, code } = await execa(
     binaryPath,
     ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
-  const goal = `> Success! https://${hosts.alias} now points to https://${
-    hosts.deployment
-  }`;
+  const goal = `> Success! https://${hosts.alias} now points to https://${hosts.deployment}`;
 
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
@@ -465,7 +480,7 @@ test('list the aliases', async t => {
     binaryPath,
     ['alias', 'ls', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -480,7 +495,7 @@ test('scale the alias', async t => {
     binaryPath,
     ['scale', context.alias, 'bru', '1', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -488,14 +503,59 @@ test('scale the alias', async t => {
   t.true(stdout.includes(`(min: 1, max: 1)`));
 });
 
-test('remove the alias', async t => {
+test('remove the explicit alias', async t => {
   const goal = `> Success! Alias ${context.alias} removed`;
 
   const { stdout, code } = await execa(
     binaryPath,
     ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
     {
-      reject: false
+      reject: false,
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+});
+
+test('create an alias from "now.json" `alias` for deployment', async t => {
+  const target = fixture('dockerfile');
+
+  // Add the `alias` field to the "now.json" file
+  const jsonPath = path.join(target, 'now.json');
+  const json = JSON.parse(await readFile(jsonPath, 'utf8'));
+  json.alias = `${session}-from-nowjson.now.sh`;
+  await writeFile(jsonPath, JSON.stringify(json));
+
+  const { stdout, code } = await execa(binaryPath, ['alias', ...defaultArgs], {
+    cwd: target,
+    reject: false,
+  });
+
+  const goal = `> Success! https://${json.alias} now points to https://${context.deployment}`;
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+
+  // Send a test request to the alias
+  const response = await fetch(`https://${json.alias}`);
+  const contentType = response.headers.get('content-type');
+  const content = await response.json();
+
+  t.is(contentType, 'application/json; charset=utf-8');
+  t.is(content.id, contextName);
+
+  context.alias = json.alias;
+});
+
+test('remove the alias from "now.json" `alias`', async t => {
+  const goal = `> Success! Alias ${context.alias} removed`;
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
+    {
+      reject: false,
     }
   );
 
@@ -508,7 +568,7 @@ test('scale down the deployment directly', async t => {
     binaryPath,
     ['scale', context.deployment, 'bru', '0', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -521,7 +581,7 @@ test('list the scopes', async t => {
     binaryPath,
     ['teams', 'ls', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -539,7 +599,7 @@ test('list the payment methods', async t => {
     binaryPath,
     ['billing', 'ls', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -553,7 +613,7 @@ test('try to purchase a domain', async t => {
     ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
     {
       reject: false,
-      input: 'y'
+      input: 'y',
     }
   );
 
@@ -574,10 +634,10 @@ test('try to transfer-in a domain with "--code" option', async t => {
       '--code',
       'xyz',
       `${session}-test.org`,
-      ...defaultArgs
+      ...defaultArgs,
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -597,10 +657,10 @@ test('try to move an invalid domain', async t => {
       'move',
       `${session}-invalid-test.org`,
       `${session}-invalid-user`,
-      ...defaultArgs
+      ...defaultArgs,
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -613,7 +673,7 @@ test('try to set default without existing payment method', async t => {
     binaryPath,
     ['billing', 'set-default', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -626,7 +686,7 @@ test('try to remove a non-existing payment method', async t => {
     binaryPath,
     ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -643,7 +703,7 @@ test('use `-V 1` to deploy a GitHub repository', async t => {
     binaryPath,
     ['-V', 1, '--public', '--name', session, ...defaultArgs, 'leo/hub'],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -657,8 +717,8 @@ test('use `-V 1` to deploy a GitHub repository', async t => {
   // Send a test request to the deployment
   const response = await fetch(href, {
     headers: {
-      Accept: 'application/json'
-    }
+      Accept: 'application/json',
+    },
   });
 
   const contentType = response.headers.get('content-type');
@@ -675,10 +735,10 @@ test('use `--platform-version 1` to deploy a GitHub repository', async t => {
       '--name',
       session,
       ...defaultArgs,
-      'leo/hub'
+      'leo/hub',
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -692,8 +752,8 @@ test('use `--platform-version 1` to deploy a GitHub repository', async t => {
   // Send a test request to the deployment
   const response = await fetch(href, {
     headers: {
-      Accept: 'application/json'
-    }
+      Accept: 'application/json',
+    },
   });
 
   const contentType = response.headers.get('content-type');
@@ -709,7 +769,7 @@ test('set platform version using `-V` to `1`', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '-V', 1],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -734,10 +794,10 @@ test('set platform version using `--platform-version` to `1`', async t => {
       session,
       ...defaultArgs,
       '--platform-version',
-      1
+      1,
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -757,7 +817,7 @@ test('set platform version using `-V` to invalid number', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '-V', 3],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -782,10 +842,10 @@ test('set platform version using `--platform-version` to invalid number', async 
       session,
       ...defaultArgs,
       '--platform-version',
-      3
+      3,
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -809,10 +869,10 @@ test('set platform version using `-V` to `2`', async t => {
       ...defaultArgs,
       '-V',
       2,
-      '--force'
+      '--force',
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -841,7 +901,7 @@ test('output logs of a 2.0 deployment', async t => {
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -849,9 +909,68 @@ test('output logs of a 2.0 deployment', async t => {
   t.is(code, 0);
 });
 
+test('output logs of a 2.0 deployment without annotate', async t => {
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['logs', context.deployment, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+  t.true(!stderr.includes('[now-builder-debug]'));
+  t.true(!stderr.includes('START RequestId'));
+  t.true(!stderr.includes('END RequestId'));
+  t.true(!stderr.includes('REPORT RequestId'));
+  t.is(code, 0);
+});
+
+test('create wildcard alias for deployment', async t => {
+  const hosts = {
+    deployment: context.deployment,
+    alias: `*.${contextName}.now.sh`,
+  };
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+
+  // Send a test request to the alias
+  const response = await fetch(`https://test.${contextName}.now.sh`);
+  const content = await response.text();
+
+  t.true(response.ok);
+  t.true(content.includes(contextName));
+
+  context.wildcardAlias = hosts.alias;
+});
+
+test('remove the wildcard alias', async t => {
+  const goal = `> Success! Alias ${context.wildcardAlias} removed`;
+
+  const { stdout, code } = await execa(
+    binaryPath,
+    ['alias', 'rm', context.wildcardAlias, '--yes', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+});
+
 test('ensure type and instance count in list is right', async t => {
   const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
-    reject: false
+    reject: false,
   });
 
   // Ensure the exit code is right
@@ -878,10 +997,10 @@ test('set platform version using `--platform-version` to `2`', async t => {
       ...defaultArgs,
       '--platform-version',
       2,
-      '--force'
+      '--force',
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -906,7 +1025,7 @@ test('ensure we render a warning for deployments with no files', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -938,7 +1057,7 @@ test('ensure the `alias` property is not sent to the API', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -963,7 +1082,7 @@ test('ensure the `scope` property works with email', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -991,7 +1110,7 @@ test('ensure the `scope` property works with username', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1019,7 +1138,7 @@ test('try to create a builds deployments with wrong config', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1039,7 +1158,7 @@ test('create a builds deployments with no actual builds', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1058,7 +1177,7 @@ test('create a builds deployments without platform version flag', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1083,7 +1202,7 @@ test('deploy multiple static files', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1097,8 +1216,8 @@ test('deploy multiple static files', async t => {
   // Send a test request to the deployment
   const response = await fetch(href, {
     headers: {
-      Accept: 'application/json'
-    }
+      Accept: 'application/json',
+    },
   });
 
   const contentType = response.headers.get('content-type');
@@ -1112,13 +1231,23 @@ test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, [directory, '--target=staging', ...args]);
-  t.regex(targetCall.stderr, /Setting target to staging/gm, formatOutput(targetCall));
+  const targetCall = await execa(binaryPath, [
+    directory,
+    '--target=staging',
+    ...args,
+  ]);
+  t.regex(
+    targetCall.stderr,
+    /Setting target to staging/gm,
+    formatOutput(targetCall)
+  );
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
 
   const { host } = new URL(targetCall.stdout);
-  const deployment = await apiFetch(`/v10/now/deployments/unknown?url=${host}`).then((resp) => resp.json());
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
   t.is(deployment.target, 'staging', JSON.stringify(deployment, null, 2));
 });
 
@@ -1126,23 +1255,47 @@ test('create a production deployment', async t => {
   const directory = fixture('static-deployment');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, [directory, '--target=production', ...args]);
+  const targetCall = await execa(binaryPath, [
+    directory,
+    '--target=production',
+    ...args,
+  ]);
 
   t.is(targetCall.code, 0, formatOutput(targetCall));
-  t.regex(targetCall.stderr, /`--prod` option instead/gm, formatOutput(targetCall));
-  t.regex(targetCall.stderr, /Setting target to production/gm, formatOutput(targetCall));
+  t.regex(
+    targetCall.stderr,
+    /`--prod` option instead/gm,
+    formatOutput(targetCall)
+  );
+  t.regex(
+    targetCall.stderr,
+    /Setting target to production/gm,
+    formatOutput(targetCall)
+  );
 
   const { host: targetHost } = new URL(targetCall.stdout);
-  const targetDeployment = await apiFetch(`/v10/now/deployments/unknown?url=${targetHost}`).then((resp) => resp.json());
-  t.is(targetDeployment.target, 'production', JSON.stringify(targetDeployment, null, 2));
+  const targetDeployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${targetHost}`
+  ).then(resp => resp.json());
+  t.is(
+    targetDeployment.target,
+    'production',
+    JSON.stringify(targetDeployment, null, 2)
+  );
 
   const call = await execa(binaryPath, [directory, '--prod', ...args]);
 
   t.is(call.code, 0, formatOutput(call));
-  t.regex(call.stderr, /Setting target to production/gm, formatOutput(targetCall));
+  t.regex(
+    call.stderr,
+    /Setting target to production/gm,
+    formatOutput(targetCall)
+  );
 
   const { host } = new URL(call.stdout);
-  const deployment = await apiFetch(`/v10/now/deployments/unknown?url=${host}`).then((resp) => resp.json());
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
   t.is(deployment.target, 'production', JSON.stringify(deployment, null, 2));
 });
 
@@ -1153,7 +1306,7 @@ test('ensure we are getting a warning for the old team flag', async t => {
     binaryPath,
     [directory, '--public', '--name', session, '--team', email, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1174,8 +1327,8 @@ test('ensure we are getting a warning for the old team flag', async t => {
   // Send a test request to the deployment
   const response = await fetch(href, {
     headers: {
-      Accept: 'application/json'
-    }
+      Accept: 'application/json',
+    },
   });
 
   const contentType = response.headers.get('content-type');
@@ -1197,10 +1350,10 @@ test('deploy multiple static files with custom scope', async t => {
       session,
       '--scope',
       email,
-      ...defaultArgs
+      ...defaultArgs,
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1214,8 +1367,8 @@ test('deploy multiple static files with custom scope', async t => {
   // Send a test request to the deployment
   const response = await fetch(href, {
     headers: {
-      Accept: 'application/json'
-    }
+      Accept: 'application/json',
+    },
   });
 
   const contentType = response.headers.get('content-type');
@@ -1232,7 +1385,7 @@ test('deploy single static file', async t => {
     binaryPath,
     [file, '--public', '--name', session, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1258,7 +1411,7 @@ test('deploy a static directory', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1283,7 +1436,7 @@ test('deploy a static build deployment', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1310,7 +1463,7 @@ test('use build-env', async t => {
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1345,10 +1498,10 @@ test('use `--build-env` CLI flag', async t => {
       session,
       '--build-env',
       `NONCE=${nonce}`,
-      ...defaultArgs
+      ...defaultArgs,
     ],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1372,7 +1525,7 @@ test('try to deploy non-existing path', async t => {
   const goal = `> Error! The specified file or directory "${session}" does not exist.`;
 
   const { stderr, code } = await execa(binaryPath, [session, ...defaultArgs], {
-    reject: false
+    reject: false,
   });
 
   t.is(code, 1);
@@ -1387,7 +1540,7 @@ test('try to deploy with non-existing team', async t => {
     binaryPath,
     [target, '--scope', session, ...defaultArgs],
     {
-      reject: false
+      reject: false,
     }
   );
 
@@ -1439,7 +1592,7 @@ test('initialize selected example ("amp")', async t => {
 
   const { stdout, stderr, code } = await execute(['init'], {
     cwd,
-    input: '\n'
+    input: '\n',
   });
 
   t.is(code, 0, formatOutput({ stdout, stderr }));
@@ -1471,7 +1624,7 @@ test('try to initialize example to existing directory', async t => {
   createFile(path.join(cwd, 'angular', '.gitignore'));
   const { stdout, code } = await execute(['init', 'angular'], {
     cwd,
-    input: '\n'
+    input: '\n',
   });
 
   t.is(code, 1);
@@ -1539,9 +1692,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     t.is(
       result.name,
       'now-revert-alias-2',
-      `[Second run] Received ${
-        result.name
-      } instead on ${url} (${deploymentUrl})`
+      `[Second run] Received ${result.name} instead on ${url} (${deploymentUrl})`
     );
   }
 
@@ -1593,7 +1744,7 @@ test('`now rm` 404 exits quickly', async t => {
   const start = Date.now();
   const { code, stderr } = await execute([
     'rm',
-    'this.is.a.deployment.that.does.not.exist.example.com'
+    'this.is.a.deployment.that.does.not.exist.example.com',
   ]);
   const delta = Date.now() - start;
 
@@ -1615,6 +1766,51 @@ test('render build errors', async t => {
 
   t.is(output.code, 1, formatOutput(output));
   t.regex(output.stderr, /Build failed/gm, formatOutput(output));
+});
+
+test('invalid deployment, projects and alias names', async t => {
+  const check = async (...args) => {
+    const output = await execute(args);
+    const print = `\`${args.join(' ')}\`\n${formatOutput(output)}`;
+    t.is(output.code, 1, print);
+    t.regex(output.stderr, /The provided argument/gm, print);
+  };
+
+  await Promise.all([
+    check('alias', '/', 'test'),
+    check('alias', 'test', '/'),
+    check('rm', '/'),
+    check('ls', '/'),
+  ]);
+});
+
+test('now certs ls', async t => {
+  const output = await execute(['certs', 'ls']);
+
+  t.is(output.code, 0, formatOutput(output));
+  t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
+});
+
+test('now certs ls --after=cert_test', async t => {
+  const output = await execute(['certs', 'ls', '--after=cert_test']);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /The cert cert_test can't be found\./gm,
+    formatOutput(output)
+  );
+});
+
+test('now hasOwnProperty not a valid subcommand', async t => {
+  const output = await execute(['hasOwnProperty']);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /The specified file or directory "hasOwnProperty" does not exist/gm,
+    formatOutput(output)
+  );
 });
 
 test.after.always(async () => {

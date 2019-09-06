@@ -34,3 +34,5 @@ node_modules
 /public
 /test/coverage-jest
 /test/coverage-karma
+
+!yarn.lock

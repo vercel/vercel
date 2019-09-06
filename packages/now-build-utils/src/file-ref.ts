@@ -8,6 +8,7 @@ import { File } from './types';
 interface FileRefOptions {
   mode?: number;
   digest: string;
+  mutable?: boolean;
 }
 
 const semaToDownloadFromS3 = new Sema(5);
@@ -25,13 +26,15 @@ export default class FileRef implements File {
   public type: 'FileRef';
   public mode: number;
   public digest: string;
+  private mutable: boolean;
 
-  constructor({ mode = 0o100644, digest }: FileRefOptions) {
+  constructor({ mode = 0o100644, digest, mutable = false }: FileRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof digest === 'string');
     this.type = 'FileRef';
     this.mode = mode;
     this.digest = digest;
+    this.mutable = mutable;
   }
 
   async toStreamAsync(): Promise<NodeJS.ReadableStream> {
@@ -40,9 +43,11 @@ export default class FileRef implements File {
     const [digestType, digestHash] = this.digest.split(':');
     if (digestType === 'sha') {
       // This CloudFront URL edge caches the `now-files` S3 bucket to prevent
-      // overloading it
+      // overloading it. Mutable files cannot be cached.
       // `https://now-files.s3.amazonaws.com/${digestHash}`
-      url = `https://dmmcy0pwk6bqi.cloudfront.net/${digestHash}`;
+      url = this.mutable
+        ? `https://now-files.s3.amazonaws.com/${digestHash}`
+        : `https://dmmcy0pwk6bqi.cloudfront.net/${digestHash}`;
     } else if (digestType === 'sha+ephemeral') {
       // This URL is currently only used for cache files that constantly
       // change. We shouldn't cache it on CloudFront because it'd always be a

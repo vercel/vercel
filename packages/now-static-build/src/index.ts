@@ -16,6 +16,7 @@ import {
   Route,
   BuildOptions,
   Config,
+  debug
 } from '@now/build-utils';
 import isPortReachable from 'is-port-reachable'
 
@@ -35,7 +36,7 @@ interface Framework {
   name: string;
   dependency: string;
   getOutputDirName: (dirPrefix: string) => Promise<string>;
-  defaultRoutes?: Route[];
+  defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   minNodeRange?: string;
 }
 
@@ -103,7 +104,7 @@ const nowDevScriptPorts = new Map();
 const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
   const basic: Route = {
     src: `${srcBase}${route.src}`,
-    dest: `http://localhost:${devPort}${route.dest}`,
+    dest: `http://localhost:${devPort}${route.dest}`
   };
 
   if (route.headers) {
@@ -113,14 +114,33 @@ const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
   return basic;
 };
 
+async function getFrameworkRoutes(
+  framework: Framework,
+  dirPrefix: string
+): Promise<Route[]> {
+  if (!framework.defaultRoutes) {
+    return [];
+  }
+
+  let routes: Route[];
+
+  if (typeof framework.defaultRoutes === 'function') {
+    routes = await framework.defaultRoutes(dirPrefix);
+  } else {
+    routes = framework.defaultRoutes;
+  }
+
+  return routes;
+}
+
 export async function build({
   files,
   entrypoint,
   workPath,
   config,
-  meta = {},
+  meta = {}
 }: BuildOptions) {
-  console.log('Downloading user files...');
+  debug('Downloading user files...');
   await download(files, workPath, meta);
 
   const mountpoint = path.dirname(entrypoint);
@@ -159,22 +179,18 @@ export async function build({
     }
 
     if (framework) {
-      console.log(
+      debug(
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
 
       if (framework.minNodeRange) {
         minNodeRange = framework.minNodeRange;
-        console.log(
-          `${framework.name} requires Node.js ${
-            framework.minNodeRange
-          }. Switching...`
+        debug(
+          `${framework.name} requires Node.js ${framework.minNodeRange}. Switching...`
         );
       } else {
-        console.log(
-          `${
-            framework.name
-          } does not require a specific Node.js version. Continuing ...`
+        debug(
+          `${framework.name} does not require a specific Node.js version. Continuing ...`
         );
       }
     }
@@ -186,24 +202,13 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-    await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts);
+    await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
     if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
       let devPort: number | undefined = nowDevScriptPorts.get(entrypoint);
 
-      if (framework && framework.defaultRoutes) {
-        // We need to delete the routes for `now dev`
-        // since in this case it will get proxied to
-        // a custom server we don't have controll over
-        delete framework.defaultRoutes;
-      }
-
       if (typeof devPort === 'number') {
-        console.log(
-          '`%s` server already running for %j',
-          devScript,
-          entrypoint
-        );
+        debug('`%s` server already running for %j', devScript, entrypoint);
       } else {
         // Run the `now-dev` or `dev` script out-of-bounds, since it is assumed that
         // it will launch a dev server that never "completes"
@@ -212,7 +217,7 @@ export async function build({
 
         const opts = {
           cwd: entrypointDir,
-          env: { ...process.env, PORT: String(devPort) },
+          env: { ...process.env, PORT: String(devPort) }
         };
 
         const child = spawn('yarn', ['run', devScript], opts);
@@ -251,7 +256,7 @@ export async function build({
           );
         }
 
-        console.log('Detected dev server for %j', entrypoint);
+        debug('Detected dev server for %j', entrypoint);
       }
 
       let srcBase = mountpoint.replace(/^\.\/?/, '');
@@ -260,28 +265,25 @@ export async function build({
         srcBase = `/${srcBase}`;
       }
 
-      if (framework && framework.defaultRoutes) {
-        for (const route of framework.defaultRoutes) {
-          routes.push(getDevRoute(srcBase, devPort, route));
-        }
-      }
-
+      // We ignore defaultRoutes for `now dev`
+      // since in this case it will get proxied to
+      // a custom server we don't have control over
       routes.push(
         getDevRoute(srcBase, devPort, {
           src: '/(.*)',
-          dest: '/$1',
+          dest: '/$1'
         })
       );
     } else {
       if (meta.isDev) {
-        console.log(`WARN: "${devScript}" script is missing from package.json`);
-        console.log(
+        debug(`WARN: "${devScript}" script is missing from package.json`);
+        debug(
           'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
         );
       }
 
       const buildScript = getCommand(pkg, 'build', config as Config);
-      console.log(`Running "${buildScript}" script in "${entrypoint}"`);
+      debug(`Running "${buildScript}" script in "${entrypoint}"`);
 
       const found = await runPackageJsonScript(
         entrypointDir,
@@ -295,8 +297,9 @@ export async function build({
         );
       }
 
+      const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
+
       if (framework) {
-        const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
         const outputDirName = await framework.getOutputDirName(outputDirPrefix);
 
         distPath = path.join(outputDirPrefix, outputDirName);
@@ -314,11 +317,16 @@ export async function build({
       }
 
       validateDistDir(distPath, meta.isDev, config);
-      output = await glob('**', distPath, mountpoint);
 
-      if (framework && framework.defaultRoutes) {
-        routes.push(...framework.defaultRoutes);
+      if (framework) {
+        const frameworkRoutes = await getFrameworkRoutes(
+          framework,
+          outputDirPrefix
+        );
+        routes.push(...frameworkRoutes);
       }
+
+      output = await glob('**', distPath, mountpoint);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
@@ -326,12 +334,12 @@ export async function build({
   }
 
   if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
-    console.log(`Running build script "${entrypoint}"`);
+    debug(`Running build script "${entrypoint}"`);
     const nodeVersion = await getNodeVersion(entrypointDir, undefined, config);
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
     validateDistDir(distPath, meta.isDev, config);
-    
+
     const output = await glob('**', distPath, mountpoint);
 
     return {

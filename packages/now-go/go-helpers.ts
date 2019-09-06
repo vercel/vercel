@@ -4,9 +4,9 @@ import fetch from 'node-fetch';
 import { mkdirp, pathExists } from 'fs-extra';
 import { dirname, join } from 'path';
 import { homedir } from 'os';
-import Debug from 'debug';
+import { debug } from '@now/build-utils';
+import stringArgv from 'string-argv';
 
-const debug = Debug('@now/go:go-helpers');
 const archMap = new Map([['x64', 'amd64'], ['x86', '386']]);
 const platformMap = new Map([['win32', 'windows']]);
 
@@ -49,7 +49,7 @@ function createGoPathTree(goPath: string, platform: string, arch: string) {
   debug('Creating GOPATH directory structure for %o (%s)', goPath, tuple);
   return Promise.all([
     mkdirp(join(goPath, 'bin')),
-    mkdirp(join(goPath, 'pkg', tuple)),
+    mkdirp(join(goPath, 'pkg', tuple))
   ]);
 }
 
@@ -68,7 +68,7 @@ class GoWrapper {
   private execute(...args: string[]) {
     const { opts, env } = this;
     debug('Exec %o', `go ${args.join(' ')}`);
-    return execa('go', args, { stdio: 'inherit', ...opts, env });
+    return execa('go', args, { stdio: 'pipe', ...opts, env });
   }
 
   mod() {
@@ -86,10 +86,15 @@ class GoWrapper {
     return this.execute(...args);
   }
 
-  build(src: string | string[], dest: string, ldsflags = '-s -w') {
+  build(src: string | string[], dest: string) {
     debug('Building optimized `go` binary %o -> %o', src, dest);
     const sources = Array.isArray(src) ? src : [src];
-    return this.execute('build', '-ldflags', ldsflags, '-o', dest, ...sources);
+
+    const flags = process.env.GO_BUILD_FLAGS
+      ? stringArgv(process.env.GO_BUILD_FLAGS)
+      : ['-ldflags', '-s -w'];
+
+    return this.execute('build', ...flags, '-o', dest, ...sources);
   }
 }
 
@@ -105,7 +110,7 @@ export async function createGo(
     ...process.env,
     PATH: path,
     GOPATH: goPath,
-    ...opts.env,
+    ...opts.env
   };
   if (goMod) {
     env.GO111MODULE = 'on';
@@ -148,7 +153,6 @@ export async function downloadGo(
       );
       const url = getGoUrl(version, platform, arch);
       debug('Downloading `go` URL: %o', url);
-      console.log('Downloading Go ...');
       const res = await fetch(url);
 
       if (!res.ok) {

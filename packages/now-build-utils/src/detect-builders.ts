@@ -10,7 +10,7 @@ interface Options {
   tag?: 'canary' | 'latest' | string;
 }
 
-const src: string = 'package.json';
+const src = 'package.json';
 const config: Config = { zeroConfig: true };
 
 const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
@@ -96,8 +96,8 @@ async function detectApiBuilders(files: string[]): Promise<Builder[]> {
     .sort(sortFiles)
     .filter(ignoreApiFilter)
     .map(file => {
-      const result = getApiBuilders().find(
-        ({ src }): boolean => minimatch(file, src)
+      const result = getApiBuilders().find(({ src }): boolean =>
+        minimatch(file, src)
       );
 
       return result ? { ...result, src: file } : null;
@@ -105,6 +105,31 @@ async function detectApiBuilders(files: string[]): Promise<Builder[]> {
 
   const finishedBuilds = builds.filter(Boolean);
   return finishedBuilds as Builder[];
+}
+
+// When a package has files that conflict with `/api` routes
+// e.g. Next.js pages/api we'll check it here and return an error.
+async function checkConflictingFiles(
+  files: string[],
+  builders: Builder[]
+): Promise<ErrorResponse | null> {
+  // For Next.js
+  if (builders.some(builder => builder.use.startsWith('@now/next'))) {
+    const hasApiPages = files.some(file => file.startsWith('pages/api/'));
+    const hasApiBuilders = builders.some(builder =>
+      builder.src.startsWith('api/')
+    );
+
+    if (hasApiPages && hasApiBuilders) {
+      return {
+        code: 'conflicting_files',
+        message:
+          'It is not possible to use `api` and `pages/api` at the same time, please only use one option',
+      };
+    }
+  }
+
+  return null;
 }
 
 // When zero config is used we can call this function
@@ -116,20 +141,28 @@ export async function detectBuilders(
 ): Promise<{
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
+  warnings: ErrorResponse[];
 }> {
   const errors: ErrorResponse[] = [];
+  const warnings: ErrorResponse[] = [];
 
   // Detect all builders for the `api` directory before anything else
   let builders = await detectApiBuilders(files);
 
   if (pkg && hasBuildScript(pkg)) {
     builders.push(await detectBuilder(pkg));
+
+    const conflictError = await checkConflictingFiles(files, builders);
+
+    if (conflictError) {
+      warnings.push(conflictError);
+    }
   } else {
     if (pkg && builders.length === 0) {
       // We only show this error when there are no api builders
       // since the dependencies of the pkg could be used for those
       errors.push(MISSING_BUILD_SCRIPT_ERROR);
-      return { errors, builders: null };
+      return { errors, warnings, builders: null };
     }
 
     // We allow a `public` directory
@@ -178,5 +211,6 @@ export async function detectBuilders(
   return {
     builders: builders.length ? builders : null,
     errors: errors.length ? errors : null,
+    warnings,
   };
 }

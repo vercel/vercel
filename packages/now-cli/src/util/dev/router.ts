@@ -26,13 +26,13 @@ export function resolveRouteParameters(
 }
 
 export default async function(
-  reqPath: string = '/',
+  reqUrl: string = '/',
   reqMethod?: string,
   routes?: RouteConfig[],
   devServer?: DevServer
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
-  let { query, pathname: reqPathname = '/' } = url.parse(reqPath, true);
+  let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
   const combinedHeaders: HttpHeadersConfig = {};
 
   // Try route match
@@ -85,6 +85,7 @@ export default async function(
         }
 
         if (routeConfig.continue) {
+          reqPathname = destPath;
           continue;
         }
 
@@ -97,7 +98,7 @@ export default async function(
             headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
-            matched_route_idx: idx
+            matched_route_idx: idx,
           };
           break;
         } else {
@@ -113,7 +114,7 @@ export default async function(
             headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
-            matched_route_idx: idx
+            matched_route_idx: idx,
           };
           break;
         }
@@ -126,7 +127,7 @@ export default async function(
       found: false,
       dest: reqPathname,
       uri_args: query,
-      headers: combinedHeaders
+      headers: combinedHeaders,
     };
   }
 
