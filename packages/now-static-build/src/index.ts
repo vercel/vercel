@@ -18,6 +18,7 @@ import {
   Config,
   debug
 } from '@now/build-utils';
+import isPortReachable from 'is-port-reachable'
 
 interface PackageJson {
   scripts?: {
@@ -230,25 +231,22 @@ export async function build({
           child.stderr.pipe(process.stderr);
         }
 
+
+        async function checkForPort(port: number | undefined): Promise<void> {
+          while (!(await isPortReachable(port))) {
+            await new Promise(resolve => {
+              setTimeout(resolve, 100);
+            });
+          }
+        }
+
         // Now wait for the server to have listened on `$PORT`, after which we
         // will ProxyPass any requests to that development server that come in
         // for this builder.
         try {
           await timeout(
             new Promise(resolve => {
-              const checkForPort = (data: string) => {
-                // Check the logs for the URL being printed with the port number
-                // (i.e. `http://localhost:47521`).
-                if (data.indexOf(`:${devPort}`) !== -1) {
-                  resolve();
-                }
-              };
-              if (child.stdout) {
-                child.stdout.on('data', checkForPort);
-              }
-              if (child.stderr) {
-                child.stderr.on('data', checkForPort);
-              }
+              checkForPort(devPort).then(resolve);
             }),
             5 * 60 * 1000
           );
