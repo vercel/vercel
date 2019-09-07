@@ -2,7 +2,7 @@ import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
 import { fetch as fetch_ } from 'fetch-h2';
 import { readFile } from 'fs-extra';
-import { join } from 'path';
+import { join, sep } from 'path';
 import qs from 'querystring';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
@@ -146,16 +146,16 @@ export const prepareFiles = (
         if (options.isDirectory) {
           // Directory
           fileName = options.path
-            ? name.replace(isWin ? `${options.path}\\` : `${options.path}/`, '')
+            ? name.substring(options.path.length + 1)
             : name;
         } else {
           // Array of files or single file
-          const segments = isWin ? name.split('\\') : name.split('/');
+          const segments = name.split(sep);
           fileName = segments[segments.length - 1];
         }
 
         next.push({
-          file: fileName.replace(/\\/g, '/'),
+          file: isWin ? fileName.replace(/\\/g, '/') : fileName,
           size: file.data.byteLength || file.data.length,
           sha,
         });
