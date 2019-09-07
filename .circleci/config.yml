@@ -493,6 +493,18 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - test-integration-macos-now-build-node-10:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
+      - test-integration-linux-now-build-node-12:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
       - test-integration-once:
           requires:
             - build
