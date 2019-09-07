@@ -17,13 +17,13 @@ const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
   code: 'missing_build_script',
   message:
     'Your `package.json` file is missing a `build` property inside the `script` property.' +
-    '\nMore details: https://zeit.co/docs/v2/advanced/platform/frequently-asked-questions#missing-build-script'
+    '\nMore details: https://zeit.co/docs/v2/advanced/platform/frequently-asked-questions#missing-build-script',
 };
 
 // Static builders are special cased in `@now/static-build`
 function getBuilders(): Map<string, Builder> {
   return new Map<string, Builder>([
-    ['next', { src, use: '@now/next', config }]
+    ['next', { src, use: '@now/next', config }],
   ]);
 }
 
@@ -35,7 +35,7 @@ function getApiBuilders(): Builder[] {
     { src: 'api/**/*.ts', use: '@now/node', config },
     { src: 'api/**/*.go', use: '@now/go', config },
     { src: 'api/**/*.py', use: '@now/python', config },
-    { src: 'api/**/*.rb', use: '@now/ruby', config }
+    { src: 'api/**/*.rb', use: '@now/ruby', config },
   ];
 }
 
@@ -107,6 +107,31 @@ async function detectApiBuilders(files: string[]): Promise<Builder[]> {
   return finishedBuilds as Builder[];
 }
 
+// When a package has files that conflict with `/api` routes
+// e.g. Next.js pages/api we'll check it here and return an error.
+async function checkConflictingFiles(
+  files: string[],
+  builders: Builder[]
+): Promise<ErrorResponse | null> {
+  // For Next.js
+  if (builders.some(builder => builder.use.startsWith('@now/next'))) {
+    const hasApiPages = files.some(file => file.startsWith('pages/api/'));
+    const hasApiBuilders = builders.some(builder =>
+      builder.src.startsWith('api/')
+    );
+
+    if (hasApiPages && hasApiBuilders) {
+      return {
+        code: 'conflicting_files',
+        message:
+          'It is not possible to use `api` and `pages/api` at the same time, please only use one option',
+      };
+    }
+  }
+
+  return null;
+}
+
 // When zero config is used we can call this function
 // to determine what builders to use
 export async function detectBuilders(
@@ -116,20 +141,28 @@ export async function detectBuilders(
 ): Promise<{
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
+  warnings: ErrorResponse[];
 }> {
   const errors: ErrorResponse[] = [];
+  const warnings: ErrorResponse[] = [];
 
   // Detect all builders for the `api` directory before anything else
   let builders = await detectApiBuilders(files);
 
   if (pkg && hasBuildScript(pkg)) {
     builders.push(await detectBuilder(pkg));
+
+    const conflictError = await checkConflictingFiles(files, builders);
+
+    if (conflictError) {
+      warnings.push(conflictError);
+    }
   } else {
     if (pkg && builders.length === 0) {
       // We only show this error when there are no api builders
       // since the dependencies of the pkg could be used for those
       errors.push(MISSING_BUILD_SCRIPT_ERROR);
-      return { errors, builders: null };
+      return { errors, warnings, builders: null };
     }
 
     // We allow a `public` directory
@@ -138,7 +171,7 @@ export async function detectBuilders(
       builders.push({
         use: '@now/static',
         src: 'public/**/*',
-        config
+        config,
       });
     } else if (builders.length > 0) {
       // We can't use pattern matching, since `!(api)` and `!(api)/**/*`
@@ -150,7 +183,7 @@ export async function detectBuilders(
           .map(name => ({
             use: '@now/static',
             src: name,
-            config
+            config,
           }))
       );
     }
@@ -177,6 +210,7 @@ export async function detectBuilders(
 
   return {
     builders: builders.length ? builders : null,
-    errors: errors.length ? errors : null
+    errors: errors.length ? errors : null,
+    warnings,
   };
 }

@@ -2,10 +2,10 @@ import path from 'path';
 import { CantParseJSONFile } from './errors-ts';
 import readJSONFile from './read-json-file';
 import { Config } from '../types';
-import { Package } from './dev/types';
+import { PackageJson } from '@now/build-utils';
 
-interface CustomPackage extends Package {
-  now?: Config
+interface CustomPackage extends PackageJson {
+  now?: Config;
 }
 
 export default async function readPackage(file?: string) {
@@ -16,8 +16,8 @@ export default async function readPackage(file?: string) {
     return result;
   }
 
-  if (result){
-    return result as CustomPackage
+  if (result) {
+    return result as CustomPackage;
   }
 
   return null;
