@@ -1,6 +1,7 @@
 import bytes from 'bytes';
 import Progress from 'progress';
 import chalk from 'chalk';
+import pluralize from 'pluralize';
 import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
@@ -39,7 +40,13 @@ export default async function processDeployment({
         );
 
         if (!quiet) {
-          log(`Synced ${event.payload.missing.length} ${uploadStamp()}`);
+          log(
+            `Synced ${pluralize(
+              'file',
+              event.payload.missing.length,
+              true
+            )} ${uploadStamp()}`
+          );
         }
 
         const size = Object.values(hashes).reduce((acc: number, file: any) => {
@@ -135,7 +142,13 @@ export default async function processDeployment({
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
         if (!quiet) {
-          log(`Synced ${event.payload.missing.length} ${uploadStamp()}`);
+          log(
+            `Synced ${pluralize(
+              'file',
+              event.payload.missing.length,
+              true
+            )} ${uploadStamp()}`
+          );
         }
 
         const size = Object.values(hashes).reduce((acc: number, file: any) => {
