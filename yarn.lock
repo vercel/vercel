@@ -1235,35 +1235,6 @@
     "@nodelib/fs.scandir" "2.1.1"
     fastq "^1.6.0"
 
-"@now/go@latest":
-  version "0.5.11"
-  resolved "https://registry.yarnpkg.com/@now/go/-/go-0.5.11.tgz#c3c6a9eaabe1de9fb4de0d6a163db8d713287dfd"
-  integrity sha512-IR8ZsIrwkN42yccmS5/ZxLaukYR7r4qdN0eeLK9X88rlR8/hxWVA5TmOyj5cr/7sVL0RSiOZXDQucHtDf9hEhg==
-
-"@now/next@latest":
-  version "0.7.1"
-  resolved "https://registry.yarnpkg.com/@now/next/-/next-0.7.1.tgz#678783031c21edcf4d7c6344fc084c2ae48f5136"
-  integrity sha512-XIUdS+51aDiVYdlUzeqcI5T1VITO84ogVAeWJuSkz2ITtOrYFmgq0z+1rxvkBHP+EW5/Z173v6wUsmZRjTZ3xw==
-
-"@now/node@latest":
-  version "0.12.8"
-  resolved "https://registry.yarnpkg.com/@now/node/-/node-0.12.8.tgz#9b8f5c81f80119401cb61fa0f9aa30fda5cf292a"
-  integrity sha512-FgSrSECIA57YbV/m8HdLJBlK1h74rmkuppuTLMe1fHxPWypJbaXWlSrToYv8zP34x2Lv481W2YDYJ3EQFm9Hcg==
-  dependencies:
-    "@types/node" "*"
-
-"@now/routing-utils@latest":
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/@now/routing-utils/-/routing-utils-1.2.3.tgz#3301ea4fb1060a8cd0f65c3146ecd6f129fdbf86"
-  integrity sha512-YhN/YM7Lko5jBE+FNDJjTAarpLDU0RUy37/q6nFfZ/eGaGfLW0qBASk1Llc+79Zg7oMvRnuHbtoxc64LxikULw==
-  optionalDependencies:
-    ajv "^6.0.0"
-
-"@now/static-build@latest":
-  version "0.9.9"
-  resolved "https://registry.yarnpkg.com/@now/static-build/-/static-build-0.9.9.tgz#847397b8de33c4dc611f5a933d14245134698cda"
-  integrity sha512-HNTIvJOEo/Afy8MbPFWXibgFreXDXSLhDZWeXhBdK3jC76R8LK3wM3EUlUbJuLMtzhn+i44tQHdagOey3nK8kg==
-
 "@octokit/endpoint@^5.1.0":
   version "5.3.2"
   resolved "https://registry.yarnpkg.com/@octokit/endpoint/-/endpoint-5.3.2.tgz#2deda2d869cac9ba7f370287d55667be2a808d4b"
@@ -2077,10 +2048,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.20.4.tgz#00f0a25a88cac3712af4ba66561d9e281c6f05c9"
   integrity sha512-fmq+F/QxPec+k/zvT7HiVpk7oiGFseS6brfT/AYqmCUp6QFRK7vZf2Ref46MImsg/g2W3g5X6SRvGRmOAvEfdA==
 
-"@zeit/node-file-trace@0.2.14":
-  version "0.2.14"
-  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.2.14.tgz#c3f00340a739ee598fcb866f24e0da42fb72a4e7"
-  integrity sha512-BF2HRQPuCr1+lRXBTlHVRGk5sFe9fZB3lIi0BhGPvrugPqZPSDjBua+ky07rnOIq5sj1cZdqMZ0fghtieOQqkw==
+"@zeit/node-file-trace@0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.3.0.tgz#a490dbc323bfd09f3b310ae559d0517f10bd7956"
+  integrity sha512-/8mfeuZrFcGCEvDa8vejX5cQlNVVsiOZyKMwvMFaWFl9OTaO+B8L9apAhV8apsAfu3xw/qDKwpwiNvjdkSCS6Q==
   dependencies:
     acorn "^6.1.1"
     acorn-stage3 "^2.0.0"
