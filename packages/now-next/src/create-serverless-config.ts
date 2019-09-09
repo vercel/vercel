@@ -42,6 +42,7 @@ function getDefaultData(target: string) {
 
 export default async function createServerlessConfig(
   workPath: string,
+  entryPath: string,
   nextVersion: string | undefined
 ) {
   let target = 'serverless';
@@ -50,12 +51,35 @@ export default async function createServerlessConfig(
       if (semver.gte(nextVersion, ExperimentalTraceVersion)) {
         target = 'experimental-serverless-trace';
       }
-    } catch (_ignored) {}
+    } catch (
+      _ignored
+      // eslint-disable-next-line
+    ) {}
   }
 
-  const configPath = path.join(workPath, 'next.config.js');
+  const primaryConfigPath = path.join(entryPath, 'next.config.js');
+  const secondaryConfigPath = path.join(workPath, 'next.config.js');
   const backupConfigName = `next.config.original.${Date.now()}.js`;
-  const backupConfigPath = path.join(workPath, backupConfigName);
+
+  const hasPrimaryConfig = fs.existsSync(primaryConfigPath);
+  const hasSecondaryConfig = fs.existsSync(secondaryConfigPath);
+
+  let configPath: string;
+  let backupConfigPath: string;
+
+  if (hasPrimaryConfig) {
+    // Prefer primary path
+    configPath = primaryConfigPath;
+    backupConfigPath = path.join(entryPath, backupConfigName);
+  } else if (hasSecondaryConfig) {
+    // Work with secondary path (some monorepo setups)
+    configPath = secondaryConfigPath;
+    backupConfigPath = path.join(workPath, backupConfigName);
+  } else {
+    // Default to primary path for creation
+    configPath = primaryConfigPath;
+    backupConfigPath = path.join(entryPath, backupConfigName);
+  }
 
   if (fs.existsSync(configPath)) {
     await fs.rename(configPath, backupConfigPath);
