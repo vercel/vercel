@@ -5,8 +5,10 @@ import debug from '../debug';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
+import { cpus } from 'os';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion } from './node-version';
+import getWriteableDirectory from './get-writable-directory';
 
 function spawnAsync(
   command: string,
@@ -161,6 +163,41 @@ export async function runNpmInstall(
       opts
     );
   }
+}
+
+
+export async function runBundleInstall(
+  destPath: string,
+  args: string[] = [],
+  spawnOpts?: SpawnOptions,
+  meta?: Meta
+) {
+  if (meta && meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+    return;
+  }
+
+  assert(path.isAbsolute(destPath));
+  const opts = spawnOpts || { env: {...process.env} };
+  if (opts.env) {
+    // Normally during install, a directory for `./.bundle/config`
+    // and `./.bundle/cache` is created but this env var will
+    // move those to the /tmp directory.
+    opts.env.BUNDLE_APP_CONFIG = await getWriteableDirectory();
+  }
+
+  await spawnAsync(
+    'bundle',
+    args.concat([
+      'install',
+      '--deployment',
+      '--no-prune',
+      '--retry', '3',
+      '--jobs', String(cpus().length || 1)
+    ]),
+    destPath,
+    opts
+  );
 }
 
 export async function runPackageJsonScript(
