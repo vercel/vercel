@@ -5,6 +5,7 @@ import debug from '../debug';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
+import { cpus } from 'os';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion } from './node-version';
 
@@ -181,7 +182,7 @@ export async function runBundleInstall(
 
     await spawnAsync(
       'bundle',
-      args.concat(['install', '--deployment', '--no-prune', '--jobs', '2']),
+      args.concat(['install', '--deployment', '--no-prune', '--retry', '3', '--jobs', String(cpus().length || 1)]),
       destPath,
       opts
     );
