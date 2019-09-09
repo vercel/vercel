@@ -182,7 +182,13 @@ export async function runBundleInstall(
 
     await spawnAsync(
       'bundle',
-      args.concat(['install', '--deployment', '--no-prune', '--retry', '3', '--jobs', String(cpus().length || 1)]),
+      args.concat([
+        'install',
+        '--deployment',
+        '--no-prune',
+        '--retry', '3',
+        '--jobs', String(cpus().length || 1)
+      ]),
       destPath,
       opts
     );
