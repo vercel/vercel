@@ -55,7 +55,7 @@ function excludeFiles(
     }
     return {
       ...newFiles,
-      [filePath]: files[filePath]
+      [filePath]: files[filePath],
     };
   }, {});
 }
@@ -116,7 +116,7 @@ function normalizePackageJson(
   const dependencies: stringMap = {};
   const devDependencies: stringMap = {
     ...defaultPackageJson.dependencies,
-    ...defaultPackageJson.devDependencies
+    ...defaultPackageJson.devDependencies,
   };
 
   if (devDependencies.react) {
@@ -139,17 +139,18 @@ function normalizePackageJson(
       'react-dom': 'latest',
       ...dependencies, // override react if user provided it
       // next-server is forced to canary
-      'next-server': 'v7.0.2-canary.49'
+      'next-server': 'v7.0.2-canary.49',
     },
     devDependencies: {
       ...devDependencies,
       // next is forced to canary
-      next: 'v7.0.2-canary.49'
+      next: 'v7.0.2-canary.49',
     },
     scripts: {
       ...defaultPackageJson.scripts,
-      'now-build': 'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas'
-    }
+      'now-build':
+        'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
+    },
   };
 }
 
@@ -218,12 +219,12 @@ function getRoutes(
   const routes: Route[] = [
     {
       src: `${prefix}_next/(.*)`,
-      dest: `${url}/_next/$1`
+      dest: `${url}/_next/$1`,
     },
     {
       src: `${prefix}static/(.*)`,
-      dest: `${url}/static/$1`
-    }
+      dest: `${url}/static/$1`,
+    },
   ];
   const filePaths = Object.keys(filesInside);
   const dynamicPages = [];
@@ -251,7 +252,7 @@ function getRoutes(
 
     routes.push({
       src: `${prefix}${pageName}`,
-      dest: `${url}/${pageName}`
+      dest: `${url}/${pageName}`,
     });
 
     if (pageName.endsWith('index')) {
@@ -259,7 +260,7 @@ function getRoutes(
 
       routes.push({
         src: `${prefix}${resolvedIndex}`,
-        dest: `${url}/${resolvedIndex}`
+        dest: `${url}/${resolvedIndex}`,
       });
     }
   }
@@ -288,7 +289,7 @@ function getRoutes(
     const fileName = path.relative('public', relativePath);
     const route = {
       src: `${prefix}${fileName}`,
-      dest: `${url}/${fileName}`
+      dest: `${url}/${fileName}`,
     };
 
     // Only add the route if a page is not already using it
@@ -327,6 +328,18 @@ export function getDynamicRoutes(
   } catch (_) {} // eslint-disable-line no-empty
 
   if (!getRouteRegex || !getSortedRoutes) {
+    try {
+      ({ getRouteRegex, getSortedRoutes } = require(resolveFrom(
+        entryPath,
+        'next/dist/next-server/lib/router/utils'
+      )));
+      if (typeof getRouteRegex !== 'function') {
+        getRouteRegex = undefined;
+      }
+    } catch (_) {} // eslint-disable-line no-empty
+  }
+
+  if (!getRouteRegex || !getSortedRoutes) {
     throw new Error(
       'Found usage of dynamic routes but not on a new enough version of Next.js.'
     );
@@ -334,7 +347,7 @@ export function getDynamicRoutes(
 
   const pageMatchers = getSortedRoutes(dynamicPages).map(pageName => ({
     pageName,
-    matcher: getRouteRegex && getRouteRegex(pageName).re
+    matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
   const routes: { src: string; dest: string }[] = [];
@@ -347,7 +360,7 @@ export function getDynamicRoutes(
     if (pageMatcher && pageMatcher.matcher) {
       routes.push({
         src: pageMatcher.matcher.source,
-        dest
+        dest,
       });
     }
   });
@@ -403,7 +416,7 @@ export async function createPseudoLayer(files: {
     pseudoLayer[fileName] = {
       compBuffer,
       crc32: crc32.unsigned(origBuffer),
-      uncompressedSize: origBuffer.byteLength
+      uncompressedSize: origBuffer.byteLength,
     };
   }
 
@@ -427,7 +440,7 @@ export async function createLambdaFromPseudoLayers({
   layers,
   handler,
   runtime,
-  environment = {}
+  environment = {},
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
   const zipFile = new ZipFile();
@@ -441,7 +454,7 @@ export async function createLambdaFromPseudoLayers({
       // @ts-ignore: `addDeflatedBuffer` is a valid function, but missing on the type
       zipFile.addDeflatedBuffer(compBuffer, seedKey, {
         crc32,
-        uncompressedSize
+        uncompressedSize,
       });
 
       addedFiles.add(seedKey);
@@ -464,7 +477,7 @@ export async function createLambdaFromPseudoLayers({
     handler,
     runtime,
     zipBuffer,
-    environment
+    environment,
   });
 }
 
@@ -481,5 +494,5 @@ export {
   stringMap,
   syncEnvVars,
   normalizePage,
-  isDynamicRoute
+  isDynamicRoute,
 };

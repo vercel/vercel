@@ -298,7 +298,7 @@ export const build = async ({
   }
 
   if (!isLegacy) {
-    await createServerlessConfig(workPath, realNextVersion);
+    await createServerlessConfig(workPath, entryPath, realNextVersion);
   }
 
   debug('running user script...');
