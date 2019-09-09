@@ -8,6 +8,7 @@ import { deprecate } from 'util';
 import { cpus } from 'os';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion } from './node-version';
+import getWriteableDirectory from './get-writable-directory';
 
 function spawnAsync(
   command: string,
@@ -177,8 +178,13 @@ export async function runBundleInstall(
   }
 
   assert(path.isAbsolute(destPath));
-
-  const opts = spawnOpts || { env: process.env };
+  const opts = spawnOpts || { env: {...process.env} };
+  if (opts.env) {
+    // Normally during install, a directory for `./.bundle/config`
+    // and `./.bundle/cache` is created but this env var will
+    // move those to the /tmp directory.
+    opts.env.BUNDLE_APP_CONFIG = await getWriteableDirectory();
+  }
 
   await spawnAsync(
     'bundle',
