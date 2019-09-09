@@ -180,18 +180,18 @@ export async function runBundleInstall(
 
   const opts = spawnOpts || { env: process.env };
 
-    await spawnAsync(
-      'bundle',
-      args.concat([
-        'install',
-        '--deployment',
-        '--no-prune',
-        '--retry', '3',
-        '--jobs', String(cpus().length || 1)
-      ]),
-      destPath,
-      opts
-    );
+  await spawnAsync(
+    'bundle',
+    args.concat([
+      'install',
+      '--deployment',
+      '--no-prune',
+      '--retry', '3',
+      '--jobs', String(cpus().length || 1)
+    ]),
+    destPath,
+    opts
+  );
 }
 
 export async function runPackageJsonScript(
