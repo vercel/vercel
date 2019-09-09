@@ -163,6 +163,30 @@ export async function runNpmInstall(
   }
 }
 
+
+export async function runBundleInstall(
+  destPath: string,
+  args: string[] = [],
+  spawnOpts?: SpawnOptions,
+  meta?: Meta
+) {
+  if (meta && meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+    return;
+  }
+
+  assert(path.isAbsolute(destPath));
+
+  const opts = spawnOpts || { env: process.env };
+
+    await spawnAsync(
+      'bundle',
+      args.concat(['install', '--no-ri', '--no-rdoc']),
+      destPath,
+      opts
+    );
+}
+
 export async function runPackageJsonScript(
   destPath: string,
   scriptName: string,
