@@ -16,16 +16,16 @@ const buildsSchema = {
       src: {
         type: 'string',
         minLength: 1,
-        maxLength: 4096
+        maxLength: 4096,
       },
       use: {
         type: 'string',
         minLength: 3,
-        maxLength: 256
+        maxLength: 256,
       },
-      config: { type: 'object' }
-    }
-  }
+      config: { type: 'object' },
+    },
+  },
 };
 
 const validateBuilds = ajv.compile(buildsSchema);

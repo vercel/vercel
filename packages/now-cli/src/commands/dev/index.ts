@@ -1,5 +1,6 @@
 import path from 'path';
 import chalk from 'chalk';
+import { PackageJson } from '@now/build-utils';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
@@ -11,11 +12,10 @@ import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import dev from './dev';
 import readPackage from '../../util/read-package';
-import { Package } from '../../util/dev/types';
 import readConfig from '../../util/config/read-config';
 
 const COMMAND_CONFIG = {
-  dev: ['dev']
+  dev: ['dev'],
 };
 
 const help = () => {
@@ -54,7 +54,7 @@ export default async function main(ctx: NowContext) {
 
       // Deprecated
       '--port': Number,
-      '-p': '--port'
+      '-p': '--port',
     });
     const debug = argv['--debug'];
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
@@ -90,7 +90,7 @@ export default async function main(ctx: NowContext) {
     const pkg = await readPackage(path.join(dir, 'package.json'));
 
     if (pkg) {
-      const { scripts } = pkg as Package;
+      const { scripts } = pkg as PackageJson;
 
       if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
         output.error(
@@ -98,9 +98,7 @@ export default async function main(ctx: NowContext) {
             'package.json'
           )} must not contain ${cmd('now dev')}`
         );
-        output.error(
-          `More details: http://err.sh/now/now-dev-as-dev-script`
-        );
+        output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
         return 1;
       }
     }

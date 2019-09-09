@@ -61,12 +61,6 @@
     "node": ">= 8.11"
   },
   "devDependencies": {
-    "@now/build-utils": "latest",
-    "@now/go": "latest",
-    "@now/next": "latest",
-    "@now/node": "latest",
-    "@now/routing-utils": "latest",
-    "@now/static-build": "latest",
     "@sentry/node": "5.5.0",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",

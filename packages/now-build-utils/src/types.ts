@@ -1,6 +1,10 @@
 import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
 
+export interface Env {
+  [name: string]: string | undefined;
+}
+
 export interface File {
   type: string;
   mode: number;
@@ -52,6 +56,8 @@ export interface Meta {
   requestPath?: string;
   filesChanged?: string[];
   filesRemoved?: string[];
+  env?: Env;
+  buildEnv?: Env;
 }
 
 export interface AnalyzeOptions {

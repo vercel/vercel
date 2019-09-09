@@ -8,6 +8,7 @@ import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
 import { join, resolve } from 'path';
 import { funCacheDir } from '@zeit/fun';
+import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
   createReadStream,
@@ -15,7 +16,7 @@ import {
   readFile,
   readJSON,
   writeFile,
-  remove
+  remove,
 } from 'fs-extra';
 import pkg from '../../../package.json';
 
@@ -23,10 +24,10 @@ import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
-import { devDependencies } from '../../../package.json';
 
 import * as staticBuilder from './static-builder';
-import { BuilderWithPackage, Package } from './types';
+import { BuilderWithPackage } from './types';
+import { getBundledBuilders } from './get-bundled-builders';
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
@@ -34,13 +35,9 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
     runInProcess: true,
     builder: Object.freeze(staticBuilder),
-    package: Object.freeze({ name: '@now/static', version: '' })
-  }
+    package: Object.freeze({ name: '@now/static', version: '' }),
+  },
 };
-
-const bundledBuilders = Object.keys(devDependencies).filter(d =>
-  d.startsWith('@now/')
-);
 
 const distTag = getDistTag(pkg.version);
 
@@ -117,7 +114,7 @@ export async function prepareBuilderDir() {
 export async function prepareBuilderModulePath() {
   const [builderDir, builderContents] = await Promise.all([
     builderDirPromise,
-    readFile(join(__dirname, 'builder-worker.js'))
+    readFile(join(__dirname, 'builder-worker.js')),
   ]);
   let needsWrite = false;
   const builderSha = getSha(builderContents);
@@ -179,7 +176,7 @@ export function getBuildUtils(packages: string[]): string {
 export function filterPackage(
   builderSpec: string,
   distTag: string,
-  buildersPkg: Package
+  buildersPkg: PackageJson
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
@@ -187,7 +184,7 @@ export function filterPackage(
     parsed.name &&
     parsed.type === 'tag' &&
     parsed.fetchSpec === distTag &&
-    bundledBuilders.includes(parsed.name) &&
+    getBundledBuilders().includes(parsed.name) &&
     buildersPkg.dependencies
   ) {
     const parsedInstalled = npa(
@@ -259,10 +256,10 @@ export async function installBuilders(
         '--exact',
         '--no-lockfile',
         '--non-interactive',
-        ...packagesToInstall
+        ...packagesToInstall,
       ],
       {
-        cwd: builderDir
+        cwd: builderDir,
       }
     );
   } finally {
@@ -294,10 +291,10 @@ export async function updateBuilders(
       '--exact',
       '--no-lockfile',
       '--non-interactive',
-      ...packages.filter(p => p !== '@now/static')
+      ...packages.filter(p => p !== '@now/static'),
     ],
     {
-      cwd: builderDir
+      cwd: builderDir,
     }
   );
 
@@ -336,7 +333,7 @@ export async function getBuilder(
       const pkg = require(join(dest, 'package.json'));
       builderWithPkg = {
         builder: Object.freeze(mod),
-        package: Object.freeze(pkg)
+        package: Object.freeze(pkg),
       };
     } catch (err) {
       if (err.code === 'MODULE_NOT_FOUND') {
@@ -357,7 +354,7 @@ export async function getBuilder(
 
 function getPackageName(
   parsed: npa.Result,
-  buildersPkg: Package
+  buildersPkg: PackageJson
 ): string | null {
   if (registryTypes.has(parsed.type)) {
     return parsed.name;
@@ -378,7 +375,7 @@ function getSha(buffer: Buffer): string {
 }
 
 function hasBundledBuilders(dependencies: { [name: string]: string }): boolean {
-  for (const name of bundledBuilders) {
+  for (const name of getBundledBuilders()) {
     if (!(name in dependencies)) {
       return false;
     }
