@@ -414,7 +414,7 @@ export default class DevServer {
         builderWithPkg: { package: pkg },
       } = buildMatch;
       if (pkg.name === '@now/static') continue;
-      if (updatedBuilders.includes(pkg.name)) {
+      if (pkg.name && updatedBuilders.includes(pkg.name)) {
         this.buildMatches.delete(src);
         this.output.debug(`Invalidated build match for "${src}"`);
       }
@@ -514,13 +514,17 @@ export default class DevServer {
           `filtered out ${allFiles.length - files.length} files`
       );
 
-      const { builders, errors } = await detectBuilders(files, pkg, {
+      const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
       });
 
       if (errors) {
         this.output.error(errors[0].message);
         await this.exit();
+      }
+
+      if (warnings && warnings.length > 0) {
+        warnings.forEach(warning => this.output.warn(warning.message));
       }
 
       if (builders) {
