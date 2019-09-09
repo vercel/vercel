@@ -181,7 +181,7 @@ export async function runBundleInstall(
 
     await spawnAsync(
       'bundle',
-      args.concat(['install', '--no-ri', '--no-rdoc']),
+      args.concat(['install', '--deployment', '--no-prune', '--jobs', '2']),
       destPath,
       opts
     );
