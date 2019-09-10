@@ -156,7 +156,7 @@
     "raw-body": "2.4.1",
     "read-pkg": "2.0.0",
     "rx-lite-aggregates": "4.0.8",
-    "semver": "5.5.0",
+    "semver": "6.3.0",
     "serve-handler": "6.1.1",
     "sinon": "4.4.2",
     "strip-ansi": "5.2.0",

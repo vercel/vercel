@@ -4,6 +4,8 @@ import chalk from 'chalk';
 import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
+import semver from 'semver';
+import pkg from '../../../package.json';
 
 export default async function processDeployment({
   now,
@@ -18,12 +20,17 @@ export default async function processDeployment({
 }: any) {
   const { warn, log } = createOutput({ debug });
   let bar: Progress | null = null;
+  const useHttp2 = semver.satisfies(pkg.version, '>10');
 
   if (!legacy) {
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(paths[0], requestBody)) {
+    for await (const event of createDeployment(
+      paths[0],
+      requestBody,
+      useHttp2
+    )) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -120,7 +127,11 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(paths[0], requestBody)) {
+    for await (const event of createLegacyDeployment(
+      paths[0],
+      requestBody,
+      useHttp2
+    )) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
