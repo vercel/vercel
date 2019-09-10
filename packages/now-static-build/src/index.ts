@@ -1,5 +1,4 @@
 import path from 'path';
-import { SpawnOptions } from 'child_process';
 import spawn from 'cross-spawn';
 import getPort from 'get-port';
 import { timeout } from 'promise-timeout';
@@ -9,6 +8,7 @@ import {
   glob,
   download,
   runNpmInstall,
+  runBundleInstall,
   runPackageJsonScript,
   runShellScript,
   getNodeVersion,
@@ -115,23 +115,6 @@ async function getFrameworkRoutes(
   return routes;
 }
 
-function spawnAsync(cmd: string, args: string[], opts: SpawnOptions) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, opts);
-    child.on('close', resolve);
-    child.on('error', reject);
-    if (child.stdout) {
-      child.stdout.setEncoding('utf8');
-      child.stdout.pipe(process.stdout);
-    }
-    if (child.stderr) {
-      child.stderr.setEncoding('utf8');
-      child.stderr.pipe(process.stderr);
-    }
-    setTimeout(() => child.emit('exit'), 60000);
-  });
-}
-
 export async function build({
   files,
   entrypoint,
@@ -169,7 +152,7 @@ export async function build({
 
       if (existsSync(gemfilePath) && !meta.isDev) {
         debug('Detected Gemfile, executing bundle install...');
-        await spawnAsync('bundle', ['install'], { cwd: workPath });
+        await runBundleInstall(workPath, [], undefined, meta);
       }
 
       // `public` is the default for zero config
