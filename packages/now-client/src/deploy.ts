@@ -19,6 +19,7 @@ export interface Options {
   isDirectory?: boolean;
   defaultName?: string;
   preflight?: boolean;
+  useHttp2?: boolean;
 }
 
 async function* createDeployment(
@@ -44,6 +45,7 @@ async function* createDeployment(
           ...metadata,
           files: preparedFiles,
         }),
+        useHttp2: options.useHttp2,
       }
     );
 
@@ -172,7 +174,8 @@ export default async function* deploy(
         deployment,
         options.token,
         metadata.version,
-        options.teamId
+        options.teamId,
+        options.useHttp2
       )) {
         yield event;
       }

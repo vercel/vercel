@@ -88,6 +88,7 @@ export default async function* upload(
             },
             body: stream,
             teamId,
+            useHttp2: options.useHttp2,
           });
 
           if (res.status === 200) {

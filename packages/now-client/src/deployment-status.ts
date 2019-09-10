@@ -1,7 +1,7 @@
-import sleep from 'sleep-promise'
-import ms from 'ms'
-import { fetch, API_DEPLOYMENTS, API_DEPLOYMENTS_LEGACY } from './utils'
-import { isDone, isReady, isFailed } from './utils/ready-state'
+import sleep from 'sleep-promise';
+import ms from 'ms';
+import { fetch, API_DEPLOYMENTS, API_DEPLOYMENTS_LEGACY } from './utils';
+import { isDone, isReady, isFailed } from './utils/ready-state';
 
 interface DeploymentStatus {
   type: string;
@@ -13,7 +13,8 @@ export default async function* checkDeploymentStatus(
   deployment: Deployment,
   token: string,
   version: number | undefined,
-  teamId?: string
+  teamId?: string,
+  useHttp2?: boolean
 ): AsyncIterableIterator<DeploymentStatus> {
   let deploymentState = deployment;
   let allBuildsCompleted = false;
@@ -32,7 +33,8 @@ export default async function* checkDeploymentStatus(
         `${apiDeployments}/${deployment.id}/builds${
           teamId ? `?teamId=${teamId}` : ''
         }`,
-        token
+        token,
+        { useHttp2 }
       );
       const data = await buildsData.json();
       const { builds = [] } = data;
@@ -63,12 +65,13 @@ export default async function* checkDeploymentStatus(
         `${apiDeployments}/${deployment.id || deployment.deploymentId}${
           teamId ? `?teamId=${teamId}` : ''
         }`,
-        token
+        token,
+        { useHttp2 }
       );
       const deploymentUpdate = await deploymentData.json();
 
       if (deploymentUpdate.error) {
-        return yield { type: 'error', payload: deploymentUpdate.error }
+        return yield { type: 'error', payload: deploymentUpdate.error };
       }
 
       if (isReady(deploymentUpdate)) {
@@ -76,7 +79,10 @@ export default async function* checkDeploymentStatus(
       }
 
       if (isFailed(deploymentUpdate)) {
-        return yield { type: 'error', payload: deploymentUpdate.error || deploymentUpdate };
+        return yield {
+          type: 'error',
+          payload: deploymentUpdate.error || deploymentUpdate,
+        };
       }
     }
 

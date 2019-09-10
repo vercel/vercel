@@ -1,6 +1,6 @@
 import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
-import { fetch as fetch_ } from 'fetch-h2';
+import { RequestInfo, RequestInit, Response } from 'node-fetch';
 import { readFile } from 'fs-extra';
 import { join, sep } from 'path';
 import qs from 'querystring';
@@ -99,11 +99,22 @@ export async function getNowIgnore(
   return ignores;
 }
 
+type FetchFunction = (
+  url: RequestInfo,
+  init?: RequestInit
+) => Promise<Response>;
+
 export const fetch = (
   url: string,
   token: string,
   opts: any = {}
 ): Promise<any> => {
+  const fetch_: FetchFunction = opts.useHttp2
+    ? require('node-fetch')
+    : require('fetch-h2');
+
+  delete opts.useHttp2;
+
   if (opts.teamId) {
     const parsedUrl = parseUrl(url, true);
     const query = parsedUrl.query;
