@@ -110,7 +110,7 @@ export const fetch = (
   opts: any = {}
 ): Promise<any> => {
   const fetch_: FetchFunction = opts.useHttp2
-    ? require('node-fetch')
+    ? require('node-fetch').default
     : require('fetch-h2');
 
   delete opts.useHttp2;
