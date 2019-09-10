@@ -24,10 +24,10 @@ import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
-import { devDependencies } from '../../../package.json';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
+import { getBundledBuilders } from './get-bundled-builders';
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
@@ -38,10 +38,6 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
     package: Object.freeze({ name: '@now/static', version: '' }),
   },
 };
-
-const bundledBuilders = Object.keys(devDependencies).filter(d =>
-  d.startsWith('@now/')
-);
 
 const distTag = getDistTag(pkg.version);
 
@@ -188,7 +184,7 @@ export function filterPackage(
     parsed.name &&
     parsed.type === 'tag' &&
     parsed.fetchSpec === distTag &&
-    bundledBuilders.includes(parsed.name) &&
+    getBundledBuilders().includes(parsed.name) &&
     buildersPkg.dependencies
   ) {
     const parsedInstalled = npa(
@@ -379,7 +375,7 @@ function getSha(buffer: Buffer): string {
 }
 
 function hasBundledBuilders(dependencies: { [name: string]: string }): boolean {
-  for (const name of bundledBuilders) {
+  for (const name of getBundledBuilders()) {
     if (!(name in dependencies)) {
       return false;
     }
