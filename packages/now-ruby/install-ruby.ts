@@ -1,12 +1,11 @@
 import { join } from 'path';
 import execa from 'execa';
-import { getWriteableDirectory, debug } from '@now/build-utils';
+import { debug } from '@now/build-utils';
 
 async function installRuby() {
-  const gemHome = await getWriteableDirectory();
   const rubyDir = '/ruby25';
   return {
-    gemHome,
+    gemHome: rubyDir,
     rubyPath: join(rubyDir, 'bin', 'ruby'),
     gemPath: join(rubyDir, 'bin', 'gem'),
   };
