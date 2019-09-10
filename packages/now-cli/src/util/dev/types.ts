@@ -92,7 +92,7 @@ export interface BuilderParams extends BuilderParamsBase {
 }
 
 export interface PrepareCacheParams extends BuilderParams {
-  cachePath: string;
+  prepareCachePath: string;
 }
 
 export interface BuilderConfigAttr {

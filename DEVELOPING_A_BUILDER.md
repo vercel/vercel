@@ -92,7 +92,7 @@ prepareCache({
   files: Files,
   entrypoint: String,
   workPath: String,
-  cachePath: String,
+  prepareCachePath: String,
   config: Object
 }) : Files cacheOutput
 ```
@@ -142,7 +142,7 @@ The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCa
 - `files`: All source files of the project as a [Files](#files) data structure.
 - `entrypoint`: Name of entrypoint file for this particular build job. Value `files[entrypoint]` is guaranteed to exist and be a valid [File](#files) reference. `entrypoint` is always a discrete file and never a glob, since globs are expanded into separate builds at deployment time.
 - `workPath`: A writable temporary directory where you are encouraged to perform your build process. This directory will be populated with the restored cache from the previous run (if any) for [`analyze`](#analyze) and [`build`](#build).
-- `cachePath`: A writable temporary directory where you can build a cache for the next run. This is only passed to `prepareCache`.
+- `prepareCachePath`: A writable temporary directory where you can build a cache for the next run. This is only passed to `prepareCache`.
 - `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `now.json`.
 
 ## Example: html-minifier

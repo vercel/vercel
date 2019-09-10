@@ -147,7 +147,7 @@ export interface PrepareCacheOptions {
    * A writable temporary directory where you can build a cache to use for
    * the next run.
    */
-  cachePath: string;
+  prepareCachePath: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
