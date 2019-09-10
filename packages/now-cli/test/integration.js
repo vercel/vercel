@@ -921,6 +921,8 @@ test('output logs of a 2.0 deployment without annotate', async t => {
   t.true(!stderr.includes('START RequestId'));
   t.true(!stderr.includes('END RequestId'));
   t.true(!stderr.includes('REPORT RequestId'));
+  t.true(!stderr.includes('Init Duration'));
+  t.true(!stderr.includes('XRAY TraceId'));
   t.is(code, 0);
 });
 
