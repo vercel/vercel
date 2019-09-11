@@ -168,3 +168,14 @@ export const prepareFiles = (
 
   return preparedFiles;
 };
+
+export function createDebug(debug?: boolean) {
+  const isDebug = debug || process.env.DEBUG;
+
+  if (isDebug) {
+    return (...logs: string[]) =>
+      console.log(`[now-client-debug] ${new Date().toISOString()}`, ...logs);
+  }
+
+  return () => {};
+}
