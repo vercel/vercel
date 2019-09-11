@@ -84,8 +84,8 @@ export default async function main(ctx) {
       debug: 'd',
       query: 'q',
       follow: 'f',
-      output: 'o'
-    }
+      output: 'o',
+    },
   });
 
   argv._ = argv._.slice(1);
@@ -138,7 +138,7 @@ export default async function main(ctx) {
 
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam });
@@ -146,7 +146,7 @@ export default async function main(ctx) {
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
 
@@ -209,7 +209,7 @@ export default async function main(ctx) {
     types,
     instanceId,
     since,
-    until
+    until,
   }; // no follow
   const storage = [];
   const storeEvent = event => storage.push(event);
@@ -219,7 +219,7 @@ export default async function main(ctx) {
     onEvent: storeEvent,
     quiet: false,
     debug,
-    findOpts: findOpts1
+    findOpts: findOpts1,
   });
 
   const printedEventIds = new Set();
@@ -241,14 +241,14 @@ export default async function main(ctx) {
       types,
       instanceId,
       since: since2,
-      follow: true
+      follow: true,
     };
     await printEvents(now, deployment.uid || deployment.id, currentTeam, {
       mode: 'logs',
       onEvent: printEvent,
       quiet: false,
       debug,
-      findOpts: findOpts2
+      findOpts: findOpts2,
     });
   }
 
@@ -298,12 +298,20 @@ function printLogShort(log) {
   const date = new Date(log.created).toISOString();
 
   data.split('\n').forEach((line, i) => {
-    if (line.includes('START RequestId:') || line.includes('END RequestId:')) {
+    if (
+      line.includes('START RequestId:') ||
+      line.includes('END RequestId:') ||
+      line.includes('XRAY TraceId:')
+    ) {
       return;
     }
 
     if (line.includes('REPORT RequestId:')) {
       line = line.substring(line.indexOf('Duration:'), line.length);
+
+      if (line.includes('Init Duration:')) {
+        line = line.substring(0, line.indexOf('Init Duration:'));
+      }
     }
 
     if (i === 0) {
@@ -345,7 +353,7 @@ function printLogRaw(log) {
 
 const logPrinters = {
   short: printLogShort,
-  raw: printLogRaw
+  raw: printLogRaw,
 };
 
 function toTimestamp(datestr) {
