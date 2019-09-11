@@ -30,6 +30,7 @@ export default async function* checkDeploymentStatus(
   }
 
   // Build polling
+  debug('Waiting for builds and the deployment to complete...');
   while (true) {
     if (!allBuildsCompleted) {
       const buildsData = await fetch(
@@ -46,7 +47,7 @@ export default async function* checkDeploymentStatus(
 
         if (!prevState || prevState.readyState !== build.readyState) {
           debug(
-            `Build state for '${build.entrypoint}' changed from ${prevState.readyState} to ${build.readyState}`
+            `Build state for '${build.entrypoint}' changed to ${build.readyState}`
           );
           yield { type: 'build-state-changed', payload: build };
         }
@@ -67,7 +68,6 @@ export default async function* checkDeploymentStatus(
         yield { type: 'all-builds-completed', payload: readyBuilds };
       }
     } else {
-      debug('Waiting for the deployment to finalize...');
       // Deployment polling
       const deploymentData = await fetch(
         `${apiDeployments}/${deployment.id || deployment.deploymentId}${

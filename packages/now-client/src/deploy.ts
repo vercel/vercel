@@ -26,14 +26,15 @@ export interface Options {
 async function* createDeployment(
   metadata: DeploymentOptions,
   files: Map<string, DeploymentFile>,
-  options: Options
+  options: Options,
+  debug: Function
 ): AsyncIterableIterator<{ type: string; payload: any }> {
-  // const debug = createDebug(options.debug)
-  // delete options.debug
   const preparedFiles = prepareFiles(files, options);
 
   let apiDeployments =
     metadata.version === 2 ? API_DEPLOYMENTS : API_DEPLOYMENTS_LEGACY;
+
+  debug('Sending deployment creation API request');
   try {
     const dpl = await fetch(
       `${apiDeployments}${generateQueryString(options)}`,
@@ -54,6 +55,7 @@ async function* createDeployment(
     const json = await dpl.json();
 
     if (!dpl.ok || json.error) {
+      debug('Error: Deployment request status is', dpl.status);
       // Return error object
       return yield {
         type: 'error',
@@ -65,6 +67,7 @@ async function* createDeployment(
 
     for (const [name, value] of dpl.headers.entries()) {
       if (name.startsWith('x-now-warning-')) {
+        debug('Deployment created with a warning:', value);
         yield { type: 'warning', payload: value };
       }
     }
@@ -182,7 +185,12 @@ export default async function* deploy(
 
   try {
     debug('Creating deployment');
-    for await (const event of createDeployment(metadata, files, options)) {
+    for await (const event of createDeployment(
+      metadata,
+      files,
+      options,
+      debug
+    )) {
       if (event.type === 'created') {
         debug('Deployment created');
         deployment = event.payload;
