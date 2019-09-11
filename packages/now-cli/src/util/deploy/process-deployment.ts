@@ -5,7 +5,7 @@ import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
 import semver from 'semver';
-import pkg from '../../../package.json';
+import pkg from '../pkg';
 
 export default async function processDeployment({
   now,
