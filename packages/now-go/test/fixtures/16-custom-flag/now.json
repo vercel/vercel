@@ -1,6 +1,6 @@
 {
   "version": 2,
   "builds": [{ "src": "index.go", "use": "@now/go" }],
-  "build": { "env": { "GO_BUILD_FLAGS": "-tags netgo -ldflags '-s -w'" }},
-  "probes": [{ "path": "/", "mustContain": "RANDOMNESS_PLACEHOLDER" }]
+  "build": { "env": { "GO_BUILD_FLAGS": "-tags first -ldflags '-s -w'" } },
+  "probes": [{ "path": "/", "mustContain": "first:RANDOMNESS_PLACEHOLDER" }]
 }
