@@ -405,6 +405,59 @@ test('deploy a dockerfile project', async t => {
   context.deployment = host;
 });
 
+test('test invalid json alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-json-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Error parsing/, formatOutput(output));
+});
+
+test('test invalid alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
+});
+
+test('test invalid type for alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-type-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
+});
+
+test('apply alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+
+  // Create the rules file
+  const alias = `test-alias-rules.${contextName}.now.sh`;
+
+  const now = {
+    alias: alias,
+  };
+
+  const rules = {
+    rules: [{ pathname: '/docker-deployment', dest: context.deployment }],
+  };
+
+  await writeFile(path.join(fixturePath, 'now.json'), JSON.stringify(now));
+  await writeFile(path.join(fixturePath, 'rules.json'), JSON.stringify(rules));
+
+  const output = await execute(['alias', '-r', 'rules.json'], {
+    cwd: fixturePath,
+  });
+  t.is(output.code, 0, formatOutput(output));
+});
+
 test('find deployment in list', async t => {
   const output = await execa(binaryPath, ['--debug', 'ls', ...defaultArgs], {
     reject: false,
