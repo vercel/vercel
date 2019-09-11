@@ -2048,10 +2048,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.20.4.tgz#00f0a25a88cac3712af4ba66561d9e281c6f05c9"
   integrity sha512-fmq+F/QxPec+k/zvT7HiVpk7oiGFseS6brfT/AYqmCUp6QFRK7vZf2Ref46MImsg/g2W3g5X6SRvGRmOAvEfdA==
 
-"@zeit/node-file-trace@0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.3.0.tgz#a490dbc323bfd09f3b310ae559d0517f10bd7956"
-  integrity sha512-/8mfeuZrFcGCEvDa8vejX5cQlNVVsiOZyKMwvMFaWFl9OTaO+B8L9apAhV8apsAfu3xw/qDKwpwiNvjdkSCS6Q==
+"@zeit/node-file-trace@0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.3.1.tgz#94631e122b08f462f08db2fdc665f8dda5fd6a18"
+  integrity sha512-HB+icVWNjRKqyCSLTuocc/dT7CUJYuFGHULOweSvRw8Cslyjs+O6v+pC4AU7OysOQVBByt17TWiA1zCzHzxSKQ==
   dependencies:
     acorn "^6.1.1"
     acorn-stage3 "^2.0.0"
@@ -7985,7 +7985,7 @@ normalize-url@^4.1.0:
   integrity sha512-0NLtR71o4k6GLP+mr6Ty34c5GA6CMoEsncKJxvQd8NzPxaHRJNnb5gZE8R1XF4CPIS7QPHLJ74IFszwtNVAHVQ==
 
 now-client@./packages/now-client:
-  version "5.1.1-canary.2"
+  version "5.1.1-canary.3"
   dependencies:
     "@zeit/fetch" "5.1.0"
     async-retry "1.2.3"
