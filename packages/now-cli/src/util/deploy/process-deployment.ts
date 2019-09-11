@@ -89,7 +89,7 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          log(`${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
+          log(`https://${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
         } else {
           process.stdout.write(event.payload.url);
         }
