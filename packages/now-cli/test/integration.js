@@ -1872,7 +1872,7 @@ test('now hasOwnProperty not a valid subcommand', async t => {
 
 test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
-  const output = await execute([fixturePath, '--force']);
+  const output = await execute([fixturePath, '--force', '--public']);
 
   t.is(output.code, 0, formatOutput(output));
 
