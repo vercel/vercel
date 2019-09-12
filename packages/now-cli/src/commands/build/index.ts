@@ -70,7 +70,7 @@ async function getBuilds(
       output.debug('No package.json found');
     }
     const { builders } = await detectBuilders(files, pkg);
-    builds.push(...(builders || []));
+    builds = builders || [];
   }
 
   return builds;
