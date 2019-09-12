@@ -1,3 +1,4 @@
+require('./polyfill');
 import { join, dirname } from 'path';
 import execa from 'execa';
 import {
