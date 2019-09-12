@@ -54,6 +54,8 @@ async function* createDeployment(
 
     const json = await dpl.json();
 
+    debug('Deployment response:', JSON.stringify(json));
+
     if (!dpl.ok || json.error) {
       debug('Error: Deployment request status is', dpl.status);
       // Return error object

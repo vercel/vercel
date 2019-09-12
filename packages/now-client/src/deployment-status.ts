@@ -39,6 +39,7 @@ export default async function* checkDeploymentStatus(
         }`,
         token
       );
+
       const data = await buildsData.json();
       const { builds = [] } = data;
 

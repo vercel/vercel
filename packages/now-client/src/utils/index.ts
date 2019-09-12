@@ -99,11 +99,15 @@ export async function getNowIgnore(
   return ignores;
 }
 
-export const fetch = (
+export const fetch = async (
   url: string,
   token: string,
-  opts: any = {}
+  opts: any = {},
+  debugEnabled?: boolean
 ): Promise<any> => {
+  const debug = createDebug(debugEnabled);
+  let time;
+
   if (opts.teamId) {
     const parsedUrl = parseUrl(url, true);
     const query = parsedUrl.query;
@@ -119,7 +123,13 @@ export const fetch = (
   // @ts-ignore
   opts.headers['user-agent'] = `now-client-v${pkg.version}`;
 
-  return fetch_(url, opts);
+  time = Date.now();
+  debug(`${opts.method || 'GET'} ${url}`);
+
+  const res = await fetch_(url, opts);
+  debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
+
+  return res;
 };
 
 export interface PreparedFile {
