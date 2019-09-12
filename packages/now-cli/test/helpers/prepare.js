@@ -1,6 +1,6 @@
 // Native
-const { join } = require('path');
 const { randomBytes } = require('crypto');
+const { join, dirname } = require('path');
 
 // Packages
 const { imageSync: getImageFile } = require('qr-image');
@@ -246,7 +246,7 @@ RUN echo $NONCE > /public/index.html
     },
     'zero-config-next-js': {
       'pages/index.js':
-        '() => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
+        'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
       'package.json': JSON.stringify({
         name: 'zero-config-next-js-test',
         scripts: {
@@ -279,6 +279,7 @@ RUN echo $NONCE > /public/index.html
       for (const name of needed) {
         const file = join(directory, name);
         const content = files[name];
+        await mkdirp(dirname(file));
         await writeFile(file.replace('-builds', ''), content);
       }
     } else {
@@ -287,6 +288,7 @@ RUN echo $NONCE > /public/index.html
       for (const name of names) {
         const file = join(directory, name);
         const content = needed[name];
+        await mkdirp(dirname(file));
         await writeFile(file.replace('-builds', ''), content);
       }
     }
