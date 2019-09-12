@@ -3,11 +3,12 @@ import spawn from 'cross-spawn';
 import getPort from 'get-port';
 import { timeout } from 'promise-timeout';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
-import frameworks from './frameworks';
+import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
   runNpmInstall,
+  runBundleInstall,
   runPackageJsonScript,
   runShellScript,
   getNodeVersion,
@@ -16,29 +17,10 @@ import {
   Route,
   BuildOptions,
   Config,
-  debug
+  debug,
+  PackageJson
 } from '@now/build-utils';
 import isPortReachable from 'is-port-reachable'
-
-interface PackageJson {
-  scripts?: {
-    [key: string]: string;
-  };
-  dependencies?: {
-    [key: string]: string;
-  };
-  devDependencies?: {
-    [key: string]: string;
-  };
-}
-
-interface Framework {
-  name: string;
-  dependency: string;
-  getOutputDirName: (dirPrefix: string) => Promise<string>;
-  defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
-  minNodeRange?: string;
-}
 
 function validateDistDir(
   distDir: string,
@@ -156,7 +138,8 @@ export async function build({
 
   if (entrypointName === 'package.json') {
     const pkgPath = path.join(workPath, entrypoint);
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
+    const gemfilePath = path.join(workPath, 'Gemfile');
 
     let output: Files = {};
     let framework: Framework | undefined = undefined;
@@ -166,6 +149,12 @@ export async function build({
     const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (config.zeroConfig) {
+
+      if (existsSync(gemfilePath) && !meta.isDev) {
+        debug('Detected Gemfile, executing bundle install...');
+        await runBundleInstall(workPath, [], undefined, meta);
+      }
+
       // `public` is the default for zero config
       distPath = path.join(workPath, path.dirname(entrypoint), 'public');
 
@@ -175,7 +164,7 @@ export async function build({
         pkg.devDependencies
       );
 
-      framework = frameworks.find(({ dependency }) => dependencies[dependency]);
+      framework = frameworks.find(({ dependency }) => dependencies[dependency || '']);
     }
 
     if (framework) {
