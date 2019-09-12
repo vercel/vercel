@@ -1885,8 +1885,9 @@ test('create zero-config deployment', async t => {
   const data = JSON.stringify(text);
 
   const validBuilders = data.builds.every(build =>
-    build.use.endsWith('@canary')
+    isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
   );
+
   t.true(validBuilders, JSON.stringify(data, null, 2));
 });
 
