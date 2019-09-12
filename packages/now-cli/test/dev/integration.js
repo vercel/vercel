@@ -49,7 +49,7 @@ function validateResponseHeaders(t, res) {
 
 async function exec(directory, args = []) {
   return execa(binaryPath, ['dev', directory, ...args], {
-    reject: false
+    reject: false,
   });
 }
 
@@ -72,9 +72,9 @@ async function testFixture(directory, opts = {}, args = []) {
       reject: false,
       detached: true,
       stdio: 'ignore',
-      ...opts
+      ...opts,
     }),
-    port
+    port,
   };
 }
 
@@ -140,6 +140,40 @@ test('[now dev] validate routes', async t => {
   );
 });
 
+test('[now dev] validate env var names', async t => {
+  const directory = fixture('invalid-env-var-name');
+  const { dev, port } = await testFixture(directory, { stdio: 'pipe' });
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    let stderr = '';
+    dev.stderr.setEncoding('utf8');
+
+    await new Promise(resolve => {
+      dev.stderr.on('data', b => {
+        stderr += b;
+        if (
+          stderr.includes('Ignoring env var "1" because name is invalid') &&
+          stderr.includes(
+            'Ignoring build env var "_a" because name is invalid'
+          ) &&
+          stderr.includes(
+            'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+          )
+        ) {
+          resolve();
+        }
+      });
+    });
+
+    t.pass();
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
 test('[now dev] 00-list-directory', async t => {
   const directory = fixture('00-list-directory');
   const { dev, port } = await testFixture(directory);
@@ -187,7 +221,7 @@ if (satisfies(process.version, '10.x')) {
   test('[now dev] 02-angular-node', async t => {
     const directory = fixture('02-angular-node');
     const { dev, port } = await testFixture(directory, { stdio: 'pipe' }, [
-      '--debug'
+      '--debug',
     ]);
 
     let stderr = '';
@@ -486,7 +520,7 @@ test('[now dev] double slashes redirect', async t => {
 
     {
       const res = await fetch(`http://localhost:${port}////?foo=bar`, {
-        redirect: 'manual'
+        redirect: 'manual',
       });
 
       validateResponseHeaders(t, res);
@@ -500,7 +534,7 @@ test('[now dev] double slashes redirect', async t => {
     {
       const res = await fetch(`http://localhost:${port}///api////date.js`, {
         method: 'POST',
-        redirect: 'manual'
+        redirect: 'manual',
       });
 
       validateResponseHeaders(t, res);
@@ -667,7 +701,7 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
 
     const rnd = Math.random().toString();
     const pkg = {
-      scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` }
+      scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
     };
     await fs.writeFile(
       path.join(directory, 'package.json'),
@@ -691,7 +725,7 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
 test('[now dev] no build matches warning', async t => {
   const directory = fixture('no-build-matches');
   const { dev } = await testFixture(directory, {
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   try {
@@ -746,7 +780,7 @@ if (satisfies(process.version, '^8.10.0 || ^10.13.0 || >=11.10.1')) {
 test('[now dev] render warning for empty cwd dir', async t => {
   const directory = fixture('empty');
   const { dev, port } = await testFixture(directory, {
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   try {

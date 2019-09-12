@@ -1,6 +1,7 @@
 import bytes from 'bytes';
 import Progress from 'progress';
 import chalk from 'chalk';
+import pluralize from 'pluralize';
 import { createDeployment, createLegacyDeployment } from 'now-client';
 import wait from '../output/wait';
 import createOutput from '../output';
@@ -12,6 +13,7 @@ export default async function processDeployment({
   paths,
   requestBody,
   uploadStamp,
+  deployStamp,
   legacy,
   env,
   quiet,
@@ -36,6 +38,16 @@ export default async function processDeployment({
         debug(
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
+
+        if (!quiet) {
+          log(
+            `Synced ${pluralize(
+              'file',
+              event.payload.missing.length,
+              true
+            )} ${uploadStamp()}`
+          );
+        }
 
         const size = Object.values(hashes).reduce((acc: number, file: any) => {
           const fileSize = file.data.byteLength || file.data.length;
@@ -73,14 +85,18 @@ export default async function processDeployment({
         }
       }
 
-      if (event.type === 'all-files-uploaded') {
-        if (!quiet) {
-          log(`Synced ${event.payload.size} ${uploadStamp()}`);
-        }
-      }
-
       if (event.type === 'created') {
         now._host = event.payload.url;
+
+        if (!quiet) {
+          log(
+            `https://${event.payload.url} ${chalk.gray(
+              `[v2]`
+            )} ${deployStamp()}`
+          );
+        } else {
+          process.stdout.write(`https://${event.payload.url}`);
+        }
       }
 
       if (event.type === 'build-state-changed') {
@@ -129,6 +145,15 @@ export default async function processDeployment({
         debug(
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
+        if (!quiet) {
+          log(
+            `Synced ${pluralize(
+              'file',
+              event.payload.missing.length,
+              true
+            )} ${uploadStamp()}`
+          );
+        }
 
         const size = Object.values(hashes).reduce((acc: number, file: any) => {
           const fileSize = file.data.byteLength || file.data.length;
@@ -166,16 +191,14 @@ export default async function processDeployment({
         }
       }
 
-      if (event.type === 'all-files-uploaded') {
-        if (!quiet) {
-          log(`Synced ${event.payload.size} ${uploadStamp()}`);
-        }
-
-        log('Building…');
-      }
-
       if (event.type === 'created') {
         now._host = event.payload.url;
+
+        if (!quiet) {
+          log(`${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
+        } else {
+          process.stdout.write(`https://${event.payload.url}`);
+        }
       }
 
       // Handle error events
