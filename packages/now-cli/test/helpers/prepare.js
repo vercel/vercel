@@ -244,6 +244,23 @@ RUN echo $NONCE > /public/index.html
       }),
       'invalid-json-rules.json': '==ok',
     },
+    'zero-config-next-js': {
+      'pages/index.js':
+        '() => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
+      'package.json': JSON.stringify({
+        name: 'zero-config-next-js-test',
+        scripts: {
+          dev: 'next',
+          start: 'next start',
+          build: 'next build',
+        },
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      }),
+    },
   };
 
   for (const typeName of Object.keys(spec)) {
