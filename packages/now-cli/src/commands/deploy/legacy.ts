@@ -61,11 +61,11 @@ import {
   DomainVerificationFailed,
   TooManyRequests,
   VerifyScaleTimeout,
-  DeploymentsRateLimited
+  DeploymentsRateLimited,
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
-  InvalidRegionOrDCForScale
+  InvalidRegionOrDCForScale,
 } from '../../util/errors';
 import { SchemaValidationFailed } from '../../util/errors';
 import handleCertError from '../../util/certs/handle-cert-error';
@@ -192,7 +192,7 @@ const promptForEnvFields = async (list: string[]) => {
   for (const field of list) {
     questions.push({
       name: field,
-      message: field
+      message: field,
     });
   }
 
@@ -214,7 +214,7 @@ const promptForEnvFields = async (list: string[]) => {
 
 async function canUseZeroConfig(cwd: string): Promise<boolean> {
   try {
-    const pkg = (await readPackage(join(cwd, 'package.json')));
+    const pkg = await readPackage(join(cwd, 'package.json'));
 
     if (!pkg || pkg instanceof Error) {
       return false;
@@ -244,7 +244,7 @@ async function canUseZeroConfig(cwd: string): Promise<boolean> {
     ) {
       return true;
     }
-  } catch(_) {}
+  } catch (_) {}
 
   return false;
 }
@@ -290,15 +290,17 @@ export default async function main(
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  const infoUrl = await canUseZeroConfig(paths[0])
+  const infoUrl = (await canUseZeroConfig(paths[0]))
     ? 'https://zeit.co/guides/migrate-to-zeit-now'
-    : 'https://zeit.co/docs/v2/advanced/platform/changes-in-now-2-0'
+    : 'https://zeit.co/docs/v2/advanced/platform/changes-in-now-2-0';
 
-  warn(`You are using an old version of the Now Platform. More: ${link(infoUrl)}`);
+  warn(
+    `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
+  );
 
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
 
   try {
@@ -308,7 +310,7 @@ export default async function main(
       token,
       config,
       firstRun: true,
-      deploymentType: undefined
+      deploymentType: undefined,
     });
   } catch (err) {
     await stopDeployment(err);
@@ -321,7 +323,7 @@ async function sync({
   token,
   config: { currentTeam },
   firstRun,
-  deploymentType
+  deploymentType,
 }: SyncOptions): Promise<void> {
   return new Promise(async (_resolve, reject) => {
     let deployStamp = stamp();
@@ -470,7 +472,7 @@ async function sync({
 
         // XXX: legacy
         deploymentType,
-        sessionAffinity
+        sessionAffinity,
       };
     }
 
@@ -480,7 +482,7 @@ async function sync({
           meta,
           deploymentName,
           deploymentType,
-          sessionAffinity
+          sessionAffinity,
         } = await readMeta(
           paths[0],
           deploymentName,
@@ -493,7 +495,7 @@ async function sync({
           'dockerfile_missing',
           'no_dockerfile_commands',
           'unsupported_deployment_type',
-          'multiple_manifests'
+          'multiple_manifests',
         ];
 
         if (
@@ -531,7 +533,7 @@ async function sync({
     // Read scale and fail if we have both regions and scale
     if (regions.length > 0 && Object.keys(scaleFromConfig).length > 0) {
       error(
-        'Can\'t set both `regions` and `scale` options simultaneously',
+        "Can't set both `regions` and `scale` options simultaneously",
         'regions-and-scale-at-once'
       );
       await exit(1);
@@ -542,9 +544,7 @@ async function sync({
       dcIds = normalizeRegionsList(regions);
       if (dcIds instanceof InvalidRegionOrDCForScale) {
         error(
-          `The value "${
-            dcIds.meta.regionOrDC
-          }" is not a valid region or DC identifier`
+          `The value "${dcIds.meta.regionOrDC}" is not a valid region or DC identifier`
         );
         await exit(1);
         return 1;
@@ -559,7 +559,7 @@ async function sync({
       scale = dcIds.reduce(
         (result: DcScale, dcId: string) => ({
           ...result,
-          [dcId]: { min: 0, max: 1 }
+          [dcId]: { min: 0, max: 1 },
         }),
         {}
       );
@@ -754,7 +754,7 @@ async function sync({
         nowConfig,
         isFile,
         paths,
-        pre: meta.name
+        pre: meta.name,
       });
       log(`Using project ${chalk.bold(meta.name)}`);
       const createArgs = Object.assign(
@@ -769,7 +769,8 @@ async function sync({
           wantsPublic,
           sessionAffinity,
           isFile,
-          nowConfig
+          nowConfig,
+          deployStamp,
         },
         meta
       );
@@ -812,7 +813,7 @@ async function sync({
 
           if (isTTY) {
             proceed = await promptBool('Are you sure you want to proceed?', {
-              trailing: eraseLines(1)
+              trailing: eraseLines(1),
             });
           }
 
@@ -852,10 +853,10 @@ async function sync({
           output,
           token,
           config: {
-            currentTeam
+            currentTeam,
           },
           firstRun: false,
-          deploymentType
+          deploymentType,
         });
       }
 
@@ -900,8 +901,6 @@ async function sync({
       } else {
         log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
       }
-    } else {
-      process.stdout.write(url);
     }
 
     if (deploymentType === 'static') {
@@ -941,9 +940,7 @@ async function sync({
           const dcOrEvent = _dcOrEvent as any;
           if (dcOrEvent instanceof VerifyScaleTimeout) {
             output.error(
-              `Instance verification timed out (${ms(
-                dcOrEvent.meta.timeout
-              )})`
+              `Instance verification timed out (${ms(dcOrEvent.meta.timeout)})`
             );
             output.log(
               'Read more: https://err.sh/now-cli/verification-timeout'
@@ -989,7 +986,7 @@ async function readMeta(
       deploymentType,
       deploymentName: _deploymentName,
       quiet: true,
-      sessionAffinity: _sessionAffinity
+      sessionAffinity: _sessionAffinity,
     });
 
     if (!deploymentType) {
@@ -1006,7 +1003,7 @@ async function readMeta(
       meta,
       deploymentName: _deploymentName,
       deploymentType,
-      sessionAffinity: _sessionAffinity
+      sessionAffinity: _sessionAffinity,
     };
   } catch (err) {
     if (isTTY && err.code === 'multiple_manifests') {
@@ -1020,7 +1017,7 @@ async function readMeta(
       try {
         deploymentType = await promptOptions([
           ['npm', `${chalk.bold('package.json')}\t${chalk.gray('   --npm')} `],
-          ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `]
+          ['docker', `${chalk.bold('Dockerfile')}\t${chalk.gray('--docker')} `],
         ]);
       } catch (_) {
         throw err;
@@ -1046,7 +1043,7 @@ async function maybeGetEventsStream(now: Now, deployment: any) {
   try {
     return await getEventsStream(now, deployment.deploymentId, {
       direction: 'forward',
-      follow: true
+      follow: true,
     });
   } catch (error) {
     return null;
@@ -1129,9 +1126,9 @@ function handleCreateDeployError(output: Output, error: Error) {
     output.error(
       `Failed to validate ${highlight(
         'now.json'
-      )}: ${message}\nDocumentation: ${
-        link('https://zeit.co/docs/v2/advanced/configuration')
-      }`
+      )}: ${message}\nDocumentation: ${link(
+        'https://zeit.co/docs/v2/advanced/configuration'
+      )}`
     );
 
     return 1;
@@ -1141,7 +1138,7 @@ function handleCreateDeployError(output: Output, error: Error) {
       `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
         error.meta.retryAfter * 1000,
         {
-          long: true
+          long: true,
         }
       )}.`
     );
