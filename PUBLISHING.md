@@ -29,6 +29,9 @@ git cherry-pick <PR504_COMMIT_SHA>
 # Verify the only difference is "version" in package.json
 git diff origin/canary
 
+# Generate release notes since previous publish
+git log --pretty=format:"- %s [%an] %H" `git log --pretty=format:"%s %H" | grep "^Publish" | head -n 1 | awk '{ print $NF }'`...HEAD
+
 # Ship it
 yarn publish-stable
 ```
