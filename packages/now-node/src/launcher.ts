@@ -5,9 +5,10 @@ type LauncherConfiguration = {
   sourcemapSupportPath: string;
   shouldAddHelpers?: boolean;
   shouldAddSourcemapSupport?: boolean;
+  awsLambdaHandler?: string;
 };
 
-export function makeLauncher({
+export function makeNowLauncher({
   entrypointPath,
   bridgePath,
   helpersPath,
@@ -80,4 +81,34 @@ try {
 }
 
 exports.launcher = bridge.launcher;`;
+}
+
+export function makeAwsLauncher({
+  entrypointPath,
+  awsLambdaHandler
+}: LauncherConfiguration): string {
+  return `const url = require("url");
+  exports.${funcName} = function (e, context, callback) {
+    const zeitNowEvent = JSON.parse(e.body);
+    const { path, method: httpMethod, body, headers } = zeitNowEvent;
+    const { query } = url.parse(path, true);
+    const queryStringParameters = {};
+    for (const [key, value] of Object.entries(query)) {
+      if (!Array.isArray(value)) {
+        queryStringParameters[key] = value;
+      }
+    }
+    const awsGatewayEvent = {
+      "resource": "/{proxy+}",
+      "path": path,
+      "httpMethod": httpMethod,
+      "body": body,
+      "isBase64Encoded": true,
+      "queryStringParameters": queryStringParameters,
+      "multiValueQueryStringParameters": query,
+      "headers": headers
+    };
+    const { ${funcName} } = require("${entrypointPath}");
+    ${funcName}(awsGatewayEvent, context, callback);
+  }`;
 }

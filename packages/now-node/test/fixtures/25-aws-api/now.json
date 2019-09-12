@@ -10,6 +10,11 @@
       "src": "callback/index.js",
       "use": "@now/node",
       "config": { "awsLambdaHandler": "callback/index.handler" }
+    },
+    {
+      "src": "graphql/index.js",
+      "use": "@now/node",
+      "config": { "awsLambdaHandler": "graphql/index.handler" }
     }
   ],
   "probes": [
@@ -17,6 +22,10 @@
     {
       "path": "/callback",
       "mustContain": "aws-api-callback:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/graphql",
+      "mustContain": "GraphQL Playground"
     }
   ]
 }
