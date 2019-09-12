@@ -89,7 +89,7 @@ export function makeAwsLauncher({
 }: LauncherConfiguration): string {
   const funcName = awsLambdaHandler.split('.').pop();
   return `const url = require("url");
-  exports.${funcName} = function (e, context, callback) {
+  exports.launcher = function (e, context, callback) {
     const zeitNowEvent = JSON.parse(e.body);
     const { path, method: httpMethod, body, headers } = zeitNowEvent;
     const { query } = url.parse(path, true);
