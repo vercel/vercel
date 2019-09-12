@@ -110,6 +110,6 @@ export function makeAwsLauncher({
       "headers": headers
     };
     const { ${funcName} } = require("${entrypointPath}");
-    ${funcName}(awsGatewayEvent, context, callback);
+    return ${funcName}(awsGatewayEvent, context, callback);
   }`;
 }
