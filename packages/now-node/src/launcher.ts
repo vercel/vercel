@@ -85,8 +85,9 @@ exports.launcher = bridge.launcher;`;
 
 export function makeAwsLauncher({
   entrypointPath,
-  awsLambdaHandler
+  awsLambdaHandler = ''
 }: LauncherConfiguration): string {
+  const funcName = awsLambdaHandler.split('.').pop();
   return `const url = require("url");
   exports.${funcName} = function (e, context, callback) {
     const zeitNowEvent = JSON.parse(e.body);
