@@ -1877,7 +1877,7 @@ test('create zero-config deployment', async t => {
   t.is(output.code, 0, formatOutput(output));
 
   const { host } = new URL(output.stdout);
-  const response = await apiFetch(`/v10/now/deployments/?url=${host}`);
+  const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
 
   const text = await response.text();
 
