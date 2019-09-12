@@ -17,7 +17,7 @@ import info from './util/output/info';
 import getNowDir from './util/config/global-path';
 import {
   getDefaultConfig,
-  getDefaultAuthConfig
+  getDefaultAuthConfig,
 } from './util/config/get-default';
 import hp from './util/humanize-path';
 import commands from './commands/index.ts';
@@ -53,7 +53,7 @@ sourceMap.install();
 Sentry.init({
   dsn: SENTRY_DSN,
   release: `now-cli@${pkg.version}`,
-  environment: pkg.version.includes('canary') ? 'canary' : 'stable'
+  environment: pkg.version.includes('canary') ? 'canary' : 'stable',
 });
 
 let debug = () => {};
@@ -71,7 +71,7 @@ const main = async argv_ => {
         '--version': Boolean,
         '-v': '--version',
         '--debug': Boolean,
-        '-d': '--debug'
+        '-d': '--debug',
       },
       { permissive: true }
     );
@@ -102,7 +102,10 @@ const main = async argv_ => {
     return 1;
   }
 
-  if (localConfig instanceof NowError && !(localConfig instanceof ERRORS.CantFindConfig)) {
+  if (
+    localConfig instanceof NowError &&
+    !(localConfig instanceof ERRORS.CantFindConfig)
+  ) {
     output.error(`Failed to load local config file: ${localConfig.message}`);
     return 1;
   }
@@ -118,7 +121,7 @@ const main = async argv_ => {
     if (targetOrSubcommand !== 'update') {
       update = await checkForUpdate(pkg, {
         interval: ms('1d'),
-        distTag: pkg.version.includes('canary') ? 'canary' : 'latest'
+        distTag: pkg.version.includes('canary') ? 'canary' : 'latest',
       });
     }
   } catch (err) {
@@ -135,7 +138,15 @@ const main = async argv_ => {
     console.log(
       info(
         `${chalk.bgRed('UPDATE AVAILABLE')} ` +
-        `Run ${cmd(await getUpdateCommand())} to install Now CLI ${update.latest}`
+          `Run ${cmd(await getUpdateCommand())} to install Now CLI ${
+            update.latest
+          }`
+      )
+    );
+
+    console.log(
+      info(
+        `Changelog: https://github.com/zeit/now/releases/tag/now@${update.latest}`
       )
     );
   }
@@ -307,9 +318,9 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(
-              NOW_AUTH_CONFIG_PATH
-            )}" `}${err.message}`
+            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            err.message
+          }`
         )
       );
       return 1;
@@ -329,7 +340,7 @@ const main = async argv_ => {
     config,
     authConfig,
     localConfig,
-    argv: argv_
+    argv: argv_,
   };
 
   let subcommand;
@@ -339,7 +350,8 @@ const main = async argv_ => {
     const targetPath = join(process.cwd(), targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
-      GLOBAL_COMMANDS.has(targetOrSubcommand) || commands.has(targetOrSubcommand);
+      GLOBAL_COMMANDS.has(targetOrSubcommand) ||
+      commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
       console.error(
@@ -412,7 +424,7 @@ const main = async argv_ => {
           message:
             'No existing credentials found. Please run ' +
             `${param('now login')} or pass ${param('--token')}`,
-          slug: 'no-credentials-found'
+          slug: 'no-credentials-found',
         })
       );
 
@@ -426,7 +438,7 @@ const main = async argv_ => {
         message: `This command doesn't work with ${param(
           '--token'
         )}. Please use ${param('--scope')}.`,
-        slug: 'no-token-allowed'
+        slug: 'no-token-allowed',
       })
     );
 
@@ -440,7 +452,7 @@ const main = async argv_ => {
       console.error(
         error({
           message: `You defined ${param('--token')}, but it's missing a value`,
-          slug: 'missing-token-value'
+          slug: 'missing-token-value',
         })
       );
 
@@ -459,11 +471,22 @@ const main = async argv_ => {
   const targetCommand = commands.get(subcommand);
 
   if (argv['--team']) {
-    output.warn(`The ${param('--team')} flag is deprecated. Please use ${param('--scope')} instead.`);
+    output.warn(
+      `The ${param('--team')} flag is deprecated. Please use ${param(
+        '--scope'
+      )} instead.`
+    );
   }
 
-  if (typeof scope === 'string' && targetCommand !== 'login' && targetCommand !== 'dev' && !(targetCommand === 'teams' && argv._[3] !== 'invite')) {
-    const { authConfig: { token } } = ctx;
+  if (
+    typeof scope === 'string' &&
+    targetCommand !== 'login' &&
+    targetCommand !== 'dev' &&
+    !(targetCommand === 'teams' && argv._[3] !== 'invite')
+  ) {
+    const {
+      authConfig: { token },
+    } = ctx;
     const client = new Client({ apiUrl, token });
 
     let user = null;
@@ -475,7 +498,7 @@ const main = async argv_ => {
         console.error(
           error({
             message: `You do not have access to the specified account`,
-            slug: 'scope-not-accessible'
+            slug: 'scope-not-accessible',
           })
         );
 
@@ -499,7 +522,7 @@ const main = async argv_ => {
           console.error(
             error({
               message: `You do not have access to the specified team`,
-              slug: 'scope-not-accessible'
+              slug: 'scope-not-accessible',
             })
           );
 
@@ -517,7 +540,7 @@ const main = async argv_ => {
         console.error(
           error({
             message: 'The specified scope does not exist',
-            slug: 'scope-not-existent'
+            slug: 'scope-not-existent',
           })
         );
 
@@ -577,7 +600,8 @@ const main = async argv_ => {
       if (shouldCollectMetrics) {
         metric
           .event(eventCategory, '1', pkg.version)
-          .exception(err.message).send();
+          .exception(err.message)
+          .send();
       }
 
       return 1;
@@ -586,7 +610,8 @@ const main = async argv_ => {
     if (shouldCollectMetrics) {
       metric
         .event(eventCategory, '1', pkg.version)
-        .exception(err.message).send();
+        .exception(err.message)
+        .send();
     }
 
     // Otherwise it is an unexpected error and we should show the trace

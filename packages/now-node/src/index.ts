@@ -161,7 +161,7 @@ async function compile(
     return source;
   }
 
-  const { fileList, esmFileList } = await nodeFileTrace([...inputFiles], {
+  const { fileList, esmFileList, warnings } = await nodeFileTrace([...inputFiles], {
     base: workPath,
     ts: true,
     mixedModules: true,
@@ -196,6 +196,10 @@ async function compile(
       }
     }
   });
+
+  for (const warning of warnings) {
+    console.warn(warning);
+  }
 
   for (const path of fileList) {
     let entry = fsCache.get(path);

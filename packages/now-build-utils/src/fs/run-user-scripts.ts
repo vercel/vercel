@@ -5,6 +5,7 @@ import debug from '../debug';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
+import { cpus } from 'os';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion } from './node-version';
 
@@ -161,6 +162,34 @@ export async function runNpmInstall(
       opts
     );
   }
+}
+
+
+export async function runBundleInstall(
+  destPath: string,
+  args: string[] = [],
+  spawnOpts?: SpawnOptions,
+  meta?: Meta
+) {
+  if (meta && meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+    return;
+  }
+
+  assert(path.isAbsolute(destPath));
+  const opts = spawnOpts || { env: process.env };
+
+  await spawnAsync(
+    'bundle',
+    args.concat([
+      'install',
+      '--no-prune',
+      '--retry', '3',
+      '--jobs', String(cpus().length || 1)
+    ]),
+    destPath,
+    opts
+  );
 }
 
 export async function runPackageJsonScript(
