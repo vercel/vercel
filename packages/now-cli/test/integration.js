@@ -1874,7 +1874,7 @@ test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
   const output = await execute([fixturePath, '--force']);
 
-  expect(output.code, 0, formatOutput(output));
+  t.is(output.code, 0, formatOutput(output));
 
   const { host } = new URL(output.stdout);
   const response = await apiFetch(`/v10/now/deployments/?url=${host}`);
