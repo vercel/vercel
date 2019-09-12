@@ -4,7 +4,7 @@ import { fetch as fetch_ } from 'fetch-h2';
 import { readFile } from 'fs-extra';
 import { join, sep } from 'path';
 import qs from 'querystring';
-import pkg from '../../package.json';
+const pkg = require('../package.json');
 import { Options } from '../deploy';
 
 export const API_FILES = 'https://api.zeit.co/v2/now/files';
@@ -114,9 +114,7 @@ export const fetch = (
   }
 
   opts.headers = opts.headers || {};
-  // @ts-ignore
   opts.headers.authorization = `Bearer ${token}`;
-  // @ts-ignore
   opts.headers['user-agent'] = `now-client-v${pkg.version}`;
 
   return fetch_(url, opts);
