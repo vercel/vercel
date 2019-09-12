@@ -439,7 +439,7 @@ export default class DevServer {
       }
     }
     try {
-      this.validateEnvConfig(fileName, base || {}, env);
+      return this.validateEnvConfig(fileName, base || {}, env);
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
         this.output.error(err.message);
@@ -448,7 +448,7 @@ export default class DevServer {
         throw err;
       }
     }
-    return { ...base, ...env };
+    return {};
   }
 
   async getNowConfig(
@@ -610,7 +610,9 @@ export default class DevServer {
     type: string,
     env: EnvConfig = {},
     localEnv: EnvConfig = {}
-  ): void {
+  ): EnvConfig {
+    // Validate if there are any missing env vars defined in `now.json`,
+    // but not in the `.env` / `.build.env` file
     const missing: string[] = Object.entries(env)
       .filter(
         ([name, value]) =>
@@ -619,9 +621,36 @@ export default class DevServer {
           !hasOwnProperty(localEnv, name)
       )
       .map(([name]) => name);
-    if (missing.length >= 1) {
+
+    if (missing.length > 0) {
       throw new MissingDotenvVarsError(type, missing);
     }
+
+    const merged: EnvConfig = { ...env, ...localEnv };
+
+    // Validate that the env var name matches what AWS Lambda allows:
+    //   - https://docs.aws.amazon.com/lambda/latest/dg/env_variables.html
+    let hasInvalidName = false;
+    for (const key of Object.keys(merged)) {
+      if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(key)) {
+        this.output.warn(
+          `Ignoring ${type
+            .split('.')
+            .slice(1)
+            .reverse()
+            .join(' ')} var ${JSON.stringify(key)} because name is invalid`
+        );
+        hasInvalidName = true;
+        delete merged[key];
+      }
+    }
+    if (hasInvalidName) {
+      this.output.log(
+        'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+      );
+    }
+
+    return merged;
   }
 
   /**
