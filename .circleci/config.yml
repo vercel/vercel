@@ -317,6 +317,21 @@ jobs:
           name: Running Integration Tests for `now dev`
           command: yarn test-integration-now-dev --clean false
 
+  test-integration-linux-now-build-node-8:
+    docker:
+      - image: circleci/node:8
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Running Integration Tests for `now build`
+          command: yarn test-integration-now-build --clean false
+
   test-integration-macos-now-build-node-10:
     macos:
       xcode: '10.0.0'
@@ -493,6 +508,12 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - test-integration-linux-now-build-node-8:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
       - test-integration-macos-now-build-node-10:
           requires:
             - build
@@ -525,6 +546,7 @@ workflows:
             - test-integration-linux-now-dev-node-8
             - test-integration-linux-now-dev-node-10
             - test-integration-linux-now-dev-node-12
+            - test-integration-linux-now-build-node-8
             - test-integration-macos-now-build-node-10
             - test-integration-linux-now-build-node-12
             - test-integration-once
