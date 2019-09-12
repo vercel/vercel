@@ -901,8 +901,6 @@ async function sync({
       } else {
         log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
       }
-    } else {
-      process.stdout.write(url);
     }
 
     if (deploymentType === 'static') {

@@ -89,9 +89,13 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          log(`https://${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
+          log(
+            `https://${event.payload.url} ${chalk.gray(
+              `[v2]`
+            )} ${deployStamp()}`
+          );
         } else {
-          process.stdout.write(event.payload.url);
+          process.stdout.write(`https://${event.payload.url}`);
         }
       }
 
@@ -193,7 +197,7 @@ export default async function processDeployment({
         if (!quiet) {
           log(`${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
         } else {
-          process.stdout.write(event.payload.url);
+          process.stdout.write(`https://${event.payload.url}`);
         }
       }
 
