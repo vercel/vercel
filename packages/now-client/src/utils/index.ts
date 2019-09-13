@@ -1,6 +1,6 @@
 import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
-import { fetch as fetch_ } from 'fetch-h2';
+import fetch_ from 'node-fetch';
 import { readFile } from 'fs-extra';
 import { join, sep } from 'path';
 import qs from 'querystring';
