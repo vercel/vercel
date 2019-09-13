@@ -115,7 +115,7 @@ export const fetch = (
 
   opts.headers = opts.headers || {};
   // @ts-ignore
-  opts.headers.authorization = `Bearer ${token}`;
+  opts.headers.Authorization = `Bearer ${token}`;
   // @ts-ignore
   opts.headers['user-agent'] = `now-client-v${pkg.version}`;
 
