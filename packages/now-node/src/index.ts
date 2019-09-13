@@ -198,7 +198,9 @@ async function compile(
   });
 
   for (const warning of warnings) {
-    console.warn(warning);
+    if (warning && warning.stack) {
+      debug(warning.stack.replace('Error: ', 'Warning: '));
+    }
   }
 
   for (const path of fileList) {
