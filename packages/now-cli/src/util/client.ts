@@ -78,14 +78,12 @@ export default class Client extends EventEmitter {
     }
 
     opts.headers = opts.headers || {};
-    opts.headers.authorization = `Bearer ${this._token}`;
+    opts.headers.Authorization = `Bearer ${this._token}`;
     opts.headers['user-agent'] = ua;
 
     const url = `${apiUrl ? '' : this._apiUrl}${_url}`;
     return this._output.time(
-      `${opts.method || 'GET'} ${
-        apiUrl ? '' : this._apiUrl
-      }${_url} ${JSON.stringify(opts.body) || ''}`,
+      `${opts.method || 'GET'} ${url} ${JSON.stringify(opts.body) || ''}`,
       fetch(url, opts as RequestInit)
     );
   }
