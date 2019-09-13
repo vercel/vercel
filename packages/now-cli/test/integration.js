@@ -23,6 +23,8 @@ const session = Math.random()
   .toString(36)
   .split('.')[1];
 
+const isCanary = pkg.version.includes('canary');
+
 const pickUrl = stdout => {
   const lines = stdout.split('\n');
   return lines[lines.length - 1];
@@ -1866,6 +1868,29 @@ test('now hasOwnProperty not a valid subcommand', async t => {
     /The specified file or directory "hasOwnProperty" does not exist/gm,
     formatOutput(output)
   );
+});
+
+test('create zero-config deployment', async t => {
+  const fixturePath = fixture('zero-config-next-js');
+  const output = await execute([fixturePath, '--force', '--public']);
+
+  t.is(output.code, 0, formatOutput(output));
+
+  const { host } = new URL(output.stdout);
+  const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
+
+  const text = await response.text();
+
+  t.is(response.status, 200, text);
+  const data = JSON.parse(text);
+
+  t.is(data.error, undefined, JSON.stringify(data, null, 2));
+
+  const validBuilders = data.builds.every(build =>
+    isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
+  );
+
+  t.true(validBuilders, JSON.stringify(data, null, 2));
 });
 
 test.after.always(async () => {

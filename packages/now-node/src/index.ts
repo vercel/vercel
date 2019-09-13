@@ -20,7 +20,7 @@ import {
   debug
 } from '@now/build-utils';
 export { NowRequest, NowResponse } from './types';
-import { makeLauncher } from './launcher';
+import { makeNowLauncher, makeAwsLauncher } from './launcher';
 import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
 import { Register, register } from './typescript';
 
@@ -286,6 +286,7 @@ export async function build({
   meta = {}
 }: BuildOptions) {
   const shouldAddHelpers = config.helpers !== false;
+  const awsLambdaHandler = config.awsLambdaHandler as string;
 
   const {
     entrypointPath,
@@ -315,6 +316,8 @@ export async function build({
   );
   debug(`trace complete [${Date.now() - traceTime}ms]`);
 
+  const makeLauncher = awsLambdaHandler ? makeAwsLauncher : makeNowLauncher;
+
   const launcherFiles: Files = {
     [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
       data: makeLauncher({
@@ -323,7 +326,8 @@ export async function build({
         helpersPath: `./${HELPERS_FILENAME}`,
         sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
         shouldAddHelpers,
-        shouldAddSourcemapSupport
+        shouldAddSourcemapSupport,
+        awsLambdaHandler,
       })
     }),
     [`${BRIDGE_FILENAME}.js`]: new FileFsRef({
@@ -346,15 +350,12 @@ export async function build({
   // Use the system-installed version of `node` when running via `now dev`
   const runtime = meta.isDev ? 'nodejs' : nodeVersion.runtime;
 
-  // Enable the raw AWS API and use this handler
-  const awsLambdaHandler = config.awsLambdaHandler as string;
-
   const lambda = await createLambda({
     files: {
       ...preparedFiles,
-      ...(awsLambdaHandler ? {} : launcherFiles)
+      ...(launcherFiles)
     },
-    handler: awsLambdaHandler || `${LAUNCHER_FILENAME}.launcher`,
+    handler: `${LAUNCHER_FILENAME}.launcher`,
     runtime
   });
 
