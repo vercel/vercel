@@ -33,6 +33,8 @@
     "publish-stable": "git checkout master && git pull && lerna version --exact",
     "publish-canary": "git checkout canary && git pull && lerna version prerelease --preid canary --exact",
     "publish-from-github": "./.circleci/publish.sh",
+    "diff": "node diff.js",
+    "changelog": "node changelog.js",
     "build": "node run.js build all",
     "test-lint": "node run.js test-lint",
     "test-unit": "node run.js test-unit",
