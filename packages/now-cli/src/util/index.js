@@ -9,13 +9,13 @@ import retry from 'async-retry';
 import { parse as parseIni } from 'ini';
 import fs from 'fs-extra';
 import ms from 'ms';
+import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
 import {
   staticFiles as getFiles,
   npm as getNpmFiles,
   docker as getDockerFiles,
 } from './get-files';
-import Agent from './agent.ts';
 import ua from './ua.ts';
 import processDeployment from './deploy/process-deployment.ts';
 import highlight from './output/highlight';
@@ -37,14 +37,8 @@ export default class Now extends EventEmitter {
     this._forceNew = forceNew;
     this._output = createOutput({ debug });
     this._apiUrl = apiUrl;
-    this._agent = new Agent(apiUrl, { debug });
     this._onRetry = this._onRetry.bind(this);
     this.currentTeam = currentTeam;
-    const closeAgent = () => {
-      this._agent.close();
-      process.removeListener('nowExit', closeAgent);
-    };
-    process.on('nowExit', closeAgent);
   }
 
   async create(
@@ -542,9 +536,7 @@ export default class Now extends EventEmitter {
     this._output.debug(`Retrying: ${err}\n${err.stack}`);
   }
 
-  close() {
-    this._agent.close();
-  }
+  close() {}
 
   get id() {
     return this._id;
@@ -588,14 +580,14 @@ export default class Now extends EventEmitter {
 
     opts.headers = opts.headers || {};
     opts.headers.accept = 'application/json';
-    opts.headers.authorization = `Bearer ${this._token}`;
+    opts.headers.Authorization = `Bearer ${this._token}`;
     opts.headers['user-agent'] = ua;
 
     return this._output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(
         opts.body
       ) || ''}`,
-      this._agent.fetch(_url, opts)
+      fetch(`${this._apiUrl}${_url}`, opts)
     );
   }
 

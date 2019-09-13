@@ -1,9 +1,9 @@
 import qs from 'querystring';
 import { EventEmitter } from 'events';
 import { parse as parseUrl } from 'url';
+import fetch, { RequestInit } from 'node-fetch';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import createOutput, { Output } from './output/create-output';
-import Agent, { AgentFetchOptions } from './agent';
 import responseError from './response-error';
 import ua from './ua';
 
@@ -17,7 +17,6 @@ export type FetchOptions = {
 };
 
 export default class Client extends EventEmitter {
-  _agent: Agent;
   _apiUrl: string;
   _debug: boolean;
   _forceNew: boolean;
@@ -30,7 +29,7 @@ export default class Client extends EventEmitter {
     token,
     currentTeam,
     forceNew = false,
-    debug = false
+    debug = false,
   }: {
     apiUrl: string;
     token: string;
@@ -44,30 +43,23 @@ export default class Client extends EventEmitter {
     this._forceNew = forceNew;
     this._output = createOutput({ debug });
     this._apiUrl = apiUrl;
-    this._agent = new Agent(apiUrl, { debug });
     this._onRetry = this._onRetry.bind(this);
     this.currentTeam = currentTeam;
-
-    const closeAgent = () => {
-      this._agent.close();
-      process.removeListener('nowExit', closeAgent);
-    };
-
-    // @ts-ignore
-    process.on('nowExit', closeAgent);
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
     return retry(fn, {
       retries,
       maxTimeout,
-      onRetry: this._onRetry
+      onRetry: this._onRetry,
     });
   }
 
   _fetch(_url: string, opts: FetchOptions = {}) {
     const parsedUrl = parseUrl(_url, true);
-    const apiUrl = parsedUrl.host ? `${parsedUrl.protocol}//${parsedUrl.host}` : '';
+    const apiUrl = parsedUrl.host
+      ? `${parsedUrl.protocol}//${parsedUrl.host}`
+      : '';
 
     if (opts.useCurrentTeam !== false && this.currentTeam) {
       const query = parsedUrl.query;
@@ -80,20 +72,19 @@ export default class Client extends EventEmitter {
       Object.assign(opts, {
         body: JSON.stringify(opts.body),
         headers: Object.assign({}, opts.headers, {
-          'Content-Type': 'application/json'
-        })
+          'Content-Type': 'application/json',
+        }),
       });
     }
 
     opts.headers = opts.headers || {};
-    opts.headers.authorization = `Bearer ${this._token}`;
+    opts.headers.Authorization = `Bearer ${this._token}`;
     opts.headers['user-agent'] = ua;
 
+    const url = `${apiUrl ? '' : this._apiUrl}${_url}`;
     return this._output.time(
-      `${opts.method || 'GET'} ${apiUrl ? '' : this._apiUrl}${_url} ${JSON.stringify(
-        opts.body
-      ) || ''}`,
-      this._agent.fetch(_url, opts as AgentFetchOptions)
+      `${opts.method || 'GET'} ${url} ${JSON.stringify(opts.body) || ''}`,
+      fetch(url, opts as RequestInit)
     );
   }
 
@@ -126,7 +117,5 @@ export default class Client extends EventEmitter {
     this._output.debug(`Retrying: ${error}\n${error.stack}`);
   }
 
-  close() {
-    this._agent.close();
-  }
+  close() {}
 }
