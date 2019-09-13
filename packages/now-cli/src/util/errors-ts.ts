@@ -1,5 +1,5 @@
 import bytes from 'bytes';
-import { Response } from 'fetch-h2';
+import { Response } from 'node-fetch';
 import { NowError } from './now-error';
 import param from './output/param';
 import cmd from './output/cmd';
@@ -53,7 +53,7 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
       message: `Your team was deleted. You can switch to a different one using ${param(
         'now switch'
       )}.`,
-      meta: {}
+      meta: {},
     });
   }
 }
@@ -67,7 +67,7 @@ export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
     super({
       code: `NOT_AUTHORIZED`,
       message: `The specified token is not valid`,
-      meta: {}
+      meta: {},
     });
   }
 }
@@ -81,7 +81,7 @@ export class MissingUser extends NowError<'MISSING_USER', {}> {
     super({
       code: 'MISSING_USER',
       message: `Not able to load user, missing from response`,
-      meta: {}
+      meta: {},
     });
   }
 }
@@ -98,7 +98,7 @@ export class DomainAlreadyExists extends NowError<
     super({
       code: 'DOMAIN_ALREADY_EXISTS',
       meta: { domain },
-      message: `The domain ${domain} already exists under a different context.`
+      message: `The domain ${domain} already exists under a different context.`,
     });
   }
 }
@@ -115,7 +115,7 @@ export class DomainPermissionDenied extends NowError<
     super({
       code: 'DOMAIN_PERMISSION_DENIED',
       meta: { domain, context },
-      message: `You don't have access to the domain ${domain} under ${context}.`
+      message: `You don't have access to the domain ${domain} under ${context}.`,
     });
   }
 }
@@ -128,7 +128,7 @@ export class DomainExternal extends NowError<
     super({
       code: 'DOMAIN_EXTERNAL',
       meta: { domain },
-      message: `The domain ${domain} must point to zeit.world.`
+      message: `The domain ${domain} must point to zeit.world.`,
     });
   }
 }
@@ -143,7 +143,7 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
       meta: {},
       message: `Not able to purchase. Please add a payment method using ${cmd(
         'now billing add'
-      )}.`
+      )}.`,
     });
   }
 }
@@ -156,7 +156,7 @@ export class InvalidTransferAuthCode extends NowError<
     super({
       code: 'INVALID_TRANSFER_AUTH_CODE',
       meta: { domain, authCode },
-      message: `The provided auth code does not match with the one expected by the current registar`
+      message: `The provided auth code does not match with the one expected by the current registar`,
     });
   }
 }
@@ -169,7 +169,7 @@ export class DomainRegistrationFailed extends NowError<
     super({
       code: 'DOMAIN_REGISTRATION_FAILED',
       meta: { domain },
-      message
+      message,
     });
   }
 }
@@ -185,7 +185,7 @@ export class DomainNotFound extends NowError<
     super({
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
-      message: `The domain ${domain} can't be found.`
+      message: `The domain ${domain} can't be found.`,
     });
   }
 }
@@ -198,7 +198,7 @@ export class DomainNotVerified extends NowError<
     super({
       code: 'DOMAIN_NOT_VERIFIED',
       meta: { domain },
-      message: `The domain ${domain} is not verified.`
+      message: `The domain ${domain} is not verified.`,
     });
   }
 }
@@ -221,7 +221,7 @@ export class DomainVerificationFailed extends NowError<
     domain,
     nsVerification,
     txtVerification,
-    purchased = false
+    purchased = false,
   }: {
     domain: string;
     nsVerification: NSVerificationError;
@@ -231,7 +231,7 @@ export class DomainVerificationFailed extends NowError<
     super({
       code: 'DOMAIN_VERIFICATION_FAILED',
       meta: { domain, nsVerification, txtVerification, purchased },
-      message: `We can't verify the domain ${domain}. Both Name Servers and DNS TXT verifications failed.`
+      message: `We can't verify the domain ${domain}. Both Name Servers and DNS TXT verifications failed.`,
     });
   }
 }
@@ -264,7 +264,7 @@ export class DomainNsNotVerifiedForWildcard extends NowError<
 > {
   constructor({
     domain,
-    nsVerification
+    nsVerification,
   }: {
     domain: string;
     nsVerification: NSVerificationError;
@@ -272,7 +272,7 @@ export class DomainNsNotVerifiedForWildcard extends NowError<
     super({
       code: 'DOMAIN_NS_NOT_VERIFIED_FOR_WILDCARD',
       meta: { domain, nsVerification },
-      message: `The domain ${domain} is not verified by nameservers for wildcard alias.`
+      message: `The domain ${domain} is not verified by nameservers for wildcard alias.`,
     });
   }
 }
@@ -289,7 +289,7 @@ export class InvalidDomain extends NowError<
     super({
       code: 'INVALID_DOMAIN',
       meta: { domain },
-      message: message || `The domain ${domain} is not valid.`
+      message: message || `The domain ${domain} is not valid.`,
     });
   }
 }
@@ -302,7 +302,7 @@ export class InvalidDeploymentId extends NowError<
     super({
       code: 'INVALID_DEPLOYMENT_ID',
       meta: { id },
-      message: `The deployment id "${id}" is not valid.`
+      message: `The deployment id "${id}" is not valid.`,
     });
   }
 }
@@ -319,7 +319,7 @@ export class UnsupportedTLD extends NowError<
     super({
       code: 'UNSUPPORTED_TLD',
       meta: { domain },
-      message: `The TLD for domain name ${domain} is not supported.`
+      message: `The TLD for domain name ${domain} is not supported.`,
     });
   }
 }
@@ -336,7 +336,7 @@ export class DomainNotAvailable extends NowError<
     super({
       code: 'DOMAIN_NOT_AVAILABLE',
       meta: { domain },
-      message: `The domain ${domain} is not available to be purchased.`
+      message: `The domain ${domain} is not available to be purchased.`,
     });
   }
 }
@@ -353,7 +353,7 @@ export class DomainServiceNotAvailable extends NowError<
     super({
       code: 'DOMAIN_SERVICE_NOT_AVAILABLE',
       meta: { domain },
-      message: `The domain purchase is unavailable, try again later.`
+      message: `The domain purchase is unavailable, try again later.`,
     });
   }
 }
@@ -370,7 +370,7 @@ export class DomainNotTransferable extends NowError<
     super({
       code: 'DOMAIN_NOT_TRANSFERABLE',
       meta: { domain },
-      message: `The domain ${domain} is not available to be transferred.`
+      message: `The domain ${domain} is not available to be transferred.`,
     });
   }
 }
@@ -386,7 +386,7 @@ export class UnexpectedDomainPurchaseError extends NowError<
     super({
       code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
       meta: { domain },
-      message: `An unexpected error happened while purchasing.`
+      message: `An unexpected error happened while purchasing.`,
     });
   }
 }
@@ -399,7 +399,7 @@ export class DomainPaymentError extends NowError<'DOMAIN_PAYMENT_ERROR', {}> {
     super({
       code: 'DOMAIN_PAYMENT_ERROR',
       meta: {},
-      message: `Your card was declined.`
+      message: `Your card was declined.`,
     });
   }
 }
@@ -416,7 +416,7 @@ export class DomainPurchasePending extends NowError<
     super({
       code: 'DOMAIN_PURCHASE_PENDING',
       meta: { domain },
-      message: `The domain purchase for ${domain} is pending.`
+      message: `The domain purchase for ${domain} is pending.`,
     });
   }
 }
@@ -430,7 +430,7 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
     super({
       code: 'USER_ABORTED',
       meta: {},
-      message: `The user aborted the operation.`
+      message: `The user aborted the operation.`,
     });
   }
 }
@@ -440,7 +440,7 @@ export class CertNotFound extends NowError<'CERT_NOT_FOUND', { id: string }> {
     super({
       code: 'CERT_NOT_FOUND',
       meta: { id },
-      message: `The cert ${id} can't be found.`
+      message: `The cert ${id} can't be found.`,
     });
   }
 }
@@ -453,7 +453,7 @@ export class CertsPermissionDenied extends NowError<
     super({
       code: 'CERTS_PERMISSION_DENIED',
       meta: { domain },
-      message: `You don't have access to ${domain}'s certs under ${context}.`
+      message: `You don't have access to ${domain}'s certs under ${context}.`,
     });
   }
 }
@@ -466,7 +466,7 @@ export class CertOrderNotFound extends NowError<
     super({
       code: 'CERT_ORDER_NOT_FOUND',
       meta: { cns },
-      message: `No cert order could be found for cns ${cns.join(' ,')}`
+      message: `No cert order could be found for cns ${cns.join(' ,')}`,
     });
   }
 }
@@ -484,7 +484,7 @@ export class TooManyRequests extends NowError<
     super({
       code: 'TOO_MANY_REQUESTS',
       meta: { api, retryAfter },
-      message: `Rate limited. Too many requests to the same endpoint.`
+      message: `Rate limited. Too many requests to the same endpoint.`,
     });
   }
 }
@@ -518,7 +518,7 @@ export class CertError extends NowError<
     cns,
     code,
     message,
-    helpUrl
+    helpUrl,
   }: {
     cns: string[];
     code: CertErrorCode;
@@ -528,7 +528,7 @@ export class CertError extends NowError<
     super({
       code: `CERT_ERROR`,
       meta: { cns, code, helpUrl },
-      message
+      message,
     });
   }
 }
@@ -547,7 +547,7 @@ export class CertConfigurationError extends NowError<
     message,
     external,
     type,
-    helpUrl
+    helpUrl,
   }: {
     cns: string[];
     message: string;
@@ -558,7 +558,7 @@ export class CertConfigurationError extends NowError<
     super({
       code: `CERT_CONFIGURATION_ERROR`,
       meta: { cns, helpUrl, external, type },
-      message
+      message,
     });
   }
 }
@@ -575,7 +575,7 @@ export class DeploymentNotFound extends NowError<
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },
-      message: `Can't find the deployment ${id} under the context ${context}`
+      message: `Can't find the deployment ${id} under the context ${context}`,
     });
   }
 }
@@ -592,7 +592,7 @@ export class DeploymentNotReady extends NowError<
     super({
       code: 'DEPLOYMENT_NOT_READY',
       meta: { url },
-      message: `The deployment https://${url} is not ready.`
+      message: `The deployment https://${url} is not ready.`,
     });
   }
 }
@@ -605,7 +605,7 @@ export class DeploymentFailedAliasImpossible extends NowError<
     super({
       code: 'DEPLOYMENT_FAILED_ALIAS_IMPOSSIBLE',
       meta: {},
-      message: `The deployment build has failed and cannot be aliased`
+      message: `The deployment build has failed and cannot be aliased`,
     });
   }
 }
@@ -622,7 +622,7 @@ export class DeploymentPermissionDenied extends NowError<
     super({
       code: 'DEPLOYMENT_PERMISSION_DENIED',
       meta: { id, context },
-      message: `You don't have access to the deployment ${id} under ${context}.`
+      message: `You don't have access to the deployment ${id} under ${context}.`,
     });
   }
 }
@@ -635,7 +635,7 @@ export class DeploymentTypeUnsupported extends NowError<
     super({
       code: 'DEPLOYMENT_TYPE_UNSUPPORTED',
       meta: {},
-      message: `This region only accepts Serverless Docker Deployments`
+      message: `This region only accepts Serverless Docker Deployments`,
     });
   }
 }
@@ -649,7 +649,7 @@ export class InvalidAlias extends NowError<'INVALID_ALIAS', { alias: string }> {
     super({
       code: 'INVALID_ALIAS',
       meta: { alias },
-      message: `The given alias ${alias} is not valid`
+      message: `The given alias ${alias} is not valid`,
     });
   }
 }
@@ -663,7 +663,7 @@ export class AliasInUse extends NowError<'ALIAS_IN_USE', { alias: string }> {
     super({
       code: 'ALIAS_IN_USE',
       meta: { alias },
-      message: `The alias is already in use`
+      message: `The alias is already in use`,
     });
   }
 }
@@ -678,7 +678,7 @@ export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
     super({
       code: 'ALIAS_IN_USE',
       meta: { domain },
-      message: `The alias is already in use`
+      message: `The alias is already in use`,
     });
   }
 }
@@ -691,7 +691,7 @@ export class ForbiddenScaleMinInstances extends NowError<
     super({
       code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
       meta: { url, max },
-      message: `You can't scale to more than ${max} min instances with your current plan.`
+      message: `You can't scale to more than ${max} min instances with your current plan.`,
     });
   }
 }
@@ -704,7 +704,7 @@ export class ForbiddenScaleMaxInstances extends NowError<
     super({
       code: 'FORBIDDEN_SCALE_MAX_INSTANCES',
       meta: { url, max },
-      message: `You can't scale to more than ${max} max instances with your current plan.`
+      message: `You can't scale to more than ${max} max instances with your current plan.`,
     });
   }
 }
@@ -717,7 +717,7 @@ export class InvalidScaleMinMaxRelation extends NowError<
     super({
       code: 'INVALID_SCALE_MIN_MAX_RELATION',
       meta: { url },
-      message: `Min number of instances can't be higher than max.`
+      message: `Min number of instances can't be higher than max.`,
     });
   }
 }
@@ -730,7 +730,7 @@ export class NotSupportedMinScaleSlots extends NowError<
     super({
       code: 'NOT_SUPPORTED_MIN_SCALE_SLOTS',
       meta: { url },
-      message: `Cloud v2 does not yet support setting a non-zero min scale setting.`
+      message: `Cloud v2 does not yet support setting a non-zero min scale setting.`,
     });
   }
 }
@@ -743,7 +743,7 @@ export class VerifyScaleTimeout extends NowError<
     super({
       code: 'VERIFY_SCALE_TIMEOUT',
       meta: { timeout },
-      message: `Instance verification timed out (${timeout}ms)`
+      message: `Instance verification timed out (${timeout}ms)`,
     });
   }
 }
@@ -756,7 +756,7 @@ export class CantParseJSONFile extends NowError<
     super({
       code: 'CANT_PARSE_JSON_FILE',
       meta: { file },
-      message: `Can't parse json file`
+      message: `Can't parse json file`,
     });
   }
 }
@@ -769,7 +769,7 @@ export class CantFindConfig extends NowError<
     super({
       code: 'CANT_FIND_CONFIG',
       meta: { paths },
-      message: `Can't find a configuration file in the given locations.`
+      message: `Can't find a configuration file in the given locations.`,
     });
   }
 }
@@ -779,7 +779,7 @@ export class FileNotFound extends NowError<'FILE_NOT_FOUND', { file: string }> {
     super({
       code: 'FILE_NOT_FOUND',
       meta: { file },
-      message: `Can't find a file in provided location '${file}'.`
+      message: `Can't find a file in provided location '${file}'.`,
     });
   }
 }
@@ -792,7 +792,7 @@ export class RulesFileValidationError extends NowError<
     super({
       code: 'PATH_ALIAS_VALIDATION_ERROR',
       meta: { location, message },
-      message: `The provided rules format in file for path alias are invalid`
+      message: `The provided rules format in file for path alias are invalid`,
     });
   }
 }
@@ -802,7 +802,7 @@ export class NoAliasInConfig extends NowError<'NO_ALIAS_IN_CONFIG', {}> {
     super({
       code: 'NO_ALIAS_IN_CONFIG',
       meta: {},
-      message: `There is no alias set up in config file.`
+      message: `There is no alias set up in config file.`,
     });
   }
 }
@@ -815,7 +815,7 @@ export class InvalidAliasInConfig extends NowError<
     super({
       code: 'INVALID_ALIAS_IN_CONFIG',
       meta: { value },
-      message: `Invalid alias option in configuration.`
+      message: `Invalid alias option in configuration.`,
     });
   }
 }
@@ -828,7 +828,7 @@ export class RuleValidationFailed extends NowError<
     super({
       code: 'RULE_VALIDATION_FAILED',
       meta: { message },
-      message: `The server validation for rules failed`
+      message: `The server validation for rules failed`,
     });
   }
 }
@@ -841,7 +841,7 @@ export class InvalidMinForScale extends NowError<
     super({
       code: 'INVALID_MIN_FOR_SCALE',
       meta: { value },
-      message: `Invalid <min> parameter "${value}". A number or "auto" were expected`
+      message: `Invalid <min> parameter "${value}". A number or "auto" were expected`,
     });
   }
 }
@@ -854,7 +854,7 @@ export class InvalidArgsForMinMaxScale extends NowError<
     super({
       code: 'INVALID_ARGS_FOR_MIN_MAX_SCALE',
       meta: { min },
-      message: `Invalid number of arguments: expected <min> ("${min}") and [max]`
+      message: `Invalid number of arguments: expected <min> ("${min}") and [max]`,
     });
   }
 }
@@ -867,7 +867,7 @@ export class InvalidMaxForScale extends NowError<
     super({
       code: 'INVALID_MAX_FOR_SCALE',
       meta: { value },
-      message: `Invalid <max> parameter "${value}". A number or "auto" were expected`
+      message: `Invalid <max> parameter "${value}". A number or "auto" were expected`,
     });
   }
 }
@@ -877,7 +877,7 @@ export class InvalidCert extends NowError<'INVALID_CERT', {}> {
     super({
       code: 'INVALID_CERT',
       meta: {},
-      message: `The provided custom certificate is invalid and couldn't be added`
+      message: `The provided custom certificate is invalid and couldn't be added`,
     });
   }
 }
@@ -890,7 +890,7 @@ export class DNSPermissionDenied extends NowError<
     super({
       code: 'DNS_PERMISSION_DENIED',
       meta: { domain },
-      message: `You don't have access to the DNS records of ${domain}.`
+      message: `You don't have access to the DNS records of ${domain}.`,
     });
   }
 }
@@ -900,7 +900,7 @@ export class DNSInvalidPort extends NowError<'DNS_INVALID_PORT', {}> {
     super({
       code: 'DNS_INVALID_PORT',
       meta: {},
-      message: `Invalid <port> parameter. A number was expected`
+      message: `Invalid <port> parameter. A number was expected`,
     });
   }
 }
@@ -913,7 +913,7 @@ export class DNSInvalidType extends NowError<
     super({
       code: 'DNS_INVALID_TYPE',
       meta: { type },
-      message: `Invalid <type> parameter "${type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT`
+      message: `Invalid <type> parameter "${type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT`,
     });
   }
 }
@@ -926,7 +926,7 @@ export class DNSConflictingRecord extends NowError<
     super({
       code: 'DNS_CONFLICTING_RECORD',
       meta: { record },
-      message: ` A conflicting record exists "${record}".`
+      message: ` A conflicting record exists "${record}".`,
     });
   }
 }
@@ -949,7 +949,7 @@ export class DomainRemovalConflict extends NowError<
     pendingAsyncPurchase,
     resolvable,
     suffix,
-    transferring
+    transferring,
   }: {
     aliases: string[];
     certs: string[];
@@ -967,9 +967,9 @@ export class DomainRemovalConflict extends NowError<
         pendingAsyncPurchase,
         suffix,
         transferring,
-        resolvable
+        resolvable,
       },
-      message
+      message,
     });
   }
 }
@@ -982,7 +982,7 @@ export class DomainMoveConflict extends NowError<
     message,
     pendingAsyncPurchase,
     resolvable,
-    suffix
+    suffix,
   }: {
     message: string;
     pendingAsyncPurchase: boolean;
@@ -994,9 +994,9 @@ export class DomainMoveConflict extends NowError<
       meta: {
         pendingAsyncPurchase,
         resolvable,
-        suffix
+        suffix,
       },
-      message
+      message,
     });
   }
 }
@@ -1006,7 +1006,7 @@ export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
     super({
       code: 'INVALID_EMAIL',
       message,
-      meta: { email }
+      meta: { email },
     });
   }
 }
@@ -1022,7 +1022,7 @@ export class AccountNotFound extends NowError<
     super({
       code: 'ACCOUNT_NOT_FOUND',
       message,
-      meta: { email }
+      meta: { email },
     });
   }
 }
@@ -1035,7 +1035,7 @@ export class InvalidMoveDestination extends NowError<
     super({
       code: 'INVALID_MOVE_DESTINATION',
       message: `Invalid move destination "${destination}"`,
-      meta: { destination }
+      meta: { destination },
     });
   }
 }
@@ -1048,7 +1048,7 @@ export class InvalidMoveToken extends NowError<
     super({
       code: 'INVALID_MOVE_TOKEN',
       message: `Invalid move token "${token}"`,
-      meta: { token }
+      meta: { token },
     });
   }
 }
@@ -1058,7 +1058,7 @@ export class NoBuilderCacheError extends NowError<'NO_BUILDER_CACHE', {}> {
     super({
       code: 'NO_BUILDER_CACHE',
       message: 'Could not find cache directory for now-builders.',
-      meta: {}
+      meta: {},
     });
   }
 }
@@ -1071,7 +1071,7 @@ export class BuilderCacheCleanError extends NowError<
     super({
       code: 'BUILDER_CACHE_CLEAN_FAILED',
       message: `Error cleaning builder cache: ${message}`,
-      meta: { path }
+      meta: { path },
     });
   }
 }
@@ -1088,7 +1088,7 @@ export class LambdaSizeExceededError extends NowError<
       ).toLowerCase()}) exceeds the maximum size limit (${bytes(
         maxLambdaSize
       ).toLowerCase()}). Learn more: https://zeit.co/docs/v2/deployments/concepts/lambdas/#maximum-bundle-size`,
-      meta: { size, maxLambdaSize }
+      meta: { size, maxLambdaSize },
     });
   }
 }
@@ -1107,7 +1107,7 @@ export class MissingDotenvVarsError extends NowError<
     } else {
       message = [
         `The following env vars are not defined in ${code(type)} file:`,
-        ...missing.map(name => `  - ${JSON.stringify(name)}`)
+        ...missing.map(name => `  - ${JSON.stringify(name)}`),
       ].join('\n');
     }
 
@@ -1116,7 +1116,7 @@ export class MissingDotenvVarsError extends NowError<
     super({
       code: 'MISSING_DOTENV_VARS',
       message,
-      meta: { type, missing }
+      meta: { type, missing },
     });
   }
 }
@@ -1129,7 +1129,7 @@ export class DeploymentsRateLimited extends NowError<
     super({
       code: 'DEPLOYMENTS_RATE_LIMITED',
       meta: {},
-      message
+      message,
     });
   }
 }
@@ -1139,7 +1139,7 @@ export class BuildsRateLimited extends NowError<'BUILDS_RATE_LIMITED', {}> {
     super({
       code: 'BUILDS_RATE_LIMITED',
       meta: {},
-      message
+      message,
     });
   }
 }
@@ -1149,7 +1149,7 @@ export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
     super({
       code: 'PROJECT_NOT_FOUND',
       meta: {},
-      message: `There is no project for "${nameOrId}"`
+      message: `There is no project for "${nameOrId}"`,
     });
   }
 }
@@ -1159,7 +1159,7 @@ export class AliasDomainConfigured extends NowError<'DOMAIN_CONFIGURED', {}> {
     super({
       code: 'DOMAIN_CONFIGURED',
       meta: {},
-      message
+      message,
     });
   }
 }
@@ -1169,7 +1169,7 @@ export class MissingBuildScript extends NowError<'MISSING_BUILD_SCRIPT', {}> {
     super({
       code: 'MISSING_BUILD_SCRIPT',
       meta: {},
-      message
+      message,
     });
   }
 }
@@ -1179,7 +1179,7 @@ export class ConflictingFilePath extends NowError<'CONFLICTING_FILE_PATH', {}> {
     super({
       code: 'CONFLICTING_FILE_PATH',
       meta: {},
-      message
+      message,
     });
   }
 }
@@ -1192,17 +1192,23 @@ export class ConflictingPathSegment extends NowError<
     super({
       code: 'CONFLICTING_PATH_SEGMENT',
       meta: {},
-      message
+      message,
     });
   }
 }
 
 export class BuildError extends NowError<'BUILD_ERROR', {}> {
-  constructor({ message, meta }: { message: string; meta: { entrypoint: string; } }) {
+  constructor({
+    message,
+    meta,
+  }: {
+    message: string;
+    meta: { entrypoint: string };
+  }) {
     super({
       code: 'BUILD_ERROR',
       meta,
-      message
+      message,
     });
   }
 }
