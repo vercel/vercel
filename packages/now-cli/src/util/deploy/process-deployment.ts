@@ -92,11 +92,8 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          log(
-            `https://${event.payload.url} ${chalk.gray(
-              `[v2]`
-            )} ${deployStamp()}`
-          );
+          const version = legacy ? `${chalk.grey('v1')} ` : '';
+          log(`https://${event.payload.url} ${version}${deployStamp()}`);
         } else {
           process.stdout.write(`https://${event.payload.url}`);
         }
