@@ -9,7 +9,7 @@ interface PrerenderOptions {
   fallback: FileBlob | FileFsRef | FileRef;
 }
 
-export class Prerender {
+export default class Prerender {
   public type: 'Prerender';
   public expiration: number;
   public lambda: Lambda;
