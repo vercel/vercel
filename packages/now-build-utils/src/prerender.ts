@@ -23,7 +23,7 @@ export class Prerender {
   }
 }
 
-interface PrerenderOptions {
+interface PrerenderGroupOptions {
   items: Array<Prerender>;
 }
 
