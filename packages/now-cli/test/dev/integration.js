@@ -824,7 +824,7 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
 
     const resp1 = await fetch(`http://localhost:${port}`);
     const text1 = await resp1.text();
-    t.is('test', text1);
+    t.is('hello', text1);
 
     await fs.writeFile(
       path.join(directory, 'public', 'index.html'),
