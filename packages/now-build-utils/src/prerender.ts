@@ -9,7 +9,7 @@ interface PrerenderOptions {
   fallback: FileBlob | FileFsRef | FileRef;
 }
 
-export default class Prerender {
+export class Prerender {
   public type: 'Prerender';
   public expiration: number;
   public lambda: Lambda;
@@ -20,5 +20,19 @@ export default class Prerender {
     this.expiration = expiration;
     this.lambda = lambda;
     this.fallback = fallback;
+  }
+}
+
+interface PrerenderOptions {
+  items: Array<Prerender>;
+}
+
+export class PrerenderGroup {
+  public type: 'PrerenderGroup';
+  public items: Array<Prerender>;
+
+  constructor({ items }: PrerenderGroupOptions) {
+    this.type = 'PrerenderGroup';
+    this.items = items;
   }
 }
