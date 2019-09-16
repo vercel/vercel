@@ -142,7 +142,7 @@ test('[now dev] validate routes', async t => {
 
 test('[now dev] validate env var names', async t => {
   const directory = fixture('invalid-env-var-name');
-  const { dev, port } = await testFixture(directory, { stdio: 'pipe' });
+  const { dev } = await testFixture(directory, { stdio: 'pipe' });
 
   try {
     // start `now dev` detached in child_process
@@ -805,6 +805,40 @@ test('[now dev] render warning for empty cwd dir', async t => {
     const response = await fetch(`http://localhost:${port}`);
     validateResponseHeaders(t, response);
     t.is(response.status, 404);
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[now dev] do not rebuild for changes in the output directory', async t => {
+  const directory = fixture('output-is-source');
+  const { dev, port } = await testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  try {
+    dev.unref();
+
+    let stderr = [];
+    dev.stderr.on('data', str => stderr.push(str));
+
+    const resp1 = await fetch(`http://localhost:${port}`);
+    const text1 = await resp1.text();
+    t.is('test', text1);
+
+    await fs.writeFile(
+      path.join(directory, 'public', 'index.html'),
+      'test test'
+    );
+
+    await sleep(ms('3s'));
+
+    const resp2 = await fetch(`http://localhost:${port}`);
+    const text2 = await resp2.text();
+    t.is('test test', text2);
+
+    const stderrOutput = stderr.join('');
+    t.is(/Built /gm.match(stderrOutput).length, 0);
   } finally {
     dev.kill('SIGTERM');
   }
