@@ -18,9 +18,15 @@ import {
   BuildOptions,
   Config,
   debug,
-  PackageJson
+  PackageJson,
 } from '@now/build-utils';
-import isPortReachable from 'is-port-reachable'
+import isPortReachable from 'is-port-reachable';
+
+async function checkForPort(port: number | undefined): Promise<void> {
+  while (!(await isPortReachable(port))) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+}
 
 function validateDistDir(
   distDir: string,
@@ -86,7 +92,7 @@ const nowDevScriptPorts = new Map();
 const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
   const basic: Route = {
     src: `${srcBase}${route.src}`,
-    dest: `http://localhost:${devPort}${route.dest}`
+    dest: `http://localhost:${devPort}${route.dest}`,
   };
 
   if (route.headers) {
@@ -120,7 +126,7 @@ export async function build({
   entrypoint,
   workPath,
   config,
-  meta = {}
+  meta = {},
 }: BuildOptions) {
   debug('Downloading user files...');
   await download(files, workPath, meta);
@@ -149,7 +155,6 @@ export async function build({
     const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (config.zeroConfig) {
-
       if (existsSync(gemfilePath) && !meta.isDev) {
         debug('Detected Gemfile, executing bundle install...');
         await runBundleInstall(workPath, [], undefined, meta);
@@ -164,7 +169,9 @@ export async function build({
         pkg.devDependencies
       );
 
-      framework = frameworks.find(({ dependency }) => dependencies[dependency || '']);
+      framework = frameworks.find(
+        ({ dependency }) => dependencies[dependency || '']
+      );
     }
 
     if (framework) {
@@ -206,7 +213,7 @@ export async function build({
 
         const opts = {
           cwd: entrypointDir,
-          env: { ...process.env, PORT: String(devPort) }
+          env: { ...process.env, PORT: String(devPort) },
         };
 
         const child = spawn('yarn', ['run', devScript], opts);
@@ -218,15 +225,6 @@ export async function build({
         if (child.stderr) {
           child.stderr.setEncoding('utf8');
           child.stderr.pipe(process.stderr);
-        }
-
-
-        async function checkForPort(port: number | undefined): Promise<void> {
-          while (!(await isPortReachable(port))) {
-            await new Promise(resolve => {
-              setTimeout(resolve, 100);
-            });
-          }
         }
 
         // Now wait for the server to have listened on `$PORT`, after which we
@@ -260,7 +258,7 @@ export async function build({
       routes.push(
         getDevRoute(srcBase, devPort, {
           src: '/(.*)',
-          dest: '/$1'
+          dest: '/$1',
         })
       );
     } else {
@@ -319,7 +317,7 @@ export async function build({
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
-    return { routes, watch, output };
+    return { routes, watch, output, distPath };
   }
 
   if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
@@ -334,7 +332,8 @@ export async function build({
     return {
       output,
       routes: [],
-      watch: []
+      watch: [],
+      distPath,
     };
   }
 

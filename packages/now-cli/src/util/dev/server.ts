@@ -182,6 +182,20 @@ export default class DevServer {
     const filesChanged: Set<string> = new Set();
     const filesRemoved: Set<string> = new Set();
 
+    const distPaths: string[] = [];
+
+    for (const buildMatch of this.buildMatches) {
+      for (const buildResult of buildMatch[1].buildResults) {
+        if (buildResult[1].distPath) {
+          distPaths.push(buildResult[1].distPath);
+        }
+      }
+    }
+
+    events = events.filter(event =>
+      distPaths.every(distPath => !event.path.startsWith(distPath))
+    );
+
     // First, update the `files` mapping of source files
     for (const event of events) {
       if (event.type === 'add') {
