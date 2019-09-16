@@ -368,8 +368,6 @@ export async function executeBuild(
       `Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`
     );
   }
-
-  console.log(JSON.stringify({ result }, null, 2));
 }
 
 export async function getBuildMatches(
