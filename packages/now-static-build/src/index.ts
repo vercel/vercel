@@ -2,11 +2,12 @@ import path from 'path';
 import spawn from 'cross-spawn';
 import getPort from 'get-port';
 import { timeout } from 'promise-timeout';
-import { existsSync, readFileSync, writeFileSync, statSync, readdirSync } from 'fs';
+import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
+  spawnAsync,
   runNpmInstall,
   runBundleInstall,
   runPackageJsonScript,
@@ -158,7 +159,6 @@ export async function build({
       const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
 
       if (HUGO_VERSION && !meta.isDev) {
-        const file = '/tmp/update_hugo.sh';
         /*
         const [major, minor] = HUGO_VERSION.split('.').map(Number);
         const isOldVersion = major === 0 && minor < 43;
@@ -167,22 +167,17 @@ export async function build({
         */
         const prefix = `hugo_`;
         const url = `https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${prefix}${HUGO_VERSION}_Linux-64bit.tar.gz`;
-        writeFileSync(file, `curl -L ${url} | tar -zx -C /usr/local/bin`);
-        await runShellScript(file);
+        await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], '/tmp');
       }
 
       if (ZOLA_VERSION && !meta.isDev) {
-        const file = '/tmp/update_zola.sh';
         const url = `https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
-        writeFileSync(file, `curl -L ${url} | tar -zx -C /usr/local/bin`);
-        await runShellScript(file);
+        await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], '/tmp');
       }
 
       if (GUTENBERG_VERSION && !meta.isDev) {
-        const file = '/tmp/update_gutenberg.sh';
         const url = `https://github.com/getzola/zola/releases/download/v${GUTENBERG_VERSION}/gutenberg-v${GUTENBERG_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
-        writeFileSync(file, `curl -L ${url} | tar -zx -C /usr/local/bin`);
-        await runShellScript(file);
+        await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], '/tmp');
       }
 
       // `public` is the default for zero config

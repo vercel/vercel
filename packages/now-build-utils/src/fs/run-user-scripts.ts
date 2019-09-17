@@ -9,7 +9,7 @@ import { cpus } from 'os';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion } from './node-version';
 
-function spawnAsync(
+export function spawnAsync(
   command: string,
   args: string[],
   cwd: string,
@@ -163,7 +163,6 @@ export async function runNpmInstall(
     );
   }
 }
-
 
 export async function runBundleInstall(
   destPath: string,
