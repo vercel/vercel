@@ -21,7 +21,7 @@ export default async function* checkDeploymentStatus(
   const buildsState: { [key: string]: DeploymentBuild } = {};
   let apiDeployments = version === 2 ? API_DEPLOYMENTS : API_DEPLOYMENTS_LEGACY;
 
-  debug(`Using ${version}.0 API for status checks`);
+  debug(`Using ${version ? `${version}.0` : '2.0'} API for status checks`);
 
   // If the deployment is ready, we don't want any of this to run
   if (isDone(deploymentState)) {

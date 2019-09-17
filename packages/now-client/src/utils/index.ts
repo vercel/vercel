@@ -106,7 +106,7 @@ export const fetch = async (
   debugEnabled?: boolean
 ): Promise<any> => {
   const debug = createDebug(debugEnabled);
-  let time;
+  let time: number;
 
   if (opts.teamId) {
     const parsedUrl = parseUrl(url, true);
@@ -123,8 +123,8 @@ export const fetch = async (
   // @ts-ignore
   opts.headers['user-agent'] = `now-client-v${pkg.version}`;
 
-  time = Date.now();
   debug(`${opts.method || 'GET'} ${url}`);
+  time = Date.now();
 
   const res = await fetch_(url, opts);
   debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
