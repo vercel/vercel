@@ -583,10 +583,17 @@ export default class Now extends EventEmitter {
     opts.headers.Authorization = `Bearer ${this._token}`;
     opts.headers['user-agent'] = ua;
 
+    if (
+      opts.body &&
+      typeof opts.body === 'object' &&
+      opts.body.constructor === Object
+    ) {
+      opts.body = JSON.stringify(opts.body);
+      opts.headers['Content-Type'] = 'application/json';
+    }
+
     return this._output.time(
-      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${JSON.stringify(
-        opts.body
-      ) || ''}`,
+      `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
       fetch(`${this._apiUrl}${_url}`, opts)
     );
   }
