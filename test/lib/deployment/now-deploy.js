@@ -38,7 +38,10 @@ async function nowDeploy (bodies, randomness) {
   if (process.env.FORCE_BUILD_IN_REGION) {
     const { builds=[] } = nowDeployPayload;
     builds.forEach(b => {
-      b.forceBuildIn = process.env.FORCE_BUILD_IN_REGION;
+      if (!b.config) {
+        b.config = {};
+      }
+      b.config.forceBuildIn = process.env.FORCE_BUILD_IN_REGION;
     });
   }
 
