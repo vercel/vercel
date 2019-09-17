@@ -2,6 +2,7 @@ import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
 import { Lambda, createLambda } from './lambda';
+import { Prerender, PrerenderGroup } from './prerender';
 import download, { DownloadedFiles } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob from './fs/glob';
@@ -27,6 +28,8 @@ export {
   FileRef,
   Lambda,
   createLambda,
+  Prerender,
+  PrerenderGroup,
   download,
   DownloadedFiles,
   getWriteableDirectory,
