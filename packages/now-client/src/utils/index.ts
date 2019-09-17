@@ -10,7 +10,8 @@ import { Options } from '../deploy';
 export const API_FILES = 'https://api.zeit.co/v2/now/files';
 export const API_DEPLOYMENTS = 'https://api.zeit.co/v9/now/deployments';
 export const API_DEPLOYMENTS_LEGACY = 'https://api.zeit.co/v3/now/deployments';
-export const API_DELETE_DEPLOYMENTS_LEGACY = 'https://api.zeit.co/v2/now/deployments';
+export const API_DELETE_DEPLOYMENTS_LEGACY =
+  'https://api.zeit.co/v2/now/deployments';
 
 export const EVENTS = new Set([
   // File events
