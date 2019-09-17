@@ -4,7 +4,7 @@
       {
         "src": "package.json",
         "use": "@now/static-build",
-        "config": { "zeroConfig": true, "forceBuildIn": "iad1" }
+        "config": { "zeroConfig": true }
       }
     ],
     "probes": [

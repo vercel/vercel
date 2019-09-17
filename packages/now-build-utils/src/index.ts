@@ -8,6 +8,7 @@ import getWriteableDirectory from './fs/get-writable-directory';
 import glob from './fs/glob';
 import rename from './fs/rename';
 import {
+  spawnAsync,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
@@ -35,6 +36,7 @@ export {
   getWriteableDirectory,
   glob,
   rename,
+  spawnAsync,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
