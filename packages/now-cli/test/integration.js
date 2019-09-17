@@ -1893,6 +1893,43 @@ test('create zero-config deployment', async t => {
   t.true(validBuilders, JSON.stringify(data, null, 2));
 });
 
+test('now secret add', async t => {
+  context.secretName = `my-secret-${Date.now().toString(36)}`;
+  const value = 'https://my-secret-endpoint.com';
+
+  const output = await execute(['secret', 'add', context.secretName, value]);
+
+  t.is(output.code, 0, formatOutput(output));
+});
+
+test('now secret ls', async t => {
+  const output = await execute(['secret', 'ls']);
+
+  t.is(output.code, 0, formatOutput(output));
+  t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
+  t.regex(output.stdout, new RegExp(), formatOutput(output));
+});
+
+test('now secret rename', async t => {
+  const nextName = `renamed-secret-${Date.now().toString(36)}`;
+  const output = await execute([
+    'secret',
+    'rename',
+    context.secretName,
+    nextName,
+  ]);
+
+  t.is(output.code, 0, formatOutput(output));
+
+  context.secretName = nextName;
+});
+
+test('now secret rm', async t => {
+  const output = await execute(['secret', 'rm', context.secretName, '-y']);
+
+  t.is(output.code, 0, formatOutput(output));
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
