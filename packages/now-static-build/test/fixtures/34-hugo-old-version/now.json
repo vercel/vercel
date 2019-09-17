@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@now/static-build",
+      "config": { "zeroConfig": true }
+    }
+  ],
+  "build": {
+    "env": {
+      "HUGO_VERSION": "0.42"
+    }
+  },
+  "probes": [
+    { "path": "/", "mustContain": "0.42" }
+  ]
+}
