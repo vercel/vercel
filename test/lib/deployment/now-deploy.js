@@ -35,6 +35,16 @@ async function nowDeploy (bodies, randomness) {
     meta: {},
   };
 
+  if (process.env.FORCE_BUILD_IN_REGION) {
+    const { builds=[] } = nowDeployPayload;
+    builds.forEach(b => {
+      if (!b.config) {
+        b.config = {};
+      }
+      b.config.forceBuildIn = process.env.FORCE_BUILD_IN_REGION;
+    });
+  }
+
   console.log(`posting ${files.length} files`);
 
   for (const { file: filename } of files) {
