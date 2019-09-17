@@ -183,11 +183,12 @@ export function createDebug(debug?: boolean) {
   const isDebug = debug || process.env.DEBUG;
 
   if (isDebug) {
-    return (...logs: string[]) =>
+    return (...logs: string[]) => {
       process.stderr.write(
-        `[now-client-debug] ${new Date().toISOString()}`,
-        ...logs
+        [`[now-client-debug] ${new Date().toISOString()}`, ...logs].join(' ') +
+          '\n'
       );
+    };
   }
 
   return () => {};
