@@ -816,26 +816,21 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  let resolveIsReady = null;
-  const isReady = new Promise(res => {
-    resolveIsReady = res;
-  });
-
   try {
     dev.unref();
 
     let stderr = [];
+    const start = Date.now();
 
-    dev.stderr.on('data', str => {
-      stderr.push(str);
+    dev.stderr.on('data', str => stderr.push(str));
 
-      if (stderr.join('').includes('Ready') && resolveIsReady) {
-        resolveIsReady();
-        resolveIsReady = null;
+    while (stderr.join('').includes('Ready') === false) {
+      await sleep(ms('5s'));
+
+      if (Date.now() - start > ms('30s')) {
+        t.is(1, 0, stderr.join(''));
       }
-    });
-
-    await isReady;
+    }
 
     const resp1 = await fetch(`http://localhost:${port}`);
     const text1 = await resp1.text();
