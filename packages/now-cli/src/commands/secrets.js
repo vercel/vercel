@@ -70,10 +70,11 @@ let subcommand;
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
-    boolean: ['help', 'debug'],
+    boolean: ['help', 'debug', 'yes'],
     alias: {
       help: 'h',
       debug: 'd',
+      yes: 'y',
     },
   });
 
@@ -188,7 +189,7 @@ async function run({ output, token, contextName, currentTeam }) {
     const theSecret = list.find(secret => secret.name === args[0]);
 
     if (theSecret) {
-      const yes = await readConfirmation(theSecret);
+      const yes = argv.yes || (await readConfirmation(theSecret));
       if (!yes) {
         console.error(error('User abort'));
         return exit(0);
