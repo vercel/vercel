@@ -74,7 +74,7 @@ export default async function main(ctx) {
       '--all': Boolean,
       '--meta': [String],
       '-a': '--all',
-      '-m': '--meta'
+      '-m': '--meta',
     });
   } catch (err) {
     handleError(err);
@@ -84,7 +84,7 @@ export default async function main(ctx) {
   const debugEnabled = argv['--debug'];
 
   const { print, log, error, note, debug } = createOutput({
-    debug: debugEnabled
+    debug: debugEnabled,
   });
 
   if (argv._.length > 2) {
@@ -103,13 +103,16 @@ export default async function main(ctx) {
   }
 
   const meta = parseMeta(argv['--meta']);
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam, includeScheme } = config;
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
 
@@ -202,7 +205,16 @@ export default async function main(ctx) {
     const item = aliases.find(e => e.uid === app || e.alias === app);
 
     if (item) {
-      debug('Found alias that matches app name');
+      debug(`Found alias that matches app name: ${item.alias}`);
+
+      if (Array.isArray(item.rules)) {
+        now.close();
+        stopSpinner();
+        log(`Found matching path alias: ${chalk.cyan(item.alias)}`);
+        log(`Please run ${cmd(`now alias ls ${item.alias}`)} instead`);
+        return 0;
+      }
+
       const match = await now.findDeployment(item.deploymentId);
       const instances = await getDeploymentInstances(
         now,
@@ -250,7 +262,9 @@ export default async function main(ctx) {
 
   // information to help the user find other deployments or instances
   if (app == null) {
-    log(`To list more deployments for a project run ${cmd('now ls [project]')}`);
+    log(
+      `To list more deployments for a project run ${cmd('now ls [project]')}`
+    );
   } else if (!argv['--all']) {
     log(`To list deployment instances run ${cmd('now ls --all [project]')}`);
   }
@@ -260,7 +274,9 @@ export default async function main(ctx) {
   console.log(
     `${table(
       [
-        ['project', 'latest deployment', 'inst #', 'type', 'state', 'age'].map(s => chalk.dim(s)),
+        ['project', 'latest deployment', 'inst #', 'type', 'state', 'age'].map(
+          s => chalk.dim(s)
+        ),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
@@ -272,7 +288,7 @@ export default async function main(ctx) {
                 : dep.instanceCount,
               dep.type === 'LAMBDAS' ? chalk.gray('-') : dep.type,
               stateString(dep.state),
-              chalk.gray(ms(Date.now() - new Date(dep.created)))
+              chalk.gray(ms(Date.now() - new Date(dep.created))),
             ],
             ...(argv['--all']
               ? dep.instances.map(i => [
@@ -280,9 +296,9 @@ export default async function main(ctx) {
                   ` ${chalk.gray('-')} ${i.url} `,
                   '',
                   '',
-                  ''
+                  '',
                 ])
-              : [])
+              : []),
           ])
           // flatten since the previous step returns a nested
           // array of the deployment and (optionally) its instances
@@ -293,12 +309,12 @@ export default async function main(ctx) {
                 // we only want to render one deployment per app
                 filterUniqueApps()
               : () => true
-          )
+          ),
       ],
       {
         align: ['l', 'l', 'r', 'l', 'b'],
         hsep: ' '.repeat(4),
-        stringLength: strlen
+        stringLength: strlen,
       }
     ).replace(/^/gm, '  ')}\n\n`
   );
@@ -310,7 +326,7 @@ function getProjectName(d) {
     return 'files';
   }
 
-  return d.name
+  return d.name;
 }
 
 // renders the state string

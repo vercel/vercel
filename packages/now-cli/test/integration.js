@@ -23,6 +23,8 @@ const session = Math.random()
   .toString(36)
   .split('.')[1];
 
+const isCanary = pkg.version.includes('canary');
+
 const pickUrl = stdout => {
   const lines = stdout.split('\n');
   return lines[lines.length - 1];
@@ -403,6 +405,59 @@ test('deploy a dockerfile project', async t => {
   t.is(content.id, contextName);
 
   context.deployment = host;
+});
+
+test('test invalid json alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-json-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Error parsing/, formatOutput(output));
+});
+
+test('test invalid alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
+});
+
+test('test invalid type for alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-type-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
+});
+
+test('apply alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+
+  // Create the rules file
+  const alias = `test-alias-rules.${contextName}.now.sh`;
+
+  const now = {
+    alias: alias,
+  };
+
+  const rules = {
+    rules: [{ pathname: '/docker-deployment', dest: context.deployment }],
+  };
+
+  await writeFile(path.join(fixturePath, 'now.json'), JSON.stringify(now));
+  await writeFile(path.join(fixturePath, 'rules.json'), JSON.stringify(rules));
+
+  const output = await execute(['alias', '-r', 'rules.json'], {
+    cwd: fixturePath,
+  });
+  t.is(output.code, 0, formatOutput(output));
 });
 
 test('find deployment in list', async t => {
@@ -1813,6 +1868,29 @@ test('now hasOwnProperty not a valid subcommand', async t => {
     /The specified file or directory "hasOwnProperty" does not exist/gm,
     formatOutput(output)
   );
+});
+
+test('create zero-config deployment', async t => {
+  const fixturePath = fixture('zero-config-next-js');
+  const output = await execute([fixturePath, '--force', '--public']);
+
+  t.is(output.code, 0, formatOutput(output));
+
+  const { host } = new URL(output.stdout);
+  const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
+
+  const text = await response.text();
+
+  t.is(response.status, 200, text);
+  const data = JSON.parse(text);
+
+  t.is(data.error, undefined, JSON.stringify(data, null, 2));
+
+  const validBuilders = data.builds.every(build =>
+    isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
+  );
+
+  t.true(validBuilders, JSON.stringify(data, null, 2));
 });
 
 test.after.always(async () => {
