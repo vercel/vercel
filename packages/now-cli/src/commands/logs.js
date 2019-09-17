@@ -283,16 +283,19 @@ function printLogShort(log) {
       ` ${obj.status} ${obj.bodyBytesSent}`;
   } else if (log.type === 'event') {
     data = `EVENT ${log.event} ${JSON.stringify(log.payload)}`;
+  } else if (obj) {
+    data = JSON.stringify(obj, null, 2);
   } else {
-    data = obj
-      ? JSON.stringify(obj, null, 2)
-      : (log.text || '')
+    data = (log.text || '')
           .replace(/\n$/, '')
           .replace(/^\n/, '')
           // eslint-disable-next-line no-control-regex
           .replace(/\x1b\[1000D/g, '')
           .replace(/\x1b\[0K/g, '')
           .replace(/\x1b\[1A/g, '');
+    if (log.type === 'stderr') {
+      data = chalk.red(data);
+    }
   }
 
   const date = new Date(log.created).toISOString();
