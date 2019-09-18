@@ -2010,10 +2010,10 @@
     agentkeepalive "3.4.1"
     debug "3.1.0"
 
-"@zeit/fun@0.10.0":
-  version "0.10.0"
-  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.10.0.tgz#03f97e7886dd2b565c921ca066ed48cf40d18531"
-  integrity sha512-eCfu2v1imJzRbl6nAgDNok3rKV3MN0R0Mwawv9zKKcBtWoocvbfTnzI5aCRd84P/Td49zHK9F3mzCEX81a9dgQ==
+"@zeit/fun@0.10.2":
+  version "0.10.2"
+  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.10.2.tgz#799dbedfc931f439a541c6344e4faeaf3ded98b2"
+  integrity sha512-wIIF3X5ASnRJLa66RktuIF6oVtRa13WSAlt08Lc/01fpQTgNiVAd92PhlfRU4azJQkbKNEQ5o+OWncAvE4s+7w==
   dependencies:
     async-listen "1.0.0"
     debug "4.1.1"
@@ -7937,7 +7937,7 @@ normalize-url@^4.1.0:
   integrity sha512-0NLtR71o4k6GLP+mr6Ty34c5GA6CMoEsncKJxvQd8NzPxaHRJNnb5gZE8R1XF4CPIS7QPHLJ74IFszwtNVAHVQ==
 
 now-client@./packages/now-client:
-  version "5.1.1-canary.3"
+  version "5.1.1-canary.4"
   dependencies:
     "@zeit/fetch" "5.1.0"
     async-retry "1.2.3"
