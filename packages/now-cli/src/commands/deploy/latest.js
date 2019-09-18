@@ -288,11 +288,15 @@ export default async function main(
     parseEnv(argv['--env'])
   );
 
+  // Enable debug mode for builders
+  const buildDebugEnv = debugEnabled ? { NOW_BUILDER_DEBUG: '1' } : {};
+
   // Merge build env out of  `build.env` from now.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
-    parseEnv(argv['--build-env'])
+    parseEnv(argv['--build-env']),
+    buildDebugEnv
   );
 
   // If there's any undefined values, then inherit them from this process
