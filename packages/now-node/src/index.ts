@@ -65,7 +65,7 @@ async function downloadInstallAndBundle({
   const downloadedFiles = await download(files, workPath, meta);
   debug(`download complete [${Date.now() - downloadTime}ms]`);
 
-  debug("Installing dependencies for user's code...");
+  console.log('Installing dependencies...');
   const installTime = Date.now();
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(

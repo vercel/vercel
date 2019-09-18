@@ -284,7 +284,7 @@ export const build = async ({
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  debug('Installing dependencies...');
+  console.log('Installing dependencies...');
   await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
   let realNextVersion: string | undefined;

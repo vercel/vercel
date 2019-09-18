@@ -104,6 +104,7 @@ export const build = async ({
     throw err;
   }
 
+  console.log('Installing dependencies...');
   await pipInstall(pipPath, workPath, 'werkzeug');
   await pipInstall(pipPath, workPath, 'requests');
 
