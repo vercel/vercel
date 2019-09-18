@@ -293,7 +293,9 @@ function printLogShort(log) {
           .replace(/\x1b\[1000D/g, '')
           .replace(/\x1b\[0K/g, '')
           .replace(/\x1b\[1A/g, '');
-    if (log.type === 'stderr') {
+    if (/warning/i.test(data)) {
+      data = chalk.yellow(data);
+    } else if (log.type === 'stderr') {
       data = chalk.red(data);
     }
   }
