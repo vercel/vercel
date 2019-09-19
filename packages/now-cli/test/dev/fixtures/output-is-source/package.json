@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "build": "rm -Rf public && mkdir -p public && echo hello first > public/index.html"
+    "build": "rm -Rf public && mkdir -p public && echo 'hello first' > public/index.html"
   }
 }
