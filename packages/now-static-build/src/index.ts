@@ -2,6 +2,7 @@ import path from 'path';
 import spawn from 'cross-spawn';
 import getPort from 'get-port';
 import { timeout } from 'promise-timeout';
+import isPortReachable from 'is-port-reachable';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { frameworks, Framework } from './frameworks';
 import {
@@ -21,7 +22,14 @@ import {
   debug,
   PackageJson,
 } from '@now/build-utils';
-import isPortReachable from 'is-port-reachable';
+
+async function checkForPort(port: number | undefined): Promise<void> {
+  while (!(await isPortReachable(port))) {
+    await new Promise(resolve => {
+      setTimeout(resolve, 100);
+    });
+  }
+}
 
 function validateDistDir(
   distDir: string,
@@ -158,13 +166,9 @@ export async function build({
       const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
 
       if (HUGO_VERSION && !meta.isDev) {
-        /*
         const [major, minor] = HUGO_VERSION.split('.').map(Number);
         const isOldVersion = major === 0 && minor < 43;
         const prefix = isOldVersion ? `hugo_` : `hugo_extended_`;
-        TODO: We can't currently use extended because of `libstdc++.so.6` needs to be updated.
-        */
-        const prefix = `hugo_`;
         const url = `https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${prefix}${HUGO_VERSION}_Linux-64bit.tar.gz`;
         await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], {
           shell: true,
@@ -252,15 +256,6 @@ export async function build({
           child.stderr.setEncoding('utf8');
           child.stderr.pipe(process.stderr);
         }
-        /* eslint-disable */
-        async function checkForPort(port: number | undefined): Promise<void> {
-          while (!(await isPortReachable(port))) {
-            await new Promise(resolve => {
-              setTimeout(resolve, 100);
-            });
-          }
-        }
-        /* eslint-enable */
 
         // Now wait for the server to have listened on `$PORT`, after which we
         // will ProxyPass any requests to that development server that come in
