@@ -826,9 +826,6 @@ test('[now dev] render warning for empty cwd dir', async t => {
 
 test('[now dev] do not rebuild for changes in the output directory', async t => {
   const directory = fixture('output-is-source');
-  const { dev, port } = await testFixture(directory, {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
 
   // Pack the builder and set it in the now.json
   const builder = await getPackedBuilderPath('now-static-build');
@@ -845,6 +842,10 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
       ],
     })
   );
+
+  const { dev, port } = await testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
   try {
     dev.unref();
