@@ -63,6 +63,15 @@ function formatOutput({ stderr, stdout }) {
   return `Received:\n"${stderr}"\n"${stdout}"`;
 }
 
+async function getPackedBuilderPath(builderDirName) {
+  const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
+  const { stdout } = await execa('npm', ['pack', '--json'], {
+    cwd: packagePath,
+  });
+  const [result] = JSON.parse(stdout);
+  return path.join(packagePath, result.filename);
+}
+
 async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
@@ -816,6 +825,22 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  // Pack the builder and set it in the now.json
+  const builder = await getPackedBuilderPath('now-static-build');
+
+  await fs.writeFile(
+    path.join(directory, 'now.json'),
+    JSON.stringify({
+      builds: [
+        {
+          src: 'package.json',
+          use: `file://${builder}`,
+          config: { zeroConfig: true },
+        },
+      ],
+    })
+  );
+
   try {
     dev.unref();
 
@@ -827,8 +852,8 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     while (stderr.join('').includes('Ready') === false) {
       await sleep(ms('3s'));
 
-      if (Date.now() - start > ms('1m')) {
-        console.log(stderr.join(''));
+      if (Date.now() - start > ms('30s')) {
+        console.log('stderr:', stderr.join(''));
         break;
       }
     }
@@ -847,9 +872,6 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     const resp2 = await fetch(`http://localhost:${port}`);
     const text2 = await resp2.text();
     t.is('test test', text2.trim());
-
-    const stderrOutput = stderr.join('');
-    t.is(stderrOutput.match(/Built /gm), null);
   } finally {
     dev.kill('SIGTERM');
   }
