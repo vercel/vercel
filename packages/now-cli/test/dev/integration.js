@@ -75,7 +75,7 @@ async function getPackedBuilderPath(builderDirName) {
     );
   }
 
-  return output.stdout.trim();
+  return path.join(packagePath, output.stdout.trim());
 }
 
 async function testFixture(directory, opts = {}, args = []) {
