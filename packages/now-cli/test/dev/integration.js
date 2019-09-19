@@ -69,12 +69,12 @@ async function getPackedBuilderPath(builderDirName) {
     cwd: packagePath,
   });
 
-  if (output.code !== 0) {
-    console.log(`Failed to pack ${builderDirName}`, formatOutput(output));
+  try {
+    const [result] = JSON.parse(output.stdout);
+    return path.join(packagePath, result.filename);
+  } catch (err) {
+    throw new Error(`Failed to parse json:\n${formatOutput(output)}`);
   }
-
-  const [result] = JSON.parse(output.stdout);
-  return path.join(packagePath, result.filename);
 }
 
 async function testFixture(directory, opts = {}, args = []) {
