@@ -17,7 +17,7 @@ import {
   BuildOptions,
   shouldServe,
   Config,
-  debug
+  debug,
 } from '@now/build-utils';
 export { NowRequest, NowResponse } from './types';
 import { makeNowLauncher, makeAwsLauncher } from './launcher';
@@ -58,14 +58,14 @@ async function downloadInstallAndBundle({
   entrypoint,
   workPath,
   config,
-  meta
+  meta,
 }: DownloadOptions) {
-  debug('downloading user files...');
+  debug('Downloading user files...');
   const downloadTime = Date.now();
   const downloadedFiles = await download(files, workPath, meta);
   debug(`download complete [${Date.now() - downloadTime}ms]`);
 
-  debug("installing dependencies for user's code...");
+  console.log('Installing dependencies...');
   const installTime = Date.now();
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(
@@ -80,7 +80,7 @@ async function downloadInstallAndBundle({
     spawnOpts,
     meta
   );
-  debug(`install complete [${Date.now() - installTime}ms]`);
+  debug(`Install complete [${Date.now() - installTime}ms]`);
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
@@ -133,7 +133,7 @@ async function compile(
   }
 
   debug(
-    'tracing input files: ' +
+    'Tracing input files: ' +
       [...inputFiles].map(p => relative(workPath, p)).join(', ')
   );
 
@@ -146,7 +146,7 @@ async function compile(
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
-        files: true // Include all files such as global `.d.ts`
+        files: true, // Include all files such as global `.d.ts`
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -154,48 +154,51 @@ async function compile(
     preparedFiles[
       relPath.slice(0, -3 - Number(path.endsWith('x'))) + '.js.map'
     ] = new FileBlob({
-      data: JSON.stringify(map)
+      data: JSON.stringify(map),
     });
     source = code;
     shouldAddSourcemapSupport = true;
     return source;
   }
 
-  const { fileList, esmFileList, warnings } = await nodeFileTrace([...inputFiles], {
-    base: workPath,
-    ts: true,
-    mixedModules: true,
-    ignore: config.excludeFiles,
-    readFile(fsPath: string): Buffer | string | null {
-      const relPath = relative(workPath, fsPath);
-      const cached = sourceCache.get(relPath);
-      if (cached) return cached.toString();
-      // null represents a not found
-      if (cached === null) return null;
-      try {
-        let source: string | Buffer = readFileSync(fsPath);
-        if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
-          source = compileTypeScript(fsPath, source.toString());
+  const { fileList, esmFileList, warnings } = await nodeFileTrace(
+    [...inputFiles],
+    {
+      base: workPath,
+      ts: true,
+      mixedModules: true,
+      ignore: config.excludeFiles,
+      readFile(fsPath: string): Buffer | string | null {
+        const relPath = relative(workPath, fsPath);
+        const cached = sourceCache.get(relPath);
+        if (cached) return cached.toString();
+        // null represents a not found
+        if (cached === null) return null;
+        try {
+          let source: string | Buffer = readFileSync(fsPath);
+          if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
+            source = compileTypeScript(fsPath, source.toString());
+          }
+          const { mode } = lstatSync(fsPath);
+          let entry: File;
+          if (isSymbolicLink(mode)) {
+            entry = new FileFsRef({ fsPath, mode });
+          } else {
+            entry = new FileBlob({ data: source, mode });
+          }
+          fsCache.set(relPath, entry);
+          sourceCache.set(relPath, source);
+          return source.toString();
+        } catch (e) {
+          if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+            sourceCache.set(relPath, null);
+            return null;
+          }
+          throw e;
         }
-        const { mode } = lstatSync(fsPath);
-        let entry: File;
-        if (isSymbolicLink(mode)) {
-          entry = new FileFsRef({ fsPath, mode });
-        } else {
-          entry = new FileBlob({ data: source, mode });
-        }
-        fsCache.set(relPath, entry);
-        sourceCache.set(relPath, source);
-        return source.toString();
-      } catch (e) {
-        if (e.code === 'ENOENT' || e.code === 'EISDIR') {
-          sourceCache.set(relPath, null);
-          return null;
-        }
-        throw e;
-      }
+      },
     }
-  });
+  );
 
   for (const warning of warnings) {
     if (warning && warning.stack) {
@@ -256,17 +259,17 @@ async function compile(
     for (const path of esmPaths) {
       const filename = basename(path);
       const { data: source } = await FileBlob.fromStream({
-        stream: preparedFiles[path].toStream()
+        stream: preparedFiles[path].toStream(),
       });
 
       const { code, map } = babelCompile(filename, source);
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
-        data: `${code}\n//# sourceMappingURL=${filename}.map`
+        data: `${code}\n//# sourceMappingURL=${filename}.map`,
       });
       delete map.sourcesContent;
       preparedFiles[path + '.map'] = new FileBlob({
-        data: JSON.stringify(map)
+        data: JSON.stringify(map),
       });
     }
   }
@@ -274,7 +277,7 @@ async function compile(
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
-    watch: fileList
+    watch: fileList,
   };
 }
 
@@ -285,7 +288,7 @@ export async function build({
   entrypoint,
   workPath,
   config = {},
-  meta = {}
+  meta = {},
 }: BuildOptions) {
   const shouldAddHelpers = config.helpers !== false;
   const awsLambdaHandler = config.awsLambdaHandler as string;
@@ -294,21 +297,21 @@ export async function build({
     entrypointPath,
     entrypointFsDirname,
     nodeVersion,
-    spawnOpts
+    spawnOpts,
   } = await downloadInstallAndBundle({
     files,
     entrypoint,
     workPath,
     config,
-    meta
+    meta,
   });
 
-  debug('running user script...');
+  debug('Running user script...');
   const runScriptTime = Date.now();
   await runPackageJsonScript(entrypointFsDirname, 'now-build', spawnOpts);
-  debug(`script complete [${Date.now() - runScriptTime}ms]`);
+  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
 
-  debug('tracing input files...');
+  debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport, watch } = await compile(
     workPath,
@@ -316,7 +319,7 @@ export async function build({
     entrypoint,
     config
   );
-  debug(`trace complete [${Date.now() - traceTime}ms]`);
+  debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
   const makeLauncher = awsLambdaHandler ? makeAwsLauncher : makeNowLauncher;
 
@@ -330,22 +333,22 @@ export async function build({
         shouldAddHelpers,
         shouldAddSourcemapSupport,
         awsLambdaHandler,
-      })
+      }),
     }),
     [`${BRIDGE_FILENAME}.js`]: new FileFsRef({
-      fsPath: join(__dirname, 'bridge.js')
-    })
+      fsPath: join(__dirname, 'bridge.js'),
+    }),
   };
 
   if (shouldAddSourcemapSupport) {
     launcherFiles[`${SOURCEMAP_SUPPORT_FILENAME}.js`] = new FileFsRef({
-      fsPath: join(__dirname, 'source-map-support.js')
+      fsPath: join(__dirname, 'source-map-support.js'),
     });
   }
 
   if (shouldAddHelpers) {
     launcherFiles[`${HELPERS_FILENAME}.js`] = new FileFsRef({
-      fsPath: join(__dirname, 'helpers.js')
+      fsPath: join(__dirname, 'helpers.js'),
     });
   }
 
@@ -355,10 +358,10 @@ export async function build({
   const lambda = await createLambda({
     files: {
       ...preparedFiles,
-      ...(launcherFiles)
+      ...launcherFiles,
     },
     handler: `${LAUNCHER_FILENAME}.launcher`,
-    runtime
+    runtime,
   });
 
   const output = { [entrypoint]: lambda };
@@ -370,7 +373,7 @@ export async function prepareCache({ workPath }: PrepareCacheOptions) {
   return {
     ...(await glob('node_modules/**', workPath)),
     ...(await glob('package-lock.json', workPath)),
-    ...(await glob('yarn.lock', workPath))
+    ...(await glob('yarn.lock', workPath)),
   };
 }
 

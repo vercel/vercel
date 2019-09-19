@@ -17,7 +17,7 @@ import {
 async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
   const target = '.';
   debug(
-    `running "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
+    `Running "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
       ' '
     )}"...`
   );
@@ -39,7 +39,7 @@ async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
     );
   } catch (err) {
     console.log(
-      `failed to run "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
+      `Failed to run "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
         ' '
       )}"...`
     );
@@ -48,14 +48,14 @@ async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
 }
 
 async function pipenvConvert(cmd: string, srcDir: string) {
-  debug('running pipfile2req');
+  debug('Running pipfile2req...');
   try {
     const out = await execa.stdout(cmd, [], {
       cwd: srcDir,
     });
     fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
   } catch (err) {
-    console.log('failed to run "pipfile2req"');
+    console.log('Failed to run "pipfile2req"');
     throw err;
   }
 }
@@ -67,7 +67,7 @@ export const build = async ({
   meta = {},
   config,
 }: BuildOptions) => {
-  debug('downloading files...');
+  debug('Downloading user files...');
   let downloadedFiles = await download(originalFiles, workPath, meta);
 
   if (meta.isDev) {
@@ -100,10 +100,11 @@ export const build = async ({
       await writeFile(setupCfg, '[install]\nprefix=\n');
     }
   } catch (err) {
-    console.log('failed to create "setup.cfg" file');
+    console.log('Failed to create "setup.cfg" file');
     throw err;
   }
 
+  console.log('Installing dependencies...');
   await pipInstall(pipPath, workPath, 'werkzeug');
   await pipInstall(pipPath, workPath, 'requests');
 
@@ -117,7 +118,7 @@ export const build = async ({
     : null;
 
   if (pipfileLockDir) {
-    debug('found "Pipfile.lock"');
+    debug('Found "Pipfile.lock"');
 
     // Convert Pipenv.Lock to requirements.txt.
     // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
@@ -142,11 +143,11 @@ export const build = async ({
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
   if (fsFiles[requirementsTxt]) {
-    debug('found local "requirements.txt"');
+    debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await pipInstall(pipPath, workPath, '-r', requirementsTxtPath);
   } else if (fsFiles['requirements.txt']) {
-    debug('found global "requirements.txt"');
+    debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await pipInstall(pipPath, workPath, '-r', requirementsTxtPath);
   }
@@ -156,7 +157,7 @@ export const build = async ({
 
   // will be used on `from $here import handler`
   // for example, `from api.users import handler`
-  debug('entrypoint is', entrypoint);
+  debug('Entrypoint is', entrypoint);
   const userHandlerFilePath = entrypoint
     .replace(/\//g, '.')
     .replace(/\.py$/, '');

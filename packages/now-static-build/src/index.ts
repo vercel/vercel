@@ -228,6 +228,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
+    console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
     if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
