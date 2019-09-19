@@ -55,7 +55,10 @@ export async function runShellScript(
   assert(path.isAbsolute(fsPath));
   const destPath = path.dirname(fsPath);
   await chmodPlusX(fsPath);
-  await spawnAsync(`./${path.basename(fsPath)}`, args, { cwd: destPath, ...spawnOpts });
+  await spawnAsync(`./${path.basename(fsPath)}`, args, {
+    cwd: destPath,
+    ...spawnOpts,
+  });
   return true;
 }
 
@@ -140,10 +143,13 @@ export async function runNpmInstall(
   assert(path.isAbsolute(destPath));
 
   let commandArgs = args;
-  debug(`installing to ${destPath}`);
+  debug(`Installing to ${destPath}`);
   const { hasPackageLockJson } = await scanParentDirs(destPath);
 
-  const opts = { cwd: destPath, ...spawnOpts } || { cwd: destPath, env: process.env };
+  const opts = { cwd: destPath, ...spawnOpts } || {
+    cwd: destPath,
+    env: process.env,
+  };
 
   if (hasPackageLockJson) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
@@ -173,15 +179,20 @@ export async function runBundleInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { cwd: destPath, ...spawnOpts } || { cwd: destPath, env: process.env };
+  const opts = { cwd: destPath, ...spawnOpts } || {
+    cwd: destPath,
+    env: process.env,
+  };
 
   await spawnAsync(
     'bundle',
     args.concat([
       'install',
       '--no-prune',
-      '--retry', '3',
-      '--jobs', String(cpus().length || 1)
+      '--retry',
+      '3',
+      '--jobs',
+      String(cpus().length || 1),
     ]),
     opts
   );
@@ -208,15 +219,11 @@ export async function runPackageJsonScript(
   const opts = { cwd: destPath, ...spawnOpts };
 
   if (hasPackageLockJson) {
-    console.log(`running "npm run ${scriptName}"`);
+    console.log(`Running "npm run ${scriptName}"`);
     await spawnAsync('npm', ['run', scriptName], opts);
   } else {
-    console.log(`running "yarn run ${scriptName}"`);
-    await spawnAsync(
-      'yarn',
-      ['--cwd', destPath, 'run', scriptName],
-      opts
-    );
+    console.log(`Running "yarn run ${scriptName}"`);
+    await spawnAsync('yarn', ['--cwd', destPath, 'run', scriptName], opts);
   }
 
   return true;
