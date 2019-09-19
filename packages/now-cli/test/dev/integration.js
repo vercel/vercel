@@ -865,18 +865,18 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
 
     const resp1 = await fetch(`http://localhost:${port}`);
     const text1 = await resp1.text();
-    t.is('hello', text1.trim());
+    t.is(text1.trim(), 'hello first', stderr.join(''));
 
     await fs.writeFile(
       path.join(directory, 'public', 'index.html'),
-      'test test'
+      'hello second'
     );
 
     await sleep(ms('3s'));
 
     const resp2 = await fetch(`http://localhost:${port}`);
     const text2 = await resp2.text();
-    t.is('test test', text2.trim());
+    t.is(text2.trim(), 'hello second', stderr.join(''));
   } finally {
     dev.kill('SIGTERM');
   }
