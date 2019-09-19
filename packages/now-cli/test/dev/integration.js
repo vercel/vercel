@@ -65,16 +65,17 @@ function formatOutput({ stderr, stdout }) {
 
 async function getPackedBuilderPath(builderDirName) {
   const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
-  const output = await execa('npm', ['pack', '--json'], {
+  const output = await execa('npm', ['pack'], {
     cwd: packagePath,
   });
 
-  try {
-    const [result] = JSON.parse(output.stdout);
-    return path.join(packagePath, result.filename);
-  } catch (err) {
-    throw new Error(`Failed to parse json:\n${formatOutput(output)}`);
+  if (output.code !== 0 || output.stdout.trim() === '') {
+    throw new Error(
+      `Failed to pack ${builderDirName}: ${formatOutput(output)}`
+    );
   }
+
+  return output.stdout.trim();
 }
 
 async function testFixture(directory, opts = {}, args = []) {
