@@ -1,9 +1,0 @@
-{
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "https://now-static-build-099-canary5tgz-kid7fuimq.natsu.dev",
-      "config": { "zeroConfig": true }
-    }
-  ]
-}
