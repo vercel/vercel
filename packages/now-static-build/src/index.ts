@@ -21,6 +21,7 @@ import {
   Config,
   debug,
   PackageJson,
+  PrepareCacheOptions,
 } from '@now/build-utils';
 
 async function checkForPort(port: number | undefined): Promise<void> {
@@ -372,4 +373,12 @@ export async function build({
   }
 
   throw new Error(message);
+}
+
+export async function prepareCache({ workPath }: PrepareCacheOptions) {
+  return {
+    ...(await glob('node_modules/**', workPath)),
+    ...(await glob('package-lock.json', workPath)),
+    ...(await glob('yarn.lock', workPath)),
+  };
 }
