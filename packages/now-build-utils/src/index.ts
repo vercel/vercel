@@ -2,11 +2,13 @@ import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
 import { Lambda, createLambda } from './lambda';
+import { Prerender, PrerenderGroup } from './prerender';
 import download, { DownloadedFiles } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob from './fs/glob';
 import rename from './fs/rename';
 import {
+  spawnAsync,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
@@ -27,11 +29,14 @@ export {
   FileRef,
   Lambda,
   createLambda,
+  Prerender,
+  PrerenderGroup,
   download,
   DownloadedFiles,
   getWriteableDirectory,
   glob,
   rename,
+  spawnAsync,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
