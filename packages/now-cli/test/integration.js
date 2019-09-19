@@ -1578,6 +1578,33 @@ test('use `--build-env` CLI flag', async t => {
   t.is(content.trim(), nonce);
 });
 
+test('use `--debug` CLI flag', async t => {
+  const directory = fixture('build-env-debug');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, '--debug', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout);
+  const { href, host } = new URL(deploymentUrl);
+  t.is(host.split('-')[0], session);
+
+  await waitForDeployment(href);
+
+  // get the content
+  const response = await fetch(href);
+  const content = await response.text();
+  t.is(content.trim(), '1');
+});
+
 test('try to deploy non-existing path', async t => {
   const goal = `> Error! The specified file or directory "${session}" does not exist.`;
 
