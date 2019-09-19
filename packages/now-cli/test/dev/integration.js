@@ -65,10 +65,15 @@ function formatOutput({ stderr, stdout }) {
 
 async function getPackedBuilderPath(builderDirName) {
   const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
-  const { stdout } = await execa('npm', ['pack', '--json'], {
+  const output = await execa('npm', ['pack', '--json'], {
     cwd: packagePath,
   });
-  const [result] = JSON.parse(stdout);
+
+  if (output.code !== 0) {
+    console.log(`Failed to pack ${builderDirName}`, formatOutput(output));
+  }
+
+  const [result] = JSON.parse(output.stdout);
   return path.join(packagePath, result.filename);
 }
 
