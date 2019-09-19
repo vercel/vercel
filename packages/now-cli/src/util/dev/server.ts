@@ -184,10 +184,10 @@ export default class DevServer {
 
     const distPaths: string[] = [];
 
-    for (const buildMatch of this.buildMatches) {
-      for (const buildResult of buildMatch[1].buildResults) {
-        if (buildResult[1].distPath) {
-          distPaths.push(buildResult[1].distPath);
+    for (const buildMatch of this.buildMatches.values()) {
+      for (const buildResult of buildMatch.buildResults.values()) {
+        if (buildResult.distPath) {
+          distPaths.push(buildResult.distPath);
         }
       }
     }
