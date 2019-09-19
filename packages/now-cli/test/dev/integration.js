@@ -824,9 +824,14 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
 
     dev.stderr.on('data', str => stderr.push(str));
 
-    await sleep(ms('15s'));
+    while (stderr.join('').includes('Ready') === false) {
+      await sleep(ms('3s'));
 
-    console.log('stderr', stderr.join(''));
+      if (Date.now() - start > ms('1m')) {
+        console.log(stderr.join(''));
+        break;
+      }
+    }
 
     const resp1 = await fetch(`http://localhost:${port}`);
     const text1 = await resp1.text();
