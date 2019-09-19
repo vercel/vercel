@@ -219,10 +219,10 @@ export async function runPackageJsonScript(
   const opts = { cwd: destPath, ...spawnOpts };
 
   if (hasPackageLockJson) {
-    console.log(`running "npm run ${scriptName}"`);
+    console.log(`Running "npm run ${scriptName}"`);
     await spawnAsync('npm', ['run', scriptName], opts);
   } else {
-    console.log(`running "yarn run ${scriptName}"`);
+    console.log(`Running "yarn run ${scriptName}"`);
     await spawnAsync('yarn', ['--cwd', destPath, 'run', scriptName], opts);
   }
 
