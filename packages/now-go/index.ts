@@ -11,7 +11,7 @@ import {
   BuildOptions,
   shouldServe,
   Files,
-  debug
+  debug,
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint } from './go-helpers';
@@ -38,7 +38,7 @@ async function initPrivateGit(credentials: string) {
     'config',
     '--global',
     'credential.helper',
-    `store --file ${join(homedir(), '.git-credentials')}`
+    `store --file ${join(homedir(), '.git-credentials')}`,
   ]);
 
   await writeFile(join(homedir(), '.git-credentials'), credentials);
@@ -51,7 +51,7 @@ export async function build({
   entrypoint,
   config,
   workPath,
-  meta = {} as BuildParamsMeta
+  meta = {} as BuildParamsMeta,
 }: BuildParamsType) {
   if (process.env.GIT_CREDENTIALS && !meta.isDev) {
     debug('Initialize Git credentials...');
@@ -76,7 +76,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
   // eslint-disable-next-line prefer-const
   let [goPath, outDir] = await Promise.all([
     getWriteableDirectory(),
-    getWriteableDirectory()
+    getWriteableDirectory(),
   ]);
 
   const srcPath = join(goPath, 'src', 'lambda');
@@ -194,7 +194,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       process.platform,
       process.arch,
       {
-        cwd: entrypointDirname
+        cwd: entrypointDirname,
       },
       true
     );
@@ -204,7 +204,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
 
         await writeFile(join(entrypointDirname, 'go.mod'), defaultGoModContent);
       } catch (err) {
-        console.log(`failed to create default go.mod for ${packageName}`);
+        console.log(`Failed to create default go.mod for ${packageName}`);
         throw err;
       }
     }
@@ -277,11 +277,11 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         !isGoModExist
       ) {
         await move(downloadedFiles[entrypoint].fsPath, finalDestination, {
-          overwrite: forceMove
+          overwrite: forceMove,
         });
       }
     } catch (err) {
-      console.log('failed to move entry to package folder');
+      console.log('Failed to move entry to package folder');
       throw err;
     }
 
@@ -354,7 +354,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       process.platform,
       process.arch,
       {
-        cwd: entrypointDirname
+        cwd: entrypointDirname,
       },
       false
     );
@@ -381,7 +381,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     try {
       await go.get();
     } catch (err) {
-      console.log('failed to `go get`');
+      console.log('Failed to `go get`');
       throw err;
     }
 
@@ -390,7 +390,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     try {
       const src = [
         join(entrypointDirname, mainGoFileName),
-        downloadedFiles[entrypoint].fsPath
+        downloadedFiles[entrypoint].fsPath,
       ];
       await go.build(src, destPath);
     } catch (err) {
@@ -403,10 +403,10 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     files: { ...(await glob('**', outDir)), ...includedFiles },
     handler: 'handler',
     runtime: 'go1.x',
-    environment: {}
+    environment: {},
   });
   const output = {
-    [entrypoint]: lambda
+    [entrypoint]: lambda,
   };
 
   const watch = parsedAnalyzed.watch;
@@ -420,7 +420,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
 
   return {
     output,
-    watch: watch.concat(watchSub)
+    watch: watch.concat(watchSub),
   };
 }
 
