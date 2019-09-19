@@ -198,6 +198,30 @@ export async function runBundleInstall(
   );
 }
 
+export async function runPipInstall(
+  destPath: string,
+  args: string[] = [],
+  spawnOpts?: SpawnOptions,
+  meta?: Meta
+) {
+  if (meta && meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+    return;
+  }
+
+  assert(path.isAbsolute(destPath));
+  const opts = { cwd: destPath, ...spawnOpts } || {
+    cwd: destPath,
+    env: process.env,
+  };
+
+  await spawnAsync(
+    'pip3',
+    ['install', '--disable-pip-version-check', ...args],
+    opts
+  );
+}
+
 export async function runPackageJsonScript(
   destPath: string,
   scriptName: string,

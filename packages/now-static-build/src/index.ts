@@ -11,6 +11,7 @@ import {
   spawnAsync,
   runNpmInstall,
   runBundleInstall,
+  runPipInstall,
   runPackageJsonScript,
   runShellScript,
   getNodeVersion,
@@ -150,6 +151,7 @@ export async function build({
     const pkgPath = path.join(workPath, entrypoint);
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
     const gemfilePath = path.join(workPath, 'Gemfile');
+    const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
     let framework: Framework | undefined = undefined;
@@ -162,6 +164,15 @@ export async function build({
       if (existsSync(gemfilePath) && !meta.isDev) {
         debug('Detected Gemfile, executing bundle install...');
         await runBundleInstall(workPath, [], undefined, meta);
+      }
+      if (existsSync(requirementsPath) && !meta.isDev) {
+        debug('Detected requirements.txt, executing pip install...');
+        await runPipInstall(
+          workPath,
+          ['-r', requirementsPath],
+          undefined,
+          meta
+        );
       }
 
       const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
