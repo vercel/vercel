@@ -3,37 +3,37 @@
   "builds": [{ "src": "**/**.py", "use": "@now/python" }],
   "probes": [
     {
-      "path": "/cookie-asgi.py",
+      "path": "/cookie_asgi.py",
       "responseHeaders": {
         "set-cookie": "one=first"
       }
     },
     {
-      "path": "/cookie-asgi.py",
+      "path": "/cookie_asgi.py",
       "responseHeaders": {
         "set-cookie": "two=second"
       }
     },
     {
-      "path": "/cookie-handler.py",
+      "path": "/cookie_handler.py",
       "responseHeaders": {
         "set-cookie": "one=first"
       }
     },
     {
-      "path": "/cookie-handler.py",
+      "path": "/cookie_handler.py",
       "responseHeaders": {
         "set-cookie": "two=second"
       }
     },
     {
-      "path": "/cookie-wsgi.py",
+      "path": "/cookie_wsgi.py",
       "responseHeaders": {
         "set-cookie": "one=first"
       }
     },
     {
-      "path": "/cookie-wsgi.py",
+      "path": "/cookie_wsgi.py",
       "responseHeaders": {
         "set-cookie": "two=second"
       }
