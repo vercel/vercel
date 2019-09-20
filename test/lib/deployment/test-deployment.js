@@ -93,9 +93,7 @@ async function testDeployment (
     if (probe.status) {
       if (probe.status !== resp.status) {
         throw new Error(
-          `Fetched page ${probeUrl} does not return the status ${
-            probe.status
-          } Instead it has ${resp.status}`
+          `Fetched page ${probeUrl} does not return the status ${probe.status} Instead it has ${resp.status}`
         );
       }
     }
@@ -107,23 +105,22 @@ async function testDeployment (
           .map(([ k, v ]) => `  ${k}=${v}`)
           .join('\n');
         throw new Error(
-          `Fetched page ${probeUrl} does not contain ${probe.mustContain}.`
-            + ` Instead it contains ${text.slice(0, 60)}`
-            + ` Response headers:\n ${headers}`
+          `Fetched page ${probeUrl} does not contain ${probe.mustContain}.` +
+            ` Instead it contains ${text.slice(0, 60)}` +
+            ` Response headers:\n ${headers}`
         );
       }
     } else if (probe.responseHeaders) {
       // eslint-disable-next-line no-loop-func
       Object.keys(probe.responseHeaders).forEach((header) => {
-        if (resp.headers.get(header) !== probe.responseHeaders[header]) {
-          const headers = Array.from(resp.headers.entries())
-            .map(([ k, v ]) => `  ${k}=${v}`)
-            .join('\n');
-
+        const actual = resp.headers.get(header);
+        const expected = probe.responseHeaders[header];
+        const isEqual = Array.isArray(expected)
+          ? expected.every((h) => actual.includes(h))
+          : expected === actual;
+        if (!isEqual) {
           throw new Error(
-            `Fetched page ${probeUrl} does not contain header ${header}: \`${
-              probe.responseHeaders[header]
-            }\`.\n\nResponse headers:\n ${headers}`
+            `Page ${probeUrl} does not have header ${header}.\n\nExpected: ${expected}.\nActual: ${headers}`
           );
         }
       });
