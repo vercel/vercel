@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "builds": [{ "src": "**/**.py", "use": "@now/python" }],
+  "probes": [
+    {
+      "path": "/cookie-asgi.py",
+      "responseHeaders": {
+        "set-cookie": "one=first"
+      }
+    },
+    {
+      "path": "/cookie-asgi.py",
+      "responseHeaders": {
+        "set-cookie": "two=second"
+      }
+    },
+    {
+      "path": "/cookie-handler.py",
+      "responseHeaders": {
+        "set-cookie": "one=first"
+      }
+    },
+    {
+      "path": "/cookie-handler.py",
+      "responseHeaders": {
+        "set-cookie": "two=second"
+      }
+    },
+    {
+      "path": "/cookie-wsgi.py",
+      "responseHeaders": {
+        "set-cookie": "one=first"
+      }
+    },
+    {
+      "path": "/cookie-wsgi.py",
+      "responseHeaders": {
+        "set-cookie": "two=second"
+      }
+    }
+  ]
+}
