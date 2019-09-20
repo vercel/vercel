@@ -119,6 +119,7 @@ export interface BuildResult {
   output: BuilderOutputs;
   routes: RouteConfig[];
   watch: string[];
+  distPath?: string;
 }
 
 export interface ShouldServeParams {
