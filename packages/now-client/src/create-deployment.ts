@@ -43,7 +43,7 @@ export default function buildCreateDeployment(
 
     const isDirectory = !Array.isArray(path) && lstatSync(path).isDirectory();
 
-    let rootFiles;
+    let rootFiles: string[];
 
     if (isDirectory && !Array.isArray(path)) {
       debug(`Provided 'path' is a directory. Reading subpaths... `);
