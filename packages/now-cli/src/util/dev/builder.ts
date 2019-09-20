@@ -260,6 +260,10 @@ export async function executeBuild(
       output: buildResultOrOutputs as BuilderOutputs,
       routes: [],
       watch: [],
+      distPath:
+        typeof buildResultOrOutputs.distPath === 'string'
+          ? buildResultOrOutputs.distPath
+          : undefined,
     };
   } else {
     result = buildResultOrOutputs as BuildResult;
