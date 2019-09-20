@@ -262,9 +262,9 @@ export const build = async ({
       "WARNING: your application is being deployed in @now/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
     );
 
-    debug('normalizing package.json');
+    debug('Normalizing package.json');
     const packageJson = normalizePackageJson(pkg);
-    debug('normalized package.json result: ', packageJson);
+    debug('Normalized package.json result: ', packageJson);
     await writePackageJson(entryPath, packageJson);
   } else if (!pkg.scripts || !pkg.scripts['now-build']) {
     debug(
@@ -280,11 +280,11 @@ export const build = async ({
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
-    debug('found NPM_AUTH_TOKEN in environment, creating .npmrc');
+    debug('Found NPM_AUTH_TOKEN in environment, creating .npmrc');
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  debug('installing dependencies...');
+  console.log('Installing dependencies...');
   await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
   let realNextVersion: string | undefined;
@@ -292,23 +292,23 @@ export const build = async ({
     realNextVersion = require(resolveFrom(entryPath, 'next/package.json'))
       .version;
 
-    debug(`detected Next.js version: ${realNextVersion}`);
+    debug(`Detected Next.js version: ${realNextVersion}`);
   } catch (_ignored) {
-    debug(`could not identify real Next.js version, that's OK!`);
+    debug(`Could not identify real Next.js version, that's OK!`);
   }
 
   if (!isLegacy) {
     await createServerlessConfig(workPath, entryPath, realNextVersion);
   }
 
-  debug('running user script...');
+  debug('Running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
   const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, 'now-build', { ...spawnOpts, env });
 
   if (isLegacy) {
-    debug('running npm install --production...');
+    debug('Running npm install --production...');
     await runNpmInstall(
       entryPath,
       ['--prefer-offline', '--production'],
@@ -329,7 +329,7 @@ export const build = async ({
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
 
-    debug('preparing lambda files...');
+    debug('Preparing lambda files...');
     let buildId: string;
     try {
       buildId = await readFile(
@@ -411,7 +411,7 @@ export const build = async ({
       })
     );
   } else {
-    debug('preparing lambda files...');
+    debug('Preparing lambda files...');
     const pagesDir = path.join(entryPath, '.next', 'serverless', 'pages');
 
     const pages = await glob('**/*.js', pagesDir);
@@ -717,7 +717,7 @@ export const prepareCache = async ({
   workPath,
   entrypoint,
 }: PrepareCacheOptions) => {
-  debug('preparing cache ...');
+  debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
 
@@ -731,7 +731,7 @@ export const prepareCache = async ({
     return {};
   }
 
-  debug('producing cache file manifest ...');
+  debug('Producing cache file manifest...');
   const cacheEntrypoint = path.relative(workPath, entryPath);
   const cache = {
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
@@ -739,6 +739,6 @@ export const prepareCache = async ({
     ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
   };
-  debug('cache file manifest produced');
+  debug('Cache file manifest produced');
   return cache;
 };
