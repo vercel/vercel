@@ -180,7 +180,7 @@ export const prepareFiles = (
 };
 
 export function createDebug(debug?: boolean) {
-  const isDebug = debug || process.env.DEBUG;
+  const isDebug = debug || process.env.NOW_CLIENT_DEBUG;
 
   if (isDebug) {
     return (...logs: string[]) => {
