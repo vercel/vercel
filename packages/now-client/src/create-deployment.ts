@@ -62,7 +62,7 @@ export default function buildCreateDeployment(
 
     debug(`Found ${ignores.length} rules in .nowignore`);
 
-    let fileList;
+    let fileList: string[];
 
     debug('Building file tree...');
 
