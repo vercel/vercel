@@ -7,21 +7,35 @@ import inspect
 import __NOW_HANDLER_FILENAME
 __now_variables = dir(__NOW_HANDLER_FILENAME)
 
+
+def format_headers(headers, decode=False):
+    keyToList = {}
+    for key, value in headers.items():
+        if decode:
+            key = key.decode()
+            value = value.decode()
+        if key not in keyToList:
+            keyToList[key] = []
+        keyToList[key].append(value)
+    return keyToList
+
+
 if 'handler' in __now_variables or 'Handler' in __now_variables:
     base = __NOW_HANDLER_FILENAME.handler if ('handler' in __now_variables) else  __NOW_HANDLER_FILENAME.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
         print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
         exit(1)
-    
+
     print('using HTTP Handler')
     from http.server import HTTPServer
     from urllib.parse import unquote
-    import requests
+    import http
     import _thread
-    
+
     server = HTTPServer(('', 0), base)
     port = server.server_address[1]
+
     def now_handler(event, context):
         _thread.start_new_thread(server.handle_request, ())
 
@@ -38,13 +52,15 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
         ):
             body = base64.b64decode(body)
 
-        res = requests.request(method, 'http://0.0.0.0:' + str(port) + path,
-                            headers=headers, data=body, allow_redirects=False)
+        conn = http.client.HTTPConnection('0.0.0.0', port)
+        conn.request(method, path, headers=headers, body=body)
+        res = conn.getresponse()
+        data = res.read().decode('utf-8')
 
         return {
-            'statusCode': res.status_code,
-            'headers': dict(res.headers),
-            'body': res.text,
+            'statusCode': res.status,
+            'headers': format_headers(res.headers),
+            'body': data,
         }
 elif 'app' in __now_variables:
     if (
@@ -60,6 +76,7 @@ elif 'app' in __now_variables:
         from werkzeug._compat import wsgi_encoding_dance
         from werkzeug.datastructures import Headers
         from werkzeug.wrappers import Response
+
         def now_handler(event, context):
             payload = json.loads(event['body'])
 
@@ -113,7 +130,7 @@ elif 'app' in __now_variables:
 
             return_dict = {
                 'statusCode': response.status_code,
-                'headers': dict(response.headers)
+                'headers': format_headers(response.headers)
             }
 
             if response.data:
@@ -126,6 +143,7 @@ elif 'app' in __now_variables:
         import asyncio
         import enum
         from urllib.parse import urlparse, unquote, urlencode
+        from werkzeug.datastructures import Headers
 
 
         class ASGICycleState(enum.Enum):
@@ -180,7 +198,7 @@ elif 'app' in __now_variables:
                         )
 
                     status_code = message['status']
-                    headers = {k: v for k, v in message.get('headers', [])}
+                    headers = Headers(message.get('headers', []))
 
                     self.on_request(headers, status_code)
                     self.state = ASGICycleState.RESPONSE
@@ -203,7 +221,7 @@ elif 'app' in __now_variables:
 
             def on_request(self, headers, status_code):
                 self.response['statusCode'] = status_code
-                self.response['headers'] = {k.decode(): v.decode() for k, v in headers.items()}
+                self.response['headers'] = format_headers(headers, decode=True)
 
             def on_response(self):
                 if self.body:
@@ -250,4 +268,3 @@ else:
     print('Missing variable `handler` or `app` in file __NOW_HANDLER_FILENAME.py')
     print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
     exit(1)
-
