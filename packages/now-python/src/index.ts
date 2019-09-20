@@ -106,7 +106,6 @@ export const build = async ({
 
   console.log('Installing dependencies...');
   await pipInstall(pipPath, workPath, 'werkzeug');
-  await pipInstall(pipPath, workPath, 'requests');
 
   let fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
