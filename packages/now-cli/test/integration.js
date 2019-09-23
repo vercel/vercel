@@ -1110,6 +1110,7 @@ test('ensure we render a warning for deployments with no files', async t => {
 test('ensure we render a prompt when deploying home directory', async t => {
   const directory = homedir();
 
+  console.log('homedir()', homedir());
   const { stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
@@ -1118,6 +1119,8 @@ test('ensure we render a prompt when deploying home directory', async t => {
       input: 'N',
     }
   );
+  console.log('stderr', stderr);
+  console.log('code', code);
 
   // Ensure the exit code is right
   t.is(code, 0);
