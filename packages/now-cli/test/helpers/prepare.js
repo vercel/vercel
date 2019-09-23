@@ -188,6 +188,31 @@ RUN mkdir /public
 RUN echo $NONCE > /public/index.html
       `,
     },
+    'build-env-debug': {
+      'now.json':
+        '{ "builds": [ { "src": "index.js", "use": "@now/node" } ], "version": 2 }',
+      'package.json': `
+{
+  "scripts": {
+    "now-build": "node now-build.js"
+  }
+}
+      `,
+      'now-build.js': `
+const fs = require('fs');
+fs.writeFileSync(
+  'index.js',
+  fs
+    .readFileSync('index.js', 'utf8')
+    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG),
+);
+      `,
+      'index.js': `
+module.exports = (req, res) => {
+  res.status(200).send('BUILD_ENV_DEBUG')
+}
+      `,
+    },
     'now-revert-alias-1': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
       'now.json': getRevertAliasConfigFile(),
