@@ -29,7 +29,7 @@ async function testDeployment (
   buildDelegate
 ) {
   console.log('testDeployment', fixturePath);
-  const globResult = await glob(`${fixturePath}/**`, { nodir: true });
+  const globResult = await glob(`${fixturePath}/**`, { nodir: true, dot: true });
   const bodies = globResult.reduce((b, f) => {
     const r = path.relative(fixturePath, f);
     b[r] = fs.readFileSync(f);
