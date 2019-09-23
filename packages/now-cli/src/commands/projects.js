@@ -104,7 +104,7 @@ async function run({ client, contextName }) {
       return exit(1);
     }
 
-    const list = await client.fetch('/v2/projects/', { method: 'GET' });
+    const list = await client.fetch('/projects/list', { method: 'GET' });
     const elapsed = ms(new Date() - start);
 
     console.log(
@@ -169,7 +169,10 @@ async function run({ client, contextName }) {
       return exit(0);
     }
 
-    await client.fetch(`/v2/projects/${name}`, { method: 'DELETE' });
+    await client.fetch('/projects/remove', {
+      method: 'DELETE',
+      body: { name },
+    });
     const elapsed = ms(new Date() - start);
     console.log(
       `${chalk.cyan('> Success!')} Project ${chalk.bold(
