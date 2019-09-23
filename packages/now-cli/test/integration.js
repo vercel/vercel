@@ -1118,17 +1118,16 @@ test('ensure we render a prompt when deploying home directory', async t => {
       input: 'N',
     }
   );
-  console.log('stdout', stdout);
 
   // Ensure the exit code is right
   t.is(code, 0);
 
-  t.true(stderr.includes('> Aborted'));
   t.true(
     stdout.includes(
-      '>You are deploying your home directory. Do you want to continue?'
+      '> You are deploying your home directory. Do you want to continue? [y|N]'
     )
   );
+  t.true(stderr.includes('> Aborted'));
 });
 
 test('ensure the `alias` property is not sent to the API', async t => {
