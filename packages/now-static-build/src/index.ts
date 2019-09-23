@@ -359,7 +359,7 @@ export async function build({
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
-    return { routes, watch, output };
+    return { routes, watch, output, distPath };
   }
 
   if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
@@ -375,6 +375,7 @@ export async function build({
       output,
       routes: [],
       watch: [],
+      distPath,
     };
   }
 
