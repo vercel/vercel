@@ -1589,6 +1589,11 @@ test('use `--debug` CLI flag', async t => {
     }
   );
 
+  console.log('session: ', session);
+  console.log('stderr: ', stderr);
+  console.log('stdout: ', stdout);
+  console.log('code: ', code);
+
   // Ensure the exit code is right
   t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
 
@@ -1596,6 +1601,9 @@ test('use `--debug` CLI flag', async t => {
   const deploymentUrl = pickUrl(stdout);
   const { href, host } = new URL(deploymentUrl);
   t.is(host.split('-')[0], session);
+
+  console.log('deploymentUrl: ', deploymentUrl);
+  console.log('href: ', href);
 
   await waitForDeployment(href);
 
