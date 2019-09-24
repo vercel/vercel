@@ -11,7 +11,7 @@ export default async function runBuild({
   buildsOutputDir,
   build,
   files,
-  output
+  output,
 }: {
   workDir: string;
   buildersDir: string;
@@ -26,7 +26,7 @@ export default async function runBuild({
     output: { [path: string]: any };
   } = {
     output: {},
-    routes: []
+    routes: [],
   };
 
   const builderName = build.use;
@@ -41,8 +41,8 @@ export default async function runBuild({
   if (build.use === '@now/static') {
     // the source is the output for @now/static
     buildOutput.output = {
-      [build.src]: files[build.src]
-    }
+      [build.src]: files[build.src],
+    };
   } else {
     const builderPath = path.join(buildersDir, 'node_modules', builderName);
     const builder = require(builderPath);
@@ -51,7 +51,7 @@ export default async function runBuild({
       files,
       workPath: workDir,
       entrypoint: build.src,
-      config: build.config || {}
+      config: build.config || {},
     });
   }
   const outputKeys = Object.keys(buildOutput.output);
@@ -70,6 +70,8 @@ export default async function runBuild({
     if (item.type === 'Lambda') {
       await fs.writeFile(itemPath, item.zipBuffer);
       item.zipBuffer = 'OMITTED';
+    } else if (item.type === 'Prerender' && item.lambda) {
+      item.lambda.zipBuffer = 'OMITTED';
     } else if (item.type === 'FileFsRef') {
       const writeStream = fs.createWriteStream(itemPath);
       item.toStream().pipe(writeStream);
