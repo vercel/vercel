@@ -4,7 +4,6 @@ const sharp = require('sharp');
 
 module.exports = async (req, res) => {
   const file = readFileSync(join(__dirname, 'monkey.jpg'));
-  console.log(`resizing image ${file}`);
   const image = sharp(file).resize({
     height: 100,
     width: 100,
