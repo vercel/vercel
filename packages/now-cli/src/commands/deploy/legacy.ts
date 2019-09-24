@@ -1,4 +1,5 @@
 import { resolve, basename, join } from 'path';
+import { homedir } from 'os';
 import { eraseLines } from 'ansi-escapes';
 // @ts-ignore
 import { write as copy } from 'clipboardy';
@@ -267,6 +268,17 @@ export default async function main(
     paths = argv._.map((item: string) => resolve(process.cwd(), item));
   } else {
     paths = [process.cwd()];
+  }
+
+  if (argv._[0] === homedir()) {
+    if (
+      !(await promptBool(
+        'You are deploying your home directory. Do you want to continue?'
+      ))
+    ) {
+      output.log('Aborted');
+      return 0;
+    }
   }
 
   // Options
