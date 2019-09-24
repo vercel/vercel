@@ -1,5 +1,4 @@
 import { resolve, basename, join } from 'path';
-import { homedir } from 'os';
 import { eraseLines } from 'ansi-escapes';
 // @ts-ignore
 import { write as copy } from 'clipboardy';
@@ -40,6 +39,8 @@ import eventListenerToGenerator from '../../util/event-listener-to-generator';
 import formatLogOutput from '../../util/output/format-log-output';
 // @ts-ignore
 import getEventsStream from '../../util/deploy/get-events-stream';
+// @ts-ignore
+import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 // @ts-ignore
 import getInstanceIndex from '../../util/deploy/get-instance-index';
 import joinWords from '../../util/output/join-words';
@@ -270,15 +271,8 @@ export default async function main(
     paths = [process.cwd()];
   }
 
-  if (argv._[0] === homedir()) {
-    if (
-      !(await promptBool(
-        'You are deploying your home directory. Do you want to continue?'
-      ))
-    ) {
-      output.log('Aborted');
-      return 0;
-    }
+  if (!(await shouldDeployDir(argv._[0], output))) {
+    return 0;
   }
 
   // Options

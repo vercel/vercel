@@ -3,7 +3,6 @@ import bytes from 'bytes';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
-import { homedir } from 'os';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
@@ -40,7 +39,7 @@ import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
-import promptBool from '../../util/input/prompt-bool';
+import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -204,15 +203,8 @@ export default async function main(
     return 1;
   }
 
-  if (argv._[0] === homedir()) {
-    if (
-      !(await promptBool(
-        'You are deploying your home directory. Do you want to continue?'
-      ))
-    ) {
-      output.log('Aborted');
-      return 0;
-    }
+  if (!(await shouldDeployDir(argv._[0], output))) {
+    return 0;
   }
 
   const {
