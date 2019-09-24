@@ -28,6 +28,7 @@ import {
   runPackageJsonScript,
   debug,
   PackageJson,
+  Prerender,
 } from '@now/build-utils';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 
@@ -331,6 +332,7 @@ export const build = async ({
 
   const exportedPageRoutes: Route[] = [];
   const lambdas: { [key: string]: Lambda } = {};
+  const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
 
@@ -633,6 +635,54 @@ export const build = async ({
     console.timeEnd(allLambdasLabel);
   }
 
+  try {
+    const prerenderManifestContents = await readFile(
+      path.join(entryPath, '.next', 'prerender-manifest.json'),
+      'utf8'
+    )
+    const distPagesDir = path.join(entryPath, '.next/serverless/pages')
+    const prerenderManifest: {
+      version: number,
+      routes: { [key: string]: { initialRevalidateSeconds: number | false } }
+    } = JSON.parse(prerenderManifestContents)
+
+    for (const route of Object.keys(prerenderManifest.routes)) {
+      const info = prerenderManifest.routes[route]
+      const prefixedRoute = path.join(entryDirectory, route)
+      const dataRoute = path.join(
+        entryDirectory, '/_next/data/', `${route}.json`
+      )
+      const htmlFsRef = new FileFsRef({
+        fsPath: path.join(distPagesDir, `${route}.html`)
+      })
+      const jsonFsRef = new FileFsRef({
+        fsPath: path.join(distPagesDir, `${route}.json`)
+      })
+
+      // if they never revalidate they can just be FileFsRefs
+      if (info.initialRevalidateSeconds === false) {
+        prerenders[prefixedRoute] = htmlFsRef
+        prerenders[dataRoute] = jsonFsRef
+      } else {
+        prerenders[prefixedRoute] = new Prerender({
+          expiration: info.initialRevalidateSeconds,
+          lambda: lambdas[prefixedRoute],
+          fallback: htmlFsRef
+        })
+        prerenders[dataRoute] = new Prerender({
+          expiration: info.initialRevalidateSeconds,
+          lambda: lambdas[prefixedRoute],
+          fallback: jsonFsRef
+        })
+      }
+    }
+  } catch (err) {
+    // not enabled if missing
+    if (err.code !== 'ENOENT') {
+      throw err
+    }
+  }
+
   const nextStaticFiles = await glob(
     '**',
     path.join(entryPath, '.next', 'static')
@@ -684,6 +734,7 @@ export const build = async ({
     output: {
       ...publicFiles,
       ...lambdas,
+      ...prerenders,
       ...staticPages,
       ...staticFiles,
       ...staticDirectoryFiles,
