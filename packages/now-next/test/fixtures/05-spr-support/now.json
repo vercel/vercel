@@ -1,0 +1,132 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@now/next" }],
+  "probes": [
+    {
+      "path": "/blog/post-1",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/blog/post-2",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/blog/post-3",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/blog/post-1/comment-1",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/blog/post-2/comment-2",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/blog/post-3/comment-3",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/lambda",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/forever",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/another",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/_next/data/blog/post-1",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/_next/data/blog/post-2",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/_next/data/blog/post-3",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/_next/data/blog/post-1/comment-1",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/_next/data/blog/post-2/comment-2",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/_next/data/blog/post-3/comment-3",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/_next/data/lambda",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/_next/data/forever",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/_next/data/another",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    }
+  ]
+}
