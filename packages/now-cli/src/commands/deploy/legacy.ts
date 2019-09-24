@@ -62,6 +62,7 @@ import {
   TooManyRequests,
   VerifyScaleTimeout,
   DeploymentsRateLimited,
+  NotDomainOwner,
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
@@ -792,6 +793,7 @@ async function sync({
 
       if (
         deployment instanceof DomainNotFound ||
+        deployment instanceof NotDomainOwner ||
         deployment instanceof DomainPermissionDenied ||
         deployment instanceof DomainVerificationFailed ||
         deployment instanceof SchemaValidationFailed ||

@@ -613,6 +613,8 @@ test('test "now.json" aliasing with non-owned domain', async t => {
     { reject: false }
   );
 
+  console.log(stderr);
+
   t.true(stderr.includes(goal));
 });
 
