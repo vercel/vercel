@@ -11,6 +11,7 @@ import {
   spawnAsync,
   runNpmInstall,
   runBundleInstall,
+  runPipInstall,
   runPackageJsonScript,
   runShellScript,
   getNodeVersion,
@@ -21,6 +22,7 @@ import {
   Config,
   debug,
   PackageJson,
+  PrepareCacheOptions,
 } from '@now/build-utils';
 
 async function checkForPort(port: number | undefined): Promise<void> {
@@ -149,6 +151,7 @@ export async function build({
     const pkgPath = path.join(workPath, entrypoint);
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
     const gemfilePath = path.join(workPath, 'Gemfile');
+    const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
     let framework: Framework | undefined = undefined;
@@ -161,6 +164,15 @@ export async function build({
       if (existsSync(gemfilePath) && !meta.isDev) {
         debug('Detected Gemfile, executing bundle install...');
         await runBundleInstall(workPath, [], undefined, meta);
+      }
+      if (existsSync(requirementsPath) && !meta.isDev) {
+        debug('Detected requirements.txt, executing pip install...');
+        await runPipInstall(
+          workPath,
+          ['-r', requirementsPath],
+          undefined,
+          meta
+        );
       }
 
       const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
@@ -227,6 +239,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
+    console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
     if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
@@ -346,7 +359,7 @@ export async function build({
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
-    return { routes, watch, output };
+    return { routes, watch, output, distPath };
   }
 
   if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
@@ -362,6 +375,7 @@ export async function build({
       output,
       routes: [],
       watch: [],
+      distPath,
     };
   }
 
@@ -372,4 +386,12 @@ export async function build({
   }
 
   throw new Error(message);
+}
+
+export async function prepareCache({ workPath }: PrepareCacheOptions) {
+  return {
+    ...(await glob('node_modules/**', workPath)),
+    ...(await glob('package-lock.json', workPath)),
+    ...(await glob('yarn.lock', workPath)),
+  };
 }

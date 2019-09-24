@@ -63,6 +63,21 @@ function formatOutput({ stderr, stdout }) {
   return `Received:\n"${stderr}"\n"${stdout}"`;
 }
 
+async function getPackedBuilderPath(builderDirName) {
+  const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
+  const output = await execa('npm', ['pack'], {
+    cwd: packagePath,
+  });
+
+  if (output.code !== 0 || output.stdout.trim() === '') {
+    throw new Error(
+      `Failed to pack ${builderDirName}: ${formatOutput(output)}`
+    );
+  }
+
+  return path.join(packagePath, output.stdout.trim());
+}
+
 async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
@@ -142,7 +157,7 @@ test('[now dev] validate routes', async t => {
 
 test('[now dev] validate env var names', async t => {
   const directory = fixture('invalid-env-var-name');
-  const { dev, port } = await testFixture(directory, { stdio: 'pipe' });
+  const { dev } = await testFixture(directory, { stdio: 'pipe' });
 
   try {
     // start `now dev` detached in child_process
@@ -805,6 +820,65 @@ test('[now dev] render warning for empty cwd dir', async t => {
     const response = await fetch(`http://localhost:${port}`);
     validateResponseHeaders(t, response);
     t.is(response.status, 404);
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[now dev] do not rebuild for changes in the output directory', async t => {
+  const directory = fixture('output-is-source');
+
+  // Pack the builder and set it in the now.json
+  const builder = await getPackedBuilderPath('now-static-build');
+
+  await fs.writeFile(
+    path.join(directory, 'now.json'),
+    JSON.stringify({
+      builds: [
+        {
+          src: 'package.json',
+          use: `file://${builder}`,
+          config: { zeroConfig: true },
+        },
+      ],
+    })
+  );
+
+  const { dev, port } = await testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  try {
+    dev.unref();
+
+    let stderr = [];
+    const start = Date.now();
+
+    dev.stderr.on('data', str => stderr.push(str));
+
+    while (stderr.join('').includes('Ready') === false) {
+      await sleep(ms('3s'));
+
+      if (Date.now() - start > ms('30s')) {
+        console.log('stderr:', stderr.join(''));
+        break;
+      }
+    }
+
+    const resp1 = await fetch(`http://localhost:${port}`);
+    const text1 = await resp1.text();
+    t.is(text1.trim(), 'hello first', stderr.join(''));
+
+    await fs.writeFile(
+      path.join(directory, 'public', 'index.html'),
+      'hello second'
+    );
+
+    await sleep(ms('3s'));
+
+    const resp2 = await fetch(`http://localhost:${port}`);
+    const text2 = await resp2.text();
+    t.is(text2.trim(), 'hello second', stderr.join(''));
   } finally {
     dev.kill('SIGTERM');
   }
