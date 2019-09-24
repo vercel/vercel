@@ -39,7 +39,6 @@ import eventListenerToGenerator from '../../util/event-listener-to-generator';
 import formatLogOutput from '../../util/output/format-log-output';
 // @ts-ignore
 import getEventsStream from '../../util/deploy/get-events-stream';
-// @ts-ignore
 import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 // @ts-ignore
 import getInstanceIndex from '../../util/deploy/get-instance-index';
