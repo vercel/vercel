@@ -178,6 +178,7 @@ export async function build({
       const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
 
       if (HUGO_VERSION && !meta.isDev) {
+        console.log('Installing Hugo version ' + HUGO_VERSION);
         const [major, minor] = HUGO_VERSION.split('.').map(Number);
         const isOldVersion = major === 0 && minor < 43;
         const prefix = isOldVersion ? `hugo_` : `hugo_extended_`;
@@ -188,6 +189,7 @@ export async function build({
       }
 
       if (ZOLA_VERSION && !meta.isDev) {
+        console.log('Installing Zola version ' + ZOLA_VERSION);
         const url = `https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
         await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], {
           shell: true,
@@ -195,6 +197,7 @@ export async function build({
       }
 
       if (GUTENBERG_VERSION && !meta.isDev) {
+        console.log('Installing Guttenberg version ' + GUTENBERG_VERSION);
         const url = `https://github.com/getzola/zola/releases/download/v${GUTENBERG_VERSION}/gutenberg-v${GUTENBERG_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
         await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], {
           shell: true,
