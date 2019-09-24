@@ -603,6 +603,19 @@ test('create an alias from "now.json" `alias` for deployment', async t => {
   context.alias = json.alias;
 });
 
+test('test "now.json" aliasing with non-owned domain', async t => {
+  const target = fixture('failing-alias');
+  const goal = `> Error! You are not owner of the domain "zeit.co"`;
+
+  let { stderr } = await execa(
+    binaryPath,
+    [target, '--public', '--name', session, ...defaultArgs],
+    { reject: false }
+  );
+
+  t.true(stderr.includes(goal));
+});
+
 test('remove the alias from "now.json" `alias`', async t => {
   const goal = `> Success! Alias ${context.alias} removed`;
 

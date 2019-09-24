@@ -227,6 +227,11 @@ RUN echo $NONCE > /public/index.html
         },
       }),
     },
+    'failing-alias': {
+      'now.json': JSON.stringify(
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+      ),
+    },
     'alias-rules': {
       'rules.json': JSON.stringify({
         rules: [
