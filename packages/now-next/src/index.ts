@@ -652,6 +652,18 @@ export const build = async ({
       const dataRoute = path.join(
         entryDirectory, '/_next/data/', `${route}.json`
       )
+      // remove the HTML file from staticPages since it's not an auto-export
+      delete staticPages[`${prefixedRoute}.html`]
+      let exportedRouteIdx = -1
+      exportedPageRoutes.find((r, i) => {
+        exportedRouteIdx = i
+        return r.dest === path.join('/', `${route}.html`)
+      })
+
+      if (exportedRouteIdx > -1) {
+        exportedPageRoutes.splice(exportedRouteIdx, 1)
+      }
+
       const htmlFsRef = new FileFsRef({
         fsPath: path.join(distPagesDir, `${route}.html`)
       })
@@ -716,6 +728,10 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
+  // for dynamic prerender pages' data _next/data/${dynamicRoute}
+  const dynamicDataRoutes: Array<{ src: string, dest: string }> = []
+  const hasPrerenders = Object.keys(prerenders).length > 0
+
   const dynamicRoutes = getDynamicRoutes(
     entryPath,
     entryDirectory,
@@ -726,7 +742,15 @@ export const build = async ({
     if (staticPages[`${route.dest}.html`.substr(1)]) {
       route.dest = `${route.dest}.html`;
     }
-    route.src = route.src.replace('^', `^${dynamicPrefix}`);
+    const origSrc = route.src
+    route.src = origSrc.replace('^', `^${dynamicPrefix}`);
+
+    if (hasPrerenders) {
+      dynamicDataRoutes.push({
+        src: origSrc.replace('^', `^${path.join(dynamicPrefix, '_next/data')}`),
+        dest: route.dest
+      })
+    }
     return route;
   });
 
@@ -757,6 +781,7 @@ export const build = async ({
       { handle: 'filesystem' },
       // Dynamic routes
       ...dynamicRoutes,
+      ...dynamicDataRoutes,
       ...(isLegacy
         ? []
         : [
