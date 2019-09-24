@@ -2,13 +2,16 @@ import path from 'path';
 import spawn from 'cross-spawn';
 import getPort from 'get-port';
 import { timeout } from 'promise-timeout';
+import isPortReachable from 'is-port-reachable';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
+  spawnAsync,
   runNpmInstall,
   runBundleInstall,
+  runPipInstall,
   runPackageJsonScript,
   runShellScript,
   getNodeVersion,
@@ -18,9 +21,17 @@ import {
   BuildOptions,
   Config,
   debug,
-  PackageJson
+  PackageJson,
+  PrepareCacheOptions,
 } from '@now/build-utils';
-import isPortReachable from 'is-port-reachable'
+
+async function checkForPort(port: number | undefined): Promise<void> {
+  while (!(await isPortReachable(port))) {
+    await new Promise(resolve => {
+      setTimeout(resolve, 100);
+    });
+  }
+}
 
 function validateDistDir(
   distDir: string,
@@ -86,7 +97,7 @@ const nowDevScriptPorts = new Map();
 const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
   const basic: Route = {
     src: `${srcBase}${route.src}`,
-    dest: `http://localhost:${devPort}${route.dest}`
+    dest: `http://localhost:${devPort}${route.dest}`,
   };
 
   if (route.headers) {
@@ -120,7 +131,7 @@ export async function build({
   entrypoint,
   workPath,
   config,
-  meta = {}
+  meta = {},
 }: BuildOptions) {
   debug('Downloading user files...');
   await download(files, workPath, meta);
@@ -140,6 +151,7 @@ export async function build({
     const pkgPath = path.join(workPath, entrypoint);
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
     const gemfilePath = path.join(workPath, 'Gemfile');
+    const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
     let framework: Framework | undefined = undefined;
@@ -149,10 +161,44 @@ export async function build({
     const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (config.zeroConfig) {
-
       if (existsSync(gemfilePath) && !meta.isDev) {
         debug('Detected Gemfile, executing bundle install...');
         await runBundleInstall(workPath, [], undefined, meta);
+      }
+      if (existsSync(requirementsPath) && !meta.isDev) {
+        debug('Detected requirements.txt, executing pip install...');
+        await runPipInstall(
+          workPath,
+          ['-r', requirementsPath],
+          undefined,
+          meta
+        );
+      }
+
+      const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
+
+      if (HUGO_VERSION && !meta.isDev) {
+        const [major, minor] = HUGO_VERSION.split('.').map(Number);
+        const isOldVersion = major === 0 && minor < 43;
+        const prefix = isOldVersion ? `hugo_` : `hugo_extended_`;
+        const url = `https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${prefix}${HUGO_VERSION}_Linux-64bit.tar.gz`;
+        await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], {
+          shell: true,
+        });
+      }
+
+      if (ZOLA_VERSION && !meta.isDev) {
+        const url = `https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
+        await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], {
+          shell: true,
+        });
+      }
+
+      if (GUTENBERG_VERSION && !meta.isDev) {
+        const url = `https://github.com/getzola/zola/releases/download/v${GUTENBERG_VERSION}/gutenberg-v${GUTENBERG_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
+        await spawnAsync(`curl -L ${url} | tar -zx -C /usr/local/bin`, [], {
+          shell: true,
+        });
       }
 
       // `public` is the default for zero config
@@ -164,7 +210,9 @@ export async function build({
         pkg.devDependencies
       );
 
-      framework = frameworks.find(({ dependency }) => dependencies[dependency || '']);
+      framework = frameworks.find(
+        ({ dependency }) => dependencies[dependency || '']
+      );
     }
 
     if (framework) {
@@ -191,6 +239,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
+    console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
     if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
@@ -206,7 +255,7 @@ export async function build({
 
         const opts = {
           cwd: entrypointDir,
-          env: { ...process.env, PORT: String(devPort) }
+          env: { ...process.env, PORT: String(devPort) },
         };
 
         const child = spawn('yarn', ['run', devScript], opts);
@@ -218,15 +267,6 @@ export async function build({
         if (child.stderr) {
           child.stderr.setEncoding('utf8');
           child.stderr.pipe(process.stderr);
-        }
-
-
-        async function checkForPort(port: number | undefined): Promise<void> {
-          while (!(await isPortReachable(port))) {
-            await new Promise(resolve => {
-              setTimeout(resolve, 100);
-            });
-          }
         }
 
         // Now wait for the server to have listened on `$PORT`, after which we
@@ -260,7 +300,7 @@ export async function build({
       routes.push(
         getDevRoute(srcBase, devPort, {
           src: '/(.*)',
-          dest: '/$1'
+          dest: '/$1',
         })
       );
     } else {
@@ -319,7 +359,7 @@ export async function build({
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
-    return { routes, watch, output };
+    return { routes, watch, output, distPath };
   }
 
   if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
@@ -334,7 +374,8 @@ export async function build({
     return {
       output,
       routes: [],
-      watch: []
+      watch: [],
+      distPath,
     };
   }
 
@@ -345,4 +386,12 @@ export async function build({
   }
 
   throw new Error(message);
+}
+
+export async function prepareCache({ workPath }: PrepareCacheOptions) {
+  return {
+    ...(await glob('node_modules/**', workPath)),
+    ...(await glob('package-lock.json', workPath)),
+    ...(await glob('yarn.lock', workPath)),
+  };
 }

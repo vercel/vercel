@@ -23,6 +23,8 @@ const session = Math.random()
   .toString(36)
   .split('.')[1];
 
+const isCanary = pkg.version.includes('canary');
+
 const pickUrl = stdout => {
   const lines = stdout.split('\n');
   return lines[lines.length - 1];
@@ -1576,6 +1578,33 @@ test('use `--build-env` CLI flag', async t => {
   t.is(content.trim(), nonce);
 });
 
+test('use `--debug` CLI flag', async t => {
+  const directory = fixture('build-env-debug');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, '--debug', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout);
+  const { href, host } = new URL(deploymentUrl);
+  t.is(host.split('-')[0], session);
+
+  await waitForDeployment(href);
+
+  // get the content
+  const response = await fetch(href);
+  const content = await response.text();
+  t.is(content.trim(), '1');
+});
+
 test('try to deploy non-existing path', async t => {
   const goal = `> Error! The specified file or directory "${session}" does not exist.`;
 
@@ -1866,6 +1895,66 @@ test('now hasOwnProperty not a valid subcommand', async t => {
     /The specified file or directory "hasOwnProperty" does not exist/gm,
     formatOutput(output)
   );
+});
+
+test('create zero-config deployment', async t => {
+  const fixturePath = fixture('zero-config-next-js');
+  const output = await execute([fixturePath, '--force', '--public']);
+
+  t.is(output.code, 0, formatOutput(output));
+
+  const { host } = new URL(output.stdout);
+  const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
+
+  const text = await response.text();
+
+  t.is(response.status, 200, text);
+  const data = JSON.parse(text);
+
+  t.is(data.error, undefined, JSON.stringify(data, null, 2));
+
+  const validBuilders = data.builds.every(build =>
+    isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
+  );
+
+  t.true(validBuilders, JSON.stringify(data, null, 2));
+});
+
+test('now secret add', async t => {
+  context.secretName = `my-secret-${Date.now().toString(36)}`;
+  const value = 'https://my-secret-endpoint.com';
+
+  const output = await execute(['secret', 'add', context.secretName, value]);
+
+  t.is(output.code, 0, formatOutput(output));
+});
+
+test('now secret ls', async t => {
+  const output = await execute(['secret', 'ls']);
+
+  t.is(output.code, 0, formatOutput(output));
+  t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
+  t.regex(output.stdout, new RegExp(), formatOutput(output));
+});
+
+test('now secret rename', async t => {
+  const nextName = `renamed-secret-${Date.now().toString(36)}`;
+  const output = await execute([
+    'secret',
+    'rename',
+    context.secretName,
+    nextName,
+  ]);
+
+  t.is(output.code, 0, formatOutput(output));
+
+  context.secretName = nextName;
+});
+
+test('now secret rm', async t => {
+  const output = await execute(['secret', 'rm', context.secretName, '-y']);
+
+  t.is(output.code, 0, formatOutput(output));
 });
 
 test.after.always(async () => {

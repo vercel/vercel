@@ -9,15 +9,14 @@ import { cpus } from 'os';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion } from './node-version';
 
-function spawnAsync(
+export function spawnAsync(
   command: string,
   args: string[],
-  cwd: string,
   opts: SpawnOptions = {}
 ) {
   return new Promise<void>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
-    opts = { stdio: 'inherit', cwd, ...opts };
+    opts = { stdio: 'inherit', ...opts };
     const child = spawn(command, args, opts);
 
     if (opts.stdio === 'pipe' && child.stderr) {
@@ -56,7 +55,10 @@ export async function runShellScript(
   assert(path.isAbsolute(fsPath));
   const destPath = path.dirname(fsPath);
   await chmodPlusX(fsPath);
-  await spawnAsync(`./${path.basename(fsPath)}`, args, destPath, spawnOpts);
+  await spawnAsync(`./${path.basename(fsPath)}`, args, {
+    cwd: destPath,
+    ...spawnOpts,
+  });
   return true;
 }
 
@@ -141,29 +143,29 @@ export async function runNpmInstall(
   assert(path.isAbsolute(destPath));
 
   let commandArgs = args;
-  debug(`installing to ${destPath}`);
+  debug(`Installing to ${destPath}`);
   const { hasPackageLockJson } = await scanParentDirs(destPath);
 
-  const opts = spawnOpts || { env: process.env };
+  const opts = { cwd: destPath, ...spawnOpts } || {
+    cwd: destPath,
+    env: process.env,
+  };
 
   if (hasPackageLockJson) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
     await spawnAsync(
       'npm',
       commandArgs.concat(['install', '--unsafe-perm']),
-      destPath,
       opts
     );
   } else {
     await spawnAsync(
       'yarn',
       commandArgs.concat(['--ignore-engines', '--cwd', destPath]),
-      destPath,
       opts
     );
   }
 }
-
 
 export async function runBundleInstall(
   destPath: string,
@@ -177,17 +179,45 @@ export async function runBundleInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = spawnOpts || { env: process.env };
+  const opts = { cwd: destPath, ...spawnOpts } || {
+    cwd: destPath,
+    env: process.env,
+  };
 
   await spawnAsync(
     'bundle',
     args.concat([
       'install',
       '--no-prune',
-      '--retry', '3',
-      '--jobs', String(cpus().length || 1)
+      '--retry',
+      '3',
+      '--jobs',
+      String(cpus().length || 1),
     ]),
-    destPath,
+    opts
+  );
+}
+
+export async function runPipInstall(
+  destPath: string,
+  args: string[] = [],
+  spawnOpts?: SpawnOptions,
+  meta?: Meta
+) {
+  if (meta && meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+    return;
+  }
+
+  assert(path.isAbsolute(destPath));
+  const opts = { cwd: destPath, ...spawnOpts } || {
+    cwd: destPath,
+    env: process.env,
+  };
+
+  await spawnAsync(
+    'pip3',
+    ['install', '--disable-pip-version-check', ...args],
     opts
   );
 }
@@ -195,7 +225,7 @@ export async function runBundleInstall(
 export async function runPackageJsonScript(
   destPath: string,
   scriptName: string,
-  opts?: SpawnOptions
+  spawnOpts?: SpawnOptions
 ) {
   assert(path.isAbsolute(destPath));
   const { packageJson, hasPackageLockJson } = await scanParentDirs(
@@ -210,17 +240,14 @@ export async function runPackageJsonScript(
   );
   if (!hasScript) return false;
 
+  const opts = { cwd: destPath, ...spawnOpts };
+
   if (hasPackageLockJson) {
-    console.log(`running "npm run ${scriptName}"`);
-    await spawnAsync('npm', ['run', scriptName], destPath, opts);
+    console.log(`Running "npm run ${scriptName}"`);
+    await spawnAsync('npm', ['run', scriptName], opts);
   } else {
-    console.log(`running "yarn run ${scriptName}"`);
-    await spawnAsync(
-      'yarn',
-      ['--cwd', destPath, 'run', scriptName],
-      destPath,
-      opts
-    );
+    console.log(`Running "yarn run ${scriptName}"`);
+    await spawnAsync('yarn', ['--cwd', destPath, 'run', scriptName], opts);
   }
 
   return true;
