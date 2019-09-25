@@ -340,7 +340,6 @@ it(
     );
 
     expect(output['index.html']).toBeDefined();
-    expect(output.goodbye).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
