@@ -364,7 +364,7 @@ test('deploy a dockerfile project', async t => {
   json.name = session;
   await writeFile(jsonPath, JSON.stringify(json));
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['--public', '--docker', '--no-verify', ...defaultArgs],
     {
@@ -372,6 +372,10 @@ test('deploy a dockerfile project', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr)
+  console.log(stdout)
+  console.log(code)
 
   // Ensure the exit code is right
   t.is(code, 0);
