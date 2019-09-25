@@ -180,6 +180,11 @@ test('login', async t => {
   t.is(logoutOutput.code, 0, formatOutput(logoutOutput));
 
   const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
+
+  console.log(loginOutput.stderr);
+  console.log(loginOutput.stdout);
+  console.log(loginOutput.code);
+
   t.is(loginOutput.code, 0, formatOutput(loginOutput));
   t.regex(
     loginOutput.stdout,
@@ -205,6 +210,10 @@ test('print the deploy help message', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 2);
   t.true(stderr.includes(deployHelpMessage), `Received:\n${stderr}\n${stdout}`);
   t.false(
@@ -214,13 +223,17 @@ test('print the deploy help message', async t => {
 });
 
 test('output the version', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['--version', ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   const version = stdout.trim();
 
@@ -263,7 +276,7 @@ test('detect update command', async t => {
     });
     t.is(installResult.code, 0);
 
-    const { stdout, stderr } = await execa(
+    const { stdout, stderr, code } = await execa(
       path.join(binPrefix, 'now'),
       ['update'],
       {
@@ -271,18 +284,25 @@ test('detect update command', async t => {
       }
     );
 
+    console.log(stderr);
+    console.log(code);
+    console.log(stdout);
     t.regex(stderr, /npm i -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
   }
 });
 
 test('login with unregisterd user', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['login', `${session}@${session}.com`, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   const goal = `> Error! Please sign up: https://zeit.co/signup`;
   const lines = stdout.trim().split('\n');
@@ -302,6 +322,10 @@ test('deploy a node microservice', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0, formatOutput({ stdout, stderr }));
@@ -327,6 +351,11 @@ test('deploy a node microservice', async t => {
       reject: false,
     }
   ));
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0, formatOutput({ stdout, stderr }));
 
   // Give 2 seconds for the proxy purge to propagate
@@ -339,13 +368,17 @@ test('deploy a node microservice', async t => {
 test('deploy a node microservice and infer name from `package.json`', async t => {
   const target = fixture('node');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [target, '--public', ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -364,7 +397,7 @@ test('deploy a dockerfile project', async t => {
   json.name = session;
   await writeFile(jsonPath, JSON.stringify(json));
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['--public', '--docker', '--no-verify', ...defaultArgs],
     {
@@ -372,6 +405,10 @@ test('deploy a dockerfile project', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -465,6 +502,10 @@ test('find deployment in list', async t => {
     reject: false,
   });
 
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
+
   const deployments = parseList(output.stdout);
 
   t.true(deployments.length > 0, formatOutput(output));
@@ -487,6 +528,10 @@ test('find deployment in list with mixed args', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   const deployments = parseList(stdout);
 
   t.true(deployments.length > 0);
@@ -506,13 +551,17 @@ test('create an explicit alias for deployment', async t => {
     alias: `${session}.now.sh`,
   };
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   const goal = `> Success! https://${hosts.alias} now points to https://${hosts.deployment}`;
 
@@ -531,13 +580,17 @@ test('create an explicit alias for deployment', async t => {
 });
 
 test('list the aliases', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['alias', 'ls', ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   const results = parseList(stdout);
 
@@ -554,6 +607,10 @@ test('scale the alias', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0, `Received:\n${stdout}\n${stderr}`);
   t.true(stdout.includes(`(min: 1, max: 1)`));
 });
@@ -561,13 +618,17 @@ test('scale the alias', async t => {
 test('remove the explicit alias', async t => {
   const goal = `> Success! Alias ${context.alias} removed`;
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
@@ -582,10 +643,18 @@ test('create an alias from "now.json" `alias` for deployment', async t => {
   json.alias = `${session}-from-nowjson.now.sh`;
   await writeFile(jsonPath, JSON.stringify(json));
 
-  const { stdout, code } = await execa(binaryPath, ['alias', ...defaultArgs], {
-    cwd: target,
-    reject: false,
-  });
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['alias', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   const goal = `> Success! https://${json.alias} now points to https://${context.deployment}`;
 
@@ -606,7 +675,7 @@ test('create an alias from "now.json" `alias` for deployment', async t => {
 test('remove the alias from "now.json" `alias`', async t => {
   const goal = `> Success! Alias ${context.alias} removed`;
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
     {
@@ -614,18 +683,26 @@ test('remove the alias from "now.json" `alias`', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
 });
 
 test('scale down the deployment directly', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['scale', context.deployment, 'bru', '0', ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 0);
   t.true(stdout.includes(`(min: 0, max: 0)`));
@@ -640,6 +717,10 @@ test('list the scopes', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0);
 
   const include = `✔ ${contextName}     ${email}`;
@@ -650,7 +731,7 @@ test('list the scopes', async t => {
 });
 
 test('list the payment methods', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['billing', 'ls', ...defaultArgs],
     {
@@ -658,12 +739,16 @@ test('list the payment methods', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0);
   t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
 test('try to purchase a domain', async t => {
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
     {
@@ -671,6 +756,10 @@ test('try to purchase a domain', async t => {
       input: 'y',
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 1);
   t.true(
@@ -681,7 +770,7 @@ test('try to purchase a domain', async t => {
 });
 
 test('try to transfer-in a domain with "--code" option', async t => {
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [
       'domains',
@@ -696,6 +785,10 @@ test('try to transfer-in a domain with "--code" option', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.true(
     stderr.includes(
       `> Error! The domain "${session}-test.org" is not transferable.`
@@ -705,7 +798,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
 });
 
 test('try to move an invalid domain', async t => {
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [
       'domains',
@@ -719,12 +812,16 @@ test('try to move an invalid domain', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.true(stderr.includes(`> Error! Domain not found under `));
   t.is(code, 1);
 });
 
 test('try to set default without existing payment method', async t => {
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     ['billing', 'set-default', ...defaultArgs],
     {
@@ -732,18 +829,26 @@ test('try to set default without existing payment method', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0);
   t.true(stderr.includes('You have no credit cards to choose from'));
 });
 
 test('try to remove a non-existing payment method', async t => {
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 0);
   t.true(
@@ -754,13 +859,17 @@ test('try to remove a non-existing payment method', async t => {
 });
 
 test('use `-V 1` to deploy a GitHub repository', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['-V', 1, '--public', '--name', session, ...defaultArgs, 'leo/hub'],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -781,7 +890,7 @@ test('use `-V 1` to deploy a GitHub repository', async t => {
 });
 
 test('use `--platform-version 1` to deploy a GitHub repository', async t => {
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [
       '--platform-version',
@@ -796,6 +905,10 @@ test('use `--platform-version 1` to deploy a GitHub repository', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -820,13 +933,17 @@ test('set platform version using `-V` to `1`', async t => {
   const goal =
     '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
 
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '-V', 1],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 1);
@@ -840,7 +957,7 @@ test('set platform version using `--platform-version` to `1`', async t => {
   const goal =
     '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
 
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [
       directory,
@@ -856,6 +973,10 @@ test('set platform version using `--platform-version` to `1`', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   // Ensure the exit code is right
   t.is(code, 1);
 
@@ -868,13 +989,17 @@ test('set platform version using `-V` to invalid number', async t => {
   const goal =
     '> Error! The "--platform-version" option must be either `1` or `2`.';
 
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '-V', 3],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 1);
@@ -888,7 +1013,7 @@ test('set platform version using `--platform-version` to invalid number', async 
   const goal =
     '> Error! The "--platform-version" option must be either `1` or `2`.';
 
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [
       directory,
@@ -903,6 +1028,10 @@ test('set platform version using `--platform-version` to invalid number', async 
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 1);
@@ -931,6 +1060,10 @@ test('set platform version using `-V` to `2`', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   const output = `Received:\n"${stderr}"\n"${stdout}"`;
 
   // Ensure the exit code is right
@@ -952,26 +1085,35 @@ test('set platform version using `-V` to `2`', async t => {
 });
 
 test('output logs of a 2.0 deployment', async t => {
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.true(stderr.includes(`Fetched deployment "${context.deployment}"`));
   t.is(code, 0);
 });
 
 test('output logs of a 2.0 deployment without annotate', async t => {
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.true(!stderr.includes('[now-builder-debug]'));
   t.true(!stderr.includes('START RequestId'));
   t.true(!stderr.includes('END RequestId'));
@@ -987,13 +1129,17 @@ test('create wildcard alias for deployment', async t => {
     alias: `*.${contextName}.now.sh`,
   };
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
 
@@ -1013,7 +1159,7 @@ test('create wildcard alias for deployment', async t => {
 test('remove the wildcard alias', async t => {
   const goal = `> Success! Alias ${context.wildcardAlias} removed`;
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     ['alias', 'rm', context.wildcardAlias, '--yes', ...defaultArgs],
     {
@@ -1021,14 +1167,26 @@ test('remove the wildcard alias', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
 });
 
 test('ensure type and instance count in list is right', async t => {
-  const { stdout, code } = await execa(binaryPath, ['ls', ...defaultArgs], {
-    reject: false,
-  });
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['ls', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1044,7 +1202,7 @@ test('ensure type and instance count in list is right', async t => {
 test('set platform version using `--platform-version` to `2`', async t => {
   const directory = fixture('builds');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [
       directory,
@@ -1060,6 +1218,10 @@ test('set platform version using `--platform-version` to `2`', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1085,6 +1247,10 @@ test('ensure we render a warning for deployments with no files', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the warning is printed
   t.true(
@@ -1119,6 +1285,10 @@ test('ensure we render a prompt when deploying home directory', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   // Ensure the exit code is right
   t.is(code, 0);
 
@@ -1133,13 +1303,17 @@ test('ensure we render a prompt when deploying home directory', async t => {
 test('ensure the `alias` property is not sent to the API', async t => {
   const directory = fixture('config-alias-property');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1165,6 +1339,10 @@ test('ensure the `scope` property works with email', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure we're deploying under the right scope
   t.true(stderr.includes(session));
@@ -1194,6 +1372,10 @@ test('ensure the `scope` property works with username', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   // Ensure we're deploying under the right scope
   t.true(stderr.includes(contextName));
 
@@ -1214,13 +1396,17 @@ test('ensure the `scope` property works with username', async t => {
 test('try to create a builds deployments with wrong config', async t => {
   const directory = fixture('builds-wrong');
 
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 1);
@@ -1234,13 +1420,17 @@ test('try to create a builds deployments with wrong config', async t => {
 test('create a builds deployments with no actual builds', async t => {
   const directory = fixture('builds-no-list');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1253,13 +1443,17 @@ test('create a builds deployments with no actual builds', async t => {
 test('create a builds deployments without platform version flag', async t => {
   const directory = fixture('builds');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1278,13 +1472,17 @@ test('create a builds deployments without platform version flag', async t => {
 test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1316,6 +1514,11 @@ test('create a staging deployment', async t => {
     '--target=staging',
     ...args,
   ]);
+
+  console.log(targetCall.stderr);
+  console.log(targetCall.stdout);
+  console.log(targetCall.code);
+
   t.regex(
     targetCall.stderr,
     /Setting target to staging/gm,
@@ -1341,6 +1544,10 @@ test('create a production deployment', async t => {
     ...args,
   ]);
 
+  console.log(targetCall.stderr);
+  console.log(targetCall.stdout);
+  console.log(targetCall.code);
+
   t.is(targetCall.code, 0, formatOutput(targetCall));
   t.regex(
     targetCall.stderr,
@@ -1364,6 +1571,10 @@ test('create a production deployment', async t => {
   );
 
   const call = await execa(binaryPath, [directory, '--prod', ...args]);
+
+  console.log(call.stderr);
+  console.log(call.stdout);
+  console.log(call.code);
 
   t.is(call.code, 0, formatOutput(call));
   t.regex(
@@ -1389,6 +1600,10 @@ test('ensure we are getting a warning for the old team flag', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the warning is printed
   t.true(
@@ -1421,7 +1636,7 @@ test('ensure we are getting a warning for the old team flag', async t => {
 test('deploy multiple static files with custom scope', async t => {
   const directory = fixture('static-multiple-files');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [
       directory,
@@ -1436,6 +1651,10 @@ test('deploy multiple static files with custom scope', async t => {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1461,13 +1680,17 @@ test('deploy multiple static files with custom scope', async t => {
 test('deploy single static file', async t => {
   const file = fixture('static-single-file/first.png');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [file, '--public', '--name', session, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1487,13 +1710,17 @@ test('deploy single static file', async t => {
 test('deploy a static directory', async t => {
   const directory = fixture('static-single-file');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1512,13 +1739,17 @@ test('deploy a static directory', async t => {
 test('deploy a static build deployment', async t => {
   const directory = fixture('now-static-build');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1539,13 +1770,17 @@ test('deploy a static build deployment', async t => {
 test('use build-env', async t => {
   const directory = fixture('build-env');
 
-  const { stdout, code } = await execa(
+  const { stdout, stderr, code } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // Ensure the exit code is right
   t.is(code, 0);
@@ -1585,6 +1820,10 @@ test('use `--build-env` CLI flag', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   // Ensure the exit code is right
   t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
 
@@ -1612,6 +1851,10 @@ test('use `--debug` CLI flag', async t => {
     }
   );
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   // Ensure the exit code is right
   t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
 
@@ -1631,9 +1874,17 @@ test('use `--debug` CLI flag', async t => {
 test('try to deploy non-existing path', async t => {
   const goal = `> Error! The specified file or directory "${session}" does not exist.`;
 
-  const { stderr, code } = await execa(binaryPath, [session, ...defaultArgs], {
-    reject: false,
-  });
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [session, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 1);
   t.true(stderr.trim().endsWith(goal));
@@ -1643,13 +1894,17 @@ test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
   const goal = `> Error! The specified scope does not exist`;
 
-  const { stderr, code } = await execa(
+  const { stderr, stdout, code } = await execa(
     binaryPath,
     [target, '--scope', session, ...defaultArgs],
     {
       reject: false,
     }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 1);
   t.true(stderr.includes(goal));
@@ -1672,6 +1927,10 @@ test('initialize example "angular"', async t => {
 
   const { stdout, stderr, code } = await execute(['init', 'angular'], { cwd });
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0, formatOutput({ stdout, stderr }));
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
   t.true(
@@ -1685,7 +1944,13 @@ test('initialize example ("angular") to specified directory', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  const { stdout, code } = await execute(['init', 'angular', 'ang'], { cwd });
+  const { stdout, stderr, code } = await execute(['init', 'angular', 'ang'], {
+    cwd,
+  });
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
@@ -1702,6 +1967,10 @@ test('initialize selected example ("amp")', async t => {
     input: '\n',
   });
 
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0, formatOutput({ stdout, stderr }));
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
   t.true(verifyExampleAmp(cwd, 'amp'), formatOutput({ stdout, stderr }));
@@ -1714,7 +1983,13 @@ test('initialize example to existing directory with "-f"', async t => {
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { stdout, code } = await execute(['init', 'angular', '-f'], { cwd });
+  const { stdout, stderr, code } = await execute(['init', 'angular', '-f'], {
+    cwd,
+  });
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 0);
   t.true(stdout.includes(goal));
@@ -1729,10 +2004,14 @@ test('try to initialize example to existing directory', async t => {
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { stdout, code } = await execute(['init', 'angular'], {
+  const { stdout, stderr, code } = await execute(['init', 'angular'], {
     cwd,
     input: '\n',
   });
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 1);
   t.true(stdout.includes(goal));
@@ -1744,7 +2023,11 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   const goal =
     '> Error! No example found for noce, run `now init` to see the list of available examples.';
 
-  const { stdout, code } = await execute(['init', 'noce'], { cwd });
+  const { stdout, stderr, code } = await execute(['init', 'noce'], { cwd });
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 1);
   t.true(stdout.includes(goal));
@@ -1756,7 +2039,13 @@ test('try to initialize example "example-404"', async t => {
   const goal =
     '> Error! No example found for example-404, run `now init` to see the list of available examples.';
 
-  const { stdout, code } = await execute(['init', 'example-404'], { cwd });
+  const { stdout, stderr, code } = await execute(['init', 'example-404'], {
+    cwd,
+  });
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   t.is(code, 1);
   t.true(stdout.includes(goal));
@@ -1772,7 +2061,14 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const url = `https://${name}.user.now.sh`;
 
   {
-    const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
+    const { stdout: deploymentUrl, stderr, code } = await execute([
+      firstDeployment,
+    ]);
+
+    console.log(stderr);
+    console.log(deploymentUrl);
+    console.log(code);
+
     t.is(code, 0);
 
     await waitForDeployment(deploymentUrl);
@@ -1788,7 +2084,14 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, code } = await execute([secondDeployment]);
+    const { stdout: deploymentUrl, stderr, code } = await execute([
+      secondDeployment,
+    ]);
+
+    console.log(stderr);
+    console.log(deploymentUrl);
+    console.log(code);
+
     t.is(code, 0);
 
     await waitForDeployment(deploymentUrl);
@@ -1804,7 +2107,13 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, code } = await execute([firstDeployment]);
+    const { stdout: deploymentUrl, stderr, code } = await execute([
+      firstDeployment,
+    ]);
+    console.log(stderr);
+    console.log(deploymentUrl);
+    console.log(code);
+
     t.is(code, 0);
 
     await waitForDeployment(deploymentUrl);
@@ -1822,6 +2131,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
 
 test('whoami', async t => {
   const { code, stdout, stderr } = await execute(['whoami']);
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   t.is(code, 0);
   t.is(stdout, contextName, formatOutput({ stdout, stderr }));
 });
@@ -1839,7 +2153,11 @@ test('fail `now dev` dev script without now.json', async t => {
 
 test('print correct link in legacy warning', async t => {
   const deploymentPath = fixture('v1-warning-link');
-  const { code, stderr } = await execute([deploymentPath]);
+  const { code, stderr, stdout } = await execute([deploymentPath]);
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
 
   // It is expected to fail,
   // since the package.json does not have a start script
@@ -1849,10 +2167,15 @@ test('print correct link in legacy warning', async t => {
 
 test('`now rm` 404 exits quickly', async t => {
   const start = Date.now();
-  const { code, stderr } = await execute([
+  const { code, stderr, stdout } = await execute([
     'rm',
     'this.is.a.deployment.that.does.not.exist.example.com',
   ]);
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
   const delta = Date.now() - start;
 
   // "does not exist" case is exit code 1, similar to Unix `rm`
@@ -1871,6 +2194,10 @@ test('render build errors', async t => {
   const deploymentPath = fixture('failing-build');
   const output = await execute([deploymentPath]);
 
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
+
   t.is(output.code, 1, formatOutput(output));
   t.regex(output.stderr, /Build failed/gm, formatOutput(output));
 });
@@ -1878,6 +2205,11 @@ test('render build errors', async t => {
 test('invalid deployment, projects and alias names', async t => {
   const check = async (...args) => {
     const output = await execute(args);
+
+    console.log(output.stderr);
+    console.log(output.stdout);
+    console.log(output.code);
+
     const print = `\`${args.join(' ')}\`\n${formatOutput(output)}`;
     t.is(output.code, 1, print);
     t.regex(output.stderr, /The provided argument/gm, print);
@@ -1894,12 +2226,20 @@ test('invalid deployment, projects and alias names', async t => {
 test('now certs ls', async t => {
   const output = await execute(['certs', 'ls']);
 
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
+
   t.is(output.code, 0, formatOutput(output));
   t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
 });
 
 test('now certs ls --after=cert_test', async t => {
   const output = await execute(['certs', 'ls', '--after=cert_test']);
+
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
 
   t.is(output.code, 1, formatOutput(output));
   t.regex(
@@ -1912,6 +2252,10 @@ test('now certs ls --after=cert_test', async t => {
 test('now hasOwnProperty not a valid subcommand', async t => {
   const output = await execute(['hasOwnProperty']);
 
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
+
   t.is(output.code, 1, formatOutput(output));
   t.regex(
     output.stderr,
@@ -1923,6 +2267,10 @@ test('now hasOwnProperty not a valid subcommand', async t => {
 test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
   const output = await execute([fixturePath, '--force', '--public']);
+
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
 
   t.is(output.code, 0, formatOutput(output));
 
@@ -1949,11 +2297,19 @@ test('now secret add', async t => {
 
   const output = await execute(['secret', 'add', context.secretName, value]);
 
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
+
   t.is(output.code, 0, formatOutput(output));
 });
 
 test('now secret ls', async t => {
   const output = await execute(['secret', 'ls']);
+
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
 
   t.is(output.code, 0, formatOutput(output));
   t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
@@ -1969,6 +2325,10 @@ test('now secret rename', async t => {
     nextName,
   ]);
 
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
+
   t.is(output.code, 0, formatOutput(output));
 
   context.secretName = nextName;
@@ -1976,6 +2336,10 @@ test('now secret rename', async t => {
 
 test('now secret rm', async t => {
   const output = await execute(['secret', 'rm', context.secretName, '-y']);
+
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
 
   t.is(output.code, 0, formatOutput(output));
 });
