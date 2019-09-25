@@ -1107,6 +1107,29 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(contentType, 'text/plain; charset=utf-8');
 });
 
+test('ensure we render a prompt when deploying home directory', async t => {
+  const directory = homedir();
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
+    {
+      reject: false,
+      input: 'N',
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  t.true(
+    stdout.includes(
+      '> You are deploying your home directory. Do you want to continue? [y|N]'
+    )
+  );
+  t.true(stderr.includes('> Aborted'));
+});
+
 test('ensure the `alias` property is not sent to the API', async t => {
   const directory = fixture('config-alias-property');
 

@@ -39,6 +39,7 @@ import eventListenerToGenerator from '../../util/event-listener-to-generator';
 import formatLogOutput from '../../util/output/format-log-output';
 // @ts-ignore
 import getEventsStream from '../../util/deploy/get-events-stream';
+import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 // @ts-ignore
 import getInstanceIndex from '../../util/deploy/get-instance-index';
 import joinWords from '../../util/output/join-words';
@@ -267,6 +268,10 @@ export default async function main(
     paths = argv._.map((item: string) => resolve(process.cwd(), item));
   } else {
     paths = [process.cwd()];
+  }
+
+  if (!(await shouldDeployDir(argv._[0], output))) {
+    return 0;
   }
 
   // Options
