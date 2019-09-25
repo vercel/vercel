@@ -28,7 +28,10 @@ export default async function processDeployment({
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(paths[0], requestBody)) {
+    for await (const event of createDeployment(paths[0], {
+      ...requestBody,
+      debug: now._debug,
+    })) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -136,7 +139,10 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(paths[0], requestBody)) {
+    for await (const event of createLegacyDeployment(paths[0], {
+      ...requestBody,
+      debug: now._debug,
+    })) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
