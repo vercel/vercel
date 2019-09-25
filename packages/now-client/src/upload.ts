@@ -10,6 +10,7 @@ const isClientNetworkError = (err: Error | DeploymentError) => {
     // These are common network errors that may happen occasionally and we should retry if we encounter these
     return (
       err.message.includes('ETIMEDOUT') ||
+      err.message.includes('ENOTFOUND') ||
       err.message.includes('ECONNREFUSED') ||
       err.message.includes('socket hang up') ||
       err.message.includes('network socket disconnected')
