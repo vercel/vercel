@@ -11,7 +11,8 @@ const isClientNetworkError = (err: Error | DeploymentError) => {
     return (
       err.message.includes('ETIMEDOUT') ||
       err.message.includes('ECONNREFUSED') ||
-      err.message.includes('socket hang up')
+      err.message.includes('socket hang up') ||
+      err.message.includes('network socket disconnected')
     );
   }
 
