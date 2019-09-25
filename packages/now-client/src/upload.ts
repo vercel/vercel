@@ -108,7 +108,7 @@ export default async function* upload(
             },
             body: stream,
             teamId,
-          });
+          }, isDebug);
 
           if (res.status === 200) {
             debug(
@@ -137,7 +137,7 @@ export default async function* upload(
           }
         } catch (e) {
           debug(
-            'An unexpected error occurred in upload promise. Closing the stream and bailing'
+            `An unexpected error occurred in upload promise:\n${e}`
           );
           err = new Error(e);
         } finally {
@@ -147,9 +147,12 @@ export default async function* upload(
 
         if (err) {
           if (isClientNetworkError(err)) {
+
+            console.log('Network error, retrying: ' + err.message);
             // If it's a network error, we retry
             throw err;
           } else {
+            console.log('Other error, bailing: ' + err.message);
             // Otherwise we bail
             return bail(err);
           }
@@ -158,8 +161,8 @@ export default async function* upload(
         return result;
       },
       {
-        retries: 6,
-        randomize: true,
+        retries: 3,
+        factor: 2
       }
     );
   });
