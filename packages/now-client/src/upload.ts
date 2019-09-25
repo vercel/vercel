@@ -5,6 +5,19 @@ import { fetch, API_FILES } from './utils';
 import { DeploymentError } from '.';
 import deploy, { Options } from './deploy';
 
+const isClientNetworkError = (err: Error | DeploymentError) => {
+  if (err.message) {
+    // These are common network errors that may happen occasionally and we should retry if we encounter these
+    return (
+      !err.message.includes('ETIMEDOUT') ||
+      !err.message.includes('ECONNREFUSED') ||
+      !err.message.includes('socket hang up')
+    );
+  }
+
+  return false;
+};
+
 export default async function* upload(
   files: Map<string, DeploymentFile>,
   options: Options
@@ -114,7 +127,13 @@ export default async function* upload(
         }
 
         if (err) {
-          return bail(err);
+          if (isClientNetworkError(err)) {
+            // If it's a network error, we retry
+            throw err;
+          } else {
+            // Otherwise we bail
+            return bail(err);
+          }
         }
 
         return result;
