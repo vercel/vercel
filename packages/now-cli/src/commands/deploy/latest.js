@@ -39,6 +39,7 @@ import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
+import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -200,6 +201,10 @@ export default async function main(
   } catch (error) {
     handleError(error);
     return 1;
+  }
+
+  if (!(await shouldDeployDir(argv._[0], output))) {
+    return 0;
   }
 
   const {
