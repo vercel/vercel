@@ -39,6 +39,7 @@ import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
+import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -202,6 +203,10 @@ export default async function main(
     return 1;
   }
 
+  if (!(await shouldDeployDir(argv._[0], output))) {
+    return 0;
+  }
+
   const {
     apiUrl,
     authConfig: { token },
@@ -288,11 +293,15 @@ export default async function main(
     parseEnv(argv['--env'])
   );
 
+  // Enable debug mode for builders
+  const buildDebugEnv = debugEnabled ? { NOW_BUILDER_DEBUG: '1' } : {};
+
   // Merge build env out of  `build.env` from now.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
-    parseEnv(argv['--build-env'])
+    parseEnv(argv['--build-env']),
+    buildDebugEnv
   );
 
   // If there's any undefined values, then inherit them from this process

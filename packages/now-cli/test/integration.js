@@ -1107,6 +1107,29 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(contentType, 'text/plain; charset=utf-8');
 });
 
+test('ensure we render a prompt when deploying home directory', async t => {
+  const directory = homedir();
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
+    {
+      reject: false,
+      input: 'N',
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  t.true(
+    stdout.includes(
+      '> You are deploying your home directory. Do you want to continue? [y|N]'
+    )
+  );
+  t.true(stderr.includes('> Aborted'));
+});
+
 test('ensure the `alias` property is not sent to the API', async t => {
   const directory = fixture('config-alias-property');
 
@@ -1576,6 +1599,33 @@ test('use `--build-env` CLI flag', async t => {
   const response = await fetch(href);
   const content = await response.text();
   t.is(content.trim(), nonce);
+});
+
+test('use `--debug` CLI flag', async t => {
+  const directory = fixture('build-env-debug');
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, '--debug', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  // Ensure the exit code is right
+  t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout);
+  const { href, host } = new URL(deploymentUrl);
+  t.is(host.split('-')[0], session);
+
+  await waitForDeployment(href);
+
+  // get the content
+  const response = await fetch(href);
+  const content = await response.text();
+  t.is(content.trim(), '1');
 });
 
 test('try to deploy non-existing path', async t => {
