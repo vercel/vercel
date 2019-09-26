@@ -722,31 +722,22 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  // for dynamic prerender pages' data _next/data/${dynamicRoute}
-  const dynamicDataRoutes: Array<{ src: string; dest: string }> = [];
-  const hasPrerenders = Object.keys(prerenders).length > 0;
-
   const dynamicRoutes = getDynamicRoutes(
     entryPath,
     entryDirectory,
     dynamicPages
-  ).map(route => {
-    // make sure .html is added to dest for now until
-    // outputting static files to clean routes is available
-    if (staticPages[`${route.dest}.html`.substr(1)]) {
-      route.dest = `${route.dest}.html`;
-    }
-    const origSrc = route.src;
-    route.src = origSrc.replace('^', `^${dynamicPrefix}`);
-
-    if (hasPrerenders) {
-      dynamicDataRoutes.push({
-        src: origSrc.replace('^', `^${path.join(dynamicPrefix, '_next/data')}`),
-        dest: route.dest,
-      });
-    }
-    return route;
-  });
+  ).reduce(
+    (prev, route) => {
+      // make sure .html is added to dest for now until
+      // outputting static files to clean routes is available
+      if (staticPages[`${route.dest}.html`.substr(1)]) {
+        route.dest = `${route.dest}.html`;
+      }
+      route.src = route.src.replace('^', `^${dynamicPrefix}`);
+      return prev.concat(route);
+    },
+    [] as { src: string; dest: string }[]
+  );
 
   return {
     output: {
@@ -776,7 +767,6 @@ export const build = async ({
       { handle: 'filesystem' },
       // Dynamic routes
       ...dynamicRoutes,
-      ...dynamicDataRoutes,
       ...(isLegacy
         ? []
         : [
