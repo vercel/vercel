@@ -306,7 +306,7 @@ test('deploy a node microservice', async t => {
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
+  t.is(content.id, session);
 
   // Test that it can be deleted via `now rm`
   ({ stdout, stderr, code } = await execa(
