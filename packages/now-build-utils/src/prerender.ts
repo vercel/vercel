@@ -23,8 +23,10 @@ export class Prerender {
     this.lambda = lambda;
     this.fallback = fallback;
     
-    if (group) {
-      this.group = group;
+    if (group <= 0 || !Number.isInteger(group)) {
+      throw new Error('The `group` argument for `Prerender` needs to be a natural number.');
     }
+    
+    this.group = group;
   }
 }
