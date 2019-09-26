@@ -643,13 +643,8 @@ export const build = async ({
     );
     console.timeEnd(allLambdasLabel);
 
-    // Handle prerendered routes that never revalidate
+    let prerenderGroup = 0;
     Object.keys(prerenderedRoutes).forEach(_route => {
-      const { revalidate } = prerenderedRoutes[_route];
-      if (revalidate !== false) {
-        return;
-      }
-
       const routeFileNoExt = _route === '/' ? '/index' : _route;
 
       const htmlFsRef = new FileFsRef({
@@ -659,74 +654,39 @@ export const build = async ({
         fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
       });
 
-      prerenders[path.join(entryDirectory, routeFileNoExt)] = htmlFsRef;
-      prerenders[
-        path.join(entryDirectory, '_next/data', `${routeFileNoExt}.json`)
-      ] = jsonFsRef;
-    });
-  }
-
-  try {
-    const prerenderManifestContents = await readFile(
-      path.join(entryPath, '.next', 'prerender-manifest.json'),
-      'utf8'
-    );
-    const distPagesDir = path.join(entryPath, '.next/serverless/pages');
-    const prerenderManifest: {
-      version: number;
-      routes: { [key: string]: { initialRevalidateSeconds: number | false } };
-    } = JSON.parse(prerenderManifestContents);
-
-    let prerenderGroup = 1;
-    for (const route of Object.keys(prerenderManifest.routes)) {
-      const info = prerenderManifest.routes[route];
-      if (info.initialRevalidateSeconds === false) {
-        continue;
-      }
-
-      const prefixedRoute = path.join(entryDirectory, route);
-      const dataRoute = path.join(
+      const { revalidate } = prerenderedRoutes[_route];
+      const outputPathPage = path.join(entryDirectory, routeFileNoExt);
+      const outputPathData = path.join(
         entryDirectory,
-        '/_next/data/',
-        `${route}.json`
+        '_next/data',
+        `${routeFileNoExt}.json`
       );
-      let exportedRouteIdx = -1;
-      exportedPageRoutes.find((r, i) => {
-        exportedRouteIdx = i;
-        return r.dest === path.join('/', `${route}.html`);
-      });
 
-      if (exportedRouteIdx > -1) {
-        exportedPageRoutes.splice(exportedRouteIdx, 1);
+      if (revalidate === false) {
+        prerenders[outputPathPage] = htmlFsRef;
+        prerenders[outputPathData] = jsonFsRef;
+      } else {
+        const lambda = lambdas[outputPathPage];
+        if (lambda == null) {
+          throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
+        }
+
+        prerenders[outputPathPage] = new Prerender({
+          expiration: revalidate,
+          lambda,
+          fallback: htmlFsRef,
+          group: prerenderGroup,
+        });
+        prerenders[outputPathData] = new Prerender({
+          expiration: revalidate,
+          lambda,
+          fallback: jsonFsRef,
+          group: prerenderGroup,
+        });
+
+        ++prerenderGroup;
       }
-
-      const htmlFsRef = new FileFsRef({
-        fsPath: path.join(distPagesDir, `${route}.html`),
-      });
-      const jsonFsRef = new FileFsRef({
-        fsPath: path.join(distPagesDir, `${route}.json`),
-      });
-
-      prerenders[prefixedRoute] = new Prerender({
-        expiration: info.initialRevalidateSeconds,
-        lambda: lambdas[prefixedRoute],
-        fallback: htmlFsRef,
-        group: prerenderGroup,
-      });
-      prerenders[dataRoute] = new Prerender({
-        expiration: info.initialRevalidateSeconds,
-        lambda: lambdas[prefixedRoute],
-        fallback: jsonFsRef,
-        group: prerenderGroup,
-      });
-
-      ++prerenderGroup;
-    }
-  } catch (err) {
-    // not enabled if missing
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
+    });
   }
 
   const nextStaticFiles = await glob(
