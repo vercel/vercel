@@ -372,6 +372,7 @@ test('deploy a dockerfile project', async t => {
   t.is(host.split('-')[0], session);
 
   await waitForDeployment(href);
+  await sleep(3000);
 
   // Send a test request to the deployment
   const response = await fetch(href, {
