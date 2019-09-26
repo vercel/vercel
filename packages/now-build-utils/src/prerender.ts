@@ -7,7 +7,7 @@ interface PrerenderOptions {
   expiration: number;
   lambda: Lambda;
   fallback: FileBlob | FileFsRef | FileRef;
-  group: number;
+  group?: number;
 }
 
 export class Prerender {
@@ -15,13 +15,16 @@ export class Prerender {
   public expiration: number;
   public lambda: Lambda;
   public fallback: FileBlob | FileFsRef | FileRef;
-  public group: number;
+  public group?: number;
 
   constructor({ expiration, lambda, fallback, group }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.lambda = lambda;
     this.fallback = fallback;
-    this.group = group;
+    
+    if (group) {
+      this.group = group;
+    }
   }
 }
