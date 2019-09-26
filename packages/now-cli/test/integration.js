@@ -157,10 +157,8 @@ async function getUser() {
   }
 
   await writeFile(path.join(location, `auth.json`), JSON.stringify({ token }));
-
-  console.log('writing token ' + token.slice(0, 5));
   const user = await fetchTokenInformation(token);
-  console.log('switching to user ' + user.email);
+  console.log('switching to user ' + getContextName(user));
   return user;
 }
 
@@ -459,6 +457,8 @@ test('apply alias rules', async t => {
 });
 
 test('find deployment in list', async t => {
+  const user = await getUser();
+  const contextName = getContextName(user);
   const output = await execa(binaryPath, ['--debug', 'ls', ...defaultArgs], {
     reject: false,
   });
@@ -469,7 +469,7 @@ test('find deployment in list', async t => {
   t.is(output.code, 0, formatOutput(output));
 
   const target = deployments.find(deployment =>
-    deployment.includes(`${session}-`)
+    deployment.includes(`${contextName}-`)
   );
 
   t.truthy(target, formatOutput(output));
@@ -477,6 +477,8 @@ test('find deployment in list', async t => {
 });
 
 test('find deployment in list with mixed args', async t => {
+  const user = await getUser();
+  const contextName = getContextName(user);
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['--debug', 'ls', ...defaultArgs],
@@ -491,7 +493,7 @@ test('find deployment in list with mixed args', async t => {
   t.is(code, 0);
 
   const target = deployments.find(deployment =>
-    deployment.includes(`${session}-`)
+    deployment.includes(`${contextName}-`)
   );
 
   t.truthy(target, formatOutput({ stdout, stderr }));
