@@ -242,7 +242,7 @@ export const build = async ({
   }
 
   const isLegacy = isLegacyNext(nextVersion);
-  let isBuildScript = false;
+  let shouldRunScript = 'now-build';
 
   debug(`MODE: ${isLegacy ? 'legacy' : 'serverless'}`);
 
@@ -267,9 +267,12 @@ export const build = async ({
     const packageJson = normalizePackageJson(pkg);
     debug('Normalized package.json result: ', packageJson);
     await writePackageJson(entryPath, packageJson);
+  } else if (pkg.scripts && pkg.scripts['now-build']) {
+    debug('Found user `now-build` script');
+    shouldRunScript = 'now-build';
   } else if (pkg.scripts && pkg.scripts['build']) {
-    debug('Found user build script');
-    isBuildScript = true;
+    debug('Found user `build` script');
+    shouldRunScript = 'build';
   } else if (!pkg.scripts || !pkg.scripts['now-build']) {
     debug(
       'Your application is being built using `next build`. ' +
@@ -280,6 +283,7 @@ export const build = async ({
       'now-build': 'next build',
       ...(pkg.scripts || {}),
     };
+    shouldRunScript = 'now-build';
     await writePackageJson(entryPath, pkg);
   }
 
@@ -309,11 +313,7 @@ export const build = async ({
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
   const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
-  if (isBuildScript) {
-    await runPackageJsonScript(entryPath, 'build', { ...spawnOpts, env });
-  } else {
-    await runPackageJsonScript(entryPath, 'now-build', { ...spawnOpts, env });
-  }
+  await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
 
   if (isLegacy) {
     debug('Running npm install --production...');
