@@ -6,6 +6,8 @@ import { join, sep } from 'path';
 import qs from 'querystring';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
+import { Sema } from 'async-sema';
+const semaphore = new Sema(10);
 
 export const API_FILES = 'https://api.zeit.co/v2/now/files';
 export const API_DEPLOYMENTS = 'https://api.zeit.co/v9/now/deployments';
@@ -99,11 +101,16 @@ export async function getNowIgnore(
   return ignores;
 }
 
-export const fetch = (
+export const fetch = async (
   url: string,
   token: string,
-  opts: any = {}
+  opts: any = {},
+  debugEnabled?: boolean
 ): Promise<any> => {
+  semaphore.acquire();
+  const debug = createDebug(debugEnabled);
+  let time: number;
+
   if (opts.teamId) {
     const parsedUrl = parseUrl(url, true);
     const query = parsedUrl.query;
@@ -119,7 +126,13 @@ export const fetch = (
   // @ts-ignore
   opts.headers['user-agent'] = `now-client-v${pkg.version}`;
 
-  return fetch_(url, opts);
+  debug(`${opts.method || 'GET'} ${url}`);
+  time = Date.now();
+  const res = await fetch_(url, opts);
+  debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
+  semaphore.release();
+
+  return res;
 };
 
 export interface PreparedFile {
@@ -168,3 +181,18 @@ export const prepareFiles = (
 
   return preparedFiles;
 };
+
+export function createDebug(debug?: boolean) {
+  const isDebug = debug || process.env.NOW_CLIENT_DEBUG;
+
+  if (isDebug) {
+    return (...logs: string[]) => {
+      process.stderr.write(
+        [`[now-client-debug] ${new Date().toISOString()}`, ...logs].join(' ') +
+          '\n'
+      );
+    };
+  }
+
+  return () => {};
+}

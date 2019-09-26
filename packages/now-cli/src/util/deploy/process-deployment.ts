@@ -28,7 +28,10 @@ export default async function processDeployment({
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(paths[0], requestBody)) {
+    for await (const event of createDeployment(paths[0], {
+      ...requestBody,
+      debug: now._debug,
+    })) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -52,28 +55,17 @@ export default async function processDeployment({
           );
         }
 
-        const size = Object.values(hashes).reduce((acc: number, file: any) => {
-          const fileSize = file.data.byteLength || file.data.length;
-
-          return acc + fileSize;
-        }, 0);
-
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        bar = new Progress(
-          `${chalk.gray(
-            '>'
-          )} Upload [:bar] :percent :etas (${size}) [${missingSize}]`,
-          {
-            width: 20,
-            complete: '=',
-            incomplete: '',
-            total: missingSize,
-            clear: true,
-          }
-        );
+        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
+          width: 20,
+          complete: '=',
+          incomplete: '',
+          total: missingSize,
+          clear: true,
+        });
       }
 
       if (event.type === 'file-uploaded') {
@@ -136,7 +128,10 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(paths[0], requestBody)) {
+    for await (const event of createLegacyDeployment(paths[0], {
+      ...requestBody,
+      debug: now._debug,
+    })) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -155,28 +150,17 @@ export default async function processDeployment({
           );
         }
 
-        const size = Object.values(hashes).reduce((acc: number, file: any) => {
-          const fileSize = file.data.byteLength || file.data.length;
-
-          return acc + fileSize;
-        }, 0);
-
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        bar = new Progress(
-          `${chalk.gray(
-            '>'
-          )} Upload [:bar] :percent :etas (${size}) [${missingSize}]`,
-          {
-            width: 20,
-            complete: '=',
-            incomplete: '',
-            total: missingSize,
-            clear: true,
-          }
-        );
+        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
+          width: 20,
+          complete: '=',
+          incomplete: '',
+          total: missingSize,
+          clear: true,
+        });
       }
 
       if (event.type === 'file-uploaded') {
