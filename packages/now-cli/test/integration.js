@@ -156,10 +156,7 @@ async function getUser() {
     await createDirectory(location);
   }
 
-  await writeFile(
-    path.join(location, `auth.json`),
-    JSON.stringify({ token })
-  );
+  await writeFile(path.join(location, `auth.json`), JSON.stringify({ token }));
 
   console.log('writing token ' + token.slice(0, 5));
   const user = await fetchTokenInformation(token);
@@ -184,8 +181,6 @@ test('login', async t => {
     /You are now logged in\./gm,
     formatOutput(loginOutput)
   );
-
-  t.is(typeof auth.token, 'string');
 });
 
 test('print the deploy help message', async t => {
@@ -2056,7 +2051,6 @@ test('now secret rm', async t => {
 });
 
 test.after.always(async () => {
-
   if (!tmpDir) {
     return;
   }
