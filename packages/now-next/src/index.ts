@@ -639,59 +639,66 @@ export const build = async ({
     const prerenderManifestContents = await readFile(
       path.join(entryPath, '.next', 'prerender-manifest.json'),
       'utf8'
-    )
-    const distPagesDir = path.join(entryPath, '.next/serverless/pages')
+    );
+    const distPagesDir = path.join(entryPath, '.next/serverless/pages');
     const prerenderManifest: {
-      version: number,
-      routes: { [key: string]: { initialRevalidateSeconds: number | false } }
-    } = JSON.parse(prerenderManifestContents)
+      version: number;
+      routes: { [key: string]: { initialRevalidateSeconds: number | false } };
+    } = JSON.parse(prerenderManifestContents);
 
+    let prerenderGroup = 1;
     for (const route of Object.keys(prerenderManifest.routes)) {
-      const info = prerenderManifest.routes[route]
-      const prefixedRoute = path.join(entryDirectory, route)
+      const info = prerenderManifest.routes[route];
+      const prefixedRoute = path.join(entryDirectory, route);
       const dataRoute = path.join(
-        entryDirectory, '/_next/data/', `${route}.json`
-      )
+        entryDirectory,
+        '/_next/data/',
+        `${route}.json`
+      );
       // remove the HTML file from staticPages since it's not an auto-export
-      delete staticPages[`${prefixedRoute}.html`]
-      let exportedRouteIdx = -1
+      delete staticPages[`${prefixedRoute}.html`];
+      let exportedRouteIdx = -1;
       exportedPageRoutes.find((r, i) => {
-        exportedRouteIdx = i
-        return r.dest === path.join('/', `${route}.html`)
-      })
+        exportedRouteIdx = i;
+        return r.dest === path.join('/', `${route}.html`);
+      });
 
       if (exportedRouteIdx > -1) {
-        exportedPageRoutes.splice(exportedRouteIdx, 1)
+        exportedPageRoutes.splice(exportedRouteIdx, 1);
       }
 
       const htmlFsRef = new FileFsRef({
-        fsPath: path.join(distPagesDir, `${route}.html`)
-      })
+        fsPath: path.join(distPagesDir, `${route}.html`),
+      });
       const jsonFsRef = new FileFsRef({
-        fsPath: path.join(distPagesDir, `${route}.json`)
-      })
+        fsPath: path.join(distPagesDir, `${route}.json`),
+      });
 
       // if they never revalidate they can just be FileFsRefs
       if (info.initialRevalidateSeconds === false) {
-        prerenders[prefixedRoute] = htmlFsRef
-        prerenders[dataRoute] = jsonFsRef
+        prerenders[prefixedRoute] = htmlFsRef;
+        prerenders[dataRoute] = jsonFsRef;
       } else {
         prerenders[prefixedRoute] = new Prerender({
           expiration: info.initialRevalidateSeconds,
           lambda: lambdas[prefixedRoute],
-          fallback: htmlFsRef
-        })
+          fallback: htmlFsRef,
+          group: prerenderGroup,
+        });
         prerenders[dataRoute] = new Prerender({
           expiration: info.initialRevalidateSeconds,
           lambda: lambdas[prefixedRoute],
-          fallback: jsonFsRef
-        })
+          fallback: jsonFsRef,
+          group: prerenderGroup,
+        });
+
+        ++prerenderGroup;
       }
     }
   } catch (err) {
     // not enabled if missing
     if (err.code !== 'ENOENT') {
-      throw err
+      throw err;
     }
   }
 
@@ -729,8 +736,8 @@ export const build = async ({
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
   // for dynamic prerender pages' data _next/data/${dynamicRoute}
-  const dynamicDataRoutes: Array<{ src: string, dest: string }> = []
-  const hasPrerenders = Object.keys(prerenders).length > 0
+  const dynamicDataRoutes: Array<{ src: string; dest: string }> = [];
+  const hasPrerenders = Object.keys(prerenders).length > 0;
 
   const dynamicRoutes = getDynamicRoutes(
     entryPath,
@@ -742,14 +749,14 @@ export const build = async ({
     if (staticPages[`${route.dest}.html`.substr(1)]) {
       route.dest = `${route.dest}.html`;
     }
-    const origSrc = route.src
+    const origSrc = route.src;
     route.src = origSrc.replace('^', `^${dynamicPrefix}`);
 
     if (hasPrerenders) {
       dynamicDataRoutes.push({
         src: origSrc.replace('^', `^${path.join(dynamicPrefix, '_next/data')}`),
-        dest: route.dest
-      })
+        dest: route.dest,
+      });
     }
     return route;
   });
