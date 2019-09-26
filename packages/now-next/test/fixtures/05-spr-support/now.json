@@ -109,10 +109,7 @@
     },
     {
       "path": "/_next/data/lambda.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
+      "status": 404
     },
     {
       "path": "/_next/data/forever.json",
