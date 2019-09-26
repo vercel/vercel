@@ -322,14 +322,9 @@ test(
   })
 );
 
-test('[now dev] 07-hexo-node', async t => {
-  const directory = fixture('07-hexo-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
+test(
+  '[now dev] 07-hexo-node',
+  testFixtureStdio('07-hexo-node', async (t, port) => {
     const result = await fetchWithRetry(`http://localhost:${port}`, 180);
     const response = await result;
 
@@ -337,10 +332,8 @@ test('[now dev] 07-hexo-node', async t => {
 
     const body = await response.text();
     t.regex(body, /Hexo \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+  })
+);
 
 test(
   '[now dev] 08-hugo',
