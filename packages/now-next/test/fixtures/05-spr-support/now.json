@@ -66,63 +66,63 @@
       }
     },
     {
-      "path": "/_next/data/blog/post-1",
+      "path": "/_next/data/blog/post-1.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/blog/post-2",
+      "path": "/_next/data/blog/post-2.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/blog/post-3",
+      "path": "/_next/data/blog/post-3.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "MISS"
       }
     },
     {
-      "path": "/_next/data/blog/post-1/comment-1",
+      "path": "/_next/data/blog/post-1/comment-1.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/blog/post-2/comment-2",
+      "path": "/_next/data/blog/post-2/comment-2.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/blog/post-3/comment-3",
+      "path": "/_next/data/blog/post-3/comment-3.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "MISS"
       }
     },
     {
-      "path": "/_next/data/lambda",
+      "path": "/_next/data/lambda.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "MISS"
       }
     },
     {
-      "path": "/_next/data/forever",
+      "path": "/_next/data/forever.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/another",
+      "path": "/_next/data/another.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
