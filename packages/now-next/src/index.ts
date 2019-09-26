@@ -643,7 +643,7 @@ export const build = async ({
     );
     console.timeEnd(allLambdasLabel);
 
-    let prerenderGroup = 0;
+    let prerenderGroup = 1;
     Object.keys(prerenderedRoutes).forEach(_route => {
       const routeFileNoExt = _route === '/' ? '/index' : _route;
 
