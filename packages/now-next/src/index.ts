@@ -642,6 +642,28 @@ export const build = async ({
       })
     );
     console.timeEnd(allLambdasLabel);
+
+    // Handle prerendered routes that never revalidate
+    Object.keys(prerenderedRoutes).forEach(_route => {
+      const { revalidate } = prerenderedRoutes[_route];
+      if (revalidate !== false) {
+        return;
+      }
+
+      const routeFileNoExt = _route === '/' ? '/index' : _route;
+
+      const htmlFsRef = new FileFsRef({
+        fsPath: path.join(pagesDir, `${routeFileNoExt}.html`),
+      });
+      const jsonFsRef = new FileFsRef({
+        fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
+      });
+
+      prerenders[path.join(entryDirectory, routeFileNoExt)] = htmlFsRef;
+      prerenders[
+        path.join(entryDirectory, '_next/data', `${routeFileNoExt}.json`)
+      ] = jsonFsRef;
+    });
   }
 
   try {
@@ -658,6 +680,10 @@ export const build = async ({
     let prerenderGroup = 1;
     for (const route of Object.keys(prerenderManifest.routes)) {
       const info = prerenderManifest.routes[route];
+      if (info.initialRevalidateSeconds === false) {
+        continue;
+      }
+
       const prefixedRoute = path.join(entryDirectory, route);
       const dataRoute = path.join(
         entryDirectory,
@@ -681,26 +707,20 @@ export const build = async ({
         fsPath: path.join(distPagesDir, `${route}.json`),
       });
 
-      // if they never revalidate they can just be FileFsRefs
-      if (info.initialRevalidateSeconds === false) {
-        prerenders[prefixedRoute] = htmlFsRef;
-        prerenders[dataRoute] = jsonFsRef;
-      } else {
-        prerenders[prefixedRoute] = new Prerender({
-          expiration: info.initialRevalidateSeconds,
-          lambda: lambdas[prefixedRoute],
-          fallback: htmlFsRef,
-          group: prerenderGroup,
-        });
-        prerenders[dataRoute] = new Prerender({
-          expiration: info.initialRevalidateSeconds,
-          lambda: lambdas[prefixedRoute],
-          fallback: jsonFsRef,
-          group: prerenderGroup,
-        });
+      prerenders[prefixedRoute] = new Prerender({
+        expiration: info.initialRevalidateSeconds,
+        lambda: lambdas[prefixedRoute],
+        fallback: htmlFsRef,
+        group: prerenderGroup,
+      });
+      prerenders[dataRoute] = new Prerender({
+        expiration: info.initialRevalidateSeconds,
+        lambda: lambdas[prefixedRoute],
+        fallback: jsonFsRef,
+        group: prerenderGroup,
+      });
 
-        ++prerenderGroup;
-      }
+      ++prerenderGroup;
     }
   } catch (err) {
     // not enabled if missing
@@ -772,6 +792,7 @@ export const build = async ({
     output: {
       ...publicFiles,
       ...lambdas,
+      // Prerenders may override Lambdas -- this is an intentional behavior.
       ...prerenders,
       ...staticPages,
       ...staticFiles,
