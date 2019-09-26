@@ -1,5 +1,7 @@
 import { createReadStream } from 'fs';
+import { Agent } from 'https';
 import retry from 'async-retry';
+import { Sema } from 'async-sema';
 import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from '.';
@@ -66,6 +68,8 @@ export default async function* upload(
   const uploadList: { [key: string]: Promise<any> } = {};
   debug('Building an upload list...');
 
+  const semaphore = new Sema(700, { capacity: 700 });
+
   shas.map((sha: string): void => {
     uploadList[sha] = retry(
       async (bail): Promise<any> => {
@@ -76,39 +80,32 @@ export default async function* upload(
           return bail(new Error(`File ${sha} is undefined`));
         }
 
+        await semaphore.acquire();
+
         const fPath = file.names[0];
         const stream = createReadStream(fPath);
         const { data } = file;
-
-        const fstreamPush = stream.push;
-
-        let uploadedSoFar = 0;
-
-        stream.push = (chunk: any): boolean => {
-          // If we're about to push the last chunk, then don't do it here
-          // But instead, we'll "hang" the progress bar and do it on 200
-          if (chunk && uploadedSoFar + chunk.length < data.length) {
-            uploadedSoFar += chunk.length;
-            // semaphore.release()
-          }
-
-          return fstreamPush.call(stream, chunk);
-        };
 
         let err;
         let result;
 
         try {
-          const res = await fetch(API_FILES, token, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              'x-now-digest': sha,
-              'x-now-length': data.length,
+          const res = await fetch(
+            API_FILES,
+            token,
+            {
+              agent: new Agent({ keepAlive: true }),
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                'x-now-digest': sha,
+                'x-now-length': data.length,
+              },
+              body: stream,
+              teamId,
             },
-            body: stream,
-            teamId,
-          }, isDebug);
+            isDebug
+          );
 
           if (res.status === 200) {
             debug(
@@ -136,23 +133,22 @@ export default async function* upload(
             throw new DeploymentError(error);
           }
         } catch (e) {
-          debug(
-            `An unexpected error occurred in upload promise:\n${e}`
-          );
+          debug(`An unexpected error occurred in upload promise:\n${e}`);
           err = new Error(e);
         } finally {
           stream.close();
           stream.destroy();
         }
 
+        semaphore.release();
+
         if (err) {
           if (isClientNetworkError(err)) {
-
-            console.log('Network error, retrying: ' + err.message);
+            debug('Network error, retrying: ' + err.message);
             // If it's a network error, we retry
             throw err;
           } else {
-            console.log('Other error, bailing: ' + err.message);
+            debug('Other error, bailing: ' + err.message);
             // Otherwise we bail
             return bail(err);
           }
@@ -162,12 +158,13 @@ export default async function* upload(
       },
       {
         retries: 3,
-        factor: 2
+        factor: 2,
       }
     );
   });
 
   debug('Starting upload');
+
   while (Object.keys(uploadList).length > 0) {
     try {
       const event = await Promise.race(
