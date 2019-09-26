@@ -158,10 +158,12 @@ test.before(async () => {
           path.join(location, `auth.json`),
           JSON.stringify({ token })
         );
+        console.log('writing token ' + token.slice(0, 5));
 
         const user = await fetchTokenInformation(token);
 
         email = user.email;
+        console.log('using user ' + email);
         contextName = user.email.split('@')[0];
       },
       { retries: 3, factor: 1 }
