@@ -6,6 +6,8 @@ import { join, sep } from 'path';
 import qs from 'querystring';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
+import { Sema } from 'async-sema';
+const semaphore = new Sema(10);
 
 export const API_FILES = 'https://api.zeit.co/v2/now/files';
 export const API_DEPLOYMENTS = 'https://api.zeit.co/v9/now/deployments';
@@ -105,6 +107,7 @@ export const fetch = async (
   opts: any = {},
   debugEnabled?: boolean
 ): Promise<any> => {
+  semaphore.acquire();
   const debug = createDebug(debugEnabled);
   let time: number;
 
@@ -125,9 +128,9 @@ export const fetch = async (
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-
   const res = await fetch_(url, opts);
   debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
+  semaphore.release();
 
   return res;
 };
