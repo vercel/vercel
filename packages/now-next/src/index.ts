@@ -726,18 +726,15 @@ export const build = async ({
     entryPath,
     entryDirectory,
     dynamicPages
-  ).reduce(
-    (prev, route) => {
-      // make sure .html is added to dest for now until
-      // outputting static files to clean routes is available
-      if (staticPages[`${route.dest}.html`.substr(1)]) {
-        route.dest = `${route.dest}.html`;
-      }
-      route.src = route.src.replace('^', `^${dynamicPrefix}`);
-      return prev.concat(route);
-    },
-    [] as { src: string; dest: string }[]
-  );
+  ).map(route => {
+    // make sure .html is added to dest for now until
+    // outputting static files to clean routes is available
+    if (staticPages[`${route.dest}.html`.substr(1)]) {
+      route.dest = `${route.dest}.html`;
+    }
+    route.src = route.src.replace('^', `^${dynamicPrefix}`);
+    return route;
+  });
 
   return {
     output: {
