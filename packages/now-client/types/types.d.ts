@@ -116,6 +116,7 @@ declare interface DeploymentOptions {
   engines?: { [key: string]: string };
   sessionAffinity?: 'ip' | 'random';
   config?: { [key: string]: any };
+  debug?: boolean;
 }
 
 declare interface NowJsonOptions {
