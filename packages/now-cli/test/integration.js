@@ -395,7 +395,7 @@ test('deploy a dockerfile project', async t => {
   }
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
+  t.is(content.id, session);
 
   context.deployment = host;
 });
@@ -525,7 +525,7 @@ test('create an explicit alias for deployment', async t => {
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
+  t.is(content.id, session);
 
   context.alias = hosts.alias;
 });
@@ -600,7 +600,7 @@ test('create an alias from "now.json" `alias` for deployment', async t => {
   const content = await response.json();
 
   t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
+  t.is(content.id, session);
 
   context.alias = json.alias;
 });
