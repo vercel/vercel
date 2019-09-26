@@ -19,6 +19,7 @@ import prepareFixtures from './helpers/prepare';
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
+const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 const session = Math.random()
   .toString(36)
   .split('.')[1];
@@ -110,8 +111,6 @@ const context = {};
 const defaultOptions = { reject: false };
 const defaultArgs = [];
 let token;
-let email;
-let contextName;
 
 let tmpDir;
 
@@ -142,42 +141,39 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 };
 
 test.before(async () => {
-  try {
-    await retry(
-      async () => {
-        const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-        const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-        const url = Buffer.from(str, 'base64').toString();
-        token = await fetchTokenWithRetry(url);
-
-        if (!fs.existsSync(location)) {
-          await createDirectory(location);
-        }
-
-        await writeFile(
-          path.join(location, `auth.json`),
-          JSON.stringify({ token })
-        );
-        console.log('writing token ' + token.slice(0, 5));
-
-        const user = await fetchTokenInformation(token);
-
-        email = user.email;
-        console.log('using user ' + email);
-        contextName = user.email.split('@')[0];
-      },
-      { retries: 3, factor: 1 }
-    );
-
-    await prepareFixtures(contextName);
-  } catch (err) {
-    console.log('Failed `test.before`');
-    console.log(err);
-  }
+  const user = await getUser();
+  const contextName = getContextName(user);
+  // TODO: should we use contextName or session?
+  await prepareFixtures(session);
 });
+
+async function getUser() {
+  const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+  const url = Buffer.from(str, 'base64').toString();
+  token = await fetchTokenWithRetry(url);
+
+  if (!fs.existsSync(location)) {
+    await createDirectory(location);
+  }
+
+  await writeFile(
+    path.join(location, `auth.json`),
+    JSON.stringify({ token })
+  );
+
+  console.log('writing token ' + token.slice(0, 5));
+  const user = await fetchTokenInformation(token);
+  console.log('switching to user ' + user.email);
+  return user;
+}
+
+function getContextName(user) {
+  return user.email.split('@')[0];
+}
 
 test('login', async t => {
   // Delete the current token
+  const { email } = await getUser();
   const logoutOutput = await execute(['logout']);
   t.is(logoutOutput.code, 0, formatOutput(logoutOutput));
 
@@ -189,13 +185,7 @@ test('login', async t => {
     formatOutput(loginOutput)
   );
 
-  // Save the new token
-  const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-  const auth = JSON.parse(await readFile(path.join(location, 'auth.json')));
-
-  token = auth.token;
-
-  t.is(typeof token, 'string');
+  t.is(typeof auth.token, 'string');
 });
 
 test('print the deploy help message', async t => {
@@ -296,6 +286,8 @@ test('login with unregisterd user', async t => {
 
 test('deploy a node microservice', async t => {
   const target = fixture('node');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   let { stdout, stderr, code } = await execa(
     binaryPath,
@@ -340,6 +332,8 @@ test('deploy a node microservice', async t => {
 
 test('deploy a node microservice and infer name from `package.json`', async t => {
   const target = fixture('node');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -359,6 +353,8 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 
 test('deploy a dockerfile project', async t => {
   const target = fixture('dockerfile');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   // Add the "name" field to the `now.json` file
   const jsonPath = path.join(target, 'now.json');
@@ -411,6 +407,7 @@ test('deploy a dockerfile project', async t => {
 
 test('test invalid json alias rules', async t => {
   const fixturePath = fixture('alias-rules');
+  const user = await getUser();
   const output = await execute(['alias', '-r', 'invalid-json-rules.json'], {
     cwd: fixturePath,
   });
@@ -421,6 +418,7 @@ test('test invalid json alias rules', async t => {
 
 test('test invalid alias rules', async t => {
   const fixturePath = fixture('alias-rules');
+  const user = await getUser();
   const output = await execute(['alias', '-r', 'invalid-rules.json'], {
     cwd: fixturePath,
   });
@@ -431,6 +429,7 @@ test('test invalid alias rules', async t => {
 
 test('test invalid type for alias rules', async t => {
   const fixturePath = fixture('alias-rules');
+  const user = await getUser();
   const output = await execute(['alias', '-r', 'invalid-type-rules.json'], {
     cwd: fixturePath,
   });
@@ -441,6 +440,8 @@ test('test invalid type for alias rules', async t => {
 
 test('apply alias rules', async t => {
   const fixturePath = fixture('alias-rules');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   // Create the rules file
   const alias = `test-alias-rules.${contextName}.now.sh`;
@@ -503,6 +504,8 @@ test('find deployment in list with mixed args', async t => {
 });
 
 test('create an explicit alias for deployment', async t => {
+  const user = await getUser();
+  const contextName = getContextName(user);
   const hosts = {
     deployment: context.deployment,
     alias: `${session}.now.sh`,
@@ -577,6 +580,8 @@ test('remove the explicit alias', async t => {
 
 test('create an alias from "now.json" `alias` for deployment', async t => {
   const target = fixture('dockerfile');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   // Add the `alias` field to the "now.json" file
   const jsonPath = path.join(target, 'now.json');
@@ -634,6 +639,8 @@ test('scale down the deployment directly', async t => {
 });
 
 test('list the scopes', async t => {
+  const user = await getUser();
+  const contextName = getContextName(user);
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['teams', 'ls', ...defaultArgs],
@@ -644,7 +651,7 @@ test('list the scopes', async t => {
 
   t.is(code, 0);
 
-  const include = `✔ ${contextName}     ${email}`;
+  const include = `✔ ${contextName}     ${user.email}`;
   t.true(
     stdout.includes(include),
     `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`
@@ -652,6 +659,8 @@ test('list the scopes', async t => {
 });
 
 test('list the payment methods', async t => {
+  const user = await getUser();
+  const contextName = getContextName(user);
   const { stdout, code } = await execa(
     binaryPath,
     ['billing', 'ls', ...defaultArgs],
@@ -739,6 +748,8 @@ test('try to set default without existing payment method', async t => {
 });
 
 test('try to remove a non-existing payment method', async t => {
+  const user = await getUser();
+  const contextName = getContextName(user);
   const { stderr, code } = await execa(
     binaryPath,
     ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
@@ -819,6 +830,8 @@ test('use `--platform-version 1` to deploy a GitHub repository', async t => {
 
 test('set platform version using `-V` to `1`', async t => {
   const directory = fixture('builds');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const goal =
     '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
 
@@ -839,6 +852,8 @@ test('set platform version using `-V` to `1`', async t => {
 
 test('set platform version using `--platform-version` to `1`', async t => {
   const directory = fixture('builds');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const goal =
     '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
 
@@ -867,6 +882,8 @@ test('set platform version using `--platform-version` to `1`', async t => {
 
 test('set platform version using `-V` to invalid number', async t => {
   const directory = fixture('builds');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const goal =
     '> Error! The "--platform-version" option must be either `1` or `2`.';
 
@@ -887,6 +904,8 @@ test('set platform version using `-V` to invalid number', async t => {
 
 test('set platform version using `--platform-version` to invalid number', async t => {
   const directory = fixture('builds');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const goal =
     '> Error! The "--platform-version" option must be either `1` or `2`.';
 
@@ -915,6 +934,8 @@ test('set platform version using `--platform-version` to invalid number', async 
 
 test('set platform version using `-V` to `2`', async t => {
   const directory = fixture('builds');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, stderr, code } = await execa(
     binaryPath,
@@ -984,6 +1005,8 @@ test('output logs of a 2.0 deployment without annotate', async t => {
 });
 
 test('create wildcard alias for deployment', async t => {
+  const user = await getUser();
+  const contextName = getContextName(user);
   const hosts = {
     deployment: context.deployment,
     alias: `*.${contextName}.now.sh`,
@@ -1045,6 +1068,8 @@ test('ensure type and instance count in list is right', async t => {
 
 test('set platform version using `--platform-version` to `2`', async t => {
   const directory = fixture('builds');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1079,6 +1104,8 @@ test('set platform version using `--platform-version` to `2`', async t => {
 
 test('ensure we render a warning for deployments with no files', async t => {
   const directory = fixture('single-dotfile');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -1134,6 +1161,8 @@ test('ensure we render a prompt when deploying home directory', async t => {
 
 test('ensure the `alias` property is not sent to the API', async t => {
   const directory = fixture('config-alias-property');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1159,6 +1188,8 @@ test('ensure the `alias` property is not sent to the API', async t => {
 
 test('ensure the `scope` property works with email', async t => {
   const directory = fixture('config-scope-property-email');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -1187,6 +1218,8 @@ test('ensure the `scope` property works with email', async t => {
 
 test('ensure the `scope` property works with username', async t => {
   const directory = fixture('config-scope-property-username');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -1215,6 +1248,8 @@ test('ensure the `scope` property works with username', async t => {
 
 test('try to create a builds deployments with wrong config', async t => {
   const directory = fixture('builds-wrong');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stderr, code } = await execa(
     binaryPath,
@@ -1235,6 +1270,8 @@ test('try to create a builds deployments with wrong config', async t => {
 
 test('create a builds deployments with no actual builds', async t => {
   const directory = fixture('builds-no-list');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1254,6 +1291,8 @@ test('create a builds deployments with no actual builds', async t => {
 
 test('create a builds deployments without platform version flag', async t => {
   const directory = fixture('builds');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1279,6 +1318,8 @@ test('create a builds deployments without platform version flag', async t => {
 
 test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1311,6 +1352,8 @@ test('deploy multiple static files', async t => {
 
 test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
   const targetCall = await execa(binaryPath, [
@@ -1335,6 +1378,8 @@ test('create a staging deployment', async t => {
 
 test('create a production deployment', async t => {
   const directory = fixture('static-deployment');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
   const targetCall = await execa(binaryPath, [
@@ -1382,7 +1427,10 @@ test('create a production deployment', async t => {
 });
 
 test('ensure we are getting a warning for the old team flag', async t => {
+  const { email } = await getUser();
   const directory = fixture('static-multiple-files');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -1421,7 +1469,10 @@ test('ensure we are getting a warning for the old team flag', async t => {
 });
 
 test('deploy multiple static files with custom scope', async t => {
+  const { email } = await getUser();
   const directory = fixture('static-multiple-files');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1462,6 +1513,8 @@ test('deploy multiple static files with custom scope', async t => {
 
 test('deploy single static file', async t => {
   const file = fixture('static-single-file/first.png');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1488,6 +1541,8 @@ test('deploy single static file', async t => {
 
 test('deploy a static directory', async t => {
   const directory = fixture('static-single-file');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1513,6 +1568,8 @@ test('deploy a static directory', async t => {
 
 test('deploy a static build deployment', async t => {
   const directory = fixture('now-static-build');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1540,6 +1597,8 @@ test('deploy a static build deployment', async t => {
 
 test('use build-env', async t => {
   const directory = fixture('build-env');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stdout, code } = await execa(
     binaryPath,
@@ -1567,6 +1626,8 @@ test('use build-env', async t => {
 
 test('use `--build-env` CLI flag', async t => {
   const directory = fixture('build-env-arg');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const nonce = Math.random()
     .toString(36)
     .substring(2);
@@ -1605,6 +1666,8 @@ test('use `--build-env` CLI flag', async t => {
 
 test('use `--debug` CLI flag', async t => {
   const directory = fixture('build-env-debug');
+  const user = await getUser();
+  const contextName = getContextName(user);
 
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -1643,6 +1706,8 @@ test('try to deploy non-existing path', async t => {
 
 test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const goal = `> Error! The specified scope does not exist`;
 
   const { stderr, code } = await execa(
@@ -1823,6 +1888,8 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
 });
 
 test('whoami', async t => {
+  const user = await getUser();
+  const contextName = getContextName(user);
   const { code, stdout, stderr } = await execute(['whoami']);
   t.is(code, 0);
   t.is(stdout, contextName, formatOutput({ stdout, stderr }));
@@ -1841,6 +1908,8 @@ test('fail `now dev` dev script without now.json', async t => {
 
 test('print correct link in legacy warning', async t => {
   const deploymentPath = fixture('v1-warning-link');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const { code, stderr } = await execute([deploymentPath]);
 
   // It is expected to fail,
@@ -1871,6 +1940,8 @@ test('`now rm` 404 exits quickly', async t => {
 
 test('render build errors', async t => {
   const deploymentPath = fixture('failing-build');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const output = await execute([deploymentPath]);
 
   t.is(output.code, 1, formatOutput(output));
@@ -1924,6 +1995,8 @@ test('now hasOwnProperty not a valid subcommand', async t => {
 
 test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
+  const user = await getUser();
+  const contextName = getContextName(user);
   const output = await execute([fixturePath, '--force', '--public']);
 
   t.is(output.code, 0, formatOutput(output));
@@ -1983,8 +2056,6 @@ test('now secret rm', async t => {
 });
 
 test.after.always(async () => {
-  // Make sure the token gets revoked
-  await execa(binaryPath, ['logout', ...defaultArgs]);
 
   if (!tmpDir) {
     return;
