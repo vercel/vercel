@@ -53,6 +53,7 @@ import {
   createLambdaFromPseudoLayers,
   PseudoLayer,
   createPseudoLayer,
+  getPrerenderedRoutes,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -426,15 +427,23 @@ export const build = async ({
 
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
+    const prerenderedRoutes = await getPrerenderedRoutes(entryPath);
 
     Object.keys(staticPageFiles).forEach((page: string) => {
+      const pathname = page.replace(/\.html$/, '');
+      const routeName = normalizePage(pathname);
+
+      // Prerendered routes emit a `.html` file but should not be treated as a
+      // static page.
+      if (Object.prototype.hasOwnProperty.call(prerenderedRoutes, routeName)) {
+        return;
+      }
+
       const staticRoute = path.join(entryDirectory, page);
       staticPages[staticRoute] = staticPageFiles[page];
 
-      const pathname = page.replace(/\.html$/, '');
-
       if (isDynamicRoute(pathname)) {
-        dynamicPages.push(normalizePage(pathname));
+        dynamicPages.push(routeName);
         return;
       }
 
@@ -655,8 +664,6 @@ export const build = async ({
         '/_next/data/',
         `${route}.json`
       );
-      // remove the HTML file from staticPages since it's not an auto-export
-      delete staticPages[`${prefixedRoute}.html`];
       let exportedRouteIdx = -1;
       exportedPageRoutes.find((r, i) => {
         exportedRouteIdx = i;

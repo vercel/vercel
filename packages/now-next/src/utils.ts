@@ -481,6 +481,57 @@ export async function createLambdaFromPseudoLayers({
   });
 }
 
+export type NextPrerenderedRoutes = {
+  [route: string]: { revalidate: number | false };
+};
+
+export async function getPrerenderedRoutes(
+  entryPath: string
+): Promise<NextPrerenderedRoutes> {
+  const pathPrerenderManifest = path.join(
+    entryPath,
+    '.next',
+    'prerender-manifest.json'
+  );
+
+  const hasManifest: boolean = await fs
+    .access(pathPrerenderManifest, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasManifest) {
+    return {};
+  }
+
+  const manifest: {
+    version: 1;
+    routes: { [key: string]: { initialRevalidateSeconds: number | false } };
+  } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
+
+  switch (manifest.version) {
+    case 1: {
+      const ret: NextPrerenderedRoutes = Object.keys(manifest.routes).reduce(
+        (prev, route) => {
+          const { initialRevalidateSeconds } = manifest.routes[route];
+          return Object.assign(prev, {
+            [route]: {
+              revalidate:
+                initialRevalidateSeconds === false
+                  ? false
+                  : Math.max(1, initialRevalidateSeconds),
+            },
+          } as NextPrerenderedRoutes);
+        },
+        {} as NextPrerenderedRoutes
+      );
+      return ret;
+    }
+    default: {
+      return {};
+    }
+  }
+}
+
 export {
   excludeFiles,
   validateEntrypoint,
