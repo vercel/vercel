@@ -97,6 +97,7 @@ const getRevertAliasConfigFile = () => {
 };
 
 module.exports = async session => {
+  console.log('preparing fixtures with session ' + session);
   const files = {
     Dockerfile: getDockerFile(session),
     'index.js': getIndexFile(session),

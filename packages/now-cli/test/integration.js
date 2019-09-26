@@ -343,7 +343,7 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 
   // Test if the output is really a URL
   const { host } = new URL(stdout);
-  t.true(host.startsWith(`node-test-${contextName}`));
+  t.true(host.startsWith(`node-test-${session}`));
 });
 
 test('deploy a dockerfile project', async t => {
