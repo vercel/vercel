@@ -691,6 +691,42 @@ test('remove the alias from "now.json" `alias`', async t => {
   t.true(stdout.startsWith(goal));
 });
 
+test('ignore files specified in .nowignore', async t => {
+  const directory = fixture('nowignore');
+
+  const args = ['--debug', '--public', '--name', session, ...defaultArgs];
+  const targetCall = await execa(binaryPath, args, { cwd: directory, reject: false });
+
+  console.log(targetCall.stderr);
+  console.log(targetCall.stdout);
+  console.log(targetCall.code);
+
+  const { host } = new URL(targetCall.stdout);
+  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
+  t.is(ignoredFile.status, 404);
+
+  const presentFile = await fetch(`https://${host}/index.txt`);
+  t.is(presentFile.status, 200);
+});
+
+test('ignore files specified in .nowignore via allowlist', async t => {
+  const directory = fixture('nowignore-allowlist');
+
+  const args = ['--debug', '--public', '--name', session, ...defaultArgs];
+  const targetCall = await execa(binaryPath, args, { cwd: directory, reject: false });
+
+  console.log(targetCall.stderr);
+  console.log(targetCall.stdout);
+  console.log(targetCall.code);
+
+  const { host } = new URL(targetCall.stdout);
+  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
+  t.is(ignoredFile.status, 404);
+
+  const presentFile = await fetch(`https://${host}/index.txt`);
+  t.is(presentFile.status, 200);
+});
+
 test('scale down the deployment directly', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
