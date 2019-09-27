@@ -695,7 +695,7 @@ test('ignore files specified in .nowignore', async t => {
   const directory = fixture('nowignore');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, [directory, ...args]);
+  const targetCall = await execa(binaryPath, args, { cwd: directory, reject: false });
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);
