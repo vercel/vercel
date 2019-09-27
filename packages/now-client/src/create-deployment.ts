@@ -5,6 +5,7 @@ import hashes, { mapToObject } from './utils/hashes';
 import uploadAndDeploy from './upload';
 import { getNowIgnore, createDebug } from './utils';
 import { DeploymentError } from './errors';
+import { CreateDeploymentFunction, DeploymentOptions } from './types';
 
 export { EVENTS } from './utils';
 

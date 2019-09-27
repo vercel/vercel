@@ -6,6 +6,7 @@ import { join, sep } from 'path';
 import qs from 'querystring';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
+import { NowJsonOptions } from '../types';
 import { Sema } from 'async-sema';
 const semaphore = new Sema(10);
 
