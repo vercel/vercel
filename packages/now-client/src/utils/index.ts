@@ -85,14 +85,14 @@ export async function getNowIgnore(path: string | string[]): Promise<Ignore> {
   ];
 
   const nowIgnore = Array.isArray(path)
-    ? maybeRead(
+    ? await maybeRead(
         join(
           path.find(fileName => fileName.includes('.nowignore'), '') || '',
           '.nowignore'
         ),
         ''
       )
-    : maybeRead(join(path, '.nowignore'), '');
+    : await maybeRead(join(path, '.nowignore'), '');
 
   const ig = ignore().add(`${ignores.join('\n')}\n${nowIgnore}`);
 
