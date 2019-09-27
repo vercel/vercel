@@ -36,7 +36,6 @@ const createDirectory = dest => fs.mkdirSync(dest);
 const waitForDeployment = async (href, expectJson) => {
   const start = Date.now();
   const max = ms('4m');
-  console.log('Waiting for deployment ' + href);
 
   // eslint-disable-next-line
   while (true) {
@@ -64,6 +63,7 @@ const waitForDeployment = async (href, expectJson) => {
       );
     }
 
+    console.log('Waiting for deployment ' + href);
     await sleep(2000);
   }
 };
