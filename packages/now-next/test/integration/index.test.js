@@ -328,3 +328,45 @@ it(
   },
   FOUR_MINUTES
 );
+
+it(
+  'Should invoke build command with serverless-no-config',
+  async () => {
+    const {
+      workPath,
+      buildResult: { output },
+    } = await runBuildLambda(
+      path.join(__dirname, 'serverless-no-config-build')
+    );
+
+    expect(output['index.html']).toBeDefined();
+    const filePaths = Object.keys(output);
+    const serverlessError = filePaths.some(filePath =>
+      filePath.match(/_error/)
+    );
+    const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_app\.js$/)
+    );
+    const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_error\.js$/)
+    );
+    const hasBuildFile = await fs.pathExists(
+      path.join(__dirname, 'serverless-no-config-build'),
+      '.next',
+      'world.txt'
+    );
+
+    expect(hasUnderScoreAppStaticFile).toBeTruthy();
+    expect(hasUnderScoreErrorStaticFile).toBeTruthy();
+    expect(serverlessError).toBeTruthy();
+    expect(hasBuildFile).toBeTruthy();
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
+    expect(
+      contents.some(name => name.includes('next.config.original.'))
+    ).toBeFalsy();
+  },
+  FOUR_MINUTES
+);

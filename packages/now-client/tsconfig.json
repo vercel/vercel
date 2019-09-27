@@ -13,8 +13,7 @@
     "noUnusedParameters": true,
     "strict": true,
     "target": "ES2015",
-    "downlevelIteration": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "downlevelIteration": true
   },
   "include": ["./src", "./types"]
 }
