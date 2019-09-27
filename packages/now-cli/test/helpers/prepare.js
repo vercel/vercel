@@ -250,6 +250,11 @@ module.exports = (req, res) => {
       'ignore.txt': 'Should be ignored',
       '.nowignore': 'ignore.txt',
     },
+    'nowignore-allowlist': {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': '*\n!index.txt',
+    },
     'failing-build': {
       'package.json': JSON.stringify({
         scripts: {
