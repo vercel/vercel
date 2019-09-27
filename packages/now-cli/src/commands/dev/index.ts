@@ -82,28 +82,6 @@ export default async function main(ctx: NowContext) {
 
   const [dir = '.'] = args;
 
-  const nowJson = await readConfig(path.join(dir, 'now.json'));
-  // @ts-ignore: Because `nowJson` could be one of three different types
-  const hasBuilds = nowJson && nowJson.builds && nowJson.builds.length > 0;
-
-  if (!nowJson || !hasBuilds) {
-    const pkg = await readPackage(path.join(dir, 'package.json'));
-
-    if (pkg) {
-      const { scripts } = pkg as PackageJson;
-
-      if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('now dev')}`
-        );
-        output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
-        return 1;
-      }
-    }
-  }
-
   if (argv._.length > 2) {
     output.error(`${cmd('now dev [dir]')} accepts at most one argument`);
     return 1;
