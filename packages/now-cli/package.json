@@ -13,7 +13,7 @@
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
     "test-unit": "nyc ava test/*unit.js --serial --fail-fast --verbose",
-    "test-integration": "ava test/integration.js --serial --fail-fast",
+    "test-integration": "ava test/integration.js --serial --tap",
     "test-integration-now-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
