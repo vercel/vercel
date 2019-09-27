@@ -3,7 +3,7 @@ import { parse as parseUrl } from 'url';
 import fetch_ from 'node-fetch';
 import { join, sep } from 'path';
 import qs from 'querystring';
-import ignore, { Ignore } from 'ignore';
+import ignore from 'ignore';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
 import { NowJsonOptions } from '../types';
@@ -57,7 +57,7 @@ const maybeRead = async function<T>(path: string, default_: T) {
   }
 };
 
-export async function getNowIgnore(path: string | string[]): Promise<Ignore> {
+export async function getNowIgnore(path: string | string[]): Promise<any> {
   let ignores: string[] = [
     '.hg',
     '.git',
