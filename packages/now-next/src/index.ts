@@ -42,7 +42,6 @@ import {
   getNextConfig,
   getPathsInside,
   getRoutes,
-  includeOnlyEntryDirectory,
   isDynamicRoute,
   normalizePackageJson,
   normalizePage,
@@ -647,15 +646,8 @@ export const build = async ({
     {}
   );
 
-  const entryDirectoryFiles = includeOnlyEntryDirectory(files, entryDirectory);
-  const staticDirectoryFiles = filesFromDirectory(
-    entryDirectoryFiles,
-    path.join(entryDirectory, 'static')
-  );
-  const publicDirectoryFiles = filesFromDirectory(
-    entryDirectoryFiles,
-    path.join(entryDirectory, 'public')
-  );
+  const staticDirectoryFiles = await glob('**', path.join(entryPath, 'static'));
+  const publicDirectoryFiles = await glob('**', path.join(entryPath, 'public'));
   const publicFiles = Object.keys(publicDirectoryFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
