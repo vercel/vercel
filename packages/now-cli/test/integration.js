@@ -1802,12 +1802,15 @@ test('deploy a static build deployment', async t => {
 });
 
 test('use build-env', async t => {
-  const directory = fixture('build-env');
+  console.log('use build-env....');
+  const target = fixture('build-env');
+  console.log('fetched build-env fixture, executing...');
 
   const { stdout, stderr, code } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs],
+    ['--public', '--name', session, ...defaultArgs],
     {
+      cwd: directory,
       reject: false,
     }
   );
@@ -1833,7 +1836,9 @@ test('use build-env', async t => {
 });
 
 test('use `--build-env` CLI flag', async t => {
-  const directory = fixture('build-env-arg');
+  console.log('use `--build-env` CLI flag....');
+  const target = fixture('build-env-arg');
+  console.log('fetched build-env-arg fixture, executing...');
   const nonce = Math.random()
     .toString(36)
     .substring(2);
@@ -1841,7 +1846,6 @@ test('use `--build-env` CLI flag', async t => {
   const { stderr, stdout, code } = await execa(
     binaryPath,
     [
-      directory,
       '--public',
       '--name',
       session,
@@ -1850,6 +1854,7 @@ test('use `--build-env` CLI flag', async t => {
       ...defaultArgs,
     ],
     {
+      cwd: directory,
       reject: false,
     }
   );
