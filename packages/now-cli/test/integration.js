@@ -710,7 +710,7 @@ test('ignore files specified in .nowignore', async t => {
 });
 
 test('ignore files specified in .nowignore via allowlist', async t => {
-  const directory = fixture('nowignore');
+  const directory = fixture('nowignore-allowlist');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
   const targetCall = await execa(binaryPath, [directory, ...args]);
