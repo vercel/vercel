@@ -37,7 +37,6 @@ import {
   EnvConfig,
   excludeFiles,
   ExperimentalTraceVersion,
-  filesFromDirectory,
   getDynamicRoutes,
   getNextConfig,
   getPathsInside,
@@ -636,6 +635,9 @@ export const build = async ({
     '**',
     path.join(entryPath, '.next', 'static')
   );
+  const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
+  const publicFolderFiles = await glob('**', path.join(entryPath, 'public'));
+
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
@@ -645,16 +647,24 @@ export const build = async ({
     }),
     {}
   );
-
-  const staticDirectoryFiles = await glob('**', path.join(entryPath, 'static'));
-  const publicDirectoryFiles = await glob('**', path.join(entryPath, 'public'));
-  const publicFiles = Object.keys(publicDirectoryFiles).reduce(
+  const staticDirectoryFiles = Object.keys(staticFolderFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [file.replace(/public[/\\]+/, '')]: publicDirectoryFiles[file],
+      [path.join(entryDirectory, 'static', file)]: staticFolderFiles[file],
     }),
     {}
   );
+  const publicDirectoryFiles = Object.keys(publicFolderFiles).reduce(
+    (mappedFiles, file) => ({
+      ...mappedFiles,
+      [path.join(
+        entryDirectory,
+        file.replace(/public[/\\]+/, '')
+      )]: publicFolderFiles[file],
+    }),
+    {}
+  );
+
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
@@ -674,7 +684,7 @@ export const build = async ({
 
   return {
     output: {
-      ...publicFiles,
+      ...publicDirectoryFiles,
       ...lambdas,
       ...staticPages,
       ...staticFiles,
