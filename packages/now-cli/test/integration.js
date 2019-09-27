@@ -33,16 +33,26 @@ const pickUrl = stdout => {
 const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
 const createDirectory = dest => fs.mkdirSync(dest);
 
-const waitForDeployment = async href => {
+const waitForDeployment = async (href, expectJson) => {
   const start = Date.now();
   const max = ms('4m');
+  console.log('Waiting for deployment ' + href);
 
   // eslint-disable-next-line
   while (true) {
     const response = await fetch(href, { redirect: 'manual' });
 
     if (response.status === 200) {
-      break;
+      if (!expectJson) {
+        return; // not expecting a response
+      } else {
+        try {
+          const text = await response.text();
+          return JSON.parse(text);
+        } catch (e) {
+          console.log('Failed to parse json, retrying...')
+        }
+      }
     }
 
     const current = Date.now();
@@ -417,29 +427,8 @@ test('deploy a dockerfile project', async t => {
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 
-  await waitForDeployment(href);
-
-  // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-  t.is(response.status, 200);
-  const contentType = response.headers.get('content-type');
-  const textContent = await response.text();
-  let content;
-
-  try {
-    content = JSON.parse(textContent);
-  } catch (error) {
-    console.log('Error parsing response as JSON:');
-    console.error(textContent);
-    throw error;
-  }
-
-  t.is(contentType, 'application/json; charset=utf-8');
-  t.is(content.id, contextName);
+  const json = await waitForDeployment(href);
+  t.is(json.id, contextName);
 
   context.deployment = host;
 });
