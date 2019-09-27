@@ -1,7 +1,6 @@
 import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
 import readdir from 'recursive-readdir';
-import { Ignore } from 'ignore';
 import { relative, join } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import uploadAndDeploy from './upload';
@@ -61,7 +60,7 @@ export default function buildCreateDeployment(
     }
 
     // Get .nowignore
-    let ig: Ignore = await getNowIgnore(path);
+    let ig = await getNowIgnore(path);
 
     debug(`Found ${ig.ignores.length} rules in .nowignore`);
 
@@ -77,7 +76,7 @@ export default function buildCreateDeployment(
       );
       fileList = ig
         .filter(relativeFileList)
-        .map(relativePath => join(process.cwd(), relativePath));
+        .map((relativePath: string) => join(process.cwd(), relativePath));
 
       debug(`Read ${fileList.length} files in the specified directory`);
     } else if (Array.isArray(path)) {
