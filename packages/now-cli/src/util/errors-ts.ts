@@ -294,6 +294,16 @@ export class InvalidDomain extends NowError<
   }
 }
 
+export class NotDomainOwner extends NowError<'NOT_DOMAIN_OWNER', {}> {
+  constructor(message: string) {
+    super({
+      code: 'NOT_DOMAIN_OWNER',
+      meta: {},
+      message,
+    });
+  }
+}
+
 export class InvalidDeploymentId extends NowError<
   'INVALID_DEPLOYMENT_ID',
   { id: string }
