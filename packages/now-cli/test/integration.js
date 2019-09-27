@@ -1810,7 +1810,7 @@ test('use build-env', async t => {
     binaryPath,
     ['--public', '--name', session, ...defaultArgs],
     {
-      cwd: directory,
+      cwd: target,
       reject: false,
     }
   );
@@ -1854,7 +1854,7 @@ test('use `--build-env` CLI flag', async t => {
       ...defaultArgs,
     ],
     {
-      cwd: directory,
+      cwd: target,
       reject: false,
     }
   );
