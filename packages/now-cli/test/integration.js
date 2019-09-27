@@ -427,7 +427,7 @@ test('deploy a dockerfile project', async t => {
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 
-  const data = await waitForDeployment(href);
+  const data = await waitForDeployment(href, true);
   t.is(data.id, contextName);
 
   context.deployment = host;
