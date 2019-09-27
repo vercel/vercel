@@ -1,9 +1,9 @@
 import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
 import fetch_ from 'node-fetch';
-import { readFile } from 'fs-extra';
 import { join, sep } from 'path';
 import qs from 'querystring';
+import ignore, { Ignore } from 'ignore';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
 import { NowJsonOptions } from '../types';
@@ -51,7 +51,7 @@ export function parseNowJSON(file?: DeploymentFile): NowJsonOptions {
 export async function getNowIgnore(
   files: string[],
   path: string | string[]
-): Promise<string[]> {
+): Promise<Ignore> {
   let ignores: string[] = [
     '.hg',
     '.git',
@@ -78,6 +78,9 @@ export async function getNowIgnore(
     'CVS',
   ];
 
+  let ig = ignore();
+  ig.add(ignores);
+
   await Promise.all(
     files.map(
       async (file: string): Promise<void> => {
@@ -87,19 +90,14 @@ export async function getNowIgnore(
             : file.includes(path)
             ? file
             : join(path, file);
-          const nowIgnore = await readFile(filePath);
 
-          nowIgnore
-            .toString()
-            .split('\n')
-            .filter((s: string): boolean => s.length > 0)
-            .forEach((entry: string): number => ignores.push(entry));
+          ig = ignore().add(filePath);
         }
       }
     )
   );
 
-  return ignores;
+  return ig;
 }
 
 export const fetch = async (
