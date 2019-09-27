@@ -61,7 +61,7 @@ export default function buildCreateDeployment(
     }
 
     // Get .nowignore
-    let ig: Ignore = await getNowIgnore(rootFiles, path);
+    let ig: Ignore = await getNowIgnore(path);
 
     debug(`Found ${ig.ignores.length} rules in .nowignore`);
 
@@ -79,7 +79,11 @@ export default function buildCreateDeployment(
         .filter(relativeFileList)
         .map(relativePath => join(process.cwd(), relativePath));
 
-      debug(`Read ${fileList.length} files in the specified directory`);
+      console.log(ig);
+      debug(
+        `Read ${fileList.length} files in the specified directory:\n`,
+        JSON.stringify(fileList, null, 2)
+      );
     } else if (Array.isArray(path)) {
       // Array of file paths
       fileList = path;
