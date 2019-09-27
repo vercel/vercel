@@ -327,8 +327,9 @@ test('deploy a node microservice', async t => {
 
   let { stdout, stderr, code } = await execa(
     binaryPath,
-    [target, '--public', '--name', session, ...defaultArgs],
+    ['--public', '--name', session, ...defaultArgs],
     {
+      cwd: target,
       reject: false,
     }
   );
@@ -380,8 +381,9 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 
   const { stdout, stderr, code } = await execa(
     binaryPath,
-    [target, '--public', ...defaultArgs],
+    ['--public', ...defaultArgs],
     {
+      cwd: target,
       reject: false,
     }
   );
