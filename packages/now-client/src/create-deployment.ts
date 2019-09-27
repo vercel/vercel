@@ -79,11 +79,7 @@ export default function buildCreateDeployment(
         .filter(relativeFileList)
         .map(relativePath => join(process.cwd(), relativePath));
 
-      console.log(ig);
-      debug(
-        `Read ${fileList.length} files in the specified directory:\n`,
-        JSON.stringify(fileList, null, 2)
-      );
+      debug(`Read ${fileList.length} files in the specified directory`);
     } else if (Array.isArray(path)) {
       // Array of file paths
       fileList = path;
