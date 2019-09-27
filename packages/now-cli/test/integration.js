@@ -323,7 +323,9 @@ test('login with unregisterd user', async t => {
 });
 
 test('deploy a node microservice', async t => {
+  console.log('deploy a node microservice....');
   const target = fixture('node');
+  console.log('fetched node fixture, executing...');
 
   let { stdout, stderr, code } = await execa(
     binaryPath,
@@ -377,7 +379,9 @@ test('deploy a node microservice', async t => {
 });
 
 test('deploy a node microservice and infer name from `package.json`', async t => {
+  console.log('deploy a node microservice and infer name from package.json....');
   const target = fixture('node');
+  console.log('fetched node fixture, executing...');
 
   const { stdout, stderr, code } = await execa(
     binaryPath,
@@ -401,13 +405,16 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 });
 
 test('deploy a dockerfile project', async t => {
+  console.log('deploy a dockerfile project');
   const target = fixture('dockerfile');
+  console.log('fetched node fixture, writing json...');
 
   // Add the "name" field to the `now.json` file
   const jsonPath = path.join(target, 'now.json');
   const json = JSON.parse(await readFile(jsonPath, 'utf8'));
   json.name = session;
   await writeFile(jsonPath, JSON.stringify(json));
+  console.log('executing deployment...');
 
   const { stdout, stderr, code } = await execa(
     binaryPath,
