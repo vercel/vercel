@@ -405,9 +405,9 @@ test('deploy a node microservice and infer name from `package.json`', async t =>
 });
 
 test('deploy a dockerfile project', async t => {
-  console.log('deploy a dockerfile project');
+  console.log('deploy a dockerfile project...');
   const target = fixture('dockerfile');
-  console.log('fetched node fixture, writing json...');
+  console.log('fetched dockerfile fixture, writing json...');
 
   // Add the "name" field to the `now.json` file
   const jsonPath = path.join(target, 'now.json');
