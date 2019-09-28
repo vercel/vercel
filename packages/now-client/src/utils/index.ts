@@ -1,13 +1,14 @@
 import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
 import fetch_ from 'node-fetch';
-import { readFile } from 'fs-extra';
 import { join, sep } from 'path';
 import qs from 'querystring';
+import ignore from 'ignore';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
 import { NowJsonOptions } from '../types';
 import { Sema } from 'async-sema';
+import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
 
 export const API_FILES = 'https://api.zeit.co/v2/now/files';
@@ -48,10 +49,15 @@ export function parseNowJSON(file?: DeploymentFile): NowJsonOptions {
   }
 }
 
-export async function getNowIgnore(
-  files: string[],
-  path: string | string[]
-): Promise<string[]> {
+const maybeRead = async function<T>(path: string, default_: T) {
+  try {
+    return await readFile(path, 'utf8');
+  } catch (err) {
+    return default_;
+  }
+};
+
+export async function getNowIgnore(path: string | string[]): Promise<any> {
   let ignores: string[] = [
     '.hg',
     '.git',
@@ -78,28 +84,19 @@ export async function getNowIgnore(
     'CVS',
   ];
 
-  await Promise.all(
-    files.map(
-      async (file: string): Promise<void> => {
-        if (file.includes('.nowignore')) {
-          const filePath = Array.isArray(path)
-            ? file
-            : file.includes(path)
-            ? file
-            : join(path, file);
-          const nowIgnore = await readFile(filePath);
+  const nowIgnore = Array.isArray(path)
+    ? await maybeRead(
+        join(
+          path.find(fileName => fileName.includes('.nowignore'), '') || '',
+          '.nowignore'
+        ),
+        ''
+      )
+    : await maybeRead(join(path, '.nowignore'), '');
 
-          nowIgnore
-            .toString()
-            .split('\n')
-            .filter((s: string): boolean => s.length > 0)
-            .forEach((entry: string): number => ignores.push(entry));
-        }
-      }
-    )
-  );
+  const ig = ignore().add(`${ignores.join('\n')}\n${nowIgnore}`);
 
-  return ignores;
+  return ig;
 }
 
 export const fetch = async (
