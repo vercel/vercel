@@ -482,10 +482,13 @@ export async function createLambdaFromPseudoLayers({
 }
 
 export type NextPrerenderedRoutes = {
-  [route: string]: { revalidate: number | false };
+  routes: {
+    [route: string]: { initialRevalidate: number | false };
+  };
+  lazyRoutes: string[];
 };
 
-export async function getPrerenderedRoutes(
+export async function getPrerenderManifest(
   entryPath: string
 ): Promise<NextPrerenderedRoutes> {
   const pathPrerenderManifest = path.join(
@@ -500,34 +503,41 @@ export async function getPrerenderedRoutes(
     .catch(() => false);
 
   if (!hasManifest) {
-    return {};
+    return { routes: {}, lazyRoutes: [] };
   }
 
   const manifest: {
     version: 1;
     routes: { [key: string]: { initialRevalidateSeconds: number | false } };
+    dynamicRoutes: string[];
   } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
   switch (manifest.version) {
     case 1: {
-      const ret: NextPrerenderedRoutes = Object.keys(manifest.routes).reduce(
+      const routes = Object.keys(manifest.routes).reduce(
         (prev, route) => {
           const { initialRevalidateSeconds } = manifest.routes[route];
           return Object.assign(prev, {
             [route]: {
-              revalidate:
+              initialRevalidate:
                 initialRevalidateSeconds === false
                   ? false
                   : Math.max(1, initialRevalidateSeconds),
             },
-          } as NextPrerenderedRoutes);
+          } as NextPrerenderedRoutes['routes']);
         },
-        {} as NextPrerenderedRoutes
+        {} as NextPrerenderedRoutes['routes']
       );
-      return ret;
+
+      return {
+        routes,
+        lazyRoutes: Array.isArray(manifest.dynamicRoutes)
+          ? manifest.dynamicRoutes
+          : [],
+      } as NextPrerenderedRoutes;
     }
     default: {
-      return {};
+      return { routes: {}, lazyRoutes: [] };
     }
   }
 }

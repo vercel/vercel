@@ -7,13 +7,14 @@ import {
 } from 'fs-extra';
 import os from 'os';
 import path from 'path';
-import semver from 'semver';
 import resolveFrom from 'resolve-from';
+import semver from 'semver';
 
 import {
   BuildOptions,
   Config,
   createLambda,
+  debug,
   download,
   FileBlob,
   FileFsRef,
@@ -22,19 +23,20 @@ import {
   getSpawnOptions,
   glob,
   Lambda,
+  PackageJson,
   PrepareCacheOptions,
+  Prerender,
   Route,
   runNpmInstall,
   runPackageJsonScript,
-  debug,
-  PackageJson,
-  Prerender,
 } from '@now/build-utils';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import {
+  createLambdaFromPseudoLayers,
+  createPseudoLayer,
   EnvConfig,
   excludeFiles,
   ExperimentalTraceVersion,
@@ -42,18 +44,16 @@ import {
   getDynamicRoutes,
   getNextConfig,
   getPathsInside,
+  getPrerenderManifest,
   getRoutes,
   includeOnlyEntryDirectory,
   isDynamicRoute,
   normalizePackageJson,
   normalizePage,
+  PseudoLayer,
   stringMap,
   syncEnvVars,
   validateEntrypoint,
-  createLambdaFromPseudoLayers,
-  PseudoLayer,
-  createPseudoLayer,
-  getPrerenderedRoutes,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -427,7 +427,7 @@ export const build = async ({
 
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
-    const prerenderedRoutes = await getPrerenderedRoutes(entryPath);
+    const prerenderManifest = await getPrerenderManifest(entryPath);
 
     Object.keys(staticPageFiles).forEach((page: string) => {
       const pathname = page.replace(/\.html$/, '');
@@ -435,7 +435,12 @@ export const build = async ({
 
       // Prerendered routes emit a `.html` file but should not be treated as a
       // static page.
-      if (Object.prototype.hasOwnProperty.call(prerenderedRoutes, routeName)) {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          prerenderManifest.routes,
+          routeName
+        )
+      ) {
         return;
       }
 
@@ -644,7 +649,7 @@ export const build = async ({
     console.timeEnd(allLambdasLabel);
 
     let prerenderGroup = 1;
-    Object.keys(prerenderedRoutes).forEach(_route => {
+    Object.keys(prerenderManifest.routes).forEach(_route => {
       const routeFileNoExt = _route === '/' ? '/index' : _route;
 
       const htmlFsRef = new FileFsRef({
@@ -654,7 +659,7 @@ export const build = async ({
         fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
       });
 
-      const { revalidate } = prerenderedRoutes[_route];
+      const { initialRevalidate } = prerenderManifest.routes[_route];
       const outputPathPage = path.join(entryDirectory, routeFileNoExt);
       const outputPathData = path.join(
         entryDirectory,
@@ -662,7 +667,7 @@ export const build = async ({
         `${routeFileNoExt}.json`
       );
 
-      if (revalidate === false) {
+      if (initialRevalidate === false) {
         prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
       } else {
@@ -672,13 +677,13 @@ export const build = async ({
         }
 
         prerenders[outputPathPage] = new Prerender({
-          expiration: revalidate,
+          expiration: initialRevalidate,
           lambda,
           fallback: htmlFsRef,
           group: prerenderGroup,
         });
         prerenders[outputPathData] = new Prerender({
-          expiration: revalidate,
+          expiration: initialRevalidate,
           lambda,
           fallback: jsonFsRef,
           group: prerenderGroup,
