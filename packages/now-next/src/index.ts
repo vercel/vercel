@@ -660,8 +660,8 @@ export const build = async ({
       });
 
       const { initialRevalidate } = prerenderManifest.routes[_route];
-      const outputPathPage = path.join(entryDirectory, routeFileNoExt);
-      const outputPathData = path.join(
+      const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+      const outputPathData = path.posix.join(
         entryDirectory,
         '_next/data',
         `${routeFileNoExt}.json`
