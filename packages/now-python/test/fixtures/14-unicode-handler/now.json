@@ -13,8 +13,7 @@
       "body": {
         "name": "Χριστοφορε"
       },
-      "status": 200,
-      "mustContain": "hello, Χριστοφορε"
+      "status": 200
     }
   ]
 }
