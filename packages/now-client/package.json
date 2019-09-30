@@ -1,6 +1,6 @@
 {
   "name": "now-client",
-  "version": "5.1.3",
+  "version": "5.1.4",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
   "license": "MIT",
