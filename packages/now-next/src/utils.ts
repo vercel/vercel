@@ -61,24 +61,6 @@ function excludeFiles(
 }
 
 /**
- * Creates a new Files object holding only the entrypoint files
- */
-function includeOnlyEntryDirectory(
-  files: Files,
-  entryDirectory: string
-): Files {
-  if (entryDirectory === '.') {
-    return files;
-  }
-
-  function matcher(filePath: string) {
-    return !filePath.startsWith(entryDirectory);
-  }
-
-  return excludeFiles(files, matcher);
-}
-
-/**
  * Exclude package manager lockfiles from files
  */
 function excludeLockFiles(files: Files): Files {
@@ -484,7 +466,6 @@ export async function createLambdaFromPseudoLayers({
 export {
   excludeFiles,
   validateEntrypoint,
-  includeOnlyEntryDirectory,
   excludeLockFiles,
   normalizePackageJson,
   filesFromDirectory,
