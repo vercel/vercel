@@ -1,4 +1,4 @@
-declare interface Route {
+export interface Route {
   src: string;
   dest: string;
   headers?: {
@@ -8,12 +8,12 @@ declare interface Route {
   methods?: string[];
 }
 
-declare interface Build {
+export interface Build {
   src: string;
   use: string;
 }
 
-declare interface Deployment {
+export interface Deployment {
   id: string;
   deploymentId?: string;
   url: string;
@@ -56,7 +56,7 @@ declare interface Deployment {
   alias: string[];
 }
 
-declare interface DeploymentBuild {
+export interface DeploymentBuild {
   id: string;
   use: string;
   createdIn: string;
@@ -79,14 +79,14 @@ declare interface DeploymentBuild {
   path: string;
 }
 
-declare interface DeploymentGithubData {
+export interface DeploymentGithubData {
   enabled: boolean;
   autoAlias: boolean;
   silent: boolean;
   autoJobCancelation: boolean;
 }
 
-declare interface DeploymentOptions {
+export interface DeploymentOptions {
   version?: number;
   regions?: string[];
   routes?: Route[];
@@ -119,14 +119,14 @@ declare interface DeploymentOptions {
   debug?: boolean;
 }
 
-declare interface NowJsonOptions {
+export interface NowJsonOptions {
   github?: DeploymentGithubData;
   scope?: string;
   type?: 'NPM' | 'STATIC' | 'DOCKER';
   version?: number;
 }
 
-declare type CreateDeploymentFunction = (
+export type CreateDeploymentFunction = (
   path: string | string[],
   options?: DeploymentOptions
 ) => AsyncIterableIterator<any>;

@@ -9,6 +9,7 @@ import {
 } from './utils';
 import checkDeploymentStatus from './deployment-status';
 import { generateQueryString } from './utils/query-string';
+import { Deployment, DeploymentOptions, NowJsonOptions } from './types';
 
 export interface Options {
   metadata: DeploymentOptions;

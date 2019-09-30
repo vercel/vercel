@@ -245,12 +245,27 @@ module.exports = (req, res) => {
     'static-deployment': {
       'index.txt': 'Hello World',
     },
+    nowignore: {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': 'ignore.txt',
+    },
+    'nowignore-allowlist': {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': '*\n!index.txt',
+    },
     'failing-build': {
       'package.json': JSON.stringify({
         scripts: {
           build: 'echo hello && exit 1',
         },
       }),
+    },
+    'failing-alias': {
+      'now.json': JSON.stringify(
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+      ),
     },
     'alias-rules': {
       'rules.json': JSON.stringify({
