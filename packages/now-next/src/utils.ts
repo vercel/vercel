@@ -75,17 +75,6 @@ function excludeLockFiles(files: Files): Files {
 }
 
 /**
- * Include only the files from a selected directory
- */
-function filesFromDirectory(files: Files, dir: string): Files {
-  function matcher(filePath: string) {
-    return !filePath.startsWith(dir.replace(/\\/g, '/'));
-  }
-
-  return excludeFiles(files, matcher);
-}
-
-/**
  * Enforce specific package.json configuration for smallest possible lambda
  */
 function normalizePackageJson(
@@ -468,7 +457,6 @@ export {
   validateEntrypoint,
   excludeLockFiles,
   normalizePackageJson,
-  filesFromDirectory,
   getNextConfig,
   getPathsInside,
   getRoutes,
