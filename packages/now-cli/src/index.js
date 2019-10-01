@@ -87,6 +87,7 @@ const main = async argv_ => {
 
   const localConfigPath = argv['--local-config'];
   const localConfig = await getConfig(output, localConfigPath);
+
   if (localConfigPath && localConfig instanceof ERRORS.CantFindConfig) {
     output.error(
       `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(

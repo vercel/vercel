@@ -271,17 +271,13 @@ module.exports = (req, res) => {
       'main.html': '<h1>hello main</h1>',
       'test.html': '<h1>hello test</h1>',
       'now.json': JSON.stringify({
-        "version": 2,
-        "builds": [
-          { "src": "main.html", "use": "@now/static" }
-        ]
+        version: 2,
+        builds: [{ src: 'main.html', use: '@now/static' }],
       }),
       'now-test.json': JSON.stringify({
-        "version": 2,
-        "builds": [
-          { "src": "test.html", "use": "@now/static" }
-        ]
-      })
+        version: 2,
+        builds: [{ src: 'test.html', use: '@now/static' }],
+      }),
     },
     'alias-rules': {
       'rules.json': JSON.stringify({

@@ -201,7 +201,6 @@ test('login', async t => {
   t.is(typeof token, 'string');
 });
 
-
 test('deploy using --local-config flag', async t => {
   const target = fixture('local-config-files');
 
@@ -723,7 +722,10 @@ test('ignore files specified in .nowignore', async t => {
   const directory = fixture('nowignore');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, args, { cwd: directory, reject: false });
+  const targetCall = await execa(binaryPath, args, {
+    cwd: directory,
+    reject: false,
+  });
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);
@@ -741,7 +743,10 @@ test('ignore files specified in .nowignore via allowlist', async t => {
   const directory = fixture('nowignore-allowlist');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, args, { cwd: directory, reject: false });
+  const targetCall = await execa(binaryPath, args, {
+    cwd: directory,
+    reject: false,
+  });
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);

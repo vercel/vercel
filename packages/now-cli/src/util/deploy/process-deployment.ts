@@ -26,17 +26,17 @@ export default async function processDeployment({
   quiet,
   nowConfig,
 }: {
-  now: Now,
-  output: Output,
-  hashes: { [key: string]: any },
-  paths: string[],
-  requestBody: DeploymentOptions,
-  uploadStamp: () => number,
-  deployStamp: () => number,
-  legacy: boolean,
-  env: any,
-  quiet: boolean,
-  nowConfig?: NowConfig
+  now: Now;
+  output: Output;
+  hashes: { [key: string]: any };
+  paths: string[];
+  requestBody: DeploymentOptions;
+  uploadStamp: () => number;
+  deployStamp: () => number;
+  legacy: boolean;
+  env: any;
+  quiet: boolean;
+  nowConfig?: NowConfig;
 }) {
   const { warn, log, debug } = output;
   let bar: Progress | null = null;
