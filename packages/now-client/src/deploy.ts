@@ -14,6 +14,7 @@ import { Deployment, DeploymentOptions, NowJsonOptions } from './types';
 export interface Options {
   metadata: DeploymentOptions;
   totalFiles: number;
+  nowConfig: NowJsonOptions;
   path: string | string[];
   token: string;
   teamId?: string;
@@ -103,37 +104,43 @@ const getDefaultName = (
   }
 };
 
-export default async function* deploy(
+function findFile(
+  fileName: string,
   files: Map<string, DeploymentFile>,
-  options: Options
-): AsyncIterableIterator<{ type: string; payload: any }> {
-  const debug = createDebug(options.debug);
-  delete options.debug;
-
-  debug(`Trying to read 'now.json'`);
-  const nowJson: DeploymentFile | undefined = Array.from(files.values()).find(
-    (file: DeploymentFile): boolean => {
+  debug: (...args: string[]) => void
+  ) {
+  debug(`Trying to read ${fileName}`);
+  const deploymentFile: DeploymentFile | undefined = Array.from(files.values()).find(
+    (file) => {
+      debugger;
       return Boolean(
-        file.names.find((name: string): boolean => name.includes('now.json'))
+        file.names.find((name) => name.includes(fileName))
       );
     }
   );
 
-  debug(`'now.json' ${nowJson ? 'found' : "doesn't exist"}`);
+  const verb = deploymentFile ? 'Found' : 'Missing';
+  debug(`${verb} ${fileName}`);
+  return deploymentFile;
+}
 
-  const nowJsonMetadata: NowJsonOptions = parseNowJSON(nowJson);
+export default async function* deploy(
+  files: Map<string, DeploymentFile>,
+  options: Options
+): AsyncIterableIterator<{ type: string; payload: any }> {
+  debugger;
+  const debug = createDebug(options.debug);
+  delete options.debug;
+
+
+  debugger;
+  const nowJsonMetadata = options.nowConfig || parseNowJSON(findFile('now.json', files, debug));
 
   delete nowJsonMetadata.github;
   delete nowJsonMetadata.scope;
 
   const meta = options.metadata || {};
   const metadata = { ...nowJsonMetadata, ...meta };
-  if (nowJson) {
-    debug(
-      `Merged 'now.json' metadata and locally provided metadata:`,
-      JSON.stringify(metadata)
-    );
-  }
 
   // Check if we should default to a static deployment
   if (!metadata.version && !metadata.name) {
@@ -231,3 +238,5 @@ export default async function* deploy(
     }
   }
 }
+
+

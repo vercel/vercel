@@ -9,6 +9,7 @@ export default async function getTargetsForAlias(
   args: string[],
   localConfig: Config
 ) {
+  debugger;
   const targets = await getTargets(output, args, localConfig);
   return targets instanceof NowError ? targets : targetsToHosts(targets);
 }
@@ -26,6 +27,7 @@ async function getTargets(
   args: string[],
   localConfig: Config
 ) {
+  debugger;
   return args.length === 0
     ? getInferredTargets(output, localConfig)
     : [args[args.length - 1]];

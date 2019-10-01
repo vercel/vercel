@@ -69,6 +69,7 @@ export default class Now extends EventEmitter {
       deployStamp,
     }
   ) {
+    debugger;
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
     const isBuilds = type === null;
@@ -81,6 +82,7 @@ export default class Now extends EventEmitter {
     let requestBody = {};
 
     if (isBuilds) {
+      debugger;
       requestBody = {
         token: this._token,
         teamId: this.currentTeam,
@@ -142,15 +144,17 @@ export default class Now extends EventEmitter {
     if (isBuilds) {
       deployment = await processDeployment({
         now: this,
-        debug,
+        output: this._output,
         hashes,
         paths,
         requestBody,
         uploadStamp,
         deployStamp,
         quiet,
+        nowConfig,
       });
     } else {
+      debugger;
       // Read `registry.npmjs.org` authToken from .npmrc
       let authToken;
 
@@ -183,7 +187,7 @@ export default class Now extends EventEmitter {
       deployment = await processDeployment({
         legacy: true,
         now: this,
-        debug,
+        output: this._output,
         hashes,
         paths,
         requestBody,
@@ -191,6 +195,7 @@ export default class Now extends EventEmitter {
         deployStamp,
         quiet,
         env,
+        nowConfig,
       });
     }
 

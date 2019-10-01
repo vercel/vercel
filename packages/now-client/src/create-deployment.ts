@@ -6,7 +6,7 @@ import hashes, { mapToObject } from './utils/hashes';
 import uploadAndDeploy from './upload';
 import { getNowIgnore, createDebug } from './utils';
 import { DeploymentError } from './errors';
-import { CreateDeploymentFunction, DeploymentOptions } from './types';
+import { CreateDeploymentFunction, DeploymentOptions, NowJsonOptions } from './types';
 
 export { EVENTS } from './utils';
 
@@ -15,6 +15,7 @@ export default function buildCreateDeployment(
 ): CreateDeploymentFunction {
   return async function* createDeployment(
     path: string | string[],
+    nowConfig: NowJsonOptions,
     options: DeploymentOptions = {}
   ): AsyncIterableIterator<any> {
     const debug = createDebug(options.debug);
@@ -127,12 +128,15 @@ export default function buildCreateDeployment(
       ...metadata
     } = options;
 
+    debugger;
+
     debug(`Setting platform version to ${version}`);
     metadata.version = version;
 
     const deploymentOpts = {
       debug: debug_,
       totalFiles: files.size,
+      nowConfig,
       token,
       isDirectory,
       path,
@@ -142,6 +146,7 @@ export default function buildCreateDeployment(
       metadata,
     };
 
+    debugger;
     debug(`Creating the deployment and starting upload...`);
     for await (const event of uploadAndDeploy(files, deploymentOpts)) {
       debug(`Yielding a '${event.type}' event`);

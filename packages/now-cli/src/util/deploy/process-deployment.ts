@@ -5,13 +5,17 @@ import pluralize from 'pluralize';
 import {
   createDeployment,
   createLegacyDeployment,
+  DeploymentOptions,
 } from '../../../../now-client';
 import wait from '../output/wait';
-import createOutput from '../output';
+import { Output } from '../output';
+// @ts-ignore
+import Now from '../../util';
+import { NowConfig } from '../dev/types';
 
 export default async function processDeployment({
   now,
-  debug,
+  output,
   hashes,
   paths,
   requestBody,
@@ -20,15 +24,30 @@ export default async function processDeployment({
   legacy,
   env,
   quiet,
-}: any) {
-  const { warn, log } = createOutput({ debug });
+  nowConfig,
+}: {
+  now: Now,
+  output: Output,
+  hashes: { [key: string]: any },
+  paths: string[],
+  requestBody: DeploymentOptions,
+  uploadStamp: () => number,
+  deployStamp: () => number,
+  legacy: boolean,
+  env: any,
+  quiet: boolean,
+  nowConfig: NowConfig
+}) {
+  debugger;
+  const { warn, log, debug } = output;
   let bar: Progress | null = null;
 
   if (!legacy) {
+    debugger;
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(paths[0], {
+    for await (const event of createDeployment(paths[0], nowConfig, {
       ...requestBody,
       debug: now._debug,
     })) {
@@ -128,7 +147,8 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(paths[0], {
+    debugger;
+    for await (const event of createLegacyDeployment(paths[0], nowConfig, {
       ...requestBody,
       debug: now._debug,
     })) {

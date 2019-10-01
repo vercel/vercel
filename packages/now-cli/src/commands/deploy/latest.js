@@ -329,7 +329,7 @@ export default async function main(
       paths,
     });
     log(`Using project ${chalk.bold(project)}`);
-
+debugger;
     const createArgs = {
       name: project,
       env: deploymentEnv,

@@ -28,6 +28,7 @@ export default async function* upload(
   files: Map<string, DeploymentFile>,
   options: Options
 ): AsyncIterableIterator<any> {
+  debugger;
   const { token, teamId, debug: isDebug } = options;
   const debug = createDebug(isDebug);
 
