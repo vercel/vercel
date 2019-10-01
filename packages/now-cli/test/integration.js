@@ -225,8 +225,8 @@ test('deploy using --local-config flag', async t => {
   const response = await fetch(`https://${host}/test.html`);
   const content = await response.text();
   t.true(content.includes('hello test'));
-  const response = await fetch(`https://${host}/main.html`);
-  t.is(response.status, 404, 'Should not deploy/build main now.json');
+  const response2 = await fetch(`https://${host}/main.html`);
+  t.is(response2.status, 404, 'Should not deploy/build main now.json');
 });
 
 test('print the deploy help message', async t => {
