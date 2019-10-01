@@ -659,13 +659,9 @@ export const build = async ({
         fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
       });
 
-      const { initialRevalidate } = prerenderManifest.routes[_route];
+      const { initialRevalidate, dataRoute } = prerenderManifest.routes[_route];
       const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
-      const outputPathData = path.posix.join(
-        entryDirectory,
-        '_next/data',
-        `${routeFileNoExt}.json`
-      );
+      const outputPathData = path.posix.join(entryDirectory, dataRoute);
 
       if (initialRevalidate === false) {
         prerenders[outputPathPage] = htmlFsRef;
