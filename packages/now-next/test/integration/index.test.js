@@ -122,6 +122,7 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'public-files'));
     expect(output['robots.txt']).toBeDefined();
+    expect(output['generated.txt']).toBeDefined();
   },
   FOUR_MINUTES
 );
