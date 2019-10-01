@@ -36,7 +36,6 @@
     "diff": "node diff.js",
     "changelog": "node changelog.js",
     "build": "node run.js build all",
-    "test": "yarn test-lint && yarn test-unit && yarn test-integration && yarn test-integration-once && yarn test-integration-now-dev",
     "test-lint": "node run.js test-lint",
     "test-unit": "node run.js test-unit",
     "test-integration": "node run.js test-integration",
