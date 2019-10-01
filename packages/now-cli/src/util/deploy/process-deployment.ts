@@ -36,21 +36,22 @@ export default async function processDeployment({
   legacy: boolean,
   env: any,
   quiet: boolean,
-  nowConfig: NowConfig
+  nowConfig?: NowConfig
 }) {
-  debugger;
   const { warn, log, debug } = output;
   let bar: Progress | null = null;
 
+  const path0 = paths[0];
+  const opts = {
+    ...requestBody,
+    debug: now._debug,
+  };
+
   if (!legacy) {
-    debugger;
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(paths[0], nowConfig, {
-      ...requestBody,
-      debug: now._debug,
-    })) {
+    for await (const event of createDeployment(path0, opts, nowConfig)) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -147,11 +148,7 @@ export default async function processDeployment({
       }
     }
   } else {
-    debugger;
-    for await (const event of createLegacyDeployment(paths[0], nowConfig, {
-      ...requestBody,
-      debug: now._debug,
-    })) {
+    for await (const event of createLegacyDeployment(path0, opts, nowConfig)) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }

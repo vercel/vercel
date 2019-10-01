@@ -85,10 +85,8 @@ const main = async argv_ => {
 
   debug = output.debug;
 
-  debugger;
   const localConfigPath = argv['--local-config'];
   const localConfig = await getConfig(output, localConfigPath);
-  debugger;
   if (localConfigPath && localConfig instanceof ERRORS.CantFindConfig) {
     output.error(
       `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
@@ -336,7 +334,6 @@ const main = async argv_ => {
     );
   }
 
-  debugger;
   // the context object to supply to the providers or the commands
   const ctx = {
     config,
@@ -469,7 +466,6 @@ const main = async argv_ => {
     }
   }
 
-  debugger;
   const scope = argv['--scope'] || argv['--team'] || localConfig.scope;
   const targetCommand = commands.get(subcommand);
 

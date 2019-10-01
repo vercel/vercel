@@ -15,7 +15,6 @@ export default async function getConfig(output: Output, configFile?: string) {
   if (config) {
     return config;
   }
-debugger;
   // First try with the config supplied by the user via --local-config
   if (configFile) {
     const localFilePath = path.resolve(localPath, configFile);
@@ -23,7 +22,6 @@ debugger;
       `Found config in provided --local-config path ${localFilePath}`
     );
     const localConfig = await readJSONFile(localFilePath);
-    debugger;
     if (localConfig instanceof CantParseJSONFile) {
       return localConfig;
     }

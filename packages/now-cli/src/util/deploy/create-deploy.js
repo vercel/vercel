@@ -11,7 +11,6 @@ export default async function createDeploy(
   paths,
   createArgs
 ) {
-  debugger;
   try {
     return await now.create(paths, createArgs);
   } catch (error) {

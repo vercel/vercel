@@ -15,8 +15,8 @@ export default function buildCreateDeployment(
 ): CreateDeploymentFunction {
   return async function* createDeployment(
     path: string | string[],
-    nowConfig: NowJsonOptions,
-    options: DeploymentOptions = {}
+    options: DeploymentOptions = {},
+    nowConfig?: NowJsonOptions,
   ): AsyncIterableIterator<any> {
     const debug = createDebug(options.debug);
 
@@ -128,8 +128,6 @@ export default function buildCreateDeployment(
       ...metadata
     } = options;
 
-    debugger;
-
     debug(`Setting platform version to ${version}`);
     metadata.version = version;
 
@@ -146,7 +144,6 @@ export default function buildCreateDeployment(
       metadata,
     };
 
-    debugger;
     debug(`Creating the deployment and starting upload...`);
     for await (const event of uploadAndDeploy(files, deploymentOpts)) {
       debug(`Yielding a '${event.type}' event`);

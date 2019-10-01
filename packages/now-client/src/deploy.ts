@@ -14,7 +14,6 @@ import { Deployment, DeploymentOptions, NowJsonOptions } from './types';
 export interface Options {
   metadata: DeploymentOptions;
   totalFiles: number;
-  nowConfig: NowJsonOptions;
   path: string | string[];
   token: string;
   teamId?: string;
@@ -23,6 +22,7 @@ export interface Options {
   defaultName?: string;
   preflight?: boolean;
   debug?: boolean;
+  nowConfig?: NowJsonOptions;
 }
 
 async function* createDeployment(
@@ -112,7 +112,6 @@ function findFile(
   debug(`Trying to read ${fileName}`);
   const deploymentFile: DeploymentFile | undefined = Array.from(files.values()).find(
     (file) => {
-      debugger;
       return Boolean(
         file.names.find((name) => name.includes(fileName))
       );
@@ -128,14 +127,10 @@ export default async function* deploy(
   files: Map<string, DeploymentFile>,
   options: Options
 ): AsyncIterableIterator<{ type: string; payload: any }> {
-  debugger;
   const debug = createDebug(options.debug);
-  delete options.debug;
-
-
-  debugger;
   const nowJsonMetadata = options.nowConfig || parseNowJSON(findFile('now.json', files, debug));
-
+  delete options.debug;
+  delete options.nowConfig;
   delete nowJsonMetadata.github;
   delete nowJsonMetadata.scope;
 

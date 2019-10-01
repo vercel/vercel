@@ -69,7 +69,6 @@ export default class Now extends EventEmitter {
       deployStamp,
     }
   ) {
-    debugger;
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
     const isBuilds = type === null;
@@ -82,7 +81,6 @@ export default class Now extends EventEmitter {
     let requestBody = {};
 
     if (isBuilds) {
-      debugger;
       requestBody = {
         token: this._token,
         teamId: this.currentTeam,
@@ -154,7 +152,6 @@ export default class Now extends EventEmitter {
         nowConfig,
       });
     } else {
-      debugger;
       // Read `registry.npmjs.org` authToken from .npmrc
       let authToken;
 

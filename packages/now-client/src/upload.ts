@@ -26,9 +26,8 @@ const isClientNetworkError = (err: Error | DeploymentError) => {
 
 export default async function* upload(
   files: Map<string, DeploymentFile>,
-  options: Options
+  options: Options,
 ): AsyncIterableIterator<any> {
-  debugger;
   const { token, teamId, debug: isDebug } = options;
   const debug = createDebug(isDebug);
 
