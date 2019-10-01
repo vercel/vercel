@@ -336,6 +336,11 @@ export const build = async ({
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
+  const dynamicDataRoutes: Array<{ src: string; dest: string }> = [];
+
+  const appMountPrefixNoTrailingSlash = path.posix
+    .join('/', entryDirectory)
+    .replace(/\/+$/, '');
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
@@ -650,6 +655,7 @@ export const build = async ({
 
     let prerenderGroup = 1;
     Object.keys(prerenderManifest.routes).forEach(_route => {
+      // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = _route === '/' ? '/index' : _route;
 
       const htmlFsRef = new FileFsRef({
@@ -687,6 +693,18 @@ export const build = async ({
 
         ++prerenderGroup;
       }
+    });
+
+    Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
+      const { dataRouteRegex } = prerenderManifest.lazyRoutes[lazyRoute];
+      dynamicDataRoutes.push({
+        // Next.js provided data route regex
+        src: dataRouteRegex.replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
+        // Location of lambda in builder output
+        dest: `^${appMountPrefixNoTrailingSlash}${
+          lazyRoute === '/' ? '/index' : lazyRoute
+        }$`,
+      });
     });
   }
 
@@ -765,6 +783,8 @@ export const build = async ({
       { handle: 'filesystem' },
       // Dynamic routes
       ...dynamicRoutes,
+      ...dynamicDataRoutes,
+      // Custom Next.js 404 page (TODO: do we want to remove this?)
       ...(isLegacy
         ? []
         : [
