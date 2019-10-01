@@ -1102,7 +1102,7 @@ export default class DevServer {
     }
 
     const method = req.method || 'GET';
-    this.output.log(`${chalk.bold(method)} ${req.url}`);
+    this.output.debug(`${chalk.bold(method)} ${req.url}`);
 
     try {
       const nowConfig = await this.getNowConfig();
