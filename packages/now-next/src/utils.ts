@@ -483,9 +483,19 @@ export async function createLambdaFromPseudoLayers({
 
 export type NextPrerenderedRoutes = {
   routes: {
-    [route: string]: { initialRevalidate: number | false };
+    [route: string]: {
+      initialRevalidate: number | false;
+      dataRoute: string;
+    };
   };
-  lazyRoutes: string[];
+
+  lazyRoutes: {
+    [route: string]: {
+      routeRegex: string;
+      dataRoute: string;
+      dataRouteRegex: string;
+    };
+  };
 };
 
 export async function getPrerenderManifest(
@@ -503,41 +513,58 @@ export async function getPrerenderManifest(
     .catch(() => false);
 
   if (!hasManifest) {
-    return { routes: {}, lazyRoutes: [] };
+    return { routes: {}, lazyRoutes: {} };
   }
 
   const manifest: {
     version: 1;
-    routes: { [key: string]: { initialRevalidateSeconds: number | false } };
-    dynamicRoutes: string[];
+    routes: {
+      [key: string]: {
+        initialRevalidateSeconds: number | false;
+        dataRoute: string;
+      };
+    };
+    dynamicRoutes: {
+      [key: string]: {
+        routeRegex: string;
+        dataRoute: string;
+        dataRouteRegex: string;
+      };
+    };
   } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
   switch (manifest.version) {
     case 1: {
-      const routes = Object.keys(manifest.routes).reduce(
-        (prev, route) => {
-          const { initialRevalidateSeconds } = manifest.routes[route];
-          return Object.assign(prev, {
-            [route]: {
-              initialRevalidate:
-                initialRevalidateSeconds === false
-                  ? false
-                  : Math.max(1, initialRevalidateSeconds),
-            },
-          } as NextPrerenderedRoutes['routes']);
-        },
-        {} as NextPrerenderedRoutes['routes']
-      );
+      const routes = Object.keys(manifest.routes);
+      const lazyRoutes = Object.keys(manifest.dynamicRoutes);
 
-      return {
-        routes,
-        lazyRoutes: Array.isArray(manifest.dynamicRoutes)
-          ? manifest.dynamicRoutes
-          : [],
-      } as NextPrerenderedRoutes;
+      const ret: NextPrerenderedRoutes = { routes: {}, lazyRoutes: {} };
+
+      routes.forEach(route => {
+        const { initialRevalidateSeconds, dataRoute } = manifest.routes[route];
+        ret.routes[route] = {
+          initialRevalidate:
+            initialRevalidateSeconds === false
+              ? false
+              : Math.max(1, initialRevalidateSeconds),
+          dataRoute,
+        };
+      });
+
+      lazyRoutes.forEach(lazyRoute => {
+        const {
+          routeRegex,
+          dataRoute,
+          dataRouteRegex,
+        } = manifest.dynamicRoutes[lazyRoute];
+
+        ret.lazyRoutes[lazyRoute] = { routeRegex, dataRoute, dataRouteRegex };
+      });
+
+      return ret;
     }
     default: {
-      return { routes: {}, lazyRoutes: [] };
+      return { routes: {}, lazyRoutes: {} };
     }
   }
 }
