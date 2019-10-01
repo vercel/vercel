@@ -201,6 +201,34 @@ test('login', async t => {
   t.is(typeof token, 'string');
 });
 
+
+test('deploy using --local-config flag', async t => {
+  const target = fixture('local-config-files');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+
+  // Send a test request to the deployment
+  const { host } = new URL(stdout);
+  const response = await fetch(`https://${host}/test.html`);
+  const content = await response.text();
+  t.true(content.includes('hello test'));
+  const response = await fetch(`https://${host}/main.html`);
+  t.is(response.status, 404, 'Should not deploy/build main now.json');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, code } = await execa(
     binaryPath,
