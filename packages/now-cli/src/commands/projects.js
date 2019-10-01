@@ -10,7 +10,7 @@ import Client from '../util/client.ts';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 
-const e = encodeURIComponent
+const e = encodeURIComponent;
 
 const help = () => {
   console.log(`
@@ -48,8 +48,8 @@ const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
     boolean: ['help'],
     alias: {
-      help: 'h'
-    }
+      help: 'h',
+    },
   });
 
   argv._ = argv._.slice(1);
@@ -63,7 +63,10 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const { authConfig: { token }, config: { currentTeam }} = ctx;
+  const {
+    authConfig: { token },
+    config: { currentTeam },
+  } = ctx;
   const client = new Client({ apiUrl, token, currentTeam, debug });
 
   const { contextName } = await getScope(client);
@@ -93,17 +96,21 @@ async function run({ client, contextName }) {
     if (args.length !== 0) {
       console.error(
         error(
-          `Invalid number of arguments. Usage: ${chalk.cyan('`now projects ls`')}`
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            '`now projects ls`'
+          )}`
         )
       );
       return exit(1);
     }
 
-    const list = await client.fetch('/projects/list', {method: 'GET'});
+    const list = await client.fetch('/v2/projects/', { method: 'GET' });
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${plural('project', list.length, true)} found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
+      `> ${plural('project', list.length, true)} found under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(`[${elapsed}]`)}`
     );
 
     if (list.length > 0) {
@@ -114,19 +121,19 @@ async function run({ client, contextName }) {
         header.concat(
           list.map(secret => [
             '',
-              chalk.bold(secret.name),
-              chalk.gray(`${ms(cur - new Date(secret.updatedAt))  } ago`)
-            ])
+            chalk.bold(secret.name),
+            chalk.gray(`${ms(cur - new Date(secret.updatedAt))} ago`),
+          ])
         ),
         {
           align: ['l', 'l', 'l'],
           hsep: ' '.repeat(2),
-          stringLength: strlen
+          stringLength: strlen,
         }
       );
 
       if (out) {
-        console.log(`\n${  out  }\n`);
+        console.log(`\n${out}\n`);
       }
     }
     return;
@@ -148,11 +155,11 @@ async function run({ client, contextName }) {
 
     // Check the existence of the project
     try {
-      await client.fetch(`/projects/info/${e(name)}`)
-    } catch(err) {
+      await client.fetch(`/projects/info/${e(name)}`);
+    } catch (err) {
       if (err.status === 404) {
-        console.error(error('No such project exists'))
-        return exit(1)
+        console.error(error('No such project exists'));
+        return exit(1);
       }
     }
 
@@ -162,7 +169,9 @@ async function run({ client, contextName }) {
       return exit(0);
     }
 
-    await client.fetch('/projects/remove', {method: 'DELETE', body: {name}});
+    await client.fetch(`/v2/projects/${name}`, {
+      method: 'DELETE',
+    });
     const elapsed = ms(new Date() - start);
     console.log(
       `${chalk.cyan('> Success!')} Project ${chalk.bold(
@@ -193,7 +202,10 @@ async function run({ client, contextName }) {
     }
 
     const [name] = args;
-    await client.fetch('/projects/ensure-project', {method: 'POST', body: {name}});
+    await client.fetch('/projects/ensure-project', {
+      method: 'POST',
+      body: { name },
+    });
     const elapsed = ms(new Date() - start);
 
     console.log(
@@ -204,9 +216,7 @@ async function run({ client, contextName }) {
     return;
   }
 
-  console.error(
-    error('Please specify a valid subcommand: ls | add | rm')
-  );
+  console.error(error('Please specify a valid subcommand: ls | add | rm'));
   help();
   exit(1);
 }
@@ -220,7 +230,7 @@ function readConfirmation(projectName) {
   return new Promise(resolve => {
     process.stdout.write(
       `The project: ${chalk.bold(projectName)} will be removed permanently.\n` +
-      `It will also delete everything under the project including deployments.\n`
+        `It will also delete everything under the project including deployments.\n`
     );
 
     process.stdout.write(
