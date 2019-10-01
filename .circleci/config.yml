@@ -130,6 +130,7 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration --clean false
+          no_output_timeout: 20m
 
   test-integration-macos-node-10:
     macos:
@@ -145,6 +146,7 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration --clean false
+          no_output_timeout: 20m
 
   test-integration-macos-node-12:
     macos:
@@ -160,6 +162,7 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration --clean false
+          no_output_timeout: 20m
 
   test-integration-linux-node-8:
     docker:
@@ -175,6 +178,7 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration --clean false
+          no_output_timeout: 20m
 
   test-integration-linux-node-10:
     docker:
@@ -190,6 +194,7 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration --clean false
+          no_output_timeout: 20m
 
   test-integration-linux-node-12:
     docker:
@@ -205,6 +210,7 @@ jobs:
       - run:
           name: Running Integration Tests
           command: yarn test-integration --clean false
+          no_output_timeout: 20m
 
   test-integration-macos-now-dev-node-8:
     macos:
