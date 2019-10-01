@@ -42,7 +42,7 @@ export default async function processDeployment({
   let bar: Progress | null = null;
 
   const path0 = paths[0];
-  const opts = {
+  const opts: DeploymentOptions = {
     ...requestBody,
     debug: now._debug,
   };
