@@ -128,5 +128,6 @@ export interface NowJsonOptions {
 
 export type CreateDeploymentFunction = (
   path: string | string[],
-  options?: DeploymentOptions
+  options?: DeploymentOptions,
+  nowConfig?: NowJsonOptions,
 ) => AsyncIterableIterator<any>;
