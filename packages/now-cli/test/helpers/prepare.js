@@ -315,17 +315,17 @@ CMD ["node", "index.js"]`,
       }),
     },
     'local-config-v2': {
-      'main.html': '<h1>hello main</h1>',
-      'test.html': '<h1>hello test</h1>',
+      [`main-${session}.html`]: '<h1>hello main</h1>',
+      [`test-${session}.html`]: '<h1>hello test</h1>',
       'now.json': JSON.stringify({
         version: 2,
-        builds: [{ src: 'main.html', use: '@now/static' }],
-        routes: [{ src: '/another-main', dest: '/main.html' }],
+        builds: [{ src: `main-${session}.html`, use: '@now/static' }],
+        routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
       'now-test.json': JSON.stringify({
         version: 2,
-        builds: [{ src: 'test.html', use: '@now/static' }],
-        routes: [{ src: '/another-test', dest: '/test.html' }],
+        builds: [{ src: `test-${session}.html`, use: '@now/static' }],
+        routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
       }),
     },
     'alias-rules': {
