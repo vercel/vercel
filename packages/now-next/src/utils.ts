@@ -457,6 +457,7 @@ export type NextPrerenderedRoutes = {
     [route: string]: {
       initialRevalidate: number | false;
       dataRoute: string;
+      srcRoute: string | null;
     };
   };
 
@@ -493,6 +494,7 @@ export async function getPrerenderManifest(
       [key: string]: {
         initialRevalidateSeconds: number | false;
         dataRoute: string;
+        srcRoute: string | null;
       };
     };
     dynamicRoutes: {
@@ -512,13 +514,18 @@ export async function getPrerenderManifest(
       const ret: NextPrerenderedRoutes = { routes: {}, lazyRoutes: {} };
 
       routes.forEach(route => {
-        const { initialRevalidateSeconds, dataRoute } = manifest.routes[route];
+        const {
+          initialRevalidateSeconds,
+          dataRoute,
+          srcRoute,
+        } = manifest.routes[route];
         ret.routes[route] = {
           initialRevalidate:
             initialRevalidateSeconds === false
               ? false
               : Math.max(1, initialRevalidateSeconds),
           dataRoute,
+          srcRoute,
         };
       });
 

@@ -666,15 +666,26 @@ export const build = async ({
         fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
       });
 
-      const { initialRevalidate, dataRoute } = prerenderManifest.routes[_route];
+      const {
+        initialRevalidate,
+        dataRoute,
+        srcRoute,
+      } = prerenderManifest.routes[_route];
       const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+      const outputSrcPathPage =
+        srcRoute == null
+          ? outputPathPage
+          : path.posix.join(
+              entryDirectory,
+              srcRoute === '/' ? '/index' : srcRoute
+            );
       const outputPathData = path.posix.join(entryDirectory, dataRoute);
 
       if (initialRevalidate === false) {
         prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
       } else {
-        const lambda = lambdas[outputPathPage];
+        const lambda = lambdas[outputSrcPathPage];
         if (lambda == null) {
           throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
         }
