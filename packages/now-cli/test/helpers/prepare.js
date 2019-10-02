@@ -267,6 +267,18 @@ module.exports = (req, res) => {
         Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
       ),
     },
+    'local-config-files': {
+      'main.html': '<h1>hello main</h1>',
+      'test.html': '<h1>hello test</h1>',
+      'now.json': JSON.stringify({
+        version: 2,
+        builds: [{ src: 'main.html', use: '@now/static' }],
+      }),
+      'now-test.json': JSON.stringify({
+        version: 2,
+        builds: [{ src: 'test.html', use: '@now/static' }],
+      }),
+    },
     'alias-rules': {
       'rules.json': JSON.stringify({
         rules: [

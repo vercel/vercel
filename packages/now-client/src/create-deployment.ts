@@ -6,7 +6,7 @@ import hashes, { mapToObject } from './utils/hashes';
 import uploadAndDeploy from './upload';
 import { getNowIgnore, createDebug } from './utils';
 import { DeploymentError } from './errors';
-import { CreateDeploymentFunction, DeploymentOptions } from './types';
+import { CreateDeploymentFunction, DeploymentOptions, NowJsonOptions } from './types';
 
 export { EVENTS } from './utils';
 
@@ -15,7 +15,8 @@ export default function buildCreateDeployment(
 ): CreateDeploymentFunction {
   return async function* createDeployment(
     path: string | string[],
-    options: DeploymentOptions = {}
+    options: DeploymentOptions = {},
+    nowConfig?: NowJsonOptions,
   ): AsyncIterableIterator<any> {
     const debug = createDebug(options.debug);
 
@@ -133,6 +134,7 @@ export default function buildCreateDeployment(
     const deploymentOpts = {
       debug: debug_,
       totalFiles: files.size,
+      nowConfig,
       token,
       isDirectory,
       path,

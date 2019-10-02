@@ -61,24 +61,6 @@ function excludeFiles(
 }
 
 /**
- * Creates a new Files object holding only the entrypoint files
- */
-function includeOnlyEntryDirectory(
-  files: Files,
-  entryDirectory: string
-): Files {
-  if (entryDirectory === '.') {
-    return files;
-  }
-
-  function matcher(filePath: string) {
-    return !filePath.startsWith(entryDirectory);
-  }
-
-  return excludeFiles(files, matcher);
-}
-
-/**
  * Exclude package manager lockfiles from files
  */
 function excludeLockFiles(files: Files): Files {
@@ -90,17 +72,6 @@ function excludeLockFiles(files: Files): Files {
     delete newFiles['yarn.lock'];
   }
   return files;
-}
-
-/**
- * Include only the files from a selected directory
- */
-function filesFromDirectory(files: Files, dir: string): Files {
-  function matcher(filePath: string) {
-    return !filePath.startsWith(dir.replace(/\\/g, '/'));
-  }
-
-  return excludeFiles(files, matcher);
 }
 
 /**
@@ -484,10 +455,8 @@ export async function createLambdaFromPseudoLayers({
 export {
   excludeFiles,
   validateEntrypoint,
-  includeOnlyEntryDirectory,
   excludeLockFiles,
   normalizePackageJson,
-  filesFromDirectory,
   getNextConfig,
   getPathsInside,
   getRoutes,
