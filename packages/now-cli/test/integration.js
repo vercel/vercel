@@ -227,7 +227,7 @@ test('deploy using --local-config flag', async t => {
 
   const anotherTestRes = await fetch(`https://${host}/another-test`);
   const anotherTestText = await anotherTestRes.text();
-  t.is(anotherTestText.includes('hello test'));
+  t.is(anotherTestText, testText);
 
   const mainRes = await fetch(`https://${host}/main.html`);
   t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
