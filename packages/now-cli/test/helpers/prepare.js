@@ -303,7 +303,7 @@ CMD ["node", "index.js"]`,
         features: {
           cloud: 'v1',
         },
-        files: ['.gitignore', 'main.html'],
+        files: ['.gitignore', 'index.js', 'main.html'],
       }),
       'now-test.json': JSON.stringify({
         version: 1,
@@ -311,7 +311,7 @@ CMD ["node", "index.js"]`,
         features: {
           cloud: 'v1',
         },
-        files: ['.gitignore', 'test.html'],
+        files: ['.gitignore', 'index.js', 'test.html'],
       }),
     },
     'local-config-v2': {
