@@ -108,15 +108,13 @@ function findFile(
   fileName: string,
   files: Map<string, DeploymentFile>,
   debug: (...args: string[]) => void
-  ) {
+) {
   debug(`Trying to read ${fileName}`);
-  const deploymentFile: DeploymentFile | undefined = Array.from(files.values()).find(
-    (file) => {
-      return Boolean(
-        file.names.find((name) => name.includes(fileName))
-      );
-    }
-  );
+  const deploymentFile: DeploymentFile | undefined = Array.from(
+    files.values()
+  ).find(file => {
+    return Boolean(file.names.find(name => name.includes(fileName)));
+  });
 
   const verb = deploymentFile ? 'Found' : 'Missing';
   debug(`${verb} ${fileName}`);
@@ -128,9 +126,8 @@ export default async function* deploy(
   options: Options
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(options.debug);
-  const nowJsonMetadata = options.nowConfig || parseNowJSON(findFile('now.json', files, debug));
-  delete options.debug;
-  delete options.nowConfig;
+  const nowJsonMetadata =
+    options.nowConfig || parseNowJSON(findFile('now.json', files, debug));
   delete nowJsonMetadata.github;
   delete nowJsonMetadata.scope;
 
@@ -233,5 +230,3 @@ export default async function* deploy(
     }
   }
 }
-
-
