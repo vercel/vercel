@@ -142,13 +142,14 @@ export default class Now extends EventEmitter {
     if (isBuilds) {
       deployment = await processDeployment({
         now: this,
-        debug,
+        output: this._output,
         hashes,
         paths,
         requestBody,
         uploadStamp,
         deployStamp,
         quiet,
+        nowConfig,
       });
     } else {
       // Read `registry.npmjs.org` authToken from .npmrc
@@ -183,7 +184,7 @@ export default class Now extends EventEmitter {
       deployment = await processDeployment({
         legacy: true,
         now: this,
-        debug,
+        output: this._output,
         hashes,
         paths,
         requestBody,
@@ -191,6 +192,7 @@ export default class Now extends EventEmitter {
         deployStamp,
         quiet,
         env,
+        nowConfig,
       });
     }
 
