@@ -37,12 +37,10 @@ import {
   EnvConfig,
   excludeFiles,
   ExperimentalTraceVersion,
-  filesFromDirectory,
   getDynamicRoutes,
   getNextConfig,
   getPathsInside,
   getRoutes,
-  includeOnlyEntryDirectory,
   isDynamicRoute,
   normalizePackageJson,
   normalizePage,
@@ -337,7 +335,7 @@ export const build = async ({
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
 
-    debug('Preparing lambda files...');
+    debug('Preparing serverless function files...');
     let buildId: string;
     try {
       buildId = await readFile(
@@ -405,7 +403,7 @@ export const build = async ({
           ],
         };
 
-        debug(`Creating lambda for page: "${page}"...`);
+        debug(`Creating serverless function for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
           files: {
             ...nextFiles,
@@ -415,11 +413,11 @@ export const build = async ({
           handler: 'now__launcher.launcher',
           runtime: nodeVersion.runtime,
         });
-        debug(`Created lambda for page: "${page}"`);
+        debug(`Created serverless function for page: "${page}"`);
       })
     );
   } else {
-    debug('Preparing lambda files...');
+    debug('Preparing serverless function files...');
     const pagesDir = path.join(entryPath, '.next', 'serverless', 'pages');
 
     const pages = await glob('**/*.js', pagesDir);
@@ -496,7 +494,8 @@ export const build = async ({
     } = {};
 
     if (requiresTracing) {
-      const tracingLabel = 'Tracing Next.js lambdas for external files ...';
+      const tracingLabel =
+        'Tracing Next.js serverless functions for external files ...';
       console.time(tracingLabel);
 
       const apiPages: string[] = [];
@@ -542,7 +541,7 @@ export const build = async ({
       apiFileList.forEach(collectTracedFiles(apiReasons, apiTracedFiles));
       console.timeEnd(tracingLabel);
 
-      const zippingLabel = 'Compressing shared lambda files';
+      const zippingLabel = 'Compressing shared serverless function files';
       console.time(zippingLabel);
 
       pseudoLayers.push(await createPseudoLayer(tracedFiles));
@@ -560,7 +559,9 @@ export const build = async ({
 
       const assetKeys = Object.keys(assets);
       if (assetKeys.length > 0) {
-        debug('detected (legacy) assets to be bundled with lambda:');
+        debug(
+          'detected (legacy) assets to be bundled with serverless function:'
+        );
         assetKeys.forEach(assetFile => debug(`\t${assetFile}`));
         debug(
           '\nPlease upgrade to Next.js 9.1 to leverage modern asset handling.'
@@ -570,7 +571,7 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
-    const allLambdasLabel = `All lambdas created`;
+    const allLambdasLabel = `All serverless functions created`;
     console.time(allLambdasLabel);
 
     await Promise.all(
@@ -586,7 +587,7 @@ export const build = async ({
           dynamicPages.push(normalizePage(pathname));
         }
 
-        const label = `Creating lambda for page: "${page}"...`;
+        const label = `Creating serverless function for page: "${page}"...`;
         console.time(label);
 
         const pageFileName = path.normalize(
@@ -637,6 +638,9 @@ export const build = async ({
     '**',
     path.join(entryPath, '.next', 'static')
   );
+  const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
+  const publicFolderFiles = await glob('**', path.join(entryPath, 'public'));
+
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
@@ -646,23 +650,24 @@ export const build = async ({
     }),
     {}
   );
-
-  const entryDirectoryFiles = includeOnlyEntryDirectory(files, entryDirectory);
-  const staticDirectoryFiles = filesFromDirectory(
-    entryDirectoryFiles,
-    path.join(entryDirectory, 'static')
-  );
-  const publicDirectoryFiles = filesFromDirectory(
-    entryDirectoryFiles,
-    path.join(entryDirectory, 'public')
-  );
-  const publicFiles = Object.keys(publicDirectoryFiles).reduce(
+  const staticDirectoryFiles = Object.keys(staticFolderFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [file.replace(/public[/\\]+/, '')]: publicDirectoryFiles[file],
+      [path.join(entryDirectory, 'static', file)]: staticFolderFiles[file],
     }),
     {}
   );
+  const publicDirectoryFiles = Object.keys(publicFolderFiles).reduce(
+    (mappedFiles, file) => ({
+      ...mappedFiles,
+      [path.join(
+        entryDirectory,
+        file.replace(/public[/\\]+/, '')
+      )]: publicFolderFiles[file],
+    }),
+    {}
+  );
+
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
@@ -682,7 +687,7 @@ export const build = async ({
 
   return {
     output: {
-      ...publicFiles,
+      ...publicDirectoryFiles,
       ...lambdas,
       ...staticPages,
       ...staticFiles,

@@ -18,7 +18,10 @@ export default function handleError(
 
   if ((<APIError>error).status === 403) {
     console.error(
-      errorOutput('Authentication error. Run `now login` to log-in again.')
+      errorOutput(
+        error.message ||
+          'Authentication error. Run `now login` to log-in again.'
+      )
     );
   } else if ((<APIError>error).status === 429) {
     // Rate limited: display the message from the server-side,
