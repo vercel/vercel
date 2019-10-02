@@ -831,6 +831,10 @@ export default class DevServer {
     const ops: Promise<void>[] = [];
 
     for (const match of this.buildMatches.values()) {
+      if (match.buildProcess) {
+        process.kill(match.buildProcess.pid);
+      }
+
       if (!match.buildOutput) continue;
 
       for (const asset of Object.values(match.buildOutput)) {
