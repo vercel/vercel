@@ -273,10 +273,12 @@ module.exports = (req, res) => {
       'now.json': JSON.stringify({
         version: 2,
         builds: [{ src: 'main.html', use: '@now/static' }],
+        routes: [{ src: '/another-main', dest: '/main.html' }],
       }),
       'now-test.json': JSON.stringify({
         version: 2,
         builds: [{ src: 'test.html', use: '@now/static' }],
+        routes: [{ src: '/another-test', dest: '/test.html' }],
       }),
     },
     'alias-rules': {
