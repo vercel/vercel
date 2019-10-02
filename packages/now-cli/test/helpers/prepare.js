@@ -245,11 +245,38 @@ module.exports = (req, res) => {
     'static-deployment': {
       'index.txt': 'Hello World',
     },
+    nowignore: {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': 'ignore.txt',
+    },
+    'nowignore-allowlist': {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': '*\n!index.txt',
+    },
     'failing-build': {
       'package.json': JSON.stringify({
         scripts: {
           build: 'echo hello && exit 1',
         },
+      }),
+    },
+    'failing-alias': {
+      'now.json': JSON.stringify(
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+      ),
+    },
+    'local-config-files': {
+      'main.html': '<h1>hello main</h1>',
+      'test.html': '<h1>hello test</h1>',
+      'now.json': JSON.stringify({
+        version: 2,
+        builds: [{ src: 'main.html', use: '@now/static' }],
+      }),
+      'now-test.json': JSON.stringify({
+        version: 2,
+        builds: [{ src: 'test.html', use: '@now/static' }],
       }),
     },
     'alias-rules': {

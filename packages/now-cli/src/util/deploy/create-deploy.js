@@ -38,6 +38,11 @@ export default async function createDeploy(
       throw new ERRORS_TS.DomainVerificationFailed(error.value);
     }
 
+    // If the domain isn't owned by the user
+    if (error.code === 'not_domain_owner') {
+      throw new ERRORS_TS.NotDomainOwner(error.message);
+    }
+
     if (error.code === 'builds_rate_limited') {
       throw new ERRORS_TS.BuildsRateLimited(error.message);
     }
@@ -90,7 +95,7 @@ export default async function createDeploy(
       throw new ERRORS_TS.DeploymentNotFound({ context: contextName });
     }
 
-    const certError = mapCertError(error)
+    const certError = mapCertError(error);
     if (certError) {
       return certError;
     }

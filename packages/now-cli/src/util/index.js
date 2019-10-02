@@ -142,13 +142,14 @@ export default class Now extends EventEmitter {
     if (isBuilds) {
       deployment = await processDeployment({
         now: this,
-        debug,
+        output: this._output,
         hashes,
         paths,
         requestBody,
         uploadStamp,
         deployStamp,
         quiet,
+        nowConfig,
       });
     } else {
       // Read `registry.npmjs.org` authToken from .npmrc
@@ -183,7 +184,7 @@ export default class Now extends EventEmitter {
       deployment = await processDeployment({
         legacy: true,
         now: this,
-        debug,
+        output: this._output,
         hashes,
         paths,
         requestBody,
@@ -191,6 +192,7 @@ export default class Now extends EventEmitter {
         deployStamp,
         quiet,
         env,
+        nowConfig,
       });
     }
 
@@ -377,7 +379,7 @@ export default class Now extends EventEmitter {
     if (!app && !Object.keys(meta).length) {
       // Get the 35 latest projects and their latest deployment
       const query = new URLSearchParams({ limit: 35 });
-      const projects = await fetchRetry(`/projects/list?${query}`);
+      const projects = await fetchRetry(`/v2/projects/?${query}`);
 
       const deployments = await Promise.all(
         projects.map(async ({ id: projectId }) => {
