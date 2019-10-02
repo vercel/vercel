@@ -32,13 +32,13 @@ export const EVENTS = new Set([
   'build-state-changed',
 ]);
 
-export function parseNowJSON(file?: DeploymentFile): NowJsonOptions {
-  if (!file) {
+export async function parseNowJSON(filePath?: string): Promise<NowJsonOptions> {
+  if (!filePath) {
     return {};
   }
 
   try {
-    const jsonString = file.data.toString();
+    const jsonString = await readFile(filePath, 'utf8');
 
     return JSON.parse(jsonString);
   } catch (e) {

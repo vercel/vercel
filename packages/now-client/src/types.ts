@@ -124,10 +124,11 @@ export interface NowJsonOptions {
   scope?: string;
   type?: 'NPM' | 'STATIC' | 'DOCKER';
   version?: number;
+  files?: string[];
 }
 
 export type CreateDeploymentFunction = (
   path: string | string[],
   options?: DeploymentOptions,
-  nowConfig?: NowJsonOptions,
+  nowConfig?: NowJsonOptions
 ) => AsyncIterableIterator<any>;
