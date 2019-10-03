@@ -260,6 +260,14 @@ test('deploy using --local-config flag type cloud v1', async t => {
   const testText = await testRes.text();
   t.true(testText.includes('hello test'));
 
+  const file1Res = await fetch(`https://${host}/folder/file1.txt`);
+  const file1Text = await file1Res.text();
+  t.true(file1Text.includes('file1'));
+
+  const file2Res = await fetch(`https://${host}/folder/sub/file2.txt`);
+  const file2Text = await file2Res.text();
+  t.true(file2Text.includes('file2'));
+
   const mainRes = await fetch(`https://${host}/main.html`);
   t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
 });

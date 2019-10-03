@@ -287,6 +287,8 @@ const svr = createServer((req, res) => {
 svr.listen(3000);`,
       'main.html': '<h1>hello main</h1>',
       'test.html': '<h1>hello test</h1>',
+      'folder/file1.txt': 'file1',
+      'folder/sub/file2.txt': 'file2',
       Dockerfile: `FROM mhart/alpine-node:latest
 LABEL name "now-cli-dockerfile-${session}"
 
@@ -303,7 +305,7 @@ CMD ["node", "index.js"]`,
         features: {
           cloud: 'v1',
         },
-        files: ['.gitignore', 'index.js', 'main.html'],
+        files: ['.gitignore', 'folder', 'index.js', 'main.html'],
       }),
       'now-test.json': JSON.stringify({
         version: 1,
@@ -311,7 +313,7 @@ CMD ["node", "index.js"]`,
         features: {
           cloud: 'v1',
         },
-        files: ['.gitignore', 'index.js', 'test.html'],
+        files: ['.gitignore', 'folder', 'index.js', 'test.html'],
       }),
     },
     'local-config-v2': {
