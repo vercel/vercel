@@ -112,10 +112,28 @@ export default function buildCreateDeployment(
     ) {
       // See the docs: https://zeit.co/docs/v1/features/configuration/#files-(array)
       debug('Filtering file list based on `files` key in now.json');
-      const allowList = new Set(nowConfig.files);
-      allowList.add('Dockerfile');
-      fileList = fileList.filter(f => allowList.has(relative(cwd, f)));
-      debug(`Found ${fileList.length} files`);
+      const allowedFiles = new Set<string>(['Dockerfile']);
+      const allowedDirs = new Set<string>();
+      nowConfig.files.forEach(relPath => {
+        if (lstatSync(relPath).isDirectory()) {
+          allowedDirs.add(relPath);
+        } else {
+          allowedFiles.add(relPath);
+        }
+      });
+      fileList = fileList.filter(absPath => {
+        const relPath = relative(cwd, absPath);
+        if (allowedFiles.has(relPath)) {
+          return true;
+        }
+        for (let dir of allowedDirs) {
+          if (relPath.startsWith(dir + '/')) {
+            return true;
+          }
+        }
+        return false;
+      });
+      debug(`Found ${fileList.length} files: ${JSON.stringify(fileList)}`);
     }
 
     // This is a useful warning because it prevents people
