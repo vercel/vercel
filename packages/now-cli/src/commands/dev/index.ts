@@ -1,7 +1,5 @@
 import path from 'path';
 import chalk from 'chalk';
-import { PackageJson } from '@now/build-utils';
-
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { NowContext } from '../../types';
@@ -11,8 +9,6 @@ import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import dev from './dev';
-import readPackage from '../../util/read-package';
-import readConfig from '../../util/config/read-config';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
