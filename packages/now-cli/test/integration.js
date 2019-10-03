@@ -201,6 +201,77 @@ test('login', async t => {
   t.is(typeof token, 'string');
 });
 
+test('deploy using --local-config flag v2', async t => {
+  const target = fixture('local-config-v2');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+
+  const { host } = new URL(stdout);
+
+  const testRes = await fetch(`https://${host}/test-${contextName}.html`);
+  const testText = await testRes.text();
+  t.is(testText, '<h1>hello test</h1>');
+
+  const anotherTestRes = await fetch(`https://${host}/another-test`);
+  const anotherTestText = await anotherTestRes.text();
+  t.is(anotherTestText, testText);
+
+  const mainRes = await fetch(`https://${host}/main-${contextName}.html`);
+  t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
+
+  const anotherMainRes = await fetch(`https://${host}/another-main`);
+  t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
+});
+
+test('deploy using --local-config flag type cloud v1', async t => {
+  const target = fixture('local-config-cloud-v1');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['deploy', '--public', '--local-config', 'now-test.json', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+
+  const { host } = new URL(stdout);
+
+  const testRes = await fetch(`https://${host}/test.html`);
+  const testText = await testRes.text();
+  t.is(testText, '<h1>hello test</h1>');
+
+  const file1Res = await fetch(`https://${host}/folder/file1.txt`);
+  const file1Text = await file1Res.text();
+  t.is(file1Text, 'file1');
+
+  const file2Res = await fetch(`https://${host}/folder/sub/file2.txt`);
+  const file2Text = await file2Res.text();
+  t.is(file2Text, 'file2');
+
+  const mainRes = await fetch(`https://${host}/main.html`);
+  t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -695,7 +766,10 @@ test('ignore files specified in .nowignore', async t => {
   const directory = fixture('nowignore');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, args, { cwd: directory, reject: false });
+  const targetCall = await execa(binaryPath, args, {
+    cwd: directory,
+    reject: false,
+  });
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);
@@ -713,7 +787,10 @@ test('ignore files specified in .nowignore via allowlist', async t => {
   const directory = fixture('nowignore-allowlist');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, args, { cwd: directory, reject: false });
+  const targetCall = await execa(binaryPath, args, {
+    cwd: directory,
+    reject: false,
+  });
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);

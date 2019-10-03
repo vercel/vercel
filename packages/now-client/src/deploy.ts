@@ -1,6 +1,5 @@
 import { DeploymentFile } from './utils/hashes';
 import {
-  parseNowJSON,
   fetch,
   API_DEPLOYMENTS,
   prepareFiles,
@@ -22,6 +21,7 @@ export interface Options {
   defaultName?: string;
   preflight?: boolean;
   debug?: boolean;
+  nowConfig?: NowJsonOptions;
 }
 
 async function* createDeployment(
@@ -73,6 +73,10 @@ async function* createDeployment(
         debug('Deployment created with a warning:', value);
         yield { type: 'warning', payload: value };
       }
+      if (name.startsWith('x-now-notice-')) {
+        debug('Deployment created with a notice:', value);
+        yield { type: 'notice', payload: value };
+      }
     }
 
     yield { type: 'created', payload: json };
@@ -108,32 +112,12 @@ export default async function* deploy(
   options: Options
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(options.debug);
-  delete options.debug;
-
-  debug(`Trying to read 'now.json'`);
-  const nowJson: DeploymentFile | undefined = Array.from(files.values()).find(
-    (file: DeploymentFile): boolean => {
-      return Boolean(
-        file.names.find((name: string): boolean => name.includes('now.json'))
-      );
-    }
-  );
-
-  debug(`'now.json' ${nowJson ? 'found' : "doesn't exist"}`);
-
-  const nowJsonMetadata: NowJsonOptions = parseNowJSON(nowJson);
-
+  const nowJsonMetadata = options.nowConfig || {};
   delete nowJsonMetadata.github;
   delete nowJsonMetadata.scope;
 
   const meta = options.metadata || {};
   const metadata = { ...nowJsonMetadata, ...meta };
-  if (nowJson) {
-    debug(
-      `Merged 'now.json' metadata and locally provided metadata:`,
-      JSON.stringify(metadata)
-    );
-  }
 
   // Check if we should default to a static deployment
   if (!metadata.version && !metadata.name) {

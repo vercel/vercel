@@ -5,13 +5,17 @@ import pluralize from 'pluralize';
 import {
   createDeployment,
   createLegacyDeployment,
+  DeploymentOptions,
 } from '../../../../now-client';
 import wait from '../output/wait';
-import createOutput from '../output';
+import { Output } from '../output';
+// @ts-ignore
+import Now from '../../util';
+import { NowConfig } from '../dev/types';
 
 export default async function processDeployment({
   now,
-  debug,
+  output,
   hashes,
   paths,
   requestBody,
@@ -20,24 +24,44 @@ export default async function processDeployment({
   legacy,
   env,
   quiet,
-}: any) {
-  const { warn, log } = createOutput({ debug });
+  nowConfig,
+}: {
+  now: Now;
+  output: Output;
+  hashes: { [key: string]: any };
+  paths: string[];
+  requestBody: DeploymentOptions;
+  uploadStamp: () => number;
+  deployStamp: () => number;
+  legacy: boolean;
+  env: any;
+  quiet: boolean;
+  nowConfig?: NowConfig;
+}) {
+  const { warn, log, debug, note } = output;
   let bar: Progress | null = null;
+
+  const path0 = paths[0];
+  const opts: DeploymentOptions = {
+    ...requestBody,
+    debug: now._debug,
+  };
 
   if (!legacy) {
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(paths[0], {
-      ...requestBody,
-      debug: now._debug,
-    })) {
+    for await (const event of createDeployment(path0, opts, nowConfig)) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
 
       if (event.type === 'warning') {
         warn(event.payload);
+      }
+
+      if (event.type === 'notice') {
+        note(event.payload);
       }
 
       if (event.type === 'file_count') {
@@ -128,10 +152,7 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(paths[0], {
-      ...requestBody,
-      debug: now._debug,
-    })) {
+    for await (const event of createLegacyDeployment(path0, opts, nowConfig)) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
