@@ -1,7 +1,5 @@
 import path from 'path';
 import chalk from 'chalk';
-import { PackageJson } from '@now/build-utils';
-
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { NowContext } from '../../types';
@@ -11,8 +9,6 @@ import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import dev from './dev';
-import readPackage from '../../util/read-package';
-import readConfig from '../../util/config/read-config';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -81,28 +77,6 @@ export default async function main(ctx: NowContext) {
   }
 
   const [dir = '.'] = args;
-
-  const nowJson = await readConfig(path.join(dir, 'now.json'));
-  // @ts-ignore: Because `nowJson` could be one of three different types
-  const hasBuilds = nowJson && nowJson.builds && nowJson.builds.length > 0;
-
-  if (!nowJson || !hasBuilds) {
-    const pkg = await readPackage(path.join(dir, 'package.json'));
-
-    if (pkg) {
-      const { scripts } = pkg as PackageJson;
-
-      if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('now dev')}`
-        );
-        output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
-        return 1;
-      }
-    }
-  }
 
   if (argv._.length > 2) {
     output.error(`${cmd('now dev [dir]')} accepts at most one argument`);
