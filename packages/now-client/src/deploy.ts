@@ -73,6 +73,10 @@ async function* createDeployment(
         debug('Deployment created with a warning:', value);
         yield { type: 'warning', payload: value };
       }
+      if (name.startsWith('x-now-notice-')) {
+        debug('Deployment created with a notice:', value);
+        yield { type: 'notice', payload: value };
+      }
     }
 
     yield { type: 'created', payload: json };
