@@ -4,9 +4,13 @@ import readdir from 'recursive-readdir';
 import { relative, join } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import uploadAndDeploy from './upload';
-import { getNowIgnore, createDebug } from './utils';
+import { getNowIgnore, createDebug, parseNowJSON } from './utils';
 import { DeploymentError } from './errors';
-import { CreateDeploymentFunction, DeploymentOptions, NowJsonOptions } from './types';
+import {
+  CreateDeploymentFunction,
+  DeploymentOptions,
+  NowJsonOptions,
+} from './types';
 
 export { EVENTS } from './utils';
 
@@ -16,9 +20,10 @@ export default function buildCreateDeployment(
   return async function* createDeployment(
     path: string | string[],
     options: DeploymentOptions = {},
-    nowConfig?: NowJsonOptions,
+    nowConfig?: NowJsonOptions
   ): AsyncIterableIterator<any> {
     const debug = createDebug(options.debug);
+    const cwd = process.cwd();
 
     debug('Creating deployment...');
 
@@ -88,6 +93,29 @@ export default function buildCreateDeployment(
       // Single file
       fileList = [path];
       debug(`Deploying the provided path as single file`);
+    }
+
+    if (!nowConfig) {
+      // If the user did not provide a nowConfig,
+      // then use the now.json file in the root.
+      const fileName = 'now.json';
+      const absolutePath = fileList.find(f => relative(cwd, f) === fileName);
+      debug(absolutePath ? `Found ${fileName}` : `Missing ${fileName}`);
+      nowConfig = await parseNowJSON(absolutePath);
+    }
+
+    if (
+      version === 1 &&
+      nowConfig &&
+      Array.isArray(nowConfig.files) &&
+      nowConfig.files.length > 0
+    ) {
+      // See the docs: https://zeit.co/docs/v1/features/configuration/#files-(array)
+      debug('Filtering file list based on `files` key in now.json');
+      const allowList = new Set(nowConfig.files);
+      allowList.add('Dockerfile');
+      fileList = fileList.filter(f => allowList.has(relative(cwd, f)));
+      debug(`Found ${fileList.length} files`);
     }
 
     // This is a useful warning because it prevents people
