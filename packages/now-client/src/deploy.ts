@@ -1,6 +1,5 @@
 import { DeploymentFile } from './utils/hashes';
 import {
-  parseNowJSON,
   fetch,
   API_DEPLOYMENTS,
   prepareFiles,
@@ -104,33 +103,12 @@ const getDefaultName = (
   }
 };
 
-function findFile(
-  fileName: string,
-  files: Map<string, DeploymentFile>,
-  debug: (...args: string[]) => void
-  ) {
-  debug(`Trying to read ${fileName}`);
-  const deploymentFile: DeploymentFile | undefined = Array.from(files.values()).find(
-    (file) => {
-      return Boolean(
-        file.names.find((name) => name.includes(fileName))
-      );
-    }
-  );
-
-  const verb = deploymentFile ? 'Found' : 'Missing';
-  debug(`${verb} ${fileName}`);
-  return deploymentFile;
-}
-
 export default async function* deploy(
   files: Map<string, DeploymentFile>,
   options: Options
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(options.debug);
-  const nowJsonMetadata = options.nowConfig || parseNowJSON(findFile('now.json', files, debug));
-  delete options.debug;
-  delete options.nowConfig;
+  const nowJsonMetadata = options.nowConfig || {};
   delete nowJsonMetadata.github;
   delete nowJsonMetadata.scope;
 
@@ -233,5 +211,3 @@ export default async function* deploy(
     }
   }
 }
-
-
