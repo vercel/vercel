@@ -267,16 +267,65 @@ module.exports = (req, res) => {
         Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
       ),
     },
-    'local-config-files': {
+    'local-config-cloud-v1': {
+      '.gitignore': '*.html',
+      'index.js': `
+const { createServer } = require('http');
+const { readFileSync } = require('fs');
+const svr = createServer((req, res) => {
+  const { url = '/' } = req;
+  const file = '.' + url;
+  console.log('reading file ' + file);
+  try {
+    let contents = readFileSync(file, 'utf8');
+    res.end(contents || '');
+  } catch (e) {
+    res.statusCode = 404;
+    res.end('Not found');
+  }
+});
+svr.listen(3000);`,
       'main.html': '<h1>hello main</h1>',
       'test.html': '<h1>hello test</h1>',
+      Dockerfile: `FROM mhart/alpine-node:latest
+LABEL name "now-cli-dockerfile-${session}"
+
+RUN mkdir /app
+WORKDIR /app
+COPY . /app
+RUN yarn
+
+EXPOSE 3000
+CMD ["node", "index.js"]`,
+      'now.json': JSON.stringify({
+        version: 1,
+        type: 'docker',
+        features: {
+          cloud: 'v1',
+        },
+        files: ['.gitignore', 'index.js', 'main.html'],
+      }),
+      'now-test.json': JSON.stringify({
+        version: 1,
+        type: 'docker',
+        features: {
+          cloud: 'v1',
+        },
+        files: ['.gitignore', 'index.js', 'test.html'],
+      }),
+    },
+    'local-config-v2': {
+      [`main-${session}.html`]: '<h1>hello main</h1>',
+      [`test-${session}.html`]: '<h1>hello test</h1>',
       'now.json': JSON.stringify({
         version: 2,
-        builds: [{ src: 'main.html', use: '@now/static' }],
+        builds: [{ src: `main-${session}.html`, use: '@now/static' }],
+        routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
       'now-test.json': JSON.stringify({
         version: 2,
-        builds: [{ src: 'test.html', use: '@now/static' }],
+        builds: [{ src: `test-${session}.html`, use: '@now/static' }],
+        routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
       }),
     },
     'alias-rules': {
