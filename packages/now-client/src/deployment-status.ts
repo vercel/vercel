@@ -2,6 +2,7 @@ import sleep from 'sleep-promise';
 import ms from 'ms';
 import { fetch, API_DEPLOYMENTS, API_DEPLOYMENTS_LEGACY } from './utils';
 import { isDone, isReady, isFailed } from './utils/ready-state';
+import { Deployment, DeploymentBuild } from './types';
 
 interface DeploymentStatus {
   type: string;

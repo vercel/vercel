@@ -189,14 +189,9 @@ test('[now dev] validate env var names', async t => {
   }
 });
 
-test('[now dev] 00-list-directory', async t => {
-  const directory = fixture('00-list-directory');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
+test(
+  '[now dev] 00-list-directory',
+  testFixtureStdio('00-list-directory', async (t, port) => {
     const result = await fetchWithRetry(`http://localhost:${port}`, 60);
     const response = await result;
 
@@ -206,10 +201,8 @@ test('[now dev] 00-list-directory', async t => {
     t.regex(body, /Files within/gm);
     t.regex(body, /test1.txt/gm);
     t.regex(body, /directory/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+  })
+);
 
 test('[now dev] 01-node', async t => {
   const directory = fixture('01-node');

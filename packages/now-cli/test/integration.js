@@ -201,6 +201,33 @@ test('login', async t => {
   t.is(typeof token, 'string');
 });
 
+test('deploy using --local-config flag', async t => {
+  const target = fixture('local-config-files');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+
+  // Send a test request to the deployment
+  const { host } = new URL(stdout);
+  const response = await fetch(`https://${host}/test.html`);
+  const content = await response.text();
+  t.true(content.includes('hello test'));
+  const response2 = await fetch(`https://${host}/main.html`);
+  t.is(response2.status, 404, 'Should not deploy/build main now.json');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -689,6 +716,48 @@ test('remove the alias from "now.json" `alias`', async t => {
 
   t.is(code, 0);
   t.true(stdout.startsWith(goal));
+});
+
+test('ignore files specified in .nowignore', async t => {
+  const directory = fixture('nowignore');
+
+  const args = ['--debug', '--public', '--name', session, ...defaultArgs];
+  const targetCall = await execa(binaryPath, args, {
+    cwd: directory,
+    reject: false,
+  });
+
+  console.log(targetCall.stderr);
+  console.log(targetCall.stdout);
+  console.log(targetCall.code);
+
+  const { host } = new URL(targetCall.stdout);
+  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
+  t.is(ignoredFile.status, 404);
+
+  const presentFile = await fetch(`https://${host}/index.txt`);
+  t.is(presentFile.status, 200);
+});
+
+test('ignore files specified in .nowignore via allowlist', async t => {
+  const directory = fixture('nowignore-allowlist');
+
+  const args = ['--debug', '--public', '--name', session, ...defaultArgs];
+  const targetCall = await execa(binaryPath, args, {
+    cwd: directory,
+    reject: false,
+  });
+
+  console.log(targetCall.stderr);
+  console.log(targetCall.stdout);
+  console.log(targetCall.code);
+
+  const { host } = new URL(targetCall.stdout);
+  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
+  t.is(ignoredFile.status, 404);
+
+  const presentFile = await fetch(`https://${host}/index.txt`);
+  t.is(presentFile.status, 200);
 });
 
 test('scale down the deployment directly', async t => {
