@@ -369,6 +369,7 @@ export default async function main(
       output.debug('Setting target to production');
       createArgs.target = 'production';
     }
+    createArgs.build.env.NOW_TARGET = createArgs.target || 'none';
 
     deployStamp = stamp();
 
