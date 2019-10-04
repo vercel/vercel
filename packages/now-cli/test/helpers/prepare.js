@@ -221,6 +221,17 @@ module.exports = (req, res) => {
       'index.json': JSON.stringify({ name: 'now-revert-alias-2' }),
       'now.json': getRevertAliasConfigFile(),
     },
+    'now-dev-fail-dev-script': {
+      'package.json': JSON.stringify(
+        {
+          scripts: {
+            dev: 'now dev',
+          },
+        },
+        null,
+        2
+      ),
+    },
     'v1-warning-link': {
       'now.json': JSON.stringify({
         version: 1,

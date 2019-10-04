@@ -2253,6 +2253,17 @@ test('whoami', async t => {
   t.is(stdout, contextName, formatOutput({ stdout, stderr }));
 });
 
+test('fail `now dev` dev script without now.json', async t => {
+  const deploymentPath = fixture('now-dev-fail-dev-script');
+  const { code, stderr } = await execute(['dev', deploymentPath]);
+
+  t.is(code, 1);
+  t.true(
+    stderr.includes('must not contain `now dev`'),
+    `Received instead: "${stderr}"`
+  );
+});
+
 test('print correct link in legacy warning', async t => {
   const deploymentPath = fixture('v1-warning-link');
   const { code, stderr, stdout } = await execute([deploymentPath]);
