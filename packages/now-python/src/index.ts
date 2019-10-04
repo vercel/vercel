@@ -23,7 +23,7 @@ async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
   //
   // distutils.errors.DistutilsOptionError: can't combine user with
   // prefix, exec_prefix/home, or install_(plat)base
-  process.env['PIP_USER'] = 0;
+  process.env.PIP_USER = '0';
   debug(
     `Running "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
       ' '
