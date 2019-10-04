@@ -66,7 +66,7 @@ export default function buildCreateDeployment(
     }
 
     // Get .nowignore
-    let ig = await getNowIgnore(path);
+    let { ig, ignores } = await getNowIgnore(path);
 
     debug(`Found ${ig.ig.ignores.length} rules in .nowignore`);
 
