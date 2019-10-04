@@ -729,10 +729,12 @@ export default class DevServer {
       this.yarnPath,
       this.output
     )
-      .then(updatedBuilders =>
-        this.invalidateBuildMatches(nowConfig, updatedBuilders)
-      )
+      .then(updatedBuilders => {
+        this.updateBuildersPromise = null;
+        this.invalidateBuildMatches(nowConfig, updatedBuilders);
+      })
       .catch(err => {
+        this.updateBuildersPromise = null;
         this.output.error(`Failed to update builders: ${err.message}`);
         this.output.debug(err.stack);
       });
@@ -832,13 +834,19 @@ export default class DevServer {
 
     for (const match of this.buildMatches.values()) {
       if (match.buildProcess) {
+        this.output.debug(
+          `Killing builder sub-process with PID ${match.buildProcess.pid}`
+        );
         process.kill(match.buildProcess.pid);
+        delete match.buildProcess;
       }
 
       if (!match.buildOutput) continue;
 
       for (const asset of Object.values(match.buildOutput)) {
         if (asset.type === 'Lambda' && asset.fn) {
+          console.error(asset);
+          this.output.debug(`Shutting down Lambda function`);
           ops.push(asset.fn.destroy());
         }
       }
@@ -847,10 +855,12 @@ export default class DevServer {
     ops.push(close(this.server));
 
     if (this.watcher) {
+      this.output.debug(`Closing file watcher`);
       this.watcher.close();
     }
 
     if (this.updateBuildersPromise) {
+      this.output.debug(`Waiting for builders update to complete`);
       ops.push(this.updateBuildersPromise);
     }
 
