@@ -2,7 +2,7 @@
 
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
 
-## Usage
+## Usages
 
 To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
 
