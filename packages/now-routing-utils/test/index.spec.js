@@ -1,9 +1,9 @@
 const assert = require('assert');
 const Ajv = require('ajv');
-const { normalizeRoutes, isHandler, schema } = require('../dist');
+const { normalizeRoutes, isHandler, schema } = require('../');
 
 const ajv = new Ajv();
-const assertValid = (routes) => {
+const assertValid = routes => {
   const validate = ajv.compile(schema);
   const valid = validate(routes);
 
@@ -70,12 +70,10 @@ describe('normalizeRoutes', () => {
     assert.notEqual(normalized.routes, null);
 
     if (normalized.routes) {
-      normalized.routes.forEach((route) => {
+      normalized.routes.forEach(route => {
         if (isHandler(route)) {
           assert.fail(
-            `Normalizer returned: { handle: ${
-              route.handle
-            } } instead of { src: ${expected} }`,
+            `Normalizer returned: { handle: ${route.handle} } instead of { src: ${expected} }`
           );
         } else {
           assert.ok(route.src === expected || route.src === expected2);
@@ -147,7 +145,7 @@ describe('normalizeRoutes', () => {
       message: `One or more invalid routes were found: \n${JSON.stringify(
         errors,
         null,
-        2,
+        2
       )}`,
       errors,
     });
@@ -202,7 +200,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/src/type',
         },
-      ],
+      ]
     );
   });
 
@@ -224,7 +222,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/dest/type',
         },
-      ],
+      ]
     );
   });
 
@@ -246,7 +244,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/methods/type',
         },
-      ],
+      ]
     );
   });
 
@@ -268,7 +266,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/methods/items/type',
         },
-      ],
+      ]
     );
   });
 
@@ -290,7 +288,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/headers/type',
         },
-      ],
+      ]
     );
   });
 
@@ -315,7 +313,7 @@ describe('normalizeRoutes', () => {
           schemaPath:
             '#/items/properties/headers/patternProperties/%5E.%7B1%2C256%7D%24/type',
         },
-      ],
+      ]
     );
   });
 
@@ -337,7 +335,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/handle/type',
         },
-      ],
+      ]
     );
   });
 
@@ -359,7 +357,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/continue/type',
         },
-      ],
+      ]
     );
   });
 
@@ -381,7 +379,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/status/type',
         },
-      ],
+      ]
     );
   });
 
@@ -403,7 +401,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/additionalProperties',
         },
-      ],
+      ]
     );
   });
 });
