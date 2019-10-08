@@ -67,6 +67,20 @@ interface BuildParamsType extends BuildOptions {
 
 export const version = 2;
 
+const nowDevChildProcesses = new Set<ChildProcess>();
+
+['SIGINT', 'SIGTERM'].forEach(signal => {
+  process.once(signal as NodeJS.Signals, () => {
+    for (const child of nowDevChildProcesses) {
+      debug(
+        `Got ${signal}, killing dev server child process (pid=${child.pid})`
+      );
+      process.kill(child.pid, signal);
+    }
+    process.exit(0);
+  });
+});
+
 /**
  * Read package.json from files
  */
@@ -212,6 +226,7 @@ export const build = async ({
       const { forked, getUrl } = startDevServer(entryPath, runtimeEnv);
       urls[entrypoint] = await getUrl();
       childProcess = forked;
+      nowDevChildProcesses.add(forked);
       debug(
         `${name} Development server for ${entrypoint} running at ${urls[entrypoint]}`
       );
