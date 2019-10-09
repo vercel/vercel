@@ -3,6 +3,7 @@ const {
   convertRedirects,
   convertRewrites,
   convertHeaders,
+  convertTrailingSlash,
 } = require('../dist/superstatic');
 const { deepEqual } = require('assert');
 
@@ -129,5 +130,41 @@ test('convertHeaders', () => {
     },
   ];
 
+  deepEqual(actual, expected);
+});
+
+test('convertTrailingSlash enabled', () => {
+  const original = ['index.html', 'dir/index.html', 'dir/sub/index.html'];
+  const actual = convertTrailingSlash(original, true);
+  const expected = [
+    {
+      src: 'dir',
+      headers: { Location: 'dir/' },
+      status: 301,
+    },
+    {
+      src: 'dir/sub',
+      headers: { Location: 'dir/sub/' },
+      status: 301,
+    },
+  ];
+  deepEqual(actual, expected);
+});
+
+test('convertTrailingSlash disabled', () => {
+  const original = ['index.html', 'dir/index.html', 'dir/sub/index.html'];
+  const actual = convertTrailingSlash(original, false);
+  const expected = [
+    {
+      src: 'dir/',
+      headers: { Location: 'dir' },
+      status: 301,
+    },
+    {
+      src: 'dir/sub/',
+      headers: { Location: 'dir/sub' },
+      status: 301,
+    },
+  ];
   deepEqual(actual, expected);
 });

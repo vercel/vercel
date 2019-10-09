@@ -69,7 +69,7 @@ export function convertRewrites(redirects: SuperstaticRewrite[]): Route[] {
 
 export function convertHeaders(headers: SuperstaticHeader[]): Route[] {
   return headers.map(h => {
-    const { src, segments } = globToRegex(h.source);
+    const { src } = globToRegex(h.source);
     const obj: { [key: string]: string } = {};
     h.headers.forEach(kv => {
       obj[kv.key] = kv.value;
@@ -80,6 +80,25 @@ export function convertHeaders(headers: SuperstaticHeader[]): Route[] {
       continue: true,
     };
   });
+}
+
+export function convertTrailingSlash(
+  filePaths: string[],
+  enable: boolean
+): Route[] {
+  return filePaths
+    .filter(f => f.endsWith('/index.html'))
+    .map(f => f.slice(0, -10))
+    .filter(dir => dir !== '' && dir !== '/' && dir.endsWith('/'))
+    .map(trailing => {
+      const clean = trailing.slice(0, -1);
+      const [src, loc] = enable ? [clean, trailing] : [trailing, clean];
+      return {
+        src: src,
+        headers: { Location: loc },
+        status: 301,
+      };
+    });
 }
 
 function globToRegex(source: string): { src: string; segments: string[] } {
