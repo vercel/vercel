@@ -1,9 +1,7 @@
 {
   "version": 2,
   "name": "now-dev-next",
-  "builds": [
-    { "src": "package.json", "use": "@now/next" }
-  ],
+  "builds": [{ "src": "package.json", "use": "@now/next@canary" }],
   "routes": [
     {
       "src": "/(.*)",
