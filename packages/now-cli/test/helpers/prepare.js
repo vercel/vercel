@@ -245,11 +245,89 @@ module.exports = (req, res) => {
     'static-deployment': {
       'index.txt': 'Hello World',
     },
+    nowignore: {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': 'ignore.txt',
+    },
+    'nowignore-allowlist': {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': '*\n!index.txt',
+    },
     'failing-build': {
       'package.json': JSON.stringify({
         scripts: {
           build: 'echo hello && exit 1',
         },
+      }),
+    },
+    'failing-alias': {
+      'now.json': JSON.stringify(
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+      ),
+    },
+    'local-config-cloud-v1': {
+      '.gitignore': '*.html',
+      'index.js': `
+const { createServer } = require('http');
+const { readFileSync } = require('fs');
+const svr = createServer((req, res) => {
+  const { url = '/' } = req;
+  const file = '.' + url;
+  console.log('reading file ' + file);
+  try {
+    let contents = readFileSync(file, 'utf8');
+    res.end(contents || '');
+  } catch (e) {
+    res.statusCode = 404;
+    res.end('Not found');
+  }
+});
+svr.listen(3000);`,
+      'main.html': '<h1>hello main</h1>',
+      'test.html': '<h1>hello test</h1>',
+      'folder/file1.txt': 'file1',
+      'folder/sub/file2.txt': 'file2',
+      Dockerfile: `FROM mhart/alpine-node:latest
+LABEL name "now-cli-dockerfile-${session}"
+
+RUN mkdir /app
+WORKDIR /app
+COPY . /app
+RUN yarn
+
+EXPOSE 3000
+CMD ["node", "index.js"]`,
+      'now.json': JSON.stringify({
+        version: 1,
+        type: 'docker',
+        features: {
+          cloud: 'v1',
+        },
+        files: ['.gitignore', 'folder', 'index.js', 'main.html'],
+      }),
+      'now-test.json': JSON.stringify({
+        version: 1,
+        type: 'docker',
+        features: {
+          cloud: 'v1',
+        },
+        files: ['.gitignore', 'folder', 'index.js', 'test.html'],
+      }),
+    },
+    'local-config-v2': {
+      [`main-${session}.html`]: '<h1>hello main</h1>',
+      [`test-${session}.html`]: '<h1>hello test</h1>',
+      'now.json': JSON.stringify({
+        version: 2,
+        builds: [{ src: `main-${session}.html`, use: '@now/static' }],
+        routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
+      }),
+      'now-test.json': JSON.stringify({
+        version: 2,
+        builds: [{ src: `test-${session}.html`, use: '@now/static' }],
+        routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
       }),
     },
     'alias-rules': {

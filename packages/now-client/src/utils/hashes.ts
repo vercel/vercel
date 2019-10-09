@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import fs from 'fs-extra';
+import { Sema } from 'async-sema';
 
 export interface DeploymentFile {
   names: string[];
@@ -42,10 +43,12 @@ export const mapToObject = (
  */
 async function hashes(files: string[]): Promise<Map<string, DeploymentFile>> {
   const map = new Map();
+  const semaphore = new Sema(100);
 
   await Promise.all(
     files.map(
       async (name: string): Promise<void> => {
+        await semaphore.acquire();
         const data = await fs.readFile(name);
 
         const h = hash(data);
@@ -56,6 +59,8 @@ async function hashes(files: string[]): Promise<Map<string, DeploymentFile>> {
         } else {
           map.set(h, { names: [name], data });
         }
+
+        semaphore.release();
       }
     )
   );

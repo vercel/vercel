@@ -34,11 +34,13 @@ import {
   ConflictingFilePath,
   ConflictingPathSegment,
   BuildError,
+  NotDomainOwner,
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
+import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -200,6 +202,10 @@ export default async function main(
   } catch (error) {
     handleError(error);
     return 1;
+  }
+
+  if (!(await shouldDeployDir(argv._[0], output))) {
+    return 0;
   }
 
   const {
@@ -375,6 +381,11 @@ export default async function main(
       ctx
     );
 
+    if (deployment instanceof NotDomainOwner) {
+      output.error(deployment);
+      return 1;
+    }
+
     const deploymentResponse = handleCertError(
       output,
       await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
@@ -403,6 +414,11 @@ export default async function main(
     }
   } catch (err) {
     debug(`Error: ${err}\n${err.stack}`);
+
+    if (err instanceof NotDomainOwner) {
+      output.error(err.message);
+      return 1;
+    }
 
     if (err instanceof DomainNotFound && err.meta && err.meta.domain) {
       output.debug(
@@ -441,6 +457,7 @@ export default async function main(
     if (
       err instanceof DomainNotFound ||
       err instanceof DomainNotVerified ||
+      err instanceof NotDomainOwner ||
       err instanceof DomainPermissionDenied ||
       err instanceof DomainVerificationFailed ||
       err instanceof SchemaValidationFailed ||
@@ -586,6 +603,7 @@ function handleCreateDeployError(output, error) {
   }
   if (
     error instanceof DeploymentNotFound ||
+    error instanceof NotDomainOwner ||
     error instanceof DeploymentsRateLimited ||
     error instanceof AliasDomainConfigured ||
     error instanceof MissingBuildScript ||

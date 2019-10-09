@@ -1,6 +1,6 @@
 {
   "name": "now-client",
-  "version": "5.1.1-canary.4",
+  "version": "5.1.1-canary.9",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
   "license": "MIT",
@@ -36,6 +36,7 @@
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
     "fs-extra": "8.0.1",
+    "ignore": "4.0.6",
     "ms": "2.1.2",
     "node-fetch": "2.6.0",
     "querystring": "^0.2.0",

@@ -5,13 +5,17 @@ import pluralize from 'pluralize';
 import {
   createDeployment,
   createLegacyDeployment,
+  DeploymentOptions,
 } from '../../../../now-client';
 import wait from '../output/wait';
-import createOutput from '../output';
+import { Output } from '../output';
+// @ts-ignore
+import Now from '../../util';
+import { NowConfig } from '../dev/types';
 
 export default async function processDeployment({
   now,
-  debug,
+  output,
   hashes,
   paths,
   requestBody,
@@ -20,21 +24,44 @@ export default async function processDeployment({
   legacy,
   env,
   quiet,
-}: any) {
-  const { warn, log } = createOutput({ debug });
+  nowConfig,
+}: {
+  now: Now;
+  output: Output;
+  hashes: { [key: string]: any };
+  paths: string[];
+  requestBody: DeploymentOptions;
+  uploadStamp: () => number;
+  deployStamp: () => number;
+  legacy: boolean;
+  env: any;
+  quiet: boolean;
+  nowConfig?: NowConfig;
+}) {
+  const { warn, log, debug, note } = output;
   let bar: Progress | null = null;
+
+  const path0 = paths[0];
+  const opts: DeploymentOptions = {
+    ...requestBody,
+    debug: now._debug,
+  };
 
   if (!legacy) {
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(paths[0], requestBody)) {
+    for await (const event of createDeployment(path0, opts, nowConfig)) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
 
       if (event.type === 'warning') {
         warn(event.payload);
+      }
+
+      if (event.type === 'notice') {
+        note(event.payload);
       }
 
       if (event.type === 'file_count') {
@@ -52,28 +79,17 @@ export default async function processDeployment({
           );
         }
 
-        const size = Object.values(hashes).reduce((acc: number, file: any) => {
-          const fileSize = file.data.byteLength || file.data.length;
-
-          return acc + fileSize;
-        }, 0);
-
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        bar = new Progress(
-          `${chalk.gray(
-            '>'
-          )} Upload [:bar] :percent :etas (${size}) [${missingSize}]`,
-          {
-            width: 20,
-            complete: '=',
-            incomplete: '',
-            total: missingSize,
-            clear: true,
-          }
-        );
+        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
+          width: 20,
+          complete: '=',
+          incomplete: '',
+          total: missingSize,
+          clear: true,
+        });
       }
 
       if (event.type === 'file-uploaded') {
@@ -92,7 +108,7 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          const version = legacy ? `${chalk.grey('v1')} ` : '';
+          const version = legacy ? `${chalk.grey('[v1]')} ` : '';
           log(`https://${event.payload.url} ${version}${deployStamp()}`);
         } else {
           process.stdout.write(`https://${event.payload.url}`);
@@ -136,7 +152,7 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(paths[0], requestBody)) {
+    for await (const event of createLegacyDeployment(path0, opts, nowConfig)) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -155,28 +171,17 @@ export default async function processDeployment({
           );
         }
 
-        const size = Object.values(hashes).reduce((acc: number, file: any) => {
-          const fileSize = file.data.byteLength || file.data.length;
-
-          return acc + fileSize;
-        }, 0);
-
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        bar = new Progress(
-          `${chalk.gray(
-            '>'
-          )} Upload [:bar] :percent :etas (${size}) [${missingSize}]`,
-          {
-            width: 20,
-            complete: '=',
-            incomplete: '',
-            total: missingSize,
-            clear: true,
-          }
-        );
+        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
+          width: 20,
+          complete: '=',
+          incomplete: '',
+          total: missingSize,
+          clear: true,
+        });
       }
 
       if (event.type === 'file-uploaded') {
@@ -195,7 +200,8 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          log(`${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
+          const version = legacy ? `${chalk.grey('[v1]')} ` : '';
+          log(`${event.payload.url} ${version}${deployStamp()}`);
         } else {
           process.stdout.write(`https://${event.payload.url}`);
         }
