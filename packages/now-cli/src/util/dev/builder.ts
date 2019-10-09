@@ -50,7 +50,8 @@ async function createBuildProcess(
   buildEnv: EnvConfig,
   workPath: string,
   output: Output,
-  yarnPath?: string
+  yarnPath?: string,
+  debugEnabled: boolean = false
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -59,18 +60,31 @@ async function createBuildProcess(
     nodeBinPromise,
     builderModulePathPromise,
   ]);
+
+  // Ensure that `node` is in the builder's `PATH`
   let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
+
+  // Ensure that `yarn` is in the builder's `PATH`
   if (yarnPath) {
     PATH = `${yarnPath}${delimiter}${PATH}`;
   }
+
+  const env: EnvConfig = {
+    ...process.env,
+    PATH,
+    ...buildEnv,
+    NOW_REGION: 'dev1',
+  };
+
+  // Builders won't show debug logs by default.
+  // The `NOW_BUILDER_DEBUG` env variable enables them.
+  if (debugEnabled) {
+    env.NOW_BUILDER_DEBUG = '1';
+  }
+
   const buildProcess = fork(modulePath, [], {
     cwd: workPath,
-    env: {
-      ...process.env,
-      PATH,
-      ...buildEnv,
-      NOW_REGION: 'dev1',
-    },
+    env,
     execPath,
     execArgv: [],
   });
@@ -134,7 +148,8 @@ export async function executeBuild(
       buildEnv,
       workPath,
       devServer.output,
-      yarnPath
+      yarnPath,
+      debug
     );
   }
 

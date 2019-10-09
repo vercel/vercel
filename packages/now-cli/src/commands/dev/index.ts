@@ -60,12 +60,6 @@ export default async function main(ctx: NowContext) {
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
     output = createOutput({ debug });
 
-    // Builders won't show debug logs by default
-    // the `NOW_BUILDER_DEBUG` env variable will enable them
-    if (debug) {
-      process.env.NOW_BUILDER_DEBUG = '1';
-    }
-
     if ('--port' in argv) {
       output.warn('`--port` is deprecated, please use `--listen` instead');
       argv['--listen'] = String(argv['--port']);
