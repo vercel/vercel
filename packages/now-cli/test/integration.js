@@ -201,8 +201,8 @@ test('login', async t => {
   t.is(typeof token, 'string');
 });
 
-test('deploy using --local-config flag', async t => {
-  const target = fixture('local-config-files');
+test('deploy using --local-config flag v2', async t => {
+  const target = fixture('local-config-v2');
 
   const { stdout, stderr, code } = await execa(
     binaryPath,
@@ -219,13 +219,57 @@ test('deploy using --local-config flag', async t => {
 
   t.is(code, 0);
 
-  // Send a test request to the deployment
   const { host } = new URL(stdout);
-  const response = await fetch(`https://${host}/test.html`);
-  const content = await response.text();
-  t.true(content.includes('hello test'));
-  const response2 = await fetch(`https://${host}/main.html`);
-  t.is(response2.status, 404, 'Should not deploy/build main now.json');
+
+  const testRes = await fetch(`https://${host}/test-${contextName}.html`);
+  const testText = await testRes.text();
+  t.is(testText, '<h1>hello test</h1>');
+
+  const anotherTestRes = await fetch(`https://${host}/another-test`);
+  const anotherTestText = await anotherTestRes.text();
+  t.is(anotherTestText, testText);
+
+  const mainRes = await fetch(`https://${host}/main-${contextName}.html`);
+  t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
+
+  const anotherMainRes = await fetch(`https://${host}/another-main`);
+  t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
+});
+
+test('deploy using --local-config flag type cloud v1', async t => {
+  const target = fixture('local-config-cloud-v1');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['deploy', '--public', '--local-config', 'now-test.json', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+
+  const { host } = new URL(stdout);
+
+  const testRes = await fetch(`https://${host}/test.html`);
+  const testText = await testRes.text();
+  t.is(testText, '<h1>hello test</h1>');
+
+  const file1Res = await fetch(`https://${host}/folder/file1.txt`);
+  const file1Text = await file1Res.text();
+  t.is(file1Text, 'file1');
+
+  const file2Res = await fetch(`https://${host}/folder/sub/file2.txt`);
+  const file2Text = await file2Res.text();
+  t.is(file2Text, 'file2');
+
+  const mainRes = await fetch(`https://${host}/main.html`);
+  t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
 });
 
 test('print the deploy help message', async t => {
