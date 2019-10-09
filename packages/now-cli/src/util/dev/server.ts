@@ -845,7 +845,6 @@ export default class DevServer {
 
       for (const asset of Object.values(match.buildOutput)) {
         if (asset.type === 'Lambda' && asset.fn) {
-          console.error(asset);
           this.output.debug(`Shutting down Lambda function`);
           ops.push(asset.fn.destroy());
         }
