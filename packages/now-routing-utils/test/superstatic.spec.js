@@ -1,5 +1,35 @@
-const { convertRedirects, convertRewrites } = require('../dist/superstatic');
+const {
+  convertCleanUrls,
+  convertRedirects,
+  convertRewrites,
+} = require('../dist/superstatic');
 const { deepEqual } = require('assert');
+
+test('convertCleanUrls', () => {
+  const actual = convertCleanUrls([
+    'file.txt',
+    'path/to/file.txt',
+    'file.js',
+    'path/to/file.js',
+    'file.html',
+    'path/to/file.html',
+  ]);
+  const expected = [
+    { src: 'file', dest: 'file.html' },
+    { src: 'path/to/file', dest: 'path/to/file.html' },
+    {
+      src: 'file.html',
+      headers: { Location: 'file' },
+      status: 301,
+    },
+    {
+      src: 'path/to/file.html',
+      headers: { Location: 'path/to/file' },
+      status: 301,
+    },
+  ];
+  deepEqual(actual, expected);
+});
 
 test('convertRedirects', () => {
   const actual = convertRedirects([

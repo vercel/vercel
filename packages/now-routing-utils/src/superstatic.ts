@@ -16,6 +16,27 @@ interface Redirect {
   type?: number;
 }
 
+export function convertCleanUrls(filePaths: string[]): Route[] {
+  const htmlFiles = filePaths
+    .filter(f => f.endsWith('.html'))
+    .map(f => ({
+      html: f,
+      clean: f.slice(0, -5),
+    }));
+
+  const rewrites: Route[] = htmlFiles.map(o => ({
+    src: o.clean,
+    dest: o.html,
+  }));
+
+  const redirects: Route[] = htmlFiles.map(o => ({
+    src: o.html,
+    headers: { Location: o.clean },
+    status: 301,
+  }));
+  return rewrites.concat(redirects);
+}
+
 export function convertRedirects(redirects: Redirect[]): Route[] {
   return redirects.map(r => {
     const { src, segments } = replaceSource(r.source);
