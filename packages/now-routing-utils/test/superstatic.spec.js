@@ -2,6 +2,7 @@ const {
   convertCleanUrls,
   convertRedirects,
   convertRewrites,
+  convertHeaders,
 } = require('../dist/superstatic');
 const { deepEqual } = require('assert');
 
@@ -84,6 +85,48 @@ test('convertRewrites', () => {
     { src: '/firebase/[^/]+', dest: 'https://www.firebase.com' },
     { src: 'app/.*', dest: '/application.html' },
     { src: 'projects/[^/]+/edit', dest: '/projects.html' },
+  ];
+
+  deepEqual(actual, expected);
+});
+
+test('convertHeaders', () => {
+  const actual = convertHeaders([
+    {
+      source: '**/*.@(eot|otf|ttf|ttc|woff|font.css)',
+      headers: [
+        {
+          key: 'Access-Control-Allow-Origin',
+          value: '*',
+        },
+      ],
+    },
+    {
+      source: '404.html',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'max-age=300',
+        },
+        {
+          key: 'Set-Cookie',
+          value: 'error=404',
+        },
+      ],
+    },
+  ]);
+
+  const expected = [
+    {
+      src: '.*\\.(eot|otf|ttf|ttc|woff|font\\.css)',
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      continue: true,
+    },
+    {
+      src: '404.html',
+      headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
+      continue: true,
+    },
   ];
 
   deepEqual(actual, expected);

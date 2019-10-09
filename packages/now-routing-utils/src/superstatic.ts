@@ -5,15 +5,25 @@
 
 import { Route } from './index';
 
-interface Rewrite {
+interface SuperstaticRewrite {
   source: string;
   destination: string;
 }
 
-interface Redirect {
+interface SuperstaticRedirect {
   source: string;
   destination: string;
   type?: number;
+}
+
+interface SuperstaticHeader {
+  source: string;
+  headers: SuperstaticHeaderKeyValue[];
+}
+
+interface SuperstaticHeaderKeyValue {
+  key: string;
+  value: string;
 }
 
 export function convertCleanUrls(filePaths: string[]): Route[] {
@@ -37,9 +47,9 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
   return rewrites.concat(redirects);
 }
 
-export function convertRedirects(redirects: Redirect[]): Route[] {
+export function convertRedirects(redirects: SuperstaticRedirect[]): Route[] {
   return redirects.map(r => {
-    const { src, segments } = replaceSource(r.source);
+    const { src, segments } = globToRegex(r.source);
     const loc = replaceSegments(segments, r.destination);
     return {
       src,
@@ -49,18 +59,34 @@ export function convertRedirects(redirects: Redirect[]): Route[] {
   });
 }
 
-export function convertRewrites(redirects: Rewrite[]): Route[] {
+export function convertRewrites(redirects: SuperstaticRewrite[]): Route[] {
   return redirects.map(r => {
-    const { src, segments } = replaceSource(r.source);
+    const { src, segments } = globToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
     return { src, dest };
   });
 }
 
-function replaceSource(source: string): { src: string; segments: string[] } {
+export function convertHeaders(headers: SuperstaticHeader[]): Route[] {
+  return headers.map(h => {
+    const { src, segments } = globToRegex(h.source);
+    const obj: { [key: string]: string } = {};
+    h.headers.forEach(kv => {
+      obj[kv.key] = kv.value;
+    });
+    return {
+      src,
+      headers: obj,
+      continue: true,
+    };
+  });
+}
+
+function globToRegex(source: string): { src: string; segments: string[] } {
   const output: string[] = [];
   const segments: string[] = [];
-  for (const part of source.split('/')) {
+  for (let part of source.split('/')) {
+    part = replaceAtSymbolGroups(part);
     if (part === '**') {
       output.push('.*');
     } else if (part === '*') {
@@ -74,6 +100,10 @@ function replaceSource(source: string): { src: string; segments: string[] } {
     }
   }
   return { src: output.join('/'), segments };
+}
+
+function replaceAtSymbolGroups(part = '') {
+  return part.replace(/@\(/g, '(');
 }
 
 function replaceSegments(segments: string[], destination: string) {
