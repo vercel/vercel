@@ -54,19 +54,19 @@ test('convertCleanUrls', () => {
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = {
-    0: ['file'],
-    1: ['path/to/file'],
-    2: ['file.html'],
-    3: ['path/to/file.html'],
-  };
+  const mustMatch = [
+    ['file'],
+    ['path/to/file'],
+    ['file.html'],
+    ['path/to/file.html'],
+  ];
 
-  const mustNotMatch = {
-    0: ['file2'],
-    1: ['path/to/file2', 'file'],
-    2: ['file2.html', 'afile.html'],
-    3: ['path/to/file2.html', 'path/to/file'],
-  };
+  const mustNotMatch = [
+    ['file2'],
+    ['path/to/file2', 'file'],
+    ['file2.html', 'afile.html'],
+    ['path/to/file2.html', 'path/to/file'],
+  ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
@@ -110,21 +110,21 @@ test('convertRedirects', () => {
 
   deepEqual(actual, expected);
 
-  const mustMatch = {
-    0: ['/some/old/path'],
-    1: ['/firebase/one', '/firebase/2', '/firebase/-'],
-    2: ['app/one', 'app/two'],
-    3: ['projects/one/edit', 'projects/two/edit'],
-    4: ['/old/one/path', '/old/two/path'],
-  };
+  const mustMatch = [
+    ['/some/old/path'],
+    ['/firebase/one', '/firebase/2', '/firebase/-'],
+    ['app/one', 'app/two'],
+    ['projects/one/edit', 'projects/two/edit'],
+    ['/old/one/path', '/old/two/path'],
+  ];
 
-  const mustNotMatch = {
-    0: ['/nope'],
-    1: ['/fire', '/firebasejumper/two', '/firebase/dir/subdir'],
-    2: ['apple', 'apptitude/not'],
-    3: ['projects/edit', 'projects/two/delete', 'projects'],
-    4: ['/old/path', '/old/two/foo', '/old'],
-  };
+  const mustNotMatch = [
+    ['/nope'],
+    ['/fire', '/firebasejumper/two', '/firebase/dir/subdir'],
+    ['apple', 'apptitude/not'],
+    ['projects/edit', 'projects/two/delete', 'projects'],
+    ['/old/path', '/old/two/foo', '/old'],
+  ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
@@ -146,20 +146,21 @@ test('convertRewrites', () => {
 
   deepEqual(actual, expected);
 
-  const mustMatch = {
-    0: ['/some/old/path'],
-    1: ['/firebase/one', '/firebase/two'],
-    2: ['app/one', 'app/two'],
-    3: ['projects/one/edit', 'projects/two/edit'],
-    4: ['/old/one/path', '/old/two/path'],
-  };
-  const mustNotMatch = {
-    0: ['/nope'],
-    1: ['/fire', '/firebasejumper/two'],
-    2: ['apple', 'apptitude/not'],
-    3: ['projects/edit', 'projects/two/delete', 'projects'],
-    4: ['/old/path', '/old/two/foo', '/old'],
-  };
+  const mustMatch = [
+    ['/some/old/path'],
+    ['/firebase/one', '/firebase/two'],
+    ['app/one', 'app/two'],
+    ['projects/one/edit', 'projects/two/edit'],
+    ['/old/one/path', '/old/two/path'],
+  ];
+
+  const mustNotMatch = [
+    ['/nope'],
+    ['/fire', '/firebasejumper/two'],
+    ['apple', 'apptitude/not'],
+    ['projects/edit', 'projects/two/delete', 'projects'],
+    ['/old/path', '/old/two/foo', '/old'],
+  ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
@@ -205,15 +206,15 @@ test('convertHeaders', () => {
 
   deepEqual(actual, expected);
 
-  const mustMatch = {
-    0: ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
-    1: ['404.html'],
-  };
+  const mustMatch = [
+    ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
+    ['404.html'],
+  ];
 
-  const mustNotMatch = {
-    0: ['hello/file.jpg', '/hello/font-css', 'dir/arial.font-css'],
-    1: ['403.html', '500.html'],
-  };
+  const mustNotMatch = [
+    ['hello/file.jpg', '/hello/font-css', 'dir/arial.font-css'],
+    ['403.html', '500.html'],
+  ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
@@ -235,15 +236,12 @@ test('convertTrailingSlash enabled', () => {
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = {
-    0: ['dir'],
-    1: ['dir/sub'],
-  };
+  const mustMatch = [['dir'], ['dir/sub']];
 
-  const mustNotMatch = {
-    0: ['dirp', 'mkdir', 'dir/foo'],
-    1: ['dirs/sub', 'dir/subs', 'dir/sub/thing'],
-  };
+  const mustNotMatch = [
+    ['dirp', 'mkdir', 'dir/foo'],
+    ['dirs/sub', 'dir/subs', 'dir/sub/thing'],
+  ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
@@ -265,15 +263,12 @@ test('convertTrailingSlash disabled', () => {
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = {
-    0: ['dir/'],
-    1: ['dir/sub/'],
-  };
+  const mustMatch = [['dir/'], ['dir/sub/']];
 
-  const mustNotMatch = {
-    0: ['dirp', 'mkdir', 'dir/foo'],
-    1: ['dirs/sub', 'dir/subs', 'dir/sub/thing'],
-  };
+  const mustNotMatch = [
+    ['dirp', 'mkdir', 'dir/foo'],
+    ['dirs/sub', 'dir/subs', 'dir/sub/thing'],
+  ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
