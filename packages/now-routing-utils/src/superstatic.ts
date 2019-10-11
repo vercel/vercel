@@ -5,23 +5,23 @@
 
 import { Route } from './index';
 
-interface SuperstaticRewrite {
+export interface SuperstaticRewrite {
   source: string;
   destination: string;
 }
 
-interface SuperstaticRedirect {
+export interface SuperstaticRedirect {
   source: string;
   destination: string;
   type?: number;
 }
 
-interface SuperstaticHeader {
+export interface SuperstaticHeader {
   source: string;
   headers: SuperstaticHeaderKeyValue[];
 }
 
-interface SuperstaticHeaderKeyValue {
+export interface SuperstaticHeaderKeyValue {
   key: string;
   value: string;
 }
