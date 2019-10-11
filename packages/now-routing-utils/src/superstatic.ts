@@ -59,8 +59,8 @@ export function convertRedirects(redirects: SuperstaticRedirect[]): Route[] {
   });
 }
 
-export function convertRewrites(redirects: SuperstaticRewrite[]): Route[] {
-  return redirects.map(r => {
+export function convertRewrites(rewrites: SuperstaticRewrite[]): Route[] {
+  return rewrites.map(r => {
     const { src, segments } = globToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
     return { src, dest };
