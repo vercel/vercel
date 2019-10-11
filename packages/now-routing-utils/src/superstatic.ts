@@ -104,25 +104,32 @@ export function convertTrailingSlash(
 function globToRegex(source: string): { src: string; segments: string[] } {
   const output: string[] = [];
   const segments: string[] = [];
-  for (let part of source.split('/')) {
-    part = replaceAtSymbolGroups(part);
+  for (const part of source.split('/')) {
     if (part === '**') {
       output.push('.*');
     } else if (part === '*') {
       output.push('[^/]+');
     } else if (part.startsWith(':')) {
-      const segment = part.slice(1);
+      const last = part.slice(-1);
+      const end = ['*', '+', '?'].includes(last) ? -1 : part.length;
+      const segment = part.slice(1, end);
+      // TODO: how to handle suffix
       output.push('(?<' + segment + '>[^/]+)');
       segments.push(segment);
     } else {
-      output.push(part);
+      output.push(
+        part
+          .replace(/@\(/g, '(')
+          .replace(/\./g, '\\.')
+          .replace(/\*/g, '[^/]+')
+      );
     }
   }
   return { src: output.join('/'), segments };
 }
 
-function replaceAtSymbolGroups(part = '') {
-  return part.replace(/@\(/g, '(');
+function replaceSymbols(part = '') {
+  return part.replace(/@\(/g, '(').replace(/\./g, '\\.');
 }
 
 function replaceSegments(segments: string[], destination: string) {

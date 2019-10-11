@@ -120,7 +120,7 @@ test('convertRedirects', () => {
 
   const mustNotMatch = {
     0: ['/nope'],
-    1: ['/fire', '/firebasejumper/two'],
+    1: ['/fire', '/firebasejumper/two', '/firebase/dir/subdir'],
     2: ['apple', 'apptitude/not'],
     3: ['projects/edit', 'projects/two/delete', 'projects'],
     4: ['/old/path', '/old/two/foo', '/old'],
@@ -167,7 +167,7 @@ test('convertRewrites', () => {
 test('convertHeaders', () => {
   const actual = convertHeaders([
     {
-      source: '**/*.@(eot|otf|ttf|ttc|woff|font.css)',
+      source: '**/*.@(eot|ttf|woff|font.css)',
       headers: [
         {
           key: 'Access-Control-Allow-Origin',
@@ -192,27 +192,26 @@ test('convertHeaders', () => {
 
   const expected = [
     {
-      src: '.*\\.(eot|otf|ttf|ttc|woff|font\\.css)',
+      src: '.*/[^/]+\\.(eot|ttf|woff|font\\.css)',
       headers: { 'Access-Control-Allow-Origin': '*' },
       continue: true,
     },
     {
-      src: '404.html',
+      src: '404\\.html',
       headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
       continue: true,
     },
   ];
 
-  // TODO: add this test back once we have a glob to regex
-  //deepEqual(actual, expected);
+  deepEqual(actual, expected);
 
   const mustMatch = {
-    0: ['hello/world/file.eot', 'another/font.ttf', 'css/font.css'],
+    0: ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
     1: ['404.html'],
   };
 
   const mustNotMatch = {
-    0: ['hello/file.jpg', '/hello/font-css'],
+    0: ['hello/file.jpg', '/hello/font-css', 'dir/arial.font-css'],
     1: ['403.html', '500.html'],
   };
 
