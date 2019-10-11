@@ -235,59 +235,39 @@ test('convertHeaders', () => {
 });
 
 test('convertTrailingSlash enabled', () => {
-  const original = ['index.html', 'dir/index.html', 'dir/sub/index.html'];
-  const actual = convertTrailingSlash(original, true);
+  const actual = convertTrailingSlash(true);
   const expected = [
     {
-      src: 'dir',
-      headers: { Location: 'dir/' },
-      status: 301,
-      continue: true,
-    },
-    {
-      src: 'dir/sub',
-      headers: { Location: 'dir/sub/' },
+      src: '^(.*[^\\/])$',
+      headers: { Location: '$1/' },
       status: 301,
       continue: true,
     },
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = [['dir'], ['dir/sub']];
+  const mustMatch = [['index.html', 'dir', 'dir/index.html', 'foo/bar']];
 
-  const mustNotMatch = [
-    ['dirp', 'mkdir', 'dir/foo'],
-    ['dirs/sub', 'dir/subs', 'dir/sub/thing'],
-  ];
+  const mustNotMatch = [['/', 'dir/', 'dir/foo/', 'next.php?page=/']];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
 
 test('convertTrailingSlash disabled', () => {
-  const original = ['index.html', 'dir/index.html', 'dir/sub/index.html'];
-  const actual = convertTrailingSlash(original, false);
+  const actual = convertTrailingSlash(false);
   const expected = [
     {
-      src: 'dir/',
-      headers: { Location: 'dir' },
-      status: 301,
-      continue: true,
-    },
-    {
-      src: 'dir/sub/',
-      headers: { Location: 'dir/sub' },
+      src: '^(.*)\\/$',
+      headers: { Location: '$1' },
       status: 301,
       continue: true,
     },
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = [['dir/'], ['dir/sub/']];
+  const mustMatch = [['dir/', 'index.html/', 'next.php?page=/']];
 
-  const mustNotMatch = [
-    ['dirp', 'mkdir', 'dir/foo'],
-    ['dirs/sub', 'dir/subs', 'dir/sub/thing'],
-  ];
+  const mustNotMatch = [['dirp', 'mkdir', 'dir/foo']];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });

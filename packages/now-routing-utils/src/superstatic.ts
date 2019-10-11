@@ -85,24 +85,24 @@ export function convertHeaders(headers: SuperstaticHeader[]): Route[] {
   });
 }
 
-export function convertTrailingSlash(
-  filePaths: string[],
-  enable: boolean
-): Route[] {
-  return filePaths
-    .filter(f => f.endsWith('/index.html'))
-    .map(f => f.slice(0, -10))
-    .filter(dir => dir !== '' && dir !== '/' && dir.endsWith('/'))
-    .map(trailing => {
-      const clean = trailing.slice(0, -1);
-      const [src, loc] = enable ? [clean, trailing] : [trailing, clean];
-      return {
-        src: src,
-        headers: { Location: loc },
-        status: 301,
-        continue: true,
-      };
+export function convertTrailingSlash(enable: boolean): Route[] {
+  const routes: Route[] = [];
+  if (enable) {
+    routes.push({
+      src: '^(.*[^\\/])$',
+      headers: { Location: '$1/' },
+      status: 301,
+      continue: true,
     });
+  } else {
+    routes.push({
+      src: '^(.*)\\/$',
+      headers: { Location: '$1' },
+      status: 301,
+      continue: true,
+    });
+  }
+  return routes;
 }
 
 function globToRegex(source: string): { src: string; segments: string[] } {
