@@ -1,17 +1,17 @@
 const assert = require('assert');
 const Ajv = require('ajv');
-const { normalizeRoutes, isHandler, schema } = require('../');
+const { normalizeRoutes, isHandler, schemaRoutes } = require('../');
 
 const ajv = new Ajv();
 const assertValid = routes => {
-  const validate = ajv.compile(schema);
+  const validate = ajv.compile(schemaRoutes);
   const valid = validate(routes);
 
   if (!valid) console.log(validate.errors);
   assert.equal(valid, true);
 };
 const assertError = (routes, errors) => {
-  const validate = ajv.compile(schema);
+  const validate = ajv.compile(schemaRoutes);
   const valid = validate(routes);
 
   assert.equal(valid, false);
