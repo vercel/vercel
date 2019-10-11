@@ -1,7 +1,7 @@
 /**
  * An ajv schema for the routes array
  */
-export const schemaRoutes = {
+export const routesSchema = {
   type: 'array',
   maxItems: 1024,
   items: {
@@ -52,7 +52,7 @@ export const schemaRoutes = {
   },
 };
 
-export const schemaRewrites = {
+export const rewritesSchema = {
   type: 'array',
   maxItems: 1024,
   items: {
@@ -71,7 +71,7 @@ export const schemaRewrites = {
   },
 };
 
-export const schemaRedirects = {
+export const redirectsSchema = {
   type: 'array',
   maxItems: 1024,
   items: {
@@ -90,10 +90,10 @@ export const schemaRedirects = {
   },
 };
 
-export const schemaCleanUrls = {
+export const cleanUrlsSchema = {
   type: 'boolean',
 };
 
-export const schemaTrailingSlash = {
+export const trailingSlashSchema = {
   type: 'boolean',
 };
