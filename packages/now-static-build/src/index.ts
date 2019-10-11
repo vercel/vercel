@@ -2,8 +2,8 @@ import ms from 'ms';
 import path from 'path';
 import spawn from 'cross-spawn';
 import getPort from 'get-port';
-import { SpawnOptions } from 'child_process';
 import isPortReachable from 'is-port-reachable';
+import { ChildProcess, SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { frameworks, Framework } from './frameworks';
 import {
@@ -102,7 +102,20 @@ function getCommand(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
 
 export const version = 2;
 
-const nowDevScriptPorts = new Map();
+const nowDevScriptPorts = new Map<string, number>();
+const nowDevChildProcesses = new Set<ChildProcess>();
+
+['SIGINT', 'SIGTERM'].forEach(signal => {
+  process.once(signal as NodeJS.Signals, () => {
+    for (const child of nowDevChildProcesses) {
+      debug(
+        `Got ${signal}, killing dev server child process (pid=${child.pid})`
+      );
+      process.kill(child.pid, signal);
+    }
+    process.exit(0);
+  });
+});
 
 const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
   const basic: Route = {
@@ -272,8 +285,9 @@ export async function build({
           env: { ...process.env, PORT: String(devPort) },
         };
 
-        const child = spawn('yarn', ['run', devScript], opts);
+        const child: ChildProcess = spawn('yarn', ['run', devScript], opts);
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
+        nowDevChildProcesses.add(child);
 
         // Now wait for the server to have listened on `$PORT`, after which we
         // will ProxyPass any requests to that development server that come in

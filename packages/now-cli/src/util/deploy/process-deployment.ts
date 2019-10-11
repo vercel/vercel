@@ -38,7 +38,7 @@ export default async function processDeployment({
   quiet: boolean;
   nowConfig?: NowConfig;
 }) {
-  const { warn, log, debug } = output;
+  const { warn, log, debug, note } = output;
   let bar: Progress | null = null;
 
   const path0 = paths[0];
@@ -58,6 +58,10 @@ export default async function processDeployment({
 
       if (event.type === 'warning') {
         warn(event.payload);
+      }
+
+      if (event.type === 'notice') {
+        note(event.payload);
       }
 
       if (event.type === 'file_count') {

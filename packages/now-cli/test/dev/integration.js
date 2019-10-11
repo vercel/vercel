@@ -869,3 +869,23 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     dev.kill('SIGTERM');
   }
 });
+
+test('[now dev] 25-nextjs-src-dir', async t => {
+  const directory = fixture('25-nextjs-src-dir');
+  const { dev, port } = await testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Next.js \+ Node.js API/gm);
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
