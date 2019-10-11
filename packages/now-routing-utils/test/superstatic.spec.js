@@ -39,17 +39,19 @@ test('convertCleanUrls', () => {
     'path/to/file.html',
   ]);
   const expected = [
-    { src: 'file', dest: 'file.html' },
-    { src: 'path/to/file', dest: 'path/to/file.html' },
+    { src: 'file', dest: 'file.html', continue: true },
+    { src: 'path/to/file', dest: 'path/to/file.html', continue: true },
     {
       src: 'file.html',
       headers: { Location: 'file' },
       status: 301,
+      continue: true,
     },
     {
       src: 'path/to/file.html',
       headers: { Location: 'path/to/file' },
       status: 301,
+      continue: true,
     },
   ];
   deepEqual(actual, expected);
@@ -89,22 +91,31 @@ test('convertRedirects', () => {
       src: '/some/old/path',
       headers: { Location: '/some/new/path' },
       status: 301,
+      continue: true,
     },
     {
       src: '/firebase/[^/]+',
       headers: { Location: 'https://www.firebase.com' },
       status: 302,
+      continue: true,
     },
-    { src: 'app/.*', headers: { Location: '/application.html' }, status: 301 },
+    {
+      src: 'app/.*',
+      headers: { Location: '/application.html' },
+      status: 301,
+      continue: true,
+    },
     {
       src: 'projects/[^/]+/edit',
       headers: { Location: '/projects.html' },
       status: 301,
+      continue: true,
     },
     {
       src: '/old/(?<segment>[^/]+)/path',
       headers: { Location: '/new/path/$segment' },
       status: 301,
+      continue: true,
     },
   ];
 
@@ -138,10 +149,14 @@ test('convertRewrites', () => {
   ]);
 
   const expected = [
-    { src: '/some/old/path', dest: '/some/new/path' },
-    { src: '/firebase/[^/]+', dest: 'https://www.firebase.com' },
-    { src: 'app/.*', dest: '/application.html' },
-    { src: 'projects/[^/]+/edit', dest: '/projects.html' },
+    { src: '/some/old/path', dest: '/some/new/path', continue: true },
+    {
+      src: '/firebase/[^/]+',
+      dest: 'https://www.firebase.com',
+      continue: true,
+    },
+    { src: 'app/.*', dest: '/application.html', continue: true },
+    { src: 'projects/[^/]+/edit', dest: '/projects.html', continue: true },
   ];
 
   deepEqual(actual, expected);
@@ -227,11 +242,13 @@ test('convertTrailingSlash enabled', () => {
       src: 'dir',
       headers: { Location: 'dir/' },
       status: 301,
+      continue: true,
     },
     {
       src: 'dir/sub',
       headers: { Location: 'dir/sub/' },
       status: 301,
+      continue: true,
     },
   ];
   deepEqual(actual, expected);
@@ -254,11 +271,13 @@ test('convertTrailingSlash disabled', () => {
       src: 'dir/',
       headers: { Location: 'dir' },
       status: 301,
+      continue: true,
     },
     {
       src: 'dir/sub/',
       headers: { Location: 'dir/sub' },
       status: 301,
+      continue: true,
     },
   ];
   deepEqual(actual, expected);

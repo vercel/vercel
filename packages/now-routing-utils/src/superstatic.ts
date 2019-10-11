@@ -37,12 +37,14 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
   const rewrites: Route[] = htmlFiles.map(o => ({
     src: o.clean,
     dest: o.html,
+    continue: true,
   }));
 
   const redirects: Route[] = htmlFiles.map(o => ({
     src: o.html,
     headers: { Location: o.clean },
     status: 301,
+    continue: true,
   }));
   return rewrites.concat(redirects);
 }
@@ -55,6 +57,7 @@ export function convertRedirects(redirects: SuperstaticRedirect[]): Route[] {
       src,
       headers: { Location: loc },
       status: r.type || 301,
+      continue: true,
     };
   });
 }
@@ -63,7 +66,7 @@ export function convertRewrites(rewrites: SuperstaticRewrite[]): Route[] {
   return rewrites.map(r => {
     const { src, segments } = globToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
-    return { src, dest };
+    return { src, dest, continue: true };
   });
 }
 
@@ -97,6 +100,7 @@ export function convertTrailingSlash(
         src: src,
         headers: { Location: loc },
         status: 301,
+        continue: true,
       };
     });
 }
@@ -126,10 +130,6 @@ function globToRegex(source: string): { src: string; segments: string[] } {
     }
   }
   return { src: output.join('/'), segments };
-}
-
-function replaceSymbols(part = '') {
-  return part.replace(/@\(/g, '(').replace(/\./g, '\\.');
 }
 
 function replaceSegments(segments: string[], destination: string) {
