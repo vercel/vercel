@@ -176,15 +176,33 @@ function getRoutes(
   files: Files,
   url: string
 ): Route[] {
+  let pagesDir = '';
   const filesInside: Files = {};
   const prefix = entryDirectory === `.` ? `/` : `/${entryDirectory}/`;
+  const fileKeys = Object.keys(files);
 
-  for (const file of Object.keys(files)) {
+  for (const file of fileKeys) {
     if (!pathsInside.includes(file)) {
       continue;
     }
 
+    if (!pagesDir) {
+      if (file.startsWith(path.join(entryDirectory, 'pages'))) {
+        pagesDir = 'pages';
+      }
+    }
+
     filesInside[file] = files[file];
+  }
+
+  // If default pages dir isn't found check for `src/pages`
+  if (
+    !pagesDir &&
+    fileKeys.some(file =>
+      file.startsWith(path.join(entryDirectory, 'src/pages'))
+    )
+  ) {
+    pagesDir = 'src/pages';
   }
 
   const routes: Route[] = [
@@ -202,13 +220,13 @@ function getRoutes(
 
   for (const file of filePaths) {
     const relativePath = path.relative(entryDirectory, file);
-    const isPage = pathIsInside('pages', relativePath);
+    const isPage = pathIsInside(pagesDir, relativePath);
 
     if (!isPage) {
       continue;
     }
 
-    const relativeToPages = path.relative('pages', relativePath);
+    const relativeToPages = path.relative(pagesDir, relativePath);
     const extension = path.extname(relativeToPages);
     const pageName = relativeToPages.replace(extension, '').replace(/\\/g, '/');
 
