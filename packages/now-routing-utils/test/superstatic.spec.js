@@ -1,12 +1,12 @@
+const { deepEqual } = require('assert');
 const {
   convertCleanUrls,
   convertRedirects,
   convertRewrites,
   convertHeaders,
   convertTrailingSlash,
-} = require('../dist/superstatic');
-const { normalizeRoutes } = require('../');
-const { deepEqual } = require('assert');
+  normalizeRoutes,
+} = require('../');
 
 function routesToRegExps(routeArray) {
   const { routes, error } = normalizeRoutes(routeArray);
