@@ -1,39 +1,19 @@
-export * from './superstatic';
 export * from './schemas';
-
-export type NowError = {
-  code: string;
-  message: string;
-  errors: {
-    message: string;
-    src?: string;
-    handle?: string;
-  }[];
-  sha?: string; // File errors
-};
-
-export type Source = {
-  src: string;
-  dest?: string;
-  headers?: {};
-  methods?: string[];
-  continue?: boolean;
-  status?: number;
-};
-
-export type Handler = {
-  handle: string;
-};
-
-export type Route = Source | Handler;
+export * from './types';
+import { Route, Handler, NormalizedRoutes, GetRoutesProps } from './types';
+import {
+  convertCleanUrls,
+  convertRewrites,
+  convertRedirects,
+  convertHeaders,
+  convertTrailingSlash,
+} from './superstatic';
 
 export function isHandler(route: Route): route is Handler {
   return typeof (route as Handler).handle !== 'undefined';
 }
 
-export function normalizeRoutes(
-  inputRoutes: Array<Route> | null
-): { routes: Array<Route> | null; error: NowError | null } {
+export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
     return { routes: inputRoutes, error: null };
   }
@@ -109,4 +89,72 @@ export function normalizeRoutes(
       : null;
 
   return { routes, error };
+}
+
+export function getTransformedRoutes({
+  nowConfig,
+  filePaths,
+}: GetRoutesProps): NormalizedRoutes {
+  const { cleanUrls, rewrites, redirects, headers, trailingSlash } = nowConfig;
+  let { routes } = nowConfig;
+  const errors: { message: string }[] = [];
+  if (typeof routes !== 'undefined') {
+    if (typeof cleanUrls !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `cleanUrls`',
+      });
+    }
+    if (typeof redirects !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `redirects`',
+      });
+    }
+    if (typeof rewrites !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `rewrites`',
+      });
+    }
+    if (typeof headers !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `headers`',
+      });
+    }
+    if (typeof trailingSlash !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `trailingSlash`',
+      });
+    }
+  } else {
+    routes = [];
+    if (typeof cleanUrls !== 'undefined') {
+      routes.push(...convertCleanUrls(filePaths));
+    }
+    if (typeof redirects !== 'undefined') {
+      routes.push(...convertRedirects(redirects));
+    }
+    if (typeof rewrites !== 'undefined') {
+      routes.push(...convertRewrites(rewrites));
+    }
+    if (typeof headers !== 'undefined') {
+      routes.push(...convertHeaders(headers));
+    }
+    if (typeof trailingSlash !== 'undefined') {
+      routes.push(...convertTrailingSlash(trailingSlash));
+    }
+  }
+
+  if (errors.length > 0) {
+    const error = {
+      code: 'invalid_routes',
+      message: `One or more invalid routes were found: \n${JSON.stringify(
+        errors,
+        null,
+        2
+      )}`,
+      errors,
+    };
+    return { routes: [], error };
+  }
+
+  return normalizeRoutes(routes);
 }

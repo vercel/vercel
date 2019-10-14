@@ -4,28 +4,7 @@
  */
 
 import pathToRegexp from 'path-to-regexp';
-import { Route } from './index';
-
-export interface SuperstaticRewrite {
-  source: string;
-  destination: string;
-}
-
-export interface SuperstaticRedirect {
-  source: string;
-  destination: string;
-  type?: number;
-}
-
-export interface SuperstaticHeader {
-  source: string;
-  headers: SuperstaticHeaderKeyValue[];
-}
-
-export interface SuperstaticHeaderKeyValue {
-  key: string;
-  value: string;
-}
+import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
 
 export function convertCleanUrls(filePaths: string[]): Route[] {
   const htmlFiles = filePaths
@@ -38,7 +17,7 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
   const redirects: Route[] = htmlFiles.map(o => ({
     src: o.html,
     headers: { Location: o.clean },
-    status: 301,
+    status: 307,
     continue: true,
   }));
 
@@ -51,20 +30,20 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
   return redirects.concat(rewrites);
 }
 
-export function convertRedirects(redirects: SuperstaticRedirect[]): Route[] {
+export function convertRedirects(redirects: NowRedirect[]): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const loc = replaceSegments(segments, r.destination);
     return {
       src,
       headers: { Location: loc },
-      status: r.type || 301,
+      status: r.statusCode || 307,
       continue: true,
     };
   });
 }
 
-export function convertRewrites(rewrites: SuperstaticRewrite[]): Route[] {
+export function convertRewrites(rewrites: NowRewrite[]): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
@@ -72,7 +51,7 @@ export function convertRewrites(rewrites: SuperstaticRewrite[]): Route[] {
   });
 }
 
-export function convertHeaders(headers: SuperstaticHeader[]): Route[] {
+export function convertHeaders(headers: NowHeader[]): Route[] {
   return headers.map(h => {
     const { src } = sourceToRegex(h.source);
     const obj: { [key: string]: string } = {};
@@ -93,14 +72,14 @@ export function convertTrailingSlash(enable: boolean): Route[] {
     routes.push({
       src: '^(.*[^\\/])$',
       headers: { Location: '$1/' },
-      status: 301,
+      status: 307,
       continue: true,
     });
   } else {
     routes.push({
       src: '^(.*)\\/$',
       headers: { Location: '$1' },
-      status: 301,
+      status: 307,
       continue: true,
     });
   }

@@ -1,12 +1,12 @@
 const { deepEqual } = require('assert');
+const { normalizeRoutes } = require('../');
 const {
   convertCleanUrls,
   convertRedirects,
   convertRewrites,
   convertHeaders,
   convertTrailingSlash,
-  normalizeRoutes,
-} = require('../');
+} = require('../dist/superstatic');
 
 function routesToRegExps(routeArray) {
   const { routes, error } = normalizeRoutes(routeArray);
@@ -42,13 +42,13 @@ test('convertCleanUrls', () => {
     {
       src: 'file.html',
       headers: { Location: 'file' },
-      status: 301,
+      status: 307,
       continue: true,
     },
     {
       src: 'path/to/file.html',
       headers: { Location: 'path/to/file' },
-      status: 301,
+      status: 307,
       continue: true,
     },
     { src: 'file', dest: 'file.html', continue: true },
@@ -79,7 +79,7 @@ test('convertRedirects', () => {
     {
       source: '/firebase/(.*)',
       destination: 'https://www.firebase.com',
-      type: 302,
+      statusCode: 302,
     },
     {
       source: '/projects/:id/:action',
@@ -92,7 +92,7 @@ test('convertRedirects', () => {
     {
       src: '^\\/some\\/old\\/path$',
       headers: { Location: '/some/new/path' },
-      status: 301,
+      status: 307,
       continue: true,
     },
     {
@@ -104,13 +104,13 @@ test('convertRedirects', () => {
     {
       src: '^\\/projects\\/([^\\/]+?)\\/([^\\/]+?)$',
       headers: { Location: '/projects.html?id=$1&action=$2' },
-      status: 301,
+      status: 307,
       continue: true,
     },
     {
       src: '^\\/old\\/([^\\/]+?)\\/path$',
       headers: { Location: '/new/path/$1' },
-      status: 301,
+      status: 307,
       continue: true,
     },
   ];
@@ -234,7 +234,7 @@ test('convertTrailingSlash enabled', () => {
     {
       src: '^(.*[^\\/])$',
       headers: { Location: '$1/' },
-      status: 301,
+      status: 307,
       continue: true,
     },
   ];
@@ -253,7 +253,7 @@ test('convertTrailingSlash disabled', () => {
     {
       src: '^(.*)\\/$',
       headers: { Location: '$1' },
-      status: 301,
+      status: 307,
       continue: true,
     },
   ];

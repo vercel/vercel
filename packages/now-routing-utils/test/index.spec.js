@@ -1,6 +1,11 @@
 const assert = require('assert');
 const Ajv = require('ajv');
-const { normalizeRoutes, isHandler, routesSchema } = require('../');
+const {
+  normalizeRoutes,
+  isHandler,
+  routesSchema,
+  getTransformedRoutes,
+} = require('../');
 
 const ajv = new Ajv();
 const assertValid = routes => {
@@ -403,5 +408,34 @@ describe('normalizeRoutes', () => {
         },
       ]
     );
+  });
+});
+
+describe('getTransformedRoutes', () => {
+  test('should normalize nowConfig.routes', () => {
+    const nowConfig = { routes: [{ src: 'page', dest: '/page.html' }] };
+    const filePaths = [];
+    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    const expected = normalizeRoutes(nowConfig.routes);
+    assert.deepEqual(actual, expected);
+  });
+
+  test('should normalize redirects before rewrites', () => {
+    const nowConfig = {
+      rewrites: [{ source: 'page', destination: '/page.html' }],
+      redirects: [{ source: 'v2', destination: '/api.py', statusCode: 302 }],
+    };
+    const filePaths = [];
+    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    const expected = [
+      {
+        src: '^v2$',
+        headers: { Location: '/api.py' },
+        continue: true,
+        status: 302,
+      },
+      { src: '^page$', dest: '/page.html', continue: true },
+    ];
+    assert.deepEqual(actual.routes, expected);
   });
 });
