@@ -3,6 +3,7 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 
+import pathToRegexp from 'path-to-regexp';
 import { Route } from './index';
 
 export interface SuperstaticRewrite {
@@ -52,7 +53,7 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
 
 export function convertRedirects(redirects: SuperstaticRedirect[]): Route[] {
   return redirects.map(r => {
-    const { src, segments } = globToRegex(r.source);
+    const { src, segments } = sourceToRegex(r.source);
     const loc = replaceSegments(segments, r.destination);
     return {
       src,
@@ -65,7 +66,7 @@ export function convertRedirects(redirects: SuperstaticRedirect[]): Route[] {
 
 export function convertRewrites(rewrites: SuperstaticRewrite[]): Route[] {
   return rewrites.map(r => {
-    const { src, segments } = globToRegex(r.source);
+    const { src, segments } = sourceToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
     return { src, dest, continue: true };
   });
@@ -73,7 +74,7 @@ export function convertRewrites(rewrites: SuperstaticRewrite[]): Route[] {
 
 export function convertHeaders(headers: SuperstaticHeader[]): Route[] {
   return headers.map(h => {
-    const { src } = globToRegex(h.source);
+    const { src } = sourceToRegex(h.source);
     const obj: { [key: string]: string } = {};
     h.headers.forEach(kv => {
       obj[kv.key] = kv.value;
@@ -106,37 +107,22 @@ export function convertTrailingSlash(enable: boolean): Route[] {
   return routes;
 }
 
-function globToRegex(source: string): { src: string; segments: string[] } {
-  const output: string[] = [];
-  const segments: string[] = [];
-  for (const part of source.split('/')) {
-    if (part === '**') {
-      output.push('.*');
-    } else if (part === '*') {
-      output.push('[^/]+');
-    } else if (part.startsWith(':')) {
-      const last = part.slice(-1);
-      const end = ['*', '+', '?'].includes(last) ? -1 : part.length;
-      const segment = part.slice(1, end);
-      // TODO: how to handle suffix
-      output.push('(?<' + segment + '>[^/]+)');
-      segments.push(segment);
-    } else {
-      output.push(
-        part
-          .replace(/@\(/g, '(')
-          .replace(/\./g, '\\.')
-          .replace(/\*/g, '[^/]+')
-      );
-    }
-  }
-  return { src: output.join('/'), segments };
+function sourceToRegex(source: string): { src: string; segments: string[] } {
+  const keys: pathToRegexp.Key[] = [];
+  const r = pathToRegexp(source, keys, { strict: true });
+  const segments = keys.map(k => k.name).filter(isString);
+  return { src: r.source, segments };
+}
+
+function isString(key: any): key is string {
+  return typeof key === 'string';
 }
 
 function replaceSegments(segments: string[], destination: string) {
-  for (const s of segments) {
-    const r = new RegExp(':' + s, 'g');
-    destination = destination.replace(r, '$' + s);
-  }
+  segments.forEach((name, index) => {
+    const r = new RegExp(':' + name, 'g');
+    const i = index + 1; // js is base 0, regex is base 1
+    destination = destination.replace(r, '$' + i);
+  });
   return destination;
 }

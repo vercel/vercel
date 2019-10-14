@@ -77,43 +77,39 @@ test('convertRedirects', () => {
   const actual = convertRedirects([
     { source: '/some/old/path', destination: '/some/new/path' },
     {
-      source: '/firebase/*',
+      source: '/firebase/(.*)',
       destination: 'https://www.firebase.com',
       type: 302,
     },
-    { source: 'app/**', destination: '/application.html' },
-    { source: 'projects/*/edit', destination: '/projects.html' },
+    {
+      source: '/projects/:id/:action',
+      destination: '/projects.html?id=:id&action=:action',
+    },
     { source: '/old/:segment/path', destination: '/new/path/:segment' },
   ]);
 
   const expected = [
     {
-      src: '/some/old/path',
+      src: '^\\/some\\/old\\/path$',
       headers: { Location: '/some/new/path' },
       status: 301,
       continue: true,
     },
     {
-      src: '/firebase/[^/]+',
+      src: '^\\/firebase\\/(.*)$',
       headers: { Location: 'https://www.firebase.com' },
       status: 302,
       continue: true,
     },
     {
-      src: 'app/.*',
-      headers: { Location: '/application.html' },
+      src: '^\\/projects\\/([^\\/]+?)\\/([^\\/]+?)$',
+      headers: { Location: '/projects.html?id=$1&action=$2' },
       status: 301,
       continue: true,
     },
     {
-      src: 'projects/[^/]+/edit',
-      headers: { Location: '/projects.html' },
-      status: 301,
-      continue: true,
-    },
-    {
-      src: '/old/(?<segment>[^/]+)/path',
-      headers: { Location: '/new/path/$segment' },
+      src: '^\\/old\\/([^\\/]+?)\\/path$',
+      headers: { Location: '/new/path/$1' },
       status: 301,
       continue: true,
     },
@@ -123,17 +119,15 @@ test('convertRedirects', () => {
 
   const mustMatch = [
     ['/some/old/path'],
-    ['/firebase/one', '/firebase/2', '/firebase/-'],
-    ['app/one', 'app/two'],
-    ['projects/one/edit', 'projects/two/edit'],
+    ['/firebase/one', '/firebase/2', '/firebase/-', '/firebase/dir/sub'],
+    ['/projects/one/edit', '/projects/two/edit'],
     ['/old/one/path', '/old/two/path'],
   ];
 
   const mustNotMatch = [
     ['/nope'],
-    ['/fire', '/firebasejumper/two', '/firebase/dir/subdir'],
-    ['apple', 'apptitude/not'],
-    ['projects/edit', 'projects/two/delete', 'projects'],
+    ['/fire', '/firebasejumper/two'],
+    ['/projects/edit', '/projects/two/three/delete', '/projects'],
     ['/old/path', '/old/two/foo', '/old'],
   ];
 
@@ -143,20 +137,22 @@ test('convertRedirects', () => {
 test('convertRewrites', () => {
   const actual = convertRewrites([
     { source: '/some/old/path', destination: '/some/new/path' },
-    { source: '/firebase/*', destination: 'https://www.firebase.com' },
-    { source: 'app/**', destination: '/application.html' },
-    { source: 'projects/*/edit', destination: '/projects.html' },
+    { source: '/firebase/(.*)', destination: 'https://www.firebase.com' },
+    { source: '/projects/:id/edit', destination: '/projects.html?id=$1' },
   ]);
 
   const expected = [
-    { src: '/some/old/path', dest: '/some/new/path', continue: true },
+    { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', continue: true },
     {
-      src: '/firebase/[^/]+',
+      src: '^\\/firebase\\/(.*)$',
       dest: 'https://www.firebase.com',
       continue: true,
     },
-    { src: 'app/.*', dest: '/application.html', continue: true },
-    { src: 'projects/[^/]+/edit', dest: '/projects.html', continue: true },
+    {
+      src: '^\\/projects\\/([^\\/]+?)\\/edit$',
+      dest: '/projects.html?id=$1',
+      continue: true,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -164,16 +160,14 @@ test('convertRewrites', () => {
   const mustMatch = [
     ['/some/old/path'],
     ['/firebase/one', '/firebase/two'],
-    ['app/one', 'app/two'],
-    ['projects/one/edit', 'projects/two/edit'],
+    ['/projects/one/edit', '/projects/two/edit'],
     ['/old/one/path', '/old/two/path'],
   ];
 
   const mustNotMatch = [
     ['/nope'],
     ['/fire', '/firebasejumper/two'],
-    ['apple', 'apptitude/not'],
-    ['projects/edit', 'projects/two/delete', 'projects'],
+    ['/projects/edit', '/projects/two/delete', '/projects'],
     ['/old/path', '/old/two/foo', '/old'],
   ];
 
@@ -183,7 +177,7 @@ test('convertRewrites', () => {
 test('convertHeaders', () => {
   const actual = convertHeaders([
     {
-      source: '**/*.@(eot|ttf|woff|font.css)',
+      source: '(.*).(eot|ttf|woff|css)',
       headers: [
         {
           key: 'Access-Control-Allow-Origin',
@@ -192,7 +186,7 @@ test('convertHeaders', () => {
       ],
     },
     {
-      source: '404.html',
+      source: '/404.html',
       headers: [
         {
           key: 'Cache-Control',
@@ -208,12 +202,12 @@ test('convertHeaders', () => {
 
   const expected = [
     {
-      src: '.*/[^/]+\\.(eot|ttf|woff|font\\.css)',
+      src: '^(.*)\\.(eot|ttf|woff|css)$',
       headers: { 'Access-Control-Allow-Origin': '*' },
       continue: true,
     },
     {
-      src: '404\\.html',
+      src: '^\\/404\\.html$',
       headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
       continue: true,
     },
@@ -222,8 +216,8 @@ test('convertHeaders', () => {
   deepEqual(actual, expected);
 
   const mustMatch = [
-    ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
-    ['404.html'],
+    ['/hello/world/file.eot', '/another/font.ttf', '/dir/arial.font.css'],
+    ['/404.html'],
   ];
 
   const mustNotMatch = [
