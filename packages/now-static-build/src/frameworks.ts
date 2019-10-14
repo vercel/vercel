@@ -294,6 +294,15 @@ export const frameworks: Framework[] = [
     name: 'Stencil',
     dependency: '@stencil/core',
     getOutputDirName: async () => 'www',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
   },
 ];
 
