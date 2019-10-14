@@ -58,6 +58,7 @@ export const rewritesSchema = {
   items: {
     type: 'object',
     additionalProperties: false,
+    required: ['source', 'destination'],
     properties: {
       source: {
         type: 'string',
@@ -72,11 +73,13 @@ export const rewritesSchema = {
 };
 
 export const redirectsSchema = {
+  title: 'Redirects',
   type: 'array',
   maxItems: 1024,
   items: {
     type: 'object',
     additionalProperties: false,
+    required: ['source', 'destination'],
     properties: {
       source: {
         type: 'string',
@@ -85,6 +88,46 @@ export const redirectsSchema = {
       destination: {
         type: 'string',
         maxLength: 4096,
+      },
+      statusCode: {
+        type: 'integer',
+        minimum: 100,
+        maximum: 999,
+      },
+    },
+  },
+};
+
+export const headersSchema = {
+  type: 'array',
+  maxItems: 1024,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['source', 'headers'],
+    properties: {
+      source: {
+        type: 'string',
+        maxLength: 4096,
+      },
+      headers: {
+        type: 'array',
+        maxItems: 1024,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['key', 'value'],
+          properties: {
+            key: {
+              type: 'string',
+              maxLength: 4096,
+            },
+            value: {
+              type: 'string',
+              maxLength: 4096,
+            },
+          },
+        },
       },
     },
   },

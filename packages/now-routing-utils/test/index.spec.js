@@ -4,20 +4,25 @@ const {
   normalizeRoutes,
   isHandler,
   routesSchema,
+  rewritesSchema,
+  redirectsSchema,
+  headersSchema,
+  cleanUrlsSchema,
+  trailingSlashSchema,
   getTransformedRoutes,
 } = require('../');
 
 const ajv = new Ajv();
-const assertValid = routes => {
-  const validate = ajv.compile(routesSchema);
-  const valid = validate(routes);
+const assertValid = (data, schema = routesSchema) => {
+  const validate = ajv.compile(schema);
+  const valid = validate(data);
 
   if (!valid) console.log(validate.errors);
   assert.equal(valid, true);
 };
-const assertError = (routes, errors) => {
-  const validate = ajv.compile(routesSchema);
-  const valid = validate(routes);
+const assertError = (data, errors, schema = routesSchema) => {
+  const validate = ajv.compile(schema);
+  const valid = validate(data);
 
   assert.equal(valid, false);
   assert.deepEqual(validate.errors, errors);
@@ -418,6 +423,7 @@ describe('getTransformedRoutes', () => {
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     const expected = normalizeRoutes(nowConfig.routes);
     assert.deepEqual(actual, expected);
+    assertValid(actual.routes);
   });
 
   test('should normalize redirects before rewrites', () => {
@@ -437,5 +443,50 @@ describe('getTransformedRoutes', () => {
       { src: '^page$', dest: '/page.html', continue: true },
     ];
     assert.deepEqual(actual.routes, expected);
+    assertValid(actual.routes);
+  });
+
+  test('should validate schemas', () => {
+    const nowConfig = {
+      cleanUrls: true,
+      rewrites: [
+        { source: 'page', destination: '/page.html' },
+        { source: 'home', destination: '/index.html' },
+      ],
+      redirects: [
+        { source: 'version1', destination: '/api1.py' },
+        { source: 'version2', destination: '/api2.py', statusCode: 302 },
+      ],
+      headers: [
+        {
+          source: '(.*)',
+          headers: [
+            {
+              key: 'Access-Control-Allow-Origin',
+              value: '*',
+            },
+          ],
+        },
+        {
+          source: '404.html',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'max-age=300',
+            },
+            {
+              key: 'Set-Cookie',
+              value: 'error=404',
+            },
+          ],
+        },
+      ],
+      trailingSlashSchema: false,
+    };
+    assertValid(nowConfig.cleanUrls, cleanUrlsSchema);
+    assertValid(nowConfig.rewrites, rewritesSchema);
+    assertValid(nowConfig.redirects, redirectsSchema);
+    assertValid(nowConfig.headers, headersSchema);
+    assertValid(nowConfig.trailingSlashSchema, trailingSlashSchema);
   });
 });
