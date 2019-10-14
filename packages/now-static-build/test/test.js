@@ -31,7 +31,6 @@ const testsThatFailToBuild = new Set([
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  /*
   if (testsThatFailToBuild.has(fixture)) {
     // eslint-disable-next-line no-loop-func
     it(`should not build ${fixture}`, async () => {
@@ -46,8 +45,6 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     });
     continue; //eslint-disable-line
   }
-
-  // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(
@@ -56,17 +53,4 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
       )
     ).resolves.toBeDefined();
   });
-  */
-  if (fixture !== '42-stencil') {
-    console.log('not 42-stencil ... skipping ...');
-  } else {
-    it(`should build ${fixture}`, async () => {
-      await expect(
-        testDeployment(
-          { builderUrl, buildUtilsUrl },
-          path.join(fixturesPath, fixture)
-        )
-      ).resolves.toBeDefined();
-    });
-  }
 }
