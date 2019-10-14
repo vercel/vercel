@@ -177,7 +177,7 @@ test('convertRewrites', () => {
 test('convertHeaders', () => {
   const actual = convertHeaders([
     {
-      source: '(.*).(eot|ttf|woff|css)',
+      source: '(.*)+/(.*)\\.(eot|otf|ttf|ttc|woff|font\\.css)',
       headers: [
         {
           key: 'Access-Control-Allow-Origin',
@@ -186,7 +186,7 @@ test('convertHeaders', () => {
       ],
     },
     {
-      source: '/404.html',
+      source: '404.html',
       headers: [
         {
           key: 'Cache-Control',
@@ -202,12 +202,12 @@ test('convertHeaders', () => {
 
   const expected = [
     {
-      src: '^(.*)\\.(eot|ttf|woff|css)$',
+      src: '(.*)+/(.*)\\.(eot|otf|ttf|ttc|woff|font\\.css)',
       headers: { 'Access-Control-Allow-Origin': '*' },
       continue: true,
     },
     {
-      src: '^\\/404\\.html$',
+      src: '404.html',
       headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
       continue: true,
     },
@@ -216,12 +216,12 @@ test('convertHeaders', () => {
   deepEqual(actual, expected);
 
   const mustMatch = [
-    ['/hello/world/file.eot', '/another/font.ttf', '/dir/arial.font.css'],
-    ['/404.html'],
+    ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
+    ['404.html'],
   ];
 
   const mustNotMatch = [
-    ['hello/file.jpg', '/hello/font-css', 'dir/arial.font-css'],
+    ['hello/file.jpg', 'hello/font-css', 'dir/arial.font-css'],
     ['403.html', '500.html'],
   ];
 

@@ -53,13 +53,12 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
 
 export function convertHeaders(headers: NowHeader[]): Route[] {
   return headers.map(h => {
-    const { src } = sourceToRegex(h.source);
     const obj: { [key: string]: string } = {};
     h.headers.forEach(kv => {
       obj[kv.key] = kv.value;
     });
     return {
-      src,
+      src: h.source,
       headers: obj,
       continue: true,
     };
