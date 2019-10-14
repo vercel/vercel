@@ -34,19 +34,20 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
       clean: f.slice(0, -5),
     }));
 
-  const rewrites: Route[] = htmlFiles.map(o => ({
-    src: o.clean,
-    dest: o.html,
-    continue: true,
-  }));
-
   const redirects: Route[] = htmlFiles.map(o => ({
     src: o.html,
     headers: { Location: o.clean },
     status: 301,
     continue: true,
   }));
-  return rewrites.concat(redirects);
+
+  const rewrites: Route[] = htmlFiles.map(o => ({
+    src: o.clean,
+    dest: o.html,
+    continue: true,
+  }));
+
+  return redirects.concat(rewrites);
 }
 
 export function convertRedirects(redirects: SuperstaticRedirect[]): Route[] {

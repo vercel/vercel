@@ -39,8 +39,6 @@ test('convertCleanUrls', () => {
     'path/to/file.html',
   ]);
   const expected = [
-    { src: 'file', dest: 'file.html', continue: true },
-    { src: 'path/to/file', dest: 'path/to/file.html', continue: true },
     {
       src: 'file.html',
       headers: { Location: 'file' },
@@ -53,21 +51,23 @@ test('convertCleanUrls', () => {
       status: 301,
       continue: true,
     },
+    { src: 'file', dest: 'file.html', continue: true },
+    { src: 'path/to/file', dest: 'path/to/file.html', continue: true },
   ];
   deepEqual(actual, expected);
 
   const mustMatch = [
-    ['file'],
-    ['path/to/file'],
     ['file.html'],
     ['path/to/file.html'],
+    ['file'],
+    ['path/to/file'],
   ];
 
   const mustNotMatch = [
-    ['file2'],
-    ['path/to/file2', 'file'],
     ['file2.html', 'afile.html'],
     ['path/to/file2.html', 'path/to/file'],
+    ['file2', 'afile'],
+    ['path/to/file2', 'file'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
