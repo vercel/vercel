@@ -109,14 +109,14 @@ export function getTransformedRoutes({
         message: 'Cannot define both `routes` and `redirects`',
       });
     }
-    if (typeof rewrites !== 'undefined') {
-      errors.push({
-        message: 'Cannot define both `routes` and `rewrites`',
-      });
-    }
     if (typeof headers !== 'undefined') {
       errors.push({
         message: 'Cannot define both `routes` and `headers`',
+      });
+    }
+    if (typeof rewrites !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `rewrites`',
       });
     }
     if (typeof trailingSlash !== 'undefined') {
