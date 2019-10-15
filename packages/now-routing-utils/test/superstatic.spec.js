@@ -236,9 +236,9 @@ test('convertTrailingSlash enabled', () => {
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = [['index.html', 'dir', 'dir/index.html', 'foo/bar']];
+  const mustMatch = [['/index.html', '/dir', '/dir/index.html', '/foo/bar']];
 
-  const mustNotMatch = [['/', 'dir/', 'dir/foo/', 'next.php?page=/']];
+  const mustNotMatch = [['/', '/dir/', '/dir/foo/', '/next.php?page=/']];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
@@ -254,9 +254,9 @@ test('convertTrailingSlash disabled', () => {
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = [['dir/', 'index.html/', 'next.php?page=/']];
+  const mustMatch = [['/dir/', '/index.html/', '/next.php?page=/']];
 
-  const mustNotMatch = [['dirp', 'mkdir', 'dir/foo']];
+  const mustNotMatch = [['/dirp', '/mkdir', '/dir/foo']];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
