@@ -672,22 +672,40 @@ export const build = async ({
     console.timeEnd(allLambdasLabel);
 
     let prerenderGroup = 1;
-    const onPrerenderRoute = (_route: string) => {
+    const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
       // Get the route file as it'd be mounted in the builder output
-      const routeFileNoExt = _route === '/' ? '/index' : _route;
+      const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
 
-      const htmlFsRef = new FileFsRef({
-        fsPath: path.join(pagesDir, `${routeFileNoExt}.html`),
-      });
-      const jsonFsRef = new FileFsRef({
-        fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
-      });
+      const htmlFsRef = isLazy
+        ? null
+        : new FileFsRef({
+            fsPath: path.join(pagesDir, `${routeFileNoExt}.html`),
+          });
+      const jsonFsRef = isLazy
+        ? null
+        : new FileFsRef({
+            fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
+          });
 
-      const {
-        initialRevalidate,
-        dataRoute,
-        srcRoute,
-      } = prerenderManifest.routes[_route];
+      let initialRevalidate: false | number;
+      let srcRoute: string | null;
+      let dataRoute: string;
+
+      if (isLazy) {
+        const pr = prerenderManifest.lazyRoutes[routeKey];
+        initialRevalidate = 1; // TODO: should Next.js provide this default?
+        // @ts-ignore
+        if (initialRevalidate === false) {
+          // Lazy routes cannot be "snapshotted" in time.
+          throw new Error('invariant isLazy: initialRevalidate !== false');
+        }
+        srcRoute = null;
+        dataRoute = pr.dataRoute;
+      } else {
+        const pr = prerenderManifest.routes[routeKey];
+        ({ initialRevalidate, srcRoute, dataRoute } = pr);
+      }
+
       const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
       const outputSrcPathPage =
         srcRoute == null
@@ -699,6 +717,9 @@ export const build = async ({
       const outputPathData = path.posix.join(entryDirectory, dataRoute);
 
       if (initialRevalidate === false) {
+        if (htmlFsRef == null || jsonFsRef == null) {
+          throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
+        }
         prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
       } else {
@@ -724,8 +745,14 @@ export const build = async ({
       }
     };
 
-    Object.keys(prerenderManifest.routes).forEach(onPrerenderRoute);
+    Object.keys(prerenderManifest.routes).forEach(route =>
+      onPrerenderRoute(route, false)
+    );
+    Object.keys(prerenderManifest.lazyRoutes).forEach(route =>
+      onPrerenderRoute(route, true)
+    );
 
+    // Dynamic pages for lazy routes should be handled by the lambda flow.
     Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
       const { dataRouteRegex } = prerenderManifest.lazyRoutes[lazyRoute];
       dynamicDataRoutes.push({
