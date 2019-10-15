@@ -672,7 +672,7 @@ export const build = async ({
     console.timeEnd(allLambdasLabel);
 
     let prerenderGroup = 1;
-    Object.keys(prerenderManifest.routes).forEach(_route => {
+    const onPrerenderRoute = (_route: string) => {
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = _route === '/' ? '/index' : _route;
 
@@ -722,7 +722,9 @@ export const build = async ({
 
         ++prerenderGroup;
       }
-    });
+    };
+
+    Object.keys(prerenderManifest.routes).forEach(onPrerenderRoute);
 
     Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
       const { dataRouteRegex } = prerenderManifest.lazyRoutes[lazyRoute];
