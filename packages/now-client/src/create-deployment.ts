@@ -66,7 +66,7 @@ export default function buildCreateDeployment(
     }
 
     // Get .nowignore
-    let ig = await getNowIgnore(path);
+    let { ig, ignores } = await getNowIgnore(path);
 
     debug(`Found ${ig.ignores.length} rules in .nowignore`);
 
@@ -76,7 +76,7 @@ export default function buildCreateDeployment(
 
     if (isDirectory && !Array.isArray(path)) {
       // Directory path
-      const dirContents = await readdir(path);
+      const dirContents = await readdir(path, ignores);
       const relativeFileList = dirContents.map(filePath =>
         relative(process.cwd(), filePath)
       );

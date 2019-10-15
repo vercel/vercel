@@ -118,7 +118,7 @@ function partiallyMatches(pathA: string, pathB: string): boolean {
   return false;
 }
 
-// Counts how often a path occurres when all placeholders
+// Counts how often a path occurs when all placeholders
 // got resolved, so we can check if they have conflicts
 function pathOccurrences(filePath: string, files: string[]): string[] {
   const getAbsolutePath = (unresolvedPath: string): string => {
@@ -226,7 +226,7 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
         error: {
           code: 'conflicting_path_segment',
           message:
-            `The segment "${conflictingSegment}" occurres more than ` +
+            `The segment "${conflictingSegment}" occurs more than ` +
             `one time in your path "${file}". Please make sure that ` +
             `every segment in a path is unique`
         }

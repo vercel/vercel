@@ -67,6 +67,20 @@ interface BuildParamsType extends BuildOptions {
 
 export const version = 2;
 
+const nowDevChildProcesses = new Set<ChildProcess>();
+
+['SIGINT', 'SIGTERM'].forEach(signal => {
+  process.once(signal as NodeJS.Signals, () => {
+    for (const child of nowDevChildProcesses) {
+      debug(
+        `Got ${signal}, killing dev server child process (pid=${child.pid})`
+      );
+      process.kill(child.pid, signal);
+    }
+    process.exit(0);
+  });
+});
+
 /**
  * Read package.json from files
  */
@@ -212,6 +226,7 @@ export const build = async ({
       const { forked, getUrl } = startDevServer(entryPath, runtimeEnv);
       urls[entrypoint] = await getUrl();
       childProcess = forked;
+      nowDevChildProcesses.add(forked);
       debug(
         `${name} Development server for ${entrypoint} running at ${urls[entrypoint]}`
       );
@@ -571,7 +586,7 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
-    const allLambdasLabel = `All serverless functions created`;
+    const allLambdasLabel = `All serverless functions created (in parallel)`;
     console.time(allLambdasLabel);
 
     await Promise.all(
@@ -587,7 +602,7 @@ export const build = async ({
           dynamicPages.push(normalizePage(pathname));
         }
 
-        const label = `Creating serverless function for page: "${page}"...`;
+        const label = `Created serverless function for "${page}" in`;
         console.time(label);
 
         const pageFileName = path.normalize(

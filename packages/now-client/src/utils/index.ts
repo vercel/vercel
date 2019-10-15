@@ -96,7 +96,7 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
 
   const ig = ignore().add(`${ignores.join('\n')}\n${nowIgnore}`);
 
-  return ig;
+  return { ig, ignores };
 }
 
 export const fetch = async (

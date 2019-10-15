@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "*.py",
+      "use": "@now/python"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200
+    }
+  ]
+}
