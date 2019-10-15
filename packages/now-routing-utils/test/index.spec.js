@@ -60,7 +60,6 @@ describe('normalizeRoutes', () => {
 
   test('normalizes src', () => {
     const expected = '^/about$';
-    const expected2 = '^\\/about$';
     const sources = [
       { src: '/about' },
       { src: '/about$' },
@@ -86,7 +85,7 @@ describe('normalizeRoutes', () => {
             `Normalizer returned: { handle: ${route.handle} } instead of { src: ${expected} }`
           );
         } else {
-          assert.ok(route.src === expected || route.src === expected2);
+          assert.strictEqual(route.src, expected);
         }
       });
     }
@@ -435,15 +434,15 @@ describe('getTransformedRoutes', () => {
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     const expected = [
       {
-        src: '^\\/v2$',
+        src: '^/v2$',
         headers: { Location: '/api.py' },
         status: 302,
       },
       { handle: 'filesystem' },
-      { src: '^\\/page$', dest: '/page.html', continue: true },
+      { src: '^/page$', dest: '/page.html', continue: true },
     ];
     assert.deepEqual(actual.routes, expected);
-    assertValid(actual.routes);
+    assertValid(actual.routes, routesSchema);
   });
 
   test('should validate schemas', () => {

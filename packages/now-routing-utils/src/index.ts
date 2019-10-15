@@ -1,6 +1,12 @@
 export * from './schemas';
 export * from './types';
-import { Route, Handler, NormalizedRoutes, GetRoutesProps } from './types';
+import {
+  Route,
+  Handler,
+  NormalizedRoutes,
+  GetRoutesProps,
+  NowError,
+} from './types';
 import {
   convertCleanUrls,
   convertRewrites,
@@ -59,6 +65,9 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
         route.src = `${route.src}$`;
       }
 
+      // Route src should strip escaped forward slash, its not special
+      route.src = route.src.replace(/\\\//g, '/');
+
       try {
         // This feels a bit dangerous if there would be a vulnerability in RegExp.
         new RegExp(route.src);
@@ -75,7 +84,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
     }
   }
 
-  const error =
+  const error: NowError | null =
     errors.length > 0
       ? {
           code: 'invalid_routes',
