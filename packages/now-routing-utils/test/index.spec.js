@@ -418,7 +418,7 @@ describe('normalizeRoutes', () => {
 
 describe('getTransformedRoutes', () => {
   test('should normalize nowConfig.routes', () => {
-    const nowConfig = { routes: [{ src: 'page', dest: '/page.html' }] };
+    const nowConfig = { routes: [{ src: '/page', dest: '/page.html' }] };
     const filePaths = [];
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     const expected = normalizeRoutes(nowConfig.routes);
@@ -428,18 +428,18 @@ describe('getTransformedRoutes', () => {
 
   test('should normalize redirects before rewrites', () => {
     const nowConfig = {
-      rewrites: [{ source: 'page', destination: '/page.html' }],
-      redirects: [{ source: 'v2', destination: '/api.py', statusCode: 302 }],
+      rewrites: [{ source: '/page', destination: '/page.html' }],
+      redirects: [{ source: '/v2', destination: '/api.py', statusCode: 302 }],
     };
     const filePaths = [];
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     const expected = [
       {
-        src: '^v2$',
+        src: '^\\/v2$',
         headers: { Location: '/api.py' },
         status: 302,
       },
-      { src: '^page$', dest: '/page.html', continue: true },
+      { src: '^\\/page$', dest: '/page.html', continue: true },
     ];
     assert.deepEqual(actual.routes, expected);
     assertValid(actual.routes);
@@ -449,16 +449,16 @@ describe('getTransformedRoutes', () => {
     const nowConfig = {
       cleanUrls: true,
       rewrites: [
-        { source: 'page', destination: '/page.html' },
-        { source: 'home', destination: '/index.html' },
+        { source: '/page', destination: '/page.html' },
+        { source: '/home', destination: '/index.html' },
       ],
       redirects: [
-        { source: 'version1', destination: '/api1.py' },
-        { source: 'version2', destination: '/api2.py', statusCode: 302 },
+        { source: '/version1', destination: '/api1.py' },
+        { source: '/version2', destination: '/api2.py', statusCode: 302 },
       ],
       headers: [
         {
-          source: '(.*)',
+          source: '/(.*)',
           headers: [
             {
               key: 'Access-Control-Allow-Origin',
@@ -467,7 +467,7 @@ describe('getTransformedRoutes', () => {
           ],
         },
         {
-          source: '404.html',
+          source: '/404.html',
           headers: [
             {
               key: 'Cache-Control',
