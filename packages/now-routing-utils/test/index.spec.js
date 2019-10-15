@@ -467,7 +467,7 @@ describe('getTransformedRoutes', () => {
           ],
         },
         {
-          source: '/404.html',
+          source: '/404',
           headers: [
             {
               key: 'Cache-Control',
