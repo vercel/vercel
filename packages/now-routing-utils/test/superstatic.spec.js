@@ -40,32 +40,32 @@ test('convertCleanUrls', () => {
   ]);
   const expected = [
     {
-      src: 'file.html',
-      headers: { Location: 'file' },
+      src: '/file.html',
+      headers: { Location: '/file' },
       status: 307,
     },
     {
-      src: 'path/to/file.html',
-      headers: { Location: 'path/to/file' },
+      src: '/path/to/file.html',
+      headers: { Location: '/path/to/file' },
       status: 307,
     },
-    { src: 'file', dest: 'file.html', continue: true },
-    { src: 'path/to/file', dest: 'path/to/file.html', continue: true },
+    { src: '/file', dest: '/file.html', continue: true },
+    { src: '/path/to/file', dest: '/path/to/file.html', continue: true },
   ];
   deepEqual(actual, expected);
 
   const mustMatch = [
-    ['file.html'],
-    ['path/to/file.html'],
-    ['file'],
-    ['path/to/file'],
+    ['/file.html'],
+    ['/path/to/file.html'],
+    ['/file'],
+    ['/path/to/file'],
   ];
 
   const mustNotMatch = [
-    ['file2.html', 'afile.html'],
-    ['path/to/file2.html', 'path/to/file'],
-    ['file2', 'afile'],
-    ['path/to/file2', 'file'],
+    ['/file2.html', '/afile.html'],
+    ['/path/to/file2.html', '/path/to/file'],
+    ['/file2', '/afile'],
+    ['/path/to/file2', '/file'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

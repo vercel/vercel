@@ -8,6 +8,7 @@ import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
 
 export function convertCleanUrls(filePaths: string[]): Route[] {
   const htmlFiles = filePaths
+    .map(toRoute)
     .filter(f => f.endsWith('.html'))
     .map(f => ({
       html: f,
@@ -99,4 +100,8 @@ function replaceSegments(segments: string[], destination: string) {
     destination = destination.replace(r, '$' + i);
   });
   return destination;
+}
+
+function toRoute(filePath: string) {
+  return filePath.startsWith('/') ? filePath : '/' + filePath;
 }
