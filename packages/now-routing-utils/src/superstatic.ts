@@ -95,15 +95,27 @@ function isString(key: any): key is string {
   return typeof key === 'string';
 }
 
-function replaceSegments(segments: string[], destination: string) {
-  segments.forEach((name, index) => {
-    const r = new RegExp(':' + name, 'g');
-    const i = index + 1; // js is base 0, regex is base 1
-    destination = destination.replace(r, '$' + i);
-  });
+function replaceSegments(segments: string[], destination: string): string {
+  if (destination.includes(':')) {
+    segments.forEach((name, index) => {
+      const r = new RegExp(':' + name, 'g');
+      destination = destination.replace(r, toSegmentDest(index));
+    });
+  } else if (segments.length > 0) {
+    let prefix = '?';
+    segments.forEach((name, index) => {
+      destination += `${prefix}${name}=${toSegmentDest(index)}`;
+      prefix = '&';
+    });
+  }
   return destination;
 }
 
-function toRoute(filePath: string) {
+function toSegmentDest(index: number): string {
+  const i = index + 1; // js is base 0, regex is base 1
+  return '$' + i.toString();
+}
+
+function toRoute(filePath: string): string {
   return filePath.startsWith('/') ? filePath : '/' + filePath;
 }

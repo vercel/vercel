@@ -81,7 +81,7 @@ test('convertRedirects', () => {
     },
     {
       source: '/projects/:id/:action',
-      destination: '/projects.html?id=:id&action=:action',
+      destination: '/projects.html',
     },
     { source: '/old/:segment/path', destination: '/new/path/:segment' },
   ]);
@@ -132,7 +132,7 @@ test('convertRewrites', () => {
   const actual = convertRewrites([
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/firebase/(.*)', destination: 'https://www.firebase.com' },
-    { source: '/projects/:id/edit', destination: '/projects.html?id=$1' },
+    { source: '/projects/:id/edit', destination: '/projects.html' },
   ]);
 
   const expected = [
