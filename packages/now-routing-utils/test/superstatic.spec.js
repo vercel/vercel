@@ -136,6 +136,7 @@ test('convertRewrites', () => {
   ]);
 
   const expected = [
+    { handle: 'filesystem' },
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', continue: true },
     {
       src: '^\\/firebase\\/(.*)$',
@@ -152,6 +153,7 @@ test('convertRewrites', () => {
   deepEqual(actual, expected);
 
   const mustMatch = [
+    [],
     ['/some/old/path'],
     ['/firebase/one', '/firebase/two'],
     ['/projects/one/edit', '/projects/two/edit'],
@@ -159,6 +161,7 @@ test('convertRewrites', () => {
   ];
 
   const mustNotMatch = [
+    [],
     ['/nope'],
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/delete', '/projects'],

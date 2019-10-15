@@ -104,6 +104,11 @@ export function getTransformedRoutes({
         message: 'Cannot define both `routes` and `cleanUrls`',
       });
     }
+    if (typeof trailingSlash !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `trailingSlash`',
+      });
+    }
     if (typeof redirects !== 'undefined') {
       errors.push({
         message: 'Cannot define both `routes` and `redirects`',
@@ -119,27 +124,22 @@ export function getTransformedRoutes({
         message: 'Cannot define both `routes` and `rewrites`',
       });
     }
-    if (typeof trailingSlash !== 'undefined') {
-      errors.push({
-        message: 'Cannot define both `routes` and `trailingSlash`',
-      });
-    }
   } else {
     routes = [];
     if (typeof cleanUrls !== 'undefined') {
       routes.push(...convertCleanUrls(filePaths));
     }
+    if (typeof trailingSlash !== 'undefined') {
+      routes.push(...convertTrailingSlash(trailingSlash));
+    }
     if (typeof redirects !== 'undefined') {
       routes.push(...convertRedirects(redirects));
-    }
-    if (typeof rewrites !== 'undefined') {
-      routes.push(...convertRewrites(rewrites));
     }
     if (typeof headers !== 'undefined') {
       routes.push(...convertHeaders(headers));
     }
-    if (typeof trailingSlash !== 'undefined') {
-      routes.push(...convertTrailingSlash(trailingSlash));
+    if (typeof rewrites !== 'undefined') {
+      routes.push(...convertRewrites(rewrites));
     }
   }
 

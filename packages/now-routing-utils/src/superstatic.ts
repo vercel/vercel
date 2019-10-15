@@ -43,11 +43,13 @@ export function convertRedirects(redirects: NowRedirect[]): Route[] {
 }
 
 export function convertRewrites(rewrites: NowRewrite[]): Route[] {
-  return rewrites.map(r => {
+  const routes: Route[] = rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
     return { src, dest, continue: true };
   });
+  routes.unshift({ handle: 'filesystem' });
+  return routes;
 }
 
 export function convertHeaders(headers: NowHeader[]): Route[] {

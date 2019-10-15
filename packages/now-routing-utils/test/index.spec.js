@@ -439,6 +439,7 @@ describe('getTransformedRoutes', () => {
         headers: { Location: '/api.py' },
         status: 302,
       },
+      { handle: 'filesystem' },
       { src: '^\\/page$', dest: '/page.html', continue: true },
     ];
     assert.deepEqual(actual.routes, expected);
