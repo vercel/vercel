@@ -586,7 +586,7 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
-    const allLambdasLabel = `All serverless functions created`;
+    const allLambdasLabel = `All serverless functions created (in parallel)`;
     console.time(allLambdasLabel);
 
     await Promise.all(
@@ -602,7 +602,7 @@ export const build = async ({
           dynamicPages.push(normalizePage(pathname));
         }
 
-        const label = `Creating serverless function for page: "${page}"...`;
+        const label = `Created serverless function for "${page}" in`;
         console.time(label);
 
         const pageFileName = path.normalize(
