@@ -437,7 +437,6 @@ describe('getTransformedRoutes', () => {
       {
         src: '^v2$',
         headers: { Location: '/api.py' },
-        continue: true,
         status: 302,
       },
       { src: '^page$', dest: '/page.html', continue: true },

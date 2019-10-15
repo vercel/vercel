@@ -18,7 +18,6 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
     src: o.html,
     headers: { Location: o.clean },
     status: 307,
-    continue: true,
   }));
 
   const rewrites: Route[] = htmlFiles.map(o => ({
@@ -38,7 +37,6 @@ export function convertRedirects(redirects: NowRedirect[]): Route[] {
       src,
       headers: { Location: loc },
       status: r.statusCode || 307,
-      continue: true,
     };
   });
 }
@@ -72,14 +70,12 @@ export function convertTrailingSlash(enable: boolean): Route[] {
       src: '^(.*[^\\/])$',
       headers: { Location: '$1/' },
       status: 307,
-      continue: true,
     });
   } else {
     routes.push({
       src: '^(.*)\\/$',
       headers: { Location: '$1' },
       status: 307,
-      continue: true,
     });
   }
   return routes;

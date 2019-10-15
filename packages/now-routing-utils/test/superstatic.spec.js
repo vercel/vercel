@@ -43,13 +43,11 @@ test('convertCleanUrls', () => {
       src: 'file.html',
       headers: { Location: 'file' },
       status: 307,
-      continue: true,
     },
     {
       src: 'path/to/file.html',
       headers: { Location: 'path/to/file' },
       status: 307,
-      continue: true,
     },
     { src: 'file', dest: 'file.html', continue: true },
     { src: 'path/to/file', dest: 'path/to/file.html', continue: true },
@@ -93,25 +91,21 @@ test('convertRedirects', () => {
       src: '^\\/some\\/old\\/path$',
       headers: { Location: '/some/new/path' },
       status: 307,
-      continue: true,
     },
     {
       src: '^\\/firebase\\/(.*)$',
       headers: { Location: 'https://www.firebase.com' },
       status: 302,
-      continue: true,
     },
     {
       src: '^\\/projects\\/([^\\/]+?)\\/([^\\/]+?)$',
       headers: { Location: '/projects.html?id=$1&action=$2' },
       status: 307,
-      continue: true,
     },
     {
       src: '^\\/old\\/([^\\/]+?)\\/path$',
       headers: { Location: '/new/path/$1' },
       status: 307,
-      continue: true,
     },
   ];
 
@@ -235,7 +229,6 @@ test('convertTrailingSlash enabled', () => {
       src: '^(.*[^\\/])$',
       headers: { Location: '$1/' },
       status: 307,
-      continue: true,
     },
   ];
   deepEqual(actual, expected);
@@ -254,7 +247,6 @@ test('convertTrailingSlash disabled', () => {
       src: '^(.*)\\/$',
       headers: { Location: '$1' },
       status: 307,
-      continue: true,
     },
   ];
   deepEqual(actual, expected);
