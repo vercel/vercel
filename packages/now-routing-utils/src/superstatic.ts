@@ -18,7 +18,7 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
   const redirects: Route[] = htmlFiles.map(o => ({
     src: o.html,
     headers: { Location: o.clean },
-    status: 307,
+    status: 301,
   }));
 
   const rewrites: Route[] = htmlFiles.map(o => ({

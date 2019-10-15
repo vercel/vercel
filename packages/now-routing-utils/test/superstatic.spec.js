@@ -42,12 +42,12 @@ test('convertCleanUrls', () => {
     {
       src: '/file.html',
       headers: { Location: '/file' },
-      status: 307,
+      status: 301,
     },
     {
       src: '/path/to/file.html',
       headers: { Location: '/path/to/file' },
-      status: 307,
+      status: 301,
     },
     { src: '/file', dest: '/file.html', continue: true },
     { src: '/path/to/file', dest: '/path/to/file.html', continue: true },
