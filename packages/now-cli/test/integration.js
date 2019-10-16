@@ -32,12 +32,12 @@ const pickUrl = stdout => {
 
 const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
 const createDirectory = dest => fs.mkdirSync(dest);
-const testv1 = (...args) => {
+const testv1 = async (...args) => {
   if (!process.version.startsWith('v12.')) {
     // Only run v1 tests on Node 12
     return;
   }
-  return test(args);
+  await test(...args);
 };
 
 const waitForDeployment = async href => {
