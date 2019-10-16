@@ -6,7 +6,9 @@
 import pathToRegexp from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
 
-export function convertCleanUrls(filePaths: string[]): Route[] {
+export function convertCleanUrls(
+  filePaths: string[]
+): { redirects: Route[]; rewrites: Route[] } {
   const htmlFiles = filePaths
     .map(toRoute)
     .filter(f => f.endsWith('.html'))
@@ -27,7 +29,7 @@ export function convertCleanUrls(filePaths: string[]): Route[] {
     continue: true,
   }));
 
-  return redirects.concat(rewrites);
+  return { redirects, rewrites };
 }
 
 export function convertRedirects(redirects: NowRedirect[]): Route[] {
@@ -48,7 +50,6 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
     const dest = replaceSegments(segments, r.destination);
     return { src, dest, continue: true };
   });
-  routes.unshift({ handle: 'filesystem' });
   return routes;
 }
 

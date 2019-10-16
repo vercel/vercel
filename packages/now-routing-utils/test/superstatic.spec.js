@@ -30,7 +30,7 @@ function assertRegexMatches(actual, mustMatch, mustNotMatch) {
 }
 
 test('convertCleanUrls', () => {
-  const actual = convertCleanUrls([
+  const { redirects, rewrites } = convertCleanUrls([
     'file.txt',
     'path/to/file.txt',
     'file.js',
@@ -38,7 +38,7 @@ test('convertCleanUrls', () => {
     'file.html',
     'path/to/file.html',
   ]);
-  const expected = [
+  const expectedRedirects = [
     {
       src: '/file.html',
       headers: { Location: '/file' },
@@ -49,26 +49,13 @@ test('convertCleanUrls', () => {
       headers: { Location: '/path/to/file' },
       status: 301,
     },
+  ];
+  const expectedRewrites = [
     { src: '/file', dest: '/file.html', continue: true },
     { src: '/path/to/file', dest: '/path/to/file.html', continue: true },
   ];
-  deepEqual(actual, expected);
-
-  const mustMatch = [
-    ['/file.html'],
-    ['/path/to/file.html'],
-    ['/file'],
-    ['/path/to/file'],
-  ];
-
-  const mustNotMatch = [
-    ['/file2.html', '/afile.html'],
-    ['/path/to/file2.html', '/path/to/file'],
-    ['/file2', '/afile'],
-    ['/path/to/file2', '/file'],
-  ];
-
-  assertRegexMatches(actual, mustMatch, mustNotMatch);
+  deepEqual(redirects, expectedRedirects);
+  deepEqual(rewrites, expectedRewrites);
 });
 
 test('convertRedirects', () => {
@@ -136,7 +123,6 @@ test('convertRewrites', () => {
   ]);
 
   const expected = [
-    { handle: 'filesystem' },
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', continue: true },
     {
       src: '^\\/firebase\\/(.*)$',
@@ -153,7 +139,6 @@ test('convertRewrites', () => {
   deepEqual(actual, expected);
 
   const mustMatch = [
-    [],
     ['/some/old/path'],
     ['/firebase/one', '/firebase/two'],
     ['/projects/one/edit', '/projects/two/edit'],
@@ -161,7 +146,6 @@ test('convertRewrites', () => {
   ];
 
   const mustNotMatch = [
-    [],
     ['/nope'],
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/delete', '/projects'],

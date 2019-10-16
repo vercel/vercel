@@ -425,22 +425,38 @@ describe('getTransformedRoutes', () => {
     assertValid(actual.routes);
   });
 
-  test('should normalize redirects before rewrites', () => {
+  test('should normalize all redirects before rewrites', () => {
     const nowConfig = {
-      rewrites: [{ source: '/page', destination: '/page.html' }],
-      redirects: [{ source: '/v2', destination: '/api.py', statusCode: 302 }],
+      cleanUrls: true,
+      rewrites: [{ source: '/v1', destination: '/v2/api.py' }],
+      redirects: [
+        { source: '/help', destination: '/support', statusCode: 302 },
+      ],
     };
-    const filePaths = [];
+    const filePaths = ['/index.html', '/support.html', '/v2/api.py'];
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     const expected = [
       {
-        src: '^/v2$',
-        headers: { Location: '/api.py' },
+        src: '^/index.html$',
+        headers: { Location: '/index' },
+        status: 301,
+      },
+      {
+        src: '^/support.html$',
+        headers: { Location: '/support' },
+        status: 301,
+      },
+      {
+        src: '^/help$',
+        headers: { Location: '/support' },
         status: 302,
       },
       { handle: 'filesystem' },
-      { src: '^/page$', dest: '/page.html', continue: true },
+      { src: '^/index$', dest: '/index.html', continue: true },
+      { src: '^/support$', dest: '/support.html', continue: true },
+      { src: '^/v1$', dest: '/v2/api.py', continue: true },
     ];
+    assert.deepEqual(actual.error, null);
     assert.deepEqual(actual.routes, expected);
     assertValid(actual.routes, routesSchema);
   });
