@@ -364,7 +364,7 @@ test('detect update command', async t => {
   }
 });
 
-test('login with unregisterd user', async t => {
+test('login with unregistered user', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['login', `${session}@${session}.com`, ...defaultArgs],
@@ -390,8 +390,9 @@ test('deploy a node microservice', async t => {
 
   let { stdout, stderr, code } = await execa(
     binaryPath,
-    [target, '--public', '--name', session, ...defaultArgs],
+    ['--public', '--name', session, ...defaultArgs],
     {
+      cwd: target,
       reject: false,
     }
   );
@@ -406,6 +407,8 @@ test('deploy a node microservice', async t => {
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session, formatOutput({ stdout, stderr }));
+
+  await waitForDeployment(href);
 
   // Send a test request to the deployment
   let response = await fetch(href);
