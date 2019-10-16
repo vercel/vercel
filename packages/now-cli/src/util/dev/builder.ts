@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
+import { promisify } from 'util';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
@@ -11,6 +12,7 @@ import chalk from 'chalk';
 import which from 'which';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
+import _treeKill from 'tree-kill';
 
 import { Output } from '../output';
 import highlight from '../output/highlight';
@@ -38,6 +40,8 @@ interface BuildMessageResult extends BuildMessage {
   result?: BuilderOutputs | BuildResult;
   error?: object;
 }
+
+const treeKill = promisify(_treeKill);
 
 let nodeBinPromise: Promise<string>;
 
@@ -398,4 +402,28 @@ export async function getBuildMatches(
   }
 
   return matches;
+}
+
+export async function shutdownBuilder(
+  match: BuildMatch,
+  { debug }: Output
+): Promise<void> {
+  const ops: Promise<void>[] = [];
+
+  if (match.buildProcess) {
+    debug(`Killing builder sub-process with PID ${match.buildProcess.pid}`);
+    ops.push(treeKill(match.buildProcess.pid));
+    delete match.buildProcess;
+  }
+
+  if (match.buildOutput) {
+    for (const asset of Object.values(match.buildOutput)) {
+      if (asset.type === 'Lambda' && asset.fn) {
+        debug(`Shutting down Lambda function`);
+        ops.push(asset.fn.destroy());
+      }
+    }
+  }
+
+  await Promise.all(ops);
 }

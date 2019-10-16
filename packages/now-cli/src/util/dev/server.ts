@@ -42,7 +42,7 @@ import isURL from './is-url';
 import devRouter from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
-import { executeBuild, getBuildMatches } from './builder';
+import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import {
   builderDirPromise,
@@ -347,13 +347,18 @@ export default class DevServer {
     }
 
     // Delete build matches that no longer exists
+    const ops: Promise<void>[] = [];
     for (const src of this.buildMatches.keys()) {
       if (!sources.includes(src)) {
         this.output.debug(`Removing build match for "${src}"`);
-        // TODO: shutdown lambda functions
+        const match = this.buildMatches.get(src);
+        if (match) {
+          ops.push(shutdownBuilder(match, this.output));
+        }
         this.buildMatches.delete(src);
       }
     }
+    await Promise.all(ops);
 
     // Add the new matches to the `buildMatches` map
     const blockingBuilds: Promise<void>[] = [];
@@ -429,6 +434,7 @@ export default class DevServer {
       } = buildMatch;
       if (pkg.name === '@now/static') continue;
       if (pkg.name && updatedBuilders.includes(pkg.name)) {
+        shutdownBuilder(buildMatch, this.output);
         this.buildMatches.delete(src);
         this.output.debug(`Invalidated build match for "${src}"`);
       }
@@ -833,22 +839,7 @@ export default class DevServer {
     const ops: Promise<void>[] = [];
 
     for (const match of this.buildMatches.values()) {
-      if (match.buildProcess) {
-        this.output.debug(
-          `Killing builder sub-process with PID ${match.buildProcess.pid}`
-        );
-        process.kill(match.buildProcess.pid);
-        delete match.buildProcess;
-      }
-
-      if (!match.buildOutput) continue;
-
-      for (const asset of Object.values(match.buildOutput)) {
-        if (asset.type === 'Lambda' && asset.fn) {
-          this.output.debug(`Shutting down Lambda function`);
-          ops.push(asset.fn.destroy());
-        }
-      }
+      ops.push(shutdownBuilder(match, this.output));
     }
 
     ops.push(close(this.server));
