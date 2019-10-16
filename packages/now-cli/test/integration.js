@@ -265,6 +265,8 @@ testv1('deploy using --local-config flag type cloud v1', async t => {
 
   const { host } = new URL(stdout);
   await waitForDeployment(`https://${host}/test.html`);
+  await waitForDeployment(`https://${host}/folder/file1.txt`);
+  await waitForDeployment(`https://${host}/folder/sub/file2.txt`);
 
   const testRes = await fetch(`https://${host}/test.html`);
   const testText = await testRes.text();
