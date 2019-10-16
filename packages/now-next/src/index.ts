@@ -720,8 +720,14 @@ export const build = async ({
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
-        prerenders[outputPathPage] = htmlFsRef;
+
+        const outputPathPageHtml = outputPathPage.concat('.html');
+        prerenders[outputPathPageHtml] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
+        exportedPageRoutes.push({
+          src: outputPathPage,
+          dest: outputPathPageHtml,
+        });
       } else {
         const lambda = lambdas[outputSrcPathPage];
         if (lambda == null) {
