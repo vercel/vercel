@@ -160,12 +160,12 @@ function getPathsInside(entryDirectory: string, files: Files) {
 }
 
 function normalizePage(page: string): string {
-  // remove '/index' from the end
-  page = page.replace(/\/index$/, '/');
   // Resolve on anything that doesn't start with `/`
   if (!page.startsWith('/')) {
     page = `/${page}`;
   }
+  // remove '/index' from the end
+  page = page.replace(/\/index$/, '/');
   return page;
 }
 
