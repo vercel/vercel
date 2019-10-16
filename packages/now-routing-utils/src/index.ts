@@ -1,36 +1,25 @@
-export type NowError = {
-  code: string;
-  message: string;
-  errors: {
-    message: string;
-    src?: string;
-    handle?: string;
-  }[];
-  sha?: string; // File errors
-};
-
-export type Source = {
-  src: string;
-  dest?: string;
-  headers?: {};
-  methods?: string[];
-  continue?: boolean;
-  status?: number;
-};
-
-export type Handler = {
-  handle: string;
-};
-
-export type Route = Source | Handler;
+export * from './schemas';
+export * from './types';
+import {
+  Route,
+  Handler,
+  NormalizedRoutes,
+  GetRoutesProps,
+  NowError,
+} from './types';
+import {
+  convertCleanUrls,
+  convertRewrites,
+  convertRedirects,
+  convertHeaders,
+  convertTrailingSlash,
+} from './superstatic';
 
 export function isHandler(route: Route): route is Handler {
   return typeof (route as Handler).handle !== 'undefined';
 }
 
-export function normalizeRoutes(
-  inputRoutes: Array<Route> | null
-): { routes: Array<Route> | null; error: NowError | null } {
+export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
     return { routes: inputRoutes, error: null };
   }
@@ -48,19 +37,19 @@ export function normalizeRoutes(
       if (Object.keys(route).length !== 1) {
         errors.push({
           message: `Cannot have any other keys when handle is used (handle: ${route.handle})`,
-          handle: route.handle
+          handle: route.handle,
         });
       }
       if (!['filesystem'].includes(route.handle)) {
         errors.push({
           message: `This is not a valid handler (handle: ${route.handle})`,
-          handle: route.handle
+          handle: route.handle,
         });
       }
       if (handling.includes(route.handle)) {
         errors.push({
           message: `You can only handle something once (handle: ${route.handle})`,
-          handle: route.handle
+          handle: route.handle,
         });
       } else {
         handling.push(route.handle);
@@ -76,23 +65,26 @@ export function normalizeRoutes(
         route.src = `${route.src}$`;
       }
 
+      // Route src should strip escaped forward slash, its not special
+      route.src = route.src.replace(/\\\//g, '/');
+
       try {
         // This feels a bit dangerous if there would be a vulnerability in RegExp.
         new RegExp(route.src);
       } catch (err) {
         errors.push({
           message: `Invalid regular expression: "${route.src}"`,
-          src: route.src
+          src: route.src,
         });
       }
     } else {
       errors.push({
-        message: 'A route must set either handle or src'
+        message: 'A route must set either handle or src',
       });
     }
   }
 
-  const error =
+  const error: NowError | null =
     errors.length > 0
       ? {
           code: 'invalid_routes',
@@ -101,63 +93,89 @@ export function normalizeRoutes(
             null,
             2
           )}`,
-          errors
+          errors,
         }
       : null;
 
   return { routes, error };
 }
 
-/**
- * An ajv schema for the routes array
- */
-export const schema = {
-  type: 'array',
-  maxItems: 1024,
-  items: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      src: {
-        type: 'string',
-        maxLength: 4096
-      },
-      dest: {
-        type: 'string',
-        maxLength: 4096
-      },
-      methods: {
-        type: 'array',
-        maxItems: 10,
-        items: {
-          type: 'string',
-          maxLength: 32
-        }
-      },
-      headers: {
-        type: 'object',
-        additionalProperties: false,
-        minProperties: 1,
-        maxProperties: 100,
-        patternProperties: {
-          '^.{1,256}$': {
-            type: 'string',
-            maxLength: 4096
-          }
-        }
-      },
-      handle: {
-        type: 'string',
-        maxLength: 32
-      },
-      continue: {
-        type: 'boolean'
-      },
-      status: {
-        type: 'integer',
-        minimum: 100,
-        maximum: 999
-      }
+export function getTransformedRoutes({
+  nowConfig,
+  filePaths,
+}: GetRoutesProps): NormalizedRoutes {
+  const { cleanUrls, rewrites, redirects, headers, trailingSlash } = nowConfig;
+  let { routes } = nowConfig;
+  const errors: { message: string }[] = [];
+  if (typeof routes !== 'undefined') {
+    if (typeof cleanUrls !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `cleanUrls`',
+      });
+    }
+    if (typeof trailingSlash !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `trailingSlash`',
+      });
+    }
+    if (typeof redirects !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `redirects`',
+      });
+    }
+    if (typeof headers !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `headers`',
+      });
+    }
+    if (typeof rewrites !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `rewrites`',
+      });
+    }
+  } else {
+    routes = [];
+    let cleanUrlsRewrites: Route[] | undefined;
+    if (typeof cleanUrls !== 'undefined') {
+      const cleanUrls = convertCleanUrls(filePaths);
+      cleanUrlsRewrites = cleanUrls.rewrites;
+      routes.push(...cleanUrls.redirects);
+    }
+    if (typeof trailingSlash !== 'undefined') {
+      routes.push(...convertTrailingSlash(trailingSlash));
+    }
+    if (typeof redirects !== 'undefined') {
+      routes.push(...convertRedirects(redirects));
+    }
+    if (typeof headers !== 'undefined') {
+      routes.push(...convertHeaders(headers));
+    }
+    if (typeof cleanUrlsRewrites !== 'undefined') {
+      routes.push(...cleanUrlsRewrites);
+    }
+    if (
+      typeof cleanUrlsRewrites !== 'undefined' ||
+      typeof rewrites !== 'undefined'
+    ) {
+      routes.push({ handle: 'filesystem' });
+    }
+    if (typeof rewrites !== 'undefined') {
+      routes.push(...convertRewrites(rewrites));
     }
   }
-};
+
+  if (errors.length > 0) {
+    const error = {
+      code: 'invalid_routes',
+      message: `One or more invalid routes were found: \n${JSON.stringify(
+        errors,
+        null,
+        2
+      )}`,
+      errors,
+    };
+    return { routes: [], error };
+  }
+
+  return normalizeRoutes(routes);
+}
