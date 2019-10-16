@@ -451,9 +451,9 @@ describe('getTransformedRoutes', () => {
         headers: { Location: '/support' },
         status: 302,
       },
-      { handle: 'filesystem' },
       { src: '^/index$', dest: '/index.html', continue: true },
       { src: '^/support$', dest: '/support.html', continue: true },
+      { handle: 'filesystem' },
       { src: '^/v1$', dest: '/v2/api.py', continue: true },
     ];
     assert.deepEqual(actual.error, null);

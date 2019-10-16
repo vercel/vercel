@@ -150,14 +150,14 @@ export function getTransformedRoutes({
     if (typeof headers !== 'undefined') {
       routes.push(...convertHeaders(headers));
     }
+    if (typeof cleanUrlsRewrites !== 'undefined') {
+      routes.push(...cleanUrlsRewrites);
+    }
     if (
       typeof cleanUrlsRewrites !== 'undefined' ||
       typeof rewrites !== 'undefined'
     ) {
       routes.push({ handle: 'filesystem' });
-    }
-    if (typeof cleanUrlsRewrites !== 'undefined') {
-      routes.push(...cleanUrlsRewrites);
     }
     if (typeof rewrites !== 'undefined') {
       routes.push(...convertRewrites(rewrites));
