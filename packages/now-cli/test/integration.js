@@ -37,12 +37,13 @@ const waitForDeployment = async href => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
+  const inspectorText = '<title>Deployment Overview';
 
   // eslint-disable-next-line
   while (true) {
     const response = await fetch(href, { redirect: 'manual' });
-
-    if (response.status === 200) {
+    const text = await response.text();
+    if (response.status === 200 && !text.includes(inspectorText)) {
       break;
     }
 
@@ -51,7 +52,7 @@ const waitForDeployment = async href => {
     if (current - start > max || response.status >= 500) {
       throw new Error(
         `Waiting for "${href}" failed since it took longer than 4 minutes.\n` +
-          `Received status ${response.status}:\n"${await response.text()}"`
+          `Received status ${response.status}:\n"${text}"`
       );
     }
 
