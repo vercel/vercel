@@ -1,7 +1,7 @@
 {
   "name": "@now/routing-utils",
   "version": "1.2.4",
-  "description": "ZEIT Now route validation utilities",
+  "description": "ZEIT Now routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -18,6 +18,9 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "test-unit": "jest --env node --verbose --runInBand"
+  },
+  "dependencies": {
+    "path-to-regexp": "3.1.0"
   },
   "devDependencies": {
     "ajv": "^6.0.0",

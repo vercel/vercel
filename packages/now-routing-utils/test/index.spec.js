@@ -1,18 +1,28 @@
 const assert = require('assert');
 const Ajv = require('ajv');
-const { normalizeRoutes, isHandler, schema } = require('../dist');
+const {
+  normalizeRoutes,
+  isHandler,
+  routesSchema,
+  rewritesSchema,
+  redirectsSchema,
+  headersSchema,
+  cleanUrlsSchema,
+  trailingSlashSchema,
+  getTransformedRoutes,
+} = require('../');
 
 const ajv = new Ajv();
-const assertValid = (routes) => {
+const assertValid = (data, schema = routesSchema) => {
   const validate = ajv.compile(schema);
-  const valid = validate(routes);
+  const valid = validate(data);
 
   if (!valid) console.log(validate.errors);
   assert.equal(valid, true);
 };
-const assertError = (routes, errors) => {
+const assertError = (data, errors, schema = routesSchema) => {
   const validate = ajv.compile(schema);
-  const valid = validate(routes);
+  const valid = validate(data);
 
   assert.equal(valid, false);
   assert.deepEqual(validate.errors, errors);
@@ -50,7 +60,6 @@ describe('normalizeRoutes', () => {
 
   test('normalizes src', () => {
     const expected = '^/about$';
-    const expected2 = '^\\/about$';
     const sources = [
       { src: '/about' },
       { src: '/about$' },
@@ -70,15 +79,13 @@ describe('normalizeRoutes', () => {
     assert.notEqual(normalized.routes, null);
 
     if (normalized.routes) {
-      normalized.routes.forEach((route) => {
+      normalized.routes.forEach(route => {
         if (isHandler(route)) {
           assert.fail(
-            `Normalizer returned: { handle: ${
-              route.handle
-            } } instead of { src: ${expected} }`,
+            `Normalizer returned: { handle: ${route.handle} } instead of { src: ${expected} }`
           );
         } else {
-          assert.ok(route.src === expected || route.src === expected2);
+          assert.strictEqual(route.src, expected);
         }
       });
     }
@@ -147,7 +154,7 @@ describe('normalizeRoutes', () => {
       message: `One or more invalid routes were found: \n${JSON.stringify(
         errors,
         null,
-        2,
+        2
       )}`,
       errors,
     });
@@ -202,7 +209,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/src/type',
         },
-      ],
+      ]
     );
   });
 
@@ -224,7 +231,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/dest/type',
         },
-      ],
+      ]
     );
   });
 
@@ -246,7 +253,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/methods/type',
         },
-      ],
+      ]
     );
   });
 
@@ -268,7 +275,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/methods/items/type',
         },
-      ],
+      ]
     );
   });
 
@@ -290,7 +297,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/headers/type',
         },
-      ],
+      ]
     );
   });
 
@@ -315,7 +322,7 @@ describe('normalizeRoutes', () => {
           schemaPath:
             '#/items/properties/headers/patternProperties/%5E.%7B1%2C256%7D%24/type',
         },
-      ],
+      ]
     );
   });
 
@@ -337,7 +344,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/handle/type',
         },
-      ],
+      ]
     );
   });
 
@@ -359,7 +366,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/continue/type',
         },
-      ],
+      ]
     );
   });
 
@@ -381,7 +388,7 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/properties/status/type',
         },
-      ],
+      ]
     );
   });
 
@@ -403,7 +410,98 @@ describe('normalizeRoutes', () => {
           },
           schemaPath: '#/items/additionalProperties',
         },
-      ],
+      ]
     );
+  });
+});
+
+describe('getTransformedRoutes', () => {
+  test('should normalize nowConfig.routes', () => {
+    const nowConfig = { routes: [{ src: '/page', dest: '/page.html' }] };
+    const filePaths = [];
+    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    const expected = normalizeRoutes(nowConfig.routes);
+    assert.deepEqual(actual, expected);
+    assertValid(actual.routes);
+  });
+
+  test('should normalize all redirects before rewrites', () => {
+    const nowConfig = {
+      cleanUrls: true,
+      rewrites: [{ source: '/v1', destination: '/v2/api.py' }],
+      redirects: [
+        { source: '/help', destination: '/support', statusCode: 302 },
+      ],
+    };
+    const filePaths = ['/index.html', '/support.html', '/v2/api.py'];
+    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    const expected = [
+      {
+        src: '^/index.html$',
+        headers: { Location: '/index' },
+        status: 301,
+      },
+      {
+        src: '^/support.html$',
+        headers: { Location: '/support' },
+        status: 301,
+      },
+      {
+        src: '^/help$',
+        headers: { Location: '/support' },
+        status: 302,
+      },
+      { src: '^/index$', dest: '/index.html', continue: true },
+      { src: '^/support$', dest: '/support.html', continue: true },
+      { handle: 'filesystem' },
+      { src: '^/v1$', dest: '/v2/api.py', continue: true },
+    ];
+    assert.deepEqual(actual.error, null);
+    assert.deepEqual(actual.routes, expected);
+    assertValid(actual.routes, routesSchema);
+  });
+
+  test('should validate schemas', () => {
+    const nowConfig = {
+      cleanUrls: true,
+      rewrites: [
+        { source: '/page', destination: '/page.html' },
+        { source: '/home', destination: '/index.html' },
+      ],
+      redirects: [
+        { source: '/version1', destination: '/api1.py' },
+        { source: '/version2', destination: '/api2.py', statusCode: 302 },
+      ],
+      headers: [
+        {
+          source: '/(.*)',
+          headers: [
+            {
+              key: 'Access-Control-Allow-Origin',
+              value: '*',
+            },
+          ],
+        },
+        {
+          source: '/404',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'max-age=300',
+            },
+            {
+              key: 'Set-Cookie',
+              value: 'error=404',
+            },
+          ],
+        },
+      ],
+      trailingSlashSchema: false,
+    };
+    assertValid(nowConfig.cleanUrls, cleanUrlsSchema);
+    assertValid(nowConfig.rewrites, rewritesSchema);
+    assertValid(nowConfig.redirects, redirectsSchema);
+    assertValid(nowConfig.headers, headersSchema);
+    assertValid(nowConfig.trailingSlashSchema, trailingSlashSchema);
   });
 });
