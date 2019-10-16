@@ -754,14 +754,14 @@ export const build = async ({
 
     // Dynamic pages for lazy routes should be handled by the lambda flow.
     Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
-      const { dataRouteRegex } = prerenderManifest.lazyRoutes[lazyRoute];
+      const { dataRouteRegex, dataRoute } = prerenderManifest.lazyRoutes[
+        lazyRoute
+      ];
       dynamicDataRoutes.push({
         // Next.js provided data route regex
         src: dataRouteRegex.replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
         // Location of lambda in builder output
-        dest: `^${appMountPrefixNoTrailingSlash}${
-          lazyRoute === '/' ? '/index' : lazyRoute
-        }$`,
+        dest: path.posix.join(entryDirectory, dataRoute),
       });
     });
   }
