@@ -34,6 +34,7 @@ const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
 const createDirectory = dest => fs.mkdirSync(dest);
 
 const waitForDeployment = async href => {
+  console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
 
@@ -254,7 +255,8 @@ test('deploy using --local-config flag type cloud v1', async t => {
 
   t.is(code, 0);
 
-  const { host } = new URL(stdout);
+  const { href, host } = new URL(stdout);
+  await waitForDeployment(href);
 
   const testRes = await fetch(`https://${host}/test.html`);
   const testText = await testRes.text();
