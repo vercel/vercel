@@ -32,16 +32,25 @@ const pickUrl = stdout => {
 
 const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
 const createDirectory = dest => fs.mkdirSync(dest);
+const testv1 = async (...args) => {
+  if (!process.version.startsWith('v12.')) {
+    // Only run v1 tests on Node 12
+    return;
+  }
+  await test(...args);
+};
 
 const waitForDeployment = async href => {
+  console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
+  const inspectorText = '<title>Deployment Overview';
 
   // eslint-disable-next-line
   while (true) {
     const response = await fetch(href, { redirect: 'manual' });
-
-    if (response.status === 200) {
+    const text = await response.text();
+    if (response.status === 200 && !text.includes(inspectorText)) {
       break;
     }
 
@@ -50,7 +59,7 @@ const waitForDeployment = async href => {
     if (current - start > max || response.status >= 500) {
       throw new Error(
         `Waiting for "${href}" failed since it took longer than 4 minutes.\n` +
-          `Received status ${response.status}:\n"${await response.text()}"`
+          `Received status ${response.status}:\n"${text}"`
       );
     }
 
@@ -236,7 +245,7 @@ test('deploy using --local-config flag v2', async t => {
   t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
 });
 
-test('deploy using --local-config flag type cloud v1', async t => {
+testv1('deploy using --local-config flag type cloud v1', async t => {
   const target = fixture('local-config-cloud-v1');
 
   const { stdout, stderr, code } = await execa(
@@ -255,6 +264,9 @@ test('deploy using --local-config flag type cloud v1', async t => {
   t.is(code, 0);
 
   const { host } = new URL(stdout);
+  await waitForDeployment(`https://${host}/test.html`);
+  await waitForDeployment(`https://${host}/folder/file1.txt`);
+  await waitForDeployment(`https://${host}/folder/sub/file2.txt`);
 
   const testRes = await fetch(`https://${host}/test.html`);
   const testText = await testRes.text();
@@ -362,7 +374,7 @@ test('detect update command', async t => {
   }
 });
 
-test('login with unregisterd user', async t => {
+test('login with unregistered user', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['login', `${session}@${session}.com`, ...defaultArgs],
@@ -383,13 +395,14 @@ test('login with unregisterd user', async t => {
   t.is(last, goal);
 });
 
-test('deploy a node microservice', async t => {
+testv1('deploy a v1 node microservice', async t => {
   const target = fixture('node');
 
   let { stdout, stderr, code } = await execa(
     binaryPath,
-    [target, '--public', '--name', session, ...defaultArgs],
+    ['--public', '--name', session, ...defaultArgs],
     {
+      cwd: target,
       reject: false,
     }
   );
@@ -404,6 +417,8 @@ test('deploy a node microservice', async t => {
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session, formatOutput({ stdout, stderr }));
+
+  await waitForDeployment(href);
 
   // Send a test request to the deployment
   let response = await fetch(href);
@@ -436,30 +451,33 @@ test('deploy a node microservice', async t => {
   t.is(response.status, 404);
 });
 
-test('deploy a node microservice and infer name from `package.json`', async t => {
-  const target = fixture('node');
+testv1(
+  'deploy a v1 node microservice and infer name from `package.json`',
+  async t => {
+    const target = fixture('node');
 
-  const { stdout, stderr, code } = await execa(
-    binaryPath,
-    [target, '--public', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
+    const { stdout, stderr, code } = await execa(
+      binaryPath,
+      [target, '--public', ...defaultArgs],
+      {
+        reject: false,
+      }
+    );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(code);
+    console.log(stderr);
+    console.log(stdout);
+    console.log(code);
 
-  // Ensure the exit code is right
-  t.is(code, 0);
+    // Ensure the exit code is right
+    t.is(code, 0);
 
-  // Test if the output is really a URL
-  const { host } = new URL(stdout);
-  t.true(host.startsWith(`node-test-${contextName}`));
-});
+    // Test if the output is really a URL
+    const { host } = new URL(stdout);
+    t.true(host.startsWith(`node-test-${contextName}`));
+  }
+);
 
-test('deploy a dockerfile project', async t => {
+testv1('deploy a v1 dockerfile project', async t => {
   const target = fixture('dockerfile');
 
   // Add the "name" field to the `now.json` file
@@ -491,11 +509,7 @@ test('deploy a dockerfile project', async t => {
   await waitForDeployment(href);
 
   // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
+  const response = await fetch(href);
   t.is(response.status, 200);
   const contentType = response.headers.get('content-type');
   const textContent = await response.text();
@@ -545,7 +559,7 @@ test('test invalid type for alias rules', async t => {
   t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
 });
 
-test('apply alias rules', async t => {
+testv1('apply alias rules', async t => {
   const fixturePath = fixture('alias-rules');
 
   // Create the rules file
@@ -568,7 +582,7 @@ test('apply alias rules', async t => {
   t.is(output.code, 0, formatOutput(output));
 });
 
-test('find deployment in list', async t => {
+testv1('find deployment in list', async t => {
   const output = await execa(binaryPath, ['--debug', 'ls', ...defaultArgs], {
     reject: false,
   });
@@ -590,7 +604,7 @@ test('find deployment in list', async t => {
   t.is(target, context.deployment, formatOutput(output));
 });
 
-test('find deployment in list with mixed args', async t => {
+testv1('find deployment in list with mixed args', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['--debug', 'ls', ...defaultArgs],
@@ -616,7 +630,7 @@ test('find deployment in list with mixed args', async t => {
   t.is(target, context.deployment, formatOutput({ stdout, stderr }));
 });
 
-test('create an explicit alias for deployment', async t => {
+testv1('create an explicit alias for deployment', async t => {
   const hosts = {
     deployment: context.deployment,
     alias: `${session}.now.sh`,
@@ -650,7 +664,7 @@ test('create an explicit alias for deployment', async t => {
   context.alias = hosts.alias;
 });
 
-test('list the aliases', async t => {
+testv1('list the aliases', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['alias', 'ls', ...defaultArgs],
@@ -669,7 +683,7 @@ test('list the aliases', async t => {
   t.true(results.includes(context.deployment));
 });
 
-test('scale the alias', async t => {
+testv1('scale the v1 alias', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['scale', context.alias, 'bru', '1', ...defaultArgs],
@@ -686,7 +700,7 @@ test('scale the alias', async t => {
   t.true(stdout.includes(`(min: 1, max: 1)`));
 });
 
-test('remove the explicit alias', async t => {
+testv1('remove the explicit alias', async t => {
   const goal = `> Success! Alias ${context.alias} removed`;
 
   const { stdout, stderr, code } = await execa(
@@ -705,7 +719,7 @@ test('remove the explicit alias', async t => {
   t.true(stdout.startsWith(goal));
 });
 
-test('create an alias from "now.json" `alias` for deployment', async t => {
+testv1('create an v1 alias from "now.json" `alias` for deployment', async t => {
   const target = fixture('dockerfile');
 
   // Add the `alias` field to the "now.json" file
@@ -743,7 +757,7 @@ test('create an alias from "now.json" `alias` for deployment', async t => {
   context.alias = json.alias;
 });
 
-test('remove the alias from "now.json" `alias`', async t => {
+testv1('remove the alias from "now.json" `alias`', async t => {
   const goal = `> Success! Alias ${context.alias} removed`;
 
   const { stdout, stderr, code } = await execa(
@@ -804,7 +818,7 @@ test('ignore files specified in .nowignore via allowlist', async t => {
   t.is(presentFile.status, 200);
 });
 
-test('scale down the deployment directly', async t => {
+testv1('scale down the deployment directly', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['scale', context.deployment, 'bru', '0', ...defaultArgs],
