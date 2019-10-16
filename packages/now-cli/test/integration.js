@@ -509,11 +509,7 @@ testv1('deploy a v1 dockerfile project', async t => {
   await waitForDeployment(href);
 
   // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
+  const response = await fetch(href);
   t.is(response.status, 200);
   const contentType = response.headers.get('content-type');
   const textContent = await response.text();
