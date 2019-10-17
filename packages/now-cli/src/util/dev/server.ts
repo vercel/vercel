@@ -42,7 +42,7 @@ import isURL from './is-url';
 import devRouter from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
-import { executeBuild, getBuildMatches } from './builder';
+import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import {
   builderDirPromise,
@@ -347,13 +347,18 @@ export default class DevServer {
     }
 
     // Delete build matches that no longer exists
+    const ops: Promise<void>[] = [];
     for (const src of this.buildMatches.keys()) {
       if (!sources.includes(src)) {
         this.output.debug(`Removing build match for "${src}"`);
-        // TODO: shutdown lambda functions
+        const match = this.buildMatches.get(src);
+        if (match) {
+          ops.push(shutdownBuilder(match, this.output));
+        }
         this.buildMatches.delete(src);
       }
     }
+    await Promise.all(ops);
 
     // Add the new matches to the `buildMatches` map
     const blockingBuilds: Promise<void>[] = [];
@@ -429,6 +434,7 @@ export default class DevServer {
       } = buildMatch;
       if (pkg.name === '@now/static') continue;
       if (pkg.name && updatedBuilders.includes(pkg.name)) {
+        shutdownBuilder(buildMatch, this.output);
         this.buildMatches.delete(src);
         this.output.debug(`Invalidated build match for "${src}"`);
       }
@@ -729,10 +735,12 @@ export default class DevServer {
       this.yarnPath,
       this.output
     )
-      .then(updatedBuilders =>
-        this.invalidateBuildMatches(nowConfig, updatedBuilders)
-      )
+      .then(updatedBuilders => {
+        this.updateBuildersPromise = null;
+        this.invalidateBuildMatches(nowConfig, updatedBuilders);
+      })
       .catch(err => {
+        this.updateBuildersPromise = null;
         this.output.error(`Failed to update builders: ${err.message}`);
         this.output.debug(err.stack);
       });
@@ -831,22 +839,18 @@ export default class DevServer {
     const ops: Promise<void>[] = [];
 
     for (const match of this.buildMatches.values()) {
-      if (!match.buildOutput) continue;
-
-      for (const asset of Object.values(match.buildOutput)) {
-        if (asset.type === 'Lambda' && asset.fn) {
-          ops.push(asset.fn.destroy());
-        }
-      }
+      ops.push(shutdownBuilder(match, this.output));
     }
 
     ops.push(close(this.server));
 
     if (this.watcher) {
+      this.output.debug(`Closing file watcher`);
       this.watcher.close();
     }
 
     if (this.updateBuildersPromise) {
+      this.output.debug(`Waiting for builders update to complete`);
       ops.push(this.updateBuildersPromise);
     }
 
@@ -1102,7 +1106,7 @@ export default class DevServer {
     }
 
     const method = req.method || 'GET';
-    this.output.log(`${chalk.bold(method)} ${req.url}`);
+    this.output.debug(`${chalk.bold(method)} ${req.url}`);
 
     try {
       const nowConfig = await this.getNowConfig();
