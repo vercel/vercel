@@ -181,7 +181,7 @@ export async function detectBuilders(
       // and package.json can be served as static files
       builders.push({
         use: '@now/static',
-        src: '!api/**',
+        src: '!{api/**,package.json}',
         config,
       });
     }

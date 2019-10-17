@@ -191,7 +191,7 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/node');
     expect(builders[0].src).toBe('api/users.js');
     expect(builders[1].use).toBe('@now/static');
-    expect(builders[1].src).toBe('!api/**');
+    expect(builders[1].src).toBe('!{api/**,package.json}');
     expect(builders.length).toBe(2);
     expect(errors).toBe(null);
   }
@@ -203,7 +203,7 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/node');
     expect(builders[0].src).toBe('api/[endpoint].js');
     expect(builders[1].use).toBe('@now/static');
-    expect(builders[1].src).toBe('!api/**');
+    expect(builders[1].src).toBe('!{api/**,package.json}');
     expect(builders.length).toBe(2);
     expect(errors).toBe(null);
   }
@@ -262,7 +262,7 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/node');
     expect(builders[0].src).toBe('api/endpoint.js');
     expect(builders[1].use).toBe('@now/static');
-    expect(builders[1].src).toBe('!api/**');
+    expect(builders[1].src).toBe('!{api/**,package.json}');
     expect(builders.length).toBe(2);
   }
 
@@ -442,7 +442,7 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/node');
     expect(builders[0].src).toBe('api/index.ts');
     expect(builders[1].use).toBe('@now/static');
-    expect(builders[1].src).toBe('!api/**');
+    expect(builders[1].src).toBe('!{api/**,package.json}');
   }
 });
 
