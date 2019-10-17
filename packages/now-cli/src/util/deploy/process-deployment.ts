@@ -45,6 +45,7 @@ export default async function processDeployment({
   const opts: DeploymentOptions = {
     ...requestBody,
     debug: now._debug,
+    apiUrl: now._apiUrl,
   };
 
   if (!legacy) {
@@ -139,6 +140,7 @@ export default async function processDeployment({
           deploySpinner();
         }
 
+        console.log(event.payload, event.payload.stack);
         throw await now.handleDeploymentError(event.payload, { hashes, env });
       }
 

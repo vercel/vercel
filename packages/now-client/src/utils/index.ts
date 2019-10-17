@@ -11,11 +11,10 @@ import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
 
-export const API_FILES = 'https://api.zeit.co/v2/now/files';
-export const API_DEPLOYMENTS = 'https://api.zeit.co/v9/now/deployments';
-export const API_DEPLOYMENTS_LEGACY = 'https://api.zeit.co/v3/now/deployments';
-export const API_DELETE_DEPLOYMENTS_LEGACY =
-  'https://api.zeit.co/v2/now/deployments';
+export const API_FILES = '/v2/now/files';
+export const API_DEPLOYMENTS = '/v9/now/deployments';
+export const API_DEPLOYMENTS_LEGACY = '/v3/now/deployments';
+export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
 export const EVENTS = new Set([
   // File events
@@ -109,6 +108,8 @@ export const fetch = async (
   const debug = createDebug(debugEnabled);
   let time: number;
 
+  url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
+
   if (opts.teamId) {
     const parsedUrl = parseUrl(url, true);
     const query = parsedUrl.query;
@@ -116,6 +117,7 @@ export const fetch = async (
     query.teamId = opts.teamId;
     url = `${parsedUrl.href}?${qs.encode(query)}`;
     delete opts.teamId;
+    delete opts.apiUrl;
   }
 
   opts.headers = opts.headers || {};

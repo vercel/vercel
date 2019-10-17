@@ -15,7 +15,8 @@ export default async function* checkDeploymentStatus(
   token: string,
   version: number | undefined,
   teamId: string | undefined,
-  debug: Function
+  debug: Function,
+  apiUrl?: string
 ): AsyncIterableIterator<DeploymentStatus> {
   let deploymentState = deployment;
   let allBuildsCompleted = false;
@@ -38,7 +39,8 @@ export default async function* checkDeploymentStatus(
         `${apiDeployments}/${deployment.id}/builds${
           teamId ? `?teamId=${teamId}` : ''
         }`,
-        token
+        token,
+        { apiUrl }
       );
 
       const data = await buildsData.json();
