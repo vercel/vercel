@@ -4,7 +4,7 @@ const {
   packAndDeploy,
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment');
-const { glob, download, detectBuilders, detectRoutes } = require('../');
+const { glob, detectBuilders, detectRoutes } = require('../');
 
 jest.setTimeout(4 * 60 * 1000);
 
