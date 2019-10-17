@@ -30,10 +30,11 @@ function getBodyParser(req: NowRequest, body: Buffer) {
     }
 
     if (type === 'application/x-www-form-urlencoded') {
-      const { parse: parseQS } = require('querystring');
+      const { parse: parseQuerystring } = require('querystring');
       // note: querystring.parse does not produce an iterable object
       // https://nodejs.org/api/querystring.html#querystring_querystring_parse_str_sep_eq_options
-      return parseQS(body.toString());
+      let tempObj = parseQuerystring(body.toString());
+      return parseQS(tempObj);
     }
 
     if (type === 'text/plain') {
@@ -70,6 +71,48 @@ function getCookieParser(req: NowRequest) {
     const { parse } = require('cookie');
     return parse(Array.isArray(header) ? header.join(';') : header);
   };
+}
+
+function parseQSArray(key: any, value: any, acc: Array<any>) {
+  let result
+  const bktNotation = (/\[[^[\]\d]?]/).test(key)
+  result = /\[(\d*)\]$/.exec(key)
+  key = key.replace(/\[\d*\]$/, "")
+
+  if (!result) {
+    acc[key] = value
+    return
+  }
+
+  if (acc[key] === undefined) {
+    if (bktNotation === true) {
+       acc[key] = value
+      return
+    } else {
+      acc[key] = [value]
+    }
+
+  }
+
+  if (bktNotation === true) {
+    acc[key] = [].concat(acc[key], value)
+  } else {
+    acc[key][result[1]] = value
+  }
+}
+
+function parseQS(input: any) {
+  const parsed = Object.create(null)
+
+  for (const [param, value] of Object.entries(input)) {
+    parseQSArray(param, value, parsed)
+  }
+
+  for (const [key, value] of Object.entries(parsed)) {
+    parsed[key] = value
+  }
+
+  return parsed
 }
 
 function status(res: NowResponse, statusCode: number): NowResponse {
