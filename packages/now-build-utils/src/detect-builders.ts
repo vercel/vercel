@@ -173,9 +173,12 @@ export async function detectBuilders(
         src: 'public/**/*',
         config,
       });
-    } else if (builders.length > 0) {
+    } else if (
+      builders.length > 0 &&
+      files.some(f => !f.startsWith('api/') && f !== 'package.json')
+    ) {
       // Everything besides the api directory
-      // can be served as static files
+      // and package.json can be served as static files
       builders.push({
         use: '@now/static',
         src: '!api/**',

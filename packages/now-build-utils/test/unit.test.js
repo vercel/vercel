@@ -219,7 +219,6 @@ it('Test `detectBuilders`', async () => {
     const { builders } = await detectBuilders(files);
     expect(builders[0].use).toBe('@now/node');
     expect(builders[0].src).toBe('api/[endpoint]/[id].js');
-    console.log(builders[1]);
     expect(builders.length).toBe(1);
   }
 
@@ -263,10 +262,8 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/node');
     expect(builders[0].src).toBe('api/endpoint.js');
     expect(builders[1].use).toBe('@now/static');
-    expect(builders[1].src).toBe('favicon.ico');
-    expect(builders[2].use).toBe('@now/static');
-    expect(builders[2].src).toBe('index.html');
-    expect(builders.length).toBe(3);
+    expect(builders[1].src).toBe('!api/**');
+    expect(builders.length).toBe(2);
   }
 
   {
