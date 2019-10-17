@@ -174,18 +174,13 @@ export async function detectBuilders(
         config,
       });
     } else if (builders.length > 0) {
-      // We can't use pattern matching, since `!(api)` and `!(api)/**/*`
-      // won't give the correct results
-      builders.push(
-        ...files
-          .filter(name => !name.startsWith('api/'))
-          .filter(name => !(name === 'package.json'))
-          .map(name => ({
-            use: '@now/static',
-            src: name,
-            config,
-          }))
-      );
+      // Everything besides the api directory
+      // can be served as static files
+      builders.push({
+        use: '@now/static',
+        src: '!api/**',
+        config,
+      });
     }
   }
 
