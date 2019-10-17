@@ -431,6 +431,19 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/node');
     expect(builders[1].use).toBe('@now/next');
   }
+
+  {
+    // many static files + one api file
+    const files = Array.from({ length: 5000 }).map((_, i) => `file${i}.html`);
+    files.push('api/index.ts');
+    const { builders } = await detectBuilders(files);
+
+    expect(builders.length).toBe(2);
+    expect(builders[0].use).toBe('@now/node');
+    expect(builders[0].src).toBe('api/index.ts');
+    expect(builders[1].use).toBe('@now/static');
+    expect(builders[1].src).toBe('!api/**');
+  }
 });
 
 it('Test `detectRoutes`', async () => {
