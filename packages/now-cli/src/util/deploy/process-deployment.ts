@@ -140,7 +140,6 @@ export default async function processDeployment({
           deploySpinner();
         }
 
-        console.log(event.payload, event.payload.stack);
         throw await now.handleDeploymentError(event.payload, { hashes, env });
       }
 
