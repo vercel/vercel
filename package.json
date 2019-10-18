@@ -58,5 +58,8 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
+  },
+  "resolutions": {
+    "signal-exit": "TooTallNate/signal-exit#update/sighub-to-sigint-on-windows"
   }
 }
