@@ -550,10 +550,7 @@ export default class DevServer {
       this.output.error(routeError.message);
       await this.exit();
     }
-    if (maybeRoutes) {
-      config.routes = config.routes || [];
-      config.routes.push(...maybeRoutes);
-    }
+    config.routes = maybeRoutes || [];
 
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
