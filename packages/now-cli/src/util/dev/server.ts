@@ -1456,25 +1456,6 @@ export default class DevServer {
     return true;
   }
 
-  /**
-   * Serve project directory as a static deployment.
-   */
-  serveProjectAsStatic = async (
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    nowRequestId: string
-  ) => {
-    const filePath = req.url ? req.url.replace(/^\//, '') : '';
-
-    if (filePath && typeof this.files[filePath] === 'undefined') {
-      await this.send404(req, res, nowRequestId);
-      return;
-    }
-
-    this.setResponseHeaders(res, nowRequestId);
-    return serveStaticFile(req, res, this.cwd, { cleanUrls: true });
-  };
-
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (
