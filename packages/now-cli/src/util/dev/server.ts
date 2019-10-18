@@ -13,6 +13,7 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
+import { getTransformedRoutes } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -553,6 +554,20 @@ export default class DevServer {
 
       if (warnings && warnings.length > 0) {
         warnings.forEach(warning => this.output.warn(warning.message));
+      }
+
+      const { error, routes } = getTransformedRoutes({
+        nowConfig: config,
+        filePaths: files,
+      });
+      if (error) {
+        this.output.error(error.message);
+        await this.exit();
+      }
+
+      if (routes) {
+        config.routes = config.routes || [];
+        config.routes.push(...routes);
       }
 
       if (builders) {

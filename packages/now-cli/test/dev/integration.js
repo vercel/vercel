@@ -19,20 +19,19 @@ function fetchWithRetry(url, retries = 3, opts = {}) {
   return new Promise(async (resolve, reject) => {
     try {
       const res = await fetch(url, opts);
-
-      if (res.ok) {
-        resolve(res);
+      if (!res.ok) {
+        throw new Error('Responded with status ' + res.status);
       }
+      resolve(res);
     } catch (error) {
       if (retries === 0) {
         reject(error);
         return;
       }
-      setTimeout(() => {
-        fetchWithRetry(url, retries - 1, opts)
-          .then(resolve)
-          .catch(reject);
-      }, 1000);
+      await sleep(1000);
+      fetchWithRetry(url, retries - 1, opts)
+        .then(resolve)
+        .catch(reject);
     }
   });
 }
@@ -240,6 +239,19 @@ test('[now dev] validate env var names', async t => {
     dev.kill('SIGTERM');
   }
 });
+
+test(
+  '[now dev] test rewrites serve correct content',
+  testFixtureStdio('test-rewrites', async (t, port) => {
+    const result = await fetchWithRetry(`http://localhost:${port}/hello`, 3);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Hello World/gm);
+  })
+);
 
 test(
   '[now dev] 00-list-directory',
