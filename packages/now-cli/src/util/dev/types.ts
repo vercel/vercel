@@ -8,6 +8,7 @@ import {
   Lambda,
   PackageJson,
 } from '@now/build-utils';
+import { NowRedirect, NowRewrite, NowHeader } from '@now/routing-utils';
 import { Output } from '../output';
 
 export interface DevServerOptions {
@@ -47,6 +48,11 @@ export interface NowConfig {
   builds?: BuildConfig[];
   routes?: RouteConfig[];
   files?: string[];
+  cleanUrls?: boolean;
+  rewrites?: NowRewrite[];
+  redirects?: NowRedirect[];
+  headers?: NowHeader[];
+  trailingSlash?: boolean;
 }
 
 export interface HttpHandler {
