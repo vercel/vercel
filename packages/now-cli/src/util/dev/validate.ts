@@ -44,34 +44,34 @@ const validateRewrites = ajv.compile(rewritesSchema);
 const validateTrailingSlash = ajv.compile(trailingSlashSchema);
 
 export function validateNowConfigBuilds(config: NowConfig) {
-  return validateNowConfig(config, 'builds', validateBuilds);
+  return validateKey(config, 'builds', validateBuilds);
 }
 
 export function validateNowConfigRoutes(config: NowConfig) {
-  return validateNowConfig(config, 'routes', validateRoutes);
+  return validateKey(config, 'routes', validateRoutes);
 }
 
 export function validateNowConfigCleanUrls(config: NowConfig) {
-  return validateNowConfig(config, 'cleanUrls', validateCleanUrls);
+  return validateKey(config, 'cleanUrls', validateCleanUrls);
 }
 
 export function validateNowConfigHeaders(config: NowConfig) {
-  return validateNowConfig(config, 'headers', validateHeaders);
+  return validateKey(config, 'headers', validateHeaders);
 }
 
 export function validateNowConfigRedirects(config: NowConfig) {
-  return validateNowConfig(config, 'redirects', validateRedirects);
+  return validateKey(config, 'redirects', validateRedirects);
 }
 
 export function validateNowConfigRewrites(config: NowConfig) {
-  return validateNowConfig(config, 'rewrites', validateRewrites);
+  return validateKey(config, 'rewrites', validateRewrites);
 }
 
 export function validateNowConfigTrailingSlash(config: NowConfig) {
-  return validateNowConfig(config, 'trailingSlash', validateTrailingSlash);
+  return validateKey(config, 'trailingSlash', validateTrailingSlash);
 }
 
-function validateNowConfig(
+function validateKey(
   config: NowConfig,
   key: keyof NowConfig,
   validate: Ajv.ValidateFunction
