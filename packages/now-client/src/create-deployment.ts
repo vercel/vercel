@@ -56,7 +56,7 @@ export default function buildCreateDeployment(
     if (Array.isArray(path)) {
       for (const filePath of path) {
         if (!isAbsolute(filePath)) {
-          yield { type: 'error', message: 'Provided path is not absolute' };
+          yield { type: 'error', message: `Provided path ${filePath} is not absolute` };
         }
       }
 
