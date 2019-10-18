@@ -206,6 +206,14 @@ test('[now dev] validate headers', async t => {
   );
 });
 
+test('[now dev] validate mixed routes and rewrites', async t => {
+  const directory = fixture('invalid-mixed-routes-rewrites');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/gm);
+});
+
 test('[now dev] validate env var names', async t => {
   const directory = fixture('invalid-env-var-name');
   const { dev } = await testFixture(directory, { stdio: 'pipe' });
