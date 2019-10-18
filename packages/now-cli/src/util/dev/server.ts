@@ -533,16 +533,30 @@ export default class DevServer {
       }
     }
 
+    const allFiles = await getAllProjectFiles(this.cwd, this.output);
+    const files = allFiles.filter(this.filter);
+
+    this.output.debug(
+      `Found ${allFiles.length} and ` +
+        `filtered out ${allFiles.length - files.length} files`
+    );
+
+    await this.validateNowConfig(config);
+    const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
+      nowConfig: config,
+      filePaths: files,
+    });
+    if (routeError) {
+      this.output.error(routeError.message);
+      await this.exit();
+    }
+    if (maybeRoutes) {
+      config.routes = config.routes || [];
+      config.routes.push(...maybeRoutes);
+    }
+
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      const allFiles = await getAllProjectFiles(this.cwd, this.output);
-      const files = allFiles.filter(this.filter);
-
-      this.output.debug(
-        `Found ${allFiles.length} and ` +
-          `filtered out ${allFiles.length - files.length} files`
-      );
-
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
       });
@@ -554,20 +568,6 @@ export default class DevServer {
 
       if (warnings && warnings.length > 0) {
         warnings.forEach(warning => this.output.warn(warning.message));
-      }
-
-      const { error, routes } = getTransformedRoutes({
-        nowConfig: config,
-        filePaths: files,
-      });
-      if (error) {
-        this.output.error(error.message);
-        await this.exit();
-      }
-
-      if (routes) {
-        config.routes = config.routes || [];
-        config.routes.push(...routes);
       }
 
       if (builders) {
