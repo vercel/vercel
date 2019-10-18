@@ -62,7 +62,7 @@ export default function buildCreateDeployment(
 
       return;
     } else if (!isAbsolute(path)) {
-      yield { type: 'error', message: 'Provided path is not absolute' };
+      yield { type: 'error', message: `Provided path ${path} is not absolute` };
 
       return;
     }
