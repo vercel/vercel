@@ -155,6 +155,58 @@ test('[now dev] validate routes', async t => {
   );
 });
 
+test('[now dev] validate cleanUrls', async t => {
+  const directory = fixture('invalid-clean-urls');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/gm);
+});
+
+test('[now dev] validate trailingSlash', async t => {
+  const directory = fixture('invalid-trailing-slash');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Invalid `trailingSlash` property:\s+should be boolean/gm
+  );
+});
+
+test('[now dev] validate rewrites', async t => {
+  const directory = fixture('invalid-rewrites');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Invalid `rewrites` property: \[0\]\.destination should be string/gm
+  );
+});
+
+test('[now dev] validate redirects', async t => {
+  const directory = fixture('invalid-redirects');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Invalid `redirects` property: \[0\]\.statusCode should be integer/gm
+  );
+});
+
+test('[now dev] validate headers', async t => {
+  const directory = fixture('invalid-headers');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/gm
+  );
+});
+
 test('[now dev] validate env var names', async t => {
   const directory = fixture('invalid-env-var-name');
   const { dev } = await testFixture(directory, { stdio: 'pipe' });
