@@ -529,7 +529,7 @@ testv1('deploy a v1 dockerfile project', async t => {
   context.deployment = host;
 });
 
-test('deploy with a custon API URL', async t => {
+test('deploy with a custom API URL', async t => {
   const directory = fixture('static-single-file');
 
   const { stdout, stderr, code } = await execa(
