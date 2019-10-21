@@ -1,3 +1,1 @@
-module.exports = {
-  plugins: ["gatsby-plugin-now"]
-};
+module.exports = {};
