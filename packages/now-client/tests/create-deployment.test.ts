@@ -13,7 +13,7 @@ describe('create v2 deployment', () => {
         `${API_DEPLOYMENTS}/${deployment.id}`,
         TOKEN,
         {
-          method: 'DELETE'
+          method: 'DELETE',
         }
       );
       expect(response.status).toEqual(200);
@@ -25,7 +25,7 @@ describe('create v2 deployment', () => {
       path.resolve(__dirname, 'fixtures', 'v2'),
       {
         token: TOKEN,
-        name: 'now-client-tests-v2'
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'warning') {
@@ -44,7 +44,7 @@ describe('create v2 deployment', () => {
       path.resolve(__dirname, 'fixtures', 'v2'),
       {
         token: TOKEN,
-        name: 'now-client-tests-v2'
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'file_count') {
@@ -63,7 +63,7 @@ describe('create v2 deployment', () => {
       path.resolve(__dirname, 'fixtures', 'v2'),
       {
         token: TOKEN,
-        name: 'now-client-tests-v2'
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'ready') {
@@ -72,5 +72,27 @@ describe('create v2 deployment', () => {
         break;
       }
     }
+  });
+
+  it('will create a v2 deployment with correct file permissions', async () => {
+    for await (const event of createDeployment(
+      path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
+      {
+        token: TOKEN,
+        name: 'now-client-tests-v2',
+      }
+    )) {
+      if (event.type === 'ready') {
+        deployment = event.payload;
+        break;
+      }
+    }
+
+    const url = `${deployment.url}/api/index.js`;
+    console.log('testing url ' + url);
+    const response = await fetch(url, TOKEN);
+    const text = await response.text();
+    expect(deployment.readyState).toEqual('READY');
+    expect(text).stringContaining('executed script');
   });
 });
