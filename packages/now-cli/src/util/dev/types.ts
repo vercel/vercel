@@ -8,6 +8,7 @@ import {
   Lambda,
   PackageJson,
 } from '@now/build-utils';
+import { NowRedirect, NowRewrite, NowHeader, Route } from '@now/routing-utils';
 import { Output } from '../output';
 
 export interface DevServerOptions {
@@ -27,15 +28,7 @@ export interface BuildMatch extends BuildConfig {
   buildProcess?: ChildProcess;
 }
 
-export interface RouteConfig {
-  src: string;
-  dest: string;
-  methods?: string[];
-  headers?: HttpHeadersConfig;
-  status?: number;
-  handle?: string;
-  continue?: boolean;
-}
+export type RouteConfig = Route;
 
 export interface NowConfig {
   name?: string;
@@ -47,6 +40,11 @@ export interface NowConfig {
   builds?: BuildConfig[];
   routes?: RouteConfig[];
   files?: string[];
+  cleanUrls?: boolean;
+  rewrites?: NowRewrite[];
+  redirects?: NowRedirect[];
+  headers?: NowHeader[];
+  trailingSlash?: boolean;
 }
 
 export interface HttpHandler {

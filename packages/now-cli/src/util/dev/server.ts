@@ -13,6 +13,7 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
+import { getTransformedRoutes } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -36,7 +37,15 @@ import {
   staticFiles as getFiles,
   getAllProjectFiles,
 } from '../get-files';
-import { validateNowConfigBuilds, validateNowConfigRoutes } from './validate';
+import {
+  validateNowConfigBuilds,
+  validateNowConfigRoutes,
+  validateNowConfigCleanUrls,
+  validateNowConfigHeaders,
+  validateNowConfigRedirects,
+  validateNowConfigRewrites,
+  validateNowConfigTrailingSlash,
+} from './validate';
 
 import isURL from './is-url';
 import devRouter from './router';
@@ -524,16 +533,27 @@ export default class DevServer {
       }
     }
 
+    const allFiles = await getAllProjectFiles(this.cwd, this.output);
+    const files = allFiles.filter(this.filter);
+
+    this.output.debug(
+      `Found ${allFiles.length} and ` +
+        `filtered out ${allFiles.length - files.length} files`
+    );
+
+    await this.validateNowConfig(config);
+    const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
+      nowConfig: config,
+      filePaths: files,
+    });
+    if (routeError) {
+      this.output.error(routeError.message);
+      await this.exit();
+    }
+    config.routes = maybeRoutes || [];
+
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      const allFiles = await getAllProjectFiles(this.cwd, this.output);
-      const files = allFiles.filter(this.filter);
-
-      this.output.debug(
-        `Found ${allFiles.length} and ` +
-          `filtered out ${allFiles.length - files.length} files`
-      );
-
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
       });
@@ -605,25 +625,31 @@ export default class DevServer {
     return pkg;
   }
 
+  async tryValidateOrExit(
+    config: NowConfig,
+    validate: (c: NowConfig) => string | null
+  ): Promise<void> {
+    const message = validate(config);
+
+    if (message) {
+      this.output.error(message);
+      await this.exit(1);
+    }
+  }
+
   async validateNowConfig(config: NowConfig): Promise<void> {
     if (config.version === 1) {
       this.output.error('Only `version: 2` is supported by `now dev`');
       await this.exit(1);
     }
 
-    const buildsError = validateNowConfigBuilds(config);
-
-    if (buildsError) {
-      this.output.error(buildsError);
-      await this.exit(1);
-    }
-
-    const routesError = validateNowConfigRoutes(config);
-
-    if (routesError) {
-      this.output.error(routesError);
-      await this.exit(1);
-    }
+    await this.tryValidateOrExit(config, validateNowConfigBuilds);
+    await this.tryValidateOrExit(config, validateNowConfigRoutes);
+    await this.tryValidateOrExit(config, validateNowConfigCleanUrls);
+    await this.tryValidateOrExit(config, validateNowConfigHeaders);
+    await this.tryValidateOrExit(config, validateNowConfigRedirects);
+    await this.tryValidateOrExit(config, validateNowConfigRewrites);
+    await this.tryValidateOrExit(config, validateNowConfigTrailingSlash);
   }
 
   validateEnvConfig(
