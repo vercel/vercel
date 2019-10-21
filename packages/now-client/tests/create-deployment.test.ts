@@ -93,6 +93,6 @@ describe('create v2 deployment', () => {
     const response = await fetch(url, TOKEN);
     const text = await response.text();
     expect(deployment.readyState).toEqual('READY');
-    expect(text).stringContaining('executed script');
+    expect(text).toContain('executed script');
   });
 });
