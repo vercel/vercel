@@ -88,7 +88,7 @@ describe('create v2 deployment', () => {
       }
     }
 
-    const url = `${deployment.url}/api/index.js`;
+    const url = `https://${deployment.url}/api/index.js`;
     console.log('testing url ' + url);
     const response = await fetch(url, TOKEN);
     const text = await response.text();
