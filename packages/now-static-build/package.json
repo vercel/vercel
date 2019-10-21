@@ -26,5 +26,8 @@
     "is-port-reachable": "2.0.1",
     "ms": "2.1.2",
     "typescript": "3.5.2"
+  },
+  "dependencies": {
+    "gatsby-plugin-now": "1.2.2"
   }
 }

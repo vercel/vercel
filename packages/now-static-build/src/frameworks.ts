@@ -1,10 +1,13 @@
-import { readdir, stat, readFile, unlink } from 'fs';
+import { readdir, stat, readFile, unlink, writeFile, copyFile } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
 import { Route } from '@now/build-utils';
+import { createGatsbyConfig } from './gatsby-generators';
 
 const readirPromise = promisify(readdir);
 const readFilePromise = promisify(readFile);
+const writeFilePromise = promisify(writeFile);
+const copyFilePromise = promisify(copyFile);
 const statPromise = promisify(stat);
 const unlinkPromise = promisify(unlink);
 const isDir = async (file: string): Promise<boolean> =>
@@ -43,6 +46,26 @@ export const frameworks: Framework[] = [
         // if the file doesn't exist, we don't create routes
         return [];
       }
+    },
+    beforeBuildHook: async entrypointDir => {
+      let gatsbyConfigUser = false;
+      try {
+        await copyFilePromise(
+          join(entrypointDir, 'gatsby-config.js'),
+          join(entrypointDir, 'gatsby-config-user.js')
+        );
+        gatsbyConfigUser = true;
+      } catch (err) {
+        // do nothing here, it just means the user
+        // didn't define gatsby-config.js
+      }
+
+      // inject gatsby-config.js wrapper
+      await writeFilePromise(
+        join(entrypointDir, 'gatsby-config.js'),
+        createGatsbyConfig(gatsbyConfigUser),
+        { encoding: 'utf-8' }
+      );
     },
   },
   {
@@ -312,4 +335,5 @@ export interface Framework {
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   minNodeRange?: string;
+  beforeBuildHook?: (entrypointDir: string) => Promise<void>;
 }
