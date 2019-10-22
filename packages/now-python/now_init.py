@@ -29,7 +29,6 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
 
     print('using HTTP Handler')
     from http.server import HTTPServer
-    from urllib.parse import unquote
     import http
     import _thread
 
@@ -40,7 +39,7 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
         _thread.start_new_thread(server.handle_request, ())
 
         payload = json.loads(event['body'])
-        path = unquote(payload['path'])
+        path = payload['path']
         headers = payload['headers']
         method = payload['method']
         encoding = payload.get('encoding')
