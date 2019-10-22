@@ -27,6 +27,12 @@
     },
     {
       "path": "/",
+      "method": "POST",
+      "headers": { "Content-Type": "application/json" },
+      "status": 200
+    },
+    {
+      "path": "/",
       "headers": { "cookie": "who=chris" },
       "mustContain": "hello chris:RANDOMNESS_PLACEHOLDER"
     },

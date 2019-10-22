@@ -13,6 +13,7 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
+import { getTransformedRoutes } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -36,13 +37,21 @@ import {
   staticFiles as getFiles,
   getAllProjectFiles,
 } from '../get-files';
-import { validateNowConfigBuilds, validateNowConfigRoutes } from './validate';
+import {
+  validateNowConfigBuilds,
+  validateNowConfigRoutes,
+  validateNowConfigCleanUrls,
+  validateNowConfigHeaders,
+  validateNowConfigRedirects,
+  validateNowConfigRewrites,
+  validateNowConfigTrailingSlash,
+} from './validate';
 
 import isURL from './is-url';
 import devRouter from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
-import { executeBuild, getBuildMatches } from './builder';
+import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import {
   builderDirPromise,
@@ -347,13 +356,18 @@ export default class DevServer {
     }
 
     // Delete build matches that no longer exists
+    const ops: Promise<void>[] = [];
     for (const src of this.buildMatches.keys()) {
       if (!sources.includes(src)) {
         this.output.debug(`Removing build match for "${src}"`);
-        // TODO: shutdown lambda functions
+        const match = this.buildMatches.get(src);
+        if (match) {
+          ops.push(shutdownBuilder(match, this.output));
+        }
         this.buildMatches.delete(src);
       }
     }
+    await Promise.all(ops);
 
     // Add the new matches to the `buildMatches` map
     const blockingBuilds: Promise<void>[] = [];
@@ -429,6 +443,7 @@ export default class DevServer {
       } = buildMatch;
       if (pkg.name === '@now/static') continue;
       if (pkg.name && updatedBuilders.includes(pkg.name)) {
+        shutdownBuilder(buildMatch, this.output);
         this.buildMatches.delete(src);
         this.output.debug(`Invalidated build match for "${src}"`);
       }
@@ -518,16 +533,27 @@ export default class DevServer {
       }
     }
 
+    const allFiles = await getAllProjectFiles(this.cwd, this.output);
+    const files = allFiles.filter(this.filter);
+
+    this.output.debug(
+      `Found ${allFiles.length} and ` +
+        `filtered out ${allFiles.length - files.length} files`
+    );
+
+    await this.validateNowConfig(config);
+    const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
+      nowConfig: config,
+      filePaths: files,
+    });
+    if (routeError) {
+      this.output.error(routeError.message);
+      await this.exit();
+    }
+    config.routes = maybeRoutes || [];
+
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      const allFiles = await getAllProjectFiles(this.cwd, this.output);
-      const files = allFiles.filter(this.filter);
-
-      this.output.debug(
-        `Found ${allFiles.length} and ` +
-          `filtered out ${allFiles.length - files.length} files`
-      );
-
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
       });
@@ -599,25 +625,31 @@ export default class DevServer {
     return pkg;
   }
 
+  async tryValidateOrExit(
+    config: NowConfig,
+    validate: (c: NowConfig) => string | null
+  ): Promise<void> {
+    const message = validate(config);
+
+    if (message) {
+      this.output.error(message);
+      await this.exit(1);
+    }
+  }
+
   async validateNowConfig(config: NowConfig): Promise<void> {
     if (config.version === 1) {
       this.output.error('Only `version: 2` is supported by `now dev`');
       await this.exit(1);
     }
 
-    const buildsError = validateNowConfigBuilds(config);
-
-    if (buildsError) {
-      this.output.error(buildsError);
-      await this.exit(1);
-    }
-
-    const routesError = validateNowConfigRoutes(config);
-
-    if (routesError) {
-      this.output.error(routesError);
-      await this.exit(1);
-    }
+    await this.tryValidateOrExit(config, validateNowConfigBuilds);
+    await this.tryValidateOrExit(config, validateNowConfigRoutes);
+    await this.tryValidateOrExit(config, validateNowConfigCleanUrls);
+    await this.tryValidateOrExit(config, validateNowConfigHeaders);
+    await this.tryValidateOrExit(config, validateNowConfigRedirects);
+    await this.tryValidateOrExit(config, validateNowConfigRewrites);
+    await this.tryValidateOrExit(config, validateNowConfigTrailingSlash);
   }
 
   validateEnvConfig(
@@ -729,10 +761,12 @@ export default class DevServer {
       this.yarnPath,
       this.output
     )
-      .then(updatedBuilders =>
-        this.invalidateBuildMatches(nowConfig, updatedBuilders)
-      )
+      .then(updatedBuilders => {
+        this.updateBuildersPromise = null;
+        this.invalidateBuildMatches(nowConfig, updatedBuilders);
+      })
       .catch(err => {
+        this.updateBuildersPromise = null;
         this.output.error(`Failed to update builders: ${err.message}`);
         this.output.debug(err.stack);
       });
@@ -831,22 +865,18 @@ export default class DevServer {
     const ops: Promise<void>[] = [];
 
     for (const match of this.buildMatches.values()) {
-      if (!match.buildOutput) continue;
-
-      for (const asset of Object.values(match.buildOutput)) {
-        if (asset.type === 'Lambda' && asset.fn) {
-          ops.push(asset.fn.destroy());
-        }
-      }
+      ops.push(shutdownBuilder(match, this.output));
     }
 
     ops.push(close(this.server));
 
     if (this.watcher) {
+      this.output.debug(`Closing file watcher`);
       this.watcher.close();
     }
 
     if (this.updateBuildersPromise) {
+      this.output.debug(`Waiting for builders update to complete`);
       ops.push(this.updateBuildersPromise);
     }
 
@@ -1102,7 +1132,7 @@ export default class DevServer {
     }
 
     const method = req.method || 'GET';
-    this.output.log(`${chalk.bold(method)} ${req.url}`);
+    this.output.debug(`${chalk.bold(method)} ${req.url}`);
 
     try {
       const nowConfig = await this.getNowConfig();
@@ -1451,25 +1481,6 @@ export default class DevServer {
     res.end(directoryHtml);
     return true;
   }
-
-  /**
-   * Serve project directory as a static deployment.
-   */
-  serveProjectAsStatic = async (
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    nowRequestId: string
-  ) => {
-    const filePath = req.url ? req.url.replace(/^\//, '') : '';
-
-    if (filePath && typeof this.files[filePath] === 'undefined') {
-      await this.send404(req, res, nowRequestId);
-      return;
-    }
-
-    this.setResponseHeaders(res, nowRequestId);
-    return serveStaticFile(req, res, this.cwd, { cleanUrls: true });
-  };
 
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
