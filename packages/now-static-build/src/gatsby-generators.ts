@@ -13,7 +13,7 @@ module.exports = {
   ...userConfig,
   plugins: [
     ...(userConfig.plugins || []),
-    { resolve: require.resolve('gatsby-plugin-now') }
+    'gatsby-plugin-now'
   ]
 }`;
 }

@@ -1,4 +1,12 @@
-import { readdir, stat, readFile, unlink, writeFile, copyFile } from 'fs';
+import {
+  readdir,
+  stat,
+  readFile,
+  unlink,
+  writeFile,
+  copyFile,
+  mkdir,
+} from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
 import { Route } from '@now/build-utils';
@@ -7,6 +15,7 @@ import { createGatsbyConfig } from './gatsby-generators';
 const readirPromise = promisify(readdir);
 const readFilePromise = promisify(readFile);
 const writeFilePromise = promisify(writeFile);
+const mkdirPromise = promisify(mkdir);
 const copyFilePromise = promisify(copyFile);
 const statPromise = promisify(stat);
 const unlinkPromise = promisify(unlink);
@@ -65,6 +74,23 @@ export const frameworks: Framework[] = [
         join(entrypointDir, 'gatsby-config.js'),
         createGatsbyConfig(gatsbyConfigUser),
         { encoding: 'utf-8' }
+      );
+
+      const gatsbyPluginNowPath = join(
+        entrypointDir,
+        'plugins',
+        'gatsby-plugin-now'
+      );
+
+      await mkdirPromise(gatsbyPluginNowPath, { recursive: true });
+
+      await copyFilePromise(
+        require.resolve('./gatsby-plugin-now/gatsby-node.js'),
+        join(gatsbyPluginNowPath, 'gatsby-node.js')
+      );
+      await copyFilePromise(
+        require.resolve('./gatsby-plugin-now/package.json'),
+        join(gatsbyPluginNowPath, 'package.json')
       );
     },
   },
