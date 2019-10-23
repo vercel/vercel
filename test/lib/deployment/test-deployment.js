@@ -29,7 +29,10 @@ async function testDeployment (
   buildDelegate
 ) {
   console.log('testDeployment', fixturePath);
-  const globResult = await glob(`${fixturePath}/**`, { nodir: true, dot: true });
+  const globResult = await glob(`${fixturePath}/**`, {
+    nodir: true,
+    dot: true,
+  });
   const bodies = globResult.reduce((b, f) => {
     const r = path.relative(fixturePath, f);
     b[r] = fs.readFileSync(f);
@@ -119,6 +122,10 @@ async function testDeployment (
           ? expected.every((h) => actual.includes(h))
           : expected === actual;
         if (!isEqual) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([ k, v ]) => `  ${k}=${v}`)
+            .join('\n');
+
           throw new Error(
             `Page ${probeUrl} does not have header ${header}.\n\nExpected: ${expected}.\nActual: ${headers}`
           );
