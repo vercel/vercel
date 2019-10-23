@@ -3,6 +3,27 @@
   "builds": [{ "src": "package.json", "use": "@now/next" }],
   "probes": [
     {
+      "path": "/lambda",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/forever",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/another",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
       "path": "/blog/post-1",
       "status": 200,
       "responseHeaders": {
@@ -42,27 +63,6 @@
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "MISS"
-      }
-    },
-    {
-      "path": "/lambda",
-      "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
-    },
-    {
-      "path": "/forever",
-      "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "HIT"
-      }
-    },
-    {
-      "path": "/another",
-      "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "HIT"
       }
     },
     {
