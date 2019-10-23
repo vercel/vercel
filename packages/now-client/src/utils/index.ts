@@ -25,6 +25,7 @@ export const EVENTS = new Set([
   // Deployment events
   'created',
   'ready',
+  'alias-assigned',
   'warning',
   'error',
   // Build events
