@@ -2037,7 +2037,7 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal));
 });
 
-test('try to deploy v1 deployment with --prod', async t => {
+testv1('try to deploy v1 deployment with --prod', async t => {
   const target = fixture('node');
   const goal = `> Error! Option --prod is not supported for Now 1.0 deployments.`;
 
@@ -2053,7 +2053,7 @@ test('try to deploy v1 deployment with --prod', async t => {
   t.true(stderr.includes(goal));
 });
 
-test('try to deploy v1 deployment with --target production', async t => {
+testv1('try to deploy v1 deployment with --target production', async t => {
   const target = fixture('node');
   const goal = `> Error! Option --target is not supported for Now 1.0 deployments.`;
 
