@@ -304,6 +304,18 @@ export default async function main(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
   );
 
+  if (argv.prod || argv.target) {
+    error(
+      `Option ${
+        argv.prod ? '--prod' : '--target'
+      } is not supported for Now 1.0 deployments. To manually alias a deployment, use ${cmd(
+        'now alias'
+      )} instead.`
+    );
+    await exit(1);
+    return 1;
+  }
+
   const {
     authConfig: { token },
     config,
