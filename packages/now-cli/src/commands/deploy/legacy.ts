@@ -308,13 +308,9 @@ export default async function main(
     error(
       `Option ${
         argv.prod ? '--prod' : '--target'
-      } is not supported for Now 1.0 deployments. ${
-        argv.prod
-          ? `Please use Now 2.0 to take advantage this feature: ${link(
-              'https://zeit.co/upgrade'
-            )}`
-          : ''
-      }`
+      } is not supported for Now 1.0 deployments. To manually alias a deployment, use ${cmd(
+        'now alias'
+      )} instead.`
     );
     await exit(1);
     return 1;
