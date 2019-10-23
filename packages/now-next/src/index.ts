@@ -715,7 +715,7 @@ export const build = async ({
       {
         // This ensures we only match known emitted-by-Next.js files and not
         // user-emitted files which may be missing a hash in their filename.
-        src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
+        src: '/_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+',
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
