@@ -304,7 +304,7 @@ export default async function main(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
   );
 
-  if (argv.prod || argv.target !== undefined) {
+  if (argv.prod || argv.target) {
     error(
       `Option ${
         argv.prod ? '--prod' : '--target'
