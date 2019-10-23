@@ -1,5 +1,12 @@
 import Ajv from 'ajv';
-import { routesSchema } from '@now/routing-utils';
+import {
+  routesSchema,
+  cleanUrlsSchema,
+  headersSchema,
+  redirectsSchema,
+  rewritesSchema,
+  trailingSlashSchema,
+} from '@now/routing-utils';
 import { NowConfig } from './types';
 
 const ajv = new Ajv();
@@ -30,38 +37,58 @@ const buildsSchema = {
 
 const validateBuilds = ajv.compile(buildsSchema);
 const validateRoutes = ajv.compile(routesSchema);
+const validateCleanUrls = ajv.compile(cleanUrlsSchema);
+const validateHeaders = ajv.compile(headersSchema);
+const validateRedirects = ajv.compile(redirectsSchema);
+const validateRewrites = ajv.compile(rewritesSchema);
+const validateTrailingSlash = ajv.compile(trailingSlashSchema);
 
-export function validateNowConfigBuilds({ builds }: NowConfig) {
-  if (!builds) {
-    return null;
-  }
-
-  if (!validateBuilds(builds)) {
-    if (!validateBuilds.errors) {
-      return null;
-    }
-
-    const error = validateBuilds.errors[0];
-
-    return `Invalid \`builds\` property: ${error.dataPath} ${error.message}`;
-  }
-
-  return null;
+export function validateNowConfigBuilds(config: NowConfig) {
+  return validateKey(config, 'builds', validateBuilds);
 }
 
-export function validateNowConfigRoutes({ routes }: NowConfig) {
-  if (!routes) {
+export function validateNowConfigRoutes(config: NowConfig) {
+  return validateKey(config, 'routes', validateRoutes);
+}
+
+export function validateNowConfigCleanUrls(config: NowConfig) {
+  return validateKey(config, 'cleanUrls', validateCleanUrls);
+}
+
+export function validateNowConfigHeaders(config: NowConfig) {
+  return validateKey(config, 'headers', validateHeaders);
+}
+
+export function validateNowConfigRedirects(config: NowConfig) {
+  return validateKey(config, 'redirects', validateRedirects);
+}
+
+export function validateNowConfigRewrites(config: NowConfig) {
+  return validateKey(config, 'rewrites', validateRewrites);
+}
+
+export function validateNowConfigTrailingSlash(config: NowConfig) {
+  return validateKey(config, 'trailingSlash', validateTrailingSlash);
+}
+
+function validateKey(
+  config: NowConfig,
+  key: keyof NowConfig,
+  validate: Ajv.ValidateFunction
+) {
+  const value = config[key];
+  if (!value) {
     return null;
   }
 
-  if (!validateRoutes(routes)) {
-    if (!validateRoutes.errors) {
+  if (!validate(value)) {
+    if (!validate.errors) {
       return null;
     }
 
-    const error = validateRoutes.errors[0];
+    const error = validate.errors[0];
 
-    return `Invalid \`routes\` property: ${error.dataPath} ${error.message}`;
+    return `Invalid \`${key}\` property: ${error.dataPath} ${error.message}`;
   }
 
   return null;
