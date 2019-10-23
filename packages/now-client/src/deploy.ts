@@ -195,7 +195,7 @@ export default async function* deploy(
   if (deployment) {
     if (deployment.readyState === 'READY') {
       debug('Deployment is READY. Not performing additional polling');
-      return yield { type: 'ready', payload: deployment };
+      yield { type: 'ready', payload: deployment };
     }
 
     try {
