@@ -187,6 +187,7 @@ export default function buildCreateDeployment(
       force,
       defaultName,
       debug: debug_,
+      apiUrl,
       ...metadata
     } = options;
 
@@ -204,6 +205,7 @@ export default function buildCreateDeployment(
       force,
       defaultName,
       metadata,
+      apiUrl,
     };
 
     debug(`Creating the deployment and starting upload...`);

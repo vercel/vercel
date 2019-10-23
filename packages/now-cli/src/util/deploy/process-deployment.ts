@@ -45,6 +45,7 @@ export default async function processDeployment({
   const opts: DeploymentOptions = {
     ...requestBody,
     debug: now._debug,
+    apiUrl: now._apiUrl,
   };
 
   if (!legacy) {

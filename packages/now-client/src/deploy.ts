@@ -22,6 +22,7 @@ export interface Options {
   preflight?: boolean;
   debug?: boolean;
   nowConfig?: NowJsonOptions;
+  apiUrl?: string;
 }
 
 async function* createDeployment(
@@ -50,6 +51,7 @@ async function* createDeployment(
           ...metadata,
           files: preparedFiles,
         }),
+        apiUrl: options.apiUrl,
       }
     );
 
@@ -203,7 +205,8 @@ export default async function* deploy(
         options.token,
         metadata.version,
         options.teamId,
-        debug
+        debug,
+        options.apiUrl
       )) {
         yield event;
       }
