@@ -117,6 +117,7 @@ export interface DeploymentOptions {
   sessionAffinity?: 'ip' | 'random';
   config?: { [key: string]: any };
   debug?: boolean;
+  apiUrl?: string;
 }
 
 export interface NowJsonOptions {

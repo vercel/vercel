@@ -332,6 +332,24 @@ jobs:
           name: Running Integration Tests Once
           command: yarn test-integration-once --clean false
 
+  test-unit:
+    docker:
+      - image: circleci/node:10
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Compiling `now dev` HTML error templates
+          command: node packages/now-cli/scripts/compile-templates.js
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Running Unit Tests
+          command: yarn test-unit --clean false
+
   coverage:
     docker:
       - image: circleci/node:10
@@ -466,6 +484,9 @@ workflows:
       - test-integration-once:
           requires:
             - build
+      - test-unit:
+          requires:
+            - build
           filters:
             tags:
               only: /.*/
@@ -484,6 +505,7 @@ workflows:
             - test-integration-linux-now-dev-node-10
             - test-integration-linux-now-dev-node-12
             - test-integration-once
+            - test-unit
             - test-lint
           filters:
             tags:

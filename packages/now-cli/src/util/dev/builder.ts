@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
+import { promisify } from 'util';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
@@ -10,8 +11,8 @@ import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import which from 'which';
 import plural from 'pluralize';
-import ora, { Ora } from 'ora';
 import minimatch from 'minimatch';
+import _treeKill from 'tree-kill';
 
 import { Output } from '../output';
 import highlight from '../output/highlight';
@@ -40,20 +41,12 @@ interface BuildMessageResult extends BuildMessage {
   error?: object;
 }
 
-const isLogging = new WeakSet<ChildProcess>();
+const treeKill = promisify(_treeKill);
 
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
   return which.sync('node', { nothrow: true }) || process.execPath;
-}
-
-function pipeChildLogging(child: ChildProcess): void {
-  if (!isLogging.has(child)) {
-    child.stdout!.pipe(process.stdout);
-    child.stderr!.pipe(process.stderr);
-    isLogging.add(child);
-  }
 }
 
 async function createBuildProcess(
@@ -98,7 +91,6 @@ async function createBuildProcess(
     env,
     execPath,
     execArgv: [],
-    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   match.buildProcess = buildProcess;
 
@@ -108,9 +100,6 @@ async function createBuildProcess(
     );
     match.buildProcess = undefined;
   });
-
-  buildProcess.stdout!.setEncoding('utf8');
-  buildProcess.stderr!.setEncoding('utf8');
 
   return new Promise((resolve, reject) => {
     // The first message that the builder process sends is the `ready` event
@@ -185,85 +174,39 @@ export async function executeBuild(
 
   let buildResultOrOutputs: BuilderOutputs | BuildResult;
   if (buildProcess) {
-    let spinLogger;
-    let spinner: Ora | undefined;
-    const fullLogs: string[] = [];
+    buildProcess.send({
+      type: 'build',
+      builderName: pkg.name,
+      buildParams,
+    });
 
-    if (isInitialBuild && !debug && process.stdout.isTTY) {
-      const logTitle = `${chalk.bold(
-        `Preparing ${chalk.underline(entrypoint)} for build`
-      )}:`;
-      spinner = ora(logTitle).start();
-
-      spinLogger = (data: Buffer) => {
-        const rawLog = stripAnsi(data.toString());
-        fullLogs.push(rawLog);
-
-        const lines = rawLog.replace(/\s+$/, '').split('\n');
-        const spinText = `${logTitle} ${lines[lines.length - 1]}`;
-        const maxCols = process.stdout.columns || 80;
-        const overflow = stripAnsi(spinText).length + 2 - maxCols;
-        spinner!.text =
-          overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
-      };
-
-      buildProcess!.stdout!.on('data', spinLogger);
-      buildProcess!.stderr!.on('data', spinLogger);
-    } else {
-      pipeChildLogging(buildProcess!);
-    }
-
-    try {
-      buildProcess.send({
-        type: 'build',
-        builderName: pkg.name,
-        buildParams,
-      });
-
-      buildResultOrOutputs = await new Promise((resolve, reject) => {
-        function onMessage({ type, result, error }: BuildMessageResult) {
-          cleanup();
-          if (type === 'buildResult') {
-            if (result) {
-              resolve(result);
-            } else if (error) {
-              reject(Object.assign(new Error(), error));
-            }
-          } else {
-            reject(new Error(`Got unexpected message type: ${type}`));
+    buildResultOrOutputs = await new Promise((resolve, reject) => {
+      function onMessage({ type, result, error }: BuildMessageResult) {
+        cleanup();
+        if (type === 'buildResult') {
+          if (result) {
+            resolve(result);
+          } else if (error) {
+            reject(Object.assign(new Error(), error));
           }
+        } else {
+          reject(new Error(`Got unexpected message type: ${type}`));
         }
-        function onExit(code: number | null, signal: string | null) {
-          cleanup();
-          const err = new Error(
-            `Builder exited with ${signal || code} before sending build result`
-          );
-          reject(err);
-        }
-        function cleanup() {
-          buildProcess!.removeListener('exit', onExit);
-          buildProcess!.removeListener('message', onMessage);
-        }
-        buildProcess!.on('exit', onExit);
-        buildProcess!.on('message', onMessage);
-      });
-    } catch (err) {
-      if (spinner) {
-        spinner.stop();
-        spinner = undefined;
-        console.log(fullLogs.join(''));
       }
-      throw err;
-    } finally {
-      if (spinLogger) {
-        buildProcess.stdout!.removeListener('data', spinLogger);
-        buildProcess.stderr!.removeListener('data', spinLogger);
+      function onExit(code: number | null, signal: string | null) {
+        cleanup();
+        const err = new Error(
+          `Builder exited with ${signal || code} before sending build result`
+        );
+        reject(err);
       }
-      if (spinner) {
-        spinner.stop();
+      function cleanup() {
+        buildProcess!.removeListener('exit', onExit);
+        buildProcess!.removeListener('message', onMessage);
       }
-      pipeChildLogging(buildProcess!);
-    }
+      buildProcess!.on('exit', onExit);
+      buildProcess!.on('message', onMessage);
+    });
   } else {
     buildResultOrOutputs = await builder.build(buildParams);
   }
@@ -459,4 +402,28 @@ export async function getBuildMatches(
   }
 
   return matches;
+}
+
+export async function shutdownBuilder(
+  match: BuildMatch,
+  { debug }: Output
+): Promise<void> {
+  const ops: Promise<void>[] = [];
+
+  if (match.buildProcess) {
+    debug(`Killing builder sub-process with PID ${match.buildProcess.pid}`);
+    ops.push(treeKill(match.buildProcess.pid));
+    delete match.buildProcess;
+  }
+
+  if (match.buildOutput) {
+    for (const asset of Object.values(match.buildOutput)) {
+      if (asset.type === 'Lambda' && asset.fn) {
+        debug(`Shutting down Lambda function`);
+        ops.push(asset.fn.destroy());
+      }
+    }
+  }
+
+  await Promise.all(ops);
 }
