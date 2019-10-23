@@ -66,60 +66,60 @@
       }
     },
     {
-      "path": "/_next/data/blog/post-1.json",
+      "path": "/_next/data/testing-build-id/blog/post-1.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/blog/post-2.json",
+      "path": "/_next/data/testing-build-id/blog/post-2.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/blog/post-3.json",
+      "path": "/_next/data/testing-build-id/blog/post-3.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "MISS"
       }
     },
     {
-      "path": "/_next/data/blog/post-1/comment-1.json",
+      "path": "/_next/data/testing-build-id/blog/post-1/comment-1.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/blog/post-2/comment-2.json",
+      "path": "/_next/data/testing-build-id/blog/post-2/comment-2.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/blog/post-3/comment-3.json",
+      "path": "/_next/data/testing-build-id/blog/post-3/comment-3.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "MISS"
       }
     },
     {
-      "path": "/_next/data/lambda.json",
+      "path": "/_next/data/testing-build-id/lambda.json",
       "status": 404
     },
     {
-      "path": "/_next/data/forever.json",
+      "path": "/_next/data/testing-build-id/forever.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/another.json",
+      "path": "/_next/data/testing-build-id/another.json",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
