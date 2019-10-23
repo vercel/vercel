@@ -2037,6 +2037,40 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal));
 });
 
+testv1('try to deploy v1 deployment with --prod', async t => {
+  const target = fixture('node');
+  const goal = `> Error! Option --prod is not supported for Now 1.0 deployments.`;
+
+  const { stderr, stdout, code } = await execa(binaryPath, [target, '--prod'], {
+    reject: false,
+  });
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 1);
+  t.true(stderr.includes(goal));
+});
+
+testv1('try to deploy v1 deployment with --target production', async t => {
+  const target = fixture('node');
+  const goal = `> Error! Option --target is not supported for Now 1.0 deployments.`;
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [target, '--target', 'production'],
+    { reject: false }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 1);
+  t.true(stderr.includes(goal));
+});
+
 const verifyExampleAngular = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'package.json')) &&
   fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
