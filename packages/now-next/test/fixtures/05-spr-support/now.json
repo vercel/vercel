@@ -13,7 +13,21 @@
       "path": "/forever",
       "status": 200,
       "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/forever",
+      "status": 200,
+      "responseHeaders": {
         "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/another",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "PRERENDER"
       }
     },
     {
@@ -27,7 +41,21 @@
       "path": "/blog/post-1",
       "status": 200,
       "responseHeaders": {
+        "x-now-cache": "PRERENDER"
+      }
+    },
+    {
+      "path": "/blog/post-1",
+      "status": 200,
+      "responseHeaders": {
         "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/blog/post-2",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "PRERENDER"
       }
     },
     {
@@ -45,17 +73,24 @@
       }
     },
     {
-      "path": "/blog/post-1/comment-1",
+      "path": "/blog/post-3",
       "status": 200,
       "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
     {
+      "path": "/blog/post-1/comment-1",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "PRERENDER"
+      }
+    },
+    {
       "path": "/blog/post-2/comment-2",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-now-cache": "PRERENDER"
       }
     },
     {
@@ -73,6 +108,13 @@
       "path": "/_next/data/testing-build-id/forever.json",
       "status": 200,
       "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/forever.json",
+      "status": 200,
+      "responseHeaders": {
         "x-now-cache": "HIT"
       }
     },
@@ -84,45 +126,31 @@
       }
     },
     {
+      "path": "/_next/data/testing-build-id/another2.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "PRERENDER"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/another2.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
       "path": "/_next/data/testing-build-id/blog/post-1.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-now-cache": "PRERENDER"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-2.json",
+      "path": "/_next/data/testing-build-id/blog/post-1337/comment-1337.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
-      }
-    },
-    {
-      "path": "/_next/data/testing-build-id/blog/post-3.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
-    },
-    {
-      "path": "/_next/data/testing-build-id/blog/post-1/comment-1.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "HIT"
-      }
-    },
-    {
-      "path": "/_next/data/testing-build-id/blog/post-2/comment-2.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "HIT"
-      }
-    },
-    {
-      "path": "/_next/data/testing-build-id/blog/post-3/comment-3.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
+        "x-now-cache": "PRERENDER"
       }
     }
   ]
