@@ -529,43 +529,6 @@ testv1('deploy a v1 dockerfile project', async t => {
   context.deployment = host;
 });
 
-test('deploy with a custom API URL', async t => {
-  const directory = fixture('static-single-file');
-
-  const { stdout, stderr, code } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--api',
-      'https://zeit.co/api',
-      ...defaultArgs,
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(code);
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
 test('test invalid json alias rules', async t => {
   const fixturePath = fixture('alias-rules');
   const output = await execute(['alias', '-r', 'invalid-json-rules.json'], {
@@ -699,6 +662,43 @@ testv1('create an explicit alias for deployment', async t => {
   t.is(content.id, contextName);
 
   context.alias = hosts.alias;
+});
+
+test('deploy with a custom API URL', async t => {
+  const directory = fixture('static-single-file');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      '--api',
+      'https://zeit.co/api',
+      ...defaultArgs,
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
 });
 
 testv1('list the aliases', async t => {
