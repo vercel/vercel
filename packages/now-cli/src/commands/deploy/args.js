@@ -127,6 +127,7 @@ export const legacyArgsMri = {
     'session-affinity',
     'regions',
     'dotenv',
+    'target',
   ],
   boolean: [
     'help',

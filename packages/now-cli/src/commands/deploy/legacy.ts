@@ -304,9 +304,11 @@ export default async function main(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
   );
 
-  if (argv.prod) {
+  if (argv.prod || argv.target !== undefined) {
     error(
-      `Now 1.0 does not support Production Deployments. Please use Now 2.0 to take advantage this feature: ${link(
+      `Option ${
+        argv.prod ? '--prod' : '--target'
+      } is not supported by Now 1.0 deployments. Please use Now 2.0 to take advantage this feature: ${link(
         'https://zeit.co/upgrade'
       )}`
     );
