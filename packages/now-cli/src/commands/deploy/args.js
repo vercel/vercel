@@ -144,6 +144,7 @@ export const legacyArgsMri = {
     'no-scale',
     'no-verify',
     'dotenv',
+    'prod',
   ],
   default: {
     C: false,
