@@ -32,8 +32,10 @@ export default async function* checkDeploymentStatus(
   debug(`Using ${version ? `${version}.0` : '2.0'} API for status checks`);
 
   // If the deployment is ready, we don't want any of this to run
-  if (isDone(deploymentState)) {
-    debug(`Deployment is already READY. Not running status checks`);
+  if (isDone(deploymentState) && isAliasAssigned(deploymentState)) {
+    debug(
+      `Deployment is already READY and aliases are assigned. Not running status checks`
+    );
     return;
   }
 
