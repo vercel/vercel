@@ -725,18 +725,23 @@ test(
   })
 );
 
-test(
-  '[now dev] 23-docusaurus',
-  testFixtureStdio('23-docusaurus', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// react-dev-utils has `engines: { node: ">= 8.10" }` in its `package.json`
+if (satisfies(process.version, '>= 8.10')) {
+  test(
+    '[now dev] 23-docusaurus',
+    testFixtureStdio('23-docusaurus', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Test Site · A website for testing/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Test Site · A website for testing/gm);
+    })
+  );
+} else {
+  console.log('Skipping `23-docusaurus` test since it requires Node >= 8.10');
+}
 
 test(
   '[now dev] 24-ember',
