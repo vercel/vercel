@@ -694,18 +694,23 @@ test(
   })
 );
 
-test(
-  '[now dev] 21-charge',
-  testFixtureStdio('21-charge', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// @static/charge has `engines: { node: ">= 8.10.0" }` in its `package.json`
+if (satisfies(process.version, '>= 8.10.0')) {
+  test(
+    '[now dev] 21-charge',
+    testFixtureStdio('21-charge', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Welcome to my new Charge site/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Welcome to my new Charge site/gm);
+    })
+  );
+} else {
+  console.log('Skipping `21-charge` test since it requires Node >= 8.10.0');
+}
 
 test(
   '[now dev] 22-brunch',
