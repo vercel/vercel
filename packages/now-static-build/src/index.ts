@@ -159,9 +159,6 @@ export async function build({
   debug('Downloading user files...');
   await download(files, workPath, meta);
 
-  console.log(entrypoint);
-  console.log(workPath);
-
   const mountpoint = path.dirname(entrypoint);
   const entrypointDir = path.join(workPath, mountpoint);
 

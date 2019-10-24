@@ -93,10 +93,6 @@ export const frameworks: Framework[] = [
         require.resolve('./gatsby-plugin-now/package.json'),
         join(gatsbyPluginNowPath, 'package.json')
       );
-
-      console.log(
-        await readFilePromise(join(gatsbyPluginNowPath, 'gatsby-node.js'))
-      );
     },
   },
   {
