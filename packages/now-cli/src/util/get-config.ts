@@ -1,5 +1,9 @@
 import path from 'path';
-import { CantParseJSONFile, CantFindConfig } from './errors-ts';
+import {
+  CantParseJSONFile,
+  CantFindConfig,
+  WorkingDirectoryDoesNotExist,
+} from './errors-ts';
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
 import readPackage from './read-package';
@@ -8,13 +12,25 @@ import { Output } from './output';
 
 let config: Config;
 
-export default async function getConfig(output: Output, configFile?: string) {
-  const localPath = process.cwd();
-
+export default async function getConfig(
+  output: Output,
+  configFile?: string
+): Promise<Config | Error> {
   // If config was already read, just return it
   if (config) {
     return config;
   }
+
+  let localPath: string;
+  try {
+    localPath = process.cwd();
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return new WorkingDirectoryDoesNotExist();
+    }
+    throw err;
+  }
+
   // First try with the config supplied by the user via --local-config
   if (configFile) {
     const localFilePath = path.resolve(localPath, configFile);
