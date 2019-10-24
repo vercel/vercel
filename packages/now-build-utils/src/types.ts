@@ -195,103 +195,106 @@ export interface ShouldServeOptions {
  * Credit to Iain Reid, MIT license.
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace PackageJson {
+  /**
+   * An author or contributor
+   */
+  export interface Author {
+    name: string;
+    email?: string;
+    homepage?: string;
+  }
+
+  /**
+   * A map of exposed bin commands
+   */
+  export interface BinMap {
+    [commandName: string]: string;
+  }
+
+  /**
+   * A bugs link
+   */
+  export interface Bugs {
+    email: string;
+    url: string;
+  }
+
+  export interface Config {
+    name?: string;
+    config?: unknown;
+  }
+
+  /**
+   * A map of dependencies
+   */
+  export interface DependencyMap {
+    [dependencyName: string]: string;
+  }
+
+  /**
+   * CommonJS package structure
+   */
+  export interface Directories {
+    lib?: string;
+    bin?: string;
+    man?: string;
+    doc?: string;
+    example?: string;
+  }
+
+  export interface Engines {
+    node?: string;
+    npm?: string;
+  }
+
+  export interface PublishConfig {
+    registry?: string;
+  }
+
+  /**
+   * A project repository
+   */
+  export interface Repository {
+    type: string;
+    url: string;
+  }
+
+  export interface ScriptsMap {
+    [scriptName: string]: string;
+  }
+}
+
 export interface PackageJson {
   readonly name?: string;
   readonly version?: string;
   readonly description?: string;
   readonly keywords?: string[];
   readonly homepage?: string;
-  readonly bugs?: string | PackageJsonBugs;
+  readonly bugs?: string | PackageJson.Bugs;
   readonly license?: string;
-  readonly author?: string | PackageJsonAuthor;
-  readonly contributors?: string[] | PackageJsonAuthor[];
+  readonly author?: string | PackageJson.Author;
+  readonly contributors?: string[] | PackageJson.Author[];
   readonly files?: string[];
   readonly main?: string;
-  readonly bin?: string | PackageJsonBinMap;
+  readonly bin?: string | PackageJson.BinMap;
   readonly man?: string | string[];
-  readonly directories?: PackageJsonDirectories;
-  readonly repository?: string | PackageJsonRepository;
-  readonly scripts?: PackageJsonScriptsMap;
-  readonly config?: PackageJsonConfig;
-  readonly dependencies?: PackageJsonDependencyMap;
-  readonly devDependencies?: PackageJsonDependencyMap;
-  readonly peerDependencies?: PackageJsonDependencyMap;
-  readonly optionalDependencies?: PackageJsonDependencyMap;
+  readonly directories?: PackageJson.Directories;
+  readonly repository?: string | PackageJson.Repository;
+  readonly scripts?: PackageJson.ScriptsMap;
+  readonly config?: PackageJson.Config;
+  readonly dependencies?: PackageJson.DependencyMap;
+  readonly devDependencies?: PackageJson.DependencyMap;
+  readonly peerDependencies?: PackageJson.DependencyMap;
+  readonly optionalDependencies?: PackageJson.DependencyMap;
   readonly bundledDependencies?: string[];
-  readonly engines?: PackageJsonEngines;
+  readonly engines?: PackageJson.Engines;
   readonly os?: string[];
   readonly cpu?: string[];
   readonly preferGlobal?: boolean;
   readonly private?: boolean;
-  readonly publishConfig?: PackageJsonPublishConfig;
-}
-
-/**
- * An author or contributor
- */
-export interface PackageJsonAuthor {
-  name: string;
-  email?: string;
-  homepage?: string;
-}
-
-/**
- * A map of exposed bin commands
- */
-export interface PackageJsonBinMap {
-  [commandName: string]: string;
-}
-
-/**
- * A bugs link
- */
-export interface PackageJsonBugs {
-  email: string;
-  url: string;
-}
-
-export interface PackageJsonConfig {
-  name?: string;
-  config?: any;
-}
-
-/**
- * A map of dependencies
- */
-export interface PackageJsonDependencyMap {
-  [dependencyName: string]: string;
-}
-
-/**
- * CommonJS package structure
- */
-export interface PackageJsonDirectories {
-  lib?: string;
-  bin?: string;
-  man?: string;
-  doc?: string;
-  example?: string;
-}
-
-export interface PackageJsonEngines {
-  node?: string;
-  npm?: string;
-}
-
-export interface PackageJsonPublishConfig {
-  registry?: string;
-}
-
-/**
- * A project repository
- */
-export interface PackageJsonRepository {
-  type: string;
-  url: string;
-}
-
-export interface PackageJsonScriptsMap {
-  [scriptName: string]: string;
+  readonly publishConfig?: PackageJson.PublishConfig;
 }
 
 export interface NodeVersion {
