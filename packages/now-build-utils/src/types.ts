@@ -196,7 +196,7 @@ export interface ShouldServeOptions {
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
 export interface PackageJson {
-  readonly name: string;
+  readonly name?: string;
   readonly version?: string;
   readonly description?: string;
   readonly keywords?: string[];
