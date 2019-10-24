@@ -987,22 +987,28 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
   }
 });
 
-test('[now dev] 25-nextjs-src-dir', async t => {
-  const directory = fixture('25-nextjs-src-dir');
-  const { dev, port } = await testFixture(directory);
+if (satisfies(process.version, '>= 8.9.0')) {
+  test('[now dev] 25-nextjs-src-dir', async t => {
+    const directory = fixture('25-nextjs-src-dir');
+    const { dev, port } = await testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-    const response = await result;
+      const result = await fetchWithRetry(`http://localhost:${port}`, 80);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Next.js \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+      const body = await response.text();
+      t.regex(body, /Next.js \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
+} else {
+  console.log(
+    'Skipping `25-nextjs-src-dir` test since it requires Node >= 8.9.0'
+  );
+}
