@@ -2037,6 +2037,40 @@ test('try to deploy with non-existing team', async t => {
   t.true(stderr.includes(goal));
 });
 
+testv1('try to deploy v1 deployment with --prod', async t => {
+  const target = fixture('node');
+  const goal = `> Error! Option --prod is not supported for Now 1.0 deployments.`;
+
+  const { stderr, stdout, code } = await execa(binaryPath, [target, '--prod'], {
+    reject: false,
+  });
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 1);
+  t.true(stderr.includes(goal));
+});
+
+testv1('try to deploy v1 deployment with --target production', async t => {
+  const target = fixture('node');
+  const goal = `> Error! Option --target is not supported for Now 1.0 deployments.`;
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [target, '--target', 'production'],
+    { reject: false }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 1);
+  t.true(stderr.includes(goal));
+});
+
 const verifyExampleAngular = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'package.json')) &&
   fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
@@ -2469,6 +2503,43 @@ test('now secret rm', async t => {
   console.log(output.code);
 
   t.is(output.code, 0, formatOutput(output));
+});
+
+test('deploy with a custom API URL', async t => {
+  const directory = fixture('static-single-file');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      '--api',
+      'https://zeit.co/api',
+      ...defaultArgs,
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
 });
 
 test.after.always(async () => {

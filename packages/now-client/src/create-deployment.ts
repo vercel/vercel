@@ -1,7 +1,7 @@
 import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
 import readdir from 'recursive-readdir';
-import { relative, join } from 'path';
+import { relative, join, isAbsolute } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import uploadAndDeploy from './upload';
 import { getNowIgnore, createDebug, parseNowJSON } from './utils';
@@ -52,6 +52,22 @@ export default function buildCreateDeployment(
     const isDirectory = !Array.isArray(path) && lstatSync(path).isDirectory();
 
     let rootFiles: string[];
+
+    if (Array.isArray(path)) {
+      for (const filePath of path) {
+        if (!isAbsolute(filePath)) {
+          throw new DeploymentError({
+            code: 'invalid_path',
+            message: `Provided path ${filePath} is not absolute`,
+          });
+        }
+      }
+    } else if (!isAbsolute(path)) {
+      throw new DeploymentError({
+        code: 'invalid_path',
+        message: `Provided path ${path} is not absolute`,
+      });
+    }
 
     if (isDirectory && !Array.isArray(path)) {
       debug(`Provided 'path' is a directory. Reading subpaths... `);
@@ -171,6 +187,7 @@ export default function buildCreateDeployment(
       force,
       defaultName,
       debug: debug_,
+      apiUrl,
       ...metadata
     } = options;
 
@@ -188,6 +205,7 @@ export default function buildCreateDeployment(
       force,
       defaultName,
       metadata,
+      apiUrl,
     };
 
     debug(`Creating the deployment and starting upload...`);
