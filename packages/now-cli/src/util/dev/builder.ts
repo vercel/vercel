@@ -411,8 +411,16 @@ export async function shutdownBuilder(
   const ops: Promise<void>[] = [];
 
   if (match.buildProcess) {
-    debug(`Killing builder sub-process with PID ${match.buildProcess.pid}`);
-    ops.push(treeKill(match.buildProcess.pid));
+    const { pid } = match.buildProcess;
+    debug(`Killing builder sub-process with PID ${pid}`);
+    const killPromise = treeKill(pid)
+      .then(() => {
+        debug(`Killed builder with PID ${pid}`);
+      })
+      .catch((err: Error) => {
+        debug(`Failed to kill builder with PID ${pid}: ${err}`);
+      });
+    ops.push(killPromise);
     delete match.buildProcess;
   }
 
