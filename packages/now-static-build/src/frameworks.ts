@@ -82,7 +82,8 @@ export const frameworks: Framework[] = [
         'gatsby-plugin-now'
       );
 
-      await mkdirPromise(gatsbyPluginNowPath, { recursive: true });
+      await mkdirPromise(join(entrypointDir, 'plugins'));
+      await mkdirPromise(gatsbyPluginNowPath);
 
       await copyFilePromise(
         require.resolve('./gatsby-plugin-now/gatsby-node.js'),
