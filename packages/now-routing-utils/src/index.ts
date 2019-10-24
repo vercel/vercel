@@ -150,8 +150,6 @@ export function getTransformedRoutes({
     }
     if (typeof rewrites !== 'undefined') {
       routes.push({ handle: 'filesystem' });
-    }
-    if (typeof rewrites !== 'undefined') {
       routes.push(...convertRewrites(rewrites));
     }
   }
