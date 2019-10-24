@@ -648,18 +648,25 @@ test('[now dev] double slashes redirect', async t => {
   }
 });
 
-test(
-  '[now dev] 18-marko',
-  testFixtureStdio('18-marko', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
+  test(
+    '[now dev] 18-marko',
+    testFixtureStdio('18-marko', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Marko Starter/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Marko Starter/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `18-marko` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
+  );
+}
 
 test(
   '[now dev] 19-mithril',
