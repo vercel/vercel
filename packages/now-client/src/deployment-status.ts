@@ -41,6 +41,7 @@ export default async function* checkDeploymentStatus(
 
   // Build polling
   debug('Waiting for builds and the deployment to complete...');
+  let readyEventFired = false;
   while (true) {
     if (!allBuildsCompleted) {
       const buildsData = await fetch(
@@ -94,17 +95,16 @@ export default async function* checkDeploymentStatus(
         return yield { type: 'error', payload: deploymentUpdate.error };
       }
 
-      if (isReady(deploymentUpdate)) {
-        if (isAliasAssigned(deploymentUpdate)) {
-          debug('Deployment state changed to READY');
-          yield { type: 'ready', payload: deploymentUpdate };
+      if (isReady(deploymentUpdate) && !readyEventFired) {
+        debug('Deployment state changed to READY 2');
+        readyEventFired = true;
+        yield { type: 'ready', payload: deploymentUpdate };
+      }
 
-          debug('Deployment alias assigned');
-          return yield { type: 'alias-assigned', payload: deploymentUpdate };
-        } else {
-          debug('Deployment state changed to READY');
-          yield { type: 'ready', payload: deploymentUpdate };
-        }
+      console.log(deploymentUpdate);
+      if (isAliasAssigned(deploymentUpdate)) {
+        debug('Deployment alias assigned');
+        return yield { type: 'alias-assigned', payload: deploymentUpdate };
       }
 
       const aliasError = isAliasError(deploymentUpdate);

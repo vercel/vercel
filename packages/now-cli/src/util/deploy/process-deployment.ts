@@ -214,7 +214,7 @@ export default async function processDeployment({
       }
 
       // Handle ready event
-      if (event.type === 'alias-assigned') {
+      if (event.type === 'ready') {
         log(`Build completed`);
         return event.payload;
       }

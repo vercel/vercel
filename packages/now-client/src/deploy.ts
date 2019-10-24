@@ -195,7 +195,7 @@ export default async function* deploy(
 
   if (deployment) {
     if (isReady(deployment) && isAliasAssigned(deployment)) {
-      debug('Deployment state changed to READY');
+      debug('Deployment state changed to READY 3');
       yield { type: 'ready', payload: deployment };
 
       debug('Deployment alias assigned');
