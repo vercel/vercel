@@ -335,8 +335,8 @@ if (satisfies(process.version, '10.x')) {
   console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
 }
 
-// Aurelia has `engines: { node: ">8.9.0" }` in its `package.json`
-if (satisfies(process.version, '>= 8.9.0')) {
+// Aurelia has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
   test(
     '[now dev] 03-aurelia',
     testFixtureStdio('03-aurelia', async (t, port) => {
@@ -350,7 +350,9 @@ if (satisfies(process.version, '>= 8.9.0')) {
     })
   );
 } else {
-  console.log('Skipping `03-aurelia` test since it requires Node >= 8.9.0');
+  console.log(
+    'Skipping `03-aurelia` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
+  );
 }
 
 // test(
