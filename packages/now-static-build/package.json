@@ -27,7 +27,5 @@
     "ms": "2.1.2",
     "typescript": "3.5.2"
   },
-  "dependencies": {
-    "gatsby-plugin-now": "1.2.2"
-  }
+  "dependencies": {}
 }
