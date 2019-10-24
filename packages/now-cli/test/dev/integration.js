@@ -335,7 +335,7 @@ if (satisfies(process.version, '10.x')) {
   console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
 }
 
-// Aurelia has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
 if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
   test(
     '[now dev] 03-aurelia',
@@ -368,18 +368,25 @@ if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
 //   })
 // );
 
-test(
-  '[now dev] 05-gatsby',
-  testFixtureStdio('05-gatsby', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
+  test(
+    '[now dev] 05-gatsby',
+    testFixtureStdio('05-gatsby', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Gatsby Default Starter/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Gatsby Default Starter/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `05-gatsby` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
+  );
+}
 
 test(
   '[now dev] 06-gridsome',
