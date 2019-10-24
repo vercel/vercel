@@ -388,18 +388,25 @@ if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
   );
 }
 
-test(
-  '[now dev] 06-gridsome',
-  testFixtureStdio('06-gridsome', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// mini-css-extract-plugin has `engines: { node: ">= 6.9.0 <7.0.0 || >= 8.9.0" }` in its `package.json`
+if (satisfies(process.version, '>= 6.9.0 <7.0.0 || >= 8.9.0')) {
+  test(
+    '[now dev] 06-gridsome',
+    testFixtureStdio('06-gridsome', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Hello, world!/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Hello, world!/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `06-gridsome` test since it requires Node >= 6.9.0 <7.0.0 || >= 8.9.0'
+  );
+}
 
 test(
   '[now dev] 07-hexo-node',
