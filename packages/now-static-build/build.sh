@@ -3,7 +3,8 @@ set -euo pipefail
 
 ncc build src/index.ts -o dist
 
-# copy gatsby plugin files in the gatsby redirect test case
+# copy gatsby-plugin-now files to the dist folder to
+# make them available when they need to be injected
 gatsby_plugin="$(dirname $(pwd))/gatsby-plugin-now"
 gatsby_local="dist/gatsby-plugin-now"
 mkdir -p $gatsby_local
