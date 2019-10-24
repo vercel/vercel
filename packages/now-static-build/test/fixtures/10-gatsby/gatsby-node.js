@@ -5,3 +5,12 @@
  */
 
 // You can delete this file if you're not using it
+
+exports.createPages = ({ actions }) => {
+  const { createRedirect } = actions
+
+  createRedirect({
+    fromPath: "/redirect",
+    toPath: "/",
+  })
+}
