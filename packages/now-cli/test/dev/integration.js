@@ -750,18 +750,25 @@ if (satisfies(process.version, '>= 8.10')) {
   console.log('Skipping `23-docusaurus` test since it requires Node >= 8.10');
 }
 
-test(
-  '[now dev] 24-ember',
-  testFixtureStdio('24-ember', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
+  test(
+    '[now dev] 24-ember',
+    testFixtureStdio('24-ember', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /HelloWorld/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /HelloWorld/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `24-ember` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
+  );
+}
 
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
