@@ -191,23 +191,107 @@ export interface ShouldServeOptions {
   config: Config;
 }
 
+/**
+ * Credit to Iain Reid, MIT license.
+ * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
+ */
 export interface PackageJson {
+  readonly name: string;
+  readonly version?: string;
+  readonly description?: string;
+  readonly keywords?: string[];
+  readonly homepage?: string;
+  readonly bugs?: string | PackageJsonBugs;
+  readonly license?: string;
+  readonly author?: string | PackageJsonAuthor;
+  readonly contributors?: string[] | PackageJsonAuthor[];
+  readonly files?: string[];
+  readonly main?: string;
+  readonly bin?: string | PackageJsonBinMap;
+  readonly man?: string | string[];
+  readonly directories?: PackageJsonDirectories;
+  readonly repository?: string | PackageJsonRepository;
+  readonly scripts?: PackageJsonScriptsMap;
+  readonly config?: PackageJsonConfig;
+  readonly dependencies?: PackageJsonDependencyMap;
+  readonly devDependencies?: PackageJsonDependencyMap;
+  readonly peerDependencies?: PackageJsonDependencyMap;
+  readonly optionalDependencies?: PackageJsonDependencyMap;
+  readonly bundledDependencies?: string[];
+  readonly engines?: PackageJsonEngines;
+  readonly os?: string[];
+  readonly cpu?: string[];
+  readonly preferGlobal?: boolean;
+  readonly private?: boolean;
+  readonly publishConfig?: PackageJsonPublishConfig;
+}
+
+/**
+ * An author or contributor
+ */
+export interface PackageJsonAuthor {
+  name: string;
+  email?: string;
+  homepage?: string;
+}
+
+/**
+ * A map of exposed bin commands
+ */
+export interface PackageJsonBinMap {
+  [commandName: string]: string;
+}
+
+/**
+ * A bugs link
+ */
+export interface PackageJsonBugs {
+  email: string;
+  url: string;
+}
+
+export interface PackageJsonConfig {
   name?: string;
-  version?: string;
-  engines?: {
-    [key: string]: string;
-    node: string;
-    npm: string;
-  };
-  scripts?: {
-    [key: string]: string;
-  };
-  dependencies?: {
-    [key: string]: string;
-  };
-  devDependencies?: {
-    [key: string]: string;
-  };
+  config?: any;
+}
+
+/**
+ * A map of dependencies
+ */
+export interface PackageJsonDependencyMap {
+  [dependencyName: string]: string;
+}
+
+/**
+ * CommonJS package structure
+ */
+export interface PackageJsonDirectories {
+  lib?: string;
+  bin?: string;
+  man?: string;
+  doc?: string;
+  example?: string;
+}
+
+export interface PackageJsonEngines {
+  node?: string;
+  npm?: string;
+}
+
+export interface PackageJsonPublishConfig {
+  registry?: string;
+}
+
+/**
+ * A project repository
+ */
+export interface PackageJsonRepository {
+  type: string;
+  url: string;
+}
+
+export interface PackageJsonScriptsMap {
+  [scriptName: string]: string;
 }
 
 export interface NodeVersion {
