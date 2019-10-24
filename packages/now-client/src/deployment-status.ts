@@ -101,7 +101,6 @@ export default async function* checkDeploymentStatus(
         yield { type: 'ready', payload: deploymentUpdate };
       }
 
-      console.log(deploymentUpdate);
       if (isAliasAssigned(deploymentUpdate)) {
         debug('Deployment alias assigned');
         return yield { type: 'alias-assigned', payload: deploymentUpdate };
