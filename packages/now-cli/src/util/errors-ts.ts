@@ -784,6 +784,19 @@ export class CantFindConfig extends NowError<
   }
 }
 
+export class WorkingDirectoryDoesNotExist extends NowError<
+  'CWD_DOES_NOT_EXIST',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'CWD_DOES_NOT_EXIST',
+      meta: {},
+      message: 'The current working directory does not exist.',
+    });
+  }
+}
+
 export class FileNotFound extends NowError<'FILE_NOT_FOUND', { file: string }> {
   constructor(file: string) {
     super({
