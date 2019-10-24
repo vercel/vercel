@@ -115,7 +115,7 @@ jobs:
 
   test-integration-macos-node-8:
     macos:
-      xcode: '9.2.0'
+      xcode: '9.0.1'
     working_directory: ~/repo
     steps:
       - checkout
@@ -205,7 +205,7 @@ jobs:
 
   test-integration-macos-now-dev-node-8:
     macos:
-      xcode: '9.2.0'
+      xcode: '9.0.1'
     working_directory: ~/repo
     steps:
       - checkout
