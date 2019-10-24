@@ -185,7 +185,7 @@ export default async function* upload(
   try {
     debug('Starting deployment creation');
     for await (const event of deploy(files, options)) {
-      if (event.type === 'ready') {
+      if (event.type === 'alias-assigned') {
         debug('Deployment is ready');
         return yield event;
       }
