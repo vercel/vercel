@@ -51,7 +51,7 @@ export default async function* upload(
       }
     } else {
       // If the deployment has succeeded here, don't continue
-      if (event.type === 'ready') {
+      if (event.type === 'alias-assigned') {
         debug('Deployment succeeded on file check');
 
         return yield event;
