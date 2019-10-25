@@ -6,7 +6,7 @@
 
 To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
 
-```
+```bash
 npm i -g now
 ```
 
