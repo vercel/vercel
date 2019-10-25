@@ -58,7 +58,7 @@
     ]
   },
   "engines": {
-    "node": ">= 8.11"
+    "node": ">= 8"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
