@@ -6,7 +6,7 @@ const REDIRECT_FILE_NAME = '__now_routes_g4t5bY.json';
 exports.onPostBuild = async ({ store }) => {
   const { redirects, program } = store.getState();
 
-  if (!redirects.length === 0) {
+  if (redirects.length === 0) {
     return;
   }
 
@@ -16,7 +16,7 @@ exports.onPostBuild = async ({ store }) => {
     const route = {
       src: redirect.fromPath,
       status: redirect.statusCode || (redirect.isPermanent ? 301 : 302),
-      headers: { Location: redirect.toPath }
+      headers: { Location: redirect.toPath },
     };
 
     if (redirect.force) {
