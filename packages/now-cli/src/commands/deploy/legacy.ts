@@ -306,9 +306,9 @@ export default async function main(
 
   if (argv.prod || argv.target) {
     error(
-      `Option ${
+      `The option ${cmd(
         argv.prod ? '--prod' : '--target'
-      } is not supported for Now 1.0 deployments. To manually alias a deployment, use ${cmd(
+      )} is not supported for Now 1.0 deployments. To manually alias a deployment, use ${cmd(
         'now alias'
       )} instead.`
     );
