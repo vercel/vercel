@@ -124,9 +124,7 @@ export default async function processDeployment({
         event.type === 'build-state-changed' &&
         event.payload.readyState === 'BUILDING'
       ) {
-        if (buildSpinner === null) {
-          buildSpinner = wait('Building...');
-        }
+        buildSpinner = wait('Building...');
       }
 
       if (event.type === 'all-builds-completed') {
