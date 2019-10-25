@@ -1,6 +1,6 @@
 {
   "name": "now-client",
-  "version": "5.2.1",
+  "version": "5.2.2",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
   "homepage": "https://zeit.co",
