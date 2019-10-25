@@ -191,6 +191,10 @@ export default function buildCreateDeployment(
       ...metadata
     } = options;
 
+    if (apiUrl) {
+      debug(`Using provided API URL: ${apiUrl}`);
+    }
+
     debug(`Setting platform version to ${version}`);
     metadata.version = version;
 
