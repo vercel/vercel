@@ -2039,7 +2039,7 @@ test('try to deploy with non-existing team', async t => {
 
 testv1('try to deploy v1 deployment with --prod', async t => {
   const target = fixture('node');
-  const goal = `> Error! Option --prod is not supported for Now 1.0 deployments.`;
+  const goal = `is not supported for Now 1.0 deployments`;
 
   const { stderr, stdout, code } = await execa(binaryPath, [target, '--prod'], {
     reject: false,
@@ -2055,7 +2055,7 @@ testv1('try to deploy v1 deployment with --prod', async t => {
 
 testv1('try to deploy v1 deployment with --target production', async t => {
   const target = fixture('node');
-  const goal = `> Error! Option --target is not supported for Now 1.0 deployments.`;
+  const goal = `is not supported for Now 1.0 deployments`;
 
   const { stderr, stdout, code } = await execa(
     binaryPath,
