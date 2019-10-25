@@ -265,6 +265,10 @@ export async function build({
           `${framework.name} does not require a specific Node.js version. Continuing ...`
         );
       }
+
+      if (framework.beforeBuildHook) {
+        await framework.beforeBuildHook(entrypointDir);
+      }
     }
 
     const nodeVersion = await getNodeVersion(
