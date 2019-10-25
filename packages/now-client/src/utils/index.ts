@@ -110,6 +110,7 @@ export const fetch = async (
   let time: number;
 
   url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
+  delete opts.apiUrl;
 
   if (opts.teamId) {
     const parsedUrl = parseUrl(url, true);
@@ -118,7 +119,6 @@ export const fetch = async (
     query.teamId = opts.teamId;
     url = `${parsedUrl.href}?${qs.encode(query)}`;
     delete opts.teamId;
-    delete opts.apiUrl;
   }
 
   opts.headers = opts.headers || {};
