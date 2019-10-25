@@ -191,23 +191,110 @@ export interface ShouldServeOptions {
   config: Config;
 }
 
+/**
+ * Credit to Iain Reid, MIT license.
+ * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
+ */
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace PackageJson {
+  /**
+   * An author or contributor
+   */
+  export interface Author {
+    name: string;
+    email?: string;
+    homepage?: string;
+  }
+
+  /**
+   * A map of exposed bin commands
+   */
+  export interface BinMap {
+    [commandName: string]: string;
+  }
+
+  /**
+   * A bugs link
+   */
+  export interface Bugs {
+    email: string;
+    url: string;
+  }
+
+  export interface Config {
+    name?: string;
+    config?: unknown;
+  }
+
+  /**
+   * A map of dependencies
+   */
+  export interface DependencyMap {
+    [dependencyName: string]: string;
+  }
+
+  /**
+   * CommonJS package structure
+   */
+  export interface Directories {
+    lib?: string;
+    bin?: string;
+    man?: string;
+    doc?: string;
+    example?: string;
+  }
+
+  export interface Engines {
+    node?: string;
+    npm?: string;
+  }
+
+  export interface PublishConfig {
+    registry?: string;
+  }
+
+  /**
+   * A project repository
+   */
+  export interface Repository {
+    type: string;
+    url: string;
+  }
+
+  export interface ScriptsMap {
+    [scriptName: string]: string;
+  }
+}
+
 export interface PackageJson {
-  name?: string;
-  version?: string;
-  engines?: {
-    [key: string]: string;
-    node: string;
-    npm: string;
-  };
-  scripts?: {
-    [key: string]: string;
-  };
-  dependencies?: {
-    [key: string]: string;
-  };
-  devDependencies?: {
-    [key: string]: string;
-  };
+  readonly name?: string;
+  readonly version?: string;
+  readonly description?: string;
+  readonly keywords?: string[];
+  readonly homepage?: string;
+  readonly bugs?: string | PackageJson.Bugs;
+  readonly license?: string;
+  readonly author?: string | PackageJson.Author;
+  readonly contributors?: string[] | PackageJson.Author[];
+  readonly files?: string[];
+  readonly main?: string;
+  readonly bin?: string | PackageJson.BinMap;
+  readonly man?: string | string[];
+  readonly directories?: PackageJson.Directories;
+  readonly repository?: string | PackageJson.Repository;
+  readonly scripts?: PackageJson.ScriptsMap;
+  readonly config?: PackageJson.Config;
+  readonly dependencies?: PackageJson.DependencyMap;
+  readonly devDependencies?: PackageJson.DependencyMap;
+  readonly peerDependencies?: PackageJson.DependencyMap;
+  readonly optionalDependencies?: PackageJson.DependencyMap;
+  readonly bundledDependencies?: string[];
+  readonly engines?: PackageJson.Engines;
+  readonly os?: string[];
+  readonly cpu?: string[];
+  readonly preferGlobal?: boolean;
+  readonly private?: boolean;
+  readonly publishConfig?: PackageJson.PublishConfig;
 }
 
 export interface NodeVersion {
