@@ -114,9 +114,16 @@ export default async function processDeployment({
         } else {
           process.stdout.write(`https://${event.payload.url}`);
         }
+
+        if (buildSpinner === null) {
+          buildSpinner = wait('Queued...');
+        }
       }
 
-      if (event.type === 'build-state-changed') {
+      if (
+        event.type === 'build-state-changed' &&
+        event.payload.readyState === 'BUILDING'
+      ) {
         if (buildSpinner === null) {
           buildSpinner = wait('Building...');
         }
