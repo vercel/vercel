@@ -9,6 +9,7 @@ import {
 import checkDeploymentStatus from './deployment-status';
 import { generateQueryString } from './utils/query-string';
 import { Deployment, DeploymentOptions, NowJsonOptions } from './types';
+import { isReady, isAliasAssigned } from './utils/ready-state';
 
 export interface Options {
   metadata: DeploymentOptions;
@@ -193,9 +194,12 @@ export default async function* deploy(
   }
 
   if (deployment) {
-    if (deployment.readyState === 'READY') {
-      debug('Deployment is READY. Not performing additional polling');
-      return yield { type: 'ready', payload: deployment };
+    if (isReady(deployment) && isAliasAssigned(deployment)) {
+      debug('Deployment state changed to READY 3');
+      yield { type: 'ready', payload: deployment };
+
+      debug('Deployment alias assigned');
+      return yield { type: 'alias-assigned', payload: deployment };
     }
 
     try {

@@ -12,7 +12,7 @@ import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/now/files';
-export const API_DEPLOYMENTS = '/v9/now/deployments';
+export const API_DEPLOYMENTS = '/v10/now/deployments';
 export const API_DEPLOYMENTS_LEGACY = '/v3/now/deployments';
 export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
@@ -25,6 +25,7 @@ export const EVENTS = new Set([
   // Deployment events
   'created',
   'ready',
+  'alias-assigned',
   'warning',
   'error',
   // Build events

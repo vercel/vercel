@@ -14,3 +14,7 @@ export const isFailed = ({
 export const isDone = (
   buildOrDeployment: Deployment | DeploymentBuild
 ): boolean => isReady(buildOrDeployment) || isFailed(buildOrDeployment);
+export const isAliasAssigned = (deployment: Deployment): boolean =>
+  Boolean(deployment.aliasAssigned);
+export const isAliasError = (deployment: Deployment): boolean =>
+  Boolean(deployment.aliasError);
