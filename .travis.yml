@@ -6,5 +6,5 @@ jobs:
       name: "Update apt packages"
       script: sudo apt-get update
 
-      name: "Installing the latest version of Go"
+      name: "Install the latest version of Go"
       script: sudo apt-get install golang-go
