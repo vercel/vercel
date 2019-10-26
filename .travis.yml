@@ -8,3 +8,6 @@ jobs:
 
       name: "Install the latest version of Go"
       script: sudo apt-get install golang-go
+
+      name: "Install Dependencies"
+      script: yarn install --check-files --frozen-lockfile
