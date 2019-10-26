@@ -1,0 +1,10 @@
+jobs:
+  include:
+
+    - stage: "Install Dependencies"
+
+      name: "Update apt packages"
+      script: sudo apt-get update
+
+      name: "Installing the latest version of Go"
+      script: sudo apt-get install golang-go
