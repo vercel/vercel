@@ -2,12 +2,11 @@ jobs:
   include:
 
     - stage: "Install Dependencies"
-
       name: "Update apt packages"
       script: sudo apt-get update
 
+    - script: sudo apt-get install golang-go
       name: "Install the latest version of Go"
-      script: sudo apt-get install golang-go
 
+    - script: yarn install --check-files --frozen-lockfile
       name: "Install Dependencies"
-      script: yarn install --check-files --frozen-lockfile
