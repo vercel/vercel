@@ -1449,37 +1449,6 @@ test('deploy a static directory', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('deploy a static build deployment', async t => {
-  const directory = fixture('now-static-build');
-
-  const { stdout, stderr, code } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(code);
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), 'hello');
-});
-
 test('use build-env', async t => {
   const directory = fixture('build-env');
 
