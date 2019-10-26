@@ -3,14 +3,11 @@ jobs:
 
     - stage: "Install dependencies"
 
-      script: sudo apt-get update
-      name: "Update apt packages"
+      script: sudo apt update
+      name: "Update apt package list"
 
-    - script: sudo apt-get install golang-go
-      name: "Install the latest version of Go"
-
-    - script: Installing apt dependencies
-      name: "Installing apt dependencies"
+    - script: sudo apt install golang-go rsync
+      name: "Install apt packages"
 
     - script: yarn install --check-files --frozen-lockfile
       name: "Install node modules"
