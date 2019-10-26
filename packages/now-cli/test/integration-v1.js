@@ -32,6 +32,13 @@ const pickUrl = stdout => {
 
 const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
 const createDirectory = dest => fs.mkdirSync(dest);
+const testv1 = async (...args) => {
+  if (!process.version.startsWith('v12.')) {
+    // Only run v1 tests on Node 12
+    return;
+  }
+  await test(...args);
+};
 
 const waitForDeployment = async href => {
   console.log(`waiting for ${href} to become ready...`);
@@ -238,6 +245,45 @@ test('deploy using --local-config flag v2', async t => {
   t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
 });
 
+testv1('deploy using --local-config flag type cloud v1', async t => {
+  const target = fixture('local-config-cloud-v1');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['deploy', '--public', '--local-config', 'now-test.json', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+
+  const { host } = new URL(stdout);
+  await waitForDeployment(`https://${host}/test.html`);
+  await waitForDeployment(`https://${host}/folder/file1.txt`);
+  await waitForDeployment(`https://${host}/folder/sub/file2.txt`);
+
+  const testRes = await fetch(`https://${host}/test.html`);
+  const testText = await testRes.text();
+  t.is(testText, '<h1>hello test</h1>');
+
+  const file1Res = await fetch(`https://${host}/folder/file1.txt`);
+  const file1Text = await file1Res.text();
+  t.is(file1Text, 'file1');
+
+  const file2Res = await fetch(`https://${host}/folder/sub/file2.txt`);
+  const file2Text = await file2Res.text();
+  t.is(file2Text, 'file2');
+
+  const mainRes = await fetch(`https://${host}/main.html`);
+  t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, code } = await execa(
     binaryPath,
@@ -349,6 +395,140 @@ test('login with unregistered user', async t => {
   t.is(last, goal);
 });
 
+testv1('deploy a v1 node microservice', async t => {
+  const target = fixture('node');
+
+  let { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['--public', '--name', session, ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 0, formatOutput({ stdout, stderr }));
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session, formatOutput({ stdout, stderr }));
+
+  await waitForDeployment(href);
+
+  // Send a test request to the deployment
+  let response = await fetch(href);
+  t.is(response.status, 200);
+  const contentType = response.headers.get('content-type');
+  const content = await response.json();
+
+  t.is(contentType, 'application/json; charset=utf-8');
+  t.is(content.id, contextName);
+
+  // Test that it can be deleted via `now rm`
+  ({ stdout, stderr, code } = await execa(
+    binaryPath,
+    ['rm', '--yes', href, ...defaultArgs],
+    {
+      reject: false,
+    }
+  ));
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0, formatOutput({ stdout, stderr }));
+
+  // Give 2 seconds for the proxy purge to propagate
+  await sleep(2000);
+
+  response = await fetch(href);
+  t.is(response.status, 404);
+});
+
+testv1(
+  'deploy a v1 node microservice and infer name from `package.json`',
+  async t => {
+    const target = fixture('node');
+
+    const { stdout, stderr, code } = await execa(
+      binaryPath,
+      [target, '--public', ...defaultArgs],
+      {
+        reject: false,
+      }
+    );
+
+    console.log(stderr);
+    console.log(stdout);
+    console.log(code);
+
+    // Ensure the exit code is right
+    t.is(code, 0);
+
+    // Test if the output is really a URL
+    const { host } = new URL(stdout);
+    t.true(host.startsWith(`node-test-${contextName}`));
+  }
+);
+
+testv1('deploy a v1 dockerfile project', async t => {
+  const target = fixture('dockerfile');
+
+  // Add the "name" field to the `now.json` file
+  const jsonPath = path.join(target, 'now.json');
+  const json = JSON.parse(await readFile(jsonPath, 'utf8'));
+  json.name = session;
+  await writeFile(jsonPath, JSON.stringify(json));
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['--public', '--docker', '--no-verify', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  await waitForDeployment(href);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  t.is(response.status, 200);
+  const contentType = response.headers.get('content-type');
+  const textContent = await response.text();
+  let content;
+
+  try {
+    content = JSON.parse(textContent);
+  } catch (error) {
+    console.log('Error parsing response as JSON:');
+    console.error(textContent);
+    throw error;
+  }
+
+  t.is(contentType, 'application/json; charset=utf-8');
+  t.is(content.id, contextName);
+
+  context.deployment = host;
+});
+
 test('test invalid json alias rules', async t => {
   const fixturePath = fixture('alias-rules');
   const output = await execute(['alias', '-r', 'invalid-json-rules.json'], {
@@ -377,6 +557,223 @@ test('test invalid type for alias rules', async t => {
 
   t.is(output.code, 1, formatOutput(output));
   t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
+});
+
+testv1('apply alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+
+  // Create the rules file
+  const alias = `test-alias-rules.${contextName}.now.sh`;
+
+  const now = {
+    alias: alias,
+  };
+
+  const rules = {
+    rules: [{ pathname: '/docker-deployment', dest: context.deployment }],
+  };
+
+  await writeFile(path.join(fixturePath, 'now.json'), JSON.stringify(now));
+  await writeFile(path.join(fixturePath, 'rules.json'), JSON.stringify(rules));
+
+  const output = await execute(['alias', '-r', 'rules.json'], {
+    cwd: fixturePath,
+  });
+  t.is(output.code, 0, formatOutput(output));
+});
+
+testv1('find deployment in list', async t => {
+  const output = await execa(binaryPath, ['--debug', 'ls', ...defaultArgs], {
+    reject: false,
+  });
+
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.code);
+
+  const deployments = parseList(output.stdout);
+
+  t.true(deployments.length > 0, formatOutput(output));
+  t.is(output.code, 0, formatOutput(output));
+
+  const target = deployments.find(deployment =>
+    deployment.includes(`${session}-`)
+  );
+
+  t.truthy(target, formatOutput(output));
+  t.is(target, context.deployment, formatOutput(output));
+});
+
+testv1('find deployment in list with mixed args', async t => {
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['--debug', 'ls', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  const deployments = parseList(stdout);
+
+  t.true(deployments.length > 0);
+  t.is(code, 0);
+
+  const target = deployments.find(deployment =>
+    deployment.includes(`${session}-`)
+  );
+
+  t.truthy(target, formatOutput({ stdout, stderr }));
+  t.is(target, context.deployment, formatOutput({ stdout, stderr }));
+});
+
+testv1('create an explicit alias for deployment', async t => {
+  const hosts = {
+    deployment: context.deployment,
+    alias: `${session}.now.sh`,
+  };
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  const goal = `> Success! https://${hosts.alias} now points to https://${hosts.deployment}`;
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+
+  // Send a test request to the alias
+  const response = await fetch(`https://${hosts.alias}`);
+  const contentType = response.headers.get('content-type');
+  const content = await response.json();
+
+  t.is(contentType, 'application/json; charset=utf-8');
+  t.is(content.id, contextName);
+
+  context.alias = hosts.alias;
+});
+
+testv1('list the aliases', async t => {
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['alias', 'ls', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  const results = parseList(stdout);
+
+  t.is(code, 0);
+  t.true(results.includes(context.deployment));
+});
+
+testv1('scale the v1 alias', async t => {
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['scale', context.alias, 'bru', '1', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0, `Received:\n${stdout}\n${stderr}`);
+  t.true(stdout.includes(`(min: 1, max: 1)`));
+});
+
+testv1('remove the explicit alias', async t => {
+  const goal = `> Success! Alias ${context.alias} removed`;
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+});
+
+testv1('create an v1 alias from "now.json" `alias` for deployment', async t => {
+  const target = fixture('dockerfile');
+
+  // Add the `alias` field to the "now.json" file
+  const jsonPath = path.join(target, 'now.json');
+  const json = JSON.parse(await readFile(jsonPath, 'utf8'));
+  json.alias = `${session}-from-nowjson.now.sh`;
+  await writeFile(jsonPath, JSON.stringify(json));
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['alias', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  const goal = `> Success! https://${json.alias} now points to https://${context.deployment}`;
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
+
+  // Send a test request to the alias
+  const response = await fetch(`https://${json.alias}`);
+  const contentType = response.headers.get('content-type');
+  const content = await response.json();
+
+  t.is(contentType, 'application/json; charset=utf-8');
+  t.is(content.id, contextName);
+
+  context.alias = json.alias;
+});
+
+testv1('remove the alias from "now.json" `alias`', async t => {
+  const goal = `> Success! Alias ${context.alias} removed`;
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['alias', 'rm', context.alias, '--yes', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+  t.true(stdout.startsWith(goal));
 });
 
 test('ignore files specified in .nowignore', async t => {
@@ -419,6 +816,23 @@ test('ignore files specified in .nowignore via allowlist', async t => {
 
   const presentFile = await fetch(`https://${host}/index.txt`);
   t.is(presentFile.status, 200);
+});
+
+testv1('scale down the deployment directly', async t => {
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['scale', context.deployment, 'bru', '0', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 0);
+  t.true(stdout.includes(`(min: 0, max: 0)`));
 });
 
 test('list the scopes', async t => {
@@ -569,6 +983,132 @@ test('try to remove a non-existing payment method', async t => {
       `You have no credit cards to choose from to delete under ${contextName}`
     )
   );
+});
+
+test('use `-V 1` to deploy a GitHub repository', async t => {
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['-V', 1, '--public', '--name', session, ...defaultArgs, 'leo/hub'],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+});
+
+test('use `--platform-version 1` to deploy a GitHub repository', async t => {
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    [
+      '--platform-version',
+      1,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      'leo/hub',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href, {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  const contentType = response.headers.get('content-type');
+  t.is(contentType, 'application/json; charset=utf-8');
+});
+
+test('set platform version using `-V` to `1`', async t => {
+  const directory = fixture('builds');
+  const goal =
+    '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs, '-V', 1],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `--platform-version` to `1`', async t => {
+  const directory = fixture('builds');
+  const goal =
+    '> Error! The property `builds` is only allowed on Now 2.0 — please upgrade';
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      '--platform-version',
+      1,
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
 });
 
 test('set platform version using `-V` to invalid number', async t => {
@@ -1323,6 +1863,37 @@ test('deploy a static directory', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
+test('deploy a static build deployment', async t => {
+  const directory = fixture('now-static-build');
+
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    [directory, '--public', '--name', session, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout);
+  const { href, host } = new URL(deploymentUrl);
+  t.is(host.split('-')[0], session);
+
+  await waitForDeployment(href);
+
+  // get the content
+  const response = await fetch(href);
+  const content = await response.text();
+  t.is(content.trim(), 'hello');
+});
+
 test('use build-env', async t => {
   const directory = fixture('build-env');
 
@@ -1456,6 +2027,40 @@ test('try to deploy with non-existing team', async t => {
     {
       reject: false,
     }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 1);
+  t.true(stderr.includes(goal));
+});
+
+testv1('try to deploy v1 deployment with --prod', async t => {
+  const target = fixture('node');
+  const goal = `is not supported for Now 1.0 deployments`;
+
+  const { stderr, stdout, code } = await execa(binaryPath, [target, '--prod'], {
+    reject: false,
+  });
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  t.is(code, 1);
+  t.true(stderr.includes(goal));
+});
+
+testv1('try to deploy v1 deployment with --target production', async t => {
+  const target = fixture('node');
+  const goal = `is not supported for Now 1.0 deployments`;
+
+  const { stderr, stdout, code } = await execa(
+    binaryPath,
+    [target, '--target', 'production'],
+    { reject: false }
   );
 
   console.log(stderr);
