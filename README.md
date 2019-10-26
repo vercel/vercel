@@ -3,7 +3,7 @@
 [![Build Status](https://badgen.net/circleci/github/zeit/now/master)](https://circleci.com/gh/zeit/workflows/now/tree/master)
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
 
-**Note**: The [canary](https://github.com/zeit/now/tree/canary) branch is under heavy development – the stable release branch is [master](https://github.com/zeit/now/tree/master).
+**NOTE**: The [canary](https://github.com/zeit/now/tree/canary) branch is under heavy development – the stable release branch is [master](https://github.com/zeit/now/tree/master).
 
 ## Usage
 
