@@ -55,7 +55,7 @@ function hasBuildScript(pkg: PackageJson | undefined) {
 
 function getFunctionBuilder(
   file: string,
-  fallback: Builder | void,
+  prevBuilder: Builder | void,
   { functions = {} }: Options
 ) {
   const key = Object.keys(functions).find(
@@ -63,16 +63,16 @@ function getFunctionBuilder(
   );
   const fn = key ? functions[key] : undefined;
 
-  if (!fn || (!fn.runtime && !fallback)) {
-    return fallback;
+  if (!fn || (!fn.runtime && !prevBuilder)) {
+    return prevBuilder;
   }
 
-  const src = (fallback && fallback.src) || file;
-  const use = fn.runtime || (fallback && fallback.use);
-  const config: Config = Object.assign({}, fallback && fallback.config);
+  const src = (prevBuilder && prevBuilder.src) || file;
+  const use = fn.runtime || (prevBuilder && prevBuilder.use);
+  const config: Config = Object.assign({}, prevBuilder && prevBuilder.config);
 
   if (!use) {
-    return fallback;
+    return prevBuilder;
   }
 
   if (fn.memory) {
@@ -92,11 +92,11 @@ async function detectFrontBuilder(
 ): Promise<Builder> {
   for (const [dependency, builder] of getBuilders(options)) {
     const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
-    const nextBuilder = getFunctionBuilder('package.json', builder, options);
+    const fnBuilder = getFunctionBuilder('package.json', builder, options);
 
     // Return the builder when a dependency matches
     if (deps[dependency]) {
-      return nextBuilder || builder;
+      return fnBuilder || builder;
     }
   }
 
