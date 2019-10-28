@@ -81,7 +81,7 @@
       "path": "/blog/post-3",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-now-cache": "/HIT|STALE/"
       }
     },
     {
