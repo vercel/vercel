@@ -107,7 +107,7 @@ export function getTransformedRoutes({
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } = nowConfig;
   let { routes } = nowConfig;
   const errors: { message: string }[] = [];
-  if (typeof routes !== 'undefined') {
+  if (routes) {
     if (typeof cleanUrls !== 'undefined') {
       errors.push({
         message: 'Cannot define both `routes` and `cleanUrls`',
