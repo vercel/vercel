@@ -465,7 +465,7 @@ it('Test `detectBuilders`', async () => {
       },
     };
     const files = [
-      'pages/inde.js',
+      'pages/index.js',
       'api/users/[id].ts',
       'api/teams/members.ts',
     ];

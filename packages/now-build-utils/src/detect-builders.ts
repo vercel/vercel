@@ -55,7 +55,7 @@ function hasBuildScript(pkg: PackageJson | undefined) {
 
 function getFunctionBuilder(
   file: string,
-  prevBuilder: Builder | void,
+  prevBuilder: Builder | undefined,
   { functions = {} }: Options
 ) {
   const key = Object.keys(functions).find(
