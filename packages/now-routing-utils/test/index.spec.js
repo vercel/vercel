@@ -425,6 +425,24 @@ describe('getTransformedRoutes', () => {
     assertValid(actual.routes);
   });
 
+  test('should not error when routes is null and cleanUrls is true', () => {
+    const nowConfig = { cleanUrls: true, routes: null };
+    const filePaths = ['file.html'];
+    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    assert.equal(actual.error, null);
+    assertValid(actual.routes);
+  });
+
+  test('should error when routes is defined and cleanUrls is true', () => {
+    const nowConfig = {
+      cleanUrls: true,
+      routes: [{ src: '/page', dest: '/file.html' }],
+    };
+    const filePaths = ['file.html'];
+    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    assert.notEqual(actual.error, null);
+  });
+
   test('should normalize all redirects before rewrites', () => {
     const nowConfig = {
       cleanUrls: true,
@@ -451,8 +469,6 @@ describe('getTransformedRoutes', () => {
         headers: { Location: '/support' },
         status: 302,
       },
-      { src: '^/index$', dest: '/index.html', continue: true },
-      { src: '^/support$', dest: '/support.html', continue: true },
       { handle: 'filesystem' },
       { src: '^/v1$', dest: '/v2/api.py', continue: true },
     ];

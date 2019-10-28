@@ -2,6 +2,7 @@ import { readdir, stat, readFile, unlink } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
 import { Route } from '@now/build-utils';
+import { injectGatsbyConfig } from './utils/gatsby-config';
 
 const readirPromise = promisify(readdir);
 const readFilePromise = promisify(readFile);
@@ -43,6 +44,9 @@ export const frameworks: Framework[] = [
         // if the file doesn't exist, we don't create routes
         return [];
       }
+    },
+    beforeBuildHook: async entrypointDir => {
+      await injectGatsbyConfig(entrypointDir);
     },
   },
   {
@@ -312,4 +316,5 @@ export interface Framework {
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   minNodeRange?: string;
+  beforeBuildHook?: (entrypointDir: string) => Promise<void>;
 }

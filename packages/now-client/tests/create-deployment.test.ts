@@ -1,19 +1,24 @@
 import path from 'path';
-import { TOKEN } from './constants';
+import { generateNewToken } from './common';
 import { fetch, API_DEPLOYMENTS } from '../src/utils';
 import { Deployment } from './types';
 import { createDeployment } from '../src/index';
 
 describe('create v2 deployment', () => {
   let deployment: Deployment;
+  let token = '';
+
+  beforeEach(async () => {
+    token = await generateNewToken();
+  });
 
   afterEach(async () => {
     if (deployment) {
       const response = await fetch(
         `${API_DEPLOYMENTS}/${deployment.id}`,
-        TOKEN,
+        token,
         {
-          method: 'DELETE'
+          method: 'DELETE',
         }
       );
       expect(response.status).toEqual(200);
@@ -24,8 +29,8 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       path.resolve(__dirname, 'fixtures', 'v2'),
       {
-        token: TOKEN,
-        name: 'now-client-tests-v2'
+        token,
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'warning') {
@@ -43,8 +48,8 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       path.resolve(__dirname, 'fixtures', 'v2'),
       {
-        token: TOKEN,
-        name: 'now-client-tests-v2'
+        token,
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'file_count') {
@@ -62,8 +67,8 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       path.resolve(__dirname, 'fixtures', 'v2'),
       {
-        token: TOKEN,
-        name: 'now-client-tests-v2'
+        token,
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'ready') {

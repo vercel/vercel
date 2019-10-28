@@ -4,11 +4,11 @@ import { Deployment } from '../../types';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
-  InvalidDeploymentId
+  InvalidDeploymentId,
 } from '../errors-ts';
 import mapCertError from '../certs/map-cert-error';
 
-type APIVersion = 'v5' | 'v9';
+type APIVersion = 'v5' | 'v10';
 
 export default async function getDeploymentByIdOrHost(
   client: Client,

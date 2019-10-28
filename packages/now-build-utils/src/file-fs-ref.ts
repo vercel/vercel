@@ -9,11 +9,13 @@ const semaToPreventEMFILE = new Sema(20);
 
 interface FileFsRefOptions {
   mode?: number;
+  contentType?: string;
   fsPath: string;
 }
 
 interface FromStreamOptions {
   mode: number;
+  contentType?: string;
   stream: NodeJS.ReadableStream;
   fsPath: string;
 }
@@ -22,17 +24,20 @@ class FileFsRef implements File {
   public type: 'FileFsRef';
   public mode: number;
   public fsPath: string;
+  public contentType: string | undefined;
 
-  constructor({ mode = 0o100644, fsPath }: FileFsRefOptions) {
+  constructor({ mode = 0o100644, contentType, fsPath }: FileFsRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof fsPath === 'string');
     this.type = 'FileFsRef';
     this.mode = mode;
+    this.contentType = contentType;
     this.fsPath = fsPath;
   }
 
   static async fromFsPath({
     mode,
+    contentType,
     fsPath,
   }: FileFsRefOptions): Promise<FileFsRef> {
     let m = mode;
@@ -40,11 +45,12 @@ class FileFsRef implements File {
       const stat = await fs.lstat(fsPath);
       m = stat.mode;
     }
-    return new FileFsRef({ mode: m, fsPath });
+    return new FileFsRef({ mode: m, contentType, fsPath });
   }
 
   static async fromStream({
     mode = 0o100644,
+    contentType,
     stream,
     fsPath,
   }: FromStreamOptions): Promise<FileFsRef> {
@@ -63,7 +69,7 @@ class FileFsRef implements File {
       dest.on('error', reject);
     });
 
-    return new FileFsRef({ mode, fsPath });
+    return new FileFsRef({ mode, contentType, fsPath });
   }
 
   async toStreamAsync(): Promise<NodeJS.ReadableStream> {
