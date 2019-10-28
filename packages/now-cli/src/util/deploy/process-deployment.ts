@@ -49,6 +49,7 @@ export default async function processDeployment({
   };
 
   if (!legacy) {
+    let queuedSpinner = null;
     let buildSpinner = null;
     let deploySpinner = null;
 
@@ -114,9 +115,20 @@ export default async function processDeployment({
         } else {
           process.stdout.write(`https://${event.payload.url}`);
         }
+
+        if (queuedSpinner === null) {
+          queuedSpinner = wait('Queued...');
+        }
       }
 
-      if (event.type === 'build-state-changed') {
+      if (
+        event.type === 'build-state-changed' &&
+        event.payload.readyState === 'BUILDING'
+      ) {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+
         if (buildSpinner === null) {
           buildSpinner = wait('Building...');
         }
@@ -144,7 +156,7 @@ export default async function processDeployment({
       }
 
       // Handle ready event
-      if (event.type === 'ready') {
+      if (event.type === 'alias-assigned') {
         if (deploySpinner) {
           deploySpinner();
         }

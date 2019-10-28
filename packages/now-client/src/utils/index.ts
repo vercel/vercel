@@ -12,7 +12,7 @@ import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/now/files';
-export const API_DEPLOYMENTS = '/v9/now/deployments';
+export const API_DEPLOYMENTS = '/v10/now/deployments';
 export const API_DEPLOYMENTS_LEGACY = '/v3/now/deployments';
 export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
@@ -25,6 +25,7 @@ export const EVENTS = new Set([
   // Deployment events
   'created',
   'ready',
+  'alias-assigned',
   'warning',
   'error',
   // Build events
@@ -109,6 +110,7 @@ export const fetch = async (
   let time: number;
 
   url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
+  delete opts.apiUrl;
 
   if (opts.teamId) {
     const parsedUrl = parseUrl(url, true);
@@ -117,7 +119,6 @@ export const fetch = async (
     query.teamId = opts.teamId;
     url = `${parsedUrl.href}?${qs.encode(query)}`;
     delete opts.teamId;
-    delete opts.apiUrl;
   }
 
   opts.headers = opts.headers || {};
