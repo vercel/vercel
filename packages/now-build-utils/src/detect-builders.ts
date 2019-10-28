@@ -1,5 +1,5 @@
-import { PackageJson, Builder, Config } from './types';
 import minimatch from 'minimatch';
+import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 
 interface ErrorResponse {
   code: string;
@@ -8,6 +8,7 @@ interface ErrorResponse {
 
 interface Options {
   tag?: 'canary' | 'latest' | string;
+  functions?: BuilderFunctions;
 }
 
 const src = 'package.json';
@@ -21,21 +22,25 @@ const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
 };
 
 // Static builders are special cased in `@now/static-build`
-function getBuilders(): Map<string, Builder> {
+function getBuilders({ tag }: Options = {}): Map<string, Builder> {
+  const withTag = tag ? `@${tag}` : '';
+
   return new Map<string, Builder>([
-    ['next', { src, use: '@now/next', config }],
+    ['next', { src, use: `@now/next${withTag}`, config }],
   ]);
 }
 
 // Must be a function to ensure that the returned
 // object won't be a reference
-function getApiBuilders(): Builder[] {
+function getApiBuilders({ tag }: Options = {}): Builder[] {
+  const withTag = tag ? `@${tag}` : '';
+
   return [
-    { src: 'api/**/*.js', use: '@now/node', config },
-    { src: 'api/**/*.ts', use: '@now/node', config },
-    { src: 'api/**/*.go', use: '@now/go', config },
-    { src: 'api/**/*.py', use: '@now/python', config },
-    { src: 'api/**/*.rb', use: '@now/ruby', config },
+    { src: 'api/**/*.js', use: `@now/node${withTag}`, config },
+    { src: 'api/**/*.ts', use: `@now/node${withTag}`, config },
+    { src: 'api/**/*.go', use: `@now/go${withTag}`, config },
+    { src: 'api/**/*.py', use: `@now/python${withTag}`, config },
+    { src: 'api/**/*.rb', use: `@now/ruby${withTag}`, config },
   ];
 }
 
@@ -48,13 +53,50 @@ function hasBuildScript(pkg: PackageJson | undefined) {
   return Boolean(scripts && scripts['build']);
 }
 
-async function detectBuilder(pkg: PackageJson): Promise<Builder> {
-  for (const [dependency, builder] of getBuilders()) {
+function getFunctionBuilder(
+  file: string,
+  prevBuilder: Builder | undefined,
+  { functions = {} }: Options
+) {
+  const key = Object.keys(functions).find(
+    k => minimatch(file, k) || file === k
+  );
+  const fn = key ? functions[key] : undefined;
+
+  if (!fn || (!fn.runtime && !prevBuilder)) {
+    return prevBuilder;
+  }
+
+  const src = (prevBuilder && prevBuilder.src) || file;
+  const use = fn.runtime || (prevBuilder && prevBuilder.use);
+  const config: Config = Object.assign({}, prevBuilder && prevBuilder.config);
+
+  if (!use) {
+    return prevBuilder;
+  }
+
+  if (fn.memory) {
+    config.memory = fn.memory;
+  }
+
+  if (fn.maxDuration) {
+    config.maxDuration = fn.maxDuration;
+  }
+
+  return { use, src, config };
+}
+
+async function detectFrontBuilder(
+  pkg: PackageJson,
+  options: Options
+): Promise<Builder> {
+  for (const [dependency, builder] of getBuilders(options)) {
     const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
+    const fnBuilder = getFunctionBuilder('package.json', builder, options);
 
     // Return the builder when a dependency matches
     if (deps[dependency]) {
-      return builder;
+      return fnBuilder || builder;
     }
   }
 
@@ -91,16 +133,19 @@ export function sortFiles(fileA: string, fileB: string) {
   return fileA.localeCompare(fileB);
 }
 
-async function detectApiBuilders(files: string[]): Promise<Builder[]> {
+async function detectApiBuilders(
+  files: string[],
+  options: Options
+): Promise<Builder[]> {
   const builds = files
     .sort(sortFiles)
     .filter(ignoreApiFilter)
     .map(file => {
-      const result = getApiBuilders().find(({ src }): boolean =>
-        minimatch(file, src)
+      const apiBuilder = getApiBuilders(options).find(b =>
+        minimatch(file, b.src)
       );
-
-      return result ? { ...result, src: file } : null;
+      const fnBuilder = getFunctionBuilder(file, apiBuilder, options);
+      return fnBuilder ? { ...fnBuilder, src: file } : null;
     });
 
   const finishedBuilds = builds.filter(Boolean);
@@ -114,11 +159,9 @@ async function checkConflictingFiles(
   builders: Builder[]
 ): Promise<ErrorResponse | null> {
   // For Next.js
-  if (builders.some(builder => builder.use.startsWith('@now/next'))) {
+  if (builders.some(b => b.use.startsWith('@now/next'))) {
     const hasApiPages = files.some(file => file.startsWith('pages/api/'));
-    const hasApiBuilders = builders.some(builder =>
-      builder.src.startsWith('api/')
-    );
+    const hasApiBuilders = builders.some(b => b.src.startsWith('api/'));
 
     if (hasApiPages && hasApiBuilders) {
       return {
@@ -137,7 +180,7 @@ async function checkConflictingFiles(
 export async function detectBuilders(
   files: string[],
   pkg?: PackageJson | undefined | null,
-  options?: Options
+  options: Options = {}
 ): Promise<{
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
@@ -147,10 +190,10 @@ export async function detectBuilders(
   const warnings: ErrorResponse[] = [];
 
   // Detect all builders for the `api` directory before anything else
-  let builders = await detectApiBuilders(files);
+  const builders = await detectApiBuilders(files, options);
 
   if (pkg && hasBuildScript(pkg)) {
-    builders.push(await detectBuilder(pkg));
+    builders.push(await detectFrontBuilder(pkg, options));
 
     const conflictError = await checkConflictingFiles(files, builders);
 
@@ -183,25 +226,6 @@ export async function detectBuilders(
         use: '@now/static',
         src: '!{api/**,package.json}',
         config,
-      });
-    }
-  }
-
-  // Change the tag for the builders
-  if (builders && builders.length) {
-    const tag = options && options.tag;
-
-    if (tag) {
-      builders = builders.map((originBuilder: Builder) => {
-        // Copy builder to make sure it is not a reference
-        const builder = { ...originBuilder };
-
-        // @now/static has no canary builder
-        if (builder.use !== '@now/static') {
-          builder.use = `${builder.use}@${tag}`;
-        }
-
-        return builder;
       });
     }
   }

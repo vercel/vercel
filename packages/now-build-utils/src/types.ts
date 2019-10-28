@@ -49,6 +49,8 @@ export interface Config {
   debug?: boolean;
   zeroConfig?: boolean;
   import?: { [key: string]: string };
+  memory?: number;
+  maxDuration?: number;
 }
 
 export interface Meta {
@@ -307,4 +309,12 @@ export interface Builder {
   use: string;
   src: string;
   config?: Config;
+}
+
+export interface BuilderFunctions {
+  [key: string]: {
+    memory?: number;
+    maxDuration?: number;
+    runtime?: string;
+  };
 }
