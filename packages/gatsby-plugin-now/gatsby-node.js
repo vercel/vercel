@@ -26,8 +26,23 @@ exports.onPostBuild = async ({ store }) => {
     }
   }
 
+  const finalRoutes = [
+    {
+      src: '/static/(.*)',
+      headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+      continue: true,
+    },
+    {
+      src: '/.*\\.(js|json|css)$',
+      headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+      continue: true,
+    },
+    ...routes,
+    { src: '/.*', status: 404, dest: '/404' },
+  ];
+
   await writeFile(
     path.join(program.directory, 'public', REDIRECT_FILE_NAME),
-    JSON.stringify(routes)
+    JSON.stringify(finalRoutes)
   );
 };
