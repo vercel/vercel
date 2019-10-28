@@ -20,7 +20,7 @@ import {
 } from 'fs-extra';
 import pkg from '../../../package.json';
 
-import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
+import { NoBuilderCacheError } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
@@ -135,24 +135,6 @@ export async function prepareBuilderModulePath() {
   }
 
   return cachedBuilderPath;
-}
-
-// Is responsible for cleaning the cache
-export async function cleanCacheDir(output: Output): Promise<void> {
-  const cacheDir = await cacheDirPromise;
-  try {
-    output.log(chalk`{magenta Deleting} ${cacheDir}`);
-    await remove(cacheDir);
-  } catch (err) {
-    throw new BuilderCacheCleanError(cacheDir, err.message);
-  }
-
-  try {
-    await remove(funCacheDir);
-    output.log(chalk`{magenta Deleting} ${funCacheDir}`);
-  } catch (err) {
-    throw new BuilderCacheCleanError(funCacheDir, err.message);
-  }
 }
 
 function getNpmVersion(use = ''): string {
