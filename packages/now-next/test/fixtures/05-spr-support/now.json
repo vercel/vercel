@@ -16,6 +16,7 @@
         "x-now-cache": "MISS"
       }
     },
+    { "delay": 2000 },
     {
       "path": "/forever",
       "status": 200,
@@ -30,6 +31,7 @@
         "x-now-cache": "PRERENDER"
       }
     },
+    { "delay": 2000 },
     {
       "path": "/another",
       "status": 200,
@@ -44,6 +46,7 @@
         "x-now-cache": "PRERENDER"
       }
     },
+    { "delay": 2000 },
     {
       "path": "/blog/post-1",
       "status": 200,
@@ -58,6 +61,7 @@
         "x-now-cache": "PRERENDER"
       }
     },
+    { "delay": 2000 },
     {
       "path": "/blog/post-2",
       "status": 200,
@@ -72,6 +76,7 @@
         "x-now-cache": "MISS"
       }
     },
+    { "delay": 2000 },
     {
       "path": "/blog/post-3",
       "status": 200,
@@ -111,6 +116,7 @@
         "x-now-cache": "MISS"
       }
     },
+    { "delay": 2000 },
     {
       "path": "/_next/data/testing-build-id/forever.json",
       "status": 200,
@@ -132,6 +138,7 @@
         "x-now-cache": "PRERENDER"
       }
     },
+    { "delay": 2000 },
     {
       "path": "/_next/data/testing-build-id/another2.json",
       "status": 200,
