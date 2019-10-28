@@ -725,7 +725,7 @@ export const build = async ({
         prerenders[outputPathPageHtml] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
         exportedPageRoutes.push({
-          src: outputPathPage,
+          src: path.posix.join('/', outputPathPage),
           dest: outputPathPageHtml,
         });
       } else {
