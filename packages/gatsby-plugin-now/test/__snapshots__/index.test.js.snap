@@ -3,6 +3,20 @@
 exports[`test generated now routes 1`] = `
 Array [
   Object {
+    "continue": true,
+    "headers": Object {
+      "cache-control": "public,max-age=31536000,immutable",
+    },
+    "src": "/static/(.*)",
+  },
+  Object {
+    "continue": true,
+    "headers": Object {
+      "cache-control": "public,max-age=31536000,immutable",
+    },
+    "src": "/.*\\\\.(js|json|css)$",
+  },
+  Object {
     "headers": Object {
       "Location": "/",
     },
@@ -81,6 +95,11 @@ Array [
     },
     "src": "/randorect",
     "status": 302,
+  },
+  Object {
+    "dest": "/404",
+    "src": "/.*",
+    "status": 404,
   },
 ]
 `;
