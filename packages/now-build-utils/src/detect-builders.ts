@@ -1,5 +1,5 @@
-import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 import minimatch from 'minimatch';
+import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 
 interface ErrorResponse {
   code: string;
