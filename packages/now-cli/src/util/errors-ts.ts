@@ -1086,19 +1086,6 @@ export class NoBuilderCacheError extends NowError<'NO_BUILDER_CACHE', {}> {
   }
 }
 
-export class BuilderCacheCleanError extends NowError<
-  'BUILDER_CACHE_CLEAN_FAILED',
-  { path: string }
-> {
-  constructor(path: string, message: string) {
-    super({
-      code: 'BUILDER_CACHE_CLEAN_FAILED',
-      message: `Error cleaning builder cache: ${message}`,
-      meta: { path },
-    });
-  }
-}
-
 export class LambdaSizeExceededError extends NowError<
   'MAX_LAMBDA_SIZE_EXCEEDED',
   { size: number; maxLambdaSize: number }
