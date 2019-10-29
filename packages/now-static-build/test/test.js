@@ -7,50 +7,33 @@ const {
 } = require('../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(12 * 60 * 1000);
-let buildUtilsUrl;
 let builderUrl;
 
 beforeAll(async () => {
-  if (!buildUtilsUrl) {
-    const buildUtilsPath = path.resolve(__dirname, '..');
-    buildUtilsUrl = await packAndDeploy(buildUtilsPath);
-    console.log('buildUtilsUrl', buildUtilsUrl);
-  }
-  const builderPath = path.resolve(__dirname, '..');
-  builderUrl = await packAndDeploy(builderPath);
+  builderUrl = await packAndDeploy(path.resolve(__dirname, '..'));
   console.log('builderUrl', builderUrl);
 });
 
-const fixturesPath = path.resolve(__dirname, 'fixtures');
-const testsThatFailToBuild = new Set([
+const fixturesThatShouldFail = [
   '04-wrong-dist-dir',
   '05-empty-dist-dir',
   '06-missing-script',
   '07-nonzero-sh',
-]);
+];
 
-// eslint-disable-next-line no-restricted-syntax
-for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (testsThatFailToBuild.has(fixture)) {
-    // eslint-disable-next-line no-loop-func
-    it(`should not build ${fixture}`, async () => {
-      try {
-        await testDeployment(
-          { builderUrl, buildUtilsUrl },
-          path.join(fixturesPath, fixture)
-        );
-      } catch (err) {
-        expect(err.message).toMatch(/is ERROR/);
-      }
-    });
-    continue; //eslint-disable-line
+const fixturesPath = path.resolve(__dirname, 'fixtures');
+const fixtures = fs.readdirSync();
+
+test.each(
+  fixtures.map(fixture => {
+    return [fixture, fixturesThatShouldFail.includes(fixture)];
+  })
+)(`testing %s (shouldFail is %p)`, async (fixture, shouldFail) => {
+  const p = testDeployment({ builderUrl }, path.join(fixturesPath, fixture));
+
+  if (shouldFail) {
+    expect(p).rejects.toThrowError(/is ERROR/);
+  } else {
+    expect(p).resolves.toBeDefined();
   }
-  it(`should build ${fixture}`, async () => {
-    await expect(
-      testDeployment(
-        { builderUrl, buildUtilsUrl },
-        path.join(fixturesPath, fixture)
-      )
-    ).resolves.toBeDefined();
-  });
-}
+});
