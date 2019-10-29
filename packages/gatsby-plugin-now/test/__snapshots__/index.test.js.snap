@@ -7,7 +7,7 @@ Array [
     "headers": Object {
       "cache-control": "public,max-age=31536000,immutable",
     },
-    "src": "/static/(.*)",
+    "src": "/(static|icons)/(.*)",
   },
   Object {
     "continue": true,
@@ -15,6 +15,20 @@ Array [
       "cache-control": "public,max-age=31536000,immutable",
     },
     "src": "/.*\\\\.(js|json|css)$",
+  },
+  Object {
+    "continue": true,
+    "headers": Object {
+      "cache-control": "public,max-age=0,must-revalidate",
+    },
+    "src": "/.*\\\\.html",
+  },
+  Object {
+    "continue": true,
+    "headers": Object {
+      "cache-control": "public,max-age=0,must-revalidate",
+    },
+    "src": "/page-data/.*",
   },
   Object {
     "headers": Object {
