@@ -444,6 +444,50 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/static');
     expect(builders[1].src).toBe('!{api/**,package.json}');
   }
+
+  {
+    // extend with functions
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'api/users/*.ts': {
+        runtime: 'my-custom-runtime-package',
+      },
+      'api/teams/members.ts': {
+        memory: 128,
+        maxDuration: 10,
+      },
+      'package.json': {
+        memory: 3008,
+        runtime: '@now/next@canary',
+      },
+    };
+    const files = [
+      'pages/index.js',
+      'api/users/[id].ts',
+      'api/teams/members.ts',
+    ];
+    const { builders } = await detectBuilders(files, pkg, { functions });
+
+    expect(builders.length).toBe(3);
+    expect(builders[0]).toEqual({
+      src: 'api/teams/members.ts',
+      use: '@now/node',
+      config: { zeroConfig: true, memory: 128, maxDuration: 10 },
+    });
+    expect(builders[1]).toEqual({
+      src: 'api/users/[id].ts',
+      use: 'my-custom-runtime-package',
+      config: { zeroConfig: true },
+    });
+    expect(builders[2]).toEqual({
+      src: 'package.json',
+      use: '@now/next@canary',
+      config: { zeroConfig: true, memory: 3008 },
+    });
+  }
 });
 
 it('Test `detectRoutes`', async () => {
