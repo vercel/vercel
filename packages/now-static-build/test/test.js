@@ -32,8 +32,8 @@ test.each(
   const p = testDeployment({ builderUrl }, path.join(fixturesPath, fixture));
 
   if (shouldFail) {
-    expect(p).rejects.toThrowError(/is ERROR/);
+    await expect(p).rejects.toThrowError(/is ERROR/);
   } else {
-    expect(p).resolves.toBeDefined();
+    await expect(p).resolves.toBeDefined();
   }
 });
