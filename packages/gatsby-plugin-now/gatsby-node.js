@@ -22,29 +22,26 @@ exports.onPostBuild = async ({ store }) => {
     }
   }
 
+  // we implement gatsby's recommendations
+  // https://www.gatsbyjs.org/docs/caching/
   const finalRoutes = [
     {
-      src: '/(static|icons)/(.*)',
+      src: '^/static/(.*)$',
       headers: { 'cache-control': 'public,max-age=31536000,immutable' },
       continue: true,
     },
     {
-      src: '/.*\\.(js|json|css)$',
+      src: '^/.*\\.(js|css)$',
       headers: { 'cache-control': 'public,max-age=31536000,immutable' },
       continue: true,
     },
     {
-      src: '/.*\\.html',
-      headers: { 'cache-control': 'public,max-age=0,must-revalidate' },
-      continue: true,
-    },
-    {
-      src: '/page-data/.*',
+      src: '^/(sw\\.js|app-data\\.json|.*\\.html|page-data/.*)$',
       headers: { 'cache-control': 'public,max-age=0,must-revalidate' },
       continue: true,
     },
     ...routes,
-    { src: '/.*', status: 404, dest: '/404' },
+    { src: '.*', status: 404, dest: '/404.html' },
   ];
 
   await writeFile(
