@@ -29,7 +29,10 @@ async function testDeployment (
   buildDelegate
 ) {
   console.log('testDeployment', fixturePath);
-  const globResult = await glob(`${fixturePath}/**`, { nodir: true, dot: true });
+  const globResult = await glob(`${fixturePath}/**`, {
+    nodir: true,
+    dot: true,
+  });
   const bodies = globResult.reduce((b, f) => {
     const r = path.relative(fixturePath, f);
     b[r] = fs.readFileSync(f);
@@ -81,6 +84,10 @@ async function testDeployment (
 
   for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
+    if (probe.delay) {
+      await new Promise((resolve) => setTimeout(resolve, probe.delay));
+      continue;
+    }
     const probeUrl = `https://${deploymentUrl}${probe.path}`;
     const fetchOpts = { method: probe.method, headers: { ...probe.headers } };
     if (probe.body) {
@@ -117,8 +124,14 @@ async function testDeployment (
         const expected = probe.responseHeaders[header];
         const isEqual = Array.isArray(expected)
           ? expected.every((h) => actual.includes(h))
+          : expected.startsWith('/') && expected.endsWith('/')
+          ? new RegExp(expected.slice(1, -1)).test(actual)
           : expected === actual;
         if (!isEqual) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([ k, v ]) => `  ${k}=${v}`)
+            .join('\n');
+
           throw new Error(
             `Page ${probeUrl} does not have header ${header}.\n\nExpected: ${expected}.\nActual: ${headers}`
           );
