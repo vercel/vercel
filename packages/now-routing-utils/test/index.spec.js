@@ -441,6 +441,25 @@ describe('getTransformedRoutes', () => {
     const filePaths = ['file.html'];
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_keys');
+  });
+
+  test('should error when redirects is invalid regex', () => {
+    const nowConfig = {
+      redirects: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_redirects');
+  });
+
+  test('should error when rewrites is invalid regex', () => {
+    const nowConfig = {
+      rewrites: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_rewrites');
   });
 
   test('should normalize all redirects before rewrites', () => {
