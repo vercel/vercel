@@ -150,7 +150,7 @@
       "path": "/_next/data/testing-build-id/blog/post-1.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-now-cache": "/HIT|STALE|PRERENDER/"
       }
     },
     {
