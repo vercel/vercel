@@ -193,10 +193,7 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.memory !== undefined &&
-      ![...Array(50).keys()]
-        .slice(2, 48)
-        .map(i => i * 64)
-        .includes(func.memory)
+      (func.memory < 128 || func.memory > 3008 || func.memory % 64 !== 0)
     ) {
       return {
         code: 'invalid_function_memory',
