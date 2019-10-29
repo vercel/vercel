@@ -128,7 +128,7 @@
       "path": "/_next/data/testing-build-id/another.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-now-cache": "/HIT|STALE/"
       }
     },
     {
