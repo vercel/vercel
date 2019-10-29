@@ -7,28 +7,21 @@ Array [
     "headers": Object {
       "cache-control": "public,max-age=31536000,immutable",
     },
-    "src": "/(static|icons)/(.*)",
+    "src": "^/static/(.*)$",
   },
   Object {
     "continue": true,
     "headers": Object {
       "cache-control": "public,max-age=31536000,immutable",
     },
-    "src": "/.*\\\\.(js|json|css)$",
+    "src": "^/.*\\\\.(js|css)$",
   },
   Object {
     "continue": true,
     "headers": Object {
       "cache-control": "public,max-age=0,must-revalidate",
     },
-    "src": "/.*\\\\.html",
-  },
-  Object {
-    "continue": true,
-    "headers": Object {
-      "cache-control": "public,max-age=0,must-revalidate",
-    },
-    "src": "/page-data/.*",
+    "src": "^/(sw\\\\.js|app-data\\\\.json|.*\\\\.html|page-data/.*)$",
   },
   Object {
     "headers": Object {
@@ -111,8 +104,8 @@ Array [
     "status": 302,
   },
   Object {
-    "dest": "/404",
-    "src": "/.*",
+    "dest": "/404.html",
+    "src": ".*",
     "status": 404,
   },
 ]
