@@ -28,13 +28,23 @@ exports.onPostBuild = async ({ store }) => {
 
   const finalRoutes = [
     {
-      src: '/static/(.*)',
+      src: '/(static|icons)/(.*)',
       headers: { 'cache-control': 'public,max-age=31536000,immutable' },
       continue: true,
     },
     {
       src: '/.*\\.(js|json|css)$',
       headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+      continue: true,
+    },
+    {
+      src: '/.*\\.html',
+      headers: { 'cache-control': 'public,max-age=0,must-revalidate' },
+      continue: true,
+    },
+    {
+      src: '/page-data/.*',
+      headers: { 'cache-control': 'public,max-age=0,must-revalidate' },
       continue: true,
     },
     ...routes,
