@@ -22,7 +22,7 @@ const fixturesThatShouldFail = [
 ];
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
-const fixtures = fs.readdirSync();
+const fixtures = fs.readdirSync(fixturesPath);
 
 test.each(
   fixtures.map(fixture => {
