@@ -11,19 +11,23 @@
     { "path": "/", "mustContain": "Welcome to your new Gatsby site" },
     {
       "path": "/static/d/856328897.json",
-      "headers": { "cache-control": "public,max-age=31536000,immutable" }
+      "responseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
     },
     {
       "path": "/app-08a9fb9626777db1bf33.js",
-      "headers": { "cache-control": "public,max-age=31536000,immutable" }
+      "responseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
     },
     {
       "path": "/index.html",
-      "headers": { "cache-control": "public,max-age=0,must-revalidate" }
+      "responseHeaders": { "cache-control": "public,max-age=0,must-revalidate" }
     },
     {
       "path": "/page-data/404/page-data.json",
-      "headers": { "cache-control": "public,max-age=0,must-revalidate" }
+      "responseHeaders": { "cache-control": "public,max-age=0,must-revalidate" }
     },
     {
       "path": "/path-that-does-not-exist",
