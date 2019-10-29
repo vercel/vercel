@@ -191,13 +191,15 @@ export function getTransformedRoutes({
     const errors = redirects
       .map(r => checkRegexSyntax(r.source))
       .filter(notEmpty);
-    const error = createNowError(
-      code,
-      'Redirect `source` contains invalid regex',
-      errors
-    );
-    if (error) {
-      return { routes, error };
+    if (errors.length > 0) {
+      return {
+        routes,
+        error: createNowError(
+          code,
+          'Redirect `source` contains invalid regex',
+          errors
+        ),
+      };
     }
     const normalized = normalizeRoutes(convertRedirects(redirects));
     if (normalized.error) {
@@ -221,13 +223,15 @@ export function getTransformedRoutes({
     const errors = rewrites
       .map(r => checkRegexSyntax(r.source))
       .filter(notEmpty);
-    const error = createNowError(
-      code,
-      'Rewrites `source` contains invalid regex',
-      errors
-    );
-    if (error) {
-      return { routes, error };
+    if (errors.length > 0) {
+      return {
+        routes,
+        error: createNowError(
+          code,
+          'Rewrites `source` contains invalid regex',
+          errors
+        ),
+      };
     }
     const normalized = normalizeRoutes(convertRewrites(rewrites));
     if (normalized.error) {
