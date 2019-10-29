@@ -1,6 +1,7 @@
 const { deepEqual } = require('assert');
 const { normalizeRoutes } = require('../');
 const {
+  getCleanUrls,
   convertCleanUrls,
   convertRedirects,
   convertRewrites,
@@ -29,8 +30,8 @@ function assertRegexMatches(actual, mustMatch, mustNotMatch) {
   assertMatches(actual, mustNotMatch, false);
 }
 
-test('convertCleanUrls', () => {
-  const { redirects, rewrites } = convertCleanUrls([
+test('getCleanUrls', () => {
+  const actual = getCleanUrls([
     'file.txt',
     'path/to/file.txt',
     'file.js',
@@ -38,24 +39,59 @@ test('convertCleanUrls', () => {
     'file.html',
     'path/to/file.html',
   ]);
-  const expectedRedirects = [
+  const expected = [
     {
-      src: '/file.html',
-      headers: { Location: '/file' },
+      html: '/file.html',
+      clean: '/file',
+    },
+    {
+      html: '/path/to/file.html',
+      clean: '/path/to/file',
+    },
+  ];
+  deepEqual(actual, expected);
+});
+
+test('convertCleanUrls true', () => {
+  const actual = convertCleanUrls(true);
+  const expected = [
+    {
+      src: '^/(?:(.+)/)?index(?:\\.html)?$',
+      headers: { Location: '/$1' },
       status: 301,
     },
     {
-      src: '/path/to/file.html',
-      headers: { Location: '/path/to/file' },
+      src: '^/(.*)\\.html$',
+      headers: { Location: '/$1' },
       status: 301,
     },
   ];
-  const expectedRewrites = [
-    { src: '/file', dest: '/file.html', continue: true },
-    { src: '/path/to/file', dest: '/path/to/file.html', continue: true },
+  deepEqual(actual, expected);
+
+  const mustMatch = [
+    ['/index', '/index.html', '/sub/index', '/sub/index.html'],
+    ['/file.html', '/sub/file.html'],
   ];
-  deepEqual(redirects, expectedRedirects);
-  deepEqual(rewrites, expectedRewrites);
+
+  const mustNotMatch = [
+    [
+      '/someindex',
+      '/someindex.html',
+      '/indexAhtml',
+      '/sub/someindex',
+      '/sub/someindex.html',
+      '/sub/indexAhtml',
+    ],
+    ['/filehtml', '/sub/filehtml'],
+  ];
+
+  assertRegexMatches(actual, mustMatch, mustNotMatch);
+});
+
+test('convertCleanUrls false', () => {
+  const actual = convertCleanUrls(false);
+  const expected = [];
+  deepEqual(actual, expected);
 });
 
 test('convertRedirects', () => {
