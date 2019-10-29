@@ -461,7 +461,7 @@ it('Test `detectBuilders`', async () => {
       },
       'package.json': {
         memory: 3008,
-        runtime: '@now/next@1.0.0-canary',
+        runtime: '@now/next@1.0.0-canary.12',
       },
     };
     const files = [
@@ -490,7 +490,7 @@ it('Test `detectBuilders`', async () => {
   }
 
   {
-    // invalid function memory
+    // invalid function key
     const functions = { ['a'.repeat(1000)]: { memory: 128 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -503,7 +503,7 @@ it('Test `detectBuilders`', async () => {
   }
 
   {
-    // invalid function memory
+    // invalid function maxDuration
     const functions = { 'pages/index.ts': { maxDuration: -1 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
