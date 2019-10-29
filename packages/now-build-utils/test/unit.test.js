@@ -484,7 +484,7 @@ it('Test `detectBuilders`', async () => {
     });
     expect(builders[2]).toEqual({
       src: 'package.json',
-      use: '@now/next@1.0.0-canary',
+      use: '@now/next@1.0.0-canary.12',
       config: { zeroConfig: true, functions },
     });
   }
