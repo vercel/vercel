@@ -15,6 +15,8 @@ import {
   convertTrailingSlash,
 } from './superstatic';
 
+export { getCleanUrls } from './superstatic';
+
 export function isHandler(route: Route): route is Handler {
   return typeof (route as Handler).handle !== 'undefined';
 }
@@ -135,9 +137,8 @@ export function getTransformedRoutes({
     }
   } else {
     routes = [];
-    if (cleanUrls) {
-      const clean = convertCleanUrls(filePaths);
-      routes.push(...clean.redirects);
+    if (typeof cleanUrls !== 'undefined') {
+      routes.push(...convertCleanUrls(cleanUrls));
     }
     if (typeof trailingSlash !== 'undefined') {
       routes.push(...convertTrailingSlash(trailingSlash));
