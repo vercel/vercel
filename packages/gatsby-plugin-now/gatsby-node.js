@@ -6,10 +6,6 @@ const REDIRECT_FILE_NAME = '__now_routes_g4t5bY.json';
 exports.onPostBuild = async ({ store }) => {
   const { redirects, program } = store.getState();
 
-  if (redirects.length === 0) {
-    return;
-  }
-
   const routes = [{ handle: 'filesystem' }];
 
   for (const redirect of redirects) {
