@@ -20,17 +20,21 @@ export function getCleanUrls(
   return htmlFiles;
 }
 
-export function convertCleanUrls(enable: boolean): Route[] {
+export function convertCleanUrls(
+  cleanUrls: boolean,
+  trailingSlash: boolean | undefined
+): Route[] {
   const routes: Route[] = [];
-  if (enable) {
+  if (cleanUrls) {
+    const loc = trailingSlash ? '/$1/' : '/$1';
     routes.push({
-      src: '^/(?:(.+)/)?index(?:\\.html)?$',
-      headers: { Location: '/$1' },
+      src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
+      headers: { Location: loc },
       status: 301,
     });
     routes.push({
-      src: '^/(.*)\\.html$',
-      headers: { Location: '/$1' },
+      src: '^/(.*)\\.html/?$',
+      headers: { Location: loc },
       status: 301,
     });
   }
