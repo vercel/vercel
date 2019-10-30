@@ -510,7 +510,7 @@ export const build = async ({
 
     if (requiresTracing) {
       const tracingLabel =
-        'Tracing Next.js serverless functions for external files ...';
+        'Traced Next.js serverless functions for external files in';
       console.time(tracingLabel);
 
       const apiPages: string[] = [];
@@ -556,7 +556,7 @@ export const build = async ({
       apiFileList.forEach(collectTracedFiles(apiReasons, apiTracedFiles));
       console.timeEnd(tracingLabel);
 
-      const zippingLabel = 'Compressing shared serverless function files';
+      const zippingLabel = 'Compressed shared serverless function files';
       console.time(zippingLabel);
 
       pseudoLayers.push(await createPseudoLayer(tracedFiles));
