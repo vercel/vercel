@@ -105,12 +105,27 @@ test('convertCleanUrls true, trailingSlash true', () => {
   deepEqual(actual, expected);
 
   const mustMatch = [
-    ['/index/', '/index.html/', '/sub/index/', '/sub/index.html/'],
-    ['/file.html/', '/sub/file.html/'],
+    [
+      '/index',
+      '/index.html',
+      '/sub/index',
+      '/sub/index.html',
+      '/index/',
+      '/index.html/',
+      '/sub/index/',
+      '/sub/index.html/',
+    ],
+    ['/file.html', '/sub/file.html', '/file.html/', '/sub/file.html/'],
   ];
 
   const mustNotMatch = [
     [
+      '/someindex',
+      '/someindex.html',
+      '/indexAhtml',
+      '/sub/someindex',
+      '/sub/someindex.html',
+      '/sub/indexAhtml',
       '/someindex/',
       '/someindex.html/',
       '/indexAhtml/',
@@ -118,7 +133,7 @@ test('convertCleanUrls true, trailingSlash true', () => {
       '/sub/someindex.html/',
       '/sub/indexAhtml/',
     ],
-    ['/filehtml/', '/sub/filehtml/'],
+    ['/filehtml', '/sub/filehtml', '/filehtml/', '/sub/filehtml/'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
