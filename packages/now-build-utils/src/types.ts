@@ -39,6 +39,7 @@ export interface Config {
     | boolean
     | number
     | { [key: string]: string }
+    | BuilderFunctions
     | undefined;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
@@ -49,8 +50,7 @@ export interface Config {
   debug?: boolean;
   zeroConfig?: boolean;
   import?: { [key: string]: string };
-  memory?: number;
-  maxDuration?: number;
+  functions?: BuilderFunctions;
 }
 
 export interface Meta {

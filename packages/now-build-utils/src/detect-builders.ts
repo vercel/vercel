@@ -1,4 +1,5 @@
 import minimatch from 'minimatch';
+import { valid as validSemver } from 'semver';
 import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 
 interface ErrorResponse {
@@ -69,18 +70,12 @@ function getFunctionBuilder(
 
   const src = (prevBuilder && prevBuilder.src) || file;
   const use = fn.runtime || (prevBuilder && prevBuilder.use);
-  const config: Config = Object.assign({}, prevBuilder && prevBuilder.config);
+  const config: Config = Object.assign({}, prevBuilder && prevBuilder.config, {
+    functions,
+  });
 
   if (!use) {
     return prevBuilder;
-  }
-
-  if (fn.memory) {
-    config.memory = fn.memory;
-  }
-
-  if (fn.maxDuration) {
-    config.maxDuration = fn.maxDuration;
   }
 
   return { use, src, config };
@@ -175,6 +170,54 @@ async function checkConflictingFiles(
   return null;
 }
 
+function validateFunctions({ functions = {} }: Options) {
+  for (const [path, func] of Object.entries(functions)) {
+    if (path.length > 256) {
+      return {
+        code: 'invalid_function_glob',
+        message: 'Function globs must be less than 256 characters long.',
+      };
+    }
+
+    if (
+      func.maxDuration !== undefined &&
+      (func.maxDuration < 1 ||
+        func.maxDuration > 900 ||
+        !Number.isInteger(func.maxDuration))
+    ) {
+      return {
+        code: 'invalid_function_duration',
+        message: 'Functions must have a duration between 1 and 900.',
+      };
+    }
+
+    if (
+      func.memory !== undefined &&
+      (func.memory < 128 || func.memory > 3008 || func.memory % 64 !== 0)
+    ) {
+      return {
+        code: 'invalid_function_memory',
+        message:
+          'Functions must have a memory value between 128 and 3008 in steps of 64.',
+      };
+    }
+
+    if (func.runtime !== undefined) {
+      const tag = `${func.runtime}`.split('@').pop();
+
+      if (!tag || !validSemver(tag)) {
+        return {
+          code: 'invalid_function_runtime',
+          message:
+            'Function runtimes must have a valid version, for example `@now/node@1.0.0`.',
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 // When zero config is used we can call this function
 // to determine what builders to use
 export async function detectBuilders(
@@ -188,6 +231,16 @@ export async function detectBuilders(
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
+
+  const functionError = validateFunctions(options);
+
+  if (functionError) {
+    return {
+      builders: null,
+      errors: [functionError],
+      warnings,
+    };
+  }
 
   // Detect all builders for the `api` directory before anything else
   const builders = await detectApiBuilders(files, options);

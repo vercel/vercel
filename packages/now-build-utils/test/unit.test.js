@@ -453,7 +453,7 @@ it('Test `detectBuilders`', async () => {
     };
     const functions = {
       'api/users/*.ts': {
-        runtime: 'my-custom-runtime-package',
+        runtime: 'my-custom-runtime-package@1.0.0',
       },
       'api/teams/members.ts': {
         memory: 128,
@@ -461,7 +461,7 @@ it('Test `detectBuilders`', async () => {
       },
       'package.json': {
         memory: 3008,
-        runtime: '@now/next@canary',
+        runtime: '@now/next@1.0.0-canary.12',
       },
     };
     const files = [
@@ -475,18 +475,70 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0]).toEqual({
       src: 'api/teams/members.ts',
       use: '@now/node',
-      config: { zeroConfig: true, memory: 128, maxDuration: 10 },
+      config: { zeroConfig: true, functions },
     });
     expect(builders[1]).toEqual({
       src: 'api/users/[id].ts',
-      use: 'my-custom-runtime-package',
-      config: { zeroConfig: true },
+      use: 'my-custom-runtime-package@1.0.0',
+      config: { zeroConfig: true, functions },
     });
     expect(builders[2]).toEqual({
       src: 'package.json',
-      use: '@now/next@canary',
-      config: { zeroConfig: true, memory: 3008 },
+      use: '@now/next@1.0.0-canary.12',
+      config: { zeroConfig: true, functions },
     });
+  }
+
+  {
+    // invalid function key
+    const functions = { ['a'.repeat(1000)]: { memory: 128 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toBe(null);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_glob');
+  }
+
+  {
+    // invalid function maxDuration
+    const functions = { 'pages/index.ts': { maxDuration: -1 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toBe(null);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_duration');
+  }
+
+  {
+    // invalid function memory
+    const functions = { 'pages/index.ts': { memory: 200 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toBe(null);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_memory');
+  }
+
+  {
+    // missing runtime version
+    const functions = { 'pages/index.ts': { runtime: 'haha' } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toBe(null);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_runtime');
   }
 });
 
