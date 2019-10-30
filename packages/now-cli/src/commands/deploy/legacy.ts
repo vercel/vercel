@@ -298,7 +298,7 @@ export default async function main(
 
   const infoUrl = (await canUseZeroConfig(paths[0]))
     ? 'https://zeit.co/guides/migrate-to-zeit-now'
-    : 'https://zeit.co/docs/v2/advanced/platform/changes-in-now-2-0';
+    : 'https://zeit.co/docs/v2/platform/changes-in-now-2-0';
 
   warn(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`

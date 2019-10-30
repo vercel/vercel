@@ -19,7 +19,7 @@ const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
   code: 'missing_build_script',
   message:
     'Your `package.json` file is missing a `build` property inside the `script` property.' +
-    '\nMore details: https://zeit.co/docs/v2/advanced/platform/frequently-asked-questions#missing-build-script',
+    '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-build-script',
 };
 
 // Static builders are special cased in `@now/static-build`
