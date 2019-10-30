@@ -52,4 +52,5 @@ export {
   debug,
 };
 
+export * from './detectors';
 export * from './types';

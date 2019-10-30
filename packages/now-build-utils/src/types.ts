@@ -1,5 +1,6 @@
 import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
+import DetectorFilesystem from './detectors/filesystem';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -308,3 +309,22 @@ export interface Builder {
   src: string;
   config?: Config;
 }
+
+export type Detector = (params: DetectorParameters) => Promise<DetectorResult>;
+
+export interface DetectorParameters {
+  fs: DetectorFilesystem;
+  detectors?: Detector[];
+}
+
+export interface DetectorOutput {
+  buildCommand?: string[];
+  buildDirectory: string;
+  buildEnv?: Env;
+  devCommand?: string[];
+  devEnv?: Env;
+  minNodeRange?: string;
+  routes?: Route[];
+}
+
+export type DetectorResult = DetectorOutput | false;
