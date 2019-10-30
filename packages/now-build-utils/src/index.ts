@@ -53,4 +53,5 @@ export {
   getLambdaOptionsFromFunction,
 };
 
+export * from './detectors';
 export * from './types';
