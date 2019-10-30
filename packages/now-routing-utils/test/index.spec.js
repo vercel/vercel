@@ -479,12 +479,12 @@ describe('getTransformedRoutes', () => {
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     const expected = [
       {
-        src: '^/(?:(.+)/)?index(?:\\.html)?$',
+        src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
         headers: { Location: '/$1' },
         status: 301,
       },
       {
-        src: '^/(.*)\\.html$',
+        src: '^/(.*)\\.html/?$',
         headers: { Location: '/$1' },
         status: 301,
       },
