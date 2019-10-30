@@ -127,7 +127,7 @@ export function getTransformedRoutes({
   nowConfig,
 }: GetRoutesProps): NormalizedRoutes {
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } = nowConfig;
-  let { routes } = nowConfig;
+  let { routes = null } = nowConfig;
   const errors: NowErrorNested[] = [];
   if (routes) {
     if (typeof cleanUrls !== 'undefined') {
@@ -166,14 +166,13 @@ export function getTransformedRoutes({
     return normalizeRoutes(routes);
   }
 
-  routes = [];
-
   if (typeof cleanUrls !== 'undefined') {
     const normalized = normalizeRoutes(convertCleanUrls(cleanUrls));
     if (normalized.error) {
       normalized.error.code = 'invalid_clean_urls';
       return { routes, error: normalized.error };
     }
+    routes = routes || [];
     routes.push(...(normalized.routes || []));
   }
 
@@ -183,6 +182,7 @@ export function getTransformedRoutes({
       normalized.error.code = 'invalid_trailing_slash';
       return { routes, error: normalized.error };
     }
+    routes = routes || [];
     routes.push(...(normalized.routes || []));
   }
 
@@ -206,6 +206,7 @@ export function getTransformedRoutes({
       normalized.error.code = code;
       return { routes, error: normalized.error };
     }
+    routes = routes || [];
     routes.push(...(normalized.routes || []));
   }
 
@@ -215,6 +216,7 @@ export function getTransformedRoutes({
       normalized.error.code = 'invalid_headers';
       return { routes, error: normalized.error };
     }
+    routes = routes || [];
     routes.push(...(normalized.routes || []));
   }
 
@@ -238,6 +240,7 @@ export function getTransformedRoutes({
       normalized.error.code = code;
       return { routes, error: normalized.error };
     }
+    routes = routes || [];
     routes.push({ handle: 'filesystem' });
     routes.push(...(normalized.routes || []));
   }

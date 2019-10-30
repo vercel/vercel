@@ -29,6 +29,11 @@ const assertError = (data, errors, schema = routesSchema) => {
 };
 
 describe('normalizeRoutes', () => {
+  test('should return routes null if provided routes is null', () => {
+    const actual = normalizeRoutes(null);
+    assert.equal(actual.routes, null);
+  });
+
   test('accepts valid routes', () => {
     if (Number(process.versions.node.split('.')[0]) < 10) {
       // Skip this test for any Node version less than Node 10
@@ -538,5 +543,11 @@ describe('getTransformedRoutes', () => {
     assertValid(nowConfig.redirects, redirectsSchema);
     assertValid(nowConfig.headers, headersSchema);
     assertValid(nowConfig.trailingSlashSchema, trailingSlashSchema);
+  });
+
+  test('should return null routes if no transformations are performed', () => {
+    const nowConfig = { routes: null };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.equal(actual.routes, null);
   });
 });
