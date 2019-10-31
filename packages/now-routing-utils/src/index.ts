@@ -112,7 +112,7 @@ function createNowError(
     errors.length > 0
       ? {
           code,
-          message: `${msg}: \n${errors.map(error => `- ${error.message}\n`)}`,
+          message: `${msg}: \n${errors.map(item => `- ${item.message}\n`)}`,
           errors,
         }
       : null;
