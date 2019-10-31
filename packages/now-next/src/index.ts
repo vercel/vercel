@@ -845,6 +845,7 @@ export const build = async ({
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+      { src: '/_next(?:/.*)?', status: 404, dest: '/_error' },
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
