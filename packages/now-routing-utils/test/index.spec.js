@@ -154,13 +154,17 @@ describe('normalizeRoutes', () => {
     const normalized = normalizeRoutes(routes);
 
     assert.deepStrictEqual(normalized.routes, routes);
-    assert.deepStrictEqual(normalized.error, {
-      code: 'invalid_routes',
-      message: `One or more invalid routes were found: \n${errors.map(
-        item => `- ${item.message}\n`
-      )}`,
-      errors,
-    });
+    assert.deepStrictEqual(normalized.error.code, 'invalid_routes');
+    assert.deepStrictEqual(normalized.error.errors, errors);
+    assert.deepStrictEqual(
+      normalized.error.message,
+      `One or more invalid routes were found:
+- This is not a valid handler (handle: doesnotexist)
+- Cannot have any other keys when handle is used (handle: filesystem)
+- You can only handle something once (handle: filesystem)
+- Invalid regular expression: "^/(broken]$"
+- A route must set either handle or src`
+    );
   });
 
   test('fails if over 1024 routes', () => {
