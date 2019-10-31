@@ -156,10 +156,8 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
     assert.deepStrictEqual(normalized.error, {
       code: 'invalid_routes',
-      message: `One or more invalid routes were found: \n${JSON.stringify(
-        errors,
-        null,
-        2
+      message: `One or more invalid routes were found: \n${errors.map(
+        item => `- ${item.message}\n`
       )}`,
       errors,
     });
