@@ -762,30 +762,6 @@ test('remove the wildcard alias', async t => {
   t.true(stdout.startsWith(goal));
 });
 
-test('ensure type and instance count in list is right', async t => {
-  const { stdout, stderr, code } = await execa(
-    binaryPath,
-    ['ls', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(code);
-
-  // Ensure the exit code is right
-  t.is(code, 0);
-
-  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
-  const columns = line.split(/\s+/);
-
-  // Ensure those columns only contain a dash
-  t.is(columns[3], '-');
-  t.is(columns[4], '-');
-});
-
 test('set platform version using `--platform-version` to `2`', async t => {
   const directory = fixture('builds');
 
