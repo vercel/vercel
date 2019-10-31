@@ -646,7 +646,7 @@ it('Test `detectRoutes`', async () => {
       '^/api/date(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/date/index.js');
-    expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
+    expect(defaultRoutes[1].src).toBe('^/api/(date\\/|date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
   }
 
@@ -661,7 +661,7 @@ it('Test `detectRoutes`', async () => {
       '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/[date]/index.js?date=$1');
-    expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
+    expect(defaultRoutes[1].src).toBe('^/api/(date\\/|date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
   }
 
