@@ -3,11 +3,11 @@ import { DetectorParameters, DetectorResult } from '../types';
 export default async function detectHugo({
   fs: { exists },
 }: DetectorParameters): Promise<DetectorResult> {
-  const [hasArchetypes, hasConfig] = await Promise.all([
-    exists('archetypes/default.md'),
+  const [hasConfigYaml, hasConfigToml] = await Promise.all([
+    exists('config.yaml'),
     exists('config.toml'),
   ]);
-  if (!hasArchetypes || !hasConfig) {
+  if (!hasConfigYaml && !hasConfigToml) {
     return false;
   }
   return {
