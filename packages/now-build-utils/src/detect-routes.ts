@@ -60,9 +60,9 @@ function createRouteFromPath(filePath: string): Route {
       const prefix = isIndex ? '\\/' : '';
 
       const names = [
-        prefix,
+        isIndex ? prefix : `${fileName}\\/`,
         prefix + escapeName(fileName),
-        prefix + escapeName(fileName) + escapeName(ext)
+        prefix + escapeName(fileName) + escapeName(ext),
       ].filter(Boolean);
 
       // Either filename with extension, filename without extension
@@ -228,8 +228,8 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
           message:
             `The segment "${conflictingSegment}" occurs more than ` +
             `one time in your path "${file}". Please make sure that ` +
-            `every segment in a path is unique`
-        }
+            `every segment in a path is unique`,
+        },
       };
     }
 
@@ -249,8 +249,8 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
           message:
             `Two or more files have conflicting paths or names. ` +
             `Please make sure path segments and filenames, without their extension, are unique. ` +
-            `The path "${file}" has conflicts with ${messagePaths}`
-        }
+            `The path "${file}" has conflicts with ${messagePaths}`,
+        },
       };
     }
 
@@ -261,7 +261,7 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
   if (defaultRoutes.length) {
     defaultRoutes.push({
       status: 404,
-      src: '/api(\\/.*)?$'
+      src: '/api(\\/.*)?$',
     });
   }
 
@@ -287,7 +287,7 @@ export async function detectRoutes(
   if (routesResult.defaultRoutes && hasPublicBuilder(builders)) {
     routesResult.defaultRoutes.push({
       src: '/(.*)',
-      dest: '/public/$1'
+      dest: '/public/$1',
     });
   }
 
