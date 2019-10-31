@@ -145,7 +145,7 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 
 const getDeploymentBuildsByUrl = async url => {
   const query = new URLSearchParams({ url });
-  const hostRes = await apiFetch(`/v10/now/deployments/unkown?${query}`);
+  const hostRes = await apiFetch(`/v10/now/deployments/unknown?${query}`);
   const { id } = await hostRes.json();
   const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
   const { builds } = await buildsRes.json();
