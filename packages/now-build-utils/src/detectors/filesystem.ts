@@ -80,10 +80,8 @@ export default abstract class DetectorFilesystem {
 
   public hasDependency = async (name: string): Promise<boolean> => {
     const pkg = await this.readPackageJson();
-    if (!pkg) return false;
-    if (pkg.dependencies && pkg.dependencies[name]) return true;
-    if (pkg.devDependencies && pkg.devDependencies[name]) return true;
-    return false;
+    const { dependencies = {}, devDependencies = {} } = pkg || {};
+    return name in dependencies || name in devDependencies;
   };
 }
 
