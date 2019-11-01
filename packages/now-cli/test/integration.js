@@ -2012,7 +2012,7 @@ test('deploy a Lambda with a specific runtime', async t => {
   t.is(build.use, '@now/node@1.0.0-canary.10', JSON.stringify(build, null, 2));
 });
 
-test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
+test.only('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory]);
 
