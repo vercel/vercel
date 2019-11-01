@@ -276,7 +276,7 @@ test(
   })
 );
 
-test.skip('[now dev] 01-node', async t => {
+test('[now dev] 01-node', async t => {
   const directory = fixture('01-node');
   const { dev, port } = await testFixture(directory);
 
