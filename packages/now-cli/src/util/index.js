@@ -179,6 +179,7 @@ export default class Now extends EventEmitter {
         limits: nowConfig.limits,
         atlas,
         config: nowConfig,
+        functions: nowConfig.functions,
       };
 
       deployment = await processDeployment({

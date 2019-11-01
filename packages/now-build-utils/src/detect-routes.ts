@@ -1,6 +1,6 @@
-import { Route, Builder } from './types';
 import { parse as parsePath } from 'path';
-import { ignoreApiFilter, sortFiles } from './detect-builders';
+import { Route, Builder } from './types';
+import { getIgnoreApiFilter, sortFiles } from './detect-builders';
 
 function escapeName(name: string) {
   const special = '[]^$.|?*+()'.split('');
@@ -197,7 +197,10 @@ interface RoutesResult {
   error: { [key: string]: string } | null;
 }
 
-async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
+async function detectApiRoutes(
+  files: string[],
+  builders: Builder[]
+): Promise<RoutesResult> {
   if (!files || files.length === 0) {
     return { defaultRoutes: null, error: null };
   }
@@ -205,7 +208,7 @@ async function detectApiRoutes(files: string[]): Promise<RoutesResult> {
   // The deepest routes need to be
   // the first ones to get handled
   const sortedFiles = files
-    .filter(ignoreApiFilter)
+    .filter(getIgnoreApiFilter(builders))
     .sort(sortFiles)
     .sort(sortFilesBySegmentCount);
 
@@ -282,7 +285,7 @@ export async function detectRoutes(
   files: string[],
   builders: Builder[]
 ): Promise<RoutesResult> {
-  const routesResult = await detectApiRoutes(files);
+  const routesResult = await detectApiRoutes(files, builders);
 
   if (routesResult.defaultRoutes && hasPublicBuilder(builders)) {
     routesResult.defaultRoutes.push({
