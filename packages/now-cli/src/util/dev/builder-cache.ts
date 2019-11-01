@@ -239,6 +239,7 @@ export async function installBuilders(
         '--no-lockfile',
         '--non-interactive',
         '--skip-integrity-check',
+        '--network-concurrency=1',
         ...packagesToInstall,
       ],
       {
@@ -275,6 +276,7 @@ export async function updateBuilders(
       '--no-lockfile',
       '--non-interactive',
       '--skip-integrity-check',
+      '--network-concurrency=1',
       ...packages.filter(p => p !== '@now/static'),
     ],
     {
