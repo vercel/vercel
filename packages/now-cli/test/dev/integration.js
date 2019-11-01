@@ -449,25 +449,29 @@ test(
   })
 );
 
-test('[now dev] 10-nextjs-node', async t => {
-  const directory = fixture('10-nextjs-node');
-  const { dev, port } = await testFixture(directory);
+if (satisfies(process.version, '>=8.9.0')) {
+  test('[now dev] 10-nextjs-node', async t => {
+    const directory = fixture('10-nextjs-node');
+    const { dev, port } = await testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-    const response = await result;
+      const result = await fetchWithRetry(`http://localhost:${port}`, 80);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Next.js \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+      const body = await response.text();
+      t.regex(body, /Next.js \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
+} else {
+  console.log('Skipping `10-nextjs-node` test since it requires Node >=8.9.0');
+}
 
 // test('[now dev] 11-nuxtjs-node', async t => {
 //   const directory = fixture('11-nuxtjs-node');
