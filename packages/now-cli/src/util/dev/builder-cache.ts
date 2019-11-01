@@ -238,6 +238,7 @@ export async function installBuilders(
         '--exact',
         '--no-lockfile',
         '--non-interactive',
+        '--skip-integrity-check',
         ...packagesToInstall,
       ],
       {
