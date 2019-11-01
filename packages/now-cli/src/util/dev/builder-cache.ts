@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import execa from 'execa';
 import semver from 'semver';
 import pipe from 'promisepipe';
+import retry from 'async-retry';
 import npa from 'npm-package-arg';
 import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
@@ -230,19 +231,23 @@ export async function installBuilders(
     `Installing builders: ${packagesToInstall.sort().join(', ')}`
   );
   try {
-    await execa(
-      process.execPath,
-      [
-        yarnPath,
-        'add',
-        '--exact',
-        '--no-lockfile',
-        '--non-interactive',
-        ...packagesToInstall,
-      ],
-      {
-        cwd: builderDir,
-      }
+    await retry(
+      () =>
+        execa(
+          process.execPath,
+          [
+            yarnPath,
+            'add',
+            '--exact',
+            '--no-lockfile',
+            '--non-interactive',
+            ...packagesToInstall,
+          ],
+          {
+            cwd: builderDir,
+          }
+        ),
+      { retries: 2 }
     );
   } finally {
     stopSpinner();
@@ -265,19 +270,23 @@ export async function updateBuilders(
 
   packages.push(getBuildUtils(packages));
 
-  await execa(
-    process.execPath,
-    [
-      yarnPath,
-      'add',
-      '--exact',
-      '--no-lockfile',
-      '--non-interactive',
-      ...packages.filter(p => p !== '@now/static'),
-    ],
-    {
-      cwd: builderDir,
-    }
+  await retry(
+    () =>
+      execa(
+        process.execPath,
+        [
+          yarnPath,
+          'add',
+          '--exact',
+          '--no-lockfile',
+          '--non-interactive',
+          ...packages.filter(p => p !== '@now/static'),
+        ],
+        {
+          cwd: builderDir,
+        }
+      ),
+    { retries: 2 }
   );
 
   const updatedPackages: string[] = [];
