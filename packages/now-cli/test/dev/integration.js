@@ -54,6 +54,10 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+    if (process.platform === 'darwin' && satisfies(process.version, '8.x')) {
+      await execa('yarn', ['cache', 'clean']);
+    }
+
     return execa('yarn', ['install'], { cwd: fixturePath });
   }
 }
