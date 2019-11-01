@@ -36,8 +36,8 @@ import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
-import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 import getUpdateCommand from './util/get-update-command';
+import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
