@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "build": "mkdir -p public && echo 0.11033719508841355 > public/index.txt"
-  }
-}
