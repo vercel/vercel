@@ -1297,7 +1297,10 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
-    this.output.debug(`Serving asset: [${asset.type}] ${assetKey}`);
+    this.output.debug(
+      `Serving asset: [${asset.type}] ${assetKey} ${(asset as any)
+        .contentType || ''}`
+    );
 
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
@@ -1311,7 +1314,7 @@ export default class DevServer {
               headers: [
                 {
                   key: 'Content-Type',
-                  value: getMimeType(assetKey),
+                  value: asset.contentType || getMimeType(assetKey),
                 },
               ],
             },
@@ -1321,7 +1324,7 @@ export default class DevServer {
       case 'FileBlob':
         const headers: http.OutgoingHttpHeaders = {
           'Content-Length': asset.data.length,
-          'Content-Type': getMimeType(assetKey),
+          'Content-Type': asset.contentType || getMimeType(assetKey),
         };
         this.setResponseHeaders(res, nowRequestId, headers);
         res.end(asset.data);
