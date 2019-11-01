@@ -81,24 +81,15 @@ async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
   port = ++port;
-
-  const dev = execa(
-    binaryPath,
-    ['dev', directory, '-l', String(port), ...args],
-    {
+  return {
+    dev: execa(binaryPath, ['dev', directory, '-l', String(port), ...args], {
       reject: false,
       detached: true,
       stdio: 'ignore',
       ...opts,
-    }
-  );
-
-  dev.on('error', err => {
-    console.error(`Error in fixture "${directory}"`);
-    throw err;
-  });
-
-  return { dev, port };
+    }),
+    port,
+  };
 }
 
 function testFixtureStdio(directory, fn) {
@@ -117,13 +108,6 @@ function testFixtureStdio(directory, fn) {
       });
 
       dev = execa(binaryPath, ['dev', dir, '-l', port]);
-
-      dev.on('error', err => {
-        console.error(`Error in fixture "${directory}"`);
-        console.error(err);
-        t.fail();
-      });
-
       dev.stderr.on('data', async data => {
         output += data.toString();
         if (data.toString().includes('Ready! Available at')) {
