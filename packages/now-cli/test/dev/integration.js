@@ -95,6 +95,7 @@ async function testFixture(directory, opts = {}, args = []) {
 
   dev.catch(err => {
     console.error(`Error in fixture "${directory}"`);
+    throw err;
   });
 
   return { dev, port };
