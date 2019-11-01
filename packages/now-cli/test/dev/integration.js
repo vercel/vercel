@@ -194,6 +194,28 @@ test('[now dev] validate env var names', async t => {
 });
 
 test(
+  '[now dev] test rewrites serve correct content',
+  testFixtureStdio('test-rewrites', async (t, port) => {
+    const result = await fetchWithRetry(`http://localhost:${port}/hello`, 3);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Hello World/gm);
+  })
+);
+
+test(
+  '[now dev] throw when invalid builder routes detected',
+  testFixtureStdio('invalid-builder-routes', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+    const body = await response.text();
+    t.regex(body, /Invalid regular expression/gm);
+  })
+);
+
+test(
   '[now dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async (t, port) => {
     const result = await fetchWithRetry(`http://localhost:${port}`, 60);
