@@ -15,6 +15,13 @@ let port = 3000;
 const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
+const fixtureIndexes = fs.readdirSync(fixture(''));
+
+const getPort = name => {
+  const index = fixtureIndexes.indexOf(name.split('/').pop());
+  return index !== -1 ? 4000 + index : ++port;
+};
+
 function fetchWithRetry(url, retries = 3, opts = {}) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -80,7 +87,7 @@ async function getPackedBuilderPath(builderDirName) {
 async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
-  port = ++port;
+  const port = getPort(directory);
 
   const dev = execa(
     binaryPath,
@@ -109,7 +116,7 @@ function testFixtureStdio(directory, fn) {
     await runNpmInstall(dir);
 
     try {
-      port = ++port;
+      const port = getPort(directory);
       let output = '';
       let readyResolve;
       let readyPromise = new Promise(resolve => {
