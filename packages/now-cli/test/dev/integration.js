@@ -266,6 +266,15 @@ test(
 );
 
 test(
+  '[now dev] throw when invalid builder routes detected',
+  testFixtureStdio('invalid-builder-routes', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+    const body = await response.text();
+    t.regex(body, /Invalid regular expression/gm);
+  })
+);
+
+test(
   '[now dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async (t, port) => {
     const result = await fetchWithRetry(`http://localhost:${port}`, 60);
