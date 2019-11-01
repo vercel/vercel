@@ -274,6 +274,7 @@ export async function updateBuilders(
       '--exact',
       '--no-lockfile',
       '--non-interactive',
+      '--skip-integrity-check',
       ...packages.filter(p => p !== '@now/static'),
     ],
     {
