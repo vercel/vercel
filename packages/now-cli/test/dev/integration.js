@@ -694,22 +694,18 @@ if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
   );
 }
 
-if (satisfies(process.version, '>=10.0.0')) {
-  test(
-    '[now dev] 19-mithril',
-    testFixtureStdio('19-mithril', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
+test(
+  '[now dev] 19-mithril',
+  testFixtureStdio('19-mithril', async (t, port) => {
+    const result = fetch(`http://localhost:${port}`);
+    const response = await result;
 
-      validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
 
-      const body = await response.text();
-      t.regex(body, /Mithril on ZEIT Now/gm);
-    })
-  );
-} else {
-  console.log('Skipping `19-mithril` test since it requires Node >= 10');
-}
+    const body = await response.text();
+    t.regex(body, /Mithril on ZEIT Now/gm);
+  })
+);
 
 test(
   '[now dev] 20-riot',
