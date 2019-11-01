@@ -135,6 +135,9 @@ export default async function processDeployment({
       }
 
       if (event.type === 'all-builds-completed') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
         if (buildSpinner) {
           buildSpinner();
         }
@@ -144,10 +147,12 @@ export default async function processDeployment({
 
       // Handle error events
       if (event.type === 'error') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
         if (buildSpinner) {
           buildSpinner();
         }
-
         if (deploySpinner) {
           deploySpinner();
         }
@@ -157,6 +162,12 @@ export default async function processDeployment({
 
       // Handle ready event
       if (event.type === 'alias-assigned') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+        if (buildSpinner) {
+          buildSpinner();
+        }
         if (deploySpinner) {
           deploySpinner();
         }
