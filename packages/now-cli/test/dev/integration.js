@@ -93,7 +93,7 @@ async function testFixture(directory, opts = {}, args = []) {
     }
   );
 
-  dev.on('error', err => {
+  dev.catch(err => {
     console.error(`Error in fixture "${directory}"`);
     throw err;
   });
@@ -118,7 +118,7 @@ function testFixtureStdio(directory, fn) {
 
       dev = execa(binaryPath, ['dev', dir, '-l', port]);
 
-      dev.on('error', err => {
+      dev.catch(err => {
         console.error(`Error in fixture "${directory}"`);
         console.error(err);
         t.fail();
