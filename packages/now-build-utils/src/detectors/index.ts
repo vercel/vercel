@@ -14,6 +14,7 @@ import jekyll from './jekyll';
 import next from './next';
 import polymer from './polymer';
 import preact from './preact';
+import svelte from './svelte';
 import vue from './vue';
 
 export { DetectorFilesystem };
@@ -29,6 +30,7 @@ export const pkgDetectors: Detector[] = [
   next,
   polymer,
   preact,
+  svelte,
   vue,
 ];
 
