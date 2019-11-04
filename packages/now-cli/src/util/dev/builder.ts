@@ -253,8 +253,6 @@ export async function executeBuild(
       });
   }
 
-  console.log('OUTPUTS ', output);
-
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
   for (const name of Object.keys(output)) {

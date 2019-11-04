@@ -4,7 +4,12 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
+import {
+  HttpHeadersConfig,
+  RouteConfig,
+  RouteResult,
+  NowConfig,
+} from './types';
 import { isHandler } from '@now/routing-utils';
 
 export function resolveRouteParameters(
@@ -27,6 +32,7 @@ export function resolveRouteParameters(
 }
 
 export default async function(
+  nowConfig: NowConfig,
   reqUrl: string = '/',
   reqMethod?: string,
   routes?: RouteConfig[],
@@ -43,7 +49,7 @@ export default async function(
       idx++;
       if (isHandler(routeConfig)) {
         if (routeConfig.handle === 'filesystem' && devServer) {
-          if (await devServer.hasFilesystem(reqPathname)) {
+          if (await devServer.hasFilesystem(reqPathname, nowConfig)) {
             break;
           }
         }
