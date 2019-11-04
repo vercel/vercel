@@ -9,6 +9,7 @@ import docusaurus from './docusaurus';
 import eleventy from './eleventy';
 import ember from './ember';
 import gatsby from './gatsby';
+import gridsome from './gridsome';
 import hexo from './hexo';
 import hugo from './hugo';
 import jekyll from './jekyll';
@@ -28,6 +29,7 @@ export const pkgDetectors: Detector[] = [
   eleventy,
   ember,
   gatsby,
+  gridsome,
   hexo,
   next,
   polymer,
