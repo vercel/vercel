@@ -770,6 +770,29 @@ test('remove the wildcard alias', async t => {
   t.true(stdout.startsWith(goal));
 });
 
+test('ensure username in list is right', async t => {
+  const { stdout, stderr, code } = await execa(
+    binaryPath,
+    ['ls', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(code);
+
+  // Ensure the exit code is right
+  t.is(code, 0);
+
+  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
+  const columns = line.split(/\s+/);
+
+  // Ensure username column have username
+  t.truthy(columns.pop().includes('now-builders-ci-bot'));
+});
+
 test('set platform version using `--platform-version` to `2`', async t => {
   const directory = fixture('builds');
 
