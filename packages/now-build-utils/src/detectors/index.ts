@@ -12,6 +12,7 @@ import hugo from './hugo';
 import jekyll from './jekyll';
 import next from './next';
 import preact from './preact';
+import vue from './vue';
 
 export { DetectorFilesystem };
 
@@ -24,6 +25,7 @@ export const pkgDetectors: Detector[] = [
   hexo,
   next,
   preact,
+  vue,
 ];
 
 export const detectors: Detector[] = [hugo, jekyll];
