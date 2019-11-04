@@ -17,6 +17,7 @@ import next from './next';
 import polymer from './polymer';
 import preact from './preact';
 import svelte from './svelte';
+import umi from './umi';
 import vue from './vue';
 
 export { DetectorFilesystem };
@@ -35,6 +36,7 @@ export const pkgDetectors: Detector[] = [
   polymer,
   preact,
   svelte,
+  umi,
   vue,
 ];
 
