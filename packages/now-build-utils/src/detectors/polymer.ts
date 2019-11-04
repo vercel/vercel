@@ -1,13 +1,12 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
-export default async function detectAngular({
+export default async function detectPolymer({
   fs: { hasDependency },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasAngular = await hasDependency('@angular/cli');
-  if (!hasAngular) return false;
+  const hasPolymer = await hasDependency('polymer-cli');
+  if (!hasPolymer) return false;
   return {
-    buildDirectory: 'dist',
-    minNodeRange: '10.x',
+    buildDirectory: 'build',
     routes: [
       {
         handle: 'filesystem',
