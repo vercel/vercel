@@ -2,6 +2,7 @@ import AggregateError from 'aggregate-error';
 import DetectorFilesystem from './filesystem';
 import { Detector, DetectorParameters, DetectorResult } from '../types';
 
+import angular from './angular';
 import cra from './create-react-app';
 import docusaurus from './docusaurus';
 import eleventy from './eleventy';
@@ -17,6 +18,7 @@ import vue from './vue';
 export { DetectorFilesystem };
 
 export const pkgDetectors: Detector[] = [
+  angular,
   cra,
   docusaurus,
   eleventy,
