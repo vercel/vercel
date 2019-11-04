@@ -327,6 +327,7 @@ export type Detector = (params: DetectorParameters) => Promise<DetectorResult>;
 export interface DetectorParameters {
   fs: DetectorFilesystem;
   detectors?: Detector[];
+  pkgDetectors?: Detector[];
 }
 
 export interface DetectorOutput {

@@ -6,23 +6,27 @@ import cra from './create-react-app';
 import docusaurus from './docusaurus';
 import eleventy from './eleventy';
 import ember from './ember';
+import gatsby from './gatsby';
 import hexo from './hexo';
 import hugo from './hugo';
-import gatsby from './gatsby';
+import jekyll from './jekyll';
+import next from './next';
 import preact from './preact';
 
 export { DetectorFilesystem };
 
-export const detectors: Detector[] = [
+export const pkgDetectors: Detector[] = [
   cra,
   docusaurus,
   eleventy,
   ember,
   gatsby,
   hexo,
-  hugo,
+  next,
   preact,
 ];
+
+export const detectors: Detector[] = [hugo, jekyll];
 
 function firstTruthy<T>(promises: Promise<T>[]) {
   return new Promise<T>((resolve, reject) => {
@@ -46,6 +50,16 @@ function firstTruthy<T>(promises: Promise<T>[]) {
 export async function detectDefaults(
   params: DetectorParameters
 ): Promise<DetectorResult> {
-  const d: Detector[] = params.detectors || detectors;
-  return firstTruthy(d.map(detector => detector(params)));
+  // The `package.json` detectors are run first, since they share the common
+  // file read of `package.json` and are the most popular frameworks
+  let d: Detector[] = params.pkgDetectors || pkgDetectors;
+  let result: DetectorResult = await firstTruthy(
+    d.map(detector => detector(params))
+  );
+  if (!result) {
+    // If no `package.json` framework was detected then check the non-pkg ones
+    d = params.detectors || detectors;
+    result = await firstTruthy(d.map(detector => detector(params)));
+  }
+  return result;
 }
