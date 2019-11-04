@@ -239,7 +239,7 @@ export async function executeBuild(
   const { output } = result;
 
   // Mimic fmeta-util and convert cleanUrls
-  if (nowConfig.cleanUrls === true) {
+  if (nowConfig.cleanUrls) {
     Object.keys(output)
       .filter(name => name.endsWith('.html'))
       .map(name => ({ name, value: output[name] }))
@@ -280,8 +280,6 @@ export async function executeBuild(
         throw new Error(`Unknown file type: ${obj.type}`);
     }
   }
-
-  console.log('Final output: ' + output);
 
   // The `watch` array must not have "./" prefix, so if the builder returned
   // watched files that contain "./" strip them here for ease of writing the

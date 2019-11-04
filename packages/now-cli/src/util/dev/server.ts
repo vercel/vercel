@@ -1625,6 +1625,7 @@ async function shouldServe(
     src.endsWith('.html') &&
     src.slice(0, -5) === requestPath
   ) {
+    // Mimic fmeta-util and convert cleanUrls
     return true;
   } else if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
