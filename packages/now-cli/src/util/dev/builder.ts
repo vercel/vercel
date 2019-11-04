@@ -30,6 +30,7 @@ import {
   BuilderOutput,
   BuilderOutputs,
 } from './types';
+import { normalizeRoutes } from '@now/routing-utils';
 
 interface BuildMessage {
   type: string;
@@ -225,6 +226,14 @@ export async function executeBuild(
     };
   } else {
     result = buildResultOrOutputs as BuildResult;
+  }
+
+  // Normalize Builder Routes
+  const normalized = normalizeRoutes(result.routes);
+  if (normalized.error) {
+    throw new Error(normalized.error.message);
+  } else {
+    result.routes = normalized.routes || [];
   }
 
   // Convert the JSON-ified output map back into their corresponding `File`

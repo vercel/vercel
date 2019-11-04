@@ -54,6 +54,10 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+    if (process.platform === 'darwin' && satisfies(process.version, '8.x')) {
+      await execa('yarn', ['cache', 'clean']);
+    }
+
     return execa('yarn', ['install'], { cwd: fixturePath });
   }
 }
@@ -258,6 +262,15 @@ test(
 
     const body = await response.text();
     t.regex(body, /Hello World/gm);
+  })
+);
+
+test(
+  '[now dev] throw when invalid builder routes detected',
+  testFixtureStdio('invalid-builder-routes', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+    const body = await response.text();
+    t.regex(body, /Invalid regular expression/gm);
   })
 );
 
