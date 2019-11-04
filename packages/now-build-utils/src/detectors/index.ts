@@ -3,7 +3,8 @@ import DetectorFilesystem from './filesystem';
 import { Detector, DetectorParameters, DetectorResult } from '../types';
 
 import angular from './angular';
-import cra from './create-react-app';
+import createReactApp from './create-react-app';
+import createReactAppEjected from './create-react-app-ejected';
 import docusaurus from './docusaurus';
 import eleventy from './eleventy';
 import ember from './ember';
@@ -21,7 +22,8 @@ export { DetectorFilesystem };
 
 export const pkgDetectors: Detector[] = [
   angular,
-  cra,
+  createReactApp,
+  createReactAppEjected,
   docusaurus,
   eleventy,
   ember,
