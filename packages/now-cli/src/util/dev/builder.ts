@@ -240,10 +240,9 @@ export async function executeBuild(
 
   // Mimic fmeta-util and convert cleanUrls
   if (nowConfig.cleanUrls) {
-    Object.keys(output)
-      .filter(name => name.endsWith('.html'))
-      .map(name => ({ name, value: output[name] }))
-      .forEach(({ name, value }) => {
+    Object.entries(output)
+      .filter(([name, value]) => name.endsWith('.html'))
+      .forEach(([name, value]) => {
         const cleanName = name.slice(0, -5);
         delete output[name];
         output[cleanName] = value;
