@@ -500,7 +500,6 @@ export default class DevServer {
     isInitialLoad: boolean = false
   ): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
-      this.output.debug('Using cached `now.json` config');
       return this.cachedNowConfig;
     }
 
@@ -1297,7 +1296,10 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
-    this.output.debug(`Serving asset: [${asset.type}] ${assetKey}`);
+    this.output.debug(
+      `Serving asset: [${asset.type}] ${assetKey} ${(asset as any)
+        .contentType || ''}`
+    );
 
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
@@ -1311,7 +1313,7 @@ export default class DevServer {
               headers: [
                 {
                   key: 'Content-Type',
-                  value: getMimeType(assetKey),
+                  value: asset.contentType || getMimeType(assetKey),
                 },
               ],
             },
@@ -1321,7 +1323,7 @@ export default class DevServer {
       case 'FileBlob':
         const headers: http.OutgoingHttpHeaders = {
           'Content-Length': asset.data.length,
-          'Content-Type': getMimeType(assetKey),
+          'Content-Type': asset.contentType || getMimeType(assetKey),
         };
         this.setResponseHeaders(res, nowRequestId, headers);
         res.end(asset.data);
@@ -1598,13 +1600,21 @@ async function shouldServe(
   isFilesystem?: boolean
 ): Promise<boolean> {
   const {
-    src: entrypoint,
+    src,
     config,
     builderWithPkg: { builder },
   } = match;
-  if (typeof builder.shouldServe === 'function') {
+  const nowConfig = await devServer.getNowConfig();
+  if (
+    nowConfig.cleanUrls &&
+    src.endsWith('.html') &&
+    src.slice(0, -5) === requestPath
+  ) {
+    // Mimic fmeta-util and convert cleanUrls
+    return true;
+  } else if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
-      entrypoint,
+      entrypoint: src,
       files,
       config,
       requestPath,
