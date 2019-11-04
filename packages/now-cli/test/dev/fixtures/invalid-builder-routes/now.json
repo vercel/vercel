@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "https://files-dx8orl9ax.static-host.site"
+    }
+  ]
+}

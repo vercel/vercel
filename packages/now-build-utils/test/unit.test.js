@@ -540,6 +540,19 @@ it('Test `detectBuilders`', async () => {
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_runtime');
   }
+
+  {
+    // use a custom runtime
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const files = ['api/user.php'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors).toBe(null);
+    expect(builders.length).toBe(1);
+    expect(builders[0].use).toBe('now-php@0.0.5');
+  }
 });
 
 it('Test `detectRoutes`', async () => {
@@ -646,7 +659,7 @@ it('Test `detectRoutes`', async () => {
       '^/api/date(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/date/index.js');
-    expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
+    expect(defaultRoutes[1].src).toBe('^/api/(date\\/|date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
   }
 
@@ -661,7 +674,7 @@ it('Test `detectRoutes`', async () => {
       '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/[date]/index.js?date=$1');
-    expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
+    expect(defaultRoutes[1].src).toBe('^/api/(date\\/|date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
   }
 
@@ -683,5 +696,17 @@ it('Test `detectRoutes`', async () => {
     expect(builders[2].use).toBe('@now/node');
     expect(builders[3].use).toBe('@now/node');
     expect(defaultRoutes.length).toBe(5);
+  }
+
+  {
+    // use a custom runtime
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const files = ['api/user.php'];
+
+    const { builders } = await detectBuilders(files, null, { functions });
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(2);
+    expect(defaultRoutes[0].dest).toBe('/api/user.php');
   }
 });
