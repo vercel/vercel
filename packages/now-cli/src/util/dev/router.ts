@@ -32,7 +32,6 @@ export function resolveRouteParameters(
 }
 
 export default async function(
-  nowConfig: NowConfig,
   reqUrl: string = '/',
   reqMethod?: string,
   routes?: RouteConfig[],
@@ -49,7 +48,7 @@ export default async function(
       idx++;
       if (isHandler(routeConfig)) {
         if (routeConfig.handle === 'filesystem' && devServer) {
-          if (await devServer.hasFilesystem(reqPathname, nowConfig)) {
+          if (await devServer.hasFilesystem(reqPathname)) {
             break;
           }
         }

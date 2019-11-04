@@ -1,13 +1,11 @@
 import test from 'ava';
 import devRouter from '../src/util/dev/router';
 
-const nowConfig = {};
-
 test('[dev-router] 301 redirection', async t => {
   const routesConfig = [
     { src: '/redirect', status: 301, headers: { Location: 'https://zeit.co' } },
   ];
-  const result = await devRouter(nowConfig, '/redirect', 'GET', routesConfig);
+  const result = await devRouter('/redirect', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -23,7 +21,7 @@ test('[dev-router] 301 redirection', async t => {
 
 test('[dev-router] captured groups', async t => {
   const routesConfig = [{ src: '/api/(.*)', dest: '/endpoints/$1.js' }];
-  const result = await devRouter(nowConfig, '/api/user', 'GET', routesConfig);
+  const result = await devRouter('/api/user', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -39,7 +37,7 @@ test('[dev-router] captured groups', async t => {
 
 test('[dev-router] named groups', async t => {
   const routesConfig = [{ src: '/user/(?<id>.+)', dest: '/user.js?id=$id' }];
-  const result = await devRouter(nowConfig, '/user/123', 'GET', routesConfig);
+  const result = await devRouter('/user/123', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -60,7 +58,7 @@ test('[dev-router] optional named groups', async t => {
       dest: '/api/functions/hello/index.js?name=$name',
     },
   ];
-  const result = await devRouter(nowConfig, '/api/hello', 'GET', routesConfig);
+  const result = await devRouter('/api/hello', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -77,7 +75,7 @@ test('[dev-router] optional named groups', async t => {
 test('[dev-router] proxy_pass', async t => {
   const routesConfig = [{ src: '/proxy', dest: 'https://zeit.co' }];
 
-  const result = await devRouter(nowConfig, '/proxy', 'GET', routesConfig);
+  const result = await devRouter('/proxy', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -97,7 +95,7 @@ test('[dev-router] methods', async t => {
     { src: '/.*', methods: ['GET'], dest: '/get' },
   ];
 
-  let result = await devRouter(nowConfig, '/', 'GET', routesConfig);
+  let result = await devRouter('/', 'GET', routesConfig);
   t.deepEqual(result, {
     found: true,
     dest: '/get',
@@ -109,7 +107,7 @@ test('[dev-router] methods', async t => {
     userDest: true,
   });
 
-  result = await devRouter(nowConfig, '/', 'POST', routesConfig);
+  result = await devRouter('/', 'POST', routesConfig);
   t.deepEqual(result, {
     found: true,
     dest: '/post',
@@ -124,7 +122,7 @@ test('[dev-router] methods', async t => {
 
 test('[dev-router] match without prefix slash', async t => {
   const routesConfig = [{ src: 'api/(.*)', dest: 'endpoints/$1.js' }];
-  const result = await devRouter(nowConfig, '/api/user', 'GET', routesConfig);
+  const result = await devRouter('/api/user', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -145,12 +143,7 @@ test('[dev-router] match with needed prefixed slash', async t => {
       dest: '/some/dest',
     },
   ];
-  const result = await devRouter(
-    nowConfig,
-    '/post-1/comments',
-    'GET',
-    routesConfig
-  );
+  const result = await devRouter('/post-1/comments', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -178,7 +171,6 @@ test('[dev-router] `continue: true` with fallthrough', async t => {
     },
   ];
   const result = await devRouter(
-    nowConfig,
     '/_next/static/chunks/0.js',
     'GET',
     routesConfig
@@ -209,7 +201,6 @@ test('[dev-router] `continue: true` with match', async t => {
     },
   ];
   const result = await devRouter(
-    nowConfig,
     '/_next/static/chunks/0.js',
     'GET',
     routesConfig
@@ -234,7 +225,7 @@ test('[dev-router] `continue: true` with match', async t => {
 
 test('[dev-router] match with catch-all with prefix slash', async t => {
   const routesConfig = [{ src: '/(.*)', dest: '/www/$1' }];
-  const result = await devRouter(nowConfig, '/', 'GET', routesConfig);
+  const result = await devRouter('/', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -250,7 +241,7 @@ test('[dev-router] match with catch-all with prefix slash', async t => {
 
 test('[dev-router] match with catch-all with no prefix slash', async t => {
   const routesConfig = [{ src: '(.*)', dest: '/www$1' }];
-  const result = await devRouter(nowConfig, '/', 'GET', routesConfig);
+  const result = await devRouter('/', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
@@ -272,7 +263,7 @@ test('[dev-router] `continue: true` with `dest`', async t => {
       dest: 'http://localhost:5000/$1',
     },
   ];
-  const result = await devRouter(nowConfig, '/a/foo', 'GET', routesConfig);
+  const result = await devRouter('/a/foo', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,

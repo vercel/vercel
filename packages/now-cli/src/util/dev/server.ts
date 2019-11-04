@@ -261,7 +261,7 @@ export default class DevServer {
       for (const [result, [requestPath, match]] of needsRebuild) {
         if (
           requestPath === null ||
-          (await shouldServe(nowConfig, match, this.files, requestPath, this))
+          (await shouldServe(match, this.files, requestPath, this))
         ) {
           this.triggerBuild(
             match,
@@ -500,7 +500,6 @@ export default class DevServer {
     isInitialLoad: boolean = false
   ): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
-      this.output.debug('Using cached `now.json` config');
       return this.cachedNowConfig;
     }
 
@@ -1189,7 +1188,6 @@ export default class DevServer {
     }
 
     const { dest, status, headers, uri_args } = await devRouter(
-      nowConfig,
       req.url,
       req.method,
       routes,
@@ -1229,7 +1227,6 @@ export default class DevServer {
 
     const requestPath = dest.replace(/^\//, '');
     const match = await findBuildMatch(
-      nowConfig,
       this.buildMatches,
       this.files,
       requestPath,
@@ -1263,7 +1260,6 @@ export default class DevServer {
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
       const matchedRoute = await devRouter(
-        nowConfig,
         newUrl,
         req.method,
         buildResult.routes,
@@ -1488,11 +1484,10 @@ export default class DevServer {
     return true;
   }
 
-  async hasFilesystem(dest: string, nowConfig: NowConfig): Promise<boolean> {
+  async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (
       await findBuildMatch(
-        nowConfig,
         this.buildMatches,
         this.files,
         requestPath,
@@ -1583,7 +1578,6 @@ function hasOwnProperty(obj: any, prop: string) {
 }
 
 async function findBuildMatch(
-  nowConfig: NowConfig,
   matches: Map<string, BuildMatch>,
   files: BuilderInputs,
   requestPath: string,
@@ -1591,16 +1585,7 @@ async function findBuildMatch(
   isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
   for (const match of matches.values()) {
-    if (
-      await shouldServe(
-        nowConfig,
-        match,
-        files,
-        requestPath,
-        devServer,
-        isFilesystem
-      )
-    ) {
+    if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
       return match;
     }
   }
@@ -1608,7 +1593,6 @@ async function findBuildMatch(
 }
 
 async function shouldServe(
-  nowConfig: NowConfig,
   match: BuildMatch,
   files: BuilderInputs,
   requestPath: string,
@@ -1620,6 +1604,7 @@ async function shouldServe(
     config,
     builderWithPkg: { builder },
   } = match;
+  const nowConfig = await devServer.getNowConfig();
   if (
     nowConfig.cleanUrls &&
     src.endsWith('.html') &&
@@ -1644,7 +1629,7 @@ async function shouldServe(
     return true;
   } else if (
     !isFilesystem &&
-    (await findMatchingRoute(nowConfig, match, requestPath, devServer))
+    (await findMatchingRoute(match, requestPath, devServer))
   ) {
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
@@ -1655,7 +1640,6 @@ async function shouldServe(
 }
 
 async function findMatchingRoute(
-  nowConfig: NowConfig,
   match: BuildMatch,
   requestPath: string,
   devServer: DevServer
@@ -1664,7 +1648,6 @@ async function findMatchingRoute(
   for (const buildResult of match.buildResults.values()) {
     if (!Array.isArray(buildResult.routes)) continue;
     const route = await devRouter(
-      nowConfig,
       reqUrl,
       undefined,
       buildResult.routes,
