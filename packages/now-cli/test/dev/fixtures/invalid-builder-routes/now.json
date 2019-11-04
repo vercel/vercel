@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "index.html",
-      "use": "https://files-dx8orl9ax.static-host.site"
+      "use": "https://files-1bsmqkkol.now.sh"
     }
   ]
 }
