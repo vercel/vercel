@@ -12,6 +12,7 @@ import hexo from './hexo';
 import hugo from './hugo';
 import jekyll from './jekyll';
 import next from './next';
+import polymer from './polymer';
 import preact from './preact';
 import vue from './vue';
 
@@ -26,6 +27,7 @@ export const pkgDetectors: Detector[] = [
   gatsby,
   hexo,
   next,
+  polymer,
   preact,
   vue,
 ];
