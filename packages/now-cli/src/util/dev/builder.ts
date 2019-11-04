@@ -236,9 +236,24 @@ export async function executeBuild(
     result.routes = normalized.routes || [];
   }
 
+  const { output } = result;
+
+  // Mimic fmeta-util and convert cleanUrls
+  if (nowConfig.cleanUrls) {
+    Object.entries(output)
+      .filter(([name, value]) => name.endsWith('.html'))
+      .forEach(([name, value]) => {
+        const cleanName = name.slice(0, -5);
+        delete output[name];
+        output[cleanName] = value;
+        if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
+          value.contentType = value.contentType || 'text/html; charset=utf-8';
+        }
+      });
+  }
+
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
-  const output = result.output as BuilderOutputs;
   for (const name of Object.keys(output)) {
     const obj = output[name] as File;
     let lambda: Lambda;
