@@ -16,6 +16,7 @@ import jekyll from './jekyll';
 import next from './next';
 import polymer from './polymer';
 import preact from './preact';
+import saber from './saber';
 import sapper from './sapper';
 import svelte from './svelte';
 import umi from './umi';
@@ -36,6 +37,7 @@ export const pkgDetectors: Detector[] = [
   next,
   polymer,
   preact,
+  saber,
   sapper,
   svelte,
   umi,
