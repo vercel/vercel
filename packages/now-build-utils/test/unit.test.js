@@ -444,6 +444,115 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/static');
     expect(builders[1].src).toBe('!{api/**,package.json}');
   }
+
+  {
+    // extend with functions
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'api/users/*.ts': {
+        runtime: 'my-custom-runtime-package@1.0.0',
+      },
+      'api/teams/members.ts': {
+        memory: 128,
+        maxDuration: 10,
+      },
+      'package.json': {
+        memory: 3008,
+        runtime: '@now/next@1.0.0-canary.12',
+      },
+    };
+    const files = [
+      'pages/index.js',
+      'api/users/[id].ts',
+      'api/teams/members.ts',
+    ];
+    const { builders } = await detectBuilders(files, pkg, { functions });
+
+    expect(builders.length).toBe(3);
+    expect(builders[0]).toEqual({
+      src: 'api/teams/members.ts',
+      use: '@now/node',
+      config: { zeroConfig: true, functions },
+    });
+    expect(builders[1]).toEqual({
+      src: 'api/users/[id].ts',
+      use: 'my-custom-runtime-package@1.0.0',
+      config: { zeroConfig: true, functions },
+    });
+    expect(builders[2]).toEqual({
+      src: 'package.json',
+      use: '@now/next@1.0.0-canary.12',
+      config: { zeroConfig: true, functions },
+    });
+  }
+
+  {
+    // invalid function key
+    const functions = { ['a'.repeat(1000)]: { memory: 128 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toBe(null);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_glob');
+  }
+
+  {
+    // invalid function maxDuration
+    const functions = { 'pages/index.ts': { maxDuration: -1 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toBe(null);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_duration');
+  }
+
+  {
+    // invalid function memory
+    const functions = { 'pages/index.ts': { memory: 200 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toBe(null);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_memory');
+  }
+
+  {
+    // missing runtime version
+    const functions = { 'pages/index.ts': { runtime: 'haha' } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toBe(null);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_runtime');
+  }
+
+  {
+    // use a custom runtime
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const files = ['api/user.php'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors).toBe(null);
+    expect(builders.length).toBe(1);
+    expect(builders[0].use).toBe('now-php@0.0.5');
+  }
 });
 
 it('Test `detectRoutes`', async () => {
@@ -550,7 +659,7 @@ it('Test `detectRoutes`', async () => {
       '^/api/date(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/date/index.js');
-    expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
+    expect(defaultRoutes[1].src).toBe('^/api/(date\\/|date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
   }
 
@@ -565,7 +674,7 @@ it('Test `detectRoutes`', async () => {
       '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$'
     );
     expect(defaultRoutes[0].dest).toBe('/api/[date]/index.js?date=$1');
-    expect(defaultRoutes[1].src).toBe('^/api/(date|date\\.js)$');
+    expect(defaultRoutes[1].src).toBe('^/api/(date\\/|date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
   }
 
@@ -587,5 +696,17 @@ it('Test `detectRoutes`', async () => {
     expect(builders[2].use).toBe('@now/node');
     expect(builders[3].use).toBe('@now/node');
     expect(defaultRoutes.length).toBe(5);
+  }
+
+  {
+    // use a custom runtime
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const files = ['api/user.php'];
+
+    const { builders } = await detectBuilders(files, null, { functions });
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(2);
+    expect(defaultRoutes[0].dest).toBe('/api/user.php');
   }
 });

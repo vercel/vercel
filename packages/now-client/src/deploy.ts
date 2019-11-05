@@ -6,6 +6,7 @@ import {
   API_DEPLOYMENTS_LEGACY,
   createDebug,
 } from './utils';
+import { BuilderFunctions } from '@now/build-utils';
 import checkDeploymentStatus from './deployment-status';
 import { generateQueryString } from './utils/query-string';
 import { Deployment, DeploymentOptions, NowJsonOptions } from './types';
@@ -24,6 +25,7 @@ export interface Options {
   debug?: boolean;
   nowConfig?: NowJsonOptions;
   apiUrl?: string;
+  functions?: BuilderFunctions;
 }
 
 async function* createDeployment(

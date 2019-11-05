@@ -364,6 +364,104 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
+    'lambda-with-128-memory': {
+      'api/memory.js': `
+        const os = require('os');
+
+        module.exports = (req, res) => {
+          res.json({ memory: os.totalmem() });
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 128,
+          },
+        },
+      }),
+    },
+    'lambda-with-200-memory': {
+      'api/memory.js': `
+        const os = require('os');
+
+        module.exports = (req, res) => {
+          res.json({ memory: os.totalmem() });
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 200,
+          },
+        },
+      }),
+    },
+    'lambda-with-3-second-timeout': {
+      'api/wait-for/[sleep].js': `
+        const sleep = t => new Promise(r => setTimeout(r, t));
+
+        module.exports = async (req, res) => {
+          await sleep(parseInt(req.query.sleep || 1) * 1000);
+          res.end('done');
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 128,
+            maxDuration: 3,
+          },
+        },
+      }),
+    },
+    'lambda-with-1000-second-timeout': {
+      'api/wait-for/[sleep].js': `
+        const sleep = t => new Promise(r => setTimeout(r, t));
+
+        module.exports = async (req, res) => {
+          await sleep(parseInt(req.query.sleep || 1) * 1000);
+          res.end('done');
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 128,
+            maxDuration: 1000,
+          },
+        },
+      }),
+    },
+    'lambda-with-node-runtime': {
+      'api/test.js': `
+        module.exports = async (req, res) => {
+          res.end('done');
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 128,
+            runtime: '@now/node@1.0.0-canary.10',
+          },
+        },
+      }),
+    },
+    'lambda-with-invalid-runtime': {
+      'api/test.js': `
+        module.exports = async (req, res) => {
+          res.end('done');
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 128,
+            runtime: '@now/node@canary',
+          },
+        },
+      }),
+    },
   };
 
   for (const typeName of Object.keys(spec)) {
