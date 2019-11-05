@@ -14,6 +14,7 @@ import gridsome from './gridsome';
 import hexo from './hexo';
 import hugo from './hugo';
 import jekyll from './jekyll';
+import middleman from './middleman';
 import next from './next';
 import polymer from './polymer';
 import preact from './preact';
@@ -48,7 +49,7 @@ export const pkgDetectors: Detector[] = [
   vue,
 ];
 
-export const detectors: Detector[] = [hugo, jekyll];
+export const detectors: Detector[] = [hugo, jekyll, middleman];
 
 function firstTruthy<T>(promises: Promise<T>[]) {
   return new Promise<T>((resolve, reject) => {
