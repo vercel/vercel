@@ -8,9 +8,9 @@ export default async function detectCreateReactAppEjected({
     return false;
   }
   return {
-    //buildCommand: ['react-scripts', 'build'],
+    buildCommand: ['node', 'scripts/build.js'],
     buildDirectory: 'build',
-    //devCommand: ['react-scripts', 'start'],
+    devCommand: ['node', 'scripts/start.js'],
     devEnv: { BROWSER: 'none' },
     routes: [
       {
