@@ -3,6 +3,7 @@ import DetectorFilesystem from './filesystem';
 import { Detector, DetectorParameters, DetectorResult } from '../types';
 
 import angular from './angular';
+import brunch from './brunch';
 import createReactApp from './create-react-app';
 import createReactAppEjected from './create-react-app-ejected';
 import docusaurus from './docusaurus';
@@ -27,6 +28,7 @@ export { DetectorFilesystem };
 
 export const pkgDetectors: Detector[] = [
   angular,
+  brunch,
   createReactApp,
   createReactAppEjected,
   docusaurus,
