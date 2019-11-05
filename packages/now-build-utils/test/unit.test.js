@@ -446,6 +446,29 @@ it('Test `detectBuilders`', async () => {
   }
 
   {
+    // functios with nextjs
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'api/teams/**/*': {
+        memory: 128,
+        maxDuration: 10,
+      },
+    };
+    const files = ['pages/index.js', 'pages/api/teams/members.ts'];
+    const { builders } = await detectBuilders(files, pkg, { functions });
+
+    expect(builders.length).toBe(1);
+    expect(builders[0]).toEqual({
+      src: 'package.json',
+      use: '@now/next',
+      config: { zeroConfig: true, functions },
+    });
+  }
+
+  {
     // extend with functions
     const pkg = {
       scripts: { build: 'next build' },

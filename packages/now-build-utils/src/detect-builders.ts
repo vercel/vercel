@@ -23,11 +23,17 @@ const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
 };
 
 // Static builders are special cased in `@now/static-build`
-function getBuilders({ tag }: Options = {}): Map<string, Builder> {
+function getBuilders({ tag, functions }: Options = {}): Map<string, Builder> {
   const withTag = tag ? `@${tag}` : '';
 
+  const builderConfig = { ...config };
+
+  if (functions) {
+    Object.assign(builderConfig, { functions });
+  }
+
   return new Map<string, Builder>([
-    ['next', { src, use: `@now/next${withTag}`, config }],
+    ['next', { src, use: `@now/next${withTag}`, config: builderConfig }],
   ]);
 }
 
