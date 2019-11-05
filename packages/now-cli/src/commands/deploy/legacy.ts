@@ -296,9 +296,7 @@ export default async function main(
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  const infoUrl = (await canUseZeroConfig(paths[0]))
-    ? 'https://zeit.co/guides/migrate-to-zeit-now'
-    : 'https://zeit.co/docs/v2/advanced/platform/changes-in-now-2-0';
+  const infoUrl = 'https://zeit.co/guides/migrate-to-zeit-now';
 
   warn(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
