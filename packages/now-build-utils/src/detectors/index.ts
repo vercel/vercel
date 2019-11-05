@@ -18,6 +18,7 @@ import polymer from './polymer';
 import preact from './preact';
 import saber from './saber';
 import sapper from './sapper';
+import stencil from './stencil';
 import svelte from './svelte';
 import umi from './umi';
 import vue from './vue';
@@ -39,6 +40,7 @@ export const pkgDetectors: Detector[] = [
   preact,
   saber,
   sapper,
+  stencil,
   svelte,
   umi,
   vue,
