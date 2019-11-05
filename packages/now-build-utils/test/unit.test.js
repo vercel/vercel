@@ -483,11 +483,11 @@ it('Test `detectBuilders`', async () => {
         maxDuration: 10,
       },
       'package.json': {
-        memory: 3008,
         runtime: '@now/next@1.0.0-canary.12',
       },
     };
     const files = [
+      'package.json',
       'pages/index.js',
       'api/users/[id].ts',
       'api/teams/members.ts',
@@ -575,6 +575,18 @@ it('Test `detectBuilders`', async () => {
     expect(errors).toBe(null);
     expect(builders.length).toBe(1);
     expect(builders[0].use).toBe('now-php@0.0.5');
+  }
+
+  {
+    // use a custom runtime but without a source
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const files = ['api/team.js'];
+    const { errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_source');
   }
 
   {

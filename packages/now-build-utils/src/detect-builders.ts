@@ -190,7 +190,7 @@ async function checkConflictingFiles(
   return null;
 }
 
-function validateFunctions({ functions = {} }: Options) {
+function validateFunctions(files: string[], { functions = {} }: Options) {
   for (const [path, func] of Object.entries(functions)) {
     if (path.length > 256) {
       return {
@@ -246,6 +246,13 @@ function validateFunctions({ functions = {} }: Options) {
             'Function runtimes must have a valid version, for example `@now/node@1.0.0`.',
         };
       }
+
+      if (files.some(f => f === path || minimatch(f, path)) === false) {
+        return {
+          code: 'invalid_function_source',
+          message: `No source file matched the function for ${path}.`,
+        };
+      }
     }
   }
 
@@ -266,7 +273,7 @@ export async function detectBuilders(
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
-  const functionError = validateFunctions(options);
+  const functionError = validateFunctions(files, options);
 
   if (functionError) {
     return {
