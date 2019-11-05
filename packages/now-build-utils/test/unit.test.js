@@ -452,14 +452,17 @@ it('Test `detectBuilders`', async () => {
       dependencies: { next: '9.0.0' },
     };
     const functions = {
-      'api/teams/**/*': {
+      'pages/api/teams/**': {
         memory: 128,
         maxDuration: 10,
       },
     };
     const files = ['pages/index.js', 'pages/api/teams/members.ts'];
-    const { builders } = await detectBuilders(files, pkg, { functions });
+    const { builders, errors } = await detectBuilders(files, pkg, {
+      functions,
+    });
 
+    expect(errors).toBe(null);
     expect(builders.length).toBe(1);
     expect(builders[0]).toEqual({
       src: 'package.json',

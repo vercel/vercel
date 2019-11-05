@@ -236,6 +236,13 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
       };
     }
 
+    if (files.some(f => f === path || minimatch(f, path)) === false) {
+      return {
+        code: 'invalid_function_source',
+        message: `No source file matched the function for ${path}.`,
+      };
+    }
+
     if (func.runtime !== undefined) {
       const tag = `${func.runtime}`.split('@').pop();
 
@@ -244,13 +251,6 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
           code: 'invalid_function_runtime',
           message:
             'Function runtimes must have a valid version, for example `@now/node@1.0.0`.',
-        };
-      }
-
-      if (files.some(f => f === path || minimatch(f, path)) === false) {
-        return {
-          code: 'invalid_function_source',
-          message: `No source file matched the function for ${path}.`,
         };
       }
     }
