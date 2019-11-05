@@ -266,6 +266,45 @@ test(
 );
 
 test(
+  '[now dev] test cleanUrls serve correct content',
+  testFixtureStdio('test-clean-urls', async (t, port) => {
+    const opts = { redirect: 'manual' };
+    const testPath = async (status, path, expectedText, headers = {}) => {
+      const res = await fetch(`http://localhost:${port}${path}`, opts);
+      t.is(res.status, status);
+      if (expectedText) {
+        const actualText = await res.text();
+        t.is(actualText.trim(), expectedText.trim());
+      }
+      if (headers) {
+        Object.keys(headers).forEach(key => {
+          const k = key.toLowerCase();
+          t.is(headers[k], res.headers[k]);
+        });
+      }
+    };
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/about', 'About Page');
+    await testPath(200, '/sub', 'Sub Index Page');
+    await testPath(200, '/sub/another', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(301, '/index.html', '', { Location: '/' });
+    await testPath(301, '/about.html', '', { Location: '/about' });
+    await testPath(301, '/sub/index.html', '', { Location: '/sub' });
+    await testPath(301, '/sub/another.html', '', { Location: '/sub/another' });
+  })
+);
+
+test(
+  '[now dev] throw when invalid builder routes detected',
+  testFixtureStdio('invalid-builder-routes', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+    const body = await response.text();
+    t.regex(body, /Invalid regular expression/gm);
+  })
+);
+
+test(
   '[now dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async (t, port) => {
     const result = await fetchWithRetry(`http://localhost:${port}`, 60);

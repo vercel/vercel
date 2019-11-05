@@ -4,7 +4,12 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
+import {
+  HttpHeadersConfig,
+  RouteConfig,
+  RouteResult,
+  NowConfig,
+} from './types';
 import { isHandler } from '@now/routing-utils';
 
 export function resolveRouteParameters(

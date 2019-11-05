@@ -168,7 +168,7 @@ export default async function main(ctx) {
 
   try {
     debug('Fetching deployments');
-    deployments = await now.list(app, { version: 4, meta });
+    deployments = await now.list(app, { version: 5, meta });
   } catch (err) {
     stopSpinner();
     throw err;
@@ -274,8 +274,8 @@ export default async function main(ctx) {
   console.log(
     `${table(
       [
-        ['project', 'latest deployment', 'inst #', 'type', 'state', 'age'].map(
-          s => chalk.dim(s)
+        ['project', 'latest deployment', 'state', 'age', 'username'].map(s =>
+          chalk.dim(s)
         ),
         ...deployments
           .sort(sortRecent())
@@ -283,12 +283,9 @@ export default async function main(ctx) {
             [
               getProjectName(dep),
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
-              dep.instanceCount == null || dep.type === 'LAMBDAS'
-                ? chalk.gray('-')
-                : dep.instanceCount,
-              dep.type === 'LAMBDAS' ? chalk.gray('-') : dep.type,
               stateString(dep.state),
               chalk.gray(ms(Date.now() - new Date(dep.created))),
+              dep.creator.username,
             ],
             ...(argv['--all']
               ? dep.instances.map(i => [
