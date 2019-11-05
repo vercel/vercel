@@ -1282,12 +1282,12 @@ export default class DevServer {
       }
     }
 
-    let foundAsset = findAsset(match, requestPath);
+    let foundAsset = findAsset(match, requestPath, nowConfig);
     if ((!foundAsset || this.shouldRebuild(req)) && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
-      foundAsset = findAsset(match, requestPath);
+      foundAsset = findAsset(match, requestPath, nowConfig);
     }
 
     if (!foundAsset) {
@@ -1608,7 +1608,10 @@ async function shouldServe(
   if (
     nowConfig.cleanUrls &&
     src.endsWith('.html') &&
-    src.slice(0, -5) === requestPath
+    (src.slice(0, -5) === requestPath ||
+      (nowConfig.trailingSlash &&
+        requestPath.endsWith('/') &&
+        src.slice(0, -5) === requestPath.slice(0, -1)))
   ) {
     // Mimic fmeta-util and convert cleanUrls
     return true;
@@ -1623,7 +1626,7 @@ async function shouldServe(
     if (shouldServe) {
       return true;
     }
-  } else if (findAsset(match, requestPath)) {
+  } else if (findAsset(match, requestPath, nowConfig)) {
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
@@ -1661,13 +1664,18 @@ async function findMatchingRoute(
 
 function findAsset(
   match: BuildMatch,
-  requestPath: string
+  requestPath: string,
+  nowConfig: NowConfig
 ): { asset: BuilderOutput; assetKey: string } | void {
   if (!match.buildOutput) {
     return;
   }
   let assetKey: string = requestPath.replace(/\/$/, '');
   let asset = match.buildOutput[requestPath];
+
+  if (nowConfig.trailingSlash && requestPath.endsWith('/')) {
+    asset = match.buildOutput[requestPath.slice(0, -1)];
+  }
 
   // In the case of an index path, fall back to iterating over the
   // builder outputs and doing an "is index" check until a match is found.
