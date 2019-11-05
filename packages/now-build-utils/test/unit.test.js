@@ -576,6 +576,30 @@ it('Test `detectBuilders`', async () => {
     expect(builders.length).toBe(1);
     expect(builders[0].use).toBe('now-php@0.0.5');
   }
+
+  {
+    // don't allow empty functions
+    const functions = { 'api/user.php': {} };
+    const files = ['api/user.php'];
+    const { errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function');
+  }
+
+  {
+    // don't allow null functions
+    const functions = { 'api/user.php': null };
+    const files = ['api/user.php'];
+    const { errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function');
+  }
 });
 
 it('Test `detectRoutes`', async () => {

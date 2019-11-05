@@ -199,6 +199,20 @@ function validateFunctions({ functions = {} }: Options) {
       };
     }
 
+    if (!func || typeof func !== 'object') {
+      return {
+        code: 'invalid_function',
+        message: 'Function must be an object.',
+      };
+    }
+
+    if (Object.keys(func).length === 0) {
+      return {
+        code: 'invalid_function',
+        message: 'Function must contain at least one property.',
+      };
+    }
+
     if (
       func.maxDuration !== undefined &&
       (func.maxDuration < 1 ||
