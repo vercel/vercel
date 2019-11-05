@@ -56,12 +56,12 @@ test('convertCleanUrls true', () => {
   const actual = convertCleanUrls(true);
   const expected = [
     {
-      src: '^/(?:(.+)/)?index(?:\\.html)?$',
+      src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: '/$1' },
       status: 301,
     },
     {
-      src: '^/(.*)\\.html$',
+      src: '^/(.*)\\.html/?$',
       headers: { Location: '/$1' },
       status: 301,
     },
@@ -83,6 +83,57 @@ test('convertCleanUrls true', () => {
       '/sub/indexAhtml',
     ],
     ['/filehtml', '/sub/filehtml'],
+  ];
+
+  assertRegexMatches(actual, mustMatch, mustNotMatch);
+});
+
+test('convertCleanUrls true, trailingSlash true', () => {
+  const actual = convertCleanUrls(true, true);
+  const expected = [
+    {
+      src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
+      headers: { Location: '/$1/' },
+      status: 301,
+    },
+    {
+      src: '^/(.*)\\.html/?$',
+      headers: { Location: '/$1/' },
+      status: 301,
+    },
+  ];
+  deepEqual(actual, expected);
+
+  const mustMatch = [
+    [
+      '/index',
+      '/index.html',
+      '/sub/index',
+      '/sub/index.html',
+      '/index/',
+      '/index.html/',
+      '/sub/index/',
+      '/sub/index.html/',
+    ],
+    ['/file.html', '/sub/file.html', '/file.html/', '/sub/file.html/'],
+  ];
+
+  const mustNotMatch = [
+    [
+      '/someindex',
+      '/someindex.html',
+      '/indexAhtml',
+      '/sub/someindex',
+      '/sub/someindex.html',
+      '/sub/indexAhtml',
+      '/someindex/',
+      '/someindex.html/',
+      '/indexAhtml/',
+      '/sub/someindex/',
+      '/sub/someindex.html/',
+      '/sub/indexAhtml/',
+    ],
+    ['/filehtml', '/sub/filehtml', '/filehtml/', '/sub/filehtml/'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

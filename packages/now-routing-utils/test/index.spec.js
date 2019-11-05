@@ -29,6 +29,11 @@ const assertError = (data, errors, schema = routesSchema) => {
 };
 
 describe('normalizeRoutes', () => {
+  test('should return routes null if provided routes is null', () => {
+    const actual = normalizeRoutes(null);
+    assert.equal(actual.routes, null);
+  });
+
   test('accepts valid routes', () => {
     if (Number(process.versions.node.split('.')[0]) < 10) {
       // Skip this test for any Node version less than Node 10
@@ -149,15 +154,17 @@ describe('normalizeRoutes', () => {
     const normalized = normalizeRoutes(routes);
 
     assert.deepStrictEqual(normalized.routes, routes);
-    assert.deepStrictEqual(normalized.error, {
-      code: 'invalid_routes',
-      message: `One or more invalid routes were found: \n${JSON.stringify(
-        errors,
-        null,
-        2
-      )}`,
-      errors,
-    });
+    assert.deepStrictEqual(normalized.error.code, 'invalid_routes');
+    assert.deepStrictEqual(normalized.error.errors, errors);
+    assert.deepStrictEqual(
+      normalized.error.message,
+      `One or more invalid routes were found:
+- This is not a valid handler (handle: doesnotexist)
+- Cannot have any other keys when handle is used (handle: filesystem)
+- You can only handle something once (handle: filesystem)
+- Invalid regular expression: "^/(broken]$"
+- A route must set either handle or src`
+    );
   });
 
   test('fails if over 1024 routes', () => {
@@ -474,12 +481,12 @@ describe('getTransformedRoutes', () => {
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     const expected = [
       {
-        src: '^/(?:(.+)/)?index(?:\\.html)?$',
+        src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
         headers: { Location: '/$1' },
         status: 301,
       },
       {
-        src: '^/(.*)\\.html$',
+        src: '^/(.*)\\.html/?$',
         headers: { Location: '/$1' },
         status: 301,
       },
@@ -538,5 +545,11 @@ describe('getTransformedRoutes', () => {
     assertValid(nowConfig.redirects, redirectsSchema);
     assertValid(nowConfig.headers, headersSchema);
     assertValid(nowConfig.trailingSlashSchema, trailingSlashSchema);
+  });
+
+  test('should return null routes if no transformations are performed', () => {
+    const nowConfig = { routes: null };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.equal(actual.routes, null);
   });
 });

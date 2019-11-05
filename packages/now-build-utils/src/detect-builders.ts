@@ -100,26 +100,40 @@ async function detectFrontBuilder(
 }
 
 // Files that match a specific pattern will get ignored
-export function ignoreApiFilter(file: string) {
-  if (file.includes('/.')) {
-    return false;
+export function getIgnoreApiFilter(optionsOrBuilders: Options | Builder[]) {
+  const possiblePatterns: string[] = getApiBuilders().map(b => b.src);
+
+  if (Array.isArray(optionsOrBuilders)) {
+    optionsOrBuilders.forEach(({ src }) => possiblePatterns.push(src));
+  } else if (optionsOrBuilders.functions) {
+    Object.keys(optionsOrBuilders.functions).forEach(p =>
+      possiblePatterns.push(p)
+    );
   }
 
-  if (file.includes('/_')) {
-    return false;
-  }
+  return (file: string) => {
+    if (!file.startsWith('api/')) {
+      return false;
+    }
 
-  if (file.endsWith('.d.ts')) {
-    return false;
-  }
+    if (file.includes('/.')) {
+      return false;
+    }
 
-  // If the file does not match any builder we also
-  // don't want to create a route e.g. `package.json`
-  if (getApiBuilders().every(({ src }) => !minimatch(file, src))) {
-    return false;
-  }
+    if (file.includes('/_')) {
+      return false;
+    }
 
-  return true;
+    if (file.endsWith('.d.ts')) {
+      return false;
+    }
+
+    if (possiblePatterns.every(p => !(file === p || minimatch(file, p)))) {
+      return false;
+    }
+
+    return true;
+  };
 }
 
 // We need to sort the file paths by alphabet to make
@@ -134,7 +148,7 @@ async function detectApiBuilders(
 ): Promise<Builder[]> {
   const builds = files
     .sort(sortFiles)
-    .filter(ignoreApiFilter)
+    .filter(getIgnoreApiFilter(options))
     .map(file => {
       const apiBuilder = getApiBuilders(options).find(b =>
         minimatch(file, b.src)
