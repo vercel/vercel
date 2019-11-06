@@ -1,0 +1,19 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@now/next",
+      "config": {
+        "src/pages/api/memory.js": {
+          "memory": 128
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/api/memory",
+      "status": 200
+    }
+  ]
+}
