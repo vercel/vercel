@@ -3,13 +3,16 @@ const { mkdirp, copyFile } = require('fs-extra');
 
 const glob = require('@now/build-utils/fs/glob');
 const download = require('@now/build-utils/fs/download');
-const { createLambda } = require('@now/build-utils/lambda');
+const {
+  createLambda,
+  getLambdaOptionsFromFunction,
+} = require('@now/build-utils/lambda');
 const getWritableDirectory = require('@now/build-utils/fs/get-writable-directory');
 const { shouldServe } = require('@now/build-utils');
 
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 
-exports.build = async ({ workPath, files, entrypoint, meta }) => {
+exports.build = async ({ workPath, files, entrypoint, meta, config }) => {
   console.log('downloading files...');
   const outDir = await getWritableDirectory();
 
@@ -27,17 +30,20 @@ exports.build = async ({ workPath, files, entrypoint, meta }) => {
     path.join(outDir, entrypoint)
   );
 
+  const lambdaOptions = await getLambdaOptionsFromFunction(entrypoint, config);
+
   const lambda = await createLambda({
     files: await glob('**', outDir),
     handler: 'handler',
     runtime: 'go1.x',
     environment: {
-      SCRIPT_FILENAME: entrypoint
-    }
+      SCRIPT_FILENAME: entrypoint,
+    },
+    ...lambdaOptions,
   });
 
   return {
-    [entrypoint]: lambda
+    [entrypoint]: lambda,
   };
 };
 
