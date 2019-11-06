@@ -6,6 +6,8 @@ export default async function detectHexo({
   const hasHexo = await hasDependency('hexo');
   if (!hasHexo) return false;
   return {
+    buildCommand: ['hexo', 'generate'],
     buildDirectory: 'public',
+    devCommand: ['hexo', 'server', '--port', '$PORT'],
   };
 }

@@ -6,7 +6,9 @@ export default async function detectSvelte({
   const hasSvelte = await hasDependency('sirv-cli');
   if (!hasSvelte) return false;
   return {
+    buildCommand: ['rollup', '-c'],
     buildDirectory: 'public',
+    devCommand: ['sirv', 'public', '--single', '--dev', ' --port', '$PORT'],
     routes: [
       {
         handle: 'filesystem',

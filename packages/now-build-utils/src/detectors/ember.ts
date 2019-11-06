@@ -6,7 +6,9 @@ export default async function detectEmber({
   const hasEmber = await hasDependency('ember-cli');
   if (!hasEmber) return false;
   return {
+    buildCommand: ['ember', 'build'],
     buildDirectory: 'build',
+    devCommand: ['ember', 'serve', '--port', '$PORT'],
     routes: [
       {
         handle: 'filesystem',

@@ -6,7 +6,9 @@ export default async function detectAngular({
   const hasAngular = await hasDependency('@angular/cli');
   if (!hasAngular) return false;
   return {
+    buildCommand: ['ng', 'build'],
     buildDirectory: 'dist',
+    devCommand: ['ng', 'serve', '--port', '$PORT'],
     minNodeRange: '10.x',
     routes: [
       {

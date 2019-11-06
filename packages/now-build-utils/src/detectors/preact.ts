@@ -6,7 +6,9 @@ export default async function detectPreact({
   const hasPreact = await hasDependency('preact-cli');
   if (!hasPreact) return false;
   return {
+    buildCommand: ['preact', 'build'],
     buildDirectory: 'build',
+    devCommand: ['preact', 'watch', '--port', '$PORT'],
     routes: [
       {
         handle: 'filesystem',
