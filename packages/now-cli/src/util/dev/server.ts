@@ -1689,7 +1689,6 @@ function findAsset(
   let assetKey: string = requestPath.replace(/\/$/, '');
   let asset = match.buildOutput[requestPath];
 
-  console.log({ match: match.buildOutput, requestPath });
   if (nowConfig.trailingSlash && requestPath.endsWith('/')) {
     asset = match.buildOutput[requestPath.slice(0, -1)];
   }
