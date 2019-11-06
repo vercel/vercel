@@ -54,6 +54,10 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+    if (process.platform === 'darwin' && satisfies(process.version, '8.x')) {
+      await execa('yarn', ['cache', 'clean']);
+    }
+
     return execa('yarn', ['install'], { cwd: fixturePath });
   }
 }
@@ -262,6 +266,45 @@ test(
 );
 
 test(
+  '[now dev] test cleanUrls serve correct content',
+  testFixtureStdio('test-clean-urls', async (t, port) => {
+    const opts = { redirect: 'manual' };
+    const testPath = async (status, path, expectedText, headers = {}) => {
+      const res = await fetch(`http://localhost:${port}${path}`, opts);
+      t.is(res.status, status);
+      if (expectedText) {
+        const actualText = await res.text();
+        t.is(actualText.trim(), expectedText.trim());
+      }
+      if (headers) {
+        Object.keys(headers).forEach(key => {
+          const k = key.toLowerCase();
+          t.is(headers[k], res.headers[k]);
+        });
+      }
+    };
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/about', 'About Page');
+    await testPath(200, '/sub', 'Sub Index Page');
+    await testPath(200, '/sub/another', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(301, '/index.html', '', { Location: '/' });
+    await testPath(301, '/about.html', '', { Location: '/about' });
+    await testPath(301, '/sub/index.html', '', { Location: '/sub' });
+    await testPath(301, '/sub/another.html', '', { Location: '/sub/another' });
+  })
+);
+
+test(
+  '[now dev] throw when invalid builder routes detected',
+  testFixtureStdio('invalid-builder-routes', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+    const body = await response.text();
+    t.regex(body, /Invalid regular expression/gm);
+  })
+);
+
+test(
   '[now dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async (t, port) => {
     const result = await fetchWithRetry(`http://localhost:${port}`, 60);
@@ -335,18 +378,25 @@ if (satisfies(process.version, '10.x')) {
   console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
 }
 
-test(
-  '[now dev] 03-aurelia',
-  testFixtureStdio('03-aurelia', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
+  test(
+    '[now dev] 03-aurelia',
+    testFixtureStdio('03-aurelia', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Aurelia Navigation Skeleton/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Aurelia Navigation Skeleton/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `03-aurelia` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
+  );
+}
 
 // test(
 //   '[now dev] 04-create-react-app-node',
@@ -361,31 +411,45 @@ test(
 //   })
 // );
 
-test(
-  '[now dev] 05-gatsby',
-  testFixtureStdio('05-gatsby', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
+  test(
+    '[now dev] 05-gatsby',
+    testFixtureStdio('05-gatsby', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Gatsby Default Starter/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Gatsby Default Starter/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `05-gatsby` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
+  );
+}
 
-test(
-  '[now dev] 06-gridsome',
-  testFixtureStdio('06-gridsome', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// mini-css-extract-plugin has `engines: { node: ">= 6.9.0 <7.0.0 || >= 8.9.0" }` in its `package.json`
+if (satisfies(process.version, '>= 6.9.0 <7.0.0 || >= 8.9.0')) {
+  test(
+    '[now dev] 06-gridsome',
+    testFixtureStdio('06-gridsome', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Hello, world!/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Hello, world!/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `06-gridsome` test since it requires Node >= 6.9.0 <7.0.0 || >= 8.9.0'
+  );
+}
 
 test(
   '[now dev] 07-hexo-node',
@@ -634,18 +698,25 @@ test('[now dev] double slashes redirect', async t => {
   }
 });
 
-test(
-  '[now dev] 18-marko',
-  testFixtureStdio('18-marko', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
+  test(
+    '[now dev] 18-marko',
+    testFixtureStdio('18-marko', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Marko Starter/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Marko Starter/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `18-marko` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
+  );
+}
 
 test(
   '[now dev] 19-mithril',
@@ -673,18 +744,23 @@ test(
   })
 );
 
-test(
-  '[now dev] 21-charge',
-  testFixtureStdio('21-charge', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// @static/charge has `engines: { node: ">= 8.10.0" }` in its `package.json`
+if (satisfies(process.version, '>= 8.10.0')) {
+  test(
+    '[now dev] 21-charge',
+    testFixtureStdio('21-charge', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Welcome to my new Charge site/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Welcome to my new Charge site/gm);
+    })
+  );
+} else {
+  console.log('Skipping `21-charge` test since it requires Node >= 8.10.0');
+}
 
 test(
   '[now dev] 22-brunch',
@@ -699,31 +775,43 @@ test(
   })
 );
 
-test(
-  '[now dev] 23-docusaurus',
-  testFixtureStdio('23-docusaurus', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// react-dev-utils has `engines: { node: ">= 8.10" }` in its `package.json`
+if (satisfies(process.version, '>= 8.10')) {
+  test(
+    '[now dev] 23-docusaurus',
+    testFixtureStdio('23-docusaurus', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Test Site · A website for testing/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /Test Site · A website for testing/gm);
+    })
+  );
+} else {
+  console.log('Skipping `23-docusaurus` test since it requires Node >= 8.10');
+}
 
-test(
-  '[now dev] 24-ember',
-  testFixtureStdio('24-ember', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
+if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
+  test(
+    '[now dev] 24-ember',
+    testFixtureStdio('24-ember', async (t, port) => {
+      const result = fetch(`http://localhost:${port}`);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /HelloWorld/gm);
-  })
-);
+      const body = await response.text();
+      t.regex(body, /HelloWorld/gm);
+    })
+  );
+} else {
+  console.log(
+    'Skipping `24-ember` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
+  );
+}
 
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
@@ -942,22 +1030,28 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
   }
 });
 
-test('[now dev] 25-nextjs-src-dir', async t => {
-  const directory = fixture('25-nextjs-src-dir');
-  const { dev, port } = await testFixture(directory);
+if (satisfies(process.version, '>= 8.9.0')) {
+  test('[now dev] 25-nextjs-src-dir', async t => {
+    const directory = fixture('25-nextjs-src-dir');
+    const { dev, port } = await testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
+    try {
+      // start `now dev` detached in child_process
+      dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-    const response = await result;
+      const result = await fetchWithRetry(`http://localhost:${port}`, 80);
+      const response = await result;
 
-    validateResponseHeaders(t, response);
+      validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Next.js \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
+      const body = await response.text();
+      t.regex(body, /Next.js \+ Node.js API/gm);
+    } finally {
+      dev.kill('SIGTERM');
+    }
+  });
+} else {
+  console.log(
+    'Skipping `25-nextjs-src-dir` test since it requires Node >= 8.9.0'
+  );
+}

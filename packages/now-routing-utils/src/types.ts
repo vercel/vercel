@@ -1,12 +1,14 @@
 export type NowError = {
   code: string;
   message: string;
-  errors: {
-    message: string;
-    src?: string;
-    handle?: string;
-  }[];
+  errors: NowErrorNested[];
   sha?: string; // File errors
+};
+
+export type NowErrorNested = {
+  message: string;
+  src?: string;
+  handle?: string;
 };
 
 export type Source = {

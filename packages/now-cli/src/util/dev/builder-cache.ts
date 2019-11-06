@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import execa from 'execa';
 import semver from 'semver';
 import pipe from 'promisepipe';
+import retry from 'async-retry';
 import npa from 'npm-package-arg';
 import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
@@ -20,7 +21,7 @@ import {
 } from 'fs-extra';
 import pkg from '../../../package.json';
 
-import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
+import { NoBuilderCacheError } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
@@ -137,24 +138,6 @@ export async function prepareBuilderModulePath() {
   return cachedBuilderPath;
 }
 
-// Is responsible for cleaning the cache
-export async function cleanCacheDir(output: Output): Promise<void> {
-  const cacheDir = await cacheDirPromise;
-  try {
-    output.log(chalk`{magenta Deleting} ${cacheDir}`);
-    await remove(cacheDir);
-  } catch (err) {
-    throw new BuilderCacheCleanError(cacheDir, err.message);
-  }
-
-  try {
-    await remove(funCacheDir);
-    output.log(chalk`{magenta Deleting} ${funCacheDir}`);
-  } catch (err) {
-    throw new BuilderCacheCleanError(funCacheDir, err.message);
-  }
-}
-
 function getNpmVersion(use = ''): string {
   const parsed = npa(use);
   if (registryTypes.has(parsed.type)) {
@@ -248,19 +231,23 @@ export async function installBuilders(
     `Installing builders: ${packagesToInstall.sort().join(', ')}`
   );
   try {
-    await execa(
-      process.execPath,
-      [
-        yarnPath,
-        'add',
-        '--exact',
-        '--no-lockfile',
-        '--non-interactive',
-        ...packagesToInstall,
-      ],
-      {
-        cwd: builderDir,
-      }
+    await retry(
+      () =>
+        execa(
+          process.execPath,
+          [
+            yarnPath,
+            'add',
+            '--exact',
+            '--no-lockfile',
+            '--non-interactive',
+            ...packagesToInstall,
+          ],
+          {
+            cwd: builderDir,
+          }
+        ),
+      { retries: 2 }
     );
   } finally {
     stopSpinner();
@@ -283,19 +270,23 @@ export async function updateBuilders(
 
   packages.push(getBuildUtils(packages));
 
-  await execa(
-    process.execPath,
-    [
-      yarnPath,
-      'add',
-      '--exact',
-      '--no-lockfile',
-      '--non-interactive',
-      ...packages.filter(p => p !== '@now/static'),
-    ],
-    {
-      cwd: builderDir,
-    }
+  await retry(
+    () =>
+      execa(
+        process.execPath,
+        [
+          yarnPath,
+          'add',
+          '--exact',
+          '--no-lockfile',
+          '--non-interactive',
+          ...packages.filter(p => p !== '@now/static'),
+        ],
+        {
+          cwd: builderDir,
+        }
+      ),
+    { retries: 2 }
   );
 
   const updatedPackages: string[] = [];

@@ -29,6 +29,11 @@ const assertError = (data, errors, schema = routesSchema) => {
 };
 
 describe('normalizeRoutes', () => {
+  test('should return routes null if provided routes is null', () => {
+    const actual = normalizeRoutes(null);
+    assert.equal(actual.routes, null);
+  });
+
   test('accepts valid routes', () => {
     if (Number(process.versions.node.split('.')[0]) < 10) {
       // Skip this test for any Node version less than Node 10
@@ -149,15 +154,17 @@ describe('normalizeRoutes', () => {
     const normalized = normalizeRoutes(routes);
 
     assert.deepStrictEqual(normalized.routes, routes);
-    assert.deepStrictEqual(normalized.error, {
-      code: 'invalid_routes',
-      message: `One or more invalid routes were found: \n${JSON.stringify(
-        errors,
-        null,
-        2
-      )}`,
-      errors,
-    });
+    assert.deepStrictEqual(normalized.error.code, 'invalid_routes');
+    assert.deepStrictEqual(normalized.error.errors, errors);
+    assert.deepStrictEqual(
+      normalized.error.message,
+      `One or more invalid routes were found:
+- This is not a valid handler (handle: doesnotexist)
+- Cannot have any other keys when handle is used (handle: filesystem)
+- You can only handle something once (handle: filesystem)
+- Invalid regular expression: "^/(broken]$"
+- A route must set either handle or src`
+    );
   });
 
   test('fails if over 1024 routes', () => {
@@ -425,6 +432,43 @@ describe('getTransformedRoutes', () => {
     assertValid(actual.routes);
   });
 
+  test('should not error when routes is null and cleanUrls is true', () => {
+    const nowConfig = { cleanUrls: true, routes: null };
+    const filePaths = ['file.html'];
+    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    assert.equal(actual.error, null);
+    assertValid(actual.routes);
+  });
+
+  test('should error when routes is defined and cleanUrls is true', () => {
+    const nowConfig = {
+      cleanUrls: true,
+      routes: [{ src: '/page', dest: '/file.html' }],
+    };
+    const filePaths = ['file.html'];
+    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_keys');
+  });
+
+  test('should error when redirects is invalid regex', () => {
+    const nowConfig = {
+      redirects: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_redirects');
+  });
+
+  test('should error when rewrites is invalid regex', () => {
+    const nowConfig = {
+      rewrites: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_rewrites');
+  });
+
   test('should normalize all redirects before rewrites', () => {
     const nowConfig = {
       cleanUrls: true,
@@ -437,13 +481,13 @@ describe('getTransformedRoutes', () => {
     const actual = getTransformedRoutes({ nowConfig, filePaths });
     const expected = [
       {
-        src: '^/index.html$',
-        headers: { Location: '/index' },
+        src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
+        headers: { Location: '/$1' },
         status: 301,
       },
       {
-        src: '^/support.html$',
-        headers: { Location: '/support' },
+        src: '^/(.*)\\.html/?$',
+        headers: { Location: '/$1' },
         status: 301,
       },
       {
@@ -451,8 +495,6 @@ describe('getTransformedRoutes', () => {
         headers: { Location: '/support' },
         status: 302,
       },
-      { src: '^/index$', dest: '/index.html', continue: true },
-      { src: '^/support$', dest: '/support.html', continue: true },
       { handle: 'filesystem' },
       { src: '^/v1$', dest: '/v2/api.py', continue: true },
     ];
@@ -503,5 +545,11 @@ describe('getTransformedRoutes', () => {
     assertValid(nowConfig.redirects, redirectsSchema);
     assertValid(nowConfig.headers, headersSchema);
     assertValid(nowConfig.trailingSlashSchema, trailingSlashSchema);
+  });
+
+  test('should return null routes if no transformations are performed', () => {
+    const nowConfig = { routes: null };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.equal(actual.routes, null);
   });
 });
