@@ -243,7 +243,7 @@ export async function executeBuild(
     Object.entries(output)
       .filter(([name, value]) => name.endsWith('.html'))
       .forEach(([name, value]) => {
-        const cleanName = name.slice(0, -5); // + (nowConfig.trailingSlash ? '/' : '');
+        const cleanName = name.slice(0, -5);
         delete output[name];
         output[cleanName] = value;
         if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
