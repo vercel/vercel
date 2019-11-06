@@ -130,7 +130,7 @@ export async function createZip(files: Files): Promise<Buffer> {
 
 export async function getLambdaOptionsFromFunction(
   sourceFile: string,
-  config: Config
+  config?: Config
 ): Promise<Pick<LambdaOptions, 'memory' | 'maxDuration'>> {
   if (config && config.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
