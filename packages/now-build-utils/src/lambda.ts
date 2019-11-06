@@ -71,9 +71,15 @@ export async function createLambda({
   assert(typeof files === 'object', '"files" must be an object');
   assert(typeof handler === 'string', '"handler" is not a string');
   assert(typeof runtime === 'string', '"runtime" is not a string');
-  assert(typeof memory === 'number', '"memory" is not a number');
-  assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
   assert(typeof environment === 'object', '"environment" is not an object');
+
+  if (memory !== undefined) {
+    assert(typeof memory === 'number', '"memory" is not a number');
+  }
+
+  if (maxDuration !== undefined) {
+    assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
+  }
 
   await sema.acquire();
 
