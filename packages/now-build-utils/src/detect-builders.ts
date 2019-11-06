@@ -25,9 +25,10 @@ const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
 // Static builders are special cased in `@now/static-build`
 function getBuilders({ tag }: Options = {}): Map<string, Builder> {
   const withTag = tag ? `@${tag}` : '';
+  const config = { zeroConfig: true };
 
   return new Map<string, Builder>([
-    ['next', { src, use: `@now/next${withTag}`, config: { ...config } }],
+    ['next', { src, use: `@now/next${withTag}`, config }],
   ]);
 }
 
@@ -35,6 +36,7 @@ function getBuilders({ tag }: Options = {}): Map<string, Builder> {
 // object won't be a reference
 function getApiBuilders({ tag }: Pick<Options, 'tag'> = {}): Builder[] {
   const withTag = tag ? `@${tag}` : '';
+  const config = { zeroConfig: true };
 
   return [
     { src: 'api/**/*.js', use: `@now/node${withTag}`, config },
@@ -200,6 +202,37 @@ async function checkConflictingFiles(
   return null;
 }
 
+// When e.g. Next.js receives a `functions` property it has to make sure,
+// that it can handle those files, otherwise there are unused functions.
+async function checkUnusedFunctionsOnFrontendBuilder(
+  files: string[],
+  builder: Builder
+): Promise<ErrorResponse | null> {
+  const { config: { functions = undefined } = {} } = builder;
+
+  if (!functions) return null;
+
+  if (builder.use.startsWith('@now/next')) {
+    const matchingFiles = files.filter(file =>
+      Object.keys(functions).some(key => file === key || minimatch(file, key))
+    );
+
+    for (const matchedFile of matchingFiles) {
+      if (
+        !matchedFile.startsWith('src/pages/') &&
+        !matchedFile.startsWith('pages/')
+      ) {
+        return {
+          code: 'unused_function',
+          message: `The function for ${matchedFile} can't be handled by any builder`,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 function validateFunctions(files: string[], { functions = {} }: Options) {
   for (const [path, func] of Object.entries(functions)) {
     if (path.length > 256) {
@@ -297,12 +330,26 @@ export async function detectBuilders(
   const builders = await detectApiBuilders(files, options);
 
   if (pkg && hasBuildScript(pkg)) {
-    builders.push(await detectFrontBuilder(pkg, builders, options));
+    const frontendBuilder = await detectFrontBuilder(pkg, builders, options);
+    builders.push(frontendBuilder);
 
     const conflictError = await checkConflictingFiles(files, builders);
 
     if (conflictError) {
       warnings.push(conflictError);
+    }
+
+    const unusedFunctionError = await checkUnusedFunctionsOnFrontendBuilder(
+      files,
+      frontendBuilder
+    );
+
+    if (unusedFunctionError) {
+      return {
+        builders: null,
+        errors: [unusedFunctionError],
+        warnings,
+      };
     }
   } else {
     if (pkg && builders.length === 0) {
