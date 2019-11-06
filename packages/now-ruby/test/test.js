@@ -20,7 +20,7 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (['06-ruby'].includes(fixture)) {
+  if (['06-rails'].includes(fixture)) {
     console.log(`Skipping ${fixture}`);
     continue;
   }
