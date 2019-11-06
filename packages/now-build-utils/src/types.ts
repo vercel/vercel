@@ -329,7 +329,7 @@ export interface DetectorParameters {
 }
 
 export interface DetectorOutput {
-  buildCommand?: string[];
+  buildCommand: string[];
   buildDirectory: string;
   buildEnv?: Env;
   devCommand?: string[];
