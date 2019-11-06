@@ -145,72 +145,9 @@ The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCa
 - `cachePath`: A writable temporary directory where you can build a cache for the next run. This is only passed to `prepareCache`.
 - `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `now.json`.
 
-## Example: html-minifier
+## Examples
 
-Let's walk through what it takes to create a simple builder that takes in a HTML source file and yields a minified HTML static file as its build output.
-
-While this is a very simple builder, the approach demonstrated here can be used to return anything: one or more static files and/or one or more lambdas.
-
-## Setting up the module
-
-### Defining the analyze step
-
-The `analyze` hook is optional. Its goal is to give the developer a tool to avoid wasting time _re-computing a build_ that has already occurred.
-
-The return value of `analyze` is a _fingerprint_: a simple string that uniquely identifies the build process.
-
-If `analyze` is not specified, its behavior is to use as the fingerprint the combined checksums of **all the files in the same directory level as the entrypoint**. This is a default that errs on making sure that we re-execute builds when files _other than the entrypoint_ (like dependencies, manifest files, etc) have changed.
-
-For our `html-minify` example, we know that HTML files don't have dependencies. Therefore, our analyze step can just return the `digest` of the entrypoint.
-
-Our `index.js` file looks as follows:
-
-```js
-exports.analyze = function({ files, entrypoint }) {
-  return files[entrypoint].digest
-}
-```
-
-This means that we will only re-minify and re-create the build output _only if the file contents (and therefore its digest) change._
-
-### Defining the build step
-
-Your module will need some utilities to manipulate the data structures we pass you, create new ones and alter the filesystem.
-
-To that end, we expose our API as part of a `@now/build-utils` package. This package is always loaded on your behalf, so make sure it's only included as `peerDependencies` in your `package.json`.
-
-Runtimes can include dependencies of their liking:
-
-```js
-const htmlMinifier = require('html-minifier')
-
-exports.version = 2
-
-exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest
-
-exports.build = async ({ files, entrypoint, config }) => {
-  const stream = files[entrypoint].toStream()
-  const options = Object.assign({}, config || {})
-  const { data } = await FileBlob.fromStream({ stream })
-  const content = data.toString()
-  const minified = htmlMinifier(content, options)
-  const result = new FileBlob({ data: minified })
-
-  return {
-    output: {
-      [entrypoint]: result
-    },
-    watch: [],
-    routes: {}
-  }
-}
-```
-
-### Defining a `prepareCache` step
-
-If our Runtime had performed work that could be re-used in the next build invocation, we could define a `prepareCache` step.
-
-In this case, there are not intermediate artifacts that we can cache, and our `analyze` step already takes care of caching the full output based on the fingerprint of the input.
+Check out our [Node.js Runtime](https://github.com/zeit/now/tree/canary/packages/now-node), [Go Runtime](https://github.com/zeit/now/tree/canary/packages/now-go), [Python Runtime](https://github.com/zeit/now/tree/canary/packages/now-python) or [Ruby Runtime](https://github.com/zeit/now/tree/canary/packages/now-ruby) for examples of how to build one.
 
 ## Technical Details
 
