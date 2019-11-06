@@ -319,7 +319,7 @@ test(
 );
 
 test(
-  '[now dev] test trailingSlash serve correct content',
+  '[now dev] test trailingSlash true serve correct content',
   testFixtureStdio('test-trailing-slash', async (t, port, testPath) => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/index.html/', 'Index Page');
@@ -332,6 +332,24 @@ test(
     await testPath(307, '/sub', '', { Location: '/sub/' });
     await testPath(307, '/sub/another.html', '', {
       Location: '/sub/another.html/',
+    });
+  })
+);
+
+test(
+  '[now dev] test trailingSlash false serve correct content',
+  testFixtureStdio('test-trailing-slash-false', async (t, port, testPath) => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/index.html', 'Index Page');
+    await testPath(200, '/about.html', 'About Page');
+    await testPath(200, '/sub', 'Sub Index Page');
+    await testPath(200, '/sub/index.html', 'Sub Index Page');
+    await testPath(200, '/sub/another.html', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(307, '/about.html/', '', { Location: '/about.html' });
+    await testPath(307, '/sub/', '', { Location: '/sub' });
+    await testPath(307, '/sub/another.html/', '', {
+      Location: '/sub/another.html',
     });
   })
 );
