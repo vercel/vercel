@@ -1213,7 +1213,7 @@ export default class DevServer {
 
     if (status) {
       res.statusCode = status;
-      if ([301, 302, 303].includes(status)) {
+      if (300 <= status && status <= 399) {
         await this.sendRedirect(
           req,
           res,
