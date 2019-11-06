@@ -1605,15 +1605,32 @@ async function shouldServe(
     builderWithPkg: { builder },
   } = match;
   const nowConfig = await devServer.getNowConfig();
+  const cleanSrc = src.endsWith('.html') ? src.slice(0, -5) : src;
+  const trimmedPath = requestPath.endsWith('/')
+    ? requestPath.slice(0, -1)
+    : requestPath;
+  console.log({ cleanSrc, trimmedPath });
+
   if (
     nowConfig.cleanUrls &&
-    src.endsWith('.html') &&
-    (src.slice(0, -5) === requestPath ||
-      (nowConfig.trailingSlash &&
-        requestPath.endsWith('/') &&
-        src.slice(0, -5) === requestPath.slice(0, -1)))
+    nowConfig.trailingSlash &&
+    cleanSrc === trimmedPath
+  ) {
+    // Mimic fmeta-util and convert cleanUrls and trailingSlash
+    return true;
+  } else if (
+    nowConfig.cleanUrls &&
+    !nowConfig.trailingSlash &&
+    cleanSrc === requestPath
   ) {
     // Mimic fmeta-util and convert cleanUrls
+    return true;
+  } else if (
+    !nowConfig.cleanUrls &&
+    nowConfig.trailingSlash &&
+    src === trimmedPath
+  ) {
+    // Mimic fmeta-util and convert trailingSlash
     return true;
   } else if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
@@ -1673,6 +1690,7 @@ function findAsset(
   let assetKey: string = requestPath.replace(/\/$/, '');
   let asset = match.buildOutput[requestPath];
 
+  console.log({ match: match.buildOutput, requestPath });
   if (nowConfig.trailingSlash && requestPath.endsWith('/')) {
     asset = match.buildOutput[requestPath.slice(0, -1)];
   }
