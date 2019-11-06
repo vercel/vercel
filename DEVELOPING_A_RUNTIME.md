@@ -145,6 +145,12 @@ The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCa
 - `cachePath`: A writable temporary directory where you can build a cache for the next run. This is only passed to `prepareCache`.
 - `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `now.json`.
 
+## Example: html-minifier
+
+Let's walk through what it takes to create a simple builder that takes in a HTML source file and yields a minified HTML static file as its build output.
+
+While this is a very simple builder, the approach demonstrated here can be used to return anything: one or more static files and/or one or more lambdas.
+
 ## Setting up the module
 
 ### Defining the analyze step
