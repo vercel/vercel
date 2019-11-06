@@ -450,11 +450,11 @@ export default class Now extends EventEmitter {
         host = host.slice(0, -1);
       }
 
-      const url = `/v3/now/hosts/${encodeURIComponent(
+      const url = `/v10/now/deployments/get?url=${encodeURIComponent(
         host
-      )}?resolve=1&noState=1`;
+      )}&resolve=1&noState=1`;
 
-      const { deployment } = await this.retry(
+      const deployment = await this.retry(
         async bail => {
           const res = await this._fetch(url);
 
