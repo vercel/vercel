@@ -580,14 +580,17 @@ async function getSourceFilePathFromPage({
   page: string;
   pagesDir: string;
 }) {
-  const relative = page.replace(pagesDir, '');
   const source = path.join(workPath, 'src', 'pages');
 
-  if ((await fs.stat(source)).isDirectory()) {
-    return path.join('src', 'pages', relative);
+  try {
+    if ((await fs.stat(source)).isDirectory()) {
+      return path.join('src', 'pages', page);
+    }
+  } catch (_err) {
+    // Ignore this error
   }
 
-  return path.join('pages', relative);
+  return path.join('pages', page);
 }
 
 export {
