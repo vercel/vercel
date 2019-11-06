@@ -125,6 +125,8 @@ export const fetch = async (
   // @ts-ignore
   opts.headers.Authorization = `Bearer ${token}`;
   // @ts-ignore
+  opts.headers.accept = `application/json`;
+  // @ts-ignore
   opts.headers['user-agent'] = `now-client-v${pkg.version}`;
 
   debug(`${opts.method || 'GET'} ${url}`);

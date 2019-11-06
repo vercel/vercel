@@ -99,7 +99,7 @@ export default async function* upload(
               headers: {
                 'Content-Type': 'application/octet-stream',
                 'x-now-digest': sha,
-                'x-now-length': data.length,
+                'x-now-size': data.length,
               },
               body: stream,
               teamId,
