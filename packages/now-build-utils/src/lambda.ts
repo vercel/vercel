@@ -1,8 +1,9 @@
 import assert from 'assert';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
+import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
-import { Files } from './types';
+import { Files, Config } from './types';
 import FileFsRef from './file-fs-ref';
 import { isSymbolicLink } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
@@ -125,4 +126,22 @@ export async function createZip(files: Files): Promise<Buffer> {
   });
 
   return zipBuffer;
+}
+
+export async function getLambdaOptionsFromFunction(
+  sourceFile: string,
+  config: Config
+): Promise<Pick<LambdaOptions, 'memory' | 'maxDuration'>> {
+  if (config && config.functions) {
+    for (const [pattern, fn] of Object.entries(config.functions)) {
+      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        return {
+          memory: fn.memory,
+          maxDuration: fn.maxDuration,
+        };
+      }
+    }
+  }
+
+  return {};
 }
