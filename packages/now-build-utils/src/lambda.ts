@@ -15,6 +15,8 @@ interface LambdaOptions {
   zipBuffer: Buffer;
   handler: string;
   runtime: string;
+  memory?: number;
+  maxDuration?: number;
   environment: Environment;
 }
 
@@ -22,6 +24,8 @@ interface CreateLambdaOptions {
   files: Files;
   handler: string;
   runtime: string;
+  memory?: number;
+  maxDuration?: number;
   environment?: Environment;
 }
 
@@ -30,13 +34,24 @@ export class Lambda {
   public zipBuffer: Buffer;
   public handler: string;
   public runtime: string;
+  public memory?: number;
+  public maxDuration?: number;
   public environment: Environment;
 
-  constructor({ zipBuffer, handler, runtime, environment }: LambdaOptions) {
+  constructor({
+    zipBuffer,
+    handler,
+    runtime,
+    maxDuration,
+    memory,
+    environment,
+  }: LambdaOptions) {
     this.type = 'Lambda';
     this.zipBuffer = zipBuffer;
     this.handler = handler;
     this.runtime = runtime;
+    this.memory = memory;
+    this.maxDuration = maxDuration;
     this.environment = environment;
   }
 }
@@ -48,11 +63,15 @@ export async function createLambda({
   files,
   handler,
   runtime,
+  memory,
+  maxDuration,
   environment = {},
 }: CreateLambdaOptions): Promise<Lambda> {
   assert(typeof files === 'object', '"files" must be an object');
   assert(typeof handler === 'string', '"handler" is not a string');
   assert(typeof runtime === 'string', '"runtime" is not a string');
+  assert(typeof memory === 'number', '"memory" is not a number');
+  assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
   assert(typeof environment === 'object', '"environment" is not an object');
 
   await sema.acquire();
@@ -63,6 +82,8 @@ export async function createLambda({
       zipBuffer,
       handler,
       runtime,
+      memory,
+      maxDuration,
       environment,
     });
   } finally {
