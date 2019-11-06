@@ -1609,7 +1609,6 @@ async function shouldServe(
   const trimmedPath = requestPath.endsWith('/')
     ? requestPath.slice(0, -1)
     : requestPath;
-  console.log({ cleanSrc, trimmedPath });
 
   if (
     nowConfig.cleanUrls &&
