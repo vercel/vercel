@@ -457,7 +457,11 @@ it('Test `detectBuilders`', async () => {
         maxDuration: 10,
       },
     };
-    const files = ['pages/index.js', 'pages/api/teams/members.ts'];
+    const files = [
+      'package.json',
+      'pages/index.js',
+      'pages/api/teams/members.ts',
+    ];
     const { builders, errors } = await detectBuilders(files, pkg, {
       functions,
     });
@@ -467,7 +471,15 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0]).toEqual({
       src: 'package.json',
       use: '@now/next',
-      config: { zeroConfig: true, functions },
+      config: {
+        zeroConfig: true,
+        functions: {
+          'pages/api/teams/**': {
+            memory: 128,
+            maxDuration: 10,
+          },
+        },
+      },
     });
   }
 
@@ -485,9 +497,6 @@ it('Test `detectBuilders`', async () => {
         memory: 128,
         maxDuration: 10,
       },
-      'package.json': {
-        runtime: '@now/next@1.0.0-canary.12',
-      },
     };
     const files = [
       'package.json',
@@ -501,17 +510,34 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0]).toEqual({
       src: 'api/teams/members.ts',
       use: '@now/node',
-      config: { zeroConfig: true, functions },
+      config: {
+        zeroConfig: true,
+        functions: {
+          'api/teams/members.ts': {
+            memory: 128,
+            maxDuration: 10,
+          },
+        },
+      },
     });
     expect(builders[1]).toEqual({
       src: 'api/users/[id].ts',
       use: 'my-custom-runtime-package@1.0.0',
-      config: { zeroConfig: true, functions },
+      config: {
+        zeroConfig: true,
+        functions: {
+          'api/users/*.ts': {
+            runtime: 'my-custom-runtime-package@1.0.0',
+          },
+        },
+      },
     });
     expect(builders[2]).toEqual({
       src: 'package.json',
-      use: '@now/next@1.0.0-canary.12',
-      config: { zeroConfig: true, functions },
+      use: '@now/next',
+      config: {
+        zeroConfig: true,
+      },
     });
   }
 

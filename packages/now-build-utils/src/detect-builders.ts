@@ -23,23 +23,17 @@ const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
 };
 
 // Static builders are special cased in `@now/static-build`
-function getBuilders({ tag, functions }: Options = {}): Map<string, Builder> {
+function getBuilders({ tag }: Options = {}): Map<string, Builder> {
   const withTag = tag ? `@${tag}` : '';
 
-  const builderConfig = { ...config };
-
-  if (functions) {
-    Object.assign(builderConfig, { functions });
-  }
-
   return new Map<string, Builder>([
-    ['next', { src, use: `@now/next${withTag}`, config: builderConfig }],
+    ['next', { src, use: `@now/next${withTag}`, config: { ...config } }],
   ]);
 }
 
 // Must be a function to ensure that the returned
 // object won't be a reference
-function getApiBuilders({ tag }: Options = {}): Builder[] {
+function getApiBuilders({ tag }: Pick<Options, 'tag'> = {}): Builder[] {
   const withTag = tag ? `@${tag}` : '';
 
   return [
@@ -60,13 +54,13 @@ function hasBuildScript(pkg: PackageJson | undefined) {
   return Boolean(scripts && scripts['build']);
 }
 
-function getFunctionBuilder(
+function getApiFunctionBuilder(
   file: string,
   prevBuilder: Builder | undefined,
-  { functions = {} }: Options
+  { functions = {} }: Pick<Options, 'functions'>
 ) {
   const key = Object.keys(functions).find(
-    k => minimatch(file, k) || file === k
+    k => file === k || minimatch(file, k)
   );
   const fn = key ? functions[key] : undefined;
 
@@ -76,28 +70,46 @@ function getFunctionBuilder(
 
   const src = (prevBuilder && prevBuilder.src) || file;
   const use = fn.runtime || (prevBuilder && prevBuilder.use);
-  const config: Config = Object.assign({}, prevBuilder && prevBuilder.config, {
-    functions,
-  });
 
-  if (!use) {
-    return prevBuilder;
+  const config: Config = { zeroConfig: true };
+
+  if (key) {
+    Object.assign(config, {
+      functions: {
+        [key]: fn,
+      },
+    });
   }
 
-  return { use, src, config };
+  return use ? { use, src, config } : prevBuilder;
 }
 
 async function detectFrontBuilder(
   pkg: PackageJson,
+  builders: Builder[],
   options: Options
 ): Promise<Builder> {
   for (const [dependency, builder] of getBuilders(options)) {
     const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
-    const fnBuilder = getFunctionBuilder('package.json', builder, options);
 
     // Return the builder when a dependency matches
     if (deps[dependency]) {
-      return fnBuilder || builder;
+      if (options.functions) {
+        Object.entries(options.functions).forEach(([key, func]) => {
+          // When the builder is not used yet we'll use it for the frontend
+          if (
+            builders.every(
+              b => !(b.config && b.config.functions && b.config.functions[key])
+            )
+          ) {
+            if (!builder.config) builder.config = {};
+            if (!builder.config.functions) builder.config.functions = {};
+            builder.config.functions[key] = { ...func };
+          }
+        });
+      }
+
+      return builder;
     }
   }
 
@@ -156,15 +168,13 @@ async function detectApiBuilders(
     .sort(sortFiles)
     .filter(getIgnoreApiFilter(options))
     .map(file => {
-      const apiBuilder = getApiBuilders(options).find(b =>
-        minimatch(file, b.src)
-      );
-      const fnBuilder = getFunctionBuilder(file, apiBuilder, options);
+      const apiBuilders = getApiBuilders(options);
+      const apiBuilder = apiBuilders.find(b => minimatch(file, b.src));
+      const fnBuilder = getApiFunctionBuilder(file, apiBuilder, options);
       return fnBuilder ? { ...fnBuilder, src: file } : null;
     });
 
-  const finishedBuilds = builds.filter(Boolean);
-  return finishedBuilds as Builder[];
+  return builds.filter(Boolean) as Builder[];
 }
 
 // When a package has files that conflict with `/api` routes
@@ -287,7 +297,7 @@ export async function detectBuilders(
   const builders = await detectApiBuilders(files, options);
 
   if (pkg && hasBuildScript(pkg)) {
-    builders.push(await detectFrontBuilder(pkg, options));
+    builders.push(await detectFrontBuilder(pkg, builders, options));
 
     const conflictError = await checkConflictingFiles(files, builders);
 
