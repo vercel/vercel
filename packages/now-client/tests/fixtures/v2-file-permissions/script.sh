@@ -1,2 +1,2 @@
 #!/bin/bash
-echo 'executed script'
+echo 'executed bash script'
