@@ -25,6 +25,7 @@ const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
 // Static builders are special cased in `@now/static-build`
 function getBuilders({ tag }: Options = {}): Map<string, Builder> {
   const withTag = tag ? `@${tag}` : '';
+  const config = { zeroConfig: true };
 
   return new Map<string, Builder>([
     ['next', { src, use: `@now/next${withTag}`, config }],
@@ -33,8 +34,9 @@ function getBuilders({ tag }: Options = {}): Map<string, Builder> {
 
 // Must be a function to ensure that the returned
 // object won't be a reference
-function getApiBuilders({ tag }: Options = {}): Builder[] {
+function getApiBuilders({ tag }: Pick<Options, 'tag'> = {}): Builder[] {
   const withTag = tag ? `@${tag}` : '';
+  const config = { zeroConfig: true };
 
   return [
     { src: 'api/**/*.js', use: `@now/node${withTag}`, config },
@@ -54,13 +56,13 @@ function hasBuildScript(pkg: PackageJson | undefined) {
   return Boolean(scripts && scripts['build']);
 }
 
-function getFunctionBuilder(
+function getApiFunctionBuilder(
   file: string,
   prevBuilder: Builder | undefined,
-  { functions = {} }: Options
+  { functions = {} }: Pick<Options, 'functions'>
 ) {
   const key = Object.keys(functions).find(
-    k => minimatch(file, k) || file === k
+    k => file === k || minimatch(file, k)
   );
   const fn = key ? functions[key] : undefined;
 
@@ -70,28 +72,46 @@ function getFunctionBuilder(
 
   const src = (prevBuilder && prevBuilder.src) || file;
   const use = fn.runtime || (prevBuilder && prevBuilder.use);
-  const config: Config = Object.assign({}, prevBuilder && prevBuilder.config, {
-    functions,
-  });
 
-  if (!use) {
-    return prevBuilder;
+  const config: Config = { zeroConfig: true };
+
+  if (key) {
+    Object.assign(config, {
+      functions: {
+        [key]: fn,
+      },
+    });
   }
 
-  return { use, src, config };
+  return use ? { use, src, config } : prevBuilder;
 }
 
 async function detectFrontBuilder(
   pkg: PackageJson,
+  builders: Builder[],
   options: Options
 ): Promise<Builder> {
   for (const [dependency, builder] of getBuilders(options)) {
     const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
-    const fnBuilder = getFunctionBuilder('package.json', builder, options);
 
     // Return the builder when a dependency matches
     if (deps[dependency]) {
-      return fnBuilder || builder;
+      if (options.functions) {
+        Object.entries(options.functions).forEach(([key, func]) => {
+          // When the builder is not used yet we'll use it for the frontend
+          if (
+            builders.every(
+              b => !(b.config && b.config.functions && b.config.functions[key])
+            )
+          ) {
+            if (!builder.config) builder.config = {};
+            if (!builder.config.functions) builder.config.functions = {};
+            builder.config.functions[key] = { ...func };
+          }
+        });
+      }
+
+      return builder;
     }
   }
 
@@ -150,15 +170,13 @@ async function detectApiBuilders(
     .sort(sortFiles)
     .filter(getIgnoreApiFilter(options))
     .map(file => {
-      const apiBuilder = getApiBuilders(options).find(b =>
-        minimatch(file, b.src)
-      );
-      const fnBuilder = getFunctionBuilder(file, apiBuilder, options);
+      const apiBuilders = getApiBuilders(options);
+      const apiBuilder = apiBuilders.find(b => minimatch(file, b.src));
+      const fnBuilder = getApiFunctionBuilder(file, apiBuilder, options);
       return fnBuilder ? { ...fnBuilder, src: file } : null;
     });
 
-  const finishedBuilds = builds.filter(Boolean);
-  return finishedBuilds as Builder[];
+  return builds.filter(Boolean) as Builder[];
 }
 
 // When a package has files that conflict with `/api` routes
@@ -184,12 +202,57 @@ async function checkConflictingFiles(
   return null;
 }
 
-function validateFunctions({ functions = {} }: Options) {
+// When e.g. Next.js receives a `functions` property it has to make sure,
+// that it can handle those files, otherwise there are unused functions.
+async function checkUnusedFunctionsOnFrontendBuilder(
+  files: string[],
+  builder: Builder
+): Promise<ErrorResponse | null> {
+  const { config: { functions = undefined } = {} } = builder;
+
+  if (!functions) return null;
+
+  if (builder.use.startsWith('@now/next')) {
+    const matchingFiles = files.filter(file =>
+      Object.keys(functions).some(key => file === key || minimatch(file, key))
+    );
+
+    for (const matchedFile of matchingFiles) {
+      if (
+        !matchedFile.startsWith('src/pages/') &&
+        !matchedFile.startsWith('pages/')
+      ) {
+        return {
+          code: 'unused_function',
+          message: `The function for ${matchedFile} can't be handled by any builder`,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function validateFunctions(files: string[], { functions = {} }: Options) {
   for (const [path, func] of Object.entries(functions)) {
     if (path.length > 256) {
       return {
         code: 'invalid_function_glob',
         message: 'Function globs must be less than 256 characters long.',
+      };
+    }
+
+    if (!func || typeof func !== 'object') {
+      return {
+        code: 'invalid_function',
+        message: 'Function must be an object.',
+      };
+    }
+
+    if (Object.keys(func).length === 0) {
+      return {
+        code: 'invalid_function',
+        message: 'Function must contain at least one property.',
       };
     }
 
@@ -213,6 +276,13 @@ function validateFunctions({ functions = {} }: Options) {
         code: 'invalid_function_memory',
         message:
           'Functions must have a memory value between 128 and 3008 in steps of 64.',
+      };
+    }
+
+    if (files.some(f => f === path || minimatch(f, path)) === false) {
+      return {
+        code: 'invalid_function_source',
+        message: `No source file matched the function for ${path}.`,
       };
     }
 
@@ -246,7 +316,7 @@ export async function detectBuilders(
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
-  const functionError = validateFunctions(options);
+  const functionError = validateFunctions(files, options);
 
   if (functionError) {
     return {
@@ -260,12 +330,26 @@ export async function detectBuilders(
   const builders = await detectApiBuilders(files, options);
 
   if (pkg && hasBuildScript(pkg)) {
-    builders.push(await detectFrontBuilder(pkg, options));
+    const frontendBuilder = await detectFrontBuilder(pkg, builders, options);
+    builders.push(frontendBuilder);
 
     const conflictError = await checkConflictingFiles(files, builders);
 
     if (conflictError) {
       warnings.push(conflictError);
+    }
+
+    const unusedFunctionError = await checkUnusedFunctionsOnFrontendBuilder(
+      files,
+      frontendBuilder
+    );
+
+    if (unusedFunctionError) {
+      return {
+        builders: null,
+        errors: [unusedFunctionError],
+        warnings,
+      };
     }
   } else {
     if (pkg && builders.length === 0) {

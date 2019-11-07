@@ -458,6 +458,8 @@ interface CreateLambdaFromPseudoLayersOptions {
   layers: PseudoLayer[];
   handler: string;
   runtime: string;
+  memory?: number;
+  maxDuration?: number;
   environment?: { [name: string]: string };
 }
 
@@ -470,6 +472,8 @@ export async function createLambdaFromPseudoLayers({
   layers,
   handler,
   runtime,
+  memory,
+  maxDuration,
   environment = {},
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -507,6 +511,8 @@ export async function createLambdaFromPseudoLayers({
     handler,
     runtime,
     zipBuffer,
+    memory,
+    maxDuration,
     environment,
   });
 }
@@ -606,6 +612,39 @@ export async function getPrerenderManifest(
   }
 }
 
+// We only need this once per build
+let _usesSrcCache: boolean | undefined;
+
+async function usesSrcDirectory(workPath: string): Promise<boolean> {
+  if (!_usesSrcCache) {
+    const source = path.join(workPath, 'src', 'pages');
+
+    try {
+      if ((await fs.stat(source)).isDirectory()) {
+        _usesSrcCache = true;
+      }
+    } catch (_err) {
+      _usesSrcCache = false;
+    }
+  }
+
+  return Boolean(_usesSrcCache);
+}
+
+async function getSourceFilePathFromPage({
+  workPath,
+  page,
+}: {
+  workPath: string;
+  page: string;
+}) {
+  if (await usesSrcDirectory(workPath)) {
+    return path.join('src', 'pages', page);
+  }
+
+  return path.join('pages', page);
+}
+
 export {
   excludeFiles,
   validateEntrypoint,
@@ -618,4 +657,5 @@ export {
   syncEnvVars,
   normalizePage,
   isDynamicRoute,
+  getSourceFilePathFromPage,
 };

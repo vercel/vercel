@@ -1055,3 +1055,16 @@ if (satisfies(process.version, '>= 8.9.0')) {
     'Skipping `25-nextjs-src-dir` test since it requires Node >= 8.9.0'
   );
 }
+
+test.only(
+  '[now dev] Use runtime from the functions property',
+  testFixtureStdio('custom-runtime', async (t, port) => {
+    const result = await fetchWithRetry(`http://localhost:${port}/api/user`, 3);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Hello, from Bash!/gm);
+  })
+);
