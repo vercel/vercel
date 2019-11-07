@@ -3,7 +3,7 @@
   "version": "0.2.17-canary.8",
   "main": "./dist/index.js",
   "license": "MIT",
-  "homepage": "https://zeit.co/docs/v2/deployments/official-builders/python-now-python",
+  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/python",
   "files": [
     "dist",
     "now_init.py"
