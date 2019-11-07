@@ -80,14 +80,14 @@ export function convertTrailingSlash(enable: boolean): Route[] {
   const routes: Route[] = [];
   if (enable) {
     routes.push({
-      src: '^(.*[^\\/])$',
-      headers: { Location: '$1/' },
+      src: '^/(.*[^\\/])$',
+      headers: { Location: '/$1/' },
       status: 307,
     });
   } else {
     routes.push({
-      src: '^(.*)\\/$',
-      headers: { Location: '$1' },
+      src: '^/(.*)\\/$',
+      headers: { Location: '/$1' },
       status: 307,
     });
   }
