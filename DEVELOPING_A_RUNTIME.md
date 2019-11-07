@@ -1,18 +1,18 @@
-# Builders Developer Reference
+# Runtime Developer Reference
 
-The following page is a reference for how to create a Builder using the available Builder's API.
+The following page is a reference for how to create a Runtime using the available Runtime API.
 
-A Builder is an npm module that exposes a `build` function and optionally an `analyze` function and `prepareCache` function.
-Official Builders are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `now.json` configuration file.
-However, the `use` property will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo url which is useful for testing your Builder.
+A Runtime is an npm module that exposes a `build` function and optionally an `analyze` function and `prepareCache` function.
+Official Runtimes are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `now.json` configuration file.
+However, the `use` property will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo url which is useful for testing your Runtime.
 
-See the [Builders Documentation](https://zeit.co/docs/v2/advanced/builders) to view example usage.
+See the [Runtimes Documentation](https://zeit.co/docs/v2/advanced/runtimes) to view example usage.
 
-## Builder Exports
+## Runtime Exports
 
 ### `version`
 
-A **required** exported constant that decides which version of the Builder API to use.
+A **required** exported constant that decides which version of the Runtime API to use.
 
 The latest and suggested version is `2`.
 
@@ -109,7 +109,7 @@ export prepareCache(options: PrepareCacheOptions) {
 
 ### `shouldServe`
 
-An **optional** exported function that is only used by `now dev` in [Now CLI](https:///download) and indicates whether a [Builder](https://zeit.co/docs/v2/advanced/builders) wants to be responsible for building a certain request path.
+An **optional** exported function that is only used by `now dev` in [Now CLI](https:///download) and indicates whether a [Runtime](https://zeit.co/docs/v2/advanced/runtimes) wants to be responsible for building a certain request path.
 
 ```js
 shouldServe({
@@ -133,7 +133,7 @@ export shouldServe(options: ShouldServeOptions) {
 
 If this method is not defined, Now CLI will default to [this function](https://github.com/zeit/now/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
 
-### Builder Options
+### Runtime Options
 
 The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCache`](#preparecache) receive one argument with the following properties.
 
@@ -145,78 +145,15 @@ The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCa
 - `cachePath`: A writable temporary directory where you can build a cache for the next run. This is only passed to `prepareCache`.
 - `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `now.json`.
 
-## Example: html-minifier
+## Examples
 
-Let's walk through what it takes to create a simple builder that takes in a HTML source file and yields a minified HTML static file as its build output.
-
-While this is a very simple builder, the approach demonstrated here can be used to return anything: one or more static files and/or one or more lambdas.
-
-## Setting up the module
-
-### Defining the analyze step
-
-The `analyze` hook is optional. Its goal is to give the developer a tool to avoid wasting time _re-computing a build_ that has already occurred.
-
-The return value of `analyze` is a _fingerprint_: a simple string that uniquely identifies the build process.
-
-If `analyze` is not specified, its behavior is to use as the fingerprint the combined checksums of **all the files in the same directory level as the entrypoint**. This is a default that errs on making sure that we re-execute builds when files _other than the entrypoint_ (like dependencies, manifest files, etc) have changed.
-
-For our `html-minify` example, we know that HTML files don't have dependencies. Therefore, our analyze step can just return the `digest` of the entrypoint.
-
-Our `index.js` file looks as follows:
-
-```js
-exports.analyze = function({ files, entrypoint }) {
-  return files[entrypoint].digest
-}
-```
-
-This means that we will only re-minify and re-create the build output _only if the file contents (and therefore its digest) change._
-
-### Defining the build step
-
-Your module will need some utilities to manipulate the data structures we pass you, create new ones and alter the filesystem.
-
-To that end, we expose our API as part of a `@now/build-utils` package. This package is always loaded on your behalf, so make sure it's only included as `peerDependencies` in your `package.json`.
-
-Builders can include dependencies of their liking:
-
-```js
-const htmlMinifier = require('html-minifier')
-
-exports.version = 2
-
-exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest
-
-exports.build = async ({ files, entrypoint, config }) => {
-  const stream = files[entrypoint].toStream()
-  const options = Object.assign({}, config || {})
-  const { data } = await FileBlob.fromStream({ stream })
-  const content = data.toString()
-  const minified = htmlMinifier(content, options)
-  const result = new FileBlob({ data: minified })
-
-  return {
-    output: {
-      [entrypoint]: result
-    },
-    watch: [],
-    routes: {}
-  }
-}
-```
-
-### Defining a `prepareCache` step
-
-If our builder had performed work that could be re-used in the next build invocation, we could define a `prepareCache` step.
-
-In this case, there are not intermediate artifacts that we can cache, and our `analyze` step already takes care of caching the full output based on the fingerprint of the input.
+Check out our [Node.js Runtime](https://github.com/zeit/now/tree/canary/packages/now-node), [Go Runtime](https://github.com/zeit/now/tree/canary/packages/now-go), [Python Runtime](https://github.com/zeit/now/tree/canary/packages/now-python) or [Ruby Runtime](https://github.com/zeit/now/tree/canary/packages/now-ruby) for examples of how to build one.
 
 ## Technical Details
 
 ### Execution Context
 
-A [Serverless Function](https://zeit.co/docs/v2/advanced/concepts/lambdas) is created where the builder logic is executed. The lambda is run using the Node.js 8 runtime. A brand new sandbox is created for each deployment, for security reasons. The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
+A [Serverless Function](https://zeit.co/docs/v2/advanced/concepts/lambdas) is created where the Runtime logic is executed. The lambda is run using the Node.js 8 runtime. A brand new sandbox is created for each deployment, for security reasons. The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
 
 All the APIs you export ([`analyze`](#analyze), [`build`](#build) and [`prepareCache`](#preparecache)) are not guaranteed to be run in the same process, but the filesystem we expose (e.g.: `workPath` and the results of calling [`getWriteableDirectory`](#getWriteableDirectory) ) is retained.
 
@@ -228,15 +165,15 @@ When a new build is created, we pre-populate the `workPath` supplied to `analyze
 
 The `analyze` step can modify that directory, and it will not be re-created when it's supplied to `build` and `prepareCache`.
 
-To learn how the cache key is computed and invalidated, refer to the [overview](https://zeit.co/docs/v2/advanced/builders#technical-details).
+To learn how the cache key is computed and invalidated, refer to the [overview](https://zeit.co/docs/v2/advanced/runtimes#technical-details).
 
 ### Accessing Environment and Secrets
 
-The env and secrets specified by the user as `build.env` are passed to the builder process. This means you can access user env via `process.env` in Node.js.
+The env and secrets specified by the user as `build.env` are passed to the Runtime process. This means you can access user env via `process.env` in Node.js.
 
 ### Utilities as peerDependencies
 
-When you publish your builder to npm, make sure to not specify `@now/build-utils` (as seen below in the API definitions) as a dependency, but rather as part of `peerDependencies`.
+When you publish your Runtime to npm, make sure to not specify `@now/build-utils` (as seen below in the API definitions) as a dependency, but rather as part of `peerDependencies`.
 
 ## Types
 
@@ -358,7 +295,7 @@ This is an abstract enumeration type that is implemented by one of the following
 
 ## JavaScript API
 
-The following is exposed by `@now/build-utils` to simplify the process of writing Builders, manipulating the file system, using the above types, etc.
+The following is exposed by `@now/build-utils` to simplify the process of writing Runtimes, manipulating the file system, using the above types, etc.
 
 ### `createLambda`
 
