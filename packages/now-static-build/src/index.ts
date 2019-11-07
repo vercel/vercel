@@ -435,7 +435,7 @@ export async function prepareCache({
     }
   }
 
-  // glob all cache pathes and return
+  // glob all cache paths and return
   let cacheFiles = {};
 
   for (const cachePath of cachePaths) {
