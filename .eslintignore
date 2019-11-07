@@ -4,6 +4,9 @@ dist
 # gatsby-plugin-now
 packages/gatsby-plugin-now/test/fixtures
 
+# now-build-utils
+packages/now-build-utils/test/fixtures
+
 # now-cli
 packages/now-cli/@types
 packages/now-cli/download
