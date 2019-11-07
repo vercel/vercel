@@ -433,8 +433,8 @@ export async function prepareCache({
   if (pkg) {
     const framework = getFramework(pkg);
 
-    if (framework && framework.cachePaths) {
-      frameworkCacheFiles = await glob(framework.cachePaths, workPath);
+    if (framework && framework.cachePattern) {
+      frameworkCacheFiles = await glob(framework.cachePattern, workPath);
     }
   }
 

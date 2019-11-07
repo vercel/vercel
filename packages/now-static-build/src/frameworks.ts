@@ -48,7 +48,7 @@ export const frameworks: Framework[] = [
     beforeBuildHook: async entrypointDir => {
       await injectGatsbyConfig(entrypointDir);
     },
-    cachePaths: '.cache/**',
+    cachePattern: '.cache/**',
   },
   {
     name: 'Hexo',
@@ -318,5 +318,5 @@ export interface Framework {
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   minNodeRange?: string;
   beforeBuildHook?: (entrypointDir: string) => Promise<void>;
-  cachePaths?: string;
+  cachePattern?: string;
 }
