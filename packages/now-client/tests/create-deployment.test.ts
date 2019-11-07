@@ -99,7 +99,7 @@ describe('create v2 deployment', () => {
     const response = await fetch_(url);
     const text = await response.text();
     expect(deployment.readyState).toEqual('READY');
-    expect(text).toContain('executed script');
+    expect(text).toContain('executed bash script');
   });
 
   it('will create a v2 deployment and ignore files specified in .nowignore', async () => {
