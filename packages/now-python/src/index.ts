@@ -186,7 +186,10 @@ export const build = async ({
   // Use the system-installed version of `python3` when running via `now dev`
   const runtime = meta.isDev ? 'python3' : 'python3.6';
 
-  const lambdaOptions = await getLambdaOptionsFromFunction(entrypoint, config);
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
 
   const lambda = await createLambda({
     files: await glob('**', workPath),

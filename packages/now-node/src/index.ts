@@ -356,7 +356,10 @@ export async function build({
   // Use the system-installed version of `node` when running via `now dev`
   const runtime = meta.isDev ? 'nodejs' : nodeVersion.runtime;
 
-  const lambdaOptions = await getLambdaOptionsFromFunction(entrypoint, config);
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
 
   const lambda = await createLambda({
     files: {

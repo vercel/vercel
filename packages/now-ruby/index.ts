@@ -208,7 +208,10 @@ export const build = async ({
     }
   }
 
-  const lambdaOptions = await getLambdaOptionsFromFunction(entrypoint, config);
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
 
   const lambda = await createLambda({
     files: outputFiles,

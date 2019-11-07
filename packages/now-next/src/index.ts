@@ -433,10 +433,10 @@ export const build = async ({
           ],
         };
 
-        const lambdaOptions = await getLambdaOptionsFromFunction(
-          await getSourceFilePathFromPage({ workPath, page, pagesDir }),
-          config
-        );
+        const lambdaOptions = await getLambdaOptionsFromFunction({
+          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          config,
+        });
 
         debug(`Creating serverless function for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
@@ -652,10 +652,10 @@ export const build = async ({
           'now__launcher.js': new FileBlob({ data: launcher }),
         };
 
-        const lambdaOptions = await getLambdaOptionsFromFunction(
-          await getSourceFilePathFromPage({ workPath, page, pagesDir }),
-          config
-        );
+        const lambdaOptions = await getLambdaOptionsFromFunction({
+          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          config,
+        });
 
         if (requiresTracing) {
           lambdas[

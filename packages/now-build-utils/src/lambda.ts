@@ -30,6 +30,11 @@ interface CreateLambdaOptions {
   environment?: Environment;
 }
 
+interface GetLambdaOptionsFromFunctionOptions {
+  sourceFile: string;
+  config?: Config;
+}
+
 export class Lambda {
   public type: 'Lambda';
   public zipBuffer: Buffer;
@@ -134,10 +139,12 @@ export async function createZip(files: Files): Promise<Buffer> {
   return zipBuffer;
 }
 
-export async function getLambdaOptionsFromFunction(
-  sourceFile: string,
-  config?: Config
-): Promise<Pick<LambdaOptions, 'memory' | 'maxDuration'>> {
+export async function getLambdaOptionsFromFunction({
+  sourceFile,
+  config,
+}: GetLambdaOptionsFromFunctionOptions): Promise<
+  Pick<LambdaOptions, 'memory' | 'maxDuration'>
+> {
   if (config && config.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {

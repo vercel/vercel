@@ -400,7 +400,10 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     }
   }
 
-  const lambdaOptions = await getLambdaOptionsFromFunction(entrypoint, config);
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
 
   const lambda = await createLambda({
     files: { ...(await glob('**', outDir)), ...includedFiles },
