@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-The domain you supplied cannot be verified using either the intended set of nameservers of the given verification TXT record.
+The domain you supplied cannot be verified using either the intended set of nameservers or the given verification TXT record.
 
 #### Possible Ways to Fix It
 

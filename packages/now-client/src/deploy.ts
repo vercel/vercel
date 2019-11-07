@@ -1,12 +1,10 @@
 import { DeploymentFile } from './utils/hashes';
 import {
   fetch,
-  API_DEPLOYMENTS,
   prepareFiles,
-  API_DEPLOYMENTS_LEGACY,
   createDebug,
+  getApiDeploymentsUrl,
 } from './utils';
-import { BuilderFunctions } from '@now/build-utils';
 import checkDeploymentStatus from './deployment-status';
 import { generateQueryString } from './utils/query-string';
 import { Deployment, DeploymentOptions, NowJsonOptions } from './types';
@@ -25,7 +23,6 @@ export interface Options {
   debug?: boolean;
   nowConfig?: NowJsonOptions;
   apiUrl?: string;
-  functions?: BuilderFunctions;
 }
 
 async function* createDeployment(
@@ -36,8 +33,7 @@ async function* createDeployment(
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const preparedFiles = prepareFiles(files, options);
 
-  let apiDeployments =
-    metadata.version === 2 ? API_DEPLOYMENTS : API_DEPLOYMENTS_LEGACY;
+  const apiDeployments = getApiDeploymentsUrl(metadata);
 
   debug('Sending deployment creation API request');
   try {
