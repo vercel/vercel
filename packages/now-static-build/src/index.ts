@@ -18,6 +18,7 @@ import {
   getNodeVersion,
   getSpawnOptions,
   Files,
+  FileFsRef,
   Route,
   BuildOptions,
   Config,
@@ -419,31 +420,56 @@ export async function prepareCache({
   entrypoint,
   workPath,
 }: PrepareCacheOptions) {
-  let cachePaths: string[] = [
-    'node_modules/**',
-    'package-lock.json',
-    'yarn.lock',
-  ];
+  // default cache paths
+  const defaultCacheFiles = await glob(
+    '@(node_modules/**|package-lock.json|yarn.lock)',
+    workPath
+  );
 
-  // add framework specific cache paths
+  // framework specific cache paths
+  let frameworkCacheFiles: { [path: string]: FileFsRef } | null = null;
+
   const pkg = getPkg(entrypoint, workPath);
   if (pkg) {
     const framework = getFramework(pkg);
 
     if (framework && framework.cachePaths) {
-      cachePaths = [...cachePaths, ...framework.cachePaths];
+      frameworkCacheFiles = await glob(framework.cachePaths, workPath);
     }
   }
 
-  // glob all cache paths and return
-  let cacheFiles = {};
-
-  for (const cachePath of cachePaths) {
-    cacheFiles = {
-      ...cacheFiles,
-      ...(await glob(cachePath, workPath)),
-    };
-  }
-
-  return cacheFiles;
+  return { ...defaultCacheFiles, ...frameworkCacheFiles };
 }
+
+// export async function prepareCache({
+//   entrypoint,
+//   workPath,
+// }: PrepareCacheOptions) {
+//   let cachePaths: string[] = [
+//     'node_modules/**',
+//     'package-lock.json',
+//     'yarn.lock',
+//   ];
+
+//   // add framework specific cache paths
+//   const pkg = getPkg(entrypoint, workPath);
+//   if (pkg) {
+//     const framework = getFramework(pkg);
+
+//     if (framework && framework.cachePaths) {
+//       cachePaths = [...cachePaths, ...framework.cachePaths];
+//     }
+//   }
+
+//   // glob all cache paths and return
+//   let cacheFiles = {};
+
+//   for (const cachePath of cachePaths) {
+//     cacheFiles = {
+//       ...cacheFiles,
+//       ...(await glob(cachePath, workPath)),
+//     };
+//   }
+
+//   return cacheFiles;
+// }
