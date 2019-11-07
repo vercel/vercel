@@ -278,7 +278,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 - `handler : String` path to handler file and (optionally) a function name it exports
 - `runtime : LambdaRuntime` the name of the lambda runtime
 - `memory : Number` the memory size in MB the lambda should use, a value from 128 to 3008, in steps of 64
-- `maxDuration: Number` seconds after this lambda will time out
+- `maxDuration: Number` number of seconds that the lambda is allowed to run before timing out
 - `environment : Object` key-value map of handler-related (aside of those passed by user) environment variables
 
 ### `LambdaRuntime`
