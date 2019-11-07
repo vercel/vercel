@@ -22,5 +22,6 @@ describe('prepareCache', () => {
     });
 
     expect(files['.cache/file']).toBeDefined();
+    expect(files['yarn.lock']).toBeDefined();
   });
 });
