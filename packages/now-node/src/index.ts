@@ -18,6 +18,7 @@ import {
   shouldServe,
   Config,
   debug,
+  getLambdaOptionsFromFunction,
 } from '@now/build-utils';
 export { NowRequest, NowResponse } from './types';
 import { makeNowLauncher, makeAwsLauncher } from './launcher';
@@ -355,6 +356,11 @@ export async function build({
   // Use the system-installed version of `node` when running via `now dev`
   const runtime = meta.isDev ? 'nodejs' : nodeVersion.runtime;
 
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
+
   const lambda = await createLambda({
     files: {
       ...preparedFiles,
@@ -362,6 +368,7 @@ export async function build({
     },
     handler: `${LAUNCHER_FILENAME}.launcher`,
     runtime,
+    ...lambdaOptions,
   });
 
   const output = { [entrypoint]: lambda };

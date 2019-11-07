@@ -3,7 +3,7 @@ const path = require('path');
 
 const {
   packAndDeploy,
-  testDeployment
+  testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(5 * 60 * 1000);
@@ -20,6 +20,11 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
+  if (['06-rails'].includes(fixture)) {
+    console.log(`Skipping ${fixture}`);
+    continue;
+  }
+
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
