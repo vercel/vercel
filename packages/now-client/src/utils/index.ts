@@ -152,6 +152,7 @@ export interface PreparedFile {
   file: string;
   sha: string;
   size: number;
+  mode: number;
 }
 
 const isWin = process.platform.includes('win');
@@ -167,7 +168,7 @@ export const prepareFiles = (
       const file = files.get(sha) as DeploymentFile;
 
       for (const name of file.names) {
-        let fileName;
+        let fileName: string;
 
         if (options.isDirectory) {
           // Directory
@@ -183,6 +184,7 @@ export const prepareFiles = (
         next.push({
           file: isWin ? fileName.replace(/\\/g, '/') : fileName,
           size: file.data.byteLength || file.data.length,
+          mode: file.mode,
           sha,
         });
       }
