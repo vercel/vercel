@@ -33,7 +33,7 @@ export const EVENTS = new Set([
 export function getApiDeploymentsUrl(
   metadata: Pick<DeploymentOptions, 'version' | 'builds'>
 ) {
-  if (metadata.version === 1) {
+  if (metadata.version !== 2) {
     return '/v3/now/deployments';
   }
 
