@@ -440,36 +440,3 @@ export async function prepareCache({
 
   return { ...defaultCacheFiles, ...frameworkCacheFiles };
 }
-
-// export async function prepareCache({
-//   entrypoint,
-//   workPath,
-// }: PrepareCacheOptions) {
-//   let cachePaths: string[] = [
-//     'node_modules/**',
-//     'package-lock.json',
-//     'yarn.lock',
-//   ];
-
-//   // add framework specific cache paths
-//   const pkg = getPkg(entrypoint, workPath);
-//   if (pkg) {
-//     const framework = getFramework(pkg);
-
-//     if (framework && framework.cachePaths) {
-//       cachePaths = [...cachePaths, ...framework.cachePaths];
-//     }
-//   }
-
-//   // glob all cache paths and return
-//   let cacheFiles = {};
-
-//   for (const cachePath of cachePaths) {
-//     cacheFiles = {
-//       ...cacheFiles,
-//       ...(await glob(cachePath, workPath)),
-//     };
-//   }
-
-//   return cacheFiles;
-// }
