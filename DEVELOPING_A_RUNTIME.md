@@ -277,7 +277,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 - `files : Files` the internal filesystem of the lambda
 - `handler : String` path to handler file and (optionally) a function name it exports
 - `runtime : LambdaRuntime` the name of the lambda runtime
-- `memory : Number` the memory size the lambda should use, a value from 128 to 3008 divisible by 64
+- `memory : Number` the memory size in MB the lambda should use, a value from 128 to 3008 divisible by 64
 - `maxDuration: Number` seconds after this lambda will time out
 - `environment : Object` key-value map of handler-related (aside of those passed by user) environment variables
 
@@ -343,7 +343,7 @@ const lambdaOptions = await getLambdaOptionsFromFunction({
 });
 
 await createLambda({
-  runtime: 'nodejs8.10',
+  runtime: 'nodejs10.x',
   handler: 'index.main',
   files: {
     'index.js': new FileBlob({ data: 'exports.main = () => {}' }),
