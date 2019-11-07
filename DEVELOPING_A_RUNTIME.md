@@ -270,7 +270,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 import { Lambda } from '@now/build-utils';
 ```
 
-This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes), called a Serverless Function, that can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper, the properties `memory` and `maxDuration` are optional. The instances of this class should not be created directly. Instead use a call to [`createLambda`](#createlambda).
+This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes), called a Serverless Function, that can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper (the properties `memory` and `maxDuration` are optional). The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
 
 **Properties:**
 
