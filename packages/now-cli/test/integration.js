@@ -214,7 +214,7 @@ test('login', async t => {
 test('deploy using --local-config flag v2', async t => {
   const target = fixture('local-config-v2');
 
-  const { stdout, stderr, code } = await execa(
+  const { code, stderr, stdout } = await execa(
     binaryPath,
     ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
     {
@@ -223,11 +223,7 @@ test('deploy using --local-config flag v2', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(code);
-
-  t.is(code, 0);
+  t.is(code, 0, formatOutput({ stderr, stdout }));
 
   const { host } = new URL(stdout);
 
