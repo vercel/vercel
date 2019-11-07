@@ -31,6 +31,7 @@ export default async function* checkDeploymentStatus(
   const apiDeployments = getApiDeploymentsUrl({
     version,
     builds: deployment.builds,
+    functions: deployment.functions
   });
 
   debug(`Using ${version ? `${version}.0` : '2.0'} API for status checks`);

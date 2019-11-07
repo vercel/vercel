@@ -31,13 +31,13 @@ export const EVENTS = new Set([
 ]);
 
 export function getApiDeploymentsUrl(
-  metadata?: Pick<DeploymentOptions, 'version' | 'builds'>
+  metadata?: Pick<DeploymentOptions, 'version' | 'builds' | 'functions'>
 ) {
   if (metadata && metadata.version !== 2) {
     return '/v3/now/deployments';
   }
 
-  if (metadata && metadata.builds) {
+  if (metadata && metadata.builds && !metadata.functions) {
     return '/v10/now/deployments';
   }
 
