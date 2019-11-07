@@ -4,7 +4,7 @@
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
-  "homepage": "https://zeit.co/docs/v2/deployments/builders/developer-guide",
+  "homepage": "https://github.com/zeit/now/blob/canary/DEVELOPING_A_RUNTIME.md",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now.git",
