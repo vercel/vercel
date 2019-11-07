@@ -11,5 +11,12 @@
         }
       }
     }
+  ],
+  "propes": [
+    {
+      "path": "/api/memory",
+      "status": 200,
+      "mustContain": "true"
+    }
   ]
 }

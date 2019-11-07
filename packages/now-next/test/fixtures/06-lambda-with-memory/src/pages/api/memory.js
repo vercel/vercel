@@ -1,5 +1,5 @@
 import os from 'os';
 
 export default function(req, res) {
-  res.end(`${2e8 > os.memtotal()}`);
+  res.end(`${4.5e8 > os.memtotal()}`);
 }
