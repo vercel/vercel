@@ -45,6 +45,7 @@ import {
   validateNowConfigRedirects,
   validateNowConfigRewrites,
   validateNowConfigTrailingSlash,
+  validateNowConfigFunctions,
 } from './validate';
 
 import isURL from './is-url';
@@ -555,6 +556,7 @@ export default class DevServer {
     if (!config.builds || config.builds.length === 0) {
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
+        functions: config.functions,
       });
 
       if (errors) {
@@ -649,6 +651,7 @@ export default class DevServer {
     await this.tryValidateOrExit(config, validateNowConfigRedirects);
     await this.tryValidateOrExit(config, validateNowConfigRewrites);
     await this.tryValidateOrExit(config, validateNowConfigTrailingSlash);
+    await this.tryValidateOrExit(config, validateNowConfigFunctions);
   }
 
   validateEnvConfig(
