@@ -422,7 +422,7 @@ export async function prepareCache({
 }: PrepareCacheOptions) {
   // default cache paths
   const defaultCacheFiles = await glob(
-    '@(node_modules/**|package-lock.json|yarn.lock)',
+    '{node_modules/**,package-lock.json,yarn.lock}',
     workPath
   );
 
