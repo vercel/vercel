@@ -1,6 +1,6 @@
 {
   "name": "@now/static-build",
-  "version": "0.9.9-canary.18",
+  "version": "0.9.9-canary.19",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/static-builds",
