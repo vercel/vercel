@@ -3,7 +3,7 @@
   "version": "1.2.2",
   "main": "index.js",
   "license": "MIT",
-  "homepage": "https://github.com/zeit/now/tree/canary/packages/gatsby-plugin-now#readme",
+  "homepage": "https://zeit.co/guides/deploying-gatsby-with-now",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now.git",

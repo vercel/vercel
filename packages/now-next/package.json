@@ -3,7 +3,7 @@
   "version": "1.0.5",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next",
+  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/next-js",
   "scripts": {
     "build": "./build.sh",
     "test-integration-once": "jest --env node --verbose --runInBand",
