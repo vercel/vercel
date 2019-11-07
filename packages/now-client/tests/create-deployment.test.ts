@@ -1,7 +1,7 @@
 import path from 'path';
 import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
-import { fetch, API_DEPLOYMENTS } from '../src/utils';
+import { fetch, getApiDeploymentsUrl } from '../src/utils';
 import { Deployment } from './types';
 import { createDeployment } from '../src/index';
 
@@ -16,7 +16,7 @@ describe('create v2 deployment', () => {
   afterEach(async () => {
     if (deployment) {
       const response = await fetch(
-        `${API_DEPLOYMENTS}/${deployment.id}`,
+        `${getApiDeploymentsUrl()}/${deployment.id}`,
         token,
         {
           method: 'DELETE',

@@ -1,6 +1,6 @@
 import sleep from 'sleep-promise';
 import ms from 'ms';
-import { fetch, API_DEPLOYMENTS, API_DEPLOYMENTS_LEGACY } from './utils';
+import { fetch, getApiDeploymentsUrl } from './utils';
 import {
   isDone,
   isReady,
@@ -27,7 +27,11 @@ export default async function* checkDeploymentStatus(
   let deploymentState = deployment;
   let allBuildsCompleted = false;
   const buildsState: { [key: string]: DeploymentBuild } = {};
-  let apiDeployments = version === 2 ? API_DEPLOYMENTS : API_DEPLOYMENTS_LEGACY;
+
+  const apiDeployments = getApiDeploymentsUrl({
+    version,
+    builds: deployment.builds,
+  });
 
   debug(`Using ${version ? `${version}.0` : '2.0'} API for status checks`);
 

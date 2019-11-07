@@ -1,6 +1,6 @@
 {
   "name": "@now/go",
-  "version": "0.5.11-canary.6",
+  "version": "0.5.11-canary.7",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/go",
