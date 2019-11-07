@@ -480,7 +480,7 @@ export default class Now extends EventEmitter {
     }
 
     const url = `/${
-      isBuilds ? 'v10' : 'v5'
+      isBuilds ? 'v11' : 'v5'
     }/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(

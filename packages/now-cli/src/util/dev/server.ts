@@ -45,6 +45,7 @@ import {
   validateNowConfigRedirects,
   validateNowConfigRewrites,
   validateNowConfigTrailingSlash,
+  validateNowConfigFunctions,
 } from './validate';
 
 import isURL from './is-url';
@@ -555,6 +556,7 @@ export default class DevServer {
     if (!config.builds || config.builds.length === 0) {
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
+        functions: config.functions,
       });
 
       if (errors) {
@@ -649,6 +651,7 @@ export default class DevServer {
     await this.tryValidateOrExit(config, validateNowConfigRedirects);
     await this.tryValidateOrExit(config, validateNowConfigRewrites);
     await this.tryValidateOrExit(config, validateNowConfigTrailingSlash);
+    await this.tryValidateOrExit(config, validateNowConfigFunctions);
   }
 
   validateEnvConfig(
@@ -1213,7 +1216,7 @@ export default class DevServer {
 
     if (status) {
       res.statusCode = status;
-      if ([301, 302, 303].includes(status)) {
+      if (300 <= status && status <= 399) {
         await this.sendRedirect(
           req,
           res,
@@ -1282,12 +1285,12 @@ export default class DevServer {
       }
     }
 
-    let foundAsset = findAsset(match, requestPath);
+    let foundAsset = findAsset(match, requestPath, nowConfig);
     if ((!foundAsset || this.shouldRebuild(req)) && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
-      foundAsset = findAsset(match, requestPath);
+      foundAsset = findAsset(match, requestPath, nowConfig);
     }
 
     if (!foundAsset) {
@@ -1605,12 +1608,31 @@ async function shouldServe(
     builderWithPkg: { builder },
   } = match;
   const nowConfig = await devServer.getNowConfig();
+  const cleanSrc = src.endsWith('.html') ? src.slice(0, -5) : src;
+  const trimmedPath = requestPath.endsWith('/')
+    ? requestPath.slice(0, -1)
+    : requestPath;
+
   if (
     nowConfig.cleanUrls &&
-    src.endsWith('.html') &&
-    src.slice(0, -5) === requestPath
+    nowConfig.trailingSlash &&
+    cleanSrc === trimmedPath
+  ) {
+    // Mimic fmeta-util and convert cleanUrls and trailingSlash
+    return true;
+  } else if (
+    nowConfig.cleanUrls &&
+    !nowConfig.trailingSlash &&
+    cleanSrc === requestPath
   ) {
     // Mimic fmeta-util and convert cleanUrls
+    return true;
+  } else if (
+    !nowConfig.cleanUrls &&
+    nowConfig.trailingSlash &&
+    src === trimmedPath
+  ) {
+    // Mimic fmeta-util and convert trailingSlash
     return true;
   } else if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
@@ -1623,7 +1645,7 @@ async function shouldServe(
     if (shouldServe) {
       return true;
     }
-  } else if (findAsset(match, requestPath)) {
+  } else if (findAsset(match, requestPath, nowConfig)) {
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
@@ -1661,13 +1683,18 @@ async function findMatchingRoute(
 
 function findAsset(
   match: BuildMatch,
-  requestPath: string
+  requestPath: string,
+  nowConfig: NowConfig
 ): { asset: BuilderOutput; assetKey: string } | void {
   if (!match.buildOutput) {
     return;
   }
   let assetKey: string = requestPath.replace(/\/$/, '');
   let asset = match.buildOutput[requestPath];
+
+  if (nowConfig.trailingSlash && requestPath.endsWith('/')) {
+    asset = match.buildOutput[requestPath.slice(0, -1)];
+  }
 
   // In the case of an index path, fall back to iterating over the
   // builder outputs and doing an "is index" check until a match is found.
