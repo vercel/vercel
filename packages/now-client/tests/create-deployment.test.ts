@@ -96,7 +96,7 @@ describe('create v2 deployment', () => {
 
     const url = `https://${deployment.url}/api/index.js`;
     console.log('testing url ' + url);
-    const response = await fetch(url, token);
+    const response = await fetch_(url);
     const text = await response.text();
     expect(deployment.readyState).toEqual('READY');
     expect(text).toContain('executed script');
