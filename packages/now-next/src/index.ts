@@ -29,6 +29,7 @@ import {
   Route,
   runNpmInstall,
   runPackageJsonScript,
+  getLambdaOptionsFromFunction,
 } from '@now/build-utils';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 
@@ -52,6 +53,7 @@ import {
   stringMap,
   syncEnvVars,
   validateEntrypoint,
+  getSourceFilePathFromPage,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -391,10 +393,15 @@ export const build = async ({
     if (filesAfterBuild['next.config.js']) {
       nextFiles['next.config.js'] = filesAfterBuild['next.config.js'];
     }
-    const pages = await glob(
-      '**/*.js',
-      path.join(entryPath, '.next', 'server', 'static', buildId, 'pages')
+    const pagesDir = path.join(
+      entryPath,
+      '.next',
+      'server',
+      'static',
+      buildId,
+      'pages'
     );
+    const pages = await glob('**/*.js', pagesDir);
     const launcherPath = path.join(__dirname, 'legacy-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -426,6 +433,11 @@ export const build = async ({
           ],
         };
 
+        const lambdaOptions = await getLambdaOptionsFromFunction({
+          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          config,
+        });
+
         debug(`Creating serverless function for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
           files: {
@@ -435,6 +447,7 @@ export const build = async ({
           },
           handler: 'now__launcher.launcher',
           runtime: nodeVersion.runtime,
+          ...lambdaOptions,
         });
         debug(`Created serverless function for page: "${page}"`);
       })
@@ -639,6 +652,11 @@ export const build = async ({
           'now__launcher.js': new FileBlob({ data: launcher }),
         };
 
+        const lambdaOptions = await getLambdaOptionsFromFunction({
+          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          config,
+        });
+
         if (requiresTracing) {
           lambdas[
             path.join(entryDirectory, pathname)
@@ -650,6 +668,7 @@ export const build = async ({
             layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
             handler: 'now__launcher.launcher',
             runtime: nodeVersion.runtime,
+            ...lambdaOptions,
           });
         } else {
           lambdas[path.join(entryDirectory, pathname)] = await createLambda({
@@ -661,6 +680,7 @@ export const build = async ({
             },
             handler: 'now__launcher.launcher',
             runtime: nodeVersion.runtime,
+            ...lambdaOptions,
           });
         }
       })
@@ -836,7 +856,11 @@ export const build = async ({
       {
         // This ensures we only match known emitted-by-Next.js files and not
         // user-emitted files which may be missing a hash in their filename.
-        src: path.join('/', entryDirectory, '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'),
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
