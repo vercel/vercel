@@ -1995,7 +1995,11 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async t 
   const output = await execute([directory]);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /maxDuration should be <= 10/gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /maxDuration must be between 1 second and 10 seconds/gm,
+    formatOutput(output)
+  );
 });
 
 test('deploy a Lambda with a specific runtime', async t => {
