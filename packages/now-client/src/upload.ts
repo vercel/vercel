@@ -26,9 +26,9 @@ const isClientNetworkError = (err: Error | DeploymentError) => {
 
 export default async function* upload(
   files: Map<string, DeploymentFile>,
-  options: Options,
+  options: Options
 ): AsyncIterableIterator<any> {
-  const { token, teamId, debug: isDebug } = options;
+  const { token, teamId, debug: isDebug, apiUrl } = options;
   const debug = createDebug(isDebug);
 
   if (!files && !token && !teamId) {
@@ -51,7 +51,7 @@ export default async function* upload(
       }
     } else {
       // If the deployment has succeeded here, don't continue
-      if (event.type === 'ready') {
+      if (event.type === 'alias-assigned') {
         debug('Deployment succeeded on file check');
 
         return yield event;
@@ -103,6 +103,7 @@ export default async function* upload(
               },
               body: stream,
               teamId,
+              apiUrl,
             },
             isDebug
           );
@@ -184,7 +185,7 @@ export default async function* upload(
   try {
     debug('Starting deployment creation');
     for await (const event of deploy(files, options)) {
-      if (event.type === 'ready') {
+      if (event.type === 'alias-assigned') {
         debug('Deployment is ready');
         return yield event;
       }

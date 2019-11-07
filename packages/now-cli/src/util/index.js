@@ -179,6 +179,7 @@ export default class Now extends EventEmitter {
         limits: nowConfig.limits,
         atlas,
         config: nowConfig,
+        functions: nowConfig.functions,
       };
 
       deployment = await processDeployment({
@@ -479,7 +480,7 @@ export default class Now extends EventEmitter {
     }
 
     const url = `/${
-      isBuilds ? 'v9' : 'v5'
+      isBuilds ? 'v10' : 'v5'
     }/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(

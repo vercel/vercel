@@ -784,6 +784,19 @@ export class CantFindConfig extends NowError<
   }
 }
 
+export class WorkingDirectoryDoesNotExist extends NowError<
+  'CWD_DOES_NOT_EXIST',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'CWD_DOES_NOT_EXIST',
+      meta: {},
+      message: 'The current working directory does not exist.',
+    });
+  }
+}
+
 export class FileNotFound extends NowError<'FILE_NOT_FOUND', { file: string }> {
   constructor(file: string) {
     super({
@@ -1069,19 +1082,6 @@ export class NoBuilderCacheError extends NowError<'NO_BUILDER_CACHE', {}> {
       code: 'NO_BUILDER_CACHE',
       message: 'Could not find cache directory for now-builders.',
       meta: {},
-    });
-  }
-}
-
-export class BuilderCacheCleanError extends NowError<
-  'BUILDER_CACHE_CLEAN_FAILED',
-  { path: string }
-> {
-  constructor(path: string, message: string) {
-    super({
-      code: 'BUILDER_CACHE_CLEAN_FAILED',
-      message: `Error cleaning builder cache: ${message}`,
-      meta: { path },
     });
   }
 }

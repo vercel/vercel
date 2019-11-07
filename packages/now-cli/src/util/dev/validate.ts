@@ -35,6 +35,35 @@ const buildsSchema = {
   },
 };
 
+const functionsSchema = {
+  type: 'object',
+  minProperties: 1,
+  maxProperties: 50,
+  additionalProperties: false,
+  patternProperties: {
+    '^.{1,256}$': {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        runtime: {
+          type: 'string',
+          maxLength: 256,
+        },
+        memory: {
+          enum: Object.keys(Array.from({ length: 50 }))
+            .slice(2, 48)
+            .map(x => Number(x) * 64),
+        },
+        maxDuration: {
+          type: 'number',
+          minimum: 1,
+          maximum: 900,
+        },
+      },
+    },
+  },
+};
+
 const validateBuilds = ajv.compile(buildsSchema);
 const validateRoutes = ajv.compile(routesSchema);
 const validateCleanUrls = ajv.compile(cleanUrlsSchema);
@@ -42,6 +71,7 @@ const validateHeaders = ajv.compile(headersSchema);
 const validateRedirects = ajv.compile(redirectsSchema);
 const validateRewrites = ajv.compile(rewritesSchema);
 const validateTrailingSlash = ajv.compile(trailingSlashSchema);
+const validateFunctions = ajv.compile(functionsSchema);
 
 export function validateNowConfigBuilds(config: NowConfig) {
   return validateKey(config, 'builds', validateBuilds);
@@ -69,6 +99,10 @@ export function validateNowConfigRewrites(config: NowConfig) {
 
 export function validateNowConfigTrailingSlash(config: NowConfig) {
   return validateKey(config, 'trailingSlash', validateTrailingSlash);
+}
+
+export function validateNowConfigFunctions(config: NowConfig) {
+  return validateKey(config, 'functions', validateFunctions);
 }
 
 function validateKey(
