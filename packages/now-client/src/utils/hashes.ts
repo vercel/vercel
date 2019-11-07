@@ -5,6 +5,7 @@ import { Sema } from 'async-sema';
 export interface DeploymentFile {
   names: string[];
   data: Buffer;
+  mode: number;
 }
 
 /**
@@ -42,7 +43,7 @@ export const mapToObject = (
  * @return {Map}
  */
 async function hashes(files: string[]): Promise<Map<string, DeploymentFile>> {
-  const map = new Map();
+  const map = new Map<string, DeploymentFile>();
   const semaphore = new Sema(100);
 
   await Promise.all(
@@ -50,6 +51,7 @@ async function hashes(files: string[]): Promise<Map<string, DeploymentFile>> {
       async (name: string): Promise<void> => {
         await semaphore.acquire();
         const data = await fs.readFile(name);
+        const { mode } = await fs.stat(name);
 
         const h = hash(data);
         const entry = map.get(h);
@@ -57,7 +59,7 @@ async function hashes(files: string[]): Promise<Map<string, DeploymentFile>> {
         if (entry) {
           entry.names.push(name);
         } else {
-          map.set(h, { names: [name], data });
+          map.set(h, { names: [name], data, mode });
         }
 
         semaphore.release();

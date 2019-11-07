@@ -80,6 +80,28 @@ describe('create v2 deployment', () => {
     }
   });
 
+  it('will create a v2 deployment with correct file permissions', async () => {
+    for await (const event of createDeployment(
+      path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
+      {
+        token,
+        name: 'now-client-tests-v2',
+      }
+    )) {
+      if (event.type === 'ready') {
+        deployment = event.payload;
+        break;
+      }
+    }
+
+    const url = `https://${deployment.url}/api/index.js`;
+    console.log('testing url ' + url);
+    const response = await fetch_(url);
+    const text = await response.text();
+    expect(deployment.readyState).toEqual('READY');
+    expect(text).toContain('executed bash script');
+  });
+
   it('will create a v2 deployment and ignore files specified in .nowignore', async () => {
     for await (const event of createDeployment(
       path.resolve(__dirname, 'fixtures', 'nowignore'),
