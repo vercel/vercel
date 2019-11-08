@@ -432,12 +432,12 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
-    'lambda-with-node-runtime': {
+    'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'now-php@0.0.6',
+            runtime: 'now-php@0.0.7',
           },
         },
       }),
