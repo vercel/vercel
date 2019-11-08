@@ -300,6 +300,34 @@ export function getDynamicRoutes(
     return [];
   }
 
+  try {
+    // Use routes-manifest if available so that we don't have
+    // to rely on inner utils of Next.js to generate the dynamic routes
+    const manifestStr = fs.readFileSync(path.join(entryPath, '.next/routes-manifest.json'), 'utf8')
+    const routesManifest = JSON.parse(manifestStr)
+
+    switch (routesManifest.version) {
+      case 0:
+        return routesManifest.dynamicRoutes.map((
+          { page, regex }: { page: string, regex: string}
+        ) => {
+          return {
+            src: regex,
+            dest: !isDev
+              ? path.join('/', entryDirectory, page)
+              : page
+          }
+        })
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      // if the routes-manifest doesn't exist they probably aren't
+      // on a new enough Next.js version if an error occurs accessing
+      // it rethrow though
+      throw err
+    }
+  }
+
   let getRouteRegex:
     | ((pageName: string) => { re: RegExp })
     | undefined = undefined;
