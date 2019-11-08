@@ -14,7 +14,7 @@ See the [Runtimes Documentation](https://zeit.co/docs/v2/advanced/runtimes) to v
 
 A **required** exported constant that decides which version of the Runtime API to use.
 
-The latest and suggested version is `2`.
+The latest and suggested version is `3`.
 
 ### `analyze`
 
