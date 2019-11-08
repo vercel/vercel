@@ -122,6 +122,13 @@ export interface BuildResult {
   distPath?: string;
 }
 
+export interface BuildResultV3 {
+  output: Lambda;
+  routes: RouteConfig[];
+  watch: string[];
+  distPath?: string;
+}
+
 export interface ShouldServeParams {
   files: BuilderInputs;
   entrypoint: string;
