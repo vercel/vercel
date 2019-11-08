@@ -77,6 +77,8 @@ async function bundleInstall(
   }
 }
 
+export const version = 3;
+
 export const build = async ({
   workPath,
   files,
@@ -208,20 +210,12 @@ export const build = async ({
     }
   }
 
-  const lambdaOptions = await getLambdaOptionsFromFunction({
-    sourceFile: entrypoint,
-    config,
-  });
-
   const lambda = await createLambda({
     files: outputFiles,
     handler: `${nowHandlerRbFilename}.now__handler`,
     runtime: 'ruby2.5',
     environment: {},
-    ...lambdaOptions,
   });
 
-  return {
-    [entrypoint]: lambda,
-  };
+  return { output: lambda };
 };
