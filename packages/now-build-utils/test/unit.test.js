@@ -622,6 +622,18 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBeDefined();
     expect(errors[0].code).toBe('unused_function');
   });
+
+  it('Do not allow function non Community Runtimes', async () => {
+    const functions = {
+      'api/test.js': { memory: 128, runtime: '@now/node@1.0.0' },
+    };
+    const files = ['api/test.js'];
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toBeDefined();
+    expect(errors[0].code).toBe('invalid_function_runtime');
+  });
 });
 
 it('Test `detectRoutes`', async () => {

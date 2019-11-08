@@ -100,7 +100,7 @@ export interface BuilderConfigAttr {
 }
 
 export interface Builder {
-  version?: 2;
+  version?: 2 | 3;
   config?: BuilderConfigAttr;
   build(
     params: BuilderParams
@@ -117,6 +117,13 @@ export interface Builder {
 
 export interface BuildResult {
   output: BuilderOutputs;
+  routes: RouteConfig[];
+  watch: string[];
+  distPath?: string;
+}
+
+export interface BuildResultV3 {
+  output: Lambda;
   routes: RouteConfig[];
   watch: string[];
   distPath?: string;
