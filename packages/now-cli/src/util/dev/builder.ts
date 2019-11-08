@@ -363,7 +363,7 @@ export async function executeBuild(
           Code: { ZipFile: asset.zipBuffer },
           Handler: asset.handler,
           Runtime: asset.runtime,
-          MemorySize: 3008,
+          MemorySize: asset.memory || 3008,
           Environment: {
             Variables: {
               ...nowConfig.env,
