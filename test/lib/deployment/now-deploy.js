@@ -6,8 +6,6 @@ const fetch = require('./fetch-retry.js');
 
 const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 
-process.env.FORCE_BUILD_IN_REGION = 'iad1';
-
 async function nowDeploy (bodies, randomness) {
   const files = Object.keys(bodies)
     .filter((n) => n !== 'now.json')
