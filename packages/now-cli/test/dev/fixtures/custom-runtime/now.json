@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/**/*.sh": {
+      "runtime": "now-bash@1.0.3"
+    }
+  }
+}

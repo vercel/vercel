@@ -143,6 +143,14 @@ const apiFetch = (url, { headers, ...options } = {}) => {
   });
 };
 
+const getDeploymentBuildsByUrl = async url => {
+  const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
+  const { id } = await hostRes.json();
+  const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
+  const { builds } = await buildsRes.json();
+  return builds;
+};
+
 test.before(async () => {
   try {
     await retry(
@@ -206,7 +214,7 @@ test('login', async t => {
 test('deploy using --local-config flag v2', async t => {
   const target = fixture('local-config-v2');
 
-  const { stdout, stderr, code } = await execa(
+  const { code, stderr, stdout } = await execa(
     binaryPath,
     ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
     {
@@ -215,11 +223,7 @@ test('deploy using --local-config flag v2', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(code);
-
-  t.is(code, 0);
+  t.is(code, 0, formatOutput({ stderr, stdout }));
 
   const { host } = new URL(stdout);
 
@@ -762,7 +766,7 @@ test('remove the wildcard alias', async t => {
   t.true(stdout.startsWith(goal));
 });
 
-test('ensure type and instance count in list is right', async t => {
+test('ensure username in list is right', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['ls', ...defaultArgs],
@@ -781,9 +785,8 @@ test('ensure type and instance count in list is right', async t => {
   const line = stdout.split('\n').find(line => line.includes('.now.sh'));
   const columns = line.split(/\s+/);
 
-  // Ensure those columns only contain a dash
-  t.is(columns[3], '-');
-  t.is(columns[4], '-');
+  // Ensure username column have username
+  t.truthy(columns.pop().includes('now-builders-ci-bot'));
 });
 
 test('set platform version using `--platform-version` to `2`', async t => {
@@ -1935,6 +1938,88 @@ test('deploy with a custom API URL', async t => {
   const contentType = response.headers.get('content-type');
 
   t.is(contentType, 'text/html; charset=utf-8');
+});
+
+test('deploy a Lambda with 128MB of memory', async t => {
+  const directory = fixture('lambda-with-128-memory');
+  const output = await execute([directory]);
+
+  t.is(output.code, 0, formatOutput(output));
+
+  const { host: url } = new URL(output.stdout);
+  const response = await fetch('https://' + url + '/api/memory');
+
+  t.is(response.status, 200, url);
+
+  // It won't be exactly 128MB,
+  // so we just compare if it is lower than 450MB
+  const { memory } = await response.json();
+  t.truthy(memory < 4.5e8, `Lambda has ${memory} bytes of memory`);
+});
+
+test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
+  const directory = fixture('lambda-with-200-memory');
+  const output = await execute([directory]);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Functions must have a memory value between 128 and 3008 in steps of 64\./gm,
+    formatOutput(output)
+  );
+});
+
+test('deploy a Lambda with 3 seconds of maxDuration', async t => {
+  const directory = fixture('lambda-with-3-second-timeout');
+  const output = await execute([directory]);
+
+  t.is(output.code, 0, formatOutput(output));
+
+  const { host: url } = new URL(output.stdout);
+
+  const [response1, response2] = await Promise.all([
+    fetch('https://' + url + '/api/wait-for/2'),
+    fetch('https://' + url + '/api/wait-for/4'),
+  ]);
+
+  t.is(response1.status, 200, url);
+  t.is(response2.status, 502, url);
+});
+
+test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {
+  const directory = fixture('lambda-with-1000-second-timeout');
+  const output = await execute([directory]);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /maxDuration must be between 1 second and 10 seconds/gm,
+    formatOutput(output)
+  );
+});
+
+test('deploy a Lambda with a specific runtime', async t => {
+  const directory = fixture('lambda-with-node-runtime');
+  const output = await execute([directory]);
+
+  t.is(output.code, 0, formatOutput(output));
+
+  const { host: url } = new URL(output.stdout);
+
+  const [build] = await getDeploymentBuildsByUrl(url);
+  t.is(build.use, '@now/node@1.0.0-canary.10', JSON.stringify(build, null, 2));
+});
+
+test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
+  const directory = fixture('lambda-with-invalid-runtime');
+  const output = await execute([directory]);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Function runtimes must have a valid version/gm,
+    formatOutput(output)
+  );
 });
 
 test.after.always(async () => {

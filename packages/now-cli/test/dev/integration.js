@@ -46,6 +46,23 @@ function validateResponseHeaders(t, res) {
   );
 }
 
+async function testPath(t, port, status, path, expectedText, headers = {}) {
+  const opts = { redirect: 'manual' };
+  const res = await fetch(`http://localhost:${port}${path}`, opts);
+  const msg = `Testing path ${path}`;
+  t.is(res.status, status, msg);
+  if (expectedText) {
+    const actualText = await res.text();
+    t.is(actualText.trim(), expectedText.trim(), msg);
+  }
+  if (headers) {
+    Object.keys(headers).forEach(key => {
+      const k = key.toLowerCase();
+      t.is(headers[k], res.headers[k], msg);
+    });
+  }
+}
+
 async function exec(directory, args = []) {
   return execa(binaryPath, ['dev', directory, ...args], {
     reject: false,
@@ -54,6 +71,10 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+    if (process.platform === 'darwin' && satisfies(process.version, '8.x')) {
+      await execa('yarn', ['cache', 'clean']);
+    }
+
     return execa('yarn', ['install'], { cwd: fixturePath });
   }
 }
@@ -125,7 +146,8 @@ function testFixtureStdio(directory, fn) {
       });
 
       await readyPromise;
-      await fn(t, port);
+      const helperTestPath = (...args) => testPath(t, port, ...args);
+      await fn(t, port, helperTestPath);
     } finally {
       dev.kill('SIGTERM');
     }
@@ -258,6 +280,86 @@ test(
 
     const body = await response.text();
     t.regex(body, /Hello World/gm);
+  })
+);
+
+test(
+  '[now dev] test cleanUrls serve correct content',
+  testFixtureStdio('test-clean-urls', async (t, port, testPath) => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/about', 'About Page');
+    await testPath(200, '/sub', 'Sub Index Page');
+    await testPath(200, '/sub/another', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(301, '/index.html', '', { Location: '/' });
+    await testPath(301, '/about.html', '', { Location: '/about' });
+    await testPath(301, '/sub/index.html', '', { Location: '/sub' });
+    await testPath(301, '/sub/another.html', '', { Location: '/sub/another' });
+  })
+);
+
+test(
+  '[now dev] test cleanUrls and trailingSlash serve correct content',
+  testFixtureStdio(
+    'test-clean-urls-trailing-slash',
+    async (t, port, testPath) => {
+      await testPath(200, '/', 'Index Page');
+      await testPath(200, '/about/', 'About Page');
+      await testPath(200, '/sub/', 'Sub Index Page');
+      await testPath(200, '/sub/another/', 'Sub Another Page');
+      await testPath(200, '/style.css/', 'body { color: green }');
+      await testPath(301, '/index.html', '', { Location: '/' });
+      await testPath(301, '/about.html', '', { Location: '/about/' });
+      await testPath(301, '/sub/index.html', '', { Location: '/sub/' });
+      await testPath(301, '/sub/another.html', '', {
+        Location: '/sub/another/',
+      });
+    }
+  )
+);
+
+test(
+  '[now dev] test trailingSlash true serve correct content',
+  testFixtureStdio('test-trailing-slash', async (t, port, testPath) => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/index.html/', 'Index Page');
+    await testPath(200, '/about.html/', 'About Page');
+    await testPath(200, '/sub/', 'Sub Index Page');
+    await testPath(200, '/sub/index.html/', 'Sub Index Page');
+    await testPath(200, '/sub/another.html/', 'Sub Another Page');
+    await testPath(200, '/style.css/', 'body { color: green }');
+    await testPath(307, '/about.html', '', { Location: '/about.html/' });
+    await testPath(307, '/sub', '', { Location: '/sub/' });
+    await testPath(307, '/sub/another.html', '', {
+      Location: '/sub/another.html/',
+    });
+  })
+);
+
+test(
+  '[now dev] test trailingSlash false serve correct content',
+  testFixtureStdio('test-trailing-slash-false', async (t, port, testPath) => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/index.html', 'Index Page');
+    await testPath(200, '/about.html', 'About Page');
+    await testPath(200, '/sub', 'Sub Index Page');
+    await testPath(200, '/sub/index.html', 'Sub Index Page');
+    await testPath(200, '/sub/another.html', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(307, '/about.html/', '', { Location: '/about.html' });
+    await testPath(307, '/sub/', '', { Location: '/sub' });
+    await testPath(307, '/sub/another.html/', '', {
+      Location: '/sub/another.html',
+    });
+  })
+);
+
+test(
+  '[now dev] throw when invalid builder routes detected',
+  testFixtureStdio('invalid-builder-routes', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+    const body = await response.text();
+    t.regex(body, /Invalid regular expression/gm);
   })
 );
 
@@ -1012,3 +1114,16 @@ if (satisfies(process.version, '>= 8.9.0')) {
     'Skipping `25-nextjs-src-dir` test since it requires Node >= 8.9.0'
   );
 }
+
+test.only(
+  '[now dev] Use runtime from the functions property',
+  testFixtureStdio('custom-runtime', async (t, port) => {
+    const result = await fetchWithRetry(`http://localhost:${port}/api/user`, 3);
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Hello, from Bash!/gm);
+  })
+);
