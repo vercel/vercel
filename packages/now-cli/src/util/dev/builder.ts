@@ -226,17 +226,17 @@ export async function executeBuild(
           : undefined,
     };
   } else if (builder.version === 3) {
-    const { output, ...rest } = buildResultOrOutputs;
+    const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
       throw new Error(`The result of "builder.build" must be a Lambda'`);
     }
 
-    if ((output as Lambda).maxDuration) {
+    if (output.maxDuration) {
       throw new Error('The result of "builder.build" cannot contain `memory`');
     }
 
-    if ((output as Lambda).memory) {
+    if (output.memory) {
       throw new Error(
         'The result of "builder.build" cannot contain `maxDuration`'
       );
@@ -245,11 +245,11 @@ export async function executeBuild(
     for (const [src, func] of Object.entries(config.functions || {})) {
       if (src === entrypoint || minimatch(entrypoint, src)) {
         if (func.maxDuration) {
-          (output as Lambda).maxDuration = func.maxDuration;
+          output.maxDuration = func.maxDuration;
         }
 
         if (func.memory) {
-          (output as Lambda).memory = func.memory;
+          output.memory = func.memory;
         }
 
         break;
