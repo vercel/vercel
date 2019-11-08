@@ -16,7 +16,6 @@ import {
   createLambda,
   BuildOptions,
   debug,
-  getLambdaOptionsFromFunction,
 } from '@now/build-utils';
 import { installBundler } from './install-ruby';
 
