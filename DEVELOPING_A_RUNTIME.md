@@ -180,8 +180,8 @@ When you publish your Runtime to npm, make sure to not specify `@now/build-utils
 ### `Files`
 
 ```ts
-import { File } from '@now/build-utils'
-type Files = { [filePath: string]: File }
+import { File } from '@now/build-utils';
+type Files = { [filePath: string]: File };
 ```
 
 This is an abstract type that is implemented as a plain [JavaScript Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object). It's helpful to think of it as a virtual filesystem representation.
@@ -202,7 +202,7 @@ An example of a valid output `Files` object is:
 This is an abstract type that can be imported if you are using TypeScript.
 
 ```ts
-import { File } from '@now/build-utils'
+import { File } from '@now/build-utils';
 ```
 
 Valid `File` types include:
@@ -214,7 +214,7 @@ Valid `File` types include:
 ### `FileRef`
 
 ```ts
-import { FileRef } from '@now/build-utils'
+import { FileRef } from '@now/build-utils';
 ```
 
 This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract file instance stored in our platform, based on the file identifier string (its checksum). When a `Files` object is passed as an input to `analyze` or `build`, all its values will be instances of `FileRef`.
@@ -231,7 +231,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ### `FileFsRef`
 
 ```ts
-import { FileFsRef } from '@now/build-utils'
+import { FileFsRef } from '@now/build-utils';
 ```
 
 This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract instance of a file present in the filesystem that the build process is executing in.
@@ -249,7 +249,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ### `FileBlob`
 
 ```ts
-import { FileBlob } from '@now/build-utils'
+import { FileBlob } from '@now/build-utils';
 ```
 
 This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract instance of a file present in memory.
@@ -267,16 +267,18 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ### `Lambda`
 
 ```ts
-import { Lambda } from '@now/build-utils'
+import { Lambda } from '@now/build-utils';
 ```
 
-This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes), called a Serverless Function, that can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper. The instances of this class should not be created directly. Instead use a call to [`createLambda`](#createlambda).
+This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes), called a Serverless Function, that can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper (the properties `memory` and `maxDuration` are optional). The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
 
 **Properties:**
 
 - `files : Files` the internal filesystem of the lambda
 - `handler : String` path to handler file and (optionally) a function name it exports
 - `runtime : LambdaRuntime` the name of the lambda runtime
+- `memory : Number` the memory size in MB the lambda should use, a value from 128 to 3008, in steps of 64
+- `maxDuration: Number` number of seconds that the lambda is allowed to run before timing out
 - `environment : Object` key-value map of handler-related (aside of those passed by user) environment variables
 
 ### `LambdaRuntime`
@@ -302,20 +304,52 @@ The following is exposed by `@now/build-utils` to simplify the process of writin
 Signature: `createLambda(Object spec) : Lambda`
 
 ```ts
-import { createLambda } from '@now/build-utils'
+import { createLambda } from '@now/build-utils';
 ```
 
 Constructor for the [`Lambda`](#lambda) type.
 
 ```js
-const { createLambda, FileBlob } = require('@now/build-utils')
+const { createLambda, FileBlob } = require('@now/build-utils');
 await createLambda({
   runtime: 'nodejs8.10',
   handler: 'index.main',
   files: {
-    'index.js': new FileBlob({ data: 'exports.main = () => {}' })
-  }
-})
+    'index.js': new FileBlob({ data: 'exports.main = () => {}' }),
+  },
+  // Optional
+  memory: 1024,
+  maxDuration: 10,
+});
+```
+
+### `getLambdaOptionsFromFunction`
+
+Signature: `getLambdaOptionsFromFunction(Object spec) : { memory, maxDuration }`
+
+```ts
+import { getLambdaOptionsFromFunction } from '@now/build-utils';
+```
+
+Creates partial options for `createLambda` by using the entrypoint for the lambda and the `config`.
+
+```js
+const { getLambdaOptionsFromFunction } = require('@now/build-utils');
+
+// lambdaOptions = { memory?: number; maxDuration?: number; };
+const lambdaOptions = await getLambdaOptionsFromFunction({
+  sourceFile: 'api/user.js',
+  config: config,
+});
+
+await createLambda({
+  runtime: 'nodejs10.x',
+  handler: 'index.main',
+  files: {
+    'index.js': new FileBlob({ data: 'exports.main = () => {}' }),
+  },
+  ...lambdaOptions,
+});
 ```
 
 ### `download`
@@ -323,7 +357,7 @@ await createLambda({
 Signature: `download() : Files`
 
 ```ts
-import { download } from '@now/build-utils'
+import { download } from '@now/build-utils';
 ```
 
 This utility allows you to download the contents of a [`Files`](#files) data structure, therefore creating the filesystem represented in it.
@@ -333,7 +367,7 @@ Since `Files` is an abstract way of representing files, you can think of `downlo
 If the **optional** `meta` property is passed (the argument for [build](#build)), only the files that have changed are downloaded. This is decided using `filesRemoved` and `filesChanged` inside that object.
 
 ```js
-await download(files, workPath, meta)
+await download(files, workPath, meta);
 ```
 
 ### `glob`
@@ -341,7 +375,7 @@ await download(files, workPath, meta)
 Signature: `glob() : Files`
 
 ```ts
-import { glob } from '@now/build-utils'
+import { glob } from '@now/build-utils';
 ```
 
 This utility allows you to _scan_ the filesystem and return a [`Files`](#files) representation of the matched glob search string. It can be thought of as the reverse of [`download`](#download).
@@ -362,7 +396,7 @@ exports.build = ({ files, workPath }) => {
 Signature: `getWriteableDirectory() : String`
 
 ```ts
-import { getWriteableDirectory } from '@now/build-utils'
+import { getWriteableDirectory } from '@now/build-utils';
 ```
 
 In some occasions, you might want to write to a temporary directory.
@@ -372,7 +406,7 @@ In some occasions, you might want to write to a temporary directory.
 Signature: `rename(Files) : Files`
 
 ```ts
-import { rename } from '@now/build-utils'
+import { rename } from '@now/build-utils';
 ```
 
 Renames the keys of the [`Files`](#files) object, which represent the paths. For example, to remove the `*.go` suffix you can use:
