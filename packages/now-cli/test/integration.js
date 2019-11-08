@@ -1998,9 +1998,10 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async t 
   );
 });
 
-test('deploy a Lambda with a specific runtime', async t => {
+// We need to skip those tests until `now-php` supports Runtime version 3
+test.skip('deploy a Lambda with a specific runtime', async t => {
   const directory = fixture('lambda-with-node-runtime');
-  const output = await execute([directory]);
+  const output = await execute([directory, '--public']);
 
   t.is(output.code, 0, formatOutput(output));
 
@@ -2010,7 +2011,8 @@ test('deploy a Lambda with a specific runtime', async t => {
   t.is(build.use, '@now/node@1.0.0-canary.10', JSON.stringify(build, null, 2));
 });
 
-test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
+// We need to skip those tests until `now-php` supports Runtime version 3
+test.skip('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory]);
 

@@ -12,7 +12,6 @@ import {
   shouldServe,
   Files,
   debug,
-  getLambdaOptionsFromFunction,
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint } from './go-helpers';
@@ -45,7 +44,7 @@ async function initPrivateGit(credentials: string) {
   await writeFile(join(homedir(), '.git-credentials'), credentials);
 }
 
-export const version = 2;
+export const version = 3;
 
 export async function build({
   files,
@@ -400,21 +399,12 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     }
   }
 
-  const lambdaOptions = await getLambdaOptionsFromFunction({
-    sourceFile: entrypoint,
-    config,
-  });
-
   const lambda = await createLambda({
     files: { ...(await glob('**', outDir)), ...includedFiles },
     handler: 'handler',
     runtime: 'go1.x',
     environment: {},
-    ...lambdaOptions,
   });
-  const output = {
-    [entrypoint]: lambda,
-  };
 
   const watch = parsedAnalyzed.watch;
   let watchSub: string[] = [];
@@ -426,7 +416,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   }
 
   return {
-    output,
+    output: lambda,
     watch: watch.concat(watchSub),
   };
 }

@@ -14,7 +14,7 @@ See the [Runtimes Documentation](https://zeit.co/docs/v2/advanced/runtimes) to v
 
 A **required** exported constant that decides which version of the Runtime API to use.
 
-The latest and suggested version is `2`.
+The latest and suggested version is `3`.
 
 ### `analyze`
 
@@ -41,7 +41,7 @@ export analyze(options: AnalyzeOptions) {
 
 ### `build`
 
-A **required** exported function that returns a [Files](#files) data structure that contains the Build outputs, which can be a [Static File](#file) or a [Serverless Function](#serverless-function).
+A **required** exported function that returns a [Serverless Function](#serverless-function).
 
 What's a Serverless Function? Read about [Serverless Function concepts](https://zeit.co/docs/v2/deployments/concepts/lambdas) to learn more.
 
@@ -58,9 +58,9 @@ build({
     filesRemoved?: Array<String>
   }
 }) : {
-  watch: Array<String>,
-  output: Files output,
-  routes: Object
+  watch?: Array<String>,
+  output: Lambda,
+  routes?: Object
 }
 ```
 
@@ -270,15 +270,13 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 import { Lambda } from '@now/build-utils';
 ```
 
-This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes), called a Serverless Function, that can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper (the properties `memory` and `maxDuration` are optional). The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
+This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes), called a Serverless Function, that can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper. The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
 
 **Properties:**
 
 - `files : Files` the internal filesystem of the lambda
 - `handler : String` path to handler file and (optionally) a function name it exports
 - `runtime : LambdaRuntime` the name of the lambda runtime
-- `memory : Number` the memory size in MB the lambda should use, a value from 128 to 3008, in steps of 64
-- `maxDuration: Number` number of seconds that the lambda is allowed to run before timing out
 - `environment : Object` key-value map of handler-related (aside of those passed by user) environment variables
 
 ### `LambdaRuntime`
@@ -317,38 +315,6 @@ await createLambda({
   files: {
     'index.js': new FileBlob({ data: 'exports.main = () => {}' }),
   },
-  // Optional
-  memory: 1024,
-  maxDuration: 10,
-});
-```
-
-### `getLambdaOptionsFromFunction`
-
-Signature: `getLambdaOptionsFromFunction(Object spec) : { memory, maxDuration }`
-
-```ts
-import { getLambdaOptionsFromFunction } from '@now/build-utils';
-```
-
-Creates partial options for `createLambda` by using the entrypoint for the lambda and the `config`.
-
-```js
-const { getLambdaOptionsFromFunction } = require('@now/build-utils');
-
-// lambdaOptions = { memory?: number; maxDuration?: number; };
-const lambdaOptions = await getLambdaOptionsFromFunction({
-  sourceFile: 'api/user.js',
-  config: config,
-});
-
-await createLambda({
-  runtime: 'nodejs10.x',
-  handler: 'index.main',
-  files: {
-    'index.js': new FileBlob({ data: 'exports.main = () => {}' }),
-  },
-  ...lambdaOptions,
 });
 ```
 
