@@ -125,18 +125,16 @@ it('should support require by path for legacy builders', () => {
   expect(Lambda2).toBe(index.Lambda);
 });
 
-it('Test `detectBuilders`', async () => {
-  {
-    // package.json + no build
+describe('Test `detectBuilders`', () => {
+  it('package.json + no build', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'pages/index.js', 'public/index.html'];
     const { builders, errors } = await detectBuilders(files, pkg);
     expect(builders).toBe(null);
     expect(errors.length).toBe(1);
-  }
+  });
 
-  {
-    // package.json + no build + next
+  it('package.json + no build + next', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -145,10 +143,9 @@ it('Test `detectBuilders`', async () => {
     const { builders, errors } = await detectBuilders(files, pkg);
     expect(builders[0].use).toBe('@now/next');
     expect(errors).toBe(null);
-  }
+  });
 
-  {
-    // package.json + no build + next
+  it('package.json + no build + next', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -157,35 +154,31 @@ it('Test `detectBuilders`', async () => {
     const { builders, errors } = await detectBuilders(files, pkg);
     expect(builders[0].use).toBe('@now/next');
     expect(errors).toBe(null);
-  }
+  });
 
-  {
-    // package.json + no build
+  it('package.json + no build', async () => {
     const pkg = {};
     const files = ['package.json'];
     const { builders, errors } = await detectBuilders(files, pkg);
     expect(builders).toBe(null);
     expect(errors.length).toBe(1);
-  }
+  });
 
-  {
-    // static file
+  it('static file', async () => {
     const files = ['index.html'];
     const { builders, errors } = await detectBuilders(files);
     expect(builders).toBe(null);
     expect(errors).toBe(null);
-  }
+  });
 
-  {
-    // no package.json + public
+  it('no package.json + public', async () => {
     const files = ['api/users.js', 'public/index.html'];
     const { builders, errors } = await detectBuilders(files);
     expect(builders[1].use).toBe('@now/static');
     expect(errors).toBe(null);
-  }
+  });
 
-  {
-    // no package.json + no build + raw static + api
+  it('no package.json + no build + raw static + api', async () => {
     const files = ['api/users.js', 'index.html'];
     const { builders, errors } = await detectBuilders(files);
     expect(builders[0].use).toBe('@now/node');
@@ -194,10 +187,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].src).toBe('!{api/**,package.json}');
     expect(builders.length).toBe(2);
     expect(errors).toBe(null);
-  }
+  });
 
-  {
-    // package.json + no build + root + api
+  it('package.json + no build + root + api', async () => {
     const files = ['index.html', 'api/[endpoint].js', 'static/image.png'];
     const { builders, errors } = await detectBuilders(files);
     expect(builders[0].use).toBe('@now/node');
@@ -206,10 +198,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].src).toBe('!{api/**,package.json}');
     expect(builders.length).toBe(2);
     expect(errors).toBe(null);
-  }
+  });
 
-  {
-    // api + ignore files
+  it('api + ignore files', async () => {
     const files = [
       'api/_utils/handler.js',
       'api/[endpoint]/.helper.js',
@@ -220,10 +211,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/node');
     expect(builders[0].src).toBe('api/[endpoint]/[id].js');
     expect(builders.length).toBe(1);
-  }
+  });
 
-  {
-    // api + next + public
+  it('api + next + public', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -236,10 +226,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/next');
     expect(builders[1].src).toBe('package.json');
     expect(builders.length).toBe(2);
-  }
+  });
 
-  {
-    // api + next + raw static
+  it('api + next + raw static', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -252,10 +241,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/next');
     expect(builders[1].src).toBe('package.json');
     expect(builders.length).toBe(2);
-  }
+  });
 
-  {
-    // api + raw static
+  it('api + raw static', async () => {
     const files = ['api/endpoint.js', 'index.html', 'favicon.ico'];
 
     const { builders } = await detectBuilders(files);
@@ -264,10 +252,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/static');
     expect(builders[1].src).toBe('!{api/**,package.json}');
     expect(builders.length).toBe(2);
-  }
+  });
 
-  {
-    // api + public
+  it('api + public', async () => {
     const files = [
       'api/endpoint.js',
       'public/index.html',
@@ -281,19 +268,17 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/static');
     expect(builders[1].src).toBe('public/**/*');
     expect(builders.length).toBe(2);
-  }
+  });
 
-  {
-    // just public
+  it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
     const { builders } = await detectBuilders(files);
     expect(builders[0].src).toBe('public/**/*');
     expect(builders.length).toBe(1);
-  }
+  });
 
-  {
-    // next + public
+  it('next + public', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -304,10 +289,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/next');
     expect(builders[0].src).toBe('package.json');
     expect(builders.length).toBe(1);
-  }
+  });
 
-  {
-    // nuxt
+  it('nuxt', async () => {
     const pkg = {
       scripts: { build: 'nuxt build' },
       dependencies: { nuxt: '2.8.1' },
@@ -318,10 +302,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/static-build');
     expect(builders[0].src).toBe('package.json');
     expect(builders.length).toBe(1);
-  }
+  });
 
-  {
-    // package.json with no build + api
+  it('package.json with no build + api', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'api/[endpoint].js'];
 
@@ -329,37 +312,33 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].use).toBe('@now/node');
     expect(builders[0].src).toBe('api/[endpoint].js');
     expect(builders.length).toBe(1);
-  }
+  });
 
-  {
-    // package.json with no build + public directory
+  it('package.json with no build + public directory', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'public/index.html'];
 
     const { builders, errors } = await detectBuilders(files, pkg);
     expect(builders).toBe(null);
     expect(errors.length).toBe(1);
-  }
+  });
 
-  {
-    // no package.json + api
+  it('no package.json + api', async () => {
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
     const { builders } = await detectBuilders(files);
     expect(builders.length).toBe(2);
-  }
+  });
 
-  {
-    // no package.json + no api
+  it('no package.json + no api', async () => {
     const files = ['index.html'];
 
     const { builders, errors } = await detectBuilders(files);
     expect(builders).toBe(null);
     expect(errors).toBe(null);
-  }
+  });
 
-  {
-    // package.json + api + canary
+  it('package.json + api + canary', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -375,10 +354,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/node@canary');
     expect(builders[2].use).toBe('@now/next@canary');
     expect(builders.length).toBe(3);
-  }
+  });
 
-  {
-    // package.json + api + latest
+  it('package.json + api + latest', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -394,10 +372,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/node@latest');
     expect(builders[2].use).toBe('@now/next@latest');
     expect(builders.length).toBe(3);
-  }
+  });
 
-  {
-    // package.json + api + random tag
+  it('package.json + api + random tag', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -413,10 +390,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders[1].use).toBe('@now/node@haha');
     expect(builders[2].use).toBe('@now/next@haha');
     expect(builders.length).toBe(3);
-  }
+  });
 
-  {
-    // next.js pages/api + api
+  it('next.js pages/api + api', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -424,16 +400,17 @@ it('Test `detectBuilders`', async () => {
     const files = ['api/user.js', 'pages/api/user.js'];
 
     const { warnings, errors, builders } = await detectBuilders(files, pkg);
+
     expect(errors).toBe(null);
+    expect(warnings[0]).toBeDefined();
     expect(warnings[0].code).toBe('conflicting_files');
     expect(builders).toBeDefined();
     expect(builders.length).toBe(2);
     expect(builders[0].use).toBe('@now/node');
     expect(builders[1].use).toBe('@now/next');
-  }
+  });
 
-  {
-    // many static files + one api file
+  it('many static files + one api file', async () => {
     const files = Array.from({ length: 5000 }).map((_, i) => `file${i}.html`);
     files.push('api/index.ts');
     const { builders } = await detectBuilders(files);
@@ -443,10 +420,46 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0].src).toBe('api/index.ts');
     expect(builders[1].use).toBe('@now/static');
     expect(builders[1].src).toBe('!{api/**,package.json}');
-  }
+  });
 
-  {
-    // extend with functions
+  it('functions with nextjs', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'pages/api/teams/**': {
+        memory: 128,
+        maxDuration: 10,
+      },
+    };
+    const files = [
+      'package.json',
+      'pages/index.js',
+      'pages/api/teams/members.ts',
+    ];
+    const { builders, errors } = await detectBuilders(files, pkg, {
+      functions,
+    });
+
+    expect(errors).toBe(null);
+    expect(builders.length).toBe(1);
+    expect(builders[0]).toEqual({
+      src: 'package.json',
+      use: '@now/next',
+      config: {
+        zeroConfig: true,
+        functions: {
+          'pages/api/teams/**': {
+            memory: 128,
+            maxDuration: 10,
+          },
+        },
+      },
+    });
+  });
+
+  it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -459,12 +472,9 @@ it('Test `detectBuilders`', async () => {
         memory: 128,
         maxDuration: 10,
       },
-      'package.json': {
-        memory: 3008,
-        runtime: '@now/next@1.0.0-canary.12',
-      },
     };
     const files = [
+      'package.json',
       'pages/index.js',
       'api/users/[id].ts',
       'api/teams/members.ts',
@@ -475,22 +485,38 @@ it('Test `detectBuilders`', async () => {
     expect(builders[0]).toEqual({
       src: 'api/teams/members.ts',
       use: '@now/node',
-      config: { zeroConfig: true, functions },
+      config: {
+        zeroConfig: true,
+        functions: {
+          'api/teams/members.ts': {
+            memory: 128,
+            maxDuration: 10,
+          },
+        },
+      },
     });
     expect(builders[1]).toEqual({
       src: 'api/users/[id].ts',
       use: 'my-custom-runtime-package@1.0.0',
-      config: { zeroConfig: true, functions },
+      config: {
+        zeroConfig: true,
+        functions: {
+          'api/users/*.ts': {
+            runtime: 'my-custom-runtime-package@1.0.0',
+          },
+        },
+      },
     });
     expect(builders[2]).toEqual({
       src: 'package.json',
-      use: '@now/next@1.0.0-canary.12',
-      config: { zeroConfig: true, functions },
+      use: '@now/next',
+      config: {
+        zeroConfig: true,
+      },
     });
-  }
+  });
 
-  {
-    // invalid function key
+  it('invalid function key', async () => {
     const functions = { ['a'.repeat(1000)]: { memory: 128 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -500,10 +526,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders).toBe(null);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_glob');
-  }
+  });
 
-  {
-    // invalid function maxDuration
+  it('invalid function maxDuration', async () => {
     const functions = { 'pages/index.ts': { maxDuration: -1 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -513,10 +538,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders).toBe(null);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_duration');
-  }
+  });
 
-  {
-    // invalid function memory
+  it('invalid function memory', async () => {
     const functions = { 'pages/index.ts': { memory: 200 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -526,10 +550,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders).toBe(null);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_memory');
-  }
+  });
 
-  {
-    // missing runtime version
+  it('missing runtime version', async () => {
     const functions = { 'pages/index.ts': { runtime: 'haha' } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -539,10 +562,9 @@ it('Test `detectBuilders`', async () => {
     expect(builders).toBe(null);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_runtime');
-  }
+  });
 
-  {
-    // use a custom runtime
+  it('use a custom runtime', async () => {
     const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -552,7 +574,54 @@ it('Test `detectBuilders`', async () => {
     expect(errors).toBe(null);
     expect(builders.length).toBe(1);
     expect(builders[0].use).toBe('now-php@0.0.5');
-  }
+  });
+
+  it('use a custom runtime but without a source', async () => {
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const files = ['api/team.js'];
+    const { errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_source');
+  });
+
+  it('do not allow empty functions', async () => {
+    const functions = { 'api/user.php': {} };
+    const files = ['api/user.php'];
+    const { errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function');
+  });
+
+  it('do not allow null functions', async () => {
+    const functions = { 'api/user.php': null };
+    const files = ['api/user.php'];
+    const { errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function');
+  });
+
+  it('Do not allow functions that are not used by @now/next', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = { 'test.js': { memory: 1024 } };
+    const files = ['pages/index.js', 'test.js'];
+
+    const { errors } = await detectBuilders(files, pkg, { functions });
+
+    expect(errors).toBeDefined();
+    expect(errors[0].code).toBe('unused_function');
+  });
 });
 
 it('Test `detectRoutes`', async () => {

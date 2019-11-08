@@ -214,7 +214,7 @@ test('login', async t => {
 test('deploy using --local-config flag v2', async t => {
   const target = fixture('local-config-v2');
 
-  const { stdout, stderr, code } = await execa(
+  const { code, stderr, stdout } = await execa(
     binaryPath,
     ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
     {
@@ -223,11 +223,7 @@ test('deploy using --local-config flag v2', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(code);
-
-  t.is(code, 0);
+  t.is(code, 0, formatOutput({ stderr, stdout }));
 
   const { host } = new URL(stdout);
 
@@ -770,7 +766,7 @@ test('remove the wildcard alias', async t => {
   t.true(stdout.startsWith(goal));
 });
 
-test('ensure type and instance count in list is right', async t => {
+test('ensure username in list is right', async t => {
   const { stdout, stderr, code } = await execa(
     binaryPath,
     ['ls', ...defaultArgs],
@@ -789,9 +785,8 @@ test('ensure type and instance count in list is right', async t => {
   const line = stdout.split('\n').find(line => line.includes('.now.sh'));
   const columns = line.split(/\s+/);
 
-  // Ensure those columns only contain a dash
-  t.is(columns[3], '-');
-  t.is(columns[4], '-');
+  // Ensure username column have username
+  t.truthy(columns.pop().includes('now-builders-ci-bot'));
 });
 
 test('set platform version using `--platform-version` to `2`', async t => {
@@ -1957,9 +1952,9 @@ test('deploy a Lambda with 128MB of memory', async t => {
   t.is(response.status, 200, url);
 
   // It won't be exactly 128MB,
-  // so we just compare if it is lower than 200MB
+  // so we just compare if it is lower than 450MB
   const { memory } = await response.json();
-  t.truthy(memory < 2e8, `Lambda has ${memory} bytes of memory`);
+  t.truthy(memory < 4.5e8, `Lambda has ${memory} bytes of memory`);
 });
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
@@ -1996,7 +1991,11 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async t 
   const output = await execute([directory]);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /maxDuration should be <= 10/gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /maxDuration must be between 1 second and 10 seconds/gm,
+    formatOutput(output)
+  );
 });
 
 test('deploy a Lambda with a specific runtime', async t => {

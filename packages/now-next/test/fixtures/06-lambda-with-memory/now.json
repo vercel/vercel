@@ -1,0 +1,22 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@now/next",
+      "config": {
+        "functions": {
+          "src/pages/api/memory.js": {
+            "memory": 128
+          }
+        }
+      }
+    }
+  ],
+  "propes": [
+    {
+      "path": "/api/memory",
+      "status": 200,
+      "mustContain": "true"
+    }
+  ]
+}

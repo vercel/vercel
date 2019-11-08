@@ -300,8 +300,8 @@ test('convertTrailingSlash enabled', () => {
   const actual = convertTrailingSlash(true);
   const expected = [
     {
-      src: '^(.*[^\\/])$',
-      headers: { Location: '$1/' },
+      src: '^/(.*[^\\/])$',
+      headers: { Location: '/$1/' },
       status: 307,
     },
   ];
@@ -318,8 +318,8 @@ test('convertTrailingSlash disabled', () => {
   const actual = convertTrailingSlash(false);
   const expected = [
     {
-      src: '^(.*)\\/$',
-      headers: { Location: '$1' },
+      src: '^/(.*)\\/$',
+      headers: { Location: '/$1' },
       status: 307,
     },
   ];

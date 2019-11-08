@@ -7,6 +7,7 @@ import {
   FileFsRef,
   Lambda,
   PackageJson,
+  BuilderFunctions,
 } from '@now/build-utils';
 import { NowRedirect, NowRewrite, NowHeader, Route } from '@now/routing-utils';
 import { Output } from '../output';
@@ -45,6 +46,7 @@ export interface NowConfig {
   redirects?: NowRedirect[];
   headers?: NowHeader[];
   trailingSlash?: boolean;
+  functions?: BuilderFunctions;
 }
 
 export interface HttpHandler {
