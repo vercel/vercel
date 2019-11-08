@@ -433,31 +433,22 @@ CMD ["node", "index.js"]`,
       }),
     },
     'lambda-with-node-runtime': {
-      'api/test.js': `
-        module.exports = async (req, res) => {
-          res.end('done');
-        };
-      `,
+      'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
       'now.json': JSON.stringify({
         functions: {
-          'api/**/*.js': {
-            memory: 128,
-            runtime: '@now/node@1.0.0-canary.10',
+          'api/**/*.php': {
+            runtime: 'now-php@0.0.6',
           },
         },
       }),
     },
     'lambda-with-invalid-runtime': {
-      'api/test.js': `
-        module.exports = async (req, res) => {
-          res.end('done');
-        };
-      `,
+      'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
       'now.json': JSON.stringify({
         functions: {
-          'api/**/*.js': {
+          'api/**/*.php': {
             memory: 128,
-            runtime: '@now/node@canary',
+            runtime: 'now-php@canary',
           },
         },
       }),
