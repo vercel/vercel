@@ -224,6 +224,19 @@ export async function executeBuild(
           ? buildResultOrOutputs.distPath
           : undefined,
     };
+  } else if (builder.version === 3) {
+    const { output, ...rest } = buildResultOrOutputs;
+
+    if ((output as BuilderOutput).type !== 'Lambda') {
+      throw new Error(`The result of "builder.build" must be a Lambda'`);
+    }
+
+    result = {
+      ...rest,
+      output: {
+        [entrypoint]: output,
+      },
+    } as BuildResult;
   } else {
     result = buildResultOrOutputs as BuildResult;
   }
