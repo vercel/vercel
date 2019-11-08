@@ -41,7 +41,7 @@ export analyze(options: AnalyzeOptions) {
 
 ### `build`
 
-A **required** exported function that retunes a [Serverless Function](#serverless-function).
+A **required** exported function that returns a [Serverless Function](#serverless-function).
 
 What's a Serverless Function? Read about [Serverless Function concepts](https://zeit.co/docs/v2/deployments/concepts/lambdas) to learn more.
 
