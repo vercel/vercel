@@ -240,7 +240,7 @@ export const build = async ({
 
     return {
       output: {},
-      routes: getRoutes(
+      routes: await getRoutes(
         entryPath,
         entryDirectory,
         pathsInside,

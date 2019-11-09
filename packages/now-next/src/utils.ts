@@ -169,13 +169,13 @@ function normalizePage(page: string): string {
   return page;
 }
 
-function getRoutes(
+async function getRoutes(
   entryPath: string,
   entryDirectory: string,
   pathsInside: string[],
   files: Files,
   url: string
-): Route[] {
+): Promise<Route[]> {
   let pagesDir = '';
   const filesInside: Files = {};
   const prefix = entryDirectory === `.` ? `/` : `/${entryDirectory}/`;
@@ -255,17 +255,18 @@ function getRoutes(
   }
 
   routes.push(
-    ...getDynamicRoutes(entryPath, entryDirectory, dynamicPages).map(
-      (route: { src: string; dest: string }) => {
-        // convert to make entire RegExp match as one group
-        route.src = route.src
-          .replace('^', `^${prefix}(`)
-          .replace('(\\/', '(')
-          .replace('$', ')$');
-        route.dest = `${url}/$1`;
-        return route;
-      }
-    )
+    ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
+      arr =>
+        arr.map((route: { src: string; dest: string }) => {
+          // convert to make entire RegExp match as one group
+          route.src = route.src
+            .replace('^', `^${prefix}(`)
+            .replace('(\\/', '(')
+            .replace('$', ')$');
+          route.dest = `${url}/$1`;
+          return route;
+        })
+    ))
   );
 
   // Add public folder routes
