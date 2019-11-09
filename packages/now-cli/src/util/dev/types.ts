@@ -100,7 +100,7 @@ export interface BuilderConfigAttr {
 }
 
 export interface Builder {
-  version?: 2 | 3;
+  version?: 1 | 2 | 3;
   config?: BuilderConfigAttr;
   build(
     params: BuilderParams
