@@ -214,7 +214,7 @@ export async function executeBuild(
   }
 
   // Sort out build result to builder v2 shape
-  if (builder.version === undefined) {
+  if (!builder.version || builder.version === 1) {
     // `BuilderOutputs` map was returned (Now Builder v1 behavior)
     result = {
       output: buildResultOrOutputs as BuilderOutputs,
@@ -225,20 +225,24 @@ export async function executeBuild(
           ? buildResultOrOutputs.distPath
           : undefined,
     };
+  } else if (builder.version === 2) {
+    result = buildResultOrOutputs as BuildResult;
   } else if (builder.version === 3) {
     const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
-      throw new Error(`The result of "builder.build" must be a Lambda'`);
+      throw new Error('The result of "builder.build()" must be a `Lambda`');
     }
 
     if (output.maxDuration) {
-      throw new Error('The result of "builder.build" cannot contain `memory`');
+      throw new Error(
+        'The result of "builder.build()" must not contain `memory`'
+      );
     }
 
     if (output.memory) {
       throw new Error(
-        'The result of "builder.build" cannot contain `maxDuration`'
+        'The result of "builder.build()" must not contain `maxDuration`'
       );
     }
 
