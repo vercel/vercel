@@ -30,14 +30,7 @@ import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
 import { getBundledBuilders } from './get-bundled-builders';
 
-interface NodeRequire {
-  (id: string): any;
-  cache: {
-    [name: string]: any;
-  };
-}
-
-declare const __non_webpack_require__: NodeRequire;
+declare const __non_webpack_require__: typeof require;
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
