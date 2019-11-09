@@ -7,10 +7,11 @@ const {
   shouldServe,
   createLambda,
   getWritableDirectory,
-  getLambdaOptionsFromFunction,
 } = require('@now/build-utils');
 
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
+
+exports.version = 3;
 
 exports.build = async ({ workPath, files, entrypoint, meta, config }) => {
   console.log('downloading files...');
@@ -30,11 +31,6 @@ exports.build = async ({ workPath, files, entrypoint, meta, config }) => {
     path.join(outDir, entrypoint)
   );
 
-  const lambdaOptions = await getLambdaOptionsFromFunction({
-    sourceFile: entrypoint,
-    config,
-  });
-
   const lambda = await createLambda({
     files: await glob('**', outDir),
     handler: 'handler',
@@ -42,12 +38,9 @@ exports.build = async ({ workPath, files, entrypoint, meta, config }) => {
     environment: {
       SCRIPT_FILENAME: entrypoint,
     },
-    ...lambdaOptions,
   });
 
-  return {
-    [entrypoint]: lambda,
-  };
+  return { output: lambda };
 };
 
 exports.shouldServe = shouldServe;

@@ -1,7 +1,7 @@
 import path from 'path';
 import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
-import { fetch, API_DEPLOYMENTS } from '../src/utils';
+import { fetch, getApiDeploymentsUrl } from '../src/utils';
 import { Deployment } from './types';
 import { createDeployment } from '../src/index';
 
@@ -16,7 +16,7 @@ describe('create v2 deployment', () => {
   afterEach(async () => {
     if (deployment) {
       const response = await fetch(
-        `${API_DEPLOYMENTS}/${deployment.id}`,
+        `${getApiDeploymentsUrl()}/${deployment.id}`,
         token,
         {
           method: 'DELETE',
@@ -78,6 +78,28 @@ describe('create v2 deployment', () => {
         break;
       }
     }
+  });
+
+  it('will create a v2 deployment with correct file permissions', async () => {
+    for await (const event of createDeployment(
+      path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
+      {
+        token,
+        name: 'now-client-tests-v2',
+      }
+    )) {
+      if (event.type === 'ready') {
+        deployment = event.payload;
+        break;
+      }
+    }
+
+    const url = `https://${deployment.url}/api/index.js`;
+    console.log('testing url ' + url);
+    const response = await fetch_(url);
+    const text = await response.text();
+    expect(deployment.readyState).toEqual('READY');
+    expect(text).toContain('executed bash script');
   });
 
   it('will create a v2 deployment and ignore files specified in .nowignore', async () => {
