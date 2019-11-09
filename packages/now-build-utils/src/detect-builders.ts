@@ -234,6 +234,8 @@ async function checkUnusedFunctionsOnFrontendBuilder(
 }
 
 function validateFunctions(files: string[], { functions = {} }: Options) {
+  const apiBuilders = getApiBuilders();
+
   for (const [path, func] of Object.entries(functions)) {
     if (path.length > 256) {
       return {
@@ -293,7 +295,16 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
         return {
           code: 'invalid_function_runtime',
           message:
-            'Function runtimes must have a valid version, for example `@now/node@1.0.0`.',
+            'Function Runtimes must have a valid version, for example `now-php@1.0.0`.',
+        };
+      }
+
+      if (
+        apiBuilders.some(b => func.runtime && func.runtime.startsWith(b.use))
+      ) {
+        return {
+          code: 'invalid_function_runtime',
+          message: `The function Runtime ${func.runtime} is not a Community Runtime and must not be specified.`,
         };
       }
     }

@@ -1,3 +1,5 @@
+import { BuilderFunctions } from '@now/build-utils';
+
 export interface Route {
   src: string;
   dest: string;
@@ -24,7 +26,8 @@ export interface Deployment {
   version: number;
   regions: string[];
   routes: Route[];
-  builds: Build[];
+  builds?: Build[];
+  functions?: BuilderFunctions;
   plan: string;
   public: boolean;
   ownerId: string;
@@ -93,6 +96,7 @@ export interface DeploymentOptions {
   regions?: string[];
   routes?: Route[];
   builds?: Build[];
+  functions?: BuilderFunctions;
   env?: {
     [key: string]: string;
   };

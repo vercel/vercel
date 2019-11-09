@@ -28,6 +28,7 @@ import {
   BuildResult,
   BuilderInputs,
   BuilderOutput,
+  BuildResultV3,
   BuilderOutputs,
 } from './types';
 import { normalizeRoutes } from '@now/routing-utils';
@@ -173,7 +174,7 @@ export async function executeBuild(
     },
   };
 
-  let buildResultOrOutputs: BuilderOutputs | BuildResult;
+  let buildResultOrOutputs: BuilderOutputs | BuildResult | BuildResultV3;
   if (buildProcess) {
     buildProcess.send({
       type: 'build',
@@ -224,6 +225,43 @@ export async function executeBuild(
           ? buildResultOrOutputs.distPath
           : undefined,
     };
+  } else if (builder.version === 3) {
+    const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
+
+    if (!output || (output as BuilderOutput).type !== 'Lambda') {
+      throw new Error(`The result of "builder.build" must be a Lambda'`);
+    }
+
+    if (output.maxDuration) {
+      throw new Error('The result of "builder.build" cannot contain `memory`');
+    }
+
+    if (output.memory) {
+      throw new Error(
+        'The result of "builder.build" cannot contain `maxDuration`'
+      );
+    }
+
+    for (const [src, func] of Object.entries(config.functions || {})) {
+      if (src === entrypoint || minimatch(entrypoint, src)) {
+        if (func.maxDuration) {
+          output.maxDuration = func.maxDuration;
+        }
+
+        if (func.memory) {
+          output.memory = func.memory;
+        }
+
+        break;
+      }
+    }
+
+    result = {
+      ...rest,
+      output: {
+        [entrypoint]: output,
+      },
+    } as BuildResult;
   } else {
     result = buildResultOrOutputs as BuildResult;
   }
@@ -325,7 +363,7 @@ export async function executeBuild(
           Code: { ZipFile: asset.zipBuffer },
           Handler: asset.handler,
           Runtime: asset.runtime,
-          MemorySize: 3008,
+          MemorySize: asset.memory || 3008,
           Environment: {
             Variables: {
               ...nowConfig.env,
