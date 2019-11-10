@@ -56,9 +56,12 @@ import {
   validateEntrypoint,
   getSourceFilePathFromPage,
   getRoutesManifest,
-  Rewrite,
-  Redirect,
 } from './utils';
+
+import {
+  convertRedirects,
+  convertRewrites
+} from '@now/routing-utils/dist/superstatic'
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -853,40 +856,10 @@ export const build = async ({
   const redirects: Route[] = []
 
   if (routesManifest) {
-    const addKeysQuery = (keys: string[], dest: string) => {
-      const curUrl = url.parse(dest, true)
-      const keysQuery: { [name: string]: any } = {}
-
-      for (let i = 0; i < keys.length; i++) {
-        keysQuery[`${i+1}`] = keys[i]
-      }
-
-      return url.format({
-        ...curUrl,
-        query: {
-          ...curUrl.query,
-          ...keysQuery
-        }
-      })
-    }
-
     switch(routesManifest.version) {
       case 1: {
-        for (const redirect of routesManifest.redirects) {
-          redirects.push({
-            src: redirect.regex.replace('^', `^${dynamicPrefix}`),
-            status: redirect.statusCode,
-            headers: {
-              Location: addKeysQuery(redirect.regexKeys, redirect.destination)
-            }
-          })
-        }
-        for (const rewrite of routesManifest.rewrites) {
-          rewrites.push({
-            src: rewrite.regex.replace('^', `^${dynamicPrefix}`),
-            dest: addKeysQuery(rewrite.regexKeys, rewrite.destination)
-          })
-        }
+        redirects.push(...convertRedirects(routesManifest.redirects))
+        rewrites.push(...convertRewrites(routesManifest.rewrites))
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
@@ -905,6 +878,8 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
+      ...redirects,
+      ...rewrites,
       // Static exported pages (.html rewrites)
       ...exportedPageRoutes,
       // Before we handle static files we need to set proper caching headers
@@ -928,8 +903,6 @@ export const build = async ({
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
-      ...redirects,
-      ...rewrites,
       // Custom Next.js 404 page (TODO: do we want to remove this?)
       ...(isLegacy
         ? []

@@ -7,9 +7,9 @@
       "fetchOptions": {
         "redirect": "manual"
       },
-      "status": "307",
+      "status": 301,
       "responseHeaders": {
-        "Location": "/hello"
+        "location": "/redir2/"
       }
     },
     {
@@ -17,9 +17,9 @@
       "fetchOptions": {
         "redirect": "manual"
       },
-      "status": "307",
+      "status": 307,
       "responseHeaders": {
-        "Location": "/hello"
+        "location": "/hello/"
       }
     },
     {
@@ -27,10 +27,10 @@
       "fetchOptions": {
         "redirect": "manual"
       },
-      "responseHeaders": {
-        "Location": "/hello"
+      "responseHeadersCo": {
+        "location": "/hello/"
       },
-      "status": "307"
+      "status": 307
     },
     {
       "path": "/rewrite1",
@@ -41,11 +41,11 @@
       "mustContain": "hello world!"
     },
     {
-      "path": "/rewrite-2/THIS_SHOULD_BE_GONE/another",
+      "path": "/rewrite/THIS_SHOULD_BE_GONE/another",
       "mustContain": "hello"
     },
     {
-      "path": "/rewrite-2/THIS_SHOULD_BE_GONE/another",
+      "path": "/rewrite/THIS_SHOULD_BE_GONE/another",
       "mustContain": "another"
     }
   ]
