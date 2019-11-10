@@ -852,7 +852,6 @@ export const build = async ({
 
   if (routesManifest) {
     switch(routesManifest.version) {
-      case 0:
       case 1: {
         for (const redirect of routesManifest.redirects) {
           redirects.push({
