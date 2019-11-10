@@ -169,13 +169,13 @@ function normalizePage(page: string): string {
   return page;
 }
 
-function getRoutes(
+async function getRoutes(
   entryPath: string,
   entryDirectory: string,
   pathsInside: string[],
   files: Files,
   url: string
-): Route[] {
+): Promise<Route[]> {
   let pagesDir = '';
   const filesInside: Files = {};
   const prefix = entryDirectory === `.` ? `/` : `/${entryDirectory}/`;
@@ -255,17 +255,18 @@ function getRoutes(
   }
 
   routes.push(
-    ...getDynamicRoutes(entryPath, entryDirectory, dynamicPages).map(
-      (route: { src: string; dest: string }) => {
-        // convert to make entire RegExp match as one group
-        route.src = route.src
-          .replace('^', `^${prefix}(`)
-          .replace('(\\/', '(')
-          .replace('$', ')$');
-        route.dest = `${url}/$1`;
-        return route;
-      }
-    )
+    ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
+      arr =>
+        arr.map((route: { src: string; dest: string }) => {
+          // convert to make entire RegExp match as one group
+          route.src = route.src
+            .replace('^', `^${prefix}(`)
+            .replace('(\\/', '(')
+            .replace('$', ')$');
+          route.dest = `${url}/$1`;
+          return route;
+        })
+    ))
   );
 
   // Add public folder routes
@@ -290,16 +291,56 @@ function getRoutes(
   return routes;
 }
 
-export function getDynamicRoutes(
+export async function getDynamicRoutes(
   entryPath: string,
   entryDirectory: string,
   dynamicPages: string[],
   isDev?: boolean
-): { src: string; dest: string }[] {
+): Promise<{ src: string; dest: string }[]> {
   if (!dynamicPages.length) {
     return [];
   }
 
+  const pathRoutesManifest = path.join(
+    entryPath,
+    '.next',
+    'routes-manifest.json'
+  );
+  const hasRoutesManifest = await fs
+    .access(pathRoutesManifest)
+    .then(() => true)
+    .catch(() => false);
+
+  if (hasRoutesManifest) {
+    const routesManifest = await fs.readJSON(pathRoutesManifest);
+
+    switch (routesManifest.version) {
+      case 0:
+      case 1: {
+        return routesManifest.dynamicRoutes.map(
+          ({ page, regex }: { page: string; regex: string }) => {
+            return {
+              src: regex,
+              dest: !isDev ? path.join('/', entryDirectory, page) : page,
+            };
+          }
+        );
+      }
+      default: {
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
+      }
+    }
+  }
+
+  // FALLBACK:
+  // When `routes-manifest.json` does not exist (old Next.js versions), we'll try to
+  // require the methods we need from Next.js' internals.
+  //
+  // TODO: implement this branch behind a Next.js version check so we don't "fallback"
+  // to this behavior blindly.
   let getRouteRegex:
     | ((pageName: string) => { re: RegExp })
     | undefined = undefined;
