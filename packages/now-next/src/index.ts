@@ -1,4 +1,5 @@
 import { ChildProcess, fork } from 'child_process';
+import url from 'url'
 import {
   pathExists,
   readFile,
@@ -55,7 +56,8 @@ import {
   validateEntrypoint,
   getSourceFilePathFromPage,
   getRoutesManifest,
-  RoutesManifest,
+  Rewrite,
+  Redirect,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -851,21 +853,38 @@ export const build = async ({
   const redirects: Route[] = []
 
   if (routesManifest) {
+    const addKeysQuery = (keys: string[], dest: string) => {
+      const curUrl = url.parse(dest, true)
+      const keysQuery: { [name: string]: any } = {}
+
+      for (let i = 0; i < keys.length; i++) {
+        keysQuery[`${i+1}`] = keys[i]
+      }
+
+      return url.format({
+        ...curUrl,
+        query: {
+          ...curUrl.query,
+          ...keysQuery
+        }
+      })
+    }
+
     switch(routesManifest.version) {
       case 1: {
         for (const redirect of routesManifest.redirects) {
           redirects.push({
             src: redirect.regex.replace('^', `^${dynamicPrefix}`),
+            status: redirect.statusCode,
             headers: {
-              Location: redirect.destination
-            },
-            status: redirect.statusCode
+              Location: addKeysQuery(redirect.regexKeys, redirect.destination)
+            }
           })
         }
         for (const rewrite of routesManifest.rewrites) {
           rewrites.push({
             src: rewrite.regex.replace('^', `^${dynamicPrefix}`),
-            dest: rewrite.destination
+            dest: addKeysQuery(rewrite.regexKeys, rewrite.destination)
           })
         }
       }

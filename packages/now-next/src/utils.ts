@@ -292,19 +292,23 @@ async function getRoutes(
   return routes;
 }
 
-type Rewrite = {
-  regex: string,
+export type Rewrite = {
   source: string,
   destination: string,
 }
 
-type Redirect = Rewrite & {
+export type Redirect = Rewrite & {
   statusCode?: number
 }
 
+type RoutesManifestRegex = {
+  regex: string,
+  regexKeys: string[]
+}
+
 export type RoutesManifest = {
-  redirects: Redirect[],
-  rewrites: Rewrite[],
+  redirects: (Redirect & RoutesManifestRegex)[],
+  rewrites: (Rewrite & RoutesManifestRegex)[],
   dynamicRoutes: {
     page: string,
     regex: string,
