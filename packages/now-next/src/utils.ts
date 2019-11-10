@@ -315,7 +315,8 @@ export async function getDynamicRoutes(
     const routesManifest = await fs.readJSON(pathRoutesManifest);
 
     switch (routesManifest.version) {
-      case 0: {
+      case 0:
+      case 1: {
         return routesManifest.dynamicRoutes.map(
           ({ page, regex }: { page: string; regex: string }) => {
             return {
