@@ -1,6 +1,7 @@
 import zlib from 'zlib';
 import path from 'path';
 import fs from 'fs-extra';
+import semver from 'semver';
 import { ZipFile } from 'yazl';
 import crc32 from 'buffer-crc32';
 import { Sema } from 'async-sema';
@@ -291,15 +292,38 @@ async function getRoutes(
   return routes;
 }
 
-export async function getDynamicRoutes(
+export type Rewrite = {
+  source: string,
+  destination: string,
+}
+
+export type Redirect = Rewrite & {
+  statusCode?: number
+}
+
+type RoutesManifestRegex = {
+  regex: string,
+  regexKeys: string[]
+}
+
+export type RoutesManifest = {
+  redirects: (Redirect & RoutesManifestRegex)[],
+  rewrites: (Rewrite & RoutesManifestRegex)[],
+  dynamicRoutes: {
+    page: string,
+    regex: string,
+  }[],
+  version: number
+}
+
+export async function getRoutesManifest(
   entryPath: string,
-  entryDirectory: string,
-  dynamicPages: string[],
-  isDev?: boolean
-): Promise<{ src: string; dest: string }[]> {
-  if (!dynamicPages.length) {
-    return [];
-  }
+  nextVersion?: string,
+): Promise< RoutesManifest | undefined> {
+  const shouldHaveManifest = (
+    nextVersion && semver.gte(nextVersion, '9.1.4-canary.0')
+  )
+  if (!shouldHaveManifest) return
 
   const pathRoutesManifest = path.join(
     entryPath,
@@ -311,11 +335,30 @@ export async function getDynamicRoutes(
     .then(() => true)
     .catch(() => false);
 
-  if (hasRoutesManifest) {
-    const routesManifest = await fs.readJSON(pathRoutesManifest);
+  if (shouldHaveManifest && !hasRoutesManifest) {
+    throw new Error(
+      `A routes-manifest.json couldn't be found. This could be due to a failure during the build`
+    )
+  }
 
+  const routesManifest: RoutesManifest = require(pathRoutesManifest)
+
+  return routesManifest
+}
+
+export async function getDynamicRoutes(
+  entryPath: string,
+  entryDirectory: string,
+  dynamicPages: string[],
+  isDev?: boolean,
+  routesManifest?: RoutesManifest
+): Promise<{ src: string; dest: string }[]> {
+  if (!dynamicPages.length) {
+    return [];
+  }
+
+  if (routesManifest) {
     switch (routesManifest.version) {
-      case 0:
       case 1: {
         return routesManifest.dynamicRoutes.map(
           ({ page, regex }: { page: string; regex: string }) => {
@@ -327,6 +370,7 @@ export async function getDynamicRoutes(
         );
       }
       default: {
+        // update MIN_ROUTES_MANIFEST_VERSION
         throw new Error(
           'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
             'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
@@ -338,9 +382,6 @@ export async function getDynamicRoutes(
   // FALLBACK:
   // When `routes-manifest.json` does not exist (old Next.js versions), we'll try to
   // require the methods we need from Next.js' internals.
-  //
-  // TODO: implement this branch behind a Next.js version check so we don't "fallback"
-  // to this behavior blindly.
   let getRouteRegex:
     | ((pageName: string) => { re: RegExp })
     | undefined = undefined;

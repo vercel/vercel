@@ -1,4 +1,5 @@
 import { ChildProcess, fork } from 'child_process';
+import url from 'url'
 import {
   pathExists,
   readFile,
@@ -54,7 +55,13 @@ import {
   syncEnvVars,
   validateEntrypoint,
   getSourceFilePathFromPage,
+  getRoutesManifest,
 } from './utils';
+
+import {
+  convertRedirects,
+  convertRewrites
+} from '@now/routing-utils/dist/superstatic'
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -825,10 +832,14 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion)
+
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
     entryDirectory,
-    dynamicPages
+    dynamicPages,
+    false,
+    routesManifest
   ).then(arr =>
     arr.map(route => {
       // make sure .html is added to dest for now until
@@ -841,6 +852,26 @@ export const build = async ({
     })
   );
 
+  const rewrites: Route[] = []
+  const redirects: Route[] = []
+
+  if (routesManifest) {
+    switch(routesManifest.version) {
+      case 1: {
+        redirects.push(...convertRedirects(routesManifest.redirects))
+        rewrites.push(...convertRewrites(routesManifest.rewrites))
+        break
+      }
+      default: {
+        // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
+      }
+    }
+  }
+
   return {
     output: {
       ...publicDirectoryFiles,
@@ -852,6 +883,8 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
+      ...redirects,
+      ...rewrites,
       // Static exported pages (.html rewrites)
       ...exportedPageRoutes,
       // Before we handle static files we need to set proper caching headers
