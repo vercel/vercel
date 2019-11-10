@@ -293,15 +293,16 @@ async function getRoutes(
 }
 
 type Rewrite = {
+  regex: string,
   source: string,
-  destination: string
+  destination: string,
 }
 
 type Redirect = Rewrite & {
   statusCode?: number
 }
 
-type RoutesManifest = {
+export type RoutesManifest = {
   redirects: Redirect[],
   rewrites: Rewrite[],
   dynamicRoutes: {
@@ -310,6 +311,8 @@ type RoutesManifest = {
   }[],
   version: number
 }
+
+const MIN_ROUTES_MANIFEST_VERSION = 1
 
 export async function getRoutesManifest(
   entryPath: string,
@@ -336,7 +339,16 @@ export async function getRoutesManifest(
     )
   }
 
-  return require(pathRoutesManifest)
+  const routesManifest: RoutesManifest = require(pathRoutesManifest)
+
+  if (routesManifest.version > MIN_ROUTES_MANIFEST_VERSION) {
+    throw new Error(
+      'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+        'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+    );
+  }
+
+  return routesManifest
 }
 
 export async function getDynamicRoutes(
@@ -364,10 +376,7 @@ export async function getDynamicRoutes(
         );
       }
       default: {
-        throw new Error(
-          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-        );
+        // update MIN_ROUTES_MANIFEST_VERSION
       }
     }
   }

@@ -55,6 +55,7 @@ import {
   validateEntrypoint,
   getSourceFilePathFromPage,
   getRoutesManifest,
+  RoutesManifest,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -846,6 +847,35 @@ export const build = async ({
     })
   );
 
+  const rewrites: Route[] = []
+  const redirects: Route[] = []
+
+  if (routesManifest) {
+    switch(routesManifest.version) {
+      case 0:
+      case 1: {
+        for (const redirect of routesManifest.redirects) {
+          redirects.push({
+            src: redirect.regex.replace('^', `^${dynamicPrefix}`),
+            headers: {
+              Location: redirect.destination
+            },
+            status: redirect.statusCode
+          })
+        }
+        for (const rewrite of routesManifest.rewrites) {
+          rewrites.push({
+            src: rewrite.regex.replace('^', `^${dynamicPrefix}`),
+            dest: rewrite.destination
+          })
+        }
+      }
+      default: {
+        // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
+      }
+    }
+  }
+
   return {
     output: {
       ...publicDirectoryFiles,
@@ -880,6 +910,8 @@ export const build = async ({
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
+      ...redirects,
+      ...rewrites,
       // Custom Next.js 404 page (TODO: do we want to remove this?)
       ...(isLegacy
         ? []
