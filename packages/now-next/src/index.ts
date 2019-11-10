@@ -860,9 +860,14 @@ export const build = async ({
       case 1: {
         redirects.push(...convertRedirects(routesManifest.redirects))
         rewrites.push(...convertRewrites(routesManifest.rewrites))
+        break
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
       }
     }
   }

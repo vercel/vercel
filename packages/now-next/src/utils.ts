@@ -316,8 +316,6 @@ export type RoutesManifest = {
   version: number
 }
 
-const MIN_ROUTES_MANIFEST_VERSION = 1
-
 export async function getRoutesManifest(
   entryPath: string,
   nextVersion?: string,
@@ -344,13 +342,6 @@ export async function getRoutesManifest(
   }
 
   const routesManifest: RoutesManifest = require(pathRoutesManifest)
-
-  if (routesManifest.version > MIN_ROUTES_MANIFEST_VERSION) {
-    throw new Error(
-      'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-        'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-    );
-  }
 
   return routesManifest
 }
@@ -380,10 +371,17 @@ export async function getDynamicRoutes(
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
       }
     }
   }
 
+  // FALLBACK:
+  // When `routes-manifest.json` does not exist (old Next.js versions), we'll try to
+  // require the methods we need from Next.js' internals.
   let getRouteRegex:
     | ((pageName: string) => { re: RegExp })
     | undefined = undefined;
