@@ -88,15 +88,6 @@ interface FSEvent {
   path: string;
 }
 
-interface NodeRequire {
-  (id: string): any;
-  cache: {
-    [name: string]: any;
-  };
-}
-
-declare const __non_webpack_require__: NodeRequire;
-
 function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && buildA.use.startsWith('@now/static-build')) {
     return 1;
@@ -415,25 +406,6 @@ export default class DevServer {
     if (updatedBuilders.length === 0) {
       this.output.debug('No builders were updated');
       return;
-    }
-
-    const _require =
-      typeof __non_webpack_require__ === 'function'
-        ? __non_webpack_require__
-        : require;
-
-    // The `require()` cache for the builder's assets must be purged
-    const builderDir = await builderDirPromise;
-    const updatedBuilderPaths = updatedBuilders.map(b =>
-      join(builderDir, 'node_modules', b)
-    );
-    for (const id of Object.keys(_require.cache)) {
-      for (const path of updatedBuilderPaths) {
-        if (id.startsWith(path)) {
-          this.output.debug(`Purging require cache for "${id}"`);
-          delete _require.cache[id];
-        }
-      }
     }
 
     // Delete any build matches that have the old builder required already
