@@ -54,6 +54,7 @@ import {
   syncEnvVars,
   validateEntrypoint,
   getSourceFilePathFromPage,
+  getRoutesManifest,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -825,10 +826,14 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion)
+
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
     entryDirectory,
-    dynamicPages
+    dynamicPages,
+    false,
+    routesManifest
   ).then(arr =>
     arr.map(route => {
       // make sure .html is added to dest for now until
