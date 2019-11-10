@@ -89,7 +89,11 @@ async function testDeployment (
       continue;
     }
     const probeUrl = `https://${deploymentUrl}${probe.path}`;
-    const fetchOpts = { method: probe.method, headers: { ...probe.headers } };
+    const fetchOpts = {
+      ...probe.fetchOptions,
+      method: probe.method,
+      headers: { ...probe.headers },
+    };
     if (probe.body) {
       fetchOpts.headers['content-type'] = 'application/json';
       fetchOpts.body = JSON.stringify(probe.body);

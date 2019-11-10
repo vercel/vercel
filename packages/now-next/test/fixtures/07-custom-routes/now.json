@@ -1,5 +1,52 @@
 {
   "version": 2,
   "builds": [{ "src": "package.json", "use": "@now/next" }],
-  "probes": []
+  "probes": [
+    {
+      "path": "/redir1",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": "307",
+      "responseHeaders": {
+        "Location": "/hello"
+      }
+    },
+    {
+      "path": "/redir2",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": "307",
+      "responseHeaders": {
+        "Location": "/hello"
+      }
+    },
+    {
+      "path": "/redir/hello",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "Location": "/hello"
+      },
+      "status": "307"
+    },
+    {
+      "path": "/rewrite1",
+      "mustContain": "hello world!"
+    },
+    {
+      "path": "/rewrite2",
+      "mustContain": "hello world!"
+    },
+    {
+      "path": "/rewrite-2/THIS_SHOULD_BE_GONE/another",
+      "mustContain": "hello"
+    },
+    {
+      "path": "/rewrite-2/THIS_SHOULD_BE_GONE/another",
+      "mustContain": "another"
+    }
+  ]
 }
