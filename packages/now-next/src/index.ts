@@ -236,7 +236,7 @@ export const build = async ({
 
     return {
       output: {},
-      routes: getRoutes(
+      routes: await getRoutes(
         entryPath,
         entryDirectory,
         pathsInside,
@@ -682,19 +682,21 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const dynamicRoutes = getDynamicRoutes(
+  const dynamicRoutes = await getDynamicRoutes(
     entryPath,
     entryDirectory,
     dynamicPages
-  ).map(route => {
-    // make sure .html is added to dest for now until
-    // outputting static files to clean routes is available
-    if (staticPages[`${route.dest}.html`.substr(1)]) {
-      route.dest = `${route.dest}.html`;
-    }
-    route.src = route.src.replace('^', `^${dynamicPrefix}`);
-    return route;
-  });
+  ).then(arr =>
+    arr.map(route => {
+      // make sure .html is added to dest for now until
+      // outputting static files to clean routes is available
+      if (staticPages[`${route.dest}.html`.substr(1)]) {
+        route.dest = `${route.dest}.html`;
+      }
+      route.src = route.src.replace('^', `^${dynamicPrefix}`);
+      return route;
+    })
+  );
 
   return {
     output: {
