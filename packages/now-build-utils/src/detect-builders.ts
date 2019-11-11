@@ -83,6 +83,11 @@ function getApiFunctionBuilder(
     });
   }
 
+  const { includeFiles, excludeFiles } = fn;
+
+  if (includeFiles) Object.assign(config, { includeFiles });
+  if (excludeFiles) Object.assign(config, { excludeFiles });
+
   return use ? { use, src, config } : prevBuilder;
 }
 
@@ -305,6 +310,24 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
         return {
           code: 'invalid_function_runtime',
           message: `The function Runtime ${func.runtime} is not a Community Runtime and must not be specified.`,
+        };
+      }
+    }
+
+    if (func.includeFiles !== undefined) {
+      if (!Array.isArray(func.includeFiles) || !func.includeFiles.every(file => typeof file === 'string')) {
+        return {
+          code: 'invalid_function_property',
+          message: 'The property \`includeFiles\` must be an array of strings.'
+        };
+      }
+    }
+
+    if (func.excludeFiles !== undefined) {
+      if (!Array.isArray(func.excludeFiles) || !func.excludeFiles.every(file => typeof file === 'string')) {
+        return {
+          code: 'invalid_function_property',
+          message: 'The property \`excludeFiles\` must be an array of strings.'
         };
       }
     }
