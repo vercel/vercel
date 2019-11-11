@@ -187,15 +187,15 @@ test.before(async () => {
 test('login', async t => {
   // Delete the current token
   const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput.code, 0, formatOutput(logoutOutput));
+  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
 
   const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
 
   console.log(loginOutput.stderr);
   console.log(loginOutput.stdout);
-  console.log(loginOutput.code);
+  console.log(loginOutput.exitCode);
 
-  t.is(loginOutput.code, 0, formatOutput(loginOutput));
+  t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
   t.regex(
     loginOutput.stdout,
     /You are now logged in\./gm,
@@ -214,7 +214,7 @@ test('login', async t => {
 test('deploy using --local-config flag v2', async t => {
   const target = fixture('local-config-v2');
 
-  const { code, stderr, stdout } = await execa(
+  const { exitCode, stderr, stdout } = await execa(
     binaryPath,
     ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
     {
@@ -223,7 +223,7 @@ test('deploy using --local-config flag v2', async t => {
     }
   );
 
-  t.is(code, 0, formatOutput({ stderr, stdout }));
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
   const { host } = new URL(stdout);
 
@@ -243,7 +243,7 @@ test('deploy using --local-config flag v2', async t => {
 });
 
 test('print the deploy help message', async t => {
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['help', ...defaultArgs],
     {
@@ -253,9 +253,9 @@ test('print the deploy help message', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 2);
+  t.is(exitCode, 2);
   t.true(stderr.includes(deployHelpMessage), `Received:\n${stderr}\n${stdout}`);
   t.false(
     stderr.includes('ExperimentalWarning'),
@@ -264,7 +264,7 @@ test('print the deploy help message', async t => {
 });
 
 test('output the version', async t => {
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['--version', ...defaultArgs],
     {
@@ -274,11 +274,11 @@ test('output the version', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   const version = stdout.trim();
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.truthy(semVer.valid(version));
   t.is(version, pkg.version);
 });
@@ -299,7 +299,7 @@ test('detect update command', async t => {
     const pkg = require('../package.json');
 
     const packResult = await execa('npm', ['pack']);
-    t.is(packResult.code, 0);
+    t.is(packResult.exitCode, 0);
 
     const prefix = os.tmpdir();
     const binPrefix = path.join(prefix, 'bin');
@@ -315,9 +315,9 @@ test('detect update command', async t => {
     const installResult = await execa('npm', ['i', '-g', pkgPath], {
       env: process.env,
     });
-    t.is(installResult.code, 0);
+    t.is(installResult.exitCode, 0);
 
-    const { stdout, stderr, code } = await execa(
+    const { stdout, stderr, exitCode } = await execa(
       path.join(binPrefix, 'now'),
       ['update'],
       {
@@ -326,14 +326,14 @@ test('detect update command', async t => {
     );
 
     console.log(stderr);
-    console.log(code);
+    console.log(exitCode);
     console.log(stdout);
     t.regex(stderr, /npm i -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
   }
 });
 
 test('login with unregistered user', async t => {
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['login', `${session}@${session}.com`, ...defaultArgs],
     {
@@ -343,13 +343,13 @@ test('login with unregistered user', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   const goal = `> Error! Please sign up: https://zeit.co/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.is(last, goal);
 });
 
@@ -359,7 +359,7 @@ test('test invalid json alias rules', async t => {
     cwd: fixturePath,
   });
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /Error parsing/, formatOutput(output));
 });
 
@@ -369,7 +369,7 @@ test('test invalid alias rules', async t => {
     cwd: fixturePath,
   });
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
 });
 
@@ -379,7 +379,7 @@ test('test invalid type for alias rules', async t => {
     cwd: fixturePath,
   });
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
 });
 
@@ -394,7 +394,7 @@ test('ignore files specified in .nowignore', async t => {
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);
-  console.log(targetCall.code);
+  console.log(targetCall.exitCode);
 
   const { host } = new URL(targetCall.stdout);
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
@@ -415,7 +415,7 @@ test('ignore files specified in .nowignore via allowlist', async t => {
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);
-  console.log(targetCall.code);
+  console.log(targetCall.exitCode);
 
   const { host } = new URL(targetCall.stdout);
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
@@ -426,7 +426,7 @@ test('ignore files specified in .nowignore via allowlist', async t => {
 });
 
 test('list the scopes', async t => {
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['teams', 'ls', ...defaultArgs],
     {
@@ -436,9 +436,9 @@ test('list the scopes', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   const include = `✔ ${contextName}     ${email}`;
   t.true(
@@ -448,7 +448,7 @@ test('list the scopes', async t => {
 });
 
 test('list the payment methods', async t => {
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['billing', 'ls', ...defaultArgs],
     {
@@ -458,14 +458,14 @@ test('list the payment methods', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
 test('try to purchase a domain', async t => {
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
     {
@@ -476,9 +476,9 @@ test('try to purchase a domain', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.true(
     stderr.includes(
       `> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`
@@ -487,7 +487,7 @@ test('try to purchase a domain', async t => {
 });
 
 test('try to transfer-in a domain with "--code" option', async t => {
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [
       'domains',
@@ -504,18 +504,18 @@ test('try to transfer-in a domain with "--code" option', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   t.true(
     stderr.includes(
       `> Error! The domain "${session}-test.org" is not transferable.`
     )
   );
-  t.is(code, 1);
+  t.is(exitCode, 1);
 });
 
 test('try to move an invalid domain', async t => {
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [
       'domains',
@@ -531,14 +531,14 @@ test('try to move an invalid domain', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   t.true(stderr.includes(`> Error! Domain not found under `));
-  t.is(code, 1);
+  t.is(exitCode, 1);
 });
 
 test('try to set default without existing payment method', async t => {
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['billing', 'set-default', ...defaultArgs],
     {
@@ -548,14 +548,14 @@ test('try to set default without existing payment method', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.true(stderr.includes('You have no credit cards to choose from'));
 });
 
 test('try to remove a non-existing payment method', async t => {
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
     {
@@ -565,9 +565,9 @@ test('try to remove a non-existing payment method', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.true(
     stderr.includes(
       `You have no credit cards to choose from to delete under ${contextName}`
@@ -580,7 +580,7 @@ test('set platform version using `-V` to invalid number', async t => {
   const goal =
     '> Error! The "--platform-version" option must be either `1` or `2`.';
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '-V', 3],
     {
@@ -590,10 +590,10 @@ test('set platform version using `-V` to invalid number', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 1);
+  t.is(exitCode, 1);
 
   // Ensure the error message shows up
   t.true(stderr.includes(goal));
@@ -604,7 +604,7 @@ test('set platform version using `--platform-version` to invalid number', async 
   const goal =
     '> Error! The "--platform-version" option must be either `1` or `2`.';
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [
       directory,
@@ -622,10 +622,10 @@ test('set platform version using `--platform-version` to invalid number', async 
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 1);
+  t.is(exitCode, 1);
 
   // Ensure the error message shows up
   t.true(stderr.includes(goal));
@@ -634,7 +634,7 @@ test('set platform version using `--platform-version` to invalid number', async 
 test('set platform version using `-V` to `2`', async t => {
   const directory = fixture('builds');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [
       directory,
@@ -653,12 +653,12 @@ test('set platform version using `-V` to `2`', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   const output = `Received:\n"${stderr}"\n"${stdout}"`;
 
   // Ensure the exit code is right
-  t.is(code, 0, output);
+  t.is(exitCode, 0, output);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -676,7 +676,7 @@ test('set platform version using `-V` to `2`', async t => {
 });
 
 test('output logs of a 2.0 deployment', async t => {
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
     {
@@ -686,14 +686,14 @@ test('output logs of a 2.0 deployment', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   t.true(stderr.includes(`Fetched deployment "${context.deployment}"`));
-  t.is(code, 0);
+  t.is(exitCode, 0);
 });
 
 test('output logs of a 2.0 deployment without annotate', async t => {
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
     {
@@ -703,7 +703,7 @@ test('output logs of a 2.0 deployment without annotate', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   t.true(!stderr.includes('[now-builder-debug]'));
   t.true(!stderr.includes('START RequestId'));
@@ -711,7 +711,7 @@ test('output logs of a 2.0 deployment without annotate', async t => {
   t.true(!stderr.includes('REPORT RequestId'));
   t.true(!stderr.includes('Init Duration'));
   t.true(!stderr.includes('XRAY TraceId'));
-  t.is(code, 0);
+  t.is(exitCode, 0);
 });
 
 test('create wildcard alias for deployment', async t => {
@@ -720,7 +720,7 @@ test('create wildcard alias for deployment', async t => {
     alias: `*.${contextName}.now.sh`,
   };
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
     {
@@ -730,11 +730,11 @@ test('create wildcard alias for deployment', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.true(stdout.startsWith(goal));
 
   // Send a test request to the alias
@@ -750,7 +750,7 @@ test('create wildcard alias for deployment', async t => {
 test('remove the wildcard alias', async t => {
   const goal = `> Success! Alias ${context.wildcardAlias} removed`;
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['alias', 'rm', context.wildcardAlias, '--yes', ...defaultArgs],
     {
@@ -760,14 +760,14 @@ test('remove the wildcard alias', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.true(stdout.startsWith(goal));
 });
 
 test('ensure username in list is right', async t => {
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['ls', ...defaultArgs],
     {
@@ -777,10 +777,10 @@ test('ensure username in list is right', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   const line = stdout.split('\n').find(line => line.includes('.now.sh'));
   const columns = line.split(/\s+/);
@@ -792,7 +792,7 @@ test('ensure username in list is right', async t => {
 test('set platform version using `--platform-version` to `2`', async t => {
   const directory = fixture('builds');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [
       directory,
@@ -811,10 +811,10 @@ test('set platform version using `--platform-version` to `2`', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -830,7 +830,7 @@ test('set platform version using `--platform-version` to `2`', async t => {
 test('ensure we render a warning for deployments with no files', async t => {
   const directory = fixture('single-dotfile');
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -840,7 +840,7 @@ test('ensure we render a warning for deployments with no files', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the warning is printed
   t.true(
@@ -854,7 +854,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(host.split('-')[0], session);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Send a test request to the deployment
   const response = await fetch(href);
@@ -866,7 +866,7 @@ test('ensure we render a warning for deployments with no files', async t => {
 test('ensure we render a prompt when deploying home directory', async t => {
   const directory = homedir();
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -877,10 +877,10 @@ test('ensure we render a prompt when deploying home directory', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   t.true(
     stdout.includes(
@@ -893,7 +893,7 @@ test('ensure we render a prompt when deploying home directory', async t => {
 test('ensure the `alias` property is not sent to the API', async t => {
   const directory = fixture('config-alias-property');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -903,10 +903,10 @@ test('ensure the `alias` property is not sent to the API', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -922,7 +922,7 @@ test('ensure the `alias` property is not sent to the API', async t => {
 test('ensure the `scope` property works with email', async t => {
   const directory = fixture('config-scope-property-email');
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -932,13 +932,13 @@ test('ensure the `scope` property works with email', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure we're deploying under the right scope
   t.true(stderr.includes(session));
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -954,7 +954,7 @@ test('ensure the `scope` property works with email', async t => {
 test('ensure the `scope` property works with username', async t => {
   const directory = fixture('config-scope-property-username');
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -964,13 +964,13 @@ test('ensure the `scope` property works with username', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure we're deploying under the right scope
   t.true(stderr.includes(contextName));
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -986,7 +986,7 @@ test('ensure the `scope` property works with username', async t => {
 test('try to create a builds deployments with wrong config', async t => {
   const directory = fixture('builds-wrong');
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -996,10 +996,10 @@ test('try to create a builds deployments with wrong config', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.true(
     stderr.includes(
       '> Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
@@ -1010,7 +1010,7 @@ test('try to create a builds deployments with wrong config', async t => {
 test('create a builds deployments with no actual builds', async t => {
   const directory = fixture('builds-no-list');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -1020,10 +1020,10 @@ test('create a builds deployments with no actual builds', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { host } = new URL(stdout);
@@ -1033,7 +1033,7 @@ test('create a builds deployments with no actual builds', async t => {
 test('create a builds deployments without platform version flag', async t => {
   const directory = fixture('builds');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -1043,10 +1043,10 @@ test('create a builds deployments without platform version flag', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1062,7 +1062,7 @@ test('create a builds deployments without platform version flag', async t => {
 test('deploy multiple static files', async t => {
   const directory = fixture('static-multiple-files');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
@@ -1072,10 +1072,10 @@ test('deploy multiple static files', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1107,7 +1107,7 @@ test('create a staging deployment', async t => {
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);
-  console.log(targetCall.code);
+  console.log(targetCall.exitCode);
 
   t.regex(
     targetCall.stderr,
@@ -1115,7 +1115,7 @@ test('create a staging deployment', async t => {
     formatOutput(targetCall)
   );
 
-  t.is(targetCall.code, 0, formatOutput(targetCall));
+  t.is(targetCall.exitCode, 0, formatOutput(targetCall));
 
   const { host } = new URL(targetCall.stdout);
   const deployment = await apiFetch(
@@ -1136,9 +1136,9 @@ test('create a production deployment', async t => {
 
   console.log(targetCall.stderr);
   console.log(targetCall.stdout);
-  console.log(targetCall.code);
+  console.log(targetCall.exitCode);
 
-  t.is(targetCall.code, 0, formatOutput(targetCall));
+  t.is(targetCall.exitCode, 0, formatOutput(targetCall));
   t.regex(
     targetCall.stderr,
     /`--prod` option instead/gm,
@@ -1164,9 +1164,9 @@ test('create a production deployment', async t => {
 
   console.log(call.stderr);
   console.log(call.stdout);
-  console.log(call.code);
+  console.log(call.exitCode);
 
-  t.is(call.code, 0, formatOutput(call));
+  t.is(call.exitCode, 0, formatOutput(call));
   t.regex(
     call.stderr,
     /Setting target to production/gm,
@@ -1183,7 +1183,7 @@ test('create a production deployment', async t => {
 test('ensure we are getting a warning for the old team flag', async t => {
   const directory = fixture('static-multiple-files');
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, '--team', email, ...defaultArgs],
     {
@@ -1193,7 +1193,7 @@ test('ensure we are getting a warning for the old team flag', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the warning is printed
   t.true(
@@ -1203,7 +1203,7 @@ test('ensure we are getting a warning for the old team flag', async t => {
   );
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1226,7 +1226,7 @@ test('ensure we are getting a warning for the old team flag', async t => {
 test('deploy multiple static files with custom scope', async t => {
   const directory = fixture('static-multiple-files');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [
       directory,
@@ -1244,10 +1244,10 @@ test('deploy multiple static files with custom scope', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1270,7 +1270,7 @@ test('deploy multiple static files with custom scope', async t => {
 test('deploy single static file', async t => {
   const file = fixture('static-single-file/first.png');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [file, '--public', '--name', session, ...defaultArgs],
     {
@@ -1280,10 +1280,10 @@ test('deploy single static file', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1300,7 +1300,7 @@ test('deploy single static file', async t => {
 test('deploy a static directory', async t => {
   const directory = fixture('static-single-file');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
@@ -1310,10 +1310,10 @@ test('deploy a static directory', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1329,7 +1329,7 @@ test('deploy a static directory', async t => {
 test('use build-env', async t => {
   const directory = fixture('build-env');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs],
     {
@@ -1339,10 +1339,10 @@ test('use build-env', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
@@ -1363,7 +1363,7 @@ test('use `--build-env` CLI flag', async t => {
     .toString(36)
     .substring(2);
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [
       directory,
@@ -1381,10 +1381,10 @@ test('use `--build-env` CLI flag', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
+  t.is(exitCode, 0, `Received:\n"${stderr}"\n"${stdout}"`);
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
@@ -1402,7 +1402,7 @@ test('use `--build-env` CLI flag', async t => {
 test('use `--debug` CLI flag', async t => {
   const directory = fixture('build-env-debug');
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [directory, '--public', '--name', session, '--debug', ...defaultArgs],
     {
@@ -1412,10 +1412,10 @@ test('use `--debug` CLI flag', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0, `Received:\n"${stderr}"\n"${stdout}"`);
+  t.is(exitCode, 0, `Received:\n"${stderr}"\n"${stdout}"`);
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
@@ -1433,7 +1433,7 @@ test('use `--debug` CLI flag', async t => {
 test('try to deploy non-existing path', async t => {
   const goal = `> Error! The specified file or directory "${session}" does not exist.`;
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [session, ...defaultArgs],
     {
@@ -1443,9 +1443,9 @@ test('try to deploy non-existing path', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.true(stderr.trim().endsWith(goal));
 });
 
@@ -1453,7 +1453,7 @@ test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
   const goal = `> Error! The specified scope does not exist`;
 
-  const { stderr, stdout, code } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [target, '--scope', session, ...defaultArgs],
     {
@@ -1463,9 +1463,9 @@ test('try to deploy with non-existing team', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.true(stderr.includes(goal));
 });
 
@@ -1484,13 +1484,15 @@ test('initialize example "angular"', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  const { stdout, stderr, code } = await execute(['init', 'angular'], { cwd });
+  const { stdout, stderr, exitCode } = await execute(['init', 'angular'], {
+    cwd,
+  });
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0, formatOutput({ stdout, stderr }));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
   t.true(
     verifyExampleAngular(cwd, 'angular'),
@@ -1503,15 +1505,18 @@ test('initialize example ("angular") to specified directory', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  const { stdout, stderr, code } = await execute(['init', 'angular', 'ang'], {
-    cwd,
-  });
+  const { stdout, stderr, exitCode } = await execute(
+    ['init', 'angular', 'ang'],
+    {
+      cwd,
+    }
+  );
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.true(stdout.includes(goal));
   t.true(verifyExampleAngular(cwd, 'ang'));
 });
@@ -1521,16 +1526,16 @@ test('initialize selected example ("amp")', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "amp" example in';
 
-  const { stdout, stderr, code } = await execute(['init'], {
+  const { stdout, stderr, exitCode } = await execute(['init'], {
     cwd,
     input: '\n',
   });
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0, formatOutput({ stdout, stderr }));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
   t.true(verifyExampleAmp(cwd, 'amp'), formatOutput({ stdout, stderr }));
 });
@@ -1542,15 +1547,18 @@ test('initialize example to existing directory with "-f"', async t => {
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { stdout, stderr, code } = await execute(['init', 'angular', '-f'], {
-    cwd,
-  });
+  const { stdout, stderr, exitCode } = await execute(
+    ['init', 'angular', '-f'],
+    {
+      cwd,
+    }
+  );
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.true(stdout.includes(goal));
   t.true(verifyExampleAngular(cwd, 'angular'));
 });
@@ -1563,16 +1571,16 @@ test('try to initialize example to existing directory', async t => {
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { stdout, stderr, code } = await execute(['init', 'angular'], {
+  const { stdout, stderr, exitCode } = await execute(['init', 'angular'], {
     cwd,
     input: '\n',
   });
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.true(stdout.includes(goal));
 });
 
@@ -1582,13 +1590,13 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   const goal =
     '> Error! No example found for noce, run `now init` to see the list of available examples.';
 
-  const { stdout, stderr, code } = await execute(['init', 'noce'], { cwd });
+  const { stdout, stderr, exitCode } = await execute(['init', 'noce'], { cwd });
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.true(stdout.includes(goal));
 });
 
@@ -1598,15 +1606,15 @@ test('try to initialize example "example-404"', async t => {
   const goal =
     '> Error! No example found for example-404, run `now init` to see the list of available examples.';
 
-  const { stdout, stderr, code } = await execute(['init', 'example-404'], {
+  const { stdout, stderr, exitCode } = await execute(['init', 'example-404'], {
     cwd,
   });
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.true(stdout.includes(goal));
 });
 
@@ -1620,11 +1628,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const url = `https://${name}.user.now.sh`;
 
   {
-    const { stdout: deploymentUrl, stderr, code } = await execute([
+    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
       firstDeployment,
     ]);
 
-    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
+    t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -1639,11 +1647,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, code } = await execute([
+    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
       secondDeployment,
     ]);
 
-    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
+    t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -1660,11 +1668,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, code } = await execute([
+    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
       firstDeployment,
     ]);
 
-    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
+    t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -1682,21 +1690,21 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
 });
 
 test('whoami', async t => {
-  const { code, stdout, stderr } = await execute(['whoami']);
+  const { exitCode, stdout, stderr } = await execute(['whoami']);
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
-  t.is(code, 0);
+  t.is(exitCode, 0);
   t.is(stdout, contextName, formatOutput({ stdout, stderr }));
 });
 
 test('fail `now dev` dev script without now.json', async t => {
   const deploymentPath = fixture('now-dev-fail-dev-script');
-  const { code, stderr } = await execute(['dev', deploymentPath]);
+  const { exitCode, stderr } = await execute(['dev', deploymentPath]);
 
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.true(
     stderr.includes('must not contain `now dev`'),
     `Received instead: "${stderr}"`
@@ -1705,33 +1713,33 @@ test('fail `now dev` dev script without now.json', async t => {
 
 test('print correct link in legacy warning', async t => {
   const deploymentPath = fixture('v1-warning-link');
-  const { code, stderr, stdout } = await execute([deploymentPath]);
+  const { exitCode, stderr, stdout } = await execute([deploymentPath]);
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // It is expected to fail,
   // since the package.json does not have a start script
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.regex(stderr, /migrate-to-zeit-now/);
 });
 
 test('`now rm` 404 exits quickly', async t => {
   const start = Date.now();
-  const { code, stderr, stdout } = await execute([
+  const { exitCode, stderr, stdout } = await execute([
     'rm',
     'this.is.a.deployment.that.does.not.exist.example.com',
   ]);
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   const delta = Date.now() - start;
 
   // "does not exist" case is exit code 1, similar to Unix `rm`
-  t.is(code, 1);
+  t.is(exitCode, 1);
   t.truthy(
     stderr.includes(
       'Could not find any deployments or projects matching "this.is.a.deployment.that.does.not.exist.example.com"'
@@ -1748,9 +1756,9 @@ test('render build errors', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /Build failed/gm, formatOutput(output));
 });
 
@@ -1760,10 +1768,10 @@ test('invalid deployment, projects and alias names', async t => {
 
     console.log(output.stderr);
     console.log(output.stdout);
-    console.log(output.code);
+    console.log(output.exitCode);
 
     const print = `\`${args.join(' ')}\`\n${formatOutput(output)}`;
-    t.is(output.code, 1, print);
+    t.is(output.exitCode, 1, print);
     t.regex(output.stderr, /The provided argument/gm, print);
   };
 
@@ -1780,9 +1788,9 @@ test('now certs ls', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
   t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
 });
 
@@ -1791,9 +1799,9 @@ test('now certs ls --after=cert_test', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /The cert cert_test can't be found\./gm,
@@ -1806,9 +1814,9 @@ test('now hasOwnProperty not a valid subcommand', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /The specified file or directory "hasOwnProperty" does not exist/gm,
@@ -1822,9 +1830,9 @@ test('create zero-config deployment', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 
   const { host } = new URL(output.stdout);
   const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
@@ -1851,9 +1859,9 @@ test('now secret add', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test('now secret ls', async t => {
@@ -1861,9 +1869,9 @@ test('now secret ls', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
   t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
@@ -1879,9 +1887,9 @@ test('now secret rename', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 
   context.secretName = nextName;
 });
@@ -1891,15 +1899,15 @@ test('now secret rm', async t => {
 
   console.log(output.stderr);
   console.log(output.stdout);
-  console.log(output.code);
+  console.log(output.exitCode);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test('deploy with a custom API URL', async t => {
   const directory = fixture('static-single-file');
 
-  const { stdout, stderr, code } = await execa(
+  const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     [
       directory,
@@ -1917,10 +1925,10 @@ test('deploy with a custom API URL', async t => {
 
   console.log(stderr);
   console.log(stdout);
-  console.log(code);
+  console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(code, 0);
+  t.is(exitCode, 0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1937,7 +1945,7 @@ test('deploy a Lambda with 128MB of memory', async t => {
   const directory = fixture('lambda-with-128-memory');
   const output = await execute([directory]);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 
   const { host: url } = new URL(output.stdout);
   const response = await fetch('https://' + url + '/api/memory');
@@ -1954,7 +1962,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
   const directory = fixture('lambda-with-200-memory');
   const output = await execute([directory]);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /Functions must have a memory value between 128 and 3008 in steps of 64\./gm,
@@ -1966,7 +1974,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   const directory = fixture('lambda-with-3-second-timeout');
   const output = await execute([directory]);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 
   const { host: url } = new URL(output.stdout);
 
@@ -1983,7 +1991,7 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async t 
   const directory = fixture('lambda-with-1000-second-timeout');
   const output = await execute([directory]);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /maxDuration must be between 1 second and 10 seconds/gm,
@@ -1996,7 +2004,7 @@ test('deploy a Lambda with a specific runtime', async t => {
   const directory = fixture('lambda-with-php-runtime');
   const output = await execute([directory, '--public']);
 
-  t.is(output.code, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 
   const { host: url } = new URL(output.stdout);
 
@@ -2009,7 +2017,7 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory]);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /Function runtimes must have a valid version/gm,
