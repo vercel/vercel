@@ -89,7 +89,7 @@ async function getPackedBuilderPath(builderDirName) {
     cwd: packagePath,
   });
 
-  if (output.code !== 0 || output.stdout.trim() === '') {
+  if (output.exitCode !== 0 || output.stdout.trim() === '') {
     throw new Error(
       `Failed to pack ${builderDirName}: ${formatOutput(output)}`
     );
@@ -158,7 +158,7 @@ test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /Invalid `builds` property: \[0\]\.src should be string/gm
@@ -169,7 +169,7 @@ test('[now dev] validate routes', async t => {
   const directory = fixture('invalid-routes');
   const output = await exec(directory);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /Invalid `routes` property: \[0\]\.src should be string/gm
@@ -180,7 +180,7 @@ test('[now dev] validate cleanUrls', async t => {
   const directory = fixture('invalid-clean-urls');
   const output = await exec(directory);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/gm);
 });
 
@@ -188,7 +188,7 @@ test('[now dev] validate trailingSlash', async t => {
   const directory = fixture('invalid-trailing-slash');
   const output = await exec(directory);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /Invalid `trailingSlash` property:\s+should be boolean/gm
@@ -199,7 +199,7 @@ test('[now dev] validate rewrites', async t => {
   const directory = fixture('invalid-rewrites');
   const output = await exec(directory);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /Invalid `rewrites` property: \[0\]\.destination should be string/gm
@@ -210,7 +210,7 @@ test('[now dev] validate redirects', async t => {
   const directory = fixture('invalid-redirects');
   const output = await exec(directory);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /Invalid `redirects` property: \[0\]\.statusCode should be integer/gm
@@ -221,7 +221,7 @@ test('[now dev] validate headers', async t => {
   const directory = fixture('invalid-headers');
   const output = await exec(directory);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
     /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/gm
@@ -232,7 +232,7 @@ test('[now dev] validate mixed routes and rewrites', async t => {
   const directory = fixture('invalid-mixed-routes-rewrites');
   const output = await exec(directory);
 
-  t.is(output.code, 1, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/gm);
 });
 
