@@ -44,7 +44,6 @@ async function* createDeployment(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${options.token}`,
         },
         body: JSON.stringify({
           ...metadata,
