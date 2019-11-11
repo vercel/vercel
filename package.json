@@ -31,7 +31,7 @@
     "lerna": "lerna",
     "bootstrap": "lerna bootstrap",
     "publish-stable": "git pull && lerna version --message 'Publish Stable' --exact",
-    "publish-canary": "git pull && lerna version prerelease --preid canary --exact",
+    "publish-canary": "git pull && lerna version prerelease --preid canary --message 'Publish Canary' --exact",
     "publish-from-github": "./.circleci/publish.sh",
     "diff": "node diff.js",
     "changelog": "node changelog.js",
