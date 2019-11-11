@@ -3,8 +3,6 @@
 [![Build Status](https://badgen.net/circleci/github/zeit/now/master)](https://circleci.com/gh/zeit/workflows/now/tree/master)
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
 
-**NOTE**: The [canary](https://github.com/zeit/now/tree/canary) branch is under heavy development – the stable release branch is [master](https://github.com/zeit/now/tree/master).
-
 ## Usage
 
 To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
