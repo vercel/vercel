@@ -1,12 +1,4 @@
-module.exports = () => {
-  return {
-    statusCode: 200,
-    headers: {},
-    body: 'default handler',
-  };
-};
-
-exports.myCustomHandler = async function() {
+exports.myCustomHandler = function() {
   return {
     statusCode: 200,
     headers: {},
