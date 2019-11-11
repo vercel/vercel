@@ -216,9 +216,8 @@ test('deploy using --local-config flag v2', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
+    ['deploy', target, '--local-config', 'now-test.json', ...defaultArgs],
     {
-      cwd: target,
       reject: false,
     }
   );
@@ -226,6 +225,7 @@ test('deploy using --local-config flag v2', async t => {
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
   const { host } = new URL(stdout);
+  t.regex(host, /secondary@/gm, `Expected "secondary" but received "${host}"`);
 
   const testRes = await fetch(`https://${host}/test-${contextName}.html`);
   const testText = await testRes.text();

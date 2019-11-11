@@ -321,11 +321,13 @@ CMD ["node", "index.js"]`,
       [`test-${session}.html`]: '<h1>hello test</h1>',
       'now.json': JSON.stringify({
         version: 2,
+        name: 'original',
         builds: [{ src: `main-${session}.html`, use: '@now/static' }],
         routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
       'now-test.json': JSON.stringify({
         version: 2,
+        name: 'secondary',
         builds: [{ src: `test-${session}.html`, use: '@now/static' }],
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
       }),
