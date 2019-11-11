@@ -1,6 +1,6 @@
 {
   "name": "@now/node",
-  "version": "1.0.2",
+  "version": "1.0.0-canary.14",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/node-js",
@@ -30,7 +30,7 @@
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
     "@zeit/ncc": "0.20.4",
-    "@zeit/node-file-trace": "0.3.1",
+    "@zeit/node-file-trace": "0.4.0",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",

@@ -12,7 +12,7 @@ exports.onPostBuild = async ({ store }) => {
     const route = {
       src: redirect.fromPath,
       status: redirect.statusCode || (redirect.isPermanent ? 301 : 302),
-      headers: { Location: redirect.toPath }
+      headers: { Location: redirect.toPath },
     };
 
     if (redirect.force) {

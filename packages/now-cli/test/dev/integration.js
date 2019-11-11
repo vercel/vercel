@@ -19,20 +19,19 @@ function fetchWithRetry(url, retries = 3, opts = {}) {
   return new Promise(async (resolve, reject) => {
     try {
       const res = await fetch(url, opts);
-
-      if (res.ok) {
-        resolve(res);
+      if (!res.ok) {
+        throw new Error('Responded with status ' + res.status);
       }
+      resolve(res);
     } catch (error) {
       if (retries === 0) {
         reject(error);
         return;
       }
-      setTimeout(() => {
-        fetchWithRetry(url, retries - 1, opts)
-          .then(resolve)
-          .catch(reject);
-      }, 1000);
+      await sleep(1000);
+      fetchWithRetry(url, retries - 1, opts)
+        .then(resolve)
+        .catch(reject);
     }
   });
 }
@@ -175,6 +174,66 @@ test('[now dev] validate routes', async t => {
     output.stderr,
     /Invalid `routes` property: \[0\]\.src should be string/gm
   );
+});
+
+test('[now dev] validate cleanUrls', async t => {
+  const directory = fixture('invalid-clean-urls');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/gm);
+});
+
+test('[now dev] validate trailingSlash', async t => {
+  const directory = fixture('invalid-trailing-slash');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Invalid `trailingSlash` property:\s+should be boolean/gm
+  );
+});
+
+test('[now dev] validate rewrites', async t => {
+  const directory = fixture('invalid-rewrites');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Invalid `rewrites` property: \[0\]\.destination should be string/gm
+  );
+});
+
+test('[now dev] validate redirects', async t => {
+  const directory = fixture('invalid-redirects');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Invalid `redirects` property: \[0\]\.statusCode should be integer/gm
+  );
+});
+
+test('[now dev] validate headers', async t => {
+  const directory = fixture('invalid-headers');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/gm
+  );
+});
+
+test('[now dev] validate mixed routes and rewrites', async t => {
+  const directory = fixture('invalid-mixed-routes-rewrites');
+  const output = await exec(directory);
+
+  t.is(output.code, 1, formatOutput(output));
+  t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/gm);
 });
 
 test('[now dev] validate env var names', async t => {
@@ -1056,7 +1115,7 @@ if (satisfies(process.version, '>= 8.9.0')) {
   );
 }
 
-test.only(
+test(
   '[now dev] Use runtime from the functions property',
   testFixtureStdio('custom-runtime', async (t, port) => {
     const result = await fetchWithRetry(`http://localhost:${port}/api/user`, 3);

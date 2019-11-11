@@ -1,6 +1,6 @@
 {
   "name": "@now/next",
-  "version": "1.0.5",
+  "version": "1.0.0-canary.21",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/next-js",
@@ -25,7 +25,7 @@
     "@types/resolve-from": "5.0.1",
     "@types/semver": "6.0.0",
     "@types/yazl": "2.4.1",
-    "@zeit/node-file-trace": "0.3.1",
+    "@zeit/node-file-trace": "0.4.0",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",
     "execa": "2.0.4",
