@@ -287,8 +287,8 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   }
 
   if (process.env.NODEJS_AWS_HANDLER_NAME) {
-    const { name } = parsePath(entrypoint);
-    return `${name}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
+    const { dir, name } = parsePath(entrypoint);
+    return `${dir}${dir ? sep : ''}${name}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
   }
 
   return '';
