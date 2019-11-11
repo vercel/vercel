@@ -1624,7 +1624,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       firstDeployment,
     ]);
 
-    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
+    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -1643,7 +1643,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       secondDeployment,
     ]);
 
-    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
+    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -1664,7 +1664,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       firstDeployment,
     ]);
 
-    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
+    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
