@@ -2015,14 +2015,14 @@
     agentkeepalive "3.4.1"
     debug "3.1.0"
 
-"@zeit/fun@0.10.2":
-  version "0.10.2"
-  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.10.2.tgz#799dbedfc931f439a541c6344e4faeaf3ded98b2"
-  integrity sha512-wIIF3X5ASnRJLa66RktuIF6oVtRa13WSAlt08Lc/01fpQTgNiVAd92PhlfRU4azJQkbKNEQ5o+OWncAvE4s+7w==
+"@zeit/fun@0.10.3":
+  version "0.10.3"
+  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.10.3.tgz#f41c1c75b2d61e464bd9eaf1aeab370a43b73d2e"
+  integrity sha512-+9zwr+nX7rF9FJtuLekgTex0Bq7Tgq2yyv+F5j2+kVUHoqRcoBuX2AdGzWV62+kMjBdx/ODRQmN4eZl9mWjNAw==
   dependencies:
     async-listen "1.0.0"
     debug "4.1.1"
-    execa "1.0.0"
+    execa "3.2.0"
     fs-extra "7.0.1"
     generic-pool "3.4.2"
     micro "9.3.5-canary.3"
@@ -2033,6 +2033,7 @@
     stat-mode "0.3.0"
     stream-to-promise "2.2.0"
     tar "4.4.8"
+    tree-kill "1.2.1"
     uid-promise "1.0.0"
     uuid "3.3.2"
     xdg-app-paths "5.1.0"
@@ -4540,19 +4541,6 @@ exec-sh@^0.3.2:
   resolved "https://registry.yarnpkg.com/exec-sh/-/exec-sh-0.3.2.tgz#6738de2eb7c8e671d0366aea0b0db8c6f7d7391b"
   integrity sha512-9sLAvzhI5nc8TpuQUh4ahMdCrWT00wPWz7j47/emR5+2qEfoZP5zzUXvx+vdx+H6ohhnsYC31iX04QLYJK8zTg==
 
-execa@1.0.0, execa@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/execa/-/execa-1.0.0.tgz#c6236a5bb4df6d6f15e88e7f017798216749ddd8"
-  integrity sha512-adbxcyWV46qiHyvSp50TKt05tB4tK3HcmF7/nxfAdhnox83seTDbwnaqKO4sXRy7roHAIFqJP/Rw/AuEbX61LA==
-  dependencies:
-    cross-spawn "^6.0.0"
-    get-stream "^4.0.0"
-    is-stream "^1.1.0"
-    npm-run-path "^2.0.0"
-    p-finally "^1.0.0"
-    signal-exit "^3.0.0"
-    strip-eof "^1.0.0"
-
 execa@2.0.4, execa@^2.0.3:
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/execa/-/execa-2.0.4.tgz#2f5cc589c81db316628627004ea4e37b93391d8e"
@@ -4604,6 +4592,19 @@ execa@^0.8.0:
   dependencies:
     cross-spawn "^5.0.1"
     get-stream "^3.0.0"
+    is-stream "^1.1.0"
+    npm-run-path "^2.0.0"
+    p-finally "^1.0.0"
+    signal-exit "^3.0.0"
+    strip-eof "^1.0.0"
+
+execa@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/execa/-/execa-1.0.0.tgz#c6236a5bb4df6d6f15e88e7f017798216749ddd8"
+  integrity sha512-adbxcyWV46qiHyvSp50TKt05tB4tK3HcmF7/nxfAdhnox83seTDbwnaqKO4sXRy7roHAIFqJP/Rw/AuEbX61LA==
+  dependencies:
+    cross-spawn "^6.0.0"
+    get-stream "^4.0.0"
     is-stream "^1.1.0"
     npm-run-path "^2.0.0"
     p-finally "^1.0.0"
