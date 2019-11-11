@@ -291,7 +291,7 @@ export async function build({
   meta = {},
 }: BuildOptions) {
   const shouldAddHelpers = !(config.helpers === false || process.env.NODEJS_HELPERS === '0');
-  const awsLambdaHandler = (config.awsLambdaHandler || process.env.NODEJS_AWS_HANDLER_NAME) as string;
+  const awsLambdaHandler = (config.awsLambdaHandler || process.env.NODEJS_AWS_HANDLER_NAME) as string;
 
   const {
     entrypointPath,
