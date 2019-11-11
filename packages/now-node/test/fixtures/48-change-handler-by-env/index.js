@@ -1,4 +1,4 @@
-exports.myCustomHandler = function() {
+exports.myCustomHandler = async function() {
   return {
     statusCode: 200,
     headers: {},

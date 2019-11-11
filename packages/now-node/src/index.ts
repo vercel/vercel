@@ -281,6 +281,18 @@ async function compile(
   };
 }
 
+function getAWSLambdaHandler(entrypoint: string, config: Config) {
+  if (config.awsLambdaHandler) {
+    return config.awsLambdaHandler as string;
+  }
+
+  if (process.env.NODEJS_AWS_HANDLER_NAME) {
+    return `${basename(entrypoint)}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
+  }
+
+  return '';
+}
+
 export const version = 3;
 
 export async function build({
@@ -291,7 +303,7 @@ export async function build({
   meta = {},
 }: BuildOptions) {
   const shouldAddHelpers = !(config.helpers === false || process.env.NODEJS_HELPERS === '0');
-  const awsLambdaHandler = (config.awsLambdaHandler || process.env.NODEJS_AWS_HANDLER_NAME) as string;
+  const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const {
     entrypointPath,
