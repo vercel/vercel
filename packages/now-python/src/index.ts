@@ -68,6 +68,8 @@ async function pipenvConvert(cmd: string, srcDir: string) {
   }
 }
 
+export const version = 3;
+
 export const build = async ({
   workPath,
   files: originalFiles,
@@ -192,9 +194,7 @@ export const build = async ({
     environment: {},
   });
 
-  return {
-    [entrypoint]: lambda,
-  };
+  return { output: lambda };
 };
 
 export { shouldServe };

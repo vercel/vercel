@@ -7,6 +7,7 @@ import {
   FileFsRef,
   Lambda,
   PackageJson,
+  BuilderFunctions,
 } from '@now/build-utils';
 import { NowRedirect, NowRewrite, NowHeader, Route } from '@now/routing-utils';
 import { Output } from '../output';
@@ -45,6 +46,7 @@ export interface NowConfig {
   redirects?: NowRedirect[];
   headers?: NowHeader[];
   trailingSlash?: boolean;
+  functions?: BuilderFunctions;
 }
 
 export interface HttpHandler {
@@ -98,7 +100,7 @@ export interface BuilderConfigAttr {
 }
 
 export interface Builder {
-  version?: 2;
+  version?: 1 | 2 | 3;
   config?: BuilderConfigAttr;
   build(
     params: BuilderParams
@@ -115,6 +117,13 @@ export interface Builder {
 
 export interface BuildResult {
   output: BuilderOutputs;
+  routes: RouteConfig[];
+  watch: string[];
+  distPath?: string;
+}
+
+export interface BuildResultV3 {
+  output: Lambda;
   routes: RouteConfig[];
   watch: string[];
   distPath?: string;

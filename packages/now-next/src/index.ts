@@ -1,4 +1,5 @@
 import { ChildProcess, fork } from 'child_process';
+import url from 'url'
 import {
   pathExists,
   readFile,
@@ -29,6 +30,7 @@ import {
   Route,
   runNpmInstall,
   runPackageJsonScript,
+  getLambdaOptionsFromFunction,
 } from '@now/build-utils';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 
@@ -52,7 +54,14 @@ import {
   stringMap,
   syncEnvVars,
   validateEntrypoint,
+  getSourceFilePathFromPage,
+  getRoutesManifest,
 } from './utils';
+
+import {
+  convertRedirects,
+  convertRewrites
+} from '@now/routing-utils/dist/superstatic'
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -238,7 +247,7 @@ export const build = async ({
 
     return {
       output: {},
-      routes: getRoutes(
+      routes: await getRoutes(
         entryPath,
         entryDirectory,
         pathsInside,
@@ -391,10 +400,15 @@ export const build = async ({
     if (filesAfterBuild['next.config.js']) {
       nextFiles['next.config.js'] = filesAfterBuild['next.config.js'];
     }
-    const pages = await glob(
-      '**/*.js',
-      path.join(entryPath, '.next', 'server', 'static', buildId, 'pages')
+    const pagesDir = path.join(
+      entryPath,
+      '.next',
+      'server',
+      'static',
+      buildId,
+      'pages'
     );
+    const pages = await glob('**/*.js', pagesDir);
     const launcherPath = path.join(__dirname, 'legacy-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -426,6 +440,11 @@ export const build = async ({
           ],
         };
 
+        const lambdaOptions = await getLambdaOptionsFromFunction({
+          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          config,
+        });
+
         debug(`Creating serverless function for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
           files: {
@@ -435,6 +454,7 @@ export const build = async ({
           },
           handler: 'now__launcher.launcher',
           runtime: nodeVersion.runtime,
+          ...lambdaOptions,
         });
         debug(`Created serverless function for page: "${page}"`);
       })
@@ -639,6 +659,11 @@ export const build = async ({
           'now__launcher.js': new FileBlob({ data: launcher }),
         };
 
+        const lambdaOptions = await getLambdaOptionsFromFunction({
+          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          config,
+        });
+
         if (requiresTracing) {
           lambdas[
             path.join(entryDirectory, pathname)
@@ -650,6 +675,7 @@ export const build = async ({
             layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
             handler: 'now__launcher.launcher',
             runtime: nodeVersion.runtime,
+            ...lambdaOptions,
           });
         } else {
           lambdas[path.join(entryDirectory, pathname)] = await createLambda({
@@ -661,6 +687,7 @@ export const build = async ({
             },
             handler: 'now__launcher.launcher',
             runtime: nodeVersion.runtime,
+            ...lambdaOptions,
           });
         }
       })
@@ -805,19 +832,45 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const dynamicRoutes = getDynamicRoutes(
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion)
+
+  const dynamicRoutes = await getDynamicRoutes(
     entryPath,
     entryDirectory,
-    dynamicPages
-  ).map(route => {
-    // make sure .html is added to dest for now until
-    // outputting static files to clean routes is available
-    if (staticPages[`${route.dest}.html`.substr(1)]) {
-      route.dest = `${route.dest}.html`;
+    dynamicPages,
+    false,
+    routesManifest
+  ).then(arr =>
+    arr.map(route => {
+      // make sure .html is added to dest for now until
+      // outputting static files to clean routes is available
+      if (staticPages[`${route.dest}.html`.substr(1)]) {
+        route.dest = `${route.dest}.html`;
+      }
+      route.src = route.src.replace('^', `^${dynamicPrefix}`);
+      return route;
+    })
+  );
+
+  const rewrites: Route[] = []
+  const redirects: Route[] = []
+
+  if (routesManifest) {
+    switch(routesManifest.version) {
+      case 1: {
+        redirects.push(...convertRedirects(routesManifest.redirects))
+        rewrites.push(...convertRewrites(routesManifest.rewrites))
+        break
+      }
+      default: {
+        // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
+      }
     }
-    route.src = route.src.replace('^', `^${dynamicPrefix}`);
-    return route;
-  });
+  }
 
   return {
     output: {
@@ -830,13 +883,19 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
+      ...redirects,
+      ...rewrites,
       // Static exported pages (.html rewrites)
       ...exportedPageRoutes,
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
         // user-emitted files which may be missing a hash in their filename.
-        src: path.join('/', entryDirectory, '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'),
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },

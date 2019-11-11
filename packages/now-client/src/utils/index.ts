@@ -6,14 +6,12 @@ import qs from 'querystring';
 import ignore from 'ignore';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
-import { NowJsonOptions } from '../types';
+import { NowJsonOptions, DeploymentOptions } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/now/files';
-export const API_DEPLOYMENTS = '/v10/now/deployments';
-export const API_DEPLOYMENTS_LEGACY = '/v3/now/deployments';
 export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
 export const EVENTS = new Set([
@@ -31,6 +29,20 @@ export const EVENTS = new Set([
   // Build events
   'build-state-changed',
 ]);
+
+export function getApiDeploymentsUrl(
+  metadata?: Pick<DeploymentOptions, 'version' | 'builds' | 'functions'>
+) {
+  if (metadata && metadata.version !== 2) {
+    return '/v3/now/deployments';
+  }
+
+  if (metadata && metadata.builds && !metadata.functions) {
+    return '/v10/now/deployments';
+  }
+
+  return '/v11/now/deployments';
+}
 
 export async function parseNowJSON(filePath?: string): Promise<NowJsonOptions> {
   if (!filePath) {
@@ -141,6 +153,7 @@ export interface PreparedFile {
   file: string;
   sha: string;
   size: number;
+  mode: number;
 }
 
 const isWin = process.platform.includes('win');
@@ -156,7 +169,7 @@ export const prepareFiles = (
       const file = files.get(sha) as DeploymentFile;
 
       for (const name of file.names) {
-        let fileName;
+        let fileName: string;
 
         if (options.isDirectory) {
           // Directory
@@ -172,6 +185,7 @@ export const prepareFiles = (
         next.push({
           file: isWin ? fileName.replace(/\\/g, '/') : fileName,
           size: file.data.byteLength || file.data.length,
+          mode: file.mode,
           sha,
         });
       }

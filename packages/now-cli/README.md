@@ -13,8 +13,8 @@ npm i -g now
 To quickly start a new project, run the following commands:
 
 ```
-now init        # Pick an example project to clone
-cd <PROJECT>    # Change directory to the newly created project
+now init        # Pick an example project
+cd <PROJECT>    # Change directory to the new project
 now dev         # Run locally during development
 now             # Deploy to the cloud
 ```

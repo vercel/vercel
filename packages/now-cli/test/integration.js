@@ -214,7 +214,7 @@ test('login', async t => {
 test('deploy using --local-config flag v2', async t => {
   const target = fixture('local-config-v2');
 
-  const { stdout, stderr, code } = await execa(
+  const { code, stderr, stdout } = await execa(
     binaryPath,
     ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
     {
@@ -223,11 +223,7 @@ test('deploy using --local-config flag v2', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(code);
-
-  t.is(code, 0);
+  t.is(code, 0, formatOutput({ stderr, stdout }));
 
   const { host } = new URL(stdout);
 
@@ -1956,9 +1952,9 @@ test('deploy a Lambda with 128MB of memory', async t => {
   t.is(response.status, 200, url);
 
   // It won't be exactly 128MB,
-  // so we just compare if it is lower than 200MB
+  // so we just compare if it is lower than 450MB
   const { memory } = await response.json();
-  t.truthy(memory < 2e8, `Lambda has ${memory} bytes of memory`);
+  t.truthy(memory < 4.5e8, `Lambda has ${memory} bytes of memory`);
 });
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
@@ -1995,21 +1991,27 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async t 
   const output = await execute([directory]);
 
   t.is(output.code, 1, formatOutput(output));
-  t.regex(output.stderr, /maxDuration should be <= 10/gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /maxDuration must be between 1 second and 10 seconds/gm,
+    formatOutput(output)
+  );
 });
 
+// We need to skip those tests until `now-php` supports Runtime version 3
 test('deploy a Lambda with a specific runtime', async t => {
-  const directory = fixture('lambda-with-node-runtime');
-  const output = await execute([directory]);
+  const directory = fixture('lambda-with-php-runtime');
+  const output = await execute([directory, '--public']);
 
   t.is(output.code, 0, formatOutput(output));
 
   const { host: url } = new URL(output.stdout);
 
   const [build] = await getDeploymentBuildsByUrl(url);
-  t.is(build.use, '@now/node@1.0.0-canary.10', JSON.stringify(build, null, 2));
+  t.is(build.use, 'now-php@0.0.7', JSON.stringify(build, null, 2));
 });
 
+// We need to skip those tests until `now-php` supports Runtime version 3
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory]);

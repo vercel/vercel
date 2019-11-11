@@ -3,7 +3,14 @@
   "builds": [
     {
       "src": "**/*.js",
-      "use": "@now/node"
+      "use": "@now/node",
+      "config": {
+        "functions": {
+          "**/*.js": {
+            "memory": 3008
+          }
+        }
+      }
     }
   ],
   "probes": [

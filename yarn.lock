@@ -7942,7 +7942,7 @@ normalize-url@^4.1.0:
   integrity sha512-0NLtR71o4k6GLP+mr6Ty34c5GA6CMoEsncKJxvQd8NzPxaHRJNnb5gZE8R1XF4CPIS7QPHLJ74IFszwtNVAHVQ==
 
 now-client@./packages/now-client:
-  version "5.1.1-canary.12"
+  version "5.1.1-canary.17"
   dependencies:
     "@zeit/fetch" "5.1.0"
     async-retry "1.2.3"

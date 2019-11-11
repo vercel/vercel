@@ -281,7 +281,7 @@ async function compile(
   };
 }
 
-export const version = 2;
+export const version = 3;
 
 export async function build({
   files,
@@ -364,9 +364,7 @@ export async function build({
     runtime,
   });
 
-  const output = { [entrypoint]: lambda };
-  const result = { output, watch };
-  return result;
+  return { output: lambda, watch };
 }
 
 export async function prepareCache({ workPath }: PrepareCacheOptions) {
