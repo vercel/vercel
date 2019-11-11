@@ -318,7 +318,7 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
       if (typeof func.includeFiles !== 'string') {
         return {
           code: 'invalid_function_property',
-          message: 'The property \`includeFiles\` must be a string.'
+          message: `The property \`includeFiles\` must be a string, received ${typeof func.includeFiles} instead.`
         };
       }
     }
@@ -327,7 +327,7 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
       if (typeof func.excludeFiles !== 'string') {
         return {
           code: 'invalid_function_property',
-          message: 'The property \`excludeFiles\` must be a string.'
+          message: `The property \`excludeFiles\` must be a string, received ${typeof func.excludeFiles} instead.`
         };
       }
     }
