@@ -1624,11 +1624,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       firstDeployment,
     ]);
 
-    console.log(stderr);
-    console.log(deploymentUrl);
-    console.log(code);
-
-    t.is(code, 0);
+    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -1647,14 +1643,12 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       secondDeployment,
     ]);
 
-    console.log(stderr);
-    console.log(deploymentUrl);
-    console.log(code);
-
-    t.is(code, 0);
+    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
+    await fetch(url);
+    await sleep(5000);
 
     const result = await fetch(url).then(r => r.json());
 
@@ -1669,14 +1663,13 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
     const { stdout: deploymentUrl, stderr, code } = await execute([
       firstDeployment,
     ]);
-    console.log(stderr);
-    console.log(deploymentUrl);
-    console.log(code);
 
-    t.is(code, 0);
+    t.is(code, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
+    await fetch(url);
+    await sleep(5000);
 
     const result = await fetch(url).then(r => r.json());
 
