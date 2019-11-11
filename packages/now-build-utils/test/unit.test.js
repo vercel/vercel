@@ -634,6 +634,85 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBeDefined();
     expect(errors[0].code).toBe('invalid_function_runtime');
   });
+
+  it('Must include includeFiles config property', async () => {
+    const functions = {
+      'api/test.js': { includeFiles: 'text/include.txt' }
+    }
+    const files = ['api/test.js'];
+
+    const { builders, errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toBe(null);
+    expect(builders).not.toBe(null);
+    expect(builders[0].use).toBe('@now/node');
+    expect(builders[0].config).toMatchObject({
+      functions,
+      zeroConfig: true,
+      includeFiles: 'text/include.txt'
+    });
+  });
+
+  it('Must include excludeFiles config property', async () => {
+    const functions = {
+      'api/test.js': { excludeFiles: 'text/exclude.txt' }
+    }
+    const files = ['api/test.js'];
+
+    const { builders, errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toBe(null);
+    expect(builders).not.toBe(null);
+    expect(builders[0].use).toBe('@now/node');
+    expect(builders[0].config).toMatchObject({
+      functions,
+      zeroConfig: true,
+      excludeFiles: 'text/exclude.txt'
+    });
+  });
+
+  it('Must include excludeFiles and includeFiles config property', async () => {
+    const functions = {
+      'api/test.js': { excludeFiles: 'text/exclude.txt', includeFiles: 'text/include.txt' }
+    }
+    const files = ['api/test.js'];
+
+    const { builders, errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toBe(null);
+    expect(builders).not.toBe(null);
+    expect(builders[0].use).toBe('@now/node');
+    expect(builders[0].config).toMatchObject({
+      functions,
+      zeroConfig: true,
+      excludeFiles: 'text/exclude.txt',
+      includeFiles: 'text/include.txt'
+    });
+  });
+
+  it('Must fail for includeFiles config property', async () => {
+    const functions = {
+      'api/test.js': { includeFiles: { test: 1 } }
+    }
+    const files = ['api/test.js'];
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).not.toBe(null);
+    expect(errors[0].code).toBe('invalid_function_property');
+  });
+
+  it('Must fail for excludeFiles config property', async () => {
+    const functions = {
+      'api/test.js': { excludeFiles: { test: 1 } }
+    }
+    const files = ['api/test.js'];
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).not.toBe(null);
+    expect(errors[0].code).toBe('invalid_function_property');
+  });
 });
 
 it('Test `detectRoutes`', async () => {
