@@ -332,6 +332,18 @@ CMD ["node", "index.js"]`,
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
       }),
     },
+    'local-config-above-target': {
+      'now-root.json': JSON.stringify({
+        version: 2,
+        name: 'root-level',
+      }),
+      'dir/index.html': '<h1>hello index</h1>',
+      'dir/another.html': '<h1>hello another</h1>',
+      'dir/now.json': JSON.stringify({
+        version: 2,
+        name: 'nested-level',
+      }),
+    },
     'alias-rules': {
       'rules.json': JSON.stringify({
         rules: [
