@@ -133,11 +133,12 @@ export const fetch = async (
     delete opts.teamId;
   }
 
-  opts.headers = opts.headers || {};
-  // @ts-ignore
-  opts.headers.Authorization = `Bearer ${token}`;
-  // @ts-ignore
-  opts.headers['user-agent'] = `now-client-v${pkg.version}`;
+  opts.headers = {
+    ...opts.headers,
+    authorization: `Bearer ${token}`,
+    accept: 'application/json',
+    'user-agent': `now-client-v${pkg.version}`,
+  };
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
