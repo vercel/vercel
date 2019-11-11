@@ -1,6 +1,6 @@
 {
   "name": "@now/node",
-  "version": "1.0.0-canary.14",
+  "version": "1.0.0-canary.15",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/node-js",
