@@ -690,24 +690,6 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
-  it('Must include includeFiles config property', async () => {
-    const functions = {
-      'api/test.js': { includeFiles: ['text/include.txt'] }
-    }
-    const files = ['api/test.js'];
-
-    const { builders, errors } = await detectBuilders(files, null, { functions });
-
-    expect(errors).toBe(null);
-    expect(builders).not.toBe(null);
-    expect(builders[0].use).toBe('@now/node');
-    expect(builders[0].config).toMatchObject({
-      functions,
-      zeroConfig: true,
-      includeFiles: ['text/include.txt']
-    });
-  });
-
   it('Must fail for includeFiles config property', async () => {
     const functions = {
       'api/test.js': { includeFiles: { test: 1 } }
