@@ -1,4 +1,4 @@
-import { basename, dirname, join, relative, resolve, sep } from 'path';
+import { basename, dirname, join, relative, resolve, sep, parse as parsePath } from 'path';
 import nodeFileTrace from '@zeit/node-file-trace';
 import {
   glob,
@@ -287,7 +287,8 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   }
 
   if (process.env.NODEJS_AWS_HANDLER_NAME) {
-    return `${basename(entrypoint)}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
+    const { name } = parsePath(entrypoint);
+    return `${name}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
   }
 
   return '';
