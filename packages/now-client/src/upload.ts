@@ -98,6 +98,7 @@ export default async function* upload(
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
+                'Content-Length': data.length,
                 'x-now-digest': sha,
                 'x-now-size': data.length,
               },
