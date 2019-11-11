@@ -315,19 +315,19 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
     }
 
     if (func.includeFiles !== undefined) {
-      if (!Array.isArray(func.includeFiles) || !func.includeFiles.every(file => typeof file === 'string')) {
+      if (typeof func.includeFiles !== 'string') {
         return {
           code: 'invalid_function_property',
-          message: 'The property \`includeFiles\` must be an array of strings.'
+          message: 'The property \`includeFiles\` must be a string.'
         };
       }
     }
 
     if (func.excludeFiles !== undefined) {
-      if (!Array.isArray(func.excludeFiles) || !func.excludeFiles.every(file => typeof file === 'string')) {
+      if (typeof func.excludeFiles !== 'string') {
         return {
           code: 'invalid_function_property',
-          message: 'The property \`excludeFiles\` must be an array of strings.'
+          message: 'The property \`excludeFiles\` must be a string.'
         };
       }
     }

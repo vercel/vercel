@@ -637,7 +637,7 @@ describe('Test `detectBuilders`', () => {
 
   it('Must include includeFiles config property', async () => {
     const functions = {
-      'api/test.js': { includeFiles: ['text/include.txt'] }
+      'api/test.js': { includeFiles: 'text/include.txt' }
     }
     const files = ['api/test.js'];
 
@@ -649,13 +649,13 @@ describe('Test `detectBuilders`', () => {
     expect(builders[0].config).toMatchObject({
       functions,
       zeroConfig: true,
-      includeFiles: ['text/include.txt']
+      includeFiles: 'text/include.txt'
     });
   });
 
   it('Must include excludeFiles config property', async () => {
     const functions = {
-      'api/test.js': { excludeFiles: ['text/exclude.txt'] }
+      'api/test.js': { excludeFiles: 'text/exclude.txt' }
     }
     const files = ['api/test.js'];
 
@@ -667,13 +667,13 @@ describe('Test `detectBuilders`', () => {
     expect(builders[0].config).toMatchObject({
       functions,
       zeroConfig: true,
-      excludeFiles: ['text/exclude.txt']
+      excludeFiles: 'text/exclude.txt'
     });
   });
 
   it('Must include excludeFiles and includeFiles config property', async () => {
     const functions = {
-      'api/test.js': { excludeFiles: ['text/exclude.txt'], includeFiles: ['text/include.txt'] }
+      'api/test.js': { excludeFiles: 'text/exclude.txt', includeFiles: 'text/include.txt' }
     }
     const files = ['api/test.js'];
 
@@ -685,8 +685,8 @@ describe('Test `detectBuilders`', () => {
     expect(builders[0].config).toMatchObject({
       functions,
       zeroConfig: true,
-      excludeFiles: ['text/exclude.txt'],
-      includeFiles: ['text/include.txt']
+      excludeFiles: 'text/exclude.txt',
+      includeFiles: 'text/include.txt'
     });
   });
 
