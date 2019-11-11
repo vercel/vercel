@@ -1115,7 +1115,7 @@ if (satisfies(process.version, '>= 8.9.0')) {
   );
 }
 
-test.only(
+test(
   '[now dev] Use runtime from the functions property',
   testFixtureStdio('custom-runtime', async (t, port) => {
     const result = await fetchWithRetry(`http://localhost:${port}/api/user`, 3);
