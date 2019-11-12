@@ -26,10 +26,10 @@ async function main() {
     const changed = diff
       .split('\n')
       .filter(item => Boolean(item) && item.includes('packages/'))
-      .map(item => relative('packages', item).split('/')[0]);
+      .map(item => relative('packages', item).split('/')[0])
+      .concat('now-cli'); // Always run tests for Now CLI
 
     matches = Array.from(new Set(changed));
-    matches.push('now-cli'); // always test Now CLI
 
     if (matches.length === 0) {
       matches.push('now-node');
