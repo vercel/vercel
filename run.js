@@ -29,9 +29,9 @@ async function main() {
       .map(item => relative('packages', item).split('/')[0]);
 
     matches = Array.from(new Set(changed));
+    matches.push('now-cli'); // always test Now CLI
 
     if (matches.length === 0) {
-      matches.push('now-cli');
       matches.push('now-node');
       console.log('No packages changed. Using default packages.');
     }
