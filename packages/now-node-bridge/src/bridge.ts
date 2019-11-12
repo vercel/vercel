@@ -29,7 +29,7 @@ export interface NowProxyResponse {
 }
 
 interface ServerLike {
-  timeout: number;
+  timeout?: number;
   listen: (
     opts: {
       host?: string;
@@ -133,19 +133,18 @@ export class Bridge {
   }
 
   listen() {
-    if (!this.server) {
+    const { server, resolveListening } = this;
+    if (!server) {
       throw new Error('Server has not been set!');
     }
 
-    const resolveListening = this.resolveListening;
-
-    if (this.server.timeout > 0) {
-      // Disable timeout (usually 2 minutes) until Node 13.x.
+    if (typeof server.timeout === 'number' && server.timeout > 0) {
+      // Disable timeout (usually 2 minutes until Node 13).
       // Instead, user should assign function `maxDuration`.
-      this.server.timeout = 0;
+      server.timeout = 0;
     }
 
-    return this.server.listen(
+    return server.listen(
       {
         host: '127.0.0.1',
         port: 0,
