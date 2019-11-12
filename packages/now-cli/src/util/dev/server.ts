@@ -141,6 +141,7 @@ export default class DevServer {
 
     this.cachedNowConfig = null;
     this.server = http.createServer(this.devServerHandler);
+    this.server.timeout = 0; // Disable timeout
     this.serverUrlPrinted = false;
     this.stopping = false;
     this.buildMatches = new Map();
