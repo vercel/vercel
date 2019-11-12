@@ -1,4 +1,12 @@
-import { basename, dirname, join, relative, resolve, sep, parse as parsePath } from 'path';
+import {
+  basename,
+  dirname,
+  join,
+  relative,
+  resolve,
+  sep,
+  parse as parsePath,
+} from 'path';
 import nodeFileTrace from '@zeit/node-file-trace';
 import {
   glob,
@@ -19,6 +27,7 @@ import {
   Config,
   debug,
 } from '@now/build-utils';
+export { shouldServe };
 export { NowRequest, NowResponse } from './types';
 import { makeNowLauncher, makeAwsLauncher } from './launcher';
 import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
@@ -288,7 +297,9 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
 
   if (process.env.NODEJS_AWS_HANDLER_NAME) {
     const { dir, name } = parsePath(entrypoint);
-    return `${dir}${dir ? sep : ''}${name}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
+    return `${dir}${dir ? sep : ''}${name}.${
+      process.env.NODEJS_AWS_HANDLER_NAME
+    }`;
   }
 
   return '';
@@ -303,7 +314,9 @@ export async function build({
   config = {},
   meta = {},
 }: BuildOptions) {
-  const shouldAddHelpers = !(config.helpers === false || process.env.NODEJS_HELPERS === '0');
+  const shouldAddHelpers = !(
+    config.helpers === false || process.env.NODEJS_HELPERS === '0'
+  );
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const {
@@ -387,5 +400,3 @@ export async function prepareCache({ workPath }: PrepareCacheOptions) {
     ...(await glob('yarn.lock', workPath)),
   };
 }
-
-export { shouldServe };
