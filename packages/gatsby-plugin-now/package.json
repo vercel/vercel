@@ -1,6 +1,6 @@
 {
   "name": "gatsby-plugin-now",
-  "version": "1.2.4-canary.0",
+  "version": "1.2.4",
   "main": "index.js",
   "license": "MIT",
   "homepage": "https://zeit.co/guides/deploying-gatsby-with-now",
