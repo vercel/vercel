@@ -1955,7 +1955,7 @@ test('deploy a Lambda with 128MB of memory', async t => {
   // It won't be exactly 128MB,
   // so we just compare if it is lower than 450MB
   const { memory } = await response.json();
-  t.truthy(memory < 4.5e8, `Lambda has ${memory} bytes of memory`);
+  t.is(memory, 128, `Lambda has ${memory} bytes of memory`);
 });
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
