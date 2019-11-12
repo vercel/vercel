@@ -185,9 +185,9 @@ test('[now-build] 02-api-and-next', async t => {
   ]))
 
   await t.notThrowsAsync(hasBuildOutput(fixtureName, buildName, {
-    'output!!api/login.js!!type': 'Lambda',
-    'output!!api/login.js!!zipBuffer': 'OMITTED',
-    'output!!api/login.js!!handler': '___now_launcher.launcher',
+    'output!!type': 'Lambda',
+    'output!!zipBuffer': 'OMITTED',
+    'output!!handler': '___now_launcher.launcher',
   }))
 
   buildName = 'api_nested_another.js-@now_node'
@@ -196,9 +196,9 @@ test('[now-build] 02-api-and-next', async t => {
   ]))
 
   await t.notThrowsAsync(hasBuildOutput(fixtureName, buildName, {
-    'output!!api/nested/another.js!!type': 'Lambda',
-    'output!!api/nested/another.js!!zipBuffer': 'OMITTED',
-    'output!!api/nested/another.js!!handler': '___now_launcher.launcher',
+    'output!!type': 'Lambda',
+    'output!!zipBuffer': 'OMITTED',
+    'output!!handler': '___now_launcher.launcher',
   }))
 
   buildName = 'api_nested_index.js-@now_node'
@@ -207,9 +207,9 @@ test('[now-build] 02-api-and-next', async t => {
   ]))
 
   await t.notThrowsAsync(hasBuildOutput(fixtureName, buildName, {
-    'output!!api/nested/index.js!!type': 'Lambda',
-    'output!!api/nested/index.js!!zipBuffer': 'OMITTED',
-    'output!!api/nested/index.js!!handler': '___now_launcher.launcher',
+    'output!!type': 'Lambda',
+    'output!!zipBuffer': 'OMITTED',
+    'output!!handler': '___now_launcher.launcher',
   }))
 });
 
@@ -249,9 +249,9 @@ test('[now-build] 03-api-and-next-zero-config', async t => {
   ]))
 
   await t.notThrowsAsync(hasBuildOutput(fixtureName, buildName, {
-    'output!!api/login.js!!type': 'Lambda',
-    'output!!api/login.js!!zipBuffer': 'OMITTED',
-    'output!!api/login.js!!handler': '___now_launcher.launcher',
+    'output!!type': 'Lambda',
+    'output!!zipBuffer': 'OMITTED',
+    'output!!handler': '___now_launcher.launcher',
   }))
 
   buildName = 'api_nested_another.js-@now_node'
@@ -260,9 +260,9 @@ test('[now-build] 03-api-and-next-zero-config', async t => {
   ]))
 
   await t.notThrowsAsync(hasBuildOutput(fixtureName, buildName, {
-    'output!!api/nested/another.js!!type': 'Lambda',
-    'output!!api/nested/another.js!!zipBuffer': 'OMITTED',
-    'output!!api/nested/another.js!!handler': '___now_launcher.launcher',
+    'output!!type': 'Lambda',
+    'output!!zipBuffer': 'OMITTED',
+    'output!!handler': '___now_launcher.launcher',
   }))
 
   buildName = 'api_nested_index.js-@now_node'
@@ -271,9 +271,9 @@ test('[now-build] 03-api-and-next-zero-config', async t => {
   ]))
 
   await t.notThrowsAsync(hasBuildOutput(fixtureName, buildName, {
-    'output!!api/nested/index.js!!type': 'Lambda',
-    'output!!api/nested/index.js!!zipBuffer': 'OMITTED',
-    'output!!api/nested/index.js!!handler': '___now_launcher.launcher',
+    'output!!type': 'Lambda',
+    'output!!zipBuffer': 'OMITTED',
+    'output!!handler': '___now_launcher.launcher',
   }))
 });
 
