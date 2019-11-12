@@ -21,7 +21,7 @@ class LocalFilesystem extends DetectorFilesystem {
 }
 
 test('detectDefaults() - angular', async () => {
-  const dir = join(__dirname, 'fixtures', '16-angular');
+  const dir = join(__dirname, 'fixtures', '03-zero-config-angular');
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
@@ -30,7 +30,7 @@ test('detectDefaults() - angular', async () => {
 });
 
 test('detectDefaults() - brunch', async () => {
-  const dir = join(__dirname, 'fixtures', '17-brunch');
+  const dir = join(__dirname, 'fixtures', '04-zero-config-brunch');
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
@@ -39,7 +39,7 @@ test('detectDefaults() - brunch', async () => {
 });
 
 test('detectDefaults() - hugo', async () => {
-  const dir = join(__dirname, 'fixtures', 'hugo');
+  const dir = join(__dirname, 'fixtures', '05-zero-config-hugo');
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
@@ -48,7 +48,7 @@ test('detectDefaults() - hugo', async () => {
 });
 
 test('detectDefaults() - jekyll', async () => {
-  const dir = join(__dirname, 'fixtures', 'jekyll');
+  const dir = join(__dirname, 'fixtures', '07-zero-config-jekyll');
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
@@ -57,7 +57,7 @@ test('detectDefaults() - jekyll', async () => {
 });
 
 test('detectDefaults() - middleman', async () => {
-  const dir = join(__dirname, 'fixtures', 'middleman');
+  const dir = join(__dirname, 'fixtures', '08-zero-config-middleman');
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
