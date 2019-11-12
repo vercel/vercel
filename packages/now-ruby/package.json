@@ -1,7 +1,7 @@
 {
   "name": "@now/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
-  "version": "0.1.7",
+  "version": "1.0.0",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/ruby",
