@@ -50,7 +50,10 @@ export default async ctx => {
     paths = [process.cwd()];
   }
 
-  const localConfig = ctx.localConfig || readLocalConfig(paths[0]);
+  let { localConfig } = ctx;
+  if (!localConfig || localConfig instanceof Error) {
+    localConfig = readLocalConfig(paths[0]);
+  }
   const debugEnabled = argv['--debug'];
   const output = createOutput({ debug: debugEnabled });
   const stats = {};
