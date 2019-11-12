@@ -1828,6 +1828,7 @@ test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
   const output = await execute([fixturePath, '--force', '--public']);
 
+  console.log('isCanary', isCanary);
   console.log(output.stderr);
   console.log(output.stdout);
   console.log(output.exitCode);
@@ -1848,7 +1849,10 @@ test('create zero-config deployment', async t => {
     isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
   );
 
-  t.true(validBuilders, JSON.stringify(data, null, 2));
+  t.true(
+    validBuilders,
+    'Builders are not valid: ' + JSON.stringify(data, null, 2)
+  );
 });
 
 test('now secret add', async t => {
