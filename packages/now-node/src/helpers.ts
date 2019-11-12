@@ -279,9 +279,5 @@ export function createServerWithHelpers(
     }
   });
 
-  // Disable timeout (usually 2 minutes) until Node 13.x.
-  // Instead, user should assign function `maxDuration`.
-  server.timeout = 0;
-
   return server;
 }

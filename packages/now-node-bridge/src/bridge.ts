@@ -5,7 +5,7 @@ import {
   Server,
   IncomingHttpHeaders,
   OutgoingHttpHeaders,
-  request
+  request,
 } from 'http';
 
 interface NowProxyEvent {
@@ -29,6 +29,7 @@ export interface NowProxyResponse {
 }
 
 interface ServerLike {
+  timeout: number;
   listen: (
     opts: {
       host?: string;
@@ -138,10 +139,16 @@ export class Bridge {
 
     const resolveListening = this.resolveListening;
 
+    if (this.server.timeout > 0) {
+      // Disable timeout (usually 2 minutes) until Node 13.x.
+      // Instead, user should assign function `maxDuration`.
+      this.server.timeout = 0;
+    }
+
     return this.server.listen(
       {
         host: '127.0.0.1',
-        port: 0
+        port: 0,
       },
       function listeningCallback() {
         if (!this || typeof this.address !== 'function') {
@@ -206,7 +213,7 @@ export class Bridge {
             statusCode: response.statusCode || 200,
             headers: response.headers,
             body: bodyBuffer.toString('base64'),
-            encoding: 'base64'
+            encoding: 'base64',
           });
         });
       });
