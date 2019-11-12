@@ -152,7 +152,7 @@ export function register(opts: Options = {}): Register {
   let compiler: string;
   try {
     compiler = require.resolve(options.compiler || 'typescript', {
-      paths: [cwd, nowNodeBase],
+      paths: [options.project || cwd, nowNodeBase],
     });
   } catch (e) {
     compiler = require.resolve(eval('"./typescript"'));

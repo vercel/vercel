@@ -316,5 +316,7 @@ export interface BuilderFunctions {
     memory?: number;
     maxDuration?: number;
     runtime?: string;
+    includeFiles?: string;
+    excludeFiles?: string;
   };
 }
