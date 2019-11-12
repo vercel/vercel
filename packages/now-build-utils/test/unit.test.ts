@@ -39,7 +39,7 @@ test('detectDefaults() - brunch', async () => {
 });
 
 test('detectDefaults() - hugo', async () => {
-  const dir = join(__dirname, 'fixtures', '05-zero-config-hugo');
+  const dir = join(__dirname, 'fixtures', '06-zero-config-hugo');
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
