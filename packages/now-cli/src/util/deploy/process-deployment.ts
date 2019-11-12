@@ -45,9 +45,11 @@ export default async function processDeployment({
   const opts: DeploymentOptions = {
     ...requestBody,
     debug: now._debug,
+    apiUrl: now._apiUrl,
   };
 
   if (!legacy) {
+    let queuedSpinner = null;
     let buildSpinner = null;
     let deploySpinner = null;
 
@@ -113,15 +115,29 @@ export default async function processDeployment({
         } else {
           process.stdout.write(`https://${event.payload.url}`);
         }
+
+        if (queuedSpinner === null) {
+          queuedSpinner = wait('Queued...');
+        }
       }
 
-      if (event.type === 'build-state-changed') {
+      if (
+        event.type === 'build-state-changed' &&
+        event.payload.readyState === 'BUILDING'
+      ) {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+
         if (buildSpinner === null) {
           buildSpinner = wait('Building...');
         }
       }
 
       if (event.type === 'all-builds-completed') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
         if (buildSpinner) {
           buildSpinner();
         }
@@ -131,10 +147,12 @@ export default async function processDeployment({
 
       // Handle error events
       if (event.type === 'error') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
         if (buildSpinner) {
           buildSpinner();
         }
-
         if (deploySpinner) {
           deploySpinner();
         }
@@ -143,7 +161,13 @@ export default async function processDeployment({
       }
 
       // Handle ready event
-      if (event.type === 'ready') {
+      if (event.type === 'alias-assigned') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+        if (buildSpinner) {
+          buildSpinner();
+        }
         if (deploySpinner) {
           deploySpinner();
         }

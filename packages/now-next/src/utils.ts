@@ -1,6 +1,7 @@
 import zlib from 'zlib';
 import path from 'path';
 import fs from 'fs-extra';
+import semver from 'semver';
 import { ZipFile } from 'yazl';
 import crc32 from 'buffer-crc32';
 import { Sema } from 'async-sema';
@@ -160,31 +161,49 @@ function getPathsInside(entryDirectory: string, files: Files) {
 }
 
 function normalizePage(page: string): string {
-  // remove '/index' from the end
-  page = page.replace(/\/index$/, '/');
   // Resolve on anything that doesn't start with `/`
   if (!page.startsWith('/')) {
     page = `/${page}`;
   }
+  // remove '/index' from the end
+  page = page.replace(/\/index$/, '/');
   return page;
 }
 
-function getRoutes(
+async function getRoutes(
   entryPath: string,
   entryDirectory: string,
   pathsInside: string[],
   files: Files,
   url: string
-): Route[] {
+): Promise<Route[]> {
+  let pagesDir = '';
   const filesInside: Files = {};
   const prefix = entryDirectory === `.` ? `/` : `/${entryDirectory}/`;
+  const fileKeys = Object.keys(files);
 
-  for (const file of Object.keys(files)) {
+  for (const file of fileKeys) {
     if (!pathsInside.includes(file)) {
       continue;
     }
 
+    if (!pagesDir) {
+      if (file.startsWith(path.join(entryDirectory, 'pages'))) {
+        pagesDir = 'pages';
+      }
+    }
+
     filesInside[file] = files[file];
+  }
+
+  // If default pages dir isn't found check for `src/pages`
+  if (
+    !pagesDir &&
+    fileKeys.some(file =>
+      file.startsWith(path.join(entryDirectory, 'src/pages'))
+    )
+  ) {
+    pagesDir = 'src/pages';
   }
 
   const routes: Route[] = [
@@ -202,13 +221,13 @@ function getRoutes(
 
   for (const file of filePaths) {
     const relativePath = path.relative(entryDirectory, file);
-    const isPage = pathIsInside('pages', relativePath);
+    const isPage = pathIsInside(pagesDir, relativePath);
 
     if (!isPage) {
       continue;
     }
 
-    const relativeToPages = path.relative('pages', relativePath);
+    const relativeToPages = path.relative(pagesDir, relativePath);
     const extension = path.extname(relativeToPages);
     const pageName = relativeToPages.replace(extension, '').replace(/\\/g, '/');
 
@@ -237,17 +256,18 @@ function getRoutes(
   }
 
   routes.push(
-    ...getDynamicRoutes(entryPath, entryDirectory, dynamicPages).map(
-      (route: { src: string; dest: string }) => {
-        // convert to make entire RegExp match as one group
-        route.src = route.src
-          .replace('^', `^${prefix}(`)
-          .replace('(\\/', '(')
-          .replace('$', ')$');
-        route.dest = `${url}/$1`;
-        return route;
-      }
-    )
+    ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
+      arr =>
+        arr.map((route: { src: string; dest: string }) => {
+          // convert to make entire RegExp match as one group
+          route.src = route.src
+            .replace('^', `^${prefix}(`)
+            .replace('(\\/', '(')
+            .replace('$', ')$');
+          route.dest = `${url}/$1`;
+          return route;
+        })
+    ))
   );
 
   // Add public folder routes
@@ -272,16 +292,96 @@ function getRoutes(
   return routes;
 }
 
-export function getDynamicRoutes(
+export type Rewrite = {
+  source: string,
+  destination: string,
+}
+
+export type Redirect = Rewrite & {
+  statusCode?: number
+}
+
+type RoutesManifestRegex = {
+  regex: string,
+  regexKeys: string[]
+}
+
+export type RoutesManifest = {
+  redirects: (Redirect & RoutesManifestRegex)[],
+  rewrites: (Rewrite & RoutesManifestRegex)[],
+  dynamicRoutes: {
+    page: string,
+    regex: string,
+  }[],
+  version: number
+}
+
+export async function getRoutesManifest(
+  entryPath: string,
+  nextVersion?: string,
+): Promise< RoutesManifest | undefined> {
+  const shouldHaveManifest = (
+    nextVersion && semver.gte(nextVersion, '9.1.4-canary.0')
+  )
+  if (!shouldHaveManifest) return
+
+  const pathRoutesManifest = path.join(
+    entryPath,
+    '.next',
+    'routes-manifest.json'
+  );
+  const hasRoutesManifest = await fs
+    .access(pathRoutesManifest)
+    .then(() => true)
+    .catch(() => false);
+
+  if (shouldHaveManifest && !hasRoutesManifest) {
+    throw new Error(
+      `A routes-manifest.json couldn't be found. This could be due to a failure during the build`
+    )
+  }
+
+  const routesManifest: RoutesManifest = require(pathRoutesManifest)
+
+  return routesManifest
+}
+
+export async function getDynamicRoutes(
   entryPath: string,
   entryDirectory: string,
   dynamicPages: string[],
-  isDev?: boolean
-): { src: string; dest: string }[] {
+  isDev?: boolean,
+  routesManifest?: RoutesManifest
+): Promise<{ src: string; dest: string }[]> {
   if (!dynamicPages.length) {
     return [];
   }
 
+  if (routesManifest) {
+    switch (routesManifest.version) {
+      case 1: {
+        return routesManifest.dynamicRoutes.map(
+          ({ page, regex }: { page: string; regex: string }) => {
+            return {
+              src: regex,
+              dest: !isDev ? path.join('/', entryDirectory, page) : page,
+            };
+          }
+        );
+      }
+      default: {
+        // update MIN_ROUTES_MANIFEST_VERSION
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
+      }
+    }
+  }
+
+  // FALLBACK:
+  // When `routes-manifest.json` does not exist (old Next.js versions), we'll try to
+  // require the methods we need from Next.js' internals.
   let getRouteRegex:
     | ((pageName: string) => { re: RegExp })
     | undefined = undefined;
@@ -399,6 +499,8 @@ interface CreateLambdaFromPseudoLayersOptions {
   layers: PseudoLayer[];
   handler: string;
   runtime: string;
+  memory?: number;
+  maxDuration?: number;
   environment?: { [name: string]: string };
 }
 
@@ -411,6 +513,8 @@ export async function createLambdaFromPseudoLayers({
   layers,
   handler,
   runtime,
+  memory,
+  maxDuration,
   environment = {},
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -448,8 +552,138 @@ export async function createLambdaFromPseudoLayers({
     handler,
     runtime,
     zipBuffer,
+    memory,
+    maxDuration,
     environment,
   });
+}
+
+export type NextPrerenderedRoutes = {
+  routes: {
+    [route: string]: {
+      initialRevalidate: number | false;
+      dataRoute: string;
+      srcRoute: string | null;
+    };
+  };
+
+  lazyRoutes: {
+    [route: string]: {
+      routeRegex: string;
+      dataRoute: string;
+      dataRouteRegex: string;
+    };
+  };
+};
+
+export async function getPrerenderManifest(
+  entryPath: string
+): Promise<NextPrerenderedRoutes> {
+  const pathPrerenderManifest = path.join(
+    entryPath,
+    '.next',
+    'prerender-manifest.json'
+  );
+
+  const hasManifest: boolean = await fs
+    .access(pathPrerenderManifest, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasManifest) {
+    return { routes: {}, lazyRoutes: {} };
+  }
+
+  const manifest: {
+    version: 1;
+    routes: {
+      [key: string]: {
+        initialRevalidateSeconds: number | false;
+        dataRoute: string;
+        srcRoute: string | null;
+      };
+    };
+    dynamicRoutes: {
+      [key: string]: {
+        routeRegex: string;
+        dataRoute: string;
+        dataRouteRegex: string;
+      };
+    };
+  } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
+
+  switch (manifest.version) {
+    case 1: {
+      const routes = Object.keys(manifest.routes);
+      const lazyRoutes = Object.keys(manifest.dynamicRoutes);
+
+      const ret: NextPrerenderedRoutes = { routes: {}, lazyRoutes: {} };
+
+      routes.forEach(route => {
+        const {
+          initialRevalidateSeconds,
+          dataRoute,
+          srcRoute,
+        } = manifest.routes[route];
+        ret.routes[route] = {
+          initialRevalidate:
+            initialRevalidateSeconds === false
+              ? false
+              : Math.max(1, initialRevalidateSeconds),
+          dataRoute,
+          srcRoute,
+        };
+      });
+
+      lazyRoutes.forEach(lazyRoute => {
+        const {
+          routeRegex,
+          dataRoute,
+          dataRouteRegex,
+        } = manifest.dynamicRoutes[lazyRoute];
+
+        ret.lazyRoutes[lazyRoute] = { routeRegex, dataRoute, dataRouteRegex };
+      });
+
+      return ret;
+    }
+    default: {
+      return { routes: {}, lazyRoutes: {} };
+    }
+  }
+}
+
+// We only need this once per build
+let _usesSrcCache: boolean | undefined;
+
+async function usesSrcDirectory(workPath: string): Promise<boolean> {
+  if (!_usesSrcCache) {
+    const source = path.join(workPath, 'src', 'pages');
+
+    try {
+      if ((await fs.stat(source)).isDirectory()) {
+        _usesSrcCache = true;
+      }
+    } catch (_err) {
+      _usesSrcCache = false;
+    }
+  }
+
+  return Boolean(_usesSrcCache);
+}
+
+async function getSourceFilePathFromPage({
+  workPath,
+  page,
+}: {
+  workPath: string;
+  page: string;
+}) {
+  if (await usesSrcDirectory(workPath)) {
+    return path.join('src', 'pages', page);
+  }
+
+  return path.join('pages', page);
 }
 
 export {
@@ -464,4 +698,5 @@ export {
   syncEnvVars,
   normalizePage,
   isDynamicRoute,
+  getSourceFilePathFromPage,
 };

@@ -20,7 +20,7 @@ async function main() {
       .toString()
       .trim();
 
-    const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/canary...HEAD';
+    const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
 
     const changed = diff

@@ -1,14 +1,14 @@
 import { DeploymentFile } from './utils/hashes';
 import {
   fetch,
-  API_DEPLOYMENTS,
   prepareFiles,
-  API_DEPLOYMENTS_LEGACY,
   createDebug,
+  getApiDeploymentsUrl,
 } from './utils';
 import checkDeploymentStatus from './deployment-status';
 import { generateQueryString } from './utils/query-string';
 import { Deployment, DeploymentOptions, NowJsonOptions } from './types';
+import { isReady, isAliasAssigned } from './utils/ready-state';
 
 export interface Options {
   metadata: DeploymentOptions;
@@ -22,6 +22,7 @@ export interface Options {
   preflight?: boolean;
   debug?: boolean;
   nowConfig?: NowJsonOptions;
+  apiUrl?: string;
 }
 
 async function* createDeployment(
@@ -32,8 +33,7 @@ async function* createDeployment(
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const preparedFiles = prepareFiles(files, options);
 
-  let apiDeployments =
-    metadata.version === 2 ? API_DEPLOYMENTS : API_DEPLOYMENTS_LEGACY;
+  const apiDeployments = getApiDeploymentsUrl(metadata);
 
   debug('Sending deployment creation API request');
   try {
@@ -44,12 +44,12 @@ async function* createDeployment(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${options.token}`,
         },
         body: JSON.stringify({
           ...metadata,
           files: preparedFiles,
         }),
+        apiUrl: options.apiUrl,
       }
     );
 
@@ -191,9 +191,12 @@ export default async function* deploy(
   }
 
   if (deployment) {
-    if (deployment.readyState === 'READY') {
-      debug('Deployment is READY. Not performing additional polling');
-      return yield { type: 'ready', payload: deployment };
+    if (isReady(deployment) && isAliasAssigned(deployment)) {
+      debug('Deployment state changed to READY 3');
+      yield { type: 'ready', payload: deployment };
+
+      debug('Deployment alias assigned');
+      return yield { type: 'alias-assigned', payload: deployment };
     }
 
     try {
@@ -203,7 +206,8 @@ export default async function* deploy(
         options.token,
         metadata.version,
         options.teamId,
-        debug
+        debug,
+        options.apiUrl
       )) {
         yield event;
       }

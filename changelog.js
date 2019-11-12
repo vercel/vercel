@@ -4,7 +4,7 @@ const commit = execSync('git log --pretty=format:"%s %H"')
   .toString()
   .trim()
   .split('\n')
-  .find(line => line.startsWith('Publish '))
+  .find(line => line.startsWith('Publish Stable '))
   .split(' ')
   .pop();
 

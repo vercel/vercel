@@ -4,7 +4,13 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
+import {
+  HttpHeadersConfig,
+  RouteConfig,
+  RouteResult,
+  NowConfig,
+} from './types';
+import { isHandler } from '@now/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
@@ -40,9 +46,8 @@ export default async function(
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
-      let { src, headers, methods, handle } = routeConfig;
-      if (handle) {
-        if (handle === 'filesystem' && devServer) {
+      if (isHandler(routeConfig)) {
+        if (routeConfig.handle === 'filesystem' && devServer) {
           if (await devServer.hasFilesystem(reqPathname)) {
             break;
           }
@@ -50,16 +55,10 @@ export default async function(
         continue;
       }
 
+      let { src, headers, methods } = routeConfig;
+
       if (Array.isArray(methods) && reqMethod && !methods.includes(reqMethod)) {
         continue;
-      }
-
-      if (!src.startsWith('^')) {
-        src = `^${src}`;
-      }
-
-      if (!src.endsWith('$')) {
-        src = `${src}$`;
       }
 
       const keys: string[] = [];

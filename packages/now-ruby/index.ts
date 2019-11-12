@@ -7,7 +7,7 @@ import {
   remove,
   pathExists,
   readFile,
-  writeFile
+  writeFile,
 } from 'fs-extra';
 import {
   download,
@@ -15,7 +15,7 @@ import {
   glob,
   createLambda,
   BuildOptions,
-  debug
+  debug,
 } from '@now/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -59,15 +59,15 @@ async function bundleInstall(
         '--gemfile',
         gemfilePath,
         '--path',
-        bundleDir
+        bundleDir,
       ],
       {
         stdio: 'pipe',
         env: {
           BUNDLE_SILENCE_ROOT_WARNING: '1',
           BUNDLE_APP_CONFIG: bundleAppConfig,
-          BUNDLE_JOBS: '4'
-        }
+          BUNDLE_JOBS: '4',
+        },
       }
     );
   } catch (err) {
@@ -76,11 +76,13 @@ async function bundleInstall(
   }
 }
 
+export const version = 3;
+
 export const build = async ({
   workPath,
   files,
   entrypoint,
-  config
+  config,
 }: BuildOptions) => {
   debug('downloading files...');
 
@@ -183,7 +185,7 @@ export const build = async ({
   if (config && (config.includeFiles || config.excludeFiles)) {
     const includedPaths = await matchPaths(config.includeFiles, workPath);
     const excludedPaths = await matchPaths(
-      <string | string[]>config.excludeFiles,
+      config.excludeFiles as string | string[],
       workPath
     );
 
@@ -211,10 +213,8 @@ export const build = async ({
     files: outputFiles,
     handler: `${nowHandlerRbFilename}.now__handler`,
     runtime: 'ruby2.5',
-    environment: {}
+    environment: {},
   });
 
-  return {
-    [entrypoint]: lambda
-  };
+  return { output: lambda };
 };

@@ -21,7 +21,7 @@ async function fetchWithProxyReq(_url, opts = {}) {
 
   return fetch(_url, {
     ...opts,
-    headers: { ...opts.headers, 'x-now-bridge-request-id': '2' }
+    headers: { ...opts.headers, 'x-now-bridge-request-id': '2' },
   });
 }
 
@@ -66,7 +66,7 @@ describe('all helpers', () => {
     ['body', 0],
     ['status', 1],
     ['send', 1],
-    ['json', 1]
+    ['json', 1],
   ];
 
   test('should not recalculate req properties twice', async () => {
@@ -83,7 +83,7 @@ describe('all helpers', () => {
     await fetchWithProxyReq(`${url}/?who=bill`, {
       method: 'POST',
       body: JSON.stringify({ who: 'mike' }),
-      headers: { 'content-type': 'application/json', cookie: 'who=jim' }
+      headers: { 'content-type': 'application/json', cookie: 'who=jim' },
     });
 
     // here we test that bodySpy is called twice with exactly the same arguments
@@ -137,7 +137,7 @@ describe('req.query', () => {
 
     expect(mockListener.mock.calls[0][0].query).toMatchObject({
       who: 'bill',
-      where: 'us'
+      where: 'us',
     });
   });
 
@@ -152,13 +152,13 @@ describe('req.cookies', () => {
   test('req.cookies should reflect req.cookie header', async () => {
     await fetchWithProxyReq(url, {
       headers: {
-        cookie: 'who=bill; where=us'
-      }
+        cookie: 'who=bill; where=us',
+      },
     });
 
     expect(mockListener.mock.calls[0][0].cookies).toMatchObject({
       who: 'bill',
-      where: 'us'
+      where: 'us',
     });
   });
 });
@@ -172,7 +172,7 @@ describe('req.body', () => {
   test('req.body should be undefined if content-type is not defined', async () => {
     await fetchWithProxyReq(url, {
       method: 'POST',
-      body: 'hello'
+      body: 'hello',
     });
     expect(mockListener.mock.calls[0][0].body).toBe(undefined);
   });
@@ -181,7 +181,7 @@ describe('req.body', () => {
     await fetchWithProxyReq(url, {
       method: 'POST',
       body: 'hello',
-      headers: { 'content-type': 'text/plain' }
+      headers: { 'content-type': 'text/plain' },
     });
 
     expect(mockListener.mock.calls[0][0].body).toBe('hello');
@@ -191,7 +191,7 @@ describe('req.body', () => {
     await fetchWithProxyReq(url, {
       method: 'POST',
       body: 'hello',
-      headers: { 'content-type': 'application/octet-stream' }
+      headers: { 'content-type': 'application/octet-stream' },
     });
 
     const [{ body }] = mockListener.mock.calls[0];
@@ -208,7 +208,7 @@ describe('req.body', () => {
     await fetchWithProxyReq(url, {
       method: 'POST',
       body: qs.encode(obj),
-      headers: { 'content-type': 'application/x-www-form-urlencoded' }
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
     expect(mockListener.mock.calls[0][0].body).toMatchObject(obj);
@@ -217,19 +217,19 @@ describe('req.body', () => {
   test('req.body should be an object when content-type is `application/json`', async () => {
     const json = {
       who: 'bill',
-      where: 'us'
+      where: 'us',
     };
 
     await fetchWithProxyReq(url, {
       method: 'POST',
       body: JSON.stringify(json),
-      headers: { 'content-type': 'application/json' }
+      headers: { 'content-type': 'application/json' },
     });
 
     expect(mockListener.mock.calls[0][0].body).toMatchObject(json);
   });
 
-  test('should throw error when body is empty and content-type is `application/json`', async () => {
+  test('should work when body is empty and content-type is `application/json`', async () => {
     mockListener.mockImplementation((req, res) => {
       console.log(req.body);
       res.end();
@@ -238,10 +238,11 @@ describe('req.body', () => {
     const res = await fetchWithProxyReq(url, {
       method: 'POST',
       body: '',
-      headers: { 'content-type': 'application/json' }
+      headers: { 'content-type': 'application/json' },
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({});
   });
 
   test('should be able to try/catch parse errors', async () => {
@@ -260,7 +261,7 @@ describe('req.body', () => {
     await fetchWithProxyReq(url, {
       method: 'POST',
       body: '{"wrong":"json"',
-      headers: { 'content-type': 'application/json' }
+      headers: { 'content-type': 'application/json' },
     });
 
     expect(bodySpy).toHaveBeenCalled();
