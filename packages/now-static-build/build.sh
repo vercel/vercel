@@ -8,4 +8,4 @@ ncc build src/index.ts -o dist
 gatsby_plugin="$(dirname $(pwd))/gatsby-plugin-now"
 gatsby_local="dist/gatsby-plugin-now"
 mkdir -p $gatsby_local
-cp -v "$gatsby_plugin/gatsby-node.js" "$gatsby_plugin/package.json" "$gatsby_local"
+cp -v "$gatsby_plugin/gatsby-node.js" "$gatsby_plugin/package.json" "$gatsby_plugin/index.js" "$gatsby_local"

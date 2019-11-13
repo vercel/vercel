@@ -40,13 +40,13 @@ export async function injectGatsbyConfig(entrypointDir: string) {
 
     await mkdirPromise(gatsbyPluginNowPath);
 
-    await copyFilePromise(
-      require.resolve('./gatsby-plugin-now/gatsby-node.js'),
-      join(gatsbyPluginNowPath, 'gatsby-node.js')
-    );
-    await copyFilePromise(
-      require.resolve('./gatsby-plugin-now/package.json'),
-      join(gatsbyPluginNowPath, 'package.json')
+    await Promise.all(
+      ['gatsby-node.js', 'package.json', 'index.js'].map(file =>
+        copyFilePromise(
+          require.resolve(`./gatsby-plugin-now/${file}`),
+          join(gatsbyPluginNowPath, file)
+        )
+      )
     );
 
     // then, we wrap the existing config and
