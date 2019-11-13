@@ -1,36 +1,28 @@
-export type NowError = {
-  code: string;
-  message: string;
-  errors: {
-    message: string;
-    src?: string;
-    handle?: string;
-  }[];
-  sha?: string; // File errors
-};
+export * from './schemas';
+export * from './types';
+import {
+  Route,
+  Handler,
+  NormalizedRoutes,
+  GetRoutesProps,
+  NowError,
+  NowErrorNested,
+} from './types';
+import {
+  convertCleanUrls,
+  convertRewrites,
+  convertRedirects,
+  convertHeaders,
+  convertTrailingSlash,
+} from './superstatic';
 
-export type Source = {
-  src: string;
-  dest?: string;
-  headers?: {};
-  methods?: string[];
-  continue?: boolean;
-  status?: number;
-};
-
-export type Handler = {
-  handle: string;
-};
-
-export type Route = Source | Handler;
+export { getCleanUrls } from './superstatic';
 
 export function isHandler(route: Route): route is Handler {
   return typeof (route as Handler).handle !== 'undefined';
 }
 
-export function normalizeRoutes(
-  inputRoutes: Array<Route> | null
-): { routes: Array<Route> | null; error: NowError | null } {
+export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
     return { routes: inputRoutes, error: null };
   }
@@ -48,19 +40,19 @@ export function normalizeRoutes(
       if (Object.keys(route).length !== 1) {
         errors.push({
           message: `Cannot have any other keys when handle is used (handle: ${route.handle})`,
-          handle: route.handle
+          handle: route.handle,
         });
       }
       if (!['filesystem'].includes(route.handle)) {
         errors.push({
           message: `This is not a valid handler (handle: ${route.handle})`,
-          handle: route.handle
+          handle: route.handle,
         });
       }
       if (handling.includes(route.handle)) {
         errors.push({
           message: `You can only handle something once (handle: ${route.handle})`,
-          handle: route.handle
+          handle: route.handle,
         });
       } else {
         handling.push(route.handle);
@@ -76,88 +68,186 @@ export function normalizeRoutes(
         route.src = `${route.src}$`;
       }
 
-      try {
-        // This feels a bit dangerous if there would be a vulnerability in RegExp.
-        new RegExp(route.src);
-      } catch (err) {
-        errors.push({
-          message: `Invalid regular expression: "${route.src}"`,
-          src: route.src
-        });
+      // Route src should strip escaped forward slash, its not special
+      route.src = route.src.replace(/\\\//g, '/');
+
+      const regError = checkRegexSyntax(route.src);
+      if (regError) {
+        errors.push(regError);
       }
     } else {
       errors.push({
-        message: 'A route must set either handle or src'
+        message: 'A route must set either handle or src',
       });
     }
   }
 
-  const error =
-    errors.length > 0
-      ? {
-          code: 'invalid_routes',
-          message: `One or more invalid routes were found: \n${JSON.stringify(
-            errors,
-            null,
-            2
-          )}`,
-          errors
-        }
-      : null;
-
+  const error = createNowError(
+    'invalid_routes',
+    'One or more invalid routes were found',
+    errors
+  );
   return { routes, error };
 }
 
-/**
- * An ajv schema for the routes array
- */
-export const schema = {
-  type: 'array',
-  maxItems: 1024,
-  items: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      src: {
-        type: 'string',
-        maxLength: 4096
-      },
-      dest: {
-        type: 'string',
-        maxLength: 4096
-      },
-      methods: {
-        type: 'array',
-        maxItems: 10,
-        items: {
-          type: 'string',
-          maxLength: 32
-        }
-      },
-      headers: {
-        type: 'object',
-        additionalProperties: false,
-        minProperties: 1,
-        maxProperties: 100,
-        patternProperties: {
-          '^.{1,256}$': {
-            type: 'string',
-            maxLength: 4096
-          }
-        }
-      },
-      handle: {
-        type: 'string',
-        maxLength: 32
-      },
-      continue: {
-        type: 'boolean'
-      },
-      status: {
-        type: 'integer',
-        minimum: 100,
-        maximum: 999
-      }
-    }
+function checkRegexSyntax(src: string): NowErrorNested | null {
+  try {
+    // This feels a bit dangerous if there would be a vulnerability in RegExp.
+    new RegExp(src);
+  } catch (err) {
+    return {
+      message: `Invalid regular expression: "${src}"`,
+      src,
+    };
   }
-};
+  return null;
+}
+
+function createNowError(
+  code: string,
+  msg: string,
+  errors: NowErrorNested[]
+): NowError | null {
+  const error: NowError | null =
+    errors.length > 0
+      ? {
+          code,
+          message: `${msg}:\n${errors
+            .map(item => `- ${item.message}`)
+            .join('\n')}`,
+          errors,
+        }
+      : null;
+  return error;
+}
+
+function notEmpty<T>(value: T | null | undefined): value is T {
+  return value !== null && value !== undefined;
+}
+
+export function getTransformedRoutes({
+  nowConfig,
+}: GetRoutesProps): NormalizedRoutes {
+  const { cleanUrls, rewrites, redirects, headers, trailingSlash } = nowConfig;
+  let { routes = null } = nowConfig;
+  const errors: NowErrorNested[] = [];
+  if (routes) {
+    if (typeof cleanUrls !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `cleanUrls`',
+      });
+    }
+    if (typeof trailingSlash !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `trailingSlash`',
+      });
+    }
+    if (typeof redirects !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `redirects`',
+      });
+    }
+    if (typeof headers !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `headers`',
+      });
+    }
+    if (typeof rewrites !== 'undefined') {
+      errors.push({
+        message: 'Cannot define both `routes` and `rewrites`',
+      });
+    }
+    if (errors.length > 0) {
+      const error = createNowError(
+        'invalid_keys',
+        'Cannot mix legacy routes with new keys',
+        errors
+      );
+      return { routes, error };
+    }
+    return normalizeRoutes(routes);
+  }
+
+  if (typeof cleanUrls !== 'undefined') {
+    const normalized = normalizeRoutes(
+      convertCleanUrls(cleanUrls, trailingSlash)
+    );
+    if (normalized.error) {
+      normalized.error.code = 'invalid_clean_urls';
+      return { routes, error: normalized.error };
+    }
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
+  }
+
+  if (typeof trailingSlash !== 'undefined') {
+    const normalized = normalizeRoutes(convertTrailingSlash(trailingSlash));
+    if (normalized.error) {
+      normalized.error.code = 'invalid_trailing_slash';
+      return { routes, error: normalized.error };
+    }
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
+  }
+
+  if (typeof redirects !== 'undefined') {
+    const code = 'invalid_redirects';
+    const errors = redirects
+      .map(r => checkRegexSyntax(r.source))
+      .filter(notEmpty);
+    if (errors.length > 0) {
+      return {
+        routes,
+        error: createNowError(
+          code,
+          'Redirect `source` contains invalid regex',
+          errors
+        ),
+      };
+    }
+    const normalized = normalizeRoutes(convertRedirects(redirects));
+    if (normalized.error) {
+      normalized.error.code = code;
+      return { routes, error: normalized.error };
+    }
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
+  }
+
+  if (typeof headers !== 'undefined') {
+    const normalized = normalizeRoutes(convertHeaders(headers));
+    if (normalized.error) {
+      normalized.error.code = 'invalid_headers';
+      return { routes, error: normalized.error };
+    }
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
+  }
+
+  if (typeof rewrites !== 'undefined') {
+    const code = 'invalid_rewrites';
+    const errors = rewrites
+      .map(r => checkRegexSyntax(r.source))
+      .filter(notEmpty);
+    if (errors.length > 0) {
+      return {
+        routes,
+        error: createNowError(
+          code,
+          'Rewrites `source` contains invalid regex',
+          errors
+        ),
+      };
+    }
+    const normalized = normalizeRoutes(convertRewrites(rewrites));
+    if (normalized.error) {
+      normalized.error.code = code;
+      return { routes, error: normalized.error };
+    }
+    routes = routes || [];
+    routes.push({ handle: 'filesystem' });
+    routes.push(...(normalized.routes || []));
+  }
+
+  return { routes, error: null };
+}

@@ -13,6 +13,7 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
+import { getTransformedRoutes } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -36,13 +37,22 @@ import {
   staticFiles as getFiles,
   getAllProjectFiles,
 } from '../get-files';
-import { validateNowConfigBuilds, validateNowConfigRoutes } from './validate';
+import {
+  validateNowConfigBuilds,
+  validateNowConfigRoutes,
+  validateNowConfigCleanUrls,
+  validateNowConfigHeaders,
+  validateNowConfigRedirects,
+  validateNowConfigRewrites,
+  validateNowConfigTrailingSlash,
+  validateNowConfigFunctions,
+} from './validate';
 
 import isURL from './is-url';
 import devRouter from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
-import { executeBuild, getBuildMatches } from './builder';
+import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import {
   builderDirPromise,
@@ -77,15 +87,6 @@ interface FSEvent {
   type: string;
   path: string;
 }
-
-interface NodeRequire {
-  (id: string): any;
-  cache: {
-    [name: string]: any;
-  };
-}
-
-declare const __non_webpack_require__: NodeRequire;
 
 function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && buildA.use.startsWith('@now/static-build')) {
@@ -140,6 +141,7 @@ export default class DevServer {
 
     this.cachedNowConfig = null;
     this.server = http.createServer(this.devServerHandler);
+    this.server.timeout = 0; // Disable timeout
     this.serverUrlPrinted = false;
     this.stopping = false;
     this.buildMatches = new Map();
@@ -347,13 +349,18 @@ export default class DevServer {
     }
 
     // Delete build matches that no longer exists
+    const ops: Promise<void>[] = [];
     for (const src of this.buildMatches.keys()) {
       if (!sources.includes(src)) {
         this.output.debug(`Removing build match for "${src}"`);
-        // TODO: shutdown lambda functions
+        const match = this.buildMatches.get(src);
+        if (match) {
+          ops.push(shutdownBuilder(match, this.output));
+        }
         this.buildMatches.delete(src);
       }
     }
+    await Promise.all(ops);
 
     // Add the new matches to the `buildMatches` map
     const blockingBuilds: Promise<void>[] = [];
@@ -402,25 +409,6 @@ export default class DevServer {
       return;
     }
 
-    const _require =
-      typeof __non_webpack_require__ === 'function'
-        ? __non_webpack_require__
-        : require;
-
-    // The `require()` cache for the builder's assets must be purged
-    const builderDir = await builderDirPromise;
-    const updatedBuilderPaths = updatedBuilders.map(b =>
-      join(builderDir, 'node_modules', b)
-    );
-    for (const id of Object.keys(_require.cache)) {
-      for (const path of updatedBuilderPaths) {
-        if (id.startsWith(path)) {
-          this.output.debug(`Purging require cache for "${id}"`);
-          delete _require.cache[id];
-        }
-      }
-    }
-
     // Delete any build matches that have the old builder required already
     for (const buildMatch of this.buildMatches.values()) {
       const {
@@ -429,6 +417,7 @@ export default class DevServer {
       } = buildMatch;
       if (pkg.name === '@now/static') continue;
       if (pkg.name && updatedBuilders.includes(pkg.name)) {
+        shutdownBuilder(buildMatch, this.output);
         this.buildMatches.delete(src);
         this.output.debug(`Invalidated build match for "${src}"`);
       }
@@ -485,7 +474,6 @@ export default class DevServer {
     isInitialLoad: boolean = false
   ): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
-      this.output.debug('Using cached `now.json` config');
       return this.cachedNowConfig;
     }
 
@@ -518,18 +506,30 @@ export default class DevServer {
       }
     }
 
+    const allFiles = await getAllProjectFiles(this.cwd, this.output);
+    const files = allFiles.filter(this.filter);
+
+    this.output.debug(
+      `Found ${allFiles.length} and ` +
+        `filtered out ${allFiles.length - files.length} files`
+    );
+
+    await this.validateNowConfig(config);
+    const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
+      nowConfig: config,
+      filePaths: files,
+    });
+    if (routeError) {
+      this.output.error(routeError.message);
+      await this.exit();
+    }
+    config.routes = maybeRoutes || [];
+
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      const allFiles = await getAllProjectFiles(this.cwd, this.output);
-      const files = allFiles.filter(this.filter);
-
-      this.output.debug(
-        `Found ${allFiles.length} and ` +
-          `filtered out ${allFiles.length - files.length} files`
-      );
-
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
+        functions: config.functions,
       });
 
       if (errors) {
@@ -599,25 +599,32 @@ export default class DevServer {
     return pkg;
   }
 
+  async tryValidateOrExit(
+    config: NowConfig,
+    validate: (c: NowConfig) => string | null
+  ): Promise<void> {
+    const message = validate(config);
+
+    if (message) {
+      this.output.error(message);
+      await this.exit(1);
+    }
+  }
+
   async validateNowConfig(config: NowConfig): Promise<void> {
     if (config.version === 1) {
       this.output.error('Only `version: 2` is supported by `now dev`');
       await this.exit(1);
     }
 
-    const buildsError = validateNowConfigBuilds(config);
-
-    if (buildsError) {
-      this.output.error(buildsError);
-      await this.exit(1);
-    }
-
-    const routesError = validateNowConfigRoutes(config);
-
-    if (routesError) {
-      this.output.error(routesError);
-      await this.exit(1);
-    }
+    await this.tryValidateOrExit(config, validateNowConfigBuilds);
+    await this.tryValidateOrExit(config, validateNowConfigRoutes);
+    await this.tryValidateOrExit(config, validateNowConfigCleanUrls);
+    await this.tryValidateOrExit(config, validateNowConfigHeaders);
+    await this.tryValidateOrExit(config, validateNowConfigRedirects);
+    await this.tryValidateOrExit(config, validateNowConfigRewrites);
+    await this.tryValidateOrExit(config, validateNowConfigTrailingSlash);
+    await this.tryValidateOrExit(config, validateNowConfigFunctions);
   }
 
   validateEnvConfig(
@@ -729,10 +736,12 @@ export default class DevServer {
       this.yarnPath,
       this.output
     )
-      .then(updatedBuilders =>
-        this.invalidateBuildMatches(nowConfig, updatedBuilders)
-      )
+      .then(updatedBuilders => {
+        this.updateBuildersPromise = null;
+        this.invalidateBuildMatches(nowConfig, updatedBuilders);
+      })
       .catch(err => {
+        this.updateBuildersPromise = null;
         this.output.error(`Failed to update builders: ${err.message}`);
         this.output.debug(err.stack);
       });
@@ -831,22 +840,18 @@ export default class DevServer {
     const ops: Promise<void>[] = [];
 
     for (const match of this.buildMatches.values()) {
-      if (!match.buildOutput) continue;
-
-      for (const asset of Object.values(match.buildOutput)) {
-        if (asset.type === 'Lambda' && asset.fn) {
-          ops.push(asset.fn.destroy());
-        }
-      }
+      ops.push(shutdownBuilder(match, this.output));
     }
 
     ops.push(close(this.server));
 
     if (this.watcher) {
+      this.output.debug(`Closing file watcher`);
       this.watcher.close();
     }
 
     if (this.updateBuildersPromise) {
+      this.output.debug(`Waiting for builders update to complete`);
       ops.push(this.updateBuildersPromise);
     }
 
@@ -1102,7 +1107,7 @@ export default class DevServer {
     }
 
     const method = req.method || 'GET';
-    this.output.log(`${chalk.bold(method)} ${req.url}`);
+    this.output.debug(`${chalk.bold(method)} ${req.url}`);
 
     try {
       const nowConfig = await this.getNowConfig();
@@ -1184,7 +1189,7 @@ export default class DevServer {
 
     if (status) {
       res.statusCode = status;
-      if ([301, 302, 303].includes(status)) {
+      if (300 <= status && status <= 399) {
         await this.sendRedirect(
           req,
           res,
@@ -1253,12 +1258,12 @@ export default class DevServer {
       }
     }
 
-    let foundAsset = findAsset(match, requestPath);
+    let foundAsset = findAsset(match, requestPath, nowConfig);
     if ((!foundAsset || this.shouldRebuild(req)) && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
       // Since the `asset` was re-built, resolve it again to get the new asset
-      foundAsset = findAsset(match, requestPath);
+      foundAsset = findAsset(match, requestPath, nowConfig);
     }
 
     if (!foundAsset) {
@@ -1267,7 +1272,10 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
-    this.output.debug(`Serving asset: [${asset.type}] ${assetKey}`);
+    this.output.debug(
+      `Serving asset: [${asset.type}] ${assetKey} ${(asset as any)
+        .contentType || ''}`
+    );
 
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
@@ -1281,7 +1289,7 @@ export default class DevServer {
               headers: [
                 {
                   key: 'Content-Type',
-                  value: getMimeType(assetKey),
+                  value: asset.contentType || getMimeType(assetKey),
                 },
               ],
             },
@@ -1291,7 +1299,7 @@ export default class DevServer {
       case 'FileBlob':
         const headers: http.OutgoingHttpHeaders = {
           'Content-Length': asset.data.length,
-          'Content-Type': getMimeType(assetKey),
+          'Content-Type': asset.contentType || getMimeType(assetKey),
         };
         this.setResponseHeaders(res, nowRequestId, headers);
         res.end(asset.data);
@@ -1452,25 +1460,6 @@ export default class DevServer {
     return true;
   }
 
-  /**
-   * Serve project directory as a static deployment.
-   */
-  serveProjectAsStatic = async (
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    nowRequestId: string
-  ) => {
-    const filePath = req.url ? req.url.replace(/^\//, '') : '';
-
-    if (filePath && typeof this.files[filePath] === 'undefined') {
-      await this.send404(req, res, nowRequestId);
-      return;
-    }
-
-    this.setResponseHeaders(res, nowRequestId);
-    return serveStaticFile(req, res, this.cwd, { cleanUrls: true });
-  };
-
   async hasFilesystem(dest: string): Promise<boolean> {
     const requestPath = dest.replace(/^\//, '');
     if (
@@ -1587,13 +1576,40 @@ async function shouldServe(
   isFilesystem?: boolean
 ): Promise<boolean> {
   const {
-    src: entrypoint,
+    src,
     config,
     builderWithPkg: { builder },
   } = match;
-  if (typeof builder.shouldServe === 'function') {
+  const nowConfig = await devServer.getNowConfig();
+  const cleanSrc = src.endsWith('.html') ? src.slice(0, -5) : src;
+  const trimmedPath = requestPath.endsWith('/')
+    ? requestPath.slice(0, -1)
+    : requestPath;
+
+  if (
+    nowConfig.cleanUrls &&
+    nowConfig.trailingSlash &&
+    cleanSrc === trimmedPath
+  ) {
+    // Mimic fmeta-util and convert cleanUrls and trailingSlash
+    return true;
+  } else if (
+    nowConfig.cleanUrls &&
+    !nowConfig.trailingSlash &&
+    cleanSrc === requestPath
+  ) {
+    // Mimic fmeta-util and convert cleanUrls
+    return true;
+  } else if (
+    !nowConfig.cleanUrls &&
+    nowConfig.trailingSlash &&
+    src === trimmedPath
+  ) {
+    // Mimic fmeta-util and convert trailingSlash
+    return true;
+  } else if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
-      entrypoint,
+      entrypoint: src,
       files,
       config,
       requestPath,
@@ -1602,7 +1618,7 @@ async function shouldServe(
     if (shouldServe) {
       return true;
     }
-  } else if (findAsset(match, requestPath)) {
+  } else if (findAsset(match, requestPath, nowConfig)) {
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
@@ -1640,13 +1656,18 @@ async function findMatchingRoute(
 
 function findAsset(
   match: BuildMatch,
-  requestPath: string
+  requestPath: string,
+  nowConfig: NowConfig
 ): { asset: BuilderOutput; assetKey: string } | void {
   if (!match.buildOutput) {
     return;
   }
   let assetKey: string = requestPath.replace(/\/$/, '');
   let asset = match.buildOutput[requestPath];
+
+  if (nowConfig.trailingSlash && requestPath.endsWith('/')) {
+    asset = match.buildOutput[requestPath.slice(0, -1)];
+  }
 
   // In the case of an index path, fall back to iterating over the
   // builder outputs and doing an "is index" check until a match is found.

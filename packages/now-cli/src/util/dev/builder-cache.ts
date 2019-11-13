@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import execa from 'execa';
 import semver from 'semver';
 import pipe from 'promisepipe';
+import retry from 'async-retry';
 import npa from 'npm-package-arg';
 import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
@@ -20,7 +21,7 @@ import {
 } from 'fs-extra';
 import pkg from '../../../package.json';
 
-import { NoBuilderCacheError, BuilderCacheCleanError } from '../errors-ts';
+import { NoBuilderCacheError } from '../errors-ts';
 import wait from '../output/wait';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
@@ -28,6 +29,8 @@ import { getDistTag } from '../get-dist-tag';
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
 import { getBundledBuilders } from './get-bundled-builders';
+
+declare const __non_webpack_require__: typeof require;
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
@@ -137,24 +140,6 @@ export async function prepareBuilderModulePath() {
   return cachedBuilderPath;
 }
 
-// Is responsible for cleaning the cache
-export async function cleanCacheDir(output: Output): Promise<void> {
-  const cacheDir = await cacheDirPromise;
-  try {
-    output.log(chalk`{magenta Deleting} ${cacheDir}`);
-    await remove(cacheDir);
-  } catch (err) {
-    throw new BuilderCacheCleanError(cacheDir, err.message);
-  }
-
-  try {
-    await remove(funCacheDir);
-    output.log(chalk`{magenta Deleting} ${funCacheDir}`);
-  } catch (err) {
-    throw new BuilderCacheCleanError(funCacheDir, err.message);
-  }
-}
-
 function getNpmVersion(use = ''): string {
   const parsed = npa(use);
   if (registryTypes.has(parsed.type)) {
@@ -230,13 +215,13 @@ export async function installBuilders(
   }
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
-  const buildersPkg = await readJSON(buildersPkgPath);
+  const buildersPkgBefore = await readJSON(buildersPkgPath);
 
   packages.push(getBuildUtils(packages));
 
   // Filter out any packages that come packaged with `now-cli`
   const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkg)
+    filterPackage(p, distTag, buildersPkgBefore)
   );
 
   if (packagesToInstall.length === 0) {
@@ -247,24 +232,40 @@ export async function installBuilders(
   const stopSpinner = wait(
     `Installing builders: ${packagesToInstall.sort().join(', ')}`
   );
+
   try {
-    await execa(
-      process.execPath,
-      [
-        yarnPath,
-        'add',
-        '--exact',
-        '--no-lockfile',
-        '--non-interactive',
-        ...packagesToInstall,
-      ],
-      {
-        cwd: builderDir,
-      }
+    await retry(
+      () =>
+        execa(
+          process.execPath,
+          [
+            yarnPath,
+            'add',
+            '--exact',
+            '--no-lockfile',
+            '--non-interactive',
+            ...packagesToInstall,
+          ],
+          {
+            cwd: builderDir,
+          }
+        ),
+      { retries: 2 }
     );
   } finally {
     stopSpinner();
   }
+
+  const updatedPackages: string[] = [];
+  const buildersPkgAfter = await readJSON(buildersPkgPath);
+  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
+    if (version !== buildersPkgBefore.dependencies[name]) {
+      output.debug(`Builder "${name}" updated to version \`${version}\``);
+      updatedPackages.push(name);
+    }
+  }
+
+  purgeRequireCache(updatedPackages, builderDir, output);
 }
 
 export async function updateBuilders(
@@ -283,19 +284,23 @@ export async function updateBuilders(
 
   packages.push(getBuildUtils(packages));
 
-  await execa(
-    process.execPath,
-    [
-      yarnPath,
-      'add',
-      '--exact',
-      '--no-lockfile',
-      '--non-interactive',
-      ...packages.filter(p => p !== '@now/static'),
-    ],
-    {
-      cwd: builderDir,
-    }
+  await retry(
+    () =>
+      execa(
+        process.execPath,
+        [
+          yarnPath,
+          'add',
+          '--exact',
+          '--no-lockfile',
+          '--non-interactive',
+          ...packages.filter(p => p !== '@now/static'),
+        ],
+        {
+          cwd: builderDir,
+        }
+      ),
+    { retries: 2 }
   );
 
   const updatedPackages: string[] = [];
@@ -306,6 +311,8 @@ export async function updateBuilders(
       updatedPackages.push(name);
     }
   }
+
+  purgeRequireCache(updatedPackages, builderDir, output);
 
   return updatedPackages;
 }
@@ -381,4 +388,26 @@ function hasBundledBuilders(dependencies: { [name: string]: string }): boolean {
     }
   }
   return true;
+}
+
+function purgeRequireCache(
+  packages: string[],
+  builderDir: string,
+  output: Output
+) {
+  const _require =
+    typeof __non_webpack_require__ === 'function'
+      ? __non_webpack_require__
+      : require;
+
+  // The `require()` cache for the builder's assets must be purged
+  const packagesPaths = packages.map(b => join(builderDir, 'node_modules', b));
+  for (const id of Object.keys(_require.cache)) {
+    for (const path of packagesPaths) {
+      if (id.startsWith(path)) {
+        output.debug(`Purging require cache for "${id}"`);
+        delete _require.cache[id];
+      }
+    }
+  }
 }

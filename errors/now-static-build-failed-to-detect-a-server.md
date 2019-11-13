@@ -19,6 +19,8 @@ the provided `$PORT` that the builder expects the server to bind to.
 For example, if you are using Gatsby, your `now-dev` script must use the `-p`
 (port) option to bind to the `$PORT` specified from the builder:
 
+> *In Windows environments, reference the `PORT` environment variable with `%PORT%`*
+
 ```
 {
   ...

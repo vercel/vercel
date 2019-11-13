@@ -1,4 +1,12 @@
-import { basename, dirname, join, relative, resolve, sep } from 'path';
+import {
+  basename,
+  dirname,
+  join,
+  relative,
+  resolve,
+  sep,
+  parse as parsePath,
+} from 'path';
 import nodeFileTrace from '@zeit/node-file-trace';
 import {
   glob,
@@ -19,6 +27,7 @@ import {
   Config,
   debug,
 } from '@now/build-utils';
+export { shouldServe };
 export { NowRequest, NowResponse } from './types';
 import { makeNowLauncher, makeAwsLauncher } from './launcher';
 import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
@@ -281,7 +290,22 @@ async function compile(
   };
 }
 
-export const version = 2;
+function getAWSLambdaHandler(entrypoint: string, config: Config) {
+  if (config.awsLambdaHandler) {
+    return config.awsLambdaHandler as string;
+  }
+
+  if (process.env.NODEJS_AWS_HANDLER_NAME) {
+    const { dir, name } = parsePath(entrypoint);
+    return `${dir}${dir ? sep : ''}${name}.${
+      process.env.NODEJS_AWS_HANDLER_NAME
+    }`;
+  }
+
+  return '';
+}
+
+export const version = 3;
 
 export async function build({
   files,
@@ -290,8 +314,10 @@ export async function build({
   config = {},
   meta = {},
 }: BuildOptions) {
-  const shouldAddHelpers = config.helpers !== false;
-  const awsLambdaHandler = config.awsLambdaHandler as string;
+  const shouldAddHelpers = !(
+    config.helpers === false || process.env.NODEJS_HELPERS === '0'
+  );
+  const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const {
     entrypointPath,
@@ -364,9 +390,7 @@ export async function build({
     runtime,
   });
 
-  const output = { [entrypoint]: lambda };
-  const result = { output, watch };
-  return result;
+  return { output: lambda, watch };
 }
 
 export async function prepareCache({ workPath }: PrepareCacheOptions) {
@@ -376,5 +400,3 @@ export async function prepareCache({ workPath }: PrepareCacheOptions) {
     ...(await glob('yarn.lock', workPath)),
   };
 }
-
-export { shouldServe };

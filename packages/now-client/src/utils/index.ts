@@ -6,16 +6,13 @@ import qs from 'querystring';
 import ignore from 'ignore';
 import pkg from '../../package.json';
 import { Options } from '../deploy';
-import { NowJsonOptions } from '../types';
+import { NowJsonOptions, DeploymentOptions } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
 
-export const API_FILES = 'https://api.zeit.co/v2/now/files';
-export const API_DEPLOYMENTS = 'https://api.zeit.co/v9/now/deployments';
-export const API_DEPLOYMENTS_LEGACY = 'https://api.zeit.co/v3/now/deployments';
-export const API_DELETE_DEPLOYMENTS_LEGACY =
-  'https://api.zeit.co/v2/now/deployments';
+export const API_FILES = '/v2/now/files';
+export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
 export const EVENTS = new Set([
   // File events
@@ -26,19 +23,34 @@ export const EVENTS = new Set([
   // Deployment events
   'created',
   'ready',
+  'alias-assigned',
   'warning',
   'error',
   // Build events
   'build-state-changed',
 ]);
 
-export function parseNowJSON(file?: DeploymentFile): NowJsonOptions {
-  if (!file) {
+export function getApiDeploymentsUrl(
+  metadata?: Pick<DeploymentOptions, 'version' | 'builds' | 'functions'>
+) {
+  if (metadata && metadata.version !== 2) {
+    return '/v3/now/deployments';
+  }
+
+  if (metadata && metadata.builds && !metadata.functions) {
+    return '/v10/now/deployments';
+  }
+
+  return '/v11/now/deployments';
+}
+
+export async function parseNowJSON(filePath?: string): Promise<NowJsonOptions> {
+  if (!filePath) {
     return {};
   }
 
   try {
-    const jsonString = file.data.toString();
+    const jsonString = await readFile(filePath, 'utf8');
 
     return JSON.parse(jsonString);
   } catch (e) {
@@ -96,7 +108,7 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
 
   const ig = ignore().add(`${ignores.join('\n')}\n${nowIgnore}`);
 
-  return ig;
+  return { ig, ignores };
 }
 
 export const fetch = async (
@@ -109,6 +121,9 @@ export const fetch = async (
   const debug = createDebug(debugEnabled);
   let time: number;
 
+  url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
+  delete opts.apiUrl;
+
   if (opts.teamId) {
     const parsedUrl = parseUrl(url, true);
     const query = parsedUrl.query;
@@ -118,11 +133,12 @@ export const fetch = async (
     delete opts.teamId;
   }
 
-  opts.headers = opts.headers || {};
-  // @ts-ignore
-  opts.headers.Authorization = `Bearer ${token}`;
-  // @ts-ignore
-  opts.headers['user-agent'] = `now-client-v${pkg.version}`;
+  opts.headers = {
+    ...opts.headers,
+    authorization: `Bearer ${token}`,
+    accept: 'application/json',
+    'user-agent': `now-client-v${pkg.version}`,
+  };
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
@@ -137,6 +153,7 @@ export interface PreparedFile {
   file: string;
   sha: string;
   size: number;
+  mode: number;
 }
 
 const isWin = process.platform.includes('win');
@@ -152,7 +169,7 @@ export const prepareFiles = (
       const file = files.get(sha) as DeploymentFile;
 
       for (const name of file.names) {
-        let fileName;
+        let fileName: string;
 
         if (options.isDirectory) {
           // Directory
@@ -168,6 +185,7 @@ export const prepareFiles = (
         next.push({
           file: isWin ? fileName.replace(/\\/g, '/') : fileName,
           size: file.data.byteLength || file.data.length,
+          mode: file.mode,
           sha,
         });
       }

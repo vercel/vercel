@@ -4,11 +4,11 @@ import { Deployment } from '../../types';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
-  InvalidDeploymentId
+  InvalidDeploymentId,
 } from '../errors-ts';
 import mapCertError from '../certs/map-cert-error';
 
-type APIVersion = 'v5' | 'v9';
+type APIVersion = 'v5' | 'v10';
 
 export default async function getDeploymentByIdOrHost(
   client: Client,
@@ -58,9 +58,7 @@ async function getDeploymentById(
 }
 
 type Response = {
-  deployment: {
-    id: string;
-  };
+  id: string;
 };
 
 async function getDeploymentByHost(
@@ -69,7 +67,9 @@ async function getDeploymentByHost(
   apiVersion: APIVersion
 ) {
   const response = await client.fetch<Response>(
-    `/v4/now/hosts/${encodeURIComponent(host)}?resolve=1&noState=1`
+    `/v10/now/deployments/get?url=${encodeURIComponent(
+      host
+    )}&resolve=1&noState=1`
   );
-  return getDeploymentById(client, response.deployment.id, apiVersion);
+  return getDeploymentById(client, response.id, apiVersion);
 }

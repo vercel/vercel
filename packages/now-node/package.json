@@ -1,9 +1,9 @@
 {
   "name": "@now/node",
-  "version": "1.0.0-canary.8",
+  "version": "1.1.3-canary.0",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/v2/deployments/official-builders/node-js-now-node",
+  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/node-js",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now.git",
@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-integration-once": "jest --env node --verbose --runInBand",
+    "test-unit": "jest --env node --verbose --runInBand test/helpers.test.js",
+    "test-integration-once": "jest --env node --verbose --runInBand test/integration.test.js",
     "prepublishOnly": "npm run build"
   },
   "files": [
@@ -29,7 +30,7 @@
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
     "@zeit/ncc": "0.20.4",
-    "@zeit/node-file-trace": "0.3.1",
+    "@zeit/node-file-trace": "0.4.0",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",

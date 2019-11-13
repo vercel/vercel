@@ -1,3 +1,5 @@
+import { BuilderFunctions } from '@now/build-utils';
+
 export interface Route {
   src: string;
   dest: string;
@@ -24,7 +26,8 @@ export interface Deployment {
   version: number;
   regions: string[];
   routes: Route[];
-  builds: Build[];
+  builds?: Build[];
+  functions?: BuilderFunctions;
   plan: string;
   public: boolean;
   ownerId: string;
@@ -54,6 +57,8 @@ export interface Deployment {
   };
   target: string;
   alias: string[];
+  aliasAssigned: boolean;
+  aliasError: string | null;
 }
 
 export interface DeploymentBuild {
@@ -91,6 +96,7 @@ export interface DeploymentOptions {
   regions?: string[];
   routes?: Route[];
   builds?: Build[];
+  functions?: BuilderFunctions;
   env?: {
     [key: string]: string;
   };
@@ -117,6 +123,7 @@ export interface DeploymentOptions {
   sessionAffinity?: 'ip' | 'random';
   config?: { [key: string]: any };
   debug?: boolean;
+  apiUrl?: string;
 }
 
 export interface NowJsonOptions {
@@ -124,10 +131,11 @@ export interface NowJsonOptions {
   scope?: string;
   type?: 'NPM' | 'STATIC' | 'DOCKER';
   version?: number;
+  files?: string[];
 }
 
 export type CreateDeploymentFunction = (
   path: string | string[],
   options?: DeploymentOptions,
-  nowConfig?: NowJsonOptions,
+  nowConfig?: NowJsonOptions
 ) => AsyncIterableIterator<any>;

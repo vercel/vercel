@@ -11,6 +11,7 @@ const buildUtilsUrl = '@canary';
 let builderUrl;
 
 beforeAll(async () => {
+  process.env.NEXT_TELEMETRY_DISABLED = '1';
   const builderPath = path.resolve(__dirname, '..');
   builderUrl = await packAndDeploy(builderPath);
   console.log('builderUrl', builderUrl);

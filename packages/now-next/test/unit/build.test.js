@@ -6,6 +6,10 @@ const { download, FileBlob } = require('@now/build-utils');
 
 jest.setTimeout(45000);
 
+beforeAll(() => {
+  process.env.NEXT_TELEMETRY_DISABLED = '1';
+})
+
 describe('build meta dev', () => {
   const files = {
     'next.config.js': new FileBlob({

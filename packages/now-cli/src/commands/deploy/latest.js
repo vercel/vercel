@@ -390,7 +390,7 @@ export default async function main(
 
     const deploymentResponse = handleCertError(
       output,
-      await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
+      await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v10')
     );
 
     if (deploymentResponse === 1) {
