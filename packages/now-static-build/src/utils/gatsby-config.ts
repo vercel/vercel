@@ -1,6 +1,7 @@
 import { writeFile, copyFile, mkdir } from 'fs';
 import { join, dirname } from 'path';
 import { promisify } from 'util';
+import { isCanary } from './is-canary';
 
 const writeFilePromise = promisify(writeFile);
 const mkdirPromise = promisify(mkdir);
@@ -24,6 +25,10 @@ module.exports = {
 }
 
 export async function injectGatsbyConfig(entrypointDir: string) {
+  if (!isCanary()) {
+    return;
+  }
+
   try {
     // first, we copy gatsby-plugin-now to plugins
     const gatsbyPluginNowPath = join(
