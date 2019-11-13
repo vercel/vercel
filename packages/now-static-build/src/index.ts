@@ -18,7 +18,6 @@ import {
   getNodeVersion,
   getSpawnOptions,
   Files,
-  FileFsRef,
   Route,
   BuildOptions,
   Config,
@@ -150,24 +149,6 @@ async function getFrameworkRoutes(
   return routes;
 }
 
-function getPkg(entrypoint: string, workPath: string) {
-  if (path.basename(entrypoint) !== 'package.json') {
-    return null;
-  }
-
-  const pkgPath = path.join(workPath, entrypoint);
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
-  return pkg;
-}
-
-function getFramework(pkg: PackageJson) {
-  const dependencies = Object.assign({}, pkg.dependencies, pkg.devDependencies);
-  const framework = frameworks.find(
-    ({ dependency }) => dependencies[dependency || '']
-  );
-  return framework;
-}
-
 export async function build({
   files,
   entrypoint,
@@ -187,9 +168,11 @@ export async function build({
     (config && (config.distDir as string)) || 'dist'
   );
 
-  const pkg = getPkg(entrypoint, workPath);
+  const entrypointName = path.basename(entrypoint);
 
-  if (pkg) {
+  if (entrypointName === 'package.json') {
+    const pkgPath = path.join(workPath, entrypoint);
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
@@ -247,7 +230,15 @@ export async function build({
       // `public` is the default for zero config
       distPath = path.join(workPath, path.dirname(entrypoint), 'public');
 
-      framework = getFramework(pkg);
+      const dependencies = Object.assign(
+        {},
+        pkg.dependencies,
+        pkg.devDependencies
+      );
+
+      framework = frameworks.find(
+        ({ dependency }) => dependencies[dependency || '']
+      );
     }
 
     if (framework) {
@@ -264,10 +255,6 @@ export async function build({
         debug(
           `${framework.name} does not require a specific Node.js version. Continuing ...`
         );
-      }
-
-      if (framework.beforeBuildHook) {
-        await framework.beforeBuildHook(entrypointDir);
       }
     }
 
@@ -390,7 +377,7 @@ export async function build({
     return { routes, watch, output, distPath };
   }
 
-  if (!config.zeroConfig && entrypoint.endsWith('.sh')) {
+  if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
     debug(`Running build script "${entrypoint}"`);
     const nodeVersion = await getNodeVersion(entrypointDir, undefined, config);
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -416,27 +403,10 @@ export async function build({
   throw new Error(message);
 }
 
-export async function prepareCache({
-  entrypoint,
-  workPath,
-}: PrepareCacheOptions) {
-  // default cache paths
-  const defaultCacheFiles = await glob(
-    '{node_modules/**,package-lock.json,yarn.lock}',
-    workPath
-  );
-
-  // framework specific cache paths
-  let frameworkCacheFiles: { [path: string]: FileFsRef } | null = null;
-
-  const pkg = getPkg(entrypoint, workPath);
-  if (pkg) {
-    const framework = getFramework(pkg);
-
-    if (framework && framework.cachePattern) {
-      frameworkCacheFiles = await glob(framework.cachePattern, workPath);
-    }
-  }
-
-  return { ...defaultCacheFiles, ...frameworkCacheFiles };
+export async function prepareCache({ workPath }: PrepareCacheOptions) {
+  return {
+    ...(await glob('node_modules/**', workPath)),
+    ...(await glob('package-lock.json', workPath)),
+    ...(await glob('yarn.lock', workPath)),
+  };
 }
