@@ -366,10 +366,8 @@ CMD ["node", "index.js"]`,
     },
     'lambda-with-128-memory': {
       'api/memory.js': `
-        const os = require('os');
-
         module.exports = (req, res) => {
-          res.json({ memory: os.totalmem() });
+          res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
         };
       `,
       'now.json': JSON.stringify({
@@ -382,10 +380,8 @@ CMD ["node", "index.js"]`,
     },
     'lambda-with-200-memory': {
       'api/memory.js': `
-        const os = require('os');
-
         module.exports = (req, res) => {
-          res.json({ memory: os.totalmem() });
+          res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
         };
       `,
       'now.json': JSON.stringify({
