@@ -1,0 +1,19 @@
+{
+  "name": "repro-gatsby-bug",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "gatsby build"
+  },
+  "dependencies": {
+    "gatsby": "2.17.7",
+    "gatsby-plugin-typescript": "2.1.15",
+    "react": "16.11.0",
+    "react-dom": "16.11.0"
+  },
+  "devDependencies": {
+    "@types/react": "16.9.11",
+    "@types/react-dom": "16.9.4",
+    "typescript": "3.6.4"
+  }
+}
