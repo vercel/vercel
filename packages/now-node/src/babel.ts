@@ -7,6 +7,7 @@ export function compile(
 ): { code: string; map: any } {
   return babel.transform(source, {
     filename,
+    configFile: false,
     babelrc: false,
     highlightCode: false,
     compact: false,
