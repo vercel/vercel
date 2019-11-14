@@ -4,7 +4,7 @@ import fetch_ from 'node-fetch';
 import { join, sep } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
-import pkg from '../../package.json';
+import { pkgVersion } from '../pkg';
 import { Options } from '../deploy';
 import { NowJsonOptions, DeploymentOptions } from '../types';
 import { Sema } from 'async-sema';
@@ -137,7 +137,7 @@ export const fetch = async (
     ...opts.headers,
     authorization: `Bearer ${token}`,
     accept: 'application/json',
-    'user-agent': `now-client-v${pkg.version}`,
+    'user-agent': `now-client-v${pkgVersion}`,
   };
 
   debug(`${opts.method || 'GET'} ${url}`);
