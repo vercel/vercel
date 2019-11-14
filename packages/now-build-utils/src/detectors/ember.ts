@@ -7,7 +7,7 @@ export default async function detectEmber({
   if (!hasEmber) return false;
   return {
     buildCommand: ['ember', 'build'],
-    buildDirectory: 'build',
+    buildDirectory: 'dist',
     devCommand: ['ember', 'serve', '--port', '$PORT'],
     routes: [
       {
