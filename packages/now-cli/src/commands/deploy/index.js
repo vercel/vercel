@@ -11,11 +11,18 @@ import getArgs from '../../util/get-args';
 import * as parts from './args';
 import { handleError } from '../../util/error';
 import readPackage from '../../util/read-package';
-import preferV2Deployment, { hasDockerfile, hasServerfile } from '../../util/prefer-v2-deployment';
+import preferV2Deployment, {
+  hasDockerfile,
+  hasServerfile,
+} from '../../util/prefer-v2-deployment';
 import getProjectName from '../../util/get-project-name';
 
 export default async ctx => {
-  const { authConfig, config: { currentTeam }, apiUrl } = ctx;
+  const {
+    authConfig,
+    config: { currentTeam },
+    apiUrl,
+  } = ctx;
   const combinedArgs = Object.assign({}, parts.legacyArgs, parts.latestArgs);
 
   let platformVersion = null;
@@ -43,7 +50,10 @@ export default async ctx => {
     paths = [process.cwd()];
   }
 
-  const localConfig = readLocalConfig(paths[0]);
+  let { localConfig } = ctx;
+  if (!localConfig || localConfig instanceof Error) {
+    localConfig = readLocalConfig(paths[0]);
+  }
   const debugEnabled = argv['--debug'];
   const output = createOutput({ debug: debugEnabled });
   const stats = {};
@@ -68,7 +78,7 @@ export default async ctx => {
         // GitHub repositories are never just one file, we need to set
         // the `isFile` property accordingly.
         stats[path] = {
-          isFile: () => false
+          isFile: () => false,
         };
       } else {
         output.error(
@@ -88,7 +98,7 @@ export default async ctx => {
       apiUrl,
       token: authConfig.token,
       currentTeam,
-      debug: debugEnabled
+      debug: debugEnabled,
     });
     try {
       ({ contextName, platformVersion } = await getScope(client));
@@ -143,15 +153,25 @@ export default async ctx => {
     platformVersion = versionFlag;
   }
 
-  if (platformVersion === 1 && versionFlag !== 1 && !argv['--docker'] && !argv['--npm']) {
+  if (
+    platformVersion === 1 &&
+    versionFlag !== 1 &&
+    !argv['--docker'] &&
+    !argv['--npm']
+  ) {
     // Only check when it was not set via CLI flag
     const reason = await preferV2Deployment({
       client,
       localConfig,
-      projectName: getProjectName({ argv, nowConfig: localConfig || {}, isFile, paths }),
+      projectName: getProjectName({
+        argv,
+        nowConfig: localConfig || {},
+        isFile,
+        paths,
+      }),
       hasServerfile: await hasServerfile(paths[0]),
       hasDockerfile: await hasDockerfile(paths[0]),
-      pkg: await readPackage(join(paths[0], 'package.json'))
+      pkg: await readPackage(join(paths[0], 'package.json')),
     });
 
     if (reason) {
@@ -172,5 +192,10 @@ export default async ctx => {
     );
   }
 
-  return require('./legacy').default(ctx, contextName, output, parts.legacyArgsMri);
+  return require('./legacy').default(
+    ctx,
+    contextName,
+    output,
+    parts.legacyArgsMri
+  );
 };
