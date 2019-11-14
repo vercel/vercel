@@ -272,7 +272,7 @@ export async function executeBuild(
     if (builder.version === 4) {
       const { error, routes: buildRoutes } = getTransformedRoutes({
         nowConfig: rest,
-        filePaths: [],
+        builderVersion: builder.version,
       });
       if (error) {
         throw new Error(error.message);
