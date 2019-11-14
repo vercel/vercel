@@ -1,6 +1,0 @@
-we're pinning gatsby to 2.17.11 in the test because gatsby had a bug
-in their plugin resolution mechanism that broke
-gatsby deployments.
-(see https://github.com/gatsbyjs/gatsby/issues/19150).
-
-this test makes sure gatsby >=2.17.7 and <=2.17.11 are also working
