@@ -14,8 +14,7 @@
     "directory": "packages/now-client"
   },
   "scripts": {
-    "build": "tsc",
-    "prepare": "npm run build",
+    "build": "tsc && rm dist/package.json",
     "test-integration-once": "jest --verbose --forceExit",
     "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
   },

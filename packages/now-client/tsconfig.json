@@ -2,10 +2,10 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["esnext", "dom"],
+    "lib": ["esnext"],
     "module": "CommonJS",
     "moduleResolution": "node",
-    "outDir": "./dist",
+    "outDir": "dist",
     "resolveJsonModule": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
@@ -15,5 +15,5 @@
     "target": "ES2015",
     "downlevelIteration": true
   },
-  "include": ["./src", "./types"]
+  "include": ["./src"]
 }
