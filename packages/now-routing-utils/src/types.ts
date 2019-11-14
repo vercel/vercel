@@ -33,7 +33,7 @@ export type NormalizedRoutes = {
 
 export interface GetRoutesProps {
   nowConfig: NowConfig;
-  filePaths: string[];
+  builderVersion?: number;
 }
 
 export interface NowConfig {

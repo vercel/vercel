@@ -213,12 +213,12 @@ test('login', async t => {
 
 test('deploy using --local-config flag v2', async t => {
   const target = fixture('local-config-v2');
+  const configPath = path.join(target, 'now-test.json');
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    ['deploy', '--local-config', 'now-test.json', ...defaultArgs],
+    ['deploy', target, '--local-config', configPath, ...defaultArgs],
     {
-      cwd: target,
       reject: false,
     }
   );
@@ -226,6 +226,7 @@ test('deploy using --local-config flag v2', async t => {
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
   const { host } = new URL(stdout);
+  t.regex(host, /secondary/gm, `Expected "secondary" but received "${host}"`);
 
   const testRes = await fetch(`https://${host}/test-${contextName}.html`);
   const testText = await testRes.text();
@@ -240,6 +241,34 @@ test('deploy using --local-config flag v2', async t => {
 
   const anotherMainRes = await fetch(`https://${host}/another-main`);
   t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
+});
+
+test('deploy using --local-config flag above target', async t => {
+  const root = fixture('local-config-above-target');
+  const target = path.join(root, 'dir');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['deploy', target, '--local-config', './now-root.json', ...defaultArgs],
+    {
+      cwd: root,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const { host } = new URL(stdout);
+
+  const testRes = await fetch(`https://${host}/index.html`);
+  const testText = await testRes.text();
+  t.is(testText, '<h1>hello index</h1>');
+
+  const anotherTestRes = await fetch(`https://${host}/another.html`);
+  const anotherTestText = await anotherTestRes.text();
+  t.is(anotherTestText, '<h1>hello another</h1>');
+
+  t.regex(host, /root-level/gm, `Expected "root-level" but received "${host}"`);
 });
 
 test('print the deploy help message', async t => {
@@ -1828,6 +1857,7 @@ test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
   const output = await execute([fixturePath, '--force', '--public']);
 
+  console.log('isCanary', isCanary);
   console.log(output.stderr);
   console.log(output.stdout);
   console.log(output.exitCode);
@@ -1848,7 +1878,10 @@ test('create zero-config deployment', async t => {
     isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
   );
 
-  t.true(validBuilders, JSON.stringify(data, null, 2));
+  t.true(
+    validBuilders,
+    'Builders are not valid: ' + JSON.stringify(data, null, 2)
+  );
 });
 
 test('now secret add', async t => {
@@ -1955,7 +1988,7 @@ test('deploy a Lambda with 128MB of memory', async t => {
   // It won't be exactly 128MB,
   // so we just compare if it is lower than 450MB
   const { memory } = await response.json();
-  t.truthy(memory < 4.5e8, `Lambda has ${memory} bytes of memory`);
+  t.is(memory, 128, `Lambda has ${memory} bytes of memory`);
 });
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {

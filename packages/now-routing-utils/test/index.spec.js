@@ -425,8 +425,7 @@ describe('normalizeRoutes', () => {
 describe('getTransformedRoutes', () => {
   test('should normalize nowConfig.routes', () => {
     const nowConfig = { routes: [{ src: '/page', dest: '/page.html' }] };
-    const filePaths = [];
-    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    const actual = getTransformedRoutes({ nowConfig });
     const expected = normalizeRoutes(nowConfig.routes);
     assert.deepEqual(actual, expected);
     assertValid(actual.routes);
@@ -434,8 +433,7 @@ describe('getTransformedRoutes', () => {
 
   test('should not error when routes is null and cleanUrls is true', () => {
     const nowConfig = { cleanUrls: true, routes: null };
-    const filePaths = ['file.html'];
-    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.error, null);
     assertValid(actual.routes);
   });
@@ -445,8 +443,7 @@ describe('getTransformedRoutes', () => {
       cleanUrls: true,
       routes: [{ src: '/page', dest: '/file.html' }],
     };
-    const filePaths = ['file.html'];
-    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
     assert.equal(actual.error.code, 'invalid_keys');
   });
@@ -477,8 +474,7 @@ describe('getTransformedRoutes', () => {
         { source: '/help', destination: '/support', statusCode: 302 },
       ],
     };
-    const filePaths = ['/index.html', '/support.html', '/v2/api.py'];
-    const actual = getTransformedRoutes({ nowConfig, filePaths });
+    const actual = getTransformedRoutes({ nowConfig });
     const expected = [
       {
         src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
@@ -551,5 +547,22 @@ describe('getTransformedRoutes', () => {
     const nowConfig = { routes: null };
     const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.routes, null);
+  });
+
+  test('should error when builder version 4 uses routes', () => {
+    const nowConfig = { routes: [{ src: '/page', dest: '/another' }] };
+    const actual = getTransformedRoutes({ nowConfig, builderVersion: 4 });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_builder_result');
+  });
+
+  test('should not error when builder version 4 uses rewrites', () => {
+    const nowConfig = {
+      rewrites: [{ source: '/page', destination: '/another' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig, builderVersion: 4 });
+    assert.equal(actual.error, null);
+    assert.notEqual(actual.routes, null);
+    assertValid(actual.routes);
   });
 });
