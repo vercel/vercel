@@ -22,7 +22,6 @@
     "@types/end-of-stream": "^1.4.0",
     "@types/fs-extra": "^5.0.5",
     "@types/glob": "^7.1.1",
-    "@types/jest": "24.0.22",
     "@types/multistream": "2.1.1",
     "@types/node-fetch": "^2.1.6",
     "@types/semver": "6.0.0",
