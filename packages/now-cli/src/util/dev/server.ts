@@ -517,7 +517,6 @@ export default class DevServer {
     await this.validateNowConfig(config);
     const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
       nowConfig: config,
-      filePaths: files,
     });
     if (routeError) {
       this.output.error(routeError.message);
