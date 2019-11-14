@@ -321,13 +321,27 @@ CMD ["node", "index.js"]`,
       [`test-${session}.html`]: '<h1>hello test</h1>',
       'now.json': JSON.stringify({
         version: 2,
+        name: 'original',
         builds: [{ src: `main-${session}.html`, use: '@now/static' }],
         routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
       'now-test.json': JSON.stringify({
         version: 2,
+        name: 'secondary',
         builds: [{ src: `test-${session}.html`, use: '@now/static' }],
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
+      }),
+    },
+    'local-config-above-target': {
+      'now-root.json': JSON.stringify({
+        version: 2,
+        name: 'root-level',
+      }),
+      'dir/index.html': '<h1>hello index</h1>',
+      'dir/another.html': '<h1>hello another</h1>',
+      'dir/now.json': JSON.stringify({
+        version: 2,
+        name: 'nested-level',
       }),
     },
     'alias-rules': {
