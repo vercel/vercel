@@ -6,7 +6,7 @@ import {
   createDeployment,
   createLegacyDeployment,
   DeploymentOptions,
-} from '../../../../now-client';
+} from 'now-client';
 import wait from '../output/wait';
 import { Output } from '../output';
 // @ts-ignore
