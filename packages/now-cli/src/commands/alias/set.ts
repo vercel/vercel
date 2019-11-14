@@ -71,6 +71,12 @@ export default async function set(
     throw err;
   }
 
+  output.warn(
+    `The ${cmd('now alias')} command was deprecated in favor of ${cmd(
+      'now --prod'
+    )}.`
+  );
+
   // If there are more than two args we have to error
   if (args.length > 2) {
     output.error(
