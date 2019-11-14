@@ -15,7 +15,6 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepare": "npm run build",
     "test-integration-once": "jest --verbose --forceExit",
     "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
   },
