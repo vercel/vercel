@@ -4,6 +4,7 @@ import fetch_ from 'node-fetch';
 import { join, sep } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
+import { pkgVersion } from '../pkg';
 import { Options } from '../deploy';
 import { NowJsonOptions, DeploymentOptions } from '../types';
 import { Sema } from 'async-sema';
@@ -12,9 +13,6 @@ const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/now/files';
 export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
-
-//eslint-disable-next-line @typescript-eslint/no-var-requires
-const pkg = require('../../package.json');
 
 export const EVENTS = new Set([
   // File events
@@ -139,7 +137,7 @@ export const fetch = async (
     ...opts.headers,
     authorization: `Bearer ${token}`,
     accept: 'application/json',
-    'user-agent': `now-client-v${pkg.version}`,
+    'user-agent': `now-client-v${pkgVersion}`,
   };
 
   debug(`${opts.method || 'GET'} ${url}`);
