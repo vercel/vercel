@@ -11,9 +11,9 @@ const GATSBY_PLUGIN_NOW_NAME = 'gatsby-plugin-now';
 const GATSBY_USER_CONFIG_PATH = './__now_gatsby_config_user.js';
 
 function createGatsbyConfig(hasUserConfig: boolean) {
-  return `let userConfig = {}
-
-let userConfig = ${hasUserConfig ? `require('${GATSBY_USER_CONFIG_PATH}')` : '{}'}
+  return `const userConfig = ${
+    hasUserConfig ? `require('${GATSBY_USER_CONFIG_PATH}')` : '{}'
+  }
 
 module.exports = {
   ...userConfig,
