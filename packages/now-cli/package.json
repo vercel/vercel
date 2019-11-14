@@ -141,7 +141,6 @@
     "mri": "1.1.0",
     "ms": "2.1.2",
     "node-fetch": "1.7.3",
-    "now-client": "./packages/now-client",
     "npm-package-arg": "6.1.0",
     "nyc": "13.2.0",
     "ora": "3.4.0",
