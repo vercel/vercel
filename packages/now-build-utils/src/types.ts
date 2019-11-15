@@ -338,6 +338,7 @@ export interface DetectorOutput {
   devEnv?: Env;
   minNodeRange?: string;
   routes?: Route[];
+  cachePattern?: string;
 }
 
 export type DetectorResult = DetectorOutput | false;

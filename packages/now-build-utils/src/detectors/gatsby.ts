@@ -15,5 +15,6 @@ export default async function detectGatsby({
     buildCommand: ['gatsby', 'build'],
     buildDirectory: 'public',
     devCommand: ['gatsby', 'develop', '-p', '$PORT'],
+    cachePattern: '.cache/**',
   };
 }
