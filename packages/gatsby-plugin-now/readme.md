@@ -1,6 +1,6 @@
 # gatsby-plugin-now
 
-⚠️ The use of this plugin is deprecated. ZEIT Now supports Gatsby Redirects out-of-the-box and does not require the use a plugin.
+⚠️ The use of this plugin is deprecated. ZEIT Now supports Gatsby Redirects out-of-the-box without any plugins.
 
 ---
 
