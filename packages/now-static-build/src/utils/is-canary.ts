@@ -1,5 +1,6 @@
-import { version } from '../../package.json';
+//eslint-disable-next-line @typescript-eslint/no-var-requires
+const pkg = require('../../package.json');
 
 export function isCanary() {
-  return version && version.includes('canary');
+  return pkg.version && pkg.version.includes('canary');
 }
