@@ -290,7 +290,7 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
       return {
         code: 'invalid_function_source',
         message:
-          'The function path "${path}" is invalid. The path must be relative to your project root and therefore cannot start with a slash.',
+          `The function path "${path}" is invalid. The path must be relative to your project root and therefore cannot start with a slash.`,
       };
     }
 
