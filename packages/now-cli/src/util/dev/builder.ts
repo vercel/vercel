@@ -29,9 +29,11 @@ import {
   BuilderInputs,
   BuilderOutput,
   BuildResultV3,
+  BuildResultV4,
   BuilderOutputs,
+  RouteConfig,
 } from './types';
-import { normalizeRoutes } from '@now/routing-utils';
+import { normalizeRoutes, getTransformedRoutes } from '@now/routing-utils';
 
 interface BuildMessage {
   type: string;
@@ -174,7 +176,11 @@ export async function executeBuild(
     },
   };
 
-  let buildResultOrOutputs: BuilderOutputs | BuildResult | BuildResultV3;
+  let buildResultOrOutputs:
+    | BuilderOutputs
+    | BuildResult
+    | BuildResultV3
+    | BuildResultV4;
   if (buildProcess) {
     buildProcess.send({
       type: 'build',
@@ -227,8 +233,10 @@ export async function executeBuild(
     };
   } else if (builder.version === 2) {
     result = buildResultOrOutputs as BuildResult;
-  } else if (builder.version === 3) {
-    const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
+  } else if (builder.version === 3 || builder.version === 4) {
+    const { output, ...rest } = buildResultOrOutputs as (
+      | BuildResultV3
+      | BuildResultV4);
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
       throw new Error('The result of "builder.build()" must be a `Lambda`');
@@ -260,8 +268,21 @@ export async function executeBuild(
       }
     }
 
+    let routes: RouteConfig[] = [];
+    if (builder.version === 4) {
+      const { error, routes: buildRoutes } = getTransformedRoutes({
+        nowConfig: rest,
+        builderVersion: builder.version,
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+      routes = buildRoutes || [];
+    }
+
     result = {
       ...rest,
+      routes,
       output: {
         [entrypoint]: output,
       },
