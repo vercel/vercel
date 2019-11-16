@@ -286,6 +286,14 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
       };
     }
 
+    if (path.startsWith('/')) {
+      return {
+        code: 'invalid_function_source',
+        message:
+          `The function path "${path}" is invalid. The path must be relative to your project root and therefore cannot start with a slash.`,
+      };
+    }
+
     if (files.some(f => f === path || minimatch(f, path)) === false) {
       return {
         code: 'invalid_function_source',
@@ -318,7 +326,7 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
       if (typeof func.includeFiles !== 'string') {
         return {
           code: 'invalid_function_property',
-          message: `The property \`includeFiles\` must be a string.`
+          message: `The property \`includeFiles\` must be a string.`,
         };
       }
     }
@@ -327,7 +335,7 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
       if (typeof func.excludeFiles !== 'string') {
         return {
           code: 'invalid_function_property',
-          message: `The property \`excludeFiles\` must be a string.`
+          message: `The property \`excludeFiles\` must be a string.`,
         };
       }
     }
