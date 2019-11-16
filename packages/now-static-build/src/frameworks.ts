@@ -45,7 +45,7 @@ export const frameworks: Framework[] = [
         return [];
       }
     },
-    beforeBuildHook: async entrypointDir => {
+    async beforeBuildHook(entrypointDir) {
       await injectGatsbyConfig(entrypointDir);
     },
     cachePattern: '.cache/**',
