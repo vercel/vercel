@@ -1,3 +1,5 @@
+import toml from 'toml';
+import yaml from 'yaml';
 import { PackageJson } from '../types';
 
 /**
@@ -76,6 +78,23 @@ export default abstract class DetectorFilesystem {
 
   public readPackageJson = async (): Promise<PackageJson | null> => {
     return await this.readJsonOrNull<PackageJson>('package.json');
+  };
+
+  public readConfigFile = async <T>(...names: string[]): Promise<T | null> => {
+    for (const name of names) {
+      const data = await this.readFileOrNull(name);
+      if (data) {
+        const str = data.toString('utf8');
+        if (name.endsWith('.json')) {
+          return JSON.parse(str);
+        } else if (name.endsWith('.toml')) {
+          return toml.parse(str);
+        } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
+          return yaml.parse(str);
+        }
+      }
+    }
+    return null;
   };
 
   public hasDependency = async (name: string): Promise<boolean> => {

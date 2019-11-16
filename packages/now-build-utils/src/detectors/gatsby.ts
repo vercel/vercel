@@ -1,14 +1,10 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectGatsby({
-  fs: { exists, hasDependency },
+  fs: { hasDependency },
 }: DetectorParameters): Promise<DetectorResult> {
   const hasGatsby = await hasDependency('gatsby');
   if (!hasGatsby) {
-    return false;
-  }
-  const hasConfig = await exists('gatsby-config.js');
-  if (!hasConfig) {
     return false;
   }
   return {

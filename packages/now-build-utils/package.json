@@ -25,6 +25,7 @@
     "@types/multistream": "2.1.1",
     "@types/node-fetch": "^2.1.6",
     "@types/semver": "6.0.0",
+    "@types/yaml": "1.2.0",
     "@types/yazl": "^2.4.1",
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",
@@ -39,7 +40,9 @@
     "multistream": "2.1.1",
     "node-fetch": "2.2.0",
     "semver": "6.1.1",
+    "toml": "3.0.0",
     "typescript": "3.5.2",
+    "yaml": "1.7.2",
     "yazl": "2.4.3"
   }
 }

@@ -9,14 +9,5 @@ export default async function detectNext({
     buildCommand: ['next', 'build'],
     buildDirectory: 'build',
     devCommand: ['next', 'start', '-p', '$PORT'],
-    routes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/index.html',
-      },
-    ],
   };
 }

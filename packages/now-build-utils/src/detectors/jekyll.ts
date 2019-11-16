@@ -1,15 +1,22 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
+/**
+ * https://jekyllrb.com/docs/configuration/options/
+ */
+interface JekyllConfig {
+  destination?: string;
+}
+
 export default async function detectJekyll({
-  fs: { exists },
+  fs: { readConfigFile },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasConfig = await exists('_config.yml');
-  if (!hasConfig) {
+  const config = await readConfigFile<JekyllConfig>('_config.yml');
+  if (!config) {
     return false;
   }
   return {
     buildCommand: ['jekyll', 'build'],
-    buildDirectory: '_site',
+    buildDirectory: config.destination || '_site',
     devCommand: ['bundle', 'exec', 'jekyll', 'serve', '-w'],
   };
 }
