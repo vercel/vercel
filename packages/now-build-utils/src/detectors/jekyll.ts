@@ -17,6 +17,14 @@ export default async function detectJekyll({
   return {
     buildCommand: ['jekyll', 'build'],
     buildDirectory: config.destination || '_site',
-    devCommand: ['bundle', 'exec', 'jekyll', 'serve', '-w'],
+    devCommand: [
+      'bundle',
+      'exec',
+      'jekyll',
+      'serve',
+      '--watch',
+      '--port',
+      '$PORT',
+    ],
   };
 }

@@ -8,6 +8,6 @@ export default async function detectSapper({
   return {
     buildCommand: ['sapper', 'export'],
     buildDirectory: '__sapper__/export',
-    devCommand: ['sapper', 'dev'],
+    devCommand: ['sapper', 'dev', '--port', '$PORT'],
   };
 }

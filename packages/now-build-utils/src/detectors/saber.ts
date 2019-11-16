@@ -8,7 +8,7 @@ export default async function detectSaber({
   return {
     buildCommand: ['saber', 'build'],
     buildDirectory: 'public',
-    devCommand: ['saber'],
+    devCommand: ['saber', '--port', '$PORT'],
     routes: [
       {
         src: '/_saber/.*',

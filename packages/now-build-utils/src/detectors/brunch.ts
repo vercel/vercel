@@ -12,6 +12,6 @@ export default async function detectBrunch({
   return {
     buildCommand: ['brunch', 'build', '--production'],
     buildDirectory: 'public',
-    devCommand: ['brunch', 'watch', '--server'],
+    devCommand: ['brunch', 'watch', '--server', '--port', '$PORT'],
   };
 }
