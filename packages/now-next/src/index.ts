@@ -883,10 +883,6 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
-      ...redirects,
-      ...rewrites,
-      // Static exported pages (.html rewrites)
-      ...exportedPageRoutes,
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
@@ -901,6 +897,10 @@ export const build = async ({
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
         continue: true,
       },
+      ...redirects,
+      ...rewrites,
+      // Static exported pages (.html rewrites)
+      ...exportedPageRoutes,
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
