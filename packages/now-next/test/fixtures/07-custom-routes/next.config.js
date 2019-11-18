@@ -1,4 +1,7 @@
 module.exports = {
+  generateBuildId() {
+    return 'build-id'
+  },
   experimental: {
     async redirects() {
       return [
