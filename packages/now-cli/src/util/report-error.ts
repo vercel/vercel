@@ -98,6 +98,6 @@ export default async function reportError(
   }
 }
 
-function ignoreError(error: Error) {
-  return error.message.includes('uv_cwd');
+function ignoreError(error: Error | undefined) {
+  return error && error.message && error.message.includes('uv_cwd');
 }
