@@ -24,11 +24,11 @@ const help = () => {
 
     ls                                  Show all domains in a list
     inspect      [name]                 Displays information related to a domain
-    add          [name]                 Add a new domain that you already own
+    add          [name] [project]       Add a new domain that you already own
     rm           [name]                 Remove a domain
     buy          [name]                 Buy a domain that you don't yet own
     move         [name] [destination]   Move a domain to another user or team.
-    transfer-in  [name]                 Transfer in a domain to Zeit
+    transfer-in  [name]                 Transfer in a domain to ZEIT
     verify       [name]                 Run a verification for a domain
 
   ${chalk.dim('Options:')}
@@ -54,13 +54,6 @@ const help = () => {
 
       Make sure the domain's DNS nameservers are at least 2 of the
       ones listed on ${chalk.underline('https://zeit.world')}.
-
-      ${chalk.yellow('NOTE:')} Running ${chalk.dim(
-    '`now alias`'
-  )} will automatically register your domain
-      if it's configured with these nameservers (no need to ${chalk.dim(
-        '`domain add`'
-      )}).
 `);
 };
 
@@ -72,7 +65,7 @@ const COMMAND_CONFIG = {
   move: ['move'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
-  verify: ['verify']
+  verify: ['verify'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -83,7 +76,7 @@ export default async function main(ctx: NowContext) {
       '--cdn': Boolean,
       '--code': String,
       '--no-cdn': Boolean,
-      '--yes': Boolean
+      '--yes': Boolean,
     });
   } catch (error) {
     handleError(error);

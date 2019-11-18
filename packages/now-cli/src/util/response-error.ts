@@ -9,7 +9,7 @@ export default async function responseError(
   let message;
   let bodyError;
 
-  if (res.status >= 400 && res.status < 500) {
+  if (!res.ok) {
     let body;
 
     try {
@@ -23,7 +23,7 @@ export default async function responseError(
     message = bodyError.message;
   }
 
-  if (message == null) {
+  if (!message) {
     message = fallbackMessage === null ? 'Response Error' : fallbackMessage;
   }
 
