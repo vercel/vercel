@@ -24,7 +24,7 @@ export default async function promptBool(label: string, options: Options = {}) {
   } = options;
 
   return new Promise(resolve => {
-    const isRaw = Boolean(stdin.isRaw);
+    const isRaw = Boolean(stdin && stdin.isRaw);
 
     if (stdin) {
       if (stdin.setRawMode) {
