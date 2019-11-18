@@ -24,7 +24,6 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-
 import getNowDir from './util/config/global-path';
 import {
   getDefaultConfig,
