@@ -47,10 +47,6 @@
     {
       "path": "/rewrite/THIS_SHOULD_BE_GONE/another",
       "mustContain": "another"
-    },
-    {
-      "path": "/_next/static/build-id/pages/hello.js",
-      "mustContain": "hello world"
     }
   ]
 }
