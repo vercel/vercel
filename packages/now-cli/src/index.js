@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 
+import error from './util/output/error';
+import param from './util/output/param';
+import info from './util/output/info';
 try {
+  // Test to see if cwd has been deleted before
+  // importing 3rd party packages that might need cwd.
   process.cwd();
-} catch (error) {
-  if (error && error.message && error.message.includes('uv_cwd')) {
-    console.error('The current working directory does not exist.');
+} catch (e) {
+  if (e && e.message && e.message.includes('uv_cwd')) {
+    console.error(error('The current working directory does not exist.'));
     process.exit(1);
   }
-  throw error;
 }
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
@@ -20,9 +24,7 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import error from './util/output/error';
-import param from './util/output/param.ts';
-import info from './util/output/info';
+
 import getNowDir from './util/config/global-path';
 import {
   getDefaultConfig,
