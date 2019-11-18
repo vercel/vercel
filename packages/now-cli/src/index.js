@@ -1,5 +1,14 @@
 #!/usr/bin/env node
 
+try {
+  process.cwd();
+} catch (error) {
+  if (error && error.message && error.message.includes('uv_cwd')) {
+    console.error('The current working directory does not exist.');
+    process.exit(1);
+  }
+  throw error;
+}
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync } from 'fs';
