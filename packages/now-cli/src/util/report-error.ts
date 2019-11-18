@@ -1,11 +1,20 @@
 import Client from './client';
-import getScope from './get-scope.ts';
+import getScope from './get-scope';
 import getArgs from './get-args';
+import { Team, User } from '../types';
 
-export default async (sentry, error, apiUrl, configFiles) => {
-  let user;
-  let team;
-  let scopeError;
+export default async function reportError(
+  sentry: typeof import('@sentry/node'),
+  error: Error,
+  apiUrl: string,
+  configFiles: typeof import('./config/files')
+) {
+  if (ignoreError(error)) {
+    return;
+  }
+  let user: User | undefined;
+  let team: Team | null | undefined;
+  let scopeError: Error | undefined;
 
   try {
     const { token } = configFiles.readAuthConfigFile();
@@ -23,15 +32,9 @@ export default async (sentry, error, apiUrl, configFiles) => {
       const spec = {
         email: user.email,
         id: user.uid,
+        username: user.username,
+        name: (user as any).name,
       };
-
-      if (user.username) {
-        spec.username = user.username;
-      }
-
-      if (user.name) {
-        spec.name = user.name;
-      }
 
       scope.setUser(spec);
     }
@@ -49,8 +52,8 @@ export default async (sentry, error, apiUrl, configFiles) => {
     }
 
     // Report `process.argv` without sensitive data
-    let args;
-    let argsError;
+    let args: any | undefined;
+    let argsError: Error | undefined;
     try {
       args = getArgs(process.argv.slice(2), {});
     } catch (err) {
@@ -93,4 +96,8 @@ export default async (sentry, error, apiUrl, configFiles) => {
   if (client) {
     await client.close();
   }
-};
+}
+
+function ignoreError(error: Error | undefined) {
+  return error && error.message && error.message.includes('uv_cwd');
+}

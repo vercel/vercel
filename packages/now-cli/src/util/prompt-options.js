@@ -12,12 +12,14 @@ function promptOptions(opts) {
       const s = v.toString();
 
       const cleanup = () => {
-        if (process.stdin.setRawMode) {
-          process.stdin.setRawMode(false);
-        }
+        if (process.stdin) {
+          if (process.stdin.setRawMode) {
+            process.stdin.setRawMode(false);
+          }
 
-        process.stdin.removeListener('data', ondata);
-        process.stdin.pause();
+          process.stdin.removeListener('data', ondata);
+          process.stdin.pause();
+        }
       };
 
       // Ctrl + C
@@ -36,11 +38,13 @@ function promptOptions(opts) {
       }
     };
 
-    if (process.stdin.setRawMode) {
-      process.stdin.setRawMode(true);
-    }
+    if (process.stdin) {
+      if (process.stdin.setRawMode) {
+        process.stdin.setRawMode(true);
+      }
 
-    process.stdin.resume();
-    process.stdin.on('data', ondata);
+      process.stdin.resume();
+      process.stdin.on('data', ondata);
+    }
   });
 }
