@@ -63,7 +63,7 @@ export default async function reportError(
     if (args) {
       const flags = ['--env', '--build-env', '--token'];
       for (const flag of flags) {
-        if (args['--env']) args[flag] = 'REDACTED';
+        if (args[flag]) args[flag] = 'REDACTED';
       }
       if (
         args._.length >= 4 &&
