@@ -20,27 +20,31 @@ export default async function promptBool(label: string, options: Options = {}) {
     noChar = 'n',
     stdin = process.stdin,
     stdout = process.stdout,
-    trailing = ''
+    trailing = '',
   } = options;
 
   return new Promise(resolve => {
-    const isRaw = Boolean(stdin.isRaw);
+    const isRaw = Boolean(stdin && stdin.isRaw);
 
-    if (stdin.setRawMode) {
-      stdin.setRawMode(true);
+    if (stdin) {
+      if (stdin.setRawMode) {
+        stdin.setRawMode(true);
+      }
+
+      stdin.resume();
     }
-
-    stdin.resume();
 
     function restore() {
       stdout.write(trailing);
 
-      if (stdin.setRawMode) {
-        stdin.setRawMode(isRaw);
-      }
+      if (stdin) {
+        if (stdin.setRawMode) {
+          stdin.setRawMode(isRaw);
+        }
 
-      stdin.pause();
-      stdin.removeListener('data', onData);
+        stdin.pause();
+        stdin.removeListener('data', onData);
+      }
     }
 
     function onData(buffer: Buffer) {
@@ -70,9 +74,12 @@ export default async function promptBool(label: string, options: Options = {}) {
       defaultValue === null
         ? `[${yesChar}|${noChar}]`
         : defaultValue
-          ? `[${chalk.bold(yesChar.toUpperCase())}|${noChar}]`
-          : `[${yesChar}|${chalk.bold(noChar.toUpperCase())}]`;
+        ? `[${chalk.bold(yesChar.toUpperCase())}|${noChar}]`
+        : `[${yesChar}|${chalk.bold(noChar.toUpperCase())}]`;
     stdout.write(`${chalk.gray('>')} ${label} ${chalk.gray(defaultText)} `);
-    stdin.on('data', onData);
+
+    if (stdin) {
+      stdin.on('data', onData);
+    }
   });
 }
