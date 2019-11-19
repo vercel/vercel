@@ -8,6 +8,7 @@
   "probes": [
     { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
     { "path": "/node10sh/", "mustContain": "node:v10" },
+    { "path": "/node12sh/", "mustContain": "node:v12" },
     { "path": "/subdirectory/", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
   ]
 }
