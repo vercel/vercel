@@ -154,11 +154,6 @@ export default async function add(
     output.print(
       `  We will run a verification for you and you will receive an email upon completion.\n`
     );
-    output.print(
-      `  If you want to force running a verification, you can run ${cmd(
-        'now domains verify <domain>'
-      )}\n`
-    );
     output.print('  Read more: https://err.sh/now/domain-verification\n\n');
   } else {
     output.log(
