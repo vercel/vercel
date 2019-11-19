@@ -87,7 +87,7 @@ export default abstract class DetectorFilesystem {
         if (name.endsWith('.json')) {
           return JSON.parse(str);
         } else if (name.endsWith('.toml')) {
-          return toml.parse(str);
+          return (toml.parse(str) as unknown) as T;
           //} else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
           //  return yaml.parse(str);
         }
