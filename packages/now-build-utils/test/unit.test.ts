@@ -2,6 +2,7 @@ import assert from 'assert';
 import { join } from 'path';
 import { readFile, pathExists } from 'fs-extra';
 import { detectDefaults, DetectorFilesystem } from '../src';
+import { firstTruthy } from '../src/detectors';
 
 class LocalFilesystem extends DetectorFilesystem {
   private dir: string;
@@ -19,6 +20,47 @@ class LocalFilesystem extends DetectorFilesystem {
     return readFile(join(this.dir, name));
   }
 }
+
+test('firstTruthy() - truthy', async () => {
+  const result = await firstTruthy([(async () => 0)(), (async () => 1)()]);
+  assert.equal(result, 1);
+});
+
+test('firstTruthy() - falsy', async () => {
+  const result = await firstTruthy([(async () => 0)(), (async () => 0)()]);
+  assert.equal(result, 0);
+});
+
+test('firstTruthy() - one throws', async () => {
+  const result = await firstTruthy([
+    (async () => {
+      throw new Error('bad');
+    })(),
+    (async () => 1)(),
+  ]);
+  assert.equal(result, 1);
+});
+
+test('firstTruthy() - all throws', async () => {
+  let errors;
+  try {
+    await firstTruthy([
+      (async () => {
+        throw new Error('bad 1');
+      })(),
+      (async () => {
+        throw new Error('bad 2');
+      })(),
+    ]);
+  } catch (_err) {
+    errors = _err;
+  }
+  assert(errors);
+  assert.equal(errors.name, 'AggregateError');
+  const arr = Array.from(errors) as Error[];
+  assert.equal(arr[0].message, 'bad 1');
+  assert.equal(arr[1].message, 'bad 2');
+});
 
 test('detectDefaults() - angular', async () => {
   const dir = join(__dirname, 'fixtures', '03-zero-config-angular');

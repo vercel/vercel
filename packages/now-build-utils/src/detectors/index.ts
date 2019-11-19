@@ -1,5 +1,4 @@
 import AggregateError from 'aggregate-error';
-import DetectorFilesystem from './filesystem';
 import { Detector, DetectorParameters, DetectorResult } from '../types';
 
 import angular from './angular';
@@ -25,8 +24,6 @@ import svelte from './svelte';
 import umi from './umi';
 import vue from './vue';
 
-export { DetectorFilesystem };
-
 export const pkgDetectors: Detector[] = [
   angular,
   brunch,
@@ -51,7 +48,7 @@ export const pkgDetectors: Detector[] = [
 
 export const detectors: Detector[] = [hugo, jekyll, middleman];
 
-function firstTruthy<T>(promises: Promise<T>[]) {
+export function firstTruthy<T>(promises: Promise<T>[]) {
   return new Promise<T>((resolve, reject) => {
     const errors: Array<Error> = [];
     let unresolved = promises.length;
