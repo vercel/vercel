@@ -63,9 +63,6 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
-      - run:
-          name: Installing apt dependencies
-          command: sudo apt install -y rsync
       - attach_workspace:
           at: .
       - run:
