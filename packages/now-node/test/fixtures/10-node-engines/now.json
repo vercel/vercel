@@ -3,8 +3,7 @@
   "builds": [
     {
       "src": "**/*.js",
-      "use": "@now/node",
-      "config": { "forceBuildIn": "iad1" }
+      "use": "@now/node"
     }
   ],
   "probes": [
