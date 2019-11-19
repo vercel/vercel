@@ -2015,10 +2015,10 @@
     agentkeepalive "3.4.1"
     debug "3.1.0"
 
-"@zeit/fun@0.10.3":
-  version "0.10.3"
-  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.10.3.tgz#f41c1c75b2d61e464bd9eaf1aeab370a43b73d2e"
-  integrity sha512-+9zwr+nX7rF9FJtuLekgTex0Bq7Tgq2yyv+F5j2+kVUHoqRcoBuX2AdGzWV62+kMjBdx/ODRQmN4eZl9mWjNAw==
+"@zeit/fun@0.10.4":
+  version "0.10.4"
+  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.10.4.tgz#fedeb05dac825df50e811939a50a5eee10363d6d"
+  integrity sha512-BOn5FboMkmpVAWWBuiLa8kQ4zp07k1/D8oHyCnaCAy0i6IxNs3Woc9zPiW0E55qhl0MRzEjwtioOHfyXK/Sw2A==
   dependencies:
     async-listen "1.0.0"
     debug "4.1.1"
