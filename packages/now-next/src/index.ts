@@ -872,6 +872,24 @@ export const build = async ({
     }
   }
 
+  const topRoutes = [
+    // Before we handle static files we need to set proper caching headers
+    {
+      // This ensures we only match known emitted-by-Next.js files and not
+      // user-emitted files which may be missing a hash in their filename.
+      src: path.join(
+        '/',
+        entryDirectory,
+        '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+      ),
+      // Next.js assets contain a hash or entropy in their filenames, so they
+      // are guaranteed to be unique and cacheable indefinitely.
+      headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+      continue: true,
+    },
+    { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
+  ]
+
   return {
     output: {
       ...publicDirectoryFiles,
@@ -883,28 +901,17 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
+      ...topRoutes,
       ...redirects,
       ...rewrites,
+      // we need to re-apply the routes above rewrites in-case the are
+      // rewriting to one of those routes
+      ...topRoutes,
       // Static exported pages (.html rewrites)
       ...exportedPageRoutes,
-      // Before we handle static files we need to set proper caching headers
-      {
-        // This ensures we only match known emitted-by-Next.js files and not
-        // user-emitted files which may be missing a hash in their filename.
-        src: path.join(
-          '/',
-          entryDirectory,
-          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
-        ),
-        // Next.js assets contain a hash or entropy in their filenames, so they
-        // are guaranteed to be unique and cacheable indefinitely.
-        headers: { 'cache-control': 'public,max-age=31536000,immutable' },
-        continue: true,
-      },
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
-      { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
