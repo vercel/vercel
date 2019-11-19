@@ -17,6 +17,7 @@
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {
+    "@iarna/toml": "2.2.3",
     "@types/async-retry": "^1.2.1",
     "@types/cross-spawn": "6.0.0",
     "@types/end-of-stream": "^1.4.0",
