@@ -121,7 +121,7 @@ export default async function set(
 
   if (args.length === 0 && !rules) {
     output.error(
-      `To ship to production, optionally configure your domains (URL) and run now --prod.`
+      `To ship to production, optionally configure your domains (URL) and run ${cmd('now --prod')}.`
     );
     return 1;
   }
