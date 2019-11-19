@@ -1,5 +1,4 @@
 import toml from 'toml';
-import yaml from 'yaml';
 import { PackageJson } from '../types';
 
 /**
@@ -89,8 +88,8 @@ export default abstract class DetectorFilesystem {
           return JSON.parse(str);
         } else if (name.endsWith('.toml')) {
           return toml.parse(str);
-        } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
-          return yaml.parse(str);
+          //} else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
+          //  return yaml.parse(str);
         }
       }
     }
