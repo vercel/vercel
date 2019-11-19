@@ -15,7 +15,6 @@
     "lerna": "3.16.4"
   },
   "devDependencies": {
-    "@types/jest": "24.0.22",
     "@typescript-eslint/eslint-plugin": "2.0.0",
     "@typescript-eslint/parser": "2.0.0",
     "@zeit/ncc": "0.20.4",
@@ -24,11 +23,9 @@
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
     "husky": "3.0.4",
-    "jest": "24.9.0",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.0",
-    "prettier": "1.18.2",
-    "ts-jest": "24.1.0"
+    "prettier": "1.18.2"
   },
   "scripts": {
     "lerna": "lerna",
