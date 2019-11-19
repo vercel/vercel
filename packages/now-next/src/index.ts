@@ -887,8 +887,6 @@ export const build = async ({
       headers: { 'cache-control': 'public,max-age=31536000,immutable' },
       continue: true,
     },
-    // Static exported pages (.html rewrites)
-    ...exportedPageRoutes,
     { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
   ]
 
@@ -909,6 +907,8 @@ export const build = async ({
       // we need to re-apply the routes above rewrites in-case the are
       // rewriting to one of those routes
       ...topRoutes,
+      // Static exported pages (.html rewrites)
+      ...exportedPageRoutes,
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
