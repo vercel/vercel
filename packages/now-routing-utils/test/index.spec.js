@@ -548,21 +548,4 @@ describe('getTransformedRoutes', () => {
     const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.routes, null);
   });
-
-  test('should error when builder version 4 uses routes', () => {
-    const nowConfig = { routes: [{ src: '/page', dest: '/another' }] };
-    const actual = getTransformedRoutes({ nowConfig, builderVersion: 4 });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_builder_result');
-  });
-
-  test('should not error when builder version 4 uses rewrites', () => {
-    const nowConfig = {
-      rewrites: [{ source: '/page', destination: '/another' }],
-    };
-    const actual = getTransformedRoutes({ nowConfig, builderVersion: 4 });
-    assert.equal(actual.error, null);
-    assert.notEqual(actual.routes, null);
-    assertValid(actual.routes);
-  });
 });

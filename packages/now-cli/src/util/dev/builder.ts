@@ -31,7 +31,6 @@ import {
   BuildResultV3,
   BuildResultV4,
   BuilderOutputs,
-  RouteConfig,
 } from './types';
 import { normalizeRoutes, getTransformedRoutes } from '@now/routing-utils';
 
@@ -233,10 +232,8 @@ export async function executeBuild(
     };
   } else if (builder.version === 2) {
     result = buildResultOrOutputs as BuildResult;
-  } else if (builder.version === 3 || builder.version === 4) {
-    const { output, ...rest } = buildResultOrOutputs as (
-      | BuildResultV3
-      | BuildResultV4);
+  } else if (builder.version === 3) {
+    const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
       throw new Error('The result of "builder.build()" must be a `Lambda`');
@@ -268,27 +265,31 @@ export async function executeBuild(
       }
     }
 
-    let routes: RouteConfig[] = [];
-    if (builder.version === 4) {
-      const { error, routes: buildRoutes } = getTransformedRoutes({
-        nowConfig: rest,
-        builderVersion: builder.version,
-      });
-      if (error) {
-        throw new Error(error.message);
-      }
-      routes = buildRoutes || [];
-    }
-
     result = {
       ...rest,
-      routes,
       output: {
         [entrypoint]: output,
       },
     } as BuildResult;
+  } else if (builder.version === 4) {
+    const resultv4 = buildResultOrOutputs as BuildResultV4;
+
+    for (const [src, func] of Object.entries(config.functions || {})) {
+      const { maxDuration, memory } = func;
+      const match = findMatchingLambda(src, resultv4);
+      if (match) {
+        const { path, lambda } = match;
+        lambda.maxDuration = maxDuration;
+        lambda.memory = memory;
+        resultv4.output[path] = lambda;
+      }
+    }
+
+    result = resultv4 as BuildResult;
   } else {
-    result = buildResultOrOutputs as BuildResult;
+    throw new Error(
+      `Now CLI does not support builder version: ${builder.version}`
+    );
   }
 
   // Normalize Builder Routes
@@ -521,4 +522,12 @@ export async function shutdownBuilder(
   }
 
   await Promise.all(ops);
+}
+
+function findMatchingLambda(src: string, output: BuildResultV4) {
+  for (const [path, lambda] of Object.entries(output.output)) {
+    if (src === path || minimatch(path, src)) {
+      return { path, lambda };
+    }
+  }
 }
