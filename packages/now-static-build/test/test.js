@@ -12,7 +12,12 @@ let builderUrl;
 
 beforeAll(async () => {
   if (!buildUtilsUrl) {
-    const buildUtilsPath = path.resolve(__dirname, '..');
+    const buildUtilsPath = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      'now-build-utils'
+    );
     buildUtilsUrl = await packAndDeploy(buildUtilsPath);
     console.log('buildUtilsUrl', buildUtilsUrl);
   }
