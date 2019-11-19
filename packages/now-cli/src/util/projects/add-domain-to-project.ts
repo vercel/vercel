@@ -1,16 +1,7 @@
 import chalk from 'chalk';
 import Client from '../client';
 import wait from '../output/wait';
-
-interface AliasTarget {
-  createdAt?: number;
-  domain: string;
-  redirect?: string | null;
-  target: 'PRODUCTION' | 'STAGING';
-  configuredBy?: null | 'CNAME' | 'A';
-  configuredChangedAt?: null | number;
-  configuredChangeAttempts?: [number, number]; // [count, lastAttemptTimestamp]
-}
+import { ProjectAliasTarget } from '../../types';
 
 export async function addDomainToProject(
   client: Client,
@@ -21,7 +12,7 @@ export async function addDomainToProject(
     `Adding domain ${domain} to project ${chalk.bold(projectNameOrId)}`
   );
   try {
-    const response = await client.fetch<AliasTarget[]>(
+    const response = await client.fetch<ProjectAliasTarget[]>(
       `/projects/${encodeURIComponent(projectNameOrId)}/alias`,
       {
         method: 'POST',
@@ -32,7 +23,7 @@ export async function addDomainToProject(
       }
     );
 
-    const aliasTarget: AliasTarget | undefined = response.find(
+    const aliasTarget: ProjectAliasTarget | undefined = response.find(
       aliasTarget => aliasTarget.domain === domain
     );
 
@@ -48,7 +39,7 @@ export async function addDomainToProject(
   } catch (err) {
     cancelWait();
 
-    if (500 > err.status) {
+    if (err.status < 500) {
       return err;
     }
 

@@ -221,10 +221,21 @@ export type DNSRecordData =
   | SRVRecordData
   | MXRecordData;
 
+export interface ProjectAliasTarget {
+  createdAt?: number;
+  domain: string;
+  redirect?: string | null;
+  target: 'PRODUCTION' | 'STAGING';
+  configuredBy?: null | 'CNAME' | 'A';
+  configuredChangedAt?: null | number;
+  configuredChangeAttempts?: [number, number];
+}
+
 export interface Project {
   id: string;
   name: string;
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  alias?: ProjectAliasTarget[];
 }

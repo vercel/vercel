@@ -35,6 +35,7 @@ const help = () => {
 
     -h, --help                     Output usage information
     -d, --debug                    Debug mode [off]
+    -f, --force                    Force a domain on a project and remove it from an existing one
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
@@ -73,10 +74,9 @@ export default async function main(ctx: NowContext) {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
-      '--cdn': Boolean,
       '--code': String,
-      '--no-cdn': Boolean,
       '--yes': Boolean,
+      '--force': Boolean,
     });
   } catch (error) {
     handleError(error);

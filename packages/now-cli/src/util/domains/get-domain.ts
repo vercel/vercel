@@ -26,7 +26,7 @@ export async function getDomain(
   } catch (error) {
     cancelWait();
 
-    if (500 > error.status) {
+    if (error.status < 500) {
       return error;
     }
 

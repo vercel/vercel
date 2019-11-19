@@ -14,11 +14,11 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getDomain } from '../../util/domains/get-domain';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
+import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 
 type Options = {
-  '--cdn': boolean;
   '--debug': boolean;
-  '--no-cdn': boolean;
+  '--force': boolean;
 };
 
 export default async function add(
@@ -34,6 +34,7 @@ export default async function add(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
+  const force = opts['--force'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
@@ -46,11 +47,6 @@ export default async function add(
     }
 
     throw err;
-  }
-
-  if (opts['--cdn'] !== undefined || opts['--no-cdn'] !== undefined) {
-    output.error(`Toggling CF from Now CLI is deprecated.`);
-    return 1;
   }
 
   if (args.length !== 2) {
@@ -78,11 +74,36 @@ export default async function add(
   }
 
   const addStamp = stamp();
-  const aliasTarget = await addDomainToProject(client, projectName, domainName);
+
+  let aliasTarget = await addDomainToProject(client, projectName, domainName);
 
   if (aliasTarget instanceof Error) {
-    output.error(aliasTarget.message);
-    return 1;
+    if (
+      aliasTarget instanceof ERRORS.APIError &&
+      aliasTarget.code === 'ALIAS_DOMAIN_EXIST' &&
+      aliasTarget.project &&
+      aliasTarget.project.id
+    ) {
+      if (force) {
+        const removeResponse = await removeDomainFromProject(
+          client,
+          aliasTarget.project.id,
+          domainName
+        );
+
+        if (removeResponse instanceof Error) {
+          output.error(removeResponse.message);
+          return 1;
+        }
+
+        aliasTarget = await addDomainToProject(client, projectName, domainName);
+      }
+    }
+
+    if (aliasTarget instanceof Error) {
+      output.error(aliasTarget.message);
+      return 1;
+    }
   }
 
   // We can cast the information because we've just added the domain and it should be there
