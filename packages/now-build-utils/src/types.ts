@@ -322,6 +322,27 @@ export interface BuilderFunctions {
   };
 }
 
+export interface NowRewrite {
+  source: string;
+  destination: string;
+}
+
+export interface NowRedirect {
+  source: string;
+  destination: string;
+  statusCode?: number;
+}
+
+export interface NowHeader {
+  source: string;
+  headers: NowHeaderKeyValue[];
+}
+
+export interface NowHeaderKeyValue {
+  key: string;
+  value: string;
+}
+
 export type Detector = (params: DetectorParameters) => Promise<DetectorResult>;
 
 export interface DetectorParameters {
@@ -337,8 +358,13 @@ export interface DetectorOutput {
   devCommand?: string[];
   devEnv?: Env;
   minNodeRange?: string;
-  routes?: Route[];
   cachePattern?: string;
+  routes?: Route[];
+  cleanUrls?: boolean;
+  rewrites?: NowRewrite[];
+  redirects?: NowRedirect[];
+  headers?: NowHeader[];
+  trailingSlash?: boolean;
 }
 
 export type DetectorResult = DetectorOutput | false;
