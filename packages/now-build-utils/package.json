@@ -42,7 +42,6 @@
     "multistream": "2.1.1",
     "node-fetch": "2.2.0",
     "semver": "6.1.1",
-    "toml": "3.0.0",
     "ts-jest": "24.1.0",
     "typescript": "3.5.2",
     "yazl": "2.4.3"
