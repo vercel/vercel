@@ -1,5 +1,4 @@
 import { ChildProcess, fork } from 'child_process';
-import url from 'url'
 import {
   pathExists,
   readFile,
@@ -60,8 +59,8 @@ import {
 
 import {
   convertRedirects,
-  convertRewrites
-} from '@now/routing-utils/dist/superstatic'
+  convertRewrites,
+} from '@now/routing-utils/dist/superstatic';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -163,23 +162,19 @@ const name = '[@now/next]';
 const urls: stringMap = {};
 
 function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
-  // The runtime env vars are encoded and passed in as `argv[2]`, so that the
-  // dev-server process can replace them onto `process.env` after the Next.js
-  // "prepare" step
-  const encodedEnv = Buffer.from(JSON.stringify(runtimeEnv)).toString('base64');
-
-  // `env` is omitted since that
-  // makes it default to `process.env`
-  const forked = fork(path.join(__dirname, 'dev-server.js'), [encodedEnv], {
+  // `env` is omitted since that makes it default to `process.env`
+  const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
     cwd: entryPath,
     execArgv: [],
   });
 
   const getUrl = () =>
     new Promise<string>((resolve, reject) => {
-      forked.on('message', resolve);
-      forked.on('error', reject);
+      forked.once('message', resolve);
+      forked.once('error', reject);
     });
+
+  forked.send({ dir: entryPath, runtimeEnv });
 
   return { forked, getUrl };
 }
@@ -832,7 +827,7 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion)
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
 
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
@@ -852,15 +847,15 @@ export const build = async ({
     })
   );
 
-  const rewrites: Route[] = []
-  const redirects: Route[] = []
+  const rewrites: Route[] = [];
+  const redirects: Route[] = [];
 
   if (routesManifest) {
-    switch(routesManifest.version) {
+    switch (routesManifest.version) {
       case 1: {
-        redirects.push(...convertRedirects(routesManifest.redirects))
-        rewrites.push(...convertRewrites(routesManifest.rewrites))
-        break
+        redirects.push(...convertRedirects(routesManifest.redirects));
+        rewrites.push(...convertRewrites(routesManifest.rewrites));
+        break;
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
@@ -888,7 +883,7 @@ export const build = async ({
       continue: true,
     },
     { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
-  ]
+  ];
 
   return {
     output: {
