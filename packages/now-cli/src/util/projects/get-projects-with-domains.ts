@@ -4,13 +4,10 @@ import wait from '../output/wait';
 import { Project } from '../../types';
 import { URLSearchParams } from 'url';
 
-export async function findProjectsForDomain(
-  client: Client,
-  domainName: string
+export async function getProjectsWithDomains(
+  client: Client
 ): Promise<Project[] | Error> {
-  const cancelWait = wait(
-    `Searching project for domain ${chalk.bold(domainName)}`
-  );
+  const cancelWait = wait(`Fetching projects with domains`);
   try {
     const limit = 50;
     let result: Project[] = [];
@@ -18,7 +15,6 @@ export async function findProjectsForDomain(
     const query = new URLSearchParams({
       hasProductionDomains: '1',
       limit: limit.toString(),
-      domain: domainName,
     });
 
     for (;;) {
