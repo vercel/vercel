@@ -22,6 +22,7 @@ import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import { detectBuilders } from './detect-builders';
 import { detectRoutes } from './detect-routes';
+import DetectorFilesystem from './detectors/filesystem';
 import debug from './debug';
 
 export {
@@ -29,6 +30,7 @@ export {
   FileFsRef,
   FileRef,
   Lambda,
+  DetectorFilesystem,
   createLambda,
   Prerender,
   download,
@@ -53,4 +55,5 @@ export {
   getLambdaOptionsFromFunction,
 };
 
+export { detectDefaults } from './detectors';
 export * from './types';

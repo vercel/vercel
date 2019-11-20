@@ -3,6 +3,7 @@ import { NodeVersion } from '../types';
 import debug from '../debug';
 
 const supportedOptions: NodeVersion[] = [
+  { major: 12, range: '12.x', runtime: 'nodejs12.x' },
   { major: 10, range: '10.x', runtime: 'nodejs10.x' },
   { major: 8, range: '8.10.x', runtime: 'nodejs8.10' },
 ];
@@ -22,7 +23,7 @@ export async function getSupportedNodeVersion(
   if (!engineRange) {
     if (!silent) {
       debug(
-        'missing `engines` in `package.json`, using default range: ' +
+        'Missing `engines` in `package.json`, using default range: ' +
           selection.range
       );
     }
@@ -43,9 +44,10 @@ export async function getSupportedNodeVersion(
     } else {
       if (!silent) {
         throw new Error(
-          'found `engines` in `package.json` with an unsupported node range: ' +
+          'Found `engines` in `package.json` with an unsupported node range: ' +
             engineRange +
-            '\nplease use `10.x` or `8.10.x` instead'
+            '\nPlease use one of the following supported ranges: ' +
+            JSON.stringify(supportedOptions.map(o => o.range))
         );
       }
     }
