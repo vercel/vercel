@@ -49,50 +49,34 @@ it('should create zip files with symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
-it('should only match supported node versions', () => {
-  expect(getSupportedNodeVersion('10.x')).resolves.toHaveProperty('major', 10);
-  expect(getSupportedNodeVersion('8.10.x')).resolves.toHaveProperty('major', 8);
+it('should only match supported node versions', async () => {
+  expect(await getSupportedNodeVersion('10.x')).toHaveProperty('major', 10);
+  expect(await getSupportedNodeVersion('8.10.x')).toHaveProperty('major', 8);
   expect(getSupportedNodeVersion('8.11.x')).rejects.toThrow();
   expect(getSupportedNodeVersion('6.x')).rejects.toThrow();
   expect(getSupportedNodeVersion('999.x')).rejects.toThrow();
   expect(getSupportedNodeVersion('foo')).rejects.toThrow();
-  expect(getSupportedNodeVersion('')).resolves.toBe(defaultSelection);
-  expect(getSupportedNodeVersion(null)).resolves.toBe(defaultSelection);
-  expect(getSupportedNodeVersion(undefined)).resolves.toBe(defaultSelection);
+  expect(await getSupportedNodeVersion('')).toBe(defaultSelection);
+  expect(await getSupportedNodeVersion(null)).toBe(defaultSelection);
+  expect(await getSupportedNodeVersion(undefined)).toBe(defaultSelection);
 });
 
-it('should match all semver ranges', () => {
+it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
-  expect(getSupportedNodeVersion('10.0.0')).resolves.toHaveProperty(
+  expect(await getSupportedNodeVersion('10.0.0')).toHaveProperty('major', 10);
+  expect(await getSupportedNodeVersion('10.x')).toHaveProperty('major', 10);
+  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 12);
+  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 12);
+  expect(await getSupportedNodeVersion('8.5.0 - 10.5.0')).toHaveProperty(
     'major',
     10
   );
-  expect(getSupportedNodeVersion('10.x')).resolves.toHaveProperty('major', 10);
-  expect(getSupportedNodeVersion('>=10')).resolves.toHaveProperty('major', 10);
-  expect(getSupportedNodeVersion('>=10.3.0')).resolves.toHaveProperty(
+  expect(await getSupportedNodeVersion('>=9.5.0 <=10.5.0')).toHaveProperty(
     'major',
     10
   );
-  expect(getSupportedNodeVersion('8.5.0 - 10.5.0')).resolves.toHaveProperty(
-    'major',
-    10
-  );
-  expect(getSupportedNodeVersion('>=9.0.0')).resolves.toHaveProperty(
-    'major',
-    10
-  );
-  expect(getSupportedNodeVersion('>=9.5.0 <=10.5.0')).resolves.toHaveProperty(
-    'major',
-    10
-  );
-  expect(getSupportedNodeVersion('~10.5.0')).resolves.toHaveProperty(
-    'major',
-    10
-  );
-  expect(getSupportedNodeVersion('^10.5.0')).resolves.toHaveProperty(
-    'major',
-    10
-  );
+  expect(await getSupportedNodeVersion('~10.5.0')).toHaveProperty('major', 10);
+  expect(await getSupportedNodeVersion('^10.5.0')).toHaveProperty('major', 10);
 });
 
 it('should support require by path for legacy builders', () => {
@@ -300,6 +284,19 @@ describe('Test `detectBuilders`', () => {
 
     const { builders } = await detectBuilders(files, pkg);
     expect(builders[0].use).toBe('@now/static-build');
+    expect(builders[0].src).toBe('package.json');
+    expect(builders.length).toBe(1);
+  });
+
+  it('nuxt + tag canary', async () => {
+    const pkg = {
+      scripts: { build: 'nuxt build' },
+      dependencies: { nuxt: '2.8.1' },
+    };
+    const files = ['package.json', 'pages/index.js'];
+
+    const { builders } = await detectBuilders(files, pkg, { tag: 'canary' });
+    expect(builders[0].use).toBe('@now/static-build@canary');
     expect(builders[0].src).toBe('package.json');
     expect(builders.length).toBe(1);
   });
