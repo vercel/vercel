@@ -21,16 +21,14 @@ export async function removeDomainFromProject(
       }
     );
 
-    cancelWait();
-
     return response;
   } catch (err) {
-    cancelWait();
-
     if (err.status < 500) {
       return err;
     }
 
     throw err;
+  } finally {
+    cancelWait();
   }
 }

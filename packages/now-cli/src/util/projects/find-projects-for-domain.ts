@@ -31,16 +31,14 @@ export async function findProjectsForDomain(
       if (response.length !== limit) break;
     }
 
-    cancelWait();
-
     return result;
   } catch (err) {
-    cancelWait();
-
     if (err.status < 500) {
       return err;
     }
 
     throw err;
+  } finally {
+    cancelWait();
   }
 }

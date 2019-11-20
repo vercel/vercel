@@ -20,16 +20,14 @@ export async function getDomain(
       `/v4/domains/${domainName}`
     );
 
-    cancelWait();
-
     return domain;
   } catch (error) {
-    cancelWait();
-
     if (error.status < 500) {
       return error;
     }
 
     throw error;
+  } finally {
+    cancelWait();
   }
 }

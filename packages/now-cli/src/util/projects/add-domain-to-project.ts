@@ -33,16 +33,14 @@ export async function addDomainToProject(
       );
     }
 
-    cancelWait();
-
     return aliasTarget;
   } catch (err) {
-    cancelWait();
-
     if (err.status < 500) {
       return err;
     }
 
     throw err;
+  } finally {
+    cancelWait();
   }
 }
