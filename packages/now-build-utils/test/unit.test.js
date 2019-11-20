@@ -288,6 +288,19 @@ describe('Test `detectBuilders`', () => {
     expect(builders.length).toBe(1);
   });
 
+  it('nuxt + tag canary', async () => {
+    const pkg = {
+      scripts: { build: 'nuxt build' },
+      dependencies: { nuxt: '2.8.1' },
+    };
+    const files = ['package.json', 'pages/index.js'];
+
+    const { builders } = await detectBuilders(files, pkg, { tag: 'canary' });
+    expect(builders[0].use).toBe('@now/static-build@canary');
+    expect(builders[0].src).toBe('package.json');
+    expect(builders.length).toBe(1);
+  });
+
   it('package.json with no build + api', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'api/[endpoint].js'];
