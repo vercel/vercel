@@ -469,6 +469,23 @@ const main = async argv_ => {
       return 1;
     }
 
+    const invalid = token.match(/(\W)/g);
+    if (invalid) {
+      const notContain = Array.from(new Set(invalid)).sort();
+      console.error(
+        error({
+          message: `You defined ${param(
+            '--token'
+          )}, but its contents are invalid. Must not contain: ${notContain
+            .map(c => JSON.stringify(c))
+            .join(', ')}`,
+          slug: 'invalid-token-value',
+        })
+      );
+
+      return 1;
+    }
+
     ctx.authConfig.token = token;
 
     // Don't use team from config if `--token` was set
