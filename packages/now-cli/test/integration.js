@@ -2020,7 +2020,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   t.is(response2.status, 502, url);
 });
 
-test('fail to deploy a Lambdas with an incorrect value for maxDuration', async t => {
+test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {
   const directory = fixture('lambda-with-1000-second-timeout');
   const output = await execute([directory]);
 
