@@ -1,10 +1,15 @@
 {
   "version": 2,
-  "builds": [{ "src": "**/*.js", "use": "@now/node" }],
+  "builds": [
+    {
+      "src": "**/*.js",
+      "use": "@now/node"
+    }
+  ],
   "probes": [
     { "path": "/empty", "mustContain": "RANDOMNESS_PLACEHOLDER:8" },
     { "path": "/exact", "mustContain": "RANDOMNESS_PLACEHOLDER:10" },
-    { "path": "/greater", "mustContain": "RANDOMNESS_PLACEHOLDER:10" },
+    { "path": "/greater", "mustContain": "RANDOMNESS_PLACEHOLDER:12" },
     { "path": "/major", "mustContain": "RANDOMNESS_PLACEHOLDER:10" },
     { "path": "/range", "mustContain": "RANDOMNESS_PLACEHOLDER:10" }
   ]

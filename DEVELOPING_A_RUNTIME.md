@@ -283,6 +283,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs12.x`
 - `nodejs10.x`
 - `nodejs8.10`
 - `go1.x`
