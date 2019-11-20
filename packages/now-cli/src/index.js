@@ -469,12 +469,16 @@ const main = async argv_ => {
       return 1;
     }
 
-    if (!/^\w+$/.test(token)) {
+    const invalid = token.match(/(\W)/g);
+    if (invalid) {
+      const notContain = Array.from(new Set(invalid)).sort();
       console.error(
         error({
           message: `You defined ${param(
             '--token'
-          )}, but its content is invalid`,
+          )}, but its contents are invalid. Must not contain: ${notContain
+            .map(c => JSON.stringify(c))
+            .join(', ')}`,
           slug: 'invalid-token-value',
         })
       );
