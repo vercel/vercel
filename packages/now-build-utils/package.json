@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-unit": "jest --env node --verbose --runInBand test/unit.test.*",
+    "test-unit": "jest --env node --verbose --runInBand test/unit.*test.*",
     "test-integration-once": "jest --env node --verbose --runInBand test/integration.test.js",
     "prepublishOnly": "./build.sh"
   },
