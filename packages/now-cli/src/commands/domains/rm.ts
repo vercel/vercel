@@ -16,6 +16,7 @@ import * as ERRORS from '../../util/errors-ts';
 import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import setCustomSuffix from '../../util/domains/set-custom-suffix';
+import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 
 type Options = {
   '--debug': boolean;
@@ -30,7 +31,7 @@ export default async function rm(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -81,6 +82,18 @@ export default async function rm(
     );
     output.log(`Run ${cmd('now domains ls')} to see your domains.`);
     return 1;
+  }
+
+  const projects = await findProjectsForDomain(client, domain.name);
+
+  if (Array.isArray(projects) && projects.length > 0) {
+    output.warn(
+      `The domain is currently used by ${plural(
+        'project',
+        projects.length,
+        true
+      )}.`
+    );
   }
 
   const skipConfirmation = opts['--yes'];
@@ -157,7 +170,7 @@ async function removeDomain(
       suffix,
       transferring,
       pendingAsyncPurchase,
-      resolvable
+      resolvable,
     } = removeResult.meta;
     if (transferring) {
       output.error(
