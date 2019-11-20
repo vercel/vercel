@@ -8,7 +8,7 @@ import { URLSearchParams } from 'url';
 export async function findProjectsForDomain(
   client: Client,
   domainName: string
-) {
+): Promise<Project[] | Error> {
   const cancelWait = wait(
     `Searching project for domain ${chalk.bold(domainName)}`
   );

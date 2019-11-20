@@ -20,7 +20,7 @@ import strlen from './strlen';
 export default function formatTable(
   header: string[],
   align: Array<'l' | 'r' | 'c' | '.'>,
-  blocks: { name: string, rows: string[][] }[],
+  blocks: { name?: string; rows: string[][] }[],
   hsep = '    '
 ) {
   const nrCols = header.length;

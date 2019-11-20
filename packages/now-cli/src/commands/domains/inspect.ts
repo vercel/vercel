@@ -10,6 +10,8 @@ import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
+import formatTable from '../../util/format-table';
+import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 
 type Options = {
   '--debug': boolean;
@@ -23,7 +25,7 @@ export default async function inspect(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -80,6 +82,13 @@ export default async function inspect(
     return 1;
   }
 
+  const projects = await findProjectsForDomain(client, domainName);
+
+  if (projects instanceof Error) {
+    output.error(projects.message);
+    return 1;
+  }
+
   output.log(
     `Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(
       inspectStamp()
@@ -104,24 +113,28 @@ export default async function inspect(
     `    ${chalk.cyan('Bought At')}\t\t\t${formatDate(domain.boughtAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('Transferred At')}\t\t${formatDate(domain.transferredAt)}\n`
+    `    ${chalk.cyan('Transferred At')}\t\t${formatDate(
+      domain.transferredAt
+    )}\n`
   );
   output.print(
     `    ${chalk.cyan('Expires At')}\t\t\t${formatDate(domain.expiresAt)}\n`
   );
   output.print(
-    `    ${chalk.cyan('NS Verified At')}\t\t${formatDate(domain.nsVerifiedAt)}\n`
+    `    ${chalk.cyan('NS Verified At')}\t\t${formatDate(
+      domain.nsVerifiedAt
+    )}\n`
   );
   output.print(
-    `    ${chalk.cyan('TXT Verified At')}\t\t${formatDate(domain.txtVerifiedAt)}\n`
+    `    ${chalk.cyan('TXT Verified At')}\t\t${formatDate(
+      domain.txtVerifiedAt
+    )}\n`
   );
-  output.print(`    ${chalk.cyan('CDN Enabled')}\t\t${true}\n`);
-  output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n\n'));
   output.print(
     `${formatNSTable(domain.intendedNameservers, domain.nameservers, {
-      extraSpace: '    '
+      extraSpace: '    ',
     })}\n`
   );
   output.print('\n');
@@ -129,7 +142,7 @@ export default async function inspect(
   output.print(chalk.bold('  Verification Record\n\n'));
   output.print(
     `${dnsTable([['_now', 'TXT', domain.verificationRecord]], {
-      extraSpace: '    '
+      extraSpace: '    ',
     })}\n`
   );
   output.print('\n');
@@ -157,6 +170,34 @@ export default async function inspect(
       )}\n`
     );
     output.print('  Read more: https://err.sh/now/domain-verification\n\n');
+  }
+
+  if (Array.isArray(projects) && projects.length > 0) {
+    output.print(chalk.bold('  Projects\n'));
+
+    const table = formatTable(
+      ['Project', 'Domains'],
+      ['l', 'l'],
+      [
+        {
+          rows: projects.map(project => {
+            const name = project.name;
+
+            const domains = (project.alias || [])
+              .map(target => target.domain)
+              .filter(alias => alias.endsWith(domainName));
+
+            const cols = domains.length ? domains.join(', ') : '-';
+
+            return [name, cols];
+          }),
+        },
+      ]
+    );
+
+    output.print(table.replace(/^(.*)/gm, `${' '.repeat(3)}$1`));
+
+    output.print('\n\n');
   }
 
   return null;
