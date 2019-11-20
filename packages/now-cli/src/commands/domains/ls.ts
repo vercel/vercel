@@ -1,4 +1,5 @@
 import ms from 'ms';
+import psl from 'psl';
 import chalk from 'chalk';
 import plural from 'pluralize';
 
@@ -16,6 +17,16 @@ import { getProjectsWithDomains } from '../../util/projects/get-projects-with-do
 type Options = {
   '--debug': boolean;
 };
+
+interface DomainInfo {
+  domain: string;
+  apexDomain: string;
+  projectName: string | null;
+  dns: 'ZEIT' | 'External';
+  configured: boolean;
+  expiresAt: number | null;
+  createdAt: number | null;
+}
 
 export default async function ls(
   ctx: NowContext,
@@ -63,18 +74,19 @@ export default async function ls(
     return 1;
   }
 
+  const domainsInfo = createDomainsInfo(domains, projects);
+
   output.log(
-    `${plural('domain', domains.length, true)} found under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(lsStamp())}`
+    `${plural(
+      'project domain',
+      domainsInfo.length,
+      true
+    )} found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
   );
 
   if (domains.length > 0) {
     output.print(
-      formatDomainsTable(domains, projects).replace(
-        /^(.*)/gm,
-        `${' '.repeat(3)}$1`
-      )
+      formatDomainsTable(domainsInfo).replace(/^(.*)/gm, `${' '.repeat(3)}$1`)
     );
     output.print('\n\n');
   }
@@ -82,43 +94,85 @@ export default async function ls(
   return 0;
 }
 
-function getProjectForDomain(domain: Domain, projects: Project[]) {
-  return projects.find(
-    ({ alias }) => alias && alias.find(({ domain: d }) => d === domain.name)
-  );
-}
-
-function formatDomainsTable(domains: Domain[], projects: Project[]) {
-  const current = new Date();
-  const rows: string[][] = [];
+function createDomainsInfo(domains: Domain[], projects: Project[]) {
+  const info = new Map<string, DomainInfo>();
 
   domains.forEach(domain => {
-    const projectForDomain = getProjectForDomain(domain, projects);
-
-    const dns = domain.serviceType;
-    const exp = formatDateWithoutTime(domain.expiresAt);
-    const conf = Boolean(domain.verified).toString();
-
-    if (projectForDomain) {
-      const age = chalk.gray(ms(current.getTime() - domain.createdAt));
-      rows.push([domain.name, projectForDomain.name, dns, exp, conf, age]);
-    } else {
-      const age = chalk.gray(ms(current.getTime() - domain.createdAt));
-      rows.push([domain.name, '-', dns, exp, conf, age]);
-    }
+    info.set(domain.name, {
+      domain: domain.name,
+      apexDomain: domain.name,
+      projectName: null,
+      expiresAt: domain.expiresAt || null,
+      createdAt: domain.createdAt,
+      configured: Boolean(domain.verified),
+      dns: domain.serviceType === 'zeit.world' ? 'ZEIT' : 'External',
+    });
 
     projects.forEach(project => {
-      if (project.id === (projectForDomain && projectForDomain.id)) return;
-
       (project.alias || []).forEach(target => {
-        if (target.domain.endsWith(domain.name)) {
-          const age = chalk.gray(
-            target.createdAt ? ms(current.getTime() - target.createdAt) : '-'
-          );
-          rows.push([target.domain, project.name, dns, exp, conf, age]);
-        }
+        if (!target.domain.endsWith(domain.name)) return;
+
+        info.set(target.domain, {
+          domain: target.domain,
+          apexDomain: domain.name,
+          projectName: project.name,
+          expiresAt: domain.expiresAt || null,
+          createdAt: domain.createdAt || target.createdAt || null,
+          configured: Boolean(domain.verified),
+          dns: domain.serviceType === 'zeit.world' ? 'ZEIT' : 'External',
+        });
       });
     });
+  });
+
+  projects.forEach(project => {
+    (project.alias || []).forEach(target => {
+      if (info.has(target.domain)) return;
+
+      const { domain: apexDomain } = psl.parse(
+        target.domain
+      ) as psl.ParsedDomain;
+
+      info.set(target.domain, {
+        domain: target.domain,
+        apexDomain: apexDomain || target.domain,
+        projectName: project.name,
+        expiresAt: null,
+        createdAt: target.createdAt || null,
+        configured: target.domain.endsWith('.now.sh') ? true : false,
+        dns: target.domain.endsWith('.now.sh') ? 'ZEIT' : 'External',
+      });
+    });
+  });
+
+  const list = Array.from(info.values());
+
+  return list.sort((a, b) => {
+    if (a.apexDomain === b.apexDomain) {
+      if (a.apexDomain === a.domain) return -1;
+      if (b.apexDomain === b.domain) return 1;
+      return a.domain.localeCompare(b.domain);
+    }
+
+    return a.apexDomain.localeCompare(b.apexDomain);
+  });
+}
+
+function formatDomainsTable(domainsInfo: DomainInfo[]) {
+  const current = Date.now();
+
+  const rows: string[][] = domainsInfo.map(info => {
+    const expiration = formatDateWithoutTime(info.expiresAt);
+    const age = info.createdAt ? ms(current - info.createdAt) : '-';
+
+    return [
+      info.domain,
+      info.projectName || '-',
+      info.dns,
+      expiration,
+      info.configured.toString(),
+      chalk.gray(age),
+    ];
   });
 
   const table = formatTable(
