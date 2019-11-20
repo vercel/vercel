@@ -84,7 +84,7 @@ export default async function ls(
     )} found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
   );
 
-  if (domains.length > 0) {
+  if (domainsInfo.length > 0) {
     output.print(
       formatDomainsTable(domainsInfo).replace(/^(.*)/gm, `${' '.repeat(3)}$1`)
     );

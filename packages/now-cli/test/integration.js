@@ -102,7 +102,19 @@ function fetchTokenInformation(token, retries = 3) {
 }
 
 function formatOutput({ stderr, stdout }) {
-  return `Received:\n"${stderr}"\n"${stdout}"`;
+  return `
+-----
+
+Stderr:
+${stderr}
+
+-----
+
+Stdout:
+${stdout}
+
+-----
+  `;
 }
 
 // AVA's `t.context` can only be set before the tests,
@@ -2067,6 +2079,41 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
     /Function Runtimes must have a valid version/gim,
     formatOutput(output)
   );
+});
+
+test('fail to add a domain without a project', async t => {
+  const output = await execute(['domains', 'add', 'my-domain.now.sh']);
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.regex(output.stderr, /expects two arguments/gm, formatOutput(output));
+});
+
+test('assign a domain to a project', async t => {
+  const domain = `project-domain.${contextName}.now.sh`;
+  const project = 'static-deployment';
+  const directory = fixture(project);
+
+  const deploymentOutput = await execute([directory]);
+  t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
+
+  const output = await execute(['domains', 'add', domain, project]);
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('list project domains', async t => {
+  const domain = `project-domain.${contextName}.now.sh`;
+  const project = 'static-deployment';
+  const directory = fixture(project);
+
+  const deploymentOutput = await execute([directory, '--force']);
+  t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
+
+  const addOutput = await execute(['domains', 'add', domain, project]);
+  t.is(addOutput.exitCode, 0, formatOutput(addOutput));
+
+  const output = await execute(['domains', 'ls']);
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, new RegExp(domain), formatOutput(output));
+  t.regex(output.stderr, new RegExp(project), formatOutput(output));
 });
 
 test.after.always(async () => {

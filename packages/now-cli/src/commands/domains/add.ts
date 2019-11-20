@@ -113,6 +113,13 @@ export default async function add(
     )} added to project ${chalk.bold(projectName)}. ${addStamp()}`
   );
 
+  if (domainName.endsWith('.now.sh')) {
+    output.log(
+      `The domain will automatically get assigned to your latest production deployment.`
+    );
+    return 0;
+  }
+
   const domainResponse = await getDomain(client, contextName, domainName);
 
   if (domainResponse instanceof Error) {
