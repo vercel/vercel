@@ -469,6 +469,19 @@ const main = async argv_ => {
       return 1;
     }
 
+    if (!/^\w+$/.test(token)) {
+      console.error(
+        error({
+          message: `You defined ${param(
+            '--token'
+          )}, but its content is invalid`,
+          slug: 'invalid-token-value',
+        })
+      );
+
+      return 1;
+    }
+
     ctx.authConfig.token = token;
 
     // Don't use team from config if `--token` was set
