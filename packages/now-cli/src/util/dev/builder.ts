@@ -271,7 +271,7 @@ export async function executeBuild(
     throw new Error(
       `Now CLI does not support builder version ${
         builder.version
-      }.\nPlease update to the latest CLI with ${await getUpdateCommand()}`
+      }.\nPlease run \`${await getUpdateCommand()}\` to update Now CLI.`
     );
   }
 
