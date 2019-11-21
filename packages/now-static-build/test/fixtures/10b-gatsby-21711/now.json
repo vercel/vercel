@@ -6,6 +6,11 @@
       "config": { "zeroConfig": true }
     }
   ],
+  "build": {
+    "env": {
+      "__NOW_CANARY": "1"
+    }
+  },
   "probes": [
     {
       "path": "/",

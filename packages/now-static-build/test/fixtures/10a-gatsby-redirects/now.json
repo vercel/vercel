@@ -6,5 +6,10 @@
       "use": "@now/static-build",
       "config": { "zeroConfig": true }
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "__NOW_CANARY": "1"
+    }
+  }
 }
