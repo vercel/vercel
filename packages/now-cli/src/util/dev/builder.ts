@@ -33,6 +33,7 @@ import {
   BuilderOutputs,
 } from './types';
 import { normalizeRoutes } from '@now/routing-utils';
+import getUpdateCommand from '../get-update-command';
 
 interface BuildMessage {
   type: string;
@@ -273,7 +274,9 @@ export async function executeBuild(
     } as BuildResult;
   } else {
     throw new Error(
-      `Now CLI does not support builder version: ${builder.version}`
+      `Now CLI does not support builder version ${
+        builder.version
+      }.\nPlease update to the latest CLI with ${await getUpdateCommand()}`
     );
   }
 
@@ -507,12 +510,4 @@ export async function shutdownBuilder(
   }
 
   await Promise.all(ops);
-}
-
-function findMatchingLambda(src: string, output: BuildResultV4) {
-  for (const [path, lambda] of Object.entries(output.output)) {
-    if (src === path || minimatch(path, src)) {
-      return { path, lambda };
-    }
-  }
 }
