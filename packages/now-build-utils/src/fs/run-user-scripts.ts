@@ -247,7 +247,11 @@ export async function runPackageJsonScript(
     await spawnAsync('npm', ['run', scriptName], opts);
   } else {
     console.log(`Running "yarn run ${scriptName}"`);
-    await spawnAsync('yarn', ['--cwd', destPath, 'run', scriptName], opts);
+    await spawnAsync(
+      'yarn',
+      ['--ignore-engines', '--cwd', destPath, 'run', scriptName],
+      opts
+    );
   }
 
   return true;
