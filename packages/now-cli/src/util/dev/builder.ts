@@ -29,11 +29,10 @@ import {
   BuilderInputs,
   BuilderOutput,
   BuildResultV3,
-  BuildResultV4,
   BuilderOutputs,
-  RouteConfig,
 } from './types';
-import { normalizeRoutes, getTransformedRoutes } from '@now/routing-utils';
+import { normalizeRoutes } from '@now/routing-utils';
+import getUpdateCommand from '../get-update-command';
 
 interface BuildMessage {
   type: string;
@@ -176,11 +175,7 @@ export async function executeBuild(
     },
   };
 
-  let buildResultOrOutputs:
-    | BuilderOutputs
-    | BuildResult
-    | BuildResultV3
-    | BuildResultV4;
+  let buildResultOrOutputs: BuilderOutputs | BuildResult | BuildResultV3;
   if (buildProcess) {
     buildProcess.send({
       type: 'build',
@@ -233,10 +228,8 @@ export async function executeBuild(
     };
   } else if (builder.version === 2) {
     result = buildResultOrOutputs as BuildResult;
-  } else if (builder.version === 3 || builder.version === 4) {
-    const { output, ...rest } = buildResultOrOutputs as (
-      | BuildResultV3
-      | BuildResultV4);
+  } else if (builder.version === 3) {
+    const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
       throw new Error('The result of "builder.build()" must be a `Lambda`');
@@ -268,27 +261,18 @@ export async function executeBuild(
       }
     }
 
-    let routes: RouteConfig[] = [];
-    if (builder.version === 4) {
-      const { error, routes: buildRoutes } = getTransformedRoutes({
-        nowConfig: rest,
-        builderVersion: builder.version,
-      });
-      if (error) {
-        throw new Error(error.message);
-      }
-      routes = buildRoutes || [];
-    }
-
     result = {
       ...rest,
-      routes,
       output: {
         [entrypoint]: output,
       },
     } as BuildResult;
   } else {
-    result = buildResultOrOutputs as BuildResult;
+    throw new Error(
+      `Now CLI does not support builder version ${
+        builder.version
+      }.\nPlease run \`${await getUpdateCommand()}\` to update Now CLI.`
+    );
   }
 
   // Normalize Builder Routes

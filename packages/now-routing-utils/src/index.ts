@@ -127,25 +127,11 @@ function notEmpty<T>(value: T | null | undefined): value is T {
 
 export function getTransformedRoutes({
   nowConfig,
-  builderVersion,
 }: GetRoutesProps): NormalizedRoutes {
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } = nowConfig;
   let { routes = null } = nowConfig;
   const errors: NowErrorNested[] = [];
   if (routes) {
-    if (typeof builderVersion === 'number' && builderVersion >= 4) {
-      const error = createNowError(
-        'invalid_builder_result',
-        'Invalid builder result',
-        [
-          {
-            message:
-              'Cannot define `routes` when builder.version is 4 or newer',
-          },
-        ]
-      );
-      return { routes, error };
-    }
     if (typeof cleanUrls !== 'undefined') {
       errors.push({
         message: 'Cannot define both `routes` and `cleanUrls`',

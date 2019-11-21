@@ -130,14 +130,10 @@ export interface BuildResultV3 {
 }
 
 export interface BuildResultV4 {
-  output: Lambda;
+  output: { [filePath: string]: Lambda };
+  routes: RouteConfig[];
   watch: string[];
   distPath?: string;
-  cleanUrls?: boolean;
-  rewrites?: NowRewrite[];
-  redirects?: NowRedirect[];
-  headers?: NowHeader[];
-  trailingSlash?: boolean;
 }
 
 export interface ShouldServeParams {
