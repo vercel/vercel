@@ -45,21 +45,22 @@ export function convertRedirects(redirects: NowRedirect[]): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const loc = replaceSegments(segments, r.destination);
-    return {
+    const route: Route = {
       src,
       headers: { Location: loc },
       status: r.statusCode || 307,
     };
+    return route;
   });
 }
 
 export function convertRewrites(rewrites: NowRewrite[]): Route[] {
-  const routes: Route[] = rewrites.map(r => {
+  return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
-    return { src, dest, continue: true };
+    const route: Route = { src, dest, check: true };
+    return route;
   });
-  return routes;
 }
 
 export function convertHeaders(headers: NowHeader[]): Route[] {
@@ -68,11 +69,12 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
     h.headers.forEach(kv => {
       obj[kv.key] = kv.value;
     });
-    return {
+    const route: Route = {
       src: h.source,
       headers: obj,
       continue: true,
     };
+    return route;
   });
 }
 
