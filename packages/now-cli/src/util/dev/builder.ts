@@ -32,7 +32,7 @@ import {
   BuildResultV4,
   BuilderOutputs,
 } from './types';
-import { normalizeRoutes, getTransformedRoutes } from '@now/routing-utils';
+import { normalizeRoutes } from '@now/routing-utils';
 
 interface BuildMessage {
   type: string;
@@ -271,21 +271,6 @@ export async function executeBuild(
         [entrypoint]: output,
       },
     } as BuildResult;
-  } else if (builder.version === 4) {
-    const resultv4 = buildResultOrOutputs as BuildResultV4;
-
-    for (const [src, func] of Object.entries(config.functions || {})) {
-      const { maxDuration, memory } = func;
-      const match = findMatchingLambda(src, resultv4);
-      if (match) {
-        const { path, lambda } = match;
-        lambda.maxDuration = maxDuration;
-        lambda.memory = memory;
-        resultv4.output[path] = lambda;
-      }
-    }
-
-    result = resultv4 as BuildResult;
   } else {
     throw new Error(
       `Now CLI does not support builder version: ${builder.version}`
