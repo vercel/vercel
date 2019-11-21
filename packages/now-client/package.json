@@ -1,6 +1,6 @@
 {
   "name": "now-client",
-  "version": "5.2.4-canary.1",
+  "version": "5.2.4-canary.2",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
   "homepage": "https://zeit.co",
@@ -27,8 +27,6 @@
     "@types/node-fetch": "2.3.4",
     "@types/recursive-readdir": "2.2.0",
     "@zeit/ncc": "0.18.5",
-    "jest": "24.8.0",
-    "ts-jest": "24.0.2",
     "typescript": "3.5.1"
   },
   "jest": {
