@@ -2032,7 +2032,18 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async t 
   );
 });
 
-// We need to skip those tests until `now-php` supports Runtime version 3
+test('invalid `--token`', async t => {
+  const output = await execute(['--token', 'he\nl,o.']);
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.true(
+    output.stderr.includes(
+      'Error! You defined "--token", but its contents are invalid. Must not contain: "\\n", ",", "."'
+    )
+  );
+});
+
+// We need to skip this test until `now-php` supports Runtime version 3
 test('deploy a Lambda with a specific runtime', async t => {
   const directory = fixture('lambda-with-php-runtime');
   const output = await execute([directory, '--public']);
@@ -2045,7 +2056,7 @@ test('deploy a Lambda with a specific runtime', async t => {
   t.is(build.use, 'now-php@0.0.7', JSON.stringify(build, null, 2));
 });
 
-// We need to skip those tests until `now-php` supports Runtime version 3
+// We need to skip this test until `now-php` supports Runtime version 3
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory]);
