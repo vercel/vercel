@@ -29,7 +29,6 @@ import {
   BuilderInputs,
   BuilderOutput,
   BuildResultV3,
-  BuildResultV4,
   BuilderOutputs,
 } from './types';
 import { normalizeRoutes } from '@now/routing-utils';
@@ -176,11 +175,7 @@ export async function executeBuild(
     },
   };
 
-  let buildResultOrOutputs:
-    | BuilderOutputs
-    | BuildResult
-    | BuildResultV3
-    | BuildResultV4;
+  let buildResultOrOutputs: BuilderOutputs | BuildResult | BuildResultV3;
   if (buildProcess) {
     buildProcess.send({
       type: 'build',
