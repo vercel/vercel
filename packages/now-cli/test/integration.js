@@ -2095,7 +2095,7 @@ test('assign a domain to a project', async t => {
   const deploymentOutput = await execute([directory]);
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
-  const output = await execute(['domains', 'add', domain, project]);
+  const output = await execute(['domains', 'add', domain, project, '--force']);
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
@@ -2107,7 +2107,13 @@ test('list project domains', async t => {
   const deploymentOutput = await execute([directory, '--force']);
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
-  const addOutput = await execute(['domains', 'add', domain, project]);
+  const addOutput = await execute([
+    'domains',
+    'add',
+    domain,
+    project,
+    '--force',
+  ]);
   t.is(addOutput.exitCode, 0, formatOutput(addOutput));
 
   const output = await execute(['domains', 'ls']);
