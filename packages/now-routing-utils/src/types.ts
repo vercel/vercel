@@ -17,6 +17,7 @@ export type Source = {
   headers?: { [name: string]: string };
   methods?: string[];
   continue?: boolean;
+  check?: boolean;
   status?: number;
 };
 
