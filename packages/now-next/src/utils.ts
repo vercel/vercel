@@ -293,37 +293,36 @@ async function getRoutes(
 }
 
 export type Rewrite = {
-  source: string,
-  destination: string,
-}
+  source: string;
+  destination: string;
+};
 
 export type Redirect = Rewrite & {
-  statusCode?: number
-}
+  statusCode?: number;
+};
 
 type RoutesManifestRegex = {
-  regex: string,
-  regexKeys: string[]
-}
+  regex: string;
+  regexKeys: string[];
+};
 
 export type RoutesManifest = {
-  redirects: (Redirect & RoutesManifestRegex)[],
-  rewrites: (Rewrite & RoutesManifestRegex)[],
+  redirects: (Redirect & RoutesManifestRegex)[];
+  rewrites: (Rewrite & RoutesManifestRegex)[];
   dynamicRoutes: {
-    page: string,
-    regex: string,
-  }[],
-  version: number
-}
+    page: string;
+    regex: string;
+  }[];
+  version: number;
+};
 
 export async function getRoutesManifest(
   entryPath: string,
-  nextVersion?: string,
-): Promise< RoutesManifest | undefined> {
-  const shouldHaveManifest = (
-    nextVersion && semver.gte(nextVersion, '9.1.4-canary.0')
-  )
-  if (!shouldHaveManifest) return
+  nextVersion?: string
+): Promise<RoutesManifest | undefined> {
+  const shouldHaveManifest =
+    nextVersion && semver.gte(nextVersion, '9.1.4-canary.0');
+  if (!shouldHaveManifest) return;
 
   const pathRoutesManifest = path.join(
     entryPath,
@@ -338,12 +337,13 @@ export async function getRoutesManifest(
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new Error(
       `A routes-manifest.json couldn't be found. This could be due to a failure during the build`
-    )
+    );
   }
 
-  const routesManifest: RoutesManifest = require(pathRoutesManifest)
+  //eslint-disable-next-line @typescript-eslint/no-var-requires
+  const routesManifest: RoutesManifest = require(pathRoutesManifest);
 
-  return routesManifest
+  return routesManifest;
 }
 
 export async function getDynamicRoutes(
@@ -352,7 +352,7 @@ export async function getDynamicRoutes(
   dynamicPages: string[],
   isDev?: boolean,
   routesManifest?: RoutesManifest
-): Promise<{ src: string; dest: string }[]> {
+): Promise<{ src: string; dest: string; check: boolean }[]> {
   if (!dynamicPages.length) {
     return [];
   }
@@ -365,6 +365,7 @@ export async function getDynamicRoutes(
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              check: true,
             };
           }
         );
@@ -421,7 +422,7 @@ export async function getDynamicRoutes(
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
-  const routes: { src: string; dest: string }[] = [];
+  const routes: { src: string; dest: string; check: boolean }[] = [];
   pageMatchers.forEach(pageMatcher => {
     // in `now dev` we don't need to prefix the destination
     const dest = !isDev
@@ -432,6 +433,7 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
+        check: true,
       });
     }
   });

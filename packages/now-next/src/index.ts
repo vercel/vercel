@@ -1,5 +1,4 @@
 import { ChildProcess, fork } from 'child_process';
-import url from 'url'
 import {
   pathExists,
   readFile,
@@ -60,8 +59,8 @@ import {
 
 import {
   convertRedirects,
-  convertRewrites
-} from '@now/routing-utils/dist/superstatic'
+  convertRewrites,
+} from '@now/routing-utils/dist/superstatic';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -358,7 +357,11 @@ export const build = async ({
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
-  const dynamicDataRoutes: Array<{ src: string; dest: string }> = [];
+  const dynamicDataRoutes: Array<{
+    src: string;
+    dest: string;
+    check: boolean;
+  }> = [];
 
   const appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
@@ -791,6 +794,7 @@ export const build = async ({
         src: dataRouteRegex.replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
         // Location of lambda in builder output
         dest: path.posix.join(entryDirectory, dataRoute),
+        check: true,
       });
     });
   }
@@ -832,7 +836,7 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion)
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
 
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
@@ -852,15 +856,15 @@ export const build = async ({
     })
   );
 
-  const rewrites: Route[] = []
-  const redirects: Route[] = []
+  const rewrites: Route[] = [];
+  const redirects: Route[] = [];
 
   if (routesManifest) {
-    switch(routesManifest.version) {
+    switch (routesManifest.version) {
       case 1: {
-        redirects.push(...convertRedirects(routesManifest.redirects))
-        rewrites.push(...convertRewrites(routesManifest.rewrites))
-        break
+        redirects.push(...convertRedirects(routesManifest.redirects));
+        rewrites.push(...convertRewrites(routesManifest.rewrites));
+        break;
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
@@ -888,7 +892,7 @@ export const build = async ({
       continue: true,
     },
     { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
-  ]
+  ];
 
   return {
     output: {
