@@ -352,7 +352,6 @@ export const build = async ({
     await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
-  const exportedPageRoutes: Route[] = [];
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
@@ -470,7 +469,8 @@ export const build = async ({
     const staticPageFiles = await glob('**/*.html', pagesDir);
     const prerenderManifest = await getPrerenderManifest(entryPath);
 
-    Object.keys(staticPageFiles).forEach((page: string) => {
+    Object.entries(staticPageFiles).forEach(([page, fsFile]) => {
+      fsFile.contentType = 'text/html';
       const pathname = page.replace(/\.html$/, '');
       const routeName = normalizePage(pathname);
 
@@ -487,18 +487,13 @@ export const build = async ({
         return;
       }
 
-      const staticRoute = path.join(entryDirectory, page);
-      staticPages[staticRoute] = staticPageFiles[page];
+      const newPath = path.join(entryDirectory, pathname);
+      staticPages[newPath] = fsFile;
 
       if (isDynamicRoute(pathname)) {
         dynamicPages.push(routeName);
         return;
       }
-
-      exportedPageRoutes.push({
-        src: `^${path.join('/', entryDirectory, pathname)}$`,
-        dest: path.join('/', staticRoute),
-      });
     });
 
     const pageKeys = Object.keys(pages);
@@ -706,6 +701,7 @@ export const build = async ({
         ? null
         : new FileFsRef({
             fsPath: path.join(pagesDir, `${routeFileNoExt}.html`),
+            contentType: 'text/html',
           });
       const jsonFsRef = isLazy
         ? null
@@ -747,13 +743,8 @@ export const build = async ({
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
 
-        const outputPathPageHtml = outputPathPage.concat('.html');
-        prerenders[outputPathPageHtml] = htmlFsRef;
+        prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
-        exportedPageRoutes.push({
-          src: path.posix.join('/', outputPathPage),
-          dest: outputPathPageHtml,
-        });
       } else {
         const lambda = lambdas[outputSrcPathPage];
         if (lambda == null) {
@@ -846,11 +837,6 @@ export const build = async ({
     routesManifest
   ).then(arr =>
     arr.map(route => {
-      // make sure .html is added to dest for now until
-      // outputting static files to clean routes is available
-      if (staticPages[`${route.dest}.html`.substr(1)]) {
-        route.dest = `${route.dest}.html`;
-      }
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
       return route;
     })
@@ -907,15 +893,12 @@ export const build = async ({
     routes: [
       ...topRoutes,
       ...redirects,
-      ...rewrites,
       // we need to re-apply the routes above rewrites in-case the are
       // rewriting to one of those routes
       ...topRoutes,
-      // Static exported pages (.html rewrites)
-      ...exportedPageRoutes,
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
-      // folder
       { handle: 'filesystem' },
+      ...rewrites,
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
