@@ -12,9 +12,19 @@ import {
   shouldServe,
   BuildOptions,
   debug,
+  Meta,
 } from '@now/build-utils';
 
-async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
+async function pipInstall(
+  pipPath: string,
+  workDir: string,
+  meta: Meta,
+  ...args: string[]
+) {
+  if (meta.isDev) {
+    debug('skipping pip install in dev mode');
+    return;
+  }
   const target = '.';
   // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
   //
@@ -115,7 +125,7 @@ export const build = async ({
   }
 
   console.log('Installing dependencies...');
-  await pipInstall(pipPath, workPath, 'werkzeug');
+  await pipInstall(pipPath, workPath, meta, 'werkzeug');
 
   let fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
@@ -137,6 +147,7 @@ export const build = async ({
     await pipInstall(
       pipPath,
       tempDir,
+      meta,
       'pipfile-requirements',
       '--no-warn-script-location'
     );
@@ -154,11 +165,11 @@ export const build = async ({
   if (fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
-    await pipInstall(pipPath, workPath, '-r', requirementsTxtPath);
+    await pipInstall(pipPath, workPath, meta, '-r', requirementsTxtPath);
   } else if (fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
-    await pipInstall(pipPath, workPath, '-r', requirementsTxtPath);
+    await pipInstall(pipPath, workPath, meta, '-r', requirementsTxtPath);
   }
 
   const originalPyPath = join(__dirname, '..', 'now_init.py');
