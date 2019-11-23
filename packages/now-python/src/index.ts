@@ -15,13 +15,24 @@ import {
   Meta,
 } from '@now/build-utils';
 
-async function pipInstall(
+async function isInstalled(dependency: string) {
+  try {
+    await execa('python3', ['-c', `"import ${dependency}"`], {
+      stdio: 'pipe',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function pipInstall(
   pipPath: string,
   workDir: string,
-  meta: Meta,
-  ...args: string[]
+  args: string[],
+  meta?: Meta
 ) {
-  if (meta.isDev) {
+  if (meta && meta.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
     return;
   }
@@ -125,7 +136,10 @@ export const build = async ({
   }
 
   console.log('Installing dependencies...');
-  await pipInstall(pipPath, workPath, meta, 'werkzeug');
+
+  if (!meta.isDev || !(await isInstalled('werkzeug'))) {
+    await pipInstall(pipPath, workPath, ['werkzeug']);
+  }
 
   let fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
@@ -147,9 +161,8 @@ export const build = async ({
     await pipInstall(
       pipPath,
       tempDir,
-      meta,
-      'pipfile-requirements',
-      '--no-warn-script-location'
+      ['pipfile-requirements', '--no-warn-script-location'],
+      meta
     );
 
     // Python needs to know where to look up all the packages we just installed.
@@ -165,11 +178,11 @@ export const build = async ({
   if (fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
-    await pipInstall(pipPath, workPath, meta, '-r', requirementsTxtPath);
+    await pipInstall(pipPath, workPath, ['-r', requirementsTxtPath], meta);
   } else if (fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
-    await pipInstall(pipPath, workPath, meta, '-r', requirementsTxtPath);
+    await pipInstall(pipPath, workPath, ['-r', requirementsTxtPath], meta);
   }
 
   const originalPyPath = join(__dirname, '..', 'now_init.py');
