@@ -22,7 +22,7 @@ async function pipInstall(
   ...args: string[]
 ) {
   if (meta.isDev) {
-    debug('skipping pip install in dev mode');
+    debug('Skipping dependency installation because dev mode is enabled');
     return;
   }
   const target = '.';
