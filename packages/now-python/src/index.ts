@@ -21,7 +21,7 @@ async function isInstalled(dependency: string) {
       stdio: 'pipe',
     });
     return true;
-  } catch {
+  } catch (err) {
     return false;
   }
 }
