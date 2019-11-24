@@ -165,6 +165,17 @@ export function filterPackage(
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
+  const parsedVersion = semver.parse(parsed.rawSpec);
+  // skip install of already installed runtime
+  if (
+    parsed.name &&
+    parsed.type === 'version' &&
+    parsedVersion &&
+    buildersPkg.dependencies &&
+    parsedVersion.version == buildersPkg.dependencies[parsed.name]
+  ) {
+    return false;
+  }
   if (
     parsed.name &&
     parsed.type === 'tag' &&
