@@ -113,9 +113,9 @@ export const build = async ({
     // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
     // it into a separate folder.
     const tempDir = await getWriteableDirectory();
-    await installRequirementsFile({
-      filePath: 'pipfile-requirements',
-      workDir: tempDir,
+    await installRequirement({
+      dependency: 'pipfile-requirements',
+      workPath: tempDir,
       meta,
       args: ['--no-warn-script-location'],
     });
