@@ -2,7 +2,7 @@
   "name": "now-client",
   "version": "5.2.4",
   "main": "dist/index.js",
-  "typings": "dist/src/index.d.ts",
+  "typings": "dist/index.d.ts",
   "homepage": "https://zeit.co",
   "license": "MIT",
   "files": [
