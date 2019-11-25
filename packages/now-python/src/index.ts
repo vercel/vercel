@@ -12,69 +12,8 @@ import {
   shouldServe,
   BuildOptions,
   debug,
-  Meta,
 } from '@now/build-utils';
-
-async function isInstalled(dependency: string) {
-  try {
-    await execa('python3', ['-c', `"import ${dependency}"`], {
-      stdio: 'pipe',
-    });
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-export async function pipInstall(
-  pipPath: string,
-  workDir: string,
-  args: string[],
-  meta?: Meta
-) {
-  if (meta && meta.isDev) {
-    debug('Skipping dependency installation because dev mode is enabled');
-    return;
-  }
-  const target = '.';
-  // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
-  //
-  // Disable installing to the Python user install directory, which is
-  // the default behavior on Debian systems and causes error:
-  //
-  // distutils.errors.DistutilsOptionError: can't combine user with
-  // prefix, exec_prefix/home, or install_(plat)base
-  process.env.PIP_USER = '0';
-  debug(
-    `Running "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
-      ' '
-    )}"...`
-  );
-  try {
-    await execa(
-      pipPath,
-      [
-        'install',
-        '--disable-pip-version-check',
-        '--target',
-        target,
-        '--upgrade',
-        ...args,
-      ],
-      {
-        cwd: workDir,
-        stdio: 'pipe',
-      }
-    );
-  } catch (err) {
-    console.log(
-      `Failed to run "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
-        ' '
-      )}"...`
-    );
-    throw err;
-  }
-}
+import { installRequirement, installRequirementsFile } from './pipInstall';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
@@ -116,8 +55,6 @@ export const build = async ({
     workPath = destNow;
   }
 
-  const pipPath = 'pip3';
-
   try {
     // See: https://stackoverflow.com/a/44728772/376773
     //
@@ -135,11 +72,13 @@ export const build = async ({
     throw err;
   }
 
-  console.log('Installing dependencies...');
+  console.log('Installing required dependencies...');
 
-  if (!meta.isDev || !(await isInstalled('werkzeug'))) {
-    await pipInstall(pipPath, workPath, ['werkzeug']);
-  }
+  await installRequirement({
+    dependency: 'werkzeug',
+    workPath: workPath,
+    meta,
+  });
 
   let fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
@@ -158,12 +97,12 @@ export const build = async ({
     // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
     // it into a separate folder.
     const tempDir = await getWriteableDirectory();
-    await pipInstall(
-      pipPath,
-      tempDir,
-      ['pipfile-requirements', '--no-warn-script-location'],
-      meta
-    );
+    await installRequirementsFile({
+      filePath: 'pipfile-requirements',
+      workDir: tempDir,
+      meta,
+      args: ['--no-warn-script-location'],
+    });
 
     // Python needs to know where to look up all the packages we just installed.
     // We tell it to use the same location as used with `--target`
@@ -178,11 +117,19 @@ export const build = async ({
   if (fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
-    await pipInstall(pipPath, workPath, ['-r', requirementsTxtPath], meta);
+    await installRequirementsFile({
+      filePath: requirementsTxtPath,
+      workDir: workPath,
+      meta,
+    });
   } else if (fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
-    await pipInstall(pipPath, workPath, ['-r', requirementsTxtPath], meta);
+    await installRequirementsFile({
+      filePath: requirementsTxtPath,
+      workDir: workPath,
+      meta,
+    });
   }
 
   const originalPyPath = join(__dirname, '..', 'now_init.py');
