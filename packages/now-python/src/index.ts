@@ -30,17 +30,16 @@ async function pipenvConvert(cmd: string, srcDir: string) {
 
 export const version = 3;
 
-export const build = async ({
-  workPath,
-  files: originalFiles,
+export async function downloadFilesInWorkPath({
   entrypoint,
-  meta = {},
+  workPath,
+  files,
+  meta,
   config,
-}: BuildOptions) => {
+}: BuildOptions) {
   debug('Downloading user files...');
-  let downloadedFiles = await download(originalFiles, workPath, meta);
-
-  if (meta.isDev) {
+  let downloadedFiles = await download(files, workPath, meta);
+  if (meta && meta.isDev) {
     let base = null;
 
     if (config && config.zeroConfig) {
@@ -54,6 +53,23 @@ export const build = async ({
     downloadedFiles = await glob('**', destNow);
     workPath = destNow;
   }
+  return workPath;
+}
+
+export const build = async ({
+  workPath,
+  files: originalFiles,
+  entrypoint,
+  meta = {},
+  config,
+}: BuildOptions) => {
+  workPath = await downloadFilesInWorkPath({
+    workPath,
+    files: originalFiles,
+    entrypoint,
+    meta,
+    config,
+  });
 
   try {
     // See: https://stackoverflow.com/a/44728772/376773
@@ -169,3 +185,6 @@ export const build = async ({
 };
 
 export { shouldServe };
+
+// other packages can depedn on @now/python to reuse common logic
+export { installRequirement, installRequirementsFile };
