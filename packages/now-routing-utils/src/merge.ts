@@ -10,12 +10,26 @@ interface BuilderRoutes {
 }
 
 export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
-  const outputRoutes = (userRoutes || []).slice(0); // shallow clone
+  const usersRoutesBefore: Route[] = [];
+  const usersRoutesAfter: Route[] = [];
   const builderRoutes: BuilderRoutes = {};
-  const sortedBuilderRoutes: Route[] = [];
-  const afterFilesystemBuilderRoutes: Route[] = [];
-  let handleFilesystem = false;
+  const builderRoutesBefore: Route[] = [];
+  const builderRoutesAfter: Route[] = [];
 
+  let foundUserDefinedFilesystem = false;
+  (userRoutes || []).forEach(route => {
+    if (!foundUserDefinedFilesystem) {
+      if (isHandler(route) && route.handle === 'filesystem') {
+        foundUserDefinedFilesystem = true;
+      } else {
+        usersRoutesBefore.push(route);
+      }
+    } else {
+      usersRoutesAfter.push(route);
+    }
+  });
+
+  // Convert build results to object mapping
   for (const build of builds) {
     if (build.routes) {
       if (!builderRoutes[build.entrypoint]) {
@@ -34,45 +48,28 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
     const br = builderRoutes[path];
     const sortedBuilders = Object.keys(br).sort();
     sortedBuilders.forEach(use => {
-      let normalRoute = true;
+      let isBefore = true;
       br[use].forEach(route => {
-        if (normalRoute) {
+        if (isBefore) {
           if (isHandler(route) && route.handle === 'filesystem') {
-            normalRoute = false;
+            isBefore = false;
           } else {
-            sortedBuilderRoutes.push(route);
+            builderRoutesBefore.push(route);
           }
         } else {
-          afterFilesystemBuilderRoutes.push(route);
+          builderRoutesAfter.push(route);
         }
       });
     });
   });
 
-  // If the user routes specify a handle: 'filesystem', inject
-  // the sortedBuilderRoutes right before it.
-  // FYI: outputRoutes already contains all user routes
-  outputRoutes.some((r, i) => {
-    if (!handleFilesystem && isHandler(r) && r.handle === 'filesystem') {
-      handleFilesystem = true;
-      outputRoutes.splice(i, 0, ...sortedBuilderRoutes);
-    }
-    return handleFilesystem;
-  });
-
-  // If the user's routes did not specify handle: 'filesystem',
-  // push the sortedBuilderRoutes to the end of the user routes.
-  if (!handleFilesystem) {
-    outputRoutes.push(...sortedBuilderRoutes);
-
-    // We only want to inject { handle: 'filesystem' } if it
-    // was defined by builder routes.
-    if (afterFilesystemBuilderRoutes.length > 0) {
-      outputRoutes.push({ handle: 'filesystem' });
-    }
+  const outputRoutes: Route[] = [];
+  outputRoutes.push(...usersRoutesBefore);
+  outputRoutes.push(...builderRoutesBefore);
+  if (usersRoutesAfter.length > 0 || builderRoutesAfter.length > 0) {
+    outputRoutes.push({ handle: 'filesystem' });
   }
-  // Finally, push the routes that should appear after handle:
-  // 'filesystem' -- these will be after all user defined routes.
-  outputRoutes.push(...afterFilesystemBuilderRoutes);
+  outputRoutes.push(...usersRoutesAfter);
+  outputRoutes.push(...builderRoutesAfter);
   return outputRoutes;
 }

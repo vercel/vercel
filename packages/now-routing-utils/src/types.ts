@@ -37,7 +37,7 @@ export interface GetRoutesProps {
 }
 
 export interface MergeRoutesProps {
-  userRoutes?: Route[];
+  userRoutes?: Route[] | null | undefined;
   builds: Build[];
 }
 
