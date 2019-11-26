@@ -118,3 +118,13 @@ test('[dev-builder] filter install not bundled stable, cached version', async t 
   const result = filterPackage('not-bundled-package', '_', buildersPkg);
   t.is(result, true);
 });
+
+test('[dev-builder] filter install not bundled tagged, cached tagged', async t => {
+  const buildersPkg = {
+    dependencies: {
+      'not-bundled-package': '16.9.0-alpha.0',
+    },
+  };
+  const result = filterPackage('not-bundled-package@alpha', '_', buildersPkg);
+  t.is(result, true);
+});
