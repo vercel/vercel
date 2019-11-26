@@ -17,6 +17,7 @@ import {
 } from './superstatic';
 
 export { getCleanUrls } from './superstatic';
+export { mergeRoutes } from './merge';
 
 export function isHandler(route: Route): route is Handler {
   return typeof (route as Handler).handle !== 'undefined';
