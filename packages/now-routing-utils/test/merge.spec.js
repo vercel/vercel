@@ -58,11 +58,11 @@ test('mergeRoutes continue', () => {
   ];
   const actual = mergeRoutes({ userRoutes, builds });
   const expected = [
+    { continue: true, dest: '/n1', src: '/node1' },
+    { continue: true, dest: '/py1', src: '/python1' },
     { continue: true, dest: '/u1', src: '/user1' },
     { dest: '/u2', src: '/user2' },
-    { continue: true, dest: '/n1', src: '/node1' },
     { dest: '/n2', src: '/node2' },
-    { continue: true, dest: '/py1', src: '/python1' },
     { dest: '/py2', src: '/python2' },
   ];
   deepEqual(actual, expected);

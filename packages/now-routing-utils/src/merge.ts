@@ -9,6 +9,28 @@ interface BuilderRoutes {
   [entrypoint: string]: BuilderToRoute;
 }
 
+function getCheckAndContinue(
+  routes: Route[]
+): { checks: Route[]; continues: Route[]; others: Route[] } {
+  const checks: Route[] = [];
+  const continues: Route[] = [];
+  const others: Route[] = [];
+
+  for (const route of routes) {
+    if (isHandler(route)) {
+      // Should never happen, only here to make TS happy
+      others.push(route);
+    } else if (route.check) {
+      checks.push(route);
+    } else if (route.continue) {
+      continues.push(route);
+    } else {
+      others.push(route);
+    }
+  }
+  return { checks, continues, others };
+}
+
 export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
   const usersRoutesBefore: Route[] = [];
   const usersRoutesAfter: Route[] = [];
@@ -63,13 +85,20 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
     });
   });
 
+  const builderBefore = getCheckAndContinue(builderRoutesBefore);
+  const builderAfter = getCheckAndContinue(builderRoutesAfter);
+
   const outputRoutes: Route[] = [];
+  outputRoutes.push(...builderBefore.continues);
   outputRoutes.push(...usersRoutesBefore);
-  outputRoutes.push(...builderRoutesBefore);
+  outputRoutes.push(...builderBefore.checks);
+  outputRoutes.push(...builderBefore.others);
   if (usersRoutesAfter.length > 0 || builderRoutesAfter.length > 0) {
     outputRoutes.push({ handle: 'filesystem' });
   }
+  outputRoutes.push(...builderAfter.continues);
   outputRoutes.push(...usersRoutesAfter);
-  outputRoutes.push(...builderRoutesAfter);
+  outputRoutes.push(...builderAfter.checks);
+  outputRoutes.push(...builderAfter.others);
   return outputRoutes;
 }
