@@ -226,7 +226,7 @@ test('mergeRoutes check true', () => {
   deepEqual(actual, expected);
 });
 
-test('mergeRoutes check true, continue true, handle filesystem', () => {
+test('mergeRoutes check true, continue true, handle filesystem middle', () => {
   const userRoutes = [
     { src: '/user1', dest: '/u1', continue: true },
     { src: '/user2', dest: '/u2' },
@@ -267,6 +267,44 @@ test('mergeRoutes check true, continue true, handle filesystem', () => {
     { dest: '/u3', src: '/user3' },
     { dest: '/n3', src: '/node3' },
     { dest: '/py3', src: '/python3' },
+  ];
+  deepEqual(actual, expected);
+});
+
+test('mergeRoutes check true, continue true, handle filesystem top', () => {
+  const userRoutes = [{ handle: 'filesystem' }, { src: '/user1', dest: '/u1' }];
+  const builds = [
+    {
+      use: '@now/node',
+      entrypoint: 'api/home.js',
+      routes: [
+        { handle: 'filesystem' },
+        { src: '/node1', dest: '/n1' },
+        { src: '/node2', dest: '/n2', continue: true },
+        { src: '/node3', dest: '/n3', check: true },
+      ],
+    },
+    {
+      use: '@now/python',
+      entrypoint: 'api/users.py',
+      routes: [
+        { handle: 'filesystem' },
+        { src: '/python1', dest: '/py1' },
+        { src: '/python2', dest: '/py2', check: true },
+        { src: '/python3', dest: '/py3', continue: true },
+      ],
+    },
+  ];
+  const actual = mergeRoutes({ userRoutes, builds });
+  const expected = [
+    { handle: 'filesystem' },
+    { continue: true, dest: '/n2', src: '/node2' },
+    { continue: true, dest: '/py3', src: '/python3' },
+    { dest: '/u1', src: '/user1' },
+    { check: true, dest: '/n3', src: '/node3' },
+    { check: true, dest: '/py2', src: '/python2' },
+    { dest: '/n1', src: '/node1' },
+    { dest: '/py1', src: '/python1' },
   ];
   deepEqual(actual, expected);
 });
