@@ -3,7 +3,7 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 
-import pathToRegexp from 'path-to-regexp';
+import { pathToRegexp, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
 
 export function getCleanUrls(
@@ -97,7 +97,7 @@ export function convertTrailingSlash(enable: boolean): Route[] {
 }
 
 function sourceToRegex(source: string): { src: string; segments: string[] } {
-  const keys: pathToRegexp.Key[] = [];
+  const keys: Key[] = [];
   const r = pathToRegexp(source, keys, { strict: true });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };

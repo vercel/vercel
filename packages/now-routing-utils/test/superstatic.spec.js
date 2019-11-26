@@ -167,17 +167,17 @@ test('convertRedirects', () => {
       status: 307,
     },
     {
-      src: '^\\/firebase\\/(.*)$',
+      src: '^\\/firebase(?:\\/(.*))$',
       headers: { Location: 'https://www.firebase.com' },
       status: 302,
     },
     {
-      src: '^\\/projects\\/([^\\/]+?)\\/([^\\/]+?)$',
+      src: '^\\/projects(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
       headers: { Location: '/projects.html?id=$1&action=$2' },
       status: 307,
     },
     {
-      src: '^\\/old\\/([^\\/]+?)\\/path$',
+      src: '^\\/old(?:\\/([^\\/#\\?]+?))\\/path$',
       headers: { Location: '/new/path/$1' },
       status: 307,
     },
@@ -212,12 +212,12 @@ test('convertRewrites', () => {
   const expected = [
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
     {
-      src: '^\\/firebase\\/(.*)$',
+      src: '^\\/firebase(?:\\/(.*))$',
       dest: 'https://www.firebase.com',
       check: true,
     },
     {
-      src: '^\\/projects\\/([^\\/]+?)\\/edit$',
+      src: '^\\/projects(?:\\/([^\\/#\\?]+?))\\/edit$',
       dest: '/projects.html?id=$1',
       check: true,
     },
