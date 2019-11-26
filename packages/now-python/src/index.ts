@@ -186,5 +186,5 @@ export const build = async ({
 
 export { shouldServe };
 
-// other packages can depedn on @now/python to reuse common logic
+// other packages can depend on @now/python to reuse common logic
 export { installRequirement, installRequirementsFile };
