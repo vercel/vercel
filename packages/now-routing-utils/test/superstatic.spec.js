@@ -210,16 +210,16 @@ test('convertRewrites', () => {
   ]);
 
   const expected = [
-    { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', continue: true },
+    { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
     {
       src: '^\\/firebase\\/(.*)$',
       dest: 'https://www.firebase.com',
-      continue: true,
+      check: true,
     },
     {
       src: '^\\/projects\\/([^\\/]+?)\\/edit$',
       dest: '/projects.html?id=$1',
-      continue: true,
+      check: true,
     },
   ];
 

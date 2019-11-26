@@ -285,14 +285,13 @@ This is an abstract enumeration type that is implemented by one of the following
 
 - `nodejs12.x`
 - `nodejs10.x`
-- `nodejs8.10`
 - `go1.x`
-- `java-1.8.0-openjdk`
+- `java11`
+- `python3.8`
 - `python3.6`
-- `python2.7`
 - `dotnetcore2.1`
-- `dotnetcore2.0`
-- `dotnetcore1.0`
+- `ruby2.5`
+- `provided`
 
 ## JavaScript API
 

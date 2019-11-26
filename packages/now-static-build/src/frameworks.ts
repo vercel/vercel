@@ -44,6 +44,7 @@ export const frameworks: Framework[] = [
         return [];
       }
     },
+    cachePattern: '.cache/**',
   },
   {
     name: 'Hexo',
@@ -312,4 +313,5 @@ export interface Framework {
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   minNodeRange?: string;
+  cachePattern?: string;
 }

@@ -43,6 +43,9 @@ export const routesSchema = {
       continue: {
         type: 'boolean',
       },
+      check: {
+        type: 'boolean',
+      },
       status: {
         type: 'integer',
         minimum: 100,
