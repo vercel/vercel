@@ -148,6 +148,7 @@ test('convertCleanUrls false', () => {
 test('convertRedirects', () => {
   const actual = convertRedirects([
     { source: '/some/old/path', destination: '/some/new/path' },
+    { source: '/next(\\.js)?', destination: 'https://nextjs.org' },
     {
       source: '/firebase/(.*)',
       destination: 'https://www.firebase.com',
@@ -164,6 +165,11 @@ test('convertRedirects', () => {
     {
       src: '^\\/some\\/old\\/path$',
       headers: { Location: '/some/new/path' },
+      status: 307,
+    },
+    {
+      src: '^\\/next(\\.js)?$',
+      headers: { Location: 'https://nextjs.org' },
       status: 307,
     },
     {
@@ -187,6 +193,7 @@ test('convertRedirects', () => {
 
   const mustMatch = [
     ['/some/old/path'],
+    ['/next', '/next.js'],
     ['/firebase/one', '/firebase/2', '/firebase/-', '/firebase/dir/sub'],
     ['/projects/one/edit', '/projects/two/edit'],
     ['/old/one/path', '/old/two/path'],
@@ -194,6 +201,7 @@ test('convertRedirects', () => {
 
   const mustNotMatch = [
     ['/nope'],
+    ['/nextAjs', '/nextjs'],
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/three/delete', '/projects'],
     ['/old/path', '/old/two/foo', '/old'],
