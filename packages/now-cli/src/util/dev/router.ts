@@ -88,6 +88,16 @@ export default async function(
           continue;
         }
 
+        if (routeConfig.check && devServer) {
+          const hasFile = await devServer.hasFilesystem(
+            routeConfig.dest || routeConfig.src
+          );
+          if (!hasFile) {
+            reqPathname = destPath;
+            continue;
+          }
+        }
+
         if (isURL(destPath)) {
           found = {
             found: true,
