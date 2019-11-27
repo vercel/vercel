@@ -89,9 +89,11 @@ export default async function(
         }
 
         if (routeConfig.check && devServer) {
-          const filePath = url.parse(destPath).pathname || '';
-          const hasDestFile = await devServer.hasFilesystem(filePath);
+          const { pathname = '/' } = url.parse(destPath);
+          const hasDestFile = await devServer.hasFilesystem(pathname);
           if (!hasDestFile) {
+            // If the file is not found, `check: true` will
+            // behave the same as `continue: true`
             reqPathname = destPath;
             continue;
           }
