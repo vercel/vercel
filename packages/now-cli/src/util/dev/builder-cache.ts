@@ -158,6 +158,14 @@ export function getBuildUtils(packages: string[]): string {
   return `@now/build-utils@${version}`;
 }
 
+function parseVersionSafe(rawSpec: string) {
+  try {
+    return semver.parse(rawSpec);
+  } catch (e) {
+    return null;
+  }
+}
+
 export function filterPackage(
   builderSpec: string,
   distTag: string,
@@ -165,7 +173,7 @@ export function filterPackage(
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
-  const parsedVersion = semver.parse(parsed.rawSpec);
+  const parsedVersion = parseVersionSafe(parsed.rawSpec);
   // skip install of already installed runtime
   if (
     parsed.name &&
