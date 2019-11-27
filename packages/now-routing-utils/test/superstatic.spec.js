@@ -148,6 +148,7 @@ test('convertCleanUrls false', () => {
 test('convertRedirects', () => {
   const actual = convertRedirects([
     { source: '/some/old/path', destination: '/some/new/path' },
+    { source: '/next(\\.js)?', destination: 'https://nextjs.org' },
     {
       source: '/firebase/(.*)',
       destination: 'https://www.firebase.com',
@@ -167,17 +168,22 @@ test('convertRedirects', () => {
       status: 307,
     },
     {
-      src: '^\\/firebase\\/(.*)$',
+      src: '^\\/next(\\.js)?$',
+      headers: { Location: 'https://nextjs.org' },
+      status: 307,
+    },
+    {
+      src: '^\\/firebase(?:\\/(.*))$',
       headers: { Location: 'https://www.firebase.com' },
       status: 302,
     },
     {
-      src: '^\\/projects\\/([^\\/]+?)\\/([^\\/]+?)$',
+      src: '^\\/projects(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
       headers: { Location: '/projects.html?id=$1&action=$2' },
       status: 307,
     },
     {
-      src: '^\\/old\\/([^\\/]+?)\\/path$',
+      src: '^\\/old(?:\\/([^\\/#\\?]+?))\\/path$',
       headers: { Location: '/new/path/$1' },
       status: 307,
     },
@@ -187,6 +193,7 @@ test('convertRedirects', () => {
 
   const mustMatch = [
     ['/some/old/path'],
+    ['/next', '/next.js'],
     ['/firebase/one', '/firebase/2', '/firebase/-', '/firebase/dir/sub'],
     ['/projects/one/edit', '/projects/two/edit'],
     ['/old/one/path', '/old/two/path'],
@@ -194,6 +201,7 @@ test('convertRedirects', () => {
 
   const mustNotMatch = [
     ['/nope'],
+    ['/nextAjs', '/nextjs'],
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/three/delete', '/projects'],
     ['/old/path', '/old/two/foo', '/old'],
@@ -212,12 +220,12 @@ test('convertRewrites', () => {
   const expected = [
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
     {
-      src: '^\\/firebase\\/(.*)$',
+      src: '^\\/firebase(?:\\/(.*))$',
       dest: 'https://www.firebase.com',
       check: true,
     },
     {
-      src: '^\\/projects\\/([^\\/]+?)\\/edit$',
+      src: '^\\/projects(?:\\/([^\\/#\\?]+?))\\/edit$',
       dest: '/projects.html?id=$1',
       check: true,
     },
