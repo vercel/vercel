@@ -39,6 +39,9 @@ function isGlobal() {
 // See: https://git.io/fj4jD
 function getNowPath() {
   if (process.platform === 'win32') {
+    if (!process.env.LOCALAPPDATA) {
+      return null;
+    }
     const path = join(process.env.LOCALAPPDATA, 'now-cli', 'now.exe');
     return fs.existsSync(path) ? path : null;
   }
@@ -48,7 +51,7 @@ function getNowPath() {
   const paths = [
     join(process.env.HOME || '/', 'bin'),
     '/usr/local/bin',
-    '/usr/bin'
+    '/usr/bin',
   ];
 
   for (const basePath of paths) {
