@@ -36,6 +36,17 @@ export interface GetRoutesProps {
   nowConfig: NowConfig;
 }
 
+export interface MergeRoutesProps {
+  userRoutes?: Route[] | null | undefined;
+  builds: Build[];
+}
+
+export interface Build {
+  use: string;
+  entrypoint: string;
+  routes?: Route[];
+}
+
 export interface NowConfig {
   name?: string;
   version?: number;
