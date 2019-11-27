@@ -155,7 +155,7 @@ function testFixtureStdio(directory, fn) {
 }
 
 test(
-  '[now dev] validate routes that use check true',
+  '[now dev] validate routes that use `check: true`',
   testFixtureStdio('routes-check-true', async (t, port) => {
     const result = await fetchWithRetry(
       `http://localhost:${port}/blog/post`,
