@@ -2,6 +2,7 @@
 const fs = require('fs');
 const { promisify } = require('util');
 const { join, delimiter } = require('path');
+const { homedir } = require('os');
 
 const stat = promisify(fs.stat);
 const unlink = promisify(fs.unlink);
@@ -39,7 +40,16 @@ function isGlobal() {
 // See: https://git.io/fj4jD
 function getNowPath() {
   if (process.platform === 'win32') {
-    const path = join(process.env.LOCALAPPDATA, 'now-cli', 'now.exe');
+    const { LOCALAPPDATA, USERPROFILE, HOMEPATH } = process.env;
+    const home = homedir() || USERPROFILE || HOMEPATH;
+    let path;
+    if (LOCALAPPDATA) {
+      path = join(LOCALAPPDATA, 'now-cli', 'now.exe');
+    } else if (home) {
+      path = join(home, 'AppData', 'Local', 'now-cli', 'now.exe');
+    } else {
+      path = '';
+    }
     return fs.existsSync(path) ? path : null;
   }
 
@@ -48,7 +58,7 @@ function getNowPath() {
   const paths = [
     join(process.env.HOME || '/', 'bin'),
     '/usr/local/bin',
-    '/usr/bin'
+    '/usr/bin',
   ];
 
   for (const basePath of paths) {
