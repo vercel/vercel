@@ -465,8 +465,7 @@ export const build = async ({
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
     const prerenderManifest = await getPrerenderManifest(entryPath);
-    // The app is static if it only has a single lambda (_error.js)
-    const hasLambdas = Object.keys(pages).length > 1;
+    const hasLambdas = Object.keys(pages).length > 0;
 
     Object.keys(staticPageFiles).forEach((page: string) => {
       const pathname = page.replace(/\.html$/, '');
