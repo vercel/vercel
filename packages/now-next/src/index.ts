@@ -1,5 +1,4 @@
 import { ChildProcess, fork } from 'child_process';
-import url from 'url'
 import {
   pathExists,
   readFile,
@@ -60,8 +59,8 @@ import {
 
 import {
   convertRedirects,
-  convertRewrites
-} from '@now/routing-utils/dist/superstatic'
+  convertRewrites,
+} from '@now/routing-utils/dist/superstatic';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -466,6 +465,8 @@ export const build = async ({
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
     const prerenderManifest = await getPrerenderManifest(entryPath);
+    // The app is static if it only has a single lambda (_error.js)
+    const hasLambdas = Object.keys(pages).length > 1;
 
     Object.keys(staticPageFiles).forEach((page: string) => {
       const pathname = page.replace(/\.html$/, '');
@@ -554,7 +555,7 @@ export const build = async ({
     if (requiresTracing) {
       const tracingLabel =
         'Traced Next.js serverless functions for external files in';
-      console.time(tracingLabel);
+      if (hasLambdas) console.time(tracingLabel);
 
       const apiPages: string[] = [];
       const nonApiPages: string[] = [];
@@ -600,7 +601,7 @@ export const build = async ({
       console.timeEnd(tracingLabel);
 
       const zippingLabel = 'Compressed shared serverless function files';
-      console.time(zippingLabel);
+      if (hasLambdas) console.time(zippingLabel);
 
       pseudoLayers.push(await createPseudoLayer(tracedFiles));
       apiPseudoLayers.push(await createPseudoLayer(apiTracedFiles));
@@ -630,7 +631,7 @@ export const build = async ({
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
     const allLambdasLabel = `All serverless functions created in`;
-    console.time(allLambdasLabel);
+    if (hasLambdas) console.time(allLambdasLabel);
 
     await Promise.all(
       pageKeys.map(async page => {
@@ -832,7 +833,7 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion)
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
 
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
@@ -852,15 +853,15 @@ export const build = async ({
     })
   );
 
-  const rewrites: Route[] = []
-  const redirects: Route[] = []
+  const rewrites: Route[] = [];
+  const redirects: Route[] = [];
 
   if (routesManifest) {
-    switch(routesManifest.version) {
+    switch (routesManifest.version) {
       case 1: {
-        redirects.push(...convertRedirects(routesManifest.redirects))
-        rewrites.push(...convertRewrites(routesManifest.rewrites))
-        break
+        redirects.push(...convertRedirects(routesManifest.redirects));
+        rewrites.push(...convertRewrites(routesManifest.rewrites));
+        break;
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
@@ -888,7 +889,7 @@ export const build = async ({
       continue: true,
     },
     { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
-  ]
+  ];
 
   return {
     output: {

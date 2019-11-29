@@ -3,10 +3,16 @@ const fs = require('fs-extra');
 const runBuildLambda = require('../../../../test/lib/run-build-lambda');
 
 const FOUR_MINUTES = 240000;
+const time = console.time;
+const timeEnd = console.timeEnd;
 
 beforeAll(() => {
   process.env.NEXT_TELEMETRY_DISABLED = '1';
-})
+});
+
+afterEach(() => {
+  jest.clearAllMocks();
+});
 
 it(
   'Should build the standard example',
@@ -111,9 +117,11 @@ it(
 it(
   'Should build the static-files test',
   async () => {
+    console.time = jest.fn(time);
     const {
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'static-files'));
+    expect(console.time).toHaveBeenCalledTimes(0);
     expect(output['static/test.txt']).toBeDefined();
   },
   FOUR_MINUTES
@@ -303,11 +311,15 @@ it(
 it(
   'Should build the serverless-no-config example',
   async () => {
+    console.timeEnd = jest.fn(timeEnd);
     const {
       workPath,
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'serverless-no-config'));
 
+    expect(console.timeEnd).toHaveBeenCalledWith(
+      'All serverless functions created in'
+    );
     expect(output['index.html']).toBeDefined();
     expect(output.goodbye).toBeDefined();
     const filePaths = Object.keys(output);
