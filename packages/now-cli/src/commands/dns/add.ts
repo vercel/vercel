@@ -13,7 +13,6 @@ import getScope from '../../util/get-scope';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import stamp from '../../util/output/stamp';
 import getDNSData from '../../util/dns/get-dns-data';
-import table from 'text-table';
 import promptBool from '../../util/input/prompt-bool';
 
 type Options = {
