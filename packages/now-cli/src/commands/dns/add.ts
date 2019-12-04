@@ -171,7 +171,6 @@ function getAddebleTableRow(domain: string, argData: DNSRecordData) {
       return [
         chalk.bold(`${domain} 
           ${argData.type} 
-          ${argData.value || ''} 
           ${argData.mxPriority || ''}
         `)
       ];
@@ -179,8 +178,6 @@ function getAddebleTableRow(domain: string, argData: DNSRecordData) {
       return [
         chalk.bold(`${domain} 
           ${argData.type} 
-          ${argData.value || ''} 
-          ${argData.mxPriority || ''}
           ${argData.srv.port || ''} 
           ${argData.srv.priority || ''} 
           ${argData.srv.target || ''} 
