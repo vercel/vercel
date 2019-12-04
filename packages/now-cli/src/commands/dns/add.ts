@@ -174,7 +174,7 @@ function getAddebleTableRow(domain: string, argData: DNSRecordData) {
           ${argData.mxPriority || ''}
         `)
       ];
-    case 'MX':
+    case 'SRV':
       return [
         chalk.bold(`${domain} 
           ${argData.type} 
