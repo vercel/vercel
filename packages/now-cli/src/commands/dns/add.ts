@@ -172,7 +172,7 @@ function getAddebleTableRow(domain: string, argData: any) {
       ];
     case 'SRV':
       return [
-        chalk.bold(`${argData.name}.${domain} ${argData.type} ${argData.srv.port || ''} ${argData.srv.priority || ''} ${argData.srv.target || ''} ${argData.srv.weight || ''}`)
+        chalk.bold(`${argData.name}.${domain} ${argData.type} ${argData.srv.priority} ${argData.srv.port} ${argData.srv.weight} ${argData.srv.target}`)
       ];
     default:
       return [
