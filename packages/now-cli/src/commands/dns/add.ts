@@ -65,7 +65,6 @@ export default async function add(
       domain,
       argData
     );
-
     if (!yes) {
       output.error(`User aborted.`);
       return 0;
@@ -138,7 +137,7 @@ function readConfirmation(
   output: Output,
   msg: string,
   domain: string,
-  argData: DNSRecordData
+  argData: any
 ) {
   return new Promise(resolve => {
     output.log(msg);
@@ -165,18 +164,18 @@ function readConfirmation(
   });
 }
 
-function getAddebleTableRow(domain: string, argData: DNSRecordData) {
+function getAddebleTableRow(domain: string, argData: any) {
   switch (argData.type) {
     case 'MX':
       return [
-        chalk.bold(`${domain} 
+        chalk.bold(`${argData.name}.${domain} 
           ${argData.type} 
           ${argData.mxPriority || ''}
         `)
       ];
     case 'SRV':
       return [
-        chalk.bold(`${domain} 
+        chalk.bold(`${argData.name}.${domain} 
           ${argData.type} 
           ${argData.srv.port || ''} 
           ${argData.srv.priority || ''} 
@@ -186,7 +185,7 @@ function getAddebleTableRow(domain: string, argData: DNSRecordData) {
       ];
     default:
       return [
-        chalk.bold(`${domain} 
+        chalk.bold(`${argData.name}.${domain} 
           ${argData.type} 
           ${argData.value || ''} 
         `)
