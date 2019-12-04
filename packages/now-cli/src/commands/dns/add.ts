@@ -166,15 +166,33 @@ function readConfirmation(
 }
 
 function getAddebleTableRow(domain: string, argData: DNSRecordData) {
-  return [
-    chalk.bold(`${domain} 
-      ${argData.type} 
-      ${argData.value || ''} 
-      ${argData.mxPriority || ''}
-      ${argData.srv ? argData.srv.port : ''} 
-      ${argData.srv ? argData.srv.priority : ''} 
-      ${argData.srv ? argData.srv.target : ''} 
-      ${argData.srv ? argData.srv.weight : ''} 
-      `)
-  ];
+  switch (argData.type) {
+    case 'MX':
+      return [
+        chalk.bold(`${domain} 
+          ${argData.type} 
+          ${argData.value || ''} 
+          ${argData.mxPriority || ''}
+        `)
+      ];
+    case 'MX':
+      return [
+        chalk.bold(`${domain} 
+          ${argData.type} 
+          ${argData.value || ''} 
+          ${argData.mxPriority || ''}
+          ${argData.srv.port || ''} 
+          ${argData.srv.priority || ''} 
+          ${argData.srv.target || ''} 
+          ${argData.srv.weight || ''} 
+        `)
+      ];
+    default:
+      return [
+        chalk.bold(`${domain} 
+          ${argData.type} 
+          ${argData.value || ''} 
+        `)
+      ];
+  }
 }
