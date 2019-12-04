@@ -11,6 +11,7 @@ import {
   DeploymentOptions,
   NowJsonOptions,
 } from './types';
+import { Options } from './deploy';
 
 export { EVENTS } from './utils';
 
@@ -188,6 +189,7 @@ export default function buildCreateDeployment(
       defaultName,
       debug: debug_,
       apiUrl,
+      userAgent,
       ...metadata
     } = options;
 
@@ -195,10 +197,14 @@ export default function buildCreateDeployment(
       debug(`Using provided API URL: ${apiUrl}`);
     }
 
+    if (userAgent) {
+      debug(`Using provided user agent: ${userAgent}`);
+    }
+
     debug(`Setting platform version to ${version}`);
     metadata.version = version;
 
-    const deploymentOpts = {
+    const deploymentOpts: Options = {
       debug: debug_,
       totalFiles: files.size,
       nowConfig,
@@ -210,6 +216,7 @@ export default function buildCreateDeployment(
       defaultName,
       metadata,
       apiUrl,
+      userAgent,
     };
 
     debug(`Creating the deployment and starting upload...`);
