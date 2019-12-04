@@ -183,6 +183,7 @@ export default function buildCreateDeployment(version: number) {
       defaultName,
       debug: debug_,
       apiUrl,
+      userAgent,
       ...metadata
     } = clientOptions;
 
@@ -190,10 +191,14 @@ export default function buildCreateDeployment(version: number) {
       debug(`Using provided API URL: ${apiUrl}`);
     }
 
+    if (userAgent) {
+      debug(`Using provided user agent: ${userAgent}`);
+    }
+
     debug(`Setting platform version to ${version}`);
     metadata.version = version;
 
-    const deploymentOpts = {
+    const deploymentOpts: Options = {
       debug: debug_,
       totalFiles: files.size,
       nowConfig,
@@ -205,6 +210,7 @@ export default function buildCreateDeployment(version: number) {
       defaultName,
       metadata,
       apiUrl,
+      userAgent,
     };
 
     debug(`Creating the deployment and starting upload...`);

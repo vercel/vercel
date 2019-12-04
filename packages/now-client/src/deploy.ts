@@ -23,6 +23,7 @@ export interface Options {
   debug?: boolean;
   nowConfig?: NowJsonOptions;
   apiUrl?: string;
+  userAgent?: string;
 }
 
 async function* createDeployment(
@@ -50,6 +51,7 @@ async function* createDeployment(
           files: preparedFiles,
         }),
         apiUrl: options.apiUrl,
+        userAgent: options.userAgent,
       }
     );
 
@@ -207,7 +209,8 @@ export default async function* deploy(
         metadata.version,
         options.teamId,
         debug,
-        options.apiUrl
+        options.apiUrl,
+        options.userAgent
       )) {
         yield event;
       }
