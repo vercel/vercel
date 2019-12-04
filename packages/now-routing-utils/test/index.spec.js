@@ -377,6 +377,28 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('fails if check is not boolean', () => {
+    assertError(
+      [
+        // @ts-ignore
+        {
+          check: 'false',
+        },
+      ],
+      [
+        {
+          dataPath: '[0].check',
+          keyword: 'type',
+          message: 'should be boolean',
+          params: {
+            type: 'boolean',
+          },
+          schemaPath: '#/items/properties/check/type',
+        },
+      ]
+    );
+  });
+
   test('fails if status is not number', () => {
     assertError(
       [
@@ -492,7 +514,7 @@ describe('getTransformedRoutes', () => {
         status: 302,
       },
       { handle: 'filesystem' },
-      { src: '^/v1$', dest: '/v2/api.py', continue: true },
+      { src: '^/v1$', dest: '/v2/api.py', check: true },
     ];
     assert.deepEqual(actual.error, null);
     assert.deepEqual(actual.routes, expected);
