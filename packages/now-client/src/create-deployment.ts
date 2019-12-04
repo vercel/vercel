@@ -6,23 +6,18 @@ import hashes, { mapToObject } from './utils/hashes';
 import uploadAndDeploy from './upload';
 import { getNowIgnore, createDebug, parseNowJSON } from './utils';
 import { DeploymentError } from './errors';
-import {
-  CreateDeploymentFunction,
-  DeploymentOptions,
-  NowJsonOptions,
-} from './types';
+import { NowConfig, NowClientOptions, DeploymentOptions } from './types';
 
 export { EVENTS } from './utils';
 
-export default function buildCreateDeployment(
-  version: number
-): CreateDeploymentFunction {
+export default function buildCreateDeployment(version: number) {
   return async function* createDeployment(
     path: string | string[],
-    options: DeploymentOptions = {},
-    nowConfig?: NowJsonOptions
+    nowConfig: NowConfig,
+    clientOptions: NowClientOptions,
+    deploymentOptions: DeploymentOptions
   ): AsyncIterableIterator<any> {
-    const debug = createDebug(options.debug);
+    const debug = createDebug(clientOptions.debug);
     const cwd = process.cwd();
 
     debug('Creating deployment...');
@@ -38,9 +33,9 @@ export default function buildCreateDeployment(
       });
     }
 
-    if (typeof options.token !== 'string') {
+    if (typeof clientOptions.token !== 'string') {
       debug(
-        `Error: 'token' is expected to be a string. Received ${typeof options.token}`
+        `Error: 'token' is expected to be a string. Received ${typeof clientOptions.token}`
       );
 
       throw new DeploymentError({
@@ -189,7 +184,7 @@ export default function buildCreateDeployment(
       debug: debug_,
       apiUrl,
       ...metadata
-    } = options;
+    } = clientOptions;
 
     if (apiUrl) {
       debug(`Using provided API URL: ${apiUrl}`);
