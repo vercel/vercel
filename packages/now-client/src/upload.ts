@@ -28,7 +28,7 @@ export default async function* upload(
   files: Map<string, DeploymentFile>,
   options: Options
 ): AsyncIterableIterator<any> {
-  const { token, teamId, debug: isDebug, apiUrl } = options;
+  const { token, teamId, debug: isDebug, apiUrl, userAgent } = options;
   const debug = createDebug(isDebug);
 
   if (!files && !token && !teamId) {
@@ -105,6 +105,7 @@ export default async function* upload(
               body: stream,
               teamId,
               apiUrl,
+              userAgent,
             },
             isDebug
           );
