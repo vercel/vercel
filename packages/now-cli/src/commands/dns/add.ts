@@ -13,6 +13,8 @@ import getScope from '../../util/get-scope';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import stamp from '../../util/output/stamp';
 import getDNSData from '../../util/dns/get-dns-data';
+import { DNSRecordData } from '../../types'
+import table from 'text-table';
 
 type Options = {
   '--debug': boolean;
@@ -54,9 +56,23 @@ export default async function add(
     );
     return 1;
   }
+ 
+  const { domain, data: argData } = parsedParams;
+  if (argData && domain === argData.name.substr(argData.name.length - domain.length, argData.name.length)) {
+    const yes = await readConfirmation(
+      output,
+      'Domain identified inside the subdomain argument. The following record will be created',
+      domain,
+      argData
+    );
+
+    if (!yes) {
+      output.error(`User aborted.`);
+      return 0;
+    }
+  }
 
   const addStamp = stamp();
-  const { domain, data: argData } = parsedParams;
   const data = await getDNSData(output, argData);
   if (!data) {
     output.log(`Aborted`);
@@ -116,4 +132,49 @@ export default async function add(
   );
 
   return 0;
+}
+
+function readConfirmation(
+  output: Output,
+  msg: string,
+  domain: string,
+  argData: DNSRecordData
+) {
+  return new Promise(resolve => {
+    output.log(msg);
+    output.print(
+      `${table([getAddebleTableRow(domain, argData)], {
+        align: ['l', 'r', 'l'],
+        hsep: ' '.repeat(6)
+      }).replace(/^(.*)/gm, '  $1')}\n`
+    );
+    output.print(
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+    );
+    process.stdin
+      .on('data', d => {
+        process.stdin.pause();
+        resolve(
+          d
+            .toString()
+            .trim()
+            .toLowerCase() === 'y'
+        );
+      })
+      .resume();
+  });
+}
+
+function getAddebleTableRow(domain: string, argData: DNSRecordData) {
+  return [
+    chalk.bold(`${domain} 
+      ${argData.type} 
+      ${argData.value || ''} 
+      ${argData.mxPriority || ''}
+      ${argData.srv ? argData.srv.port : ''} 
+      ${argData.srv ? argData.srv.priority : ''} 
+      ${argData.srv ? argData.srv.target : ''} 
+      ${argData.srv ? argData.srv.weight : ''} 
+      `)
+  ];
 }
