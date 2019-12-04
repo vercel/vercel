@@ -168,27 +168,15 @@ function getAddebleTableRow(domain: string, argData: any) {
   switch (argData.type) {
     case 'MX':
       return [
-        chalk.bold(`${argData.name}.${domain} 
-          ${argData.type} 
-          ${argData.mxPriority || ''}
-        `)
+        chalk.bold(`${argData.name}.${domain} ${argData.type} ${argData.value} ${argData.mxPriority} || ''}`)
       ];
     case 'SRV':
       return [
-        chalk.bold(`${argData.name}.${domain} 
-          ${argData.type} 
-          ${argData.srv.port || ''} 
-          ${argData.srv.priority || ''} 
-          ${argData.srv.target || ''} 
-          ${argData.srv.weight || ''} 
-        `)
+        chalk.bold(`${argData.name}.${domain} ${argData.type} ${argData.srv.port || ''} ${argData.srv.priority || ''} ${argData.srv.target || ''} ${argData.srv.weight || ''}`)
       ];
     default:
       return [
-        chalk.bold(`${argData.name}.${domain} 
-          ${argData.type} 
-          ${argData.value || ''} 
-        `)
+        chalk.bold(`${argData.name}.${domain} ${argData.type} ${argData.value || ''}`)
       ];
   }
 }
