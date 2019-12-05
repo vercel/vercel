@@ -22,7 +22,8 @@ export default async function* checkDeploymentStatus(
   version: number | undefined,
   teamId: string | undefined,
   debug: Function,
-  apiUrl?: string
+  apiUrl?: string,
+  userAgent?: string
 ): AsyncIterableIterator<DeploymentStatus> {
   let deploymentState = deployment;
   let allBuildsCompleted = false;
@@ -31,7 +32,7 @@ export default async function* checkDeploymentStatus(
   const apiDeployments = getApiDeploymentsUrl({
     version,
     builds: deployment.builds,
-    functions: deployment.functions
+    functions: deployment.functions,
   });
 
   debug(`Using ${version ? `${version}.0` : '2.0'} API for status checks`);
@@ -54,7 +55,7 @@ export default async function* checkDeploymentStatus(
           teamId ? `?teamId=${teamId}` : ''
         }`,
         token,
-        { apiUrl }
+        { apiUrl, userAgent }
       );
 
       const data = await buildsData.json();
@@ -91,7 +92,8 @@ export default async function* checkDeploymentStatus(
         `${apiDeployments}/${deployment.id || deployment.deploymentId}${
           teamId ? `?teamId=${teamId}` : ''
         }`,
-        token
+        token,
+        { apiUrl, userAgent }
       );
       const deploymentUpdate = await deploymentData.json();
 
