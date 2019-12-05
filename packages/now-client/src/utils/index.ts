@@ -5,8 +5,7 @@ import { join, sep } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
-import { Options } from '../deploy';
-import { NowJsonOptions, DeploymentOptions } from '../types';
+import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
@@ -44,7 +43,7 @@ export function getApiDeploymentsUrl(
   return '/v11/now/deployments';
 }
 
-export async function parseNowJSON(filePath?: string): Promise<NowJsonOptions> {
+export async function parseNowJSON(filePath?: string): Promise<NowConfig> {
   if (!filePath) {
     return {};
   }
@@ -171,7 +170,7 @@ const isWin = process.platform.includes('win');
 
 export const prepareFiles = (
   files: Map<string, DeploymentFile>,
-  options: Options
+  clientOptions: NowClientOptions
 ): PreparedFile[] => {
   const preparedFiles = [...files.keys()].reduce(
     (acc: PreparedFile[], sha: string): PreparedFile[] => {
@@ -182,10 +181,10 @@ export const prepareFiles = (
       for (const name of file.names) {
         let fileName: string;
 
-        if (options.isDirectory) {
+        if (clientOptions.isDirectory) {
           // Directory
-          fileName = options.path
-            ? name.substring(options.path.length + 1)
+          fileName = clientOptions.path
+            ? name.substring(clientOptions.path.length + 1)
             : name;
         } else {
           // Array of files or single file

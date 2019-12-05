@@ -8,7 +8,13 @@ import {
   isAliasAssigned,
   isAliasError,
 } from './utils/ready-state';
-import { Deployment, DeploymentBuild } from './types';
+import { createDebug } from './utils';
+import {
+  Dictionary,
+  Deployment,
+  NowClientOptions,
+  DeploymentBuild,
+} from './types';
 
 interface DeploymentStatus {
   type: string;
@@ -16,18 +22,17 @@ interface DeploymentStatus {
 }
 
 /* eslint-disable */
-export default async function* checkDeploymentStatus(
+export async function* checkDeploymentStatus(
   deployment: Deployment,
-  token: string,
-  version: number | undefined,
-  teamId: string | undefined,
-  debug: Function,
-  apiUrl?: string,
-  userAgent?: string
+  clientOptions: NowClientOptions
 ): AsyncIterableIterator<DeploymentStatus> {
+  const { version } = deployment;
+  const { token, teamId, apiUrl, userAgent } = clientOptions;
+  const debug = createDebug(clientOptions.debug);
+
   let deploymentState = deployment;
   let allBuildsCompleted = false;
-  const buildsState: { [key: string]: DeploymentBuild } = {};
+  const buildsState: Dictionary<DeploymentBuild> = {};
 
   const apiDeployments = getApiDeploymentsUrl({
     version,

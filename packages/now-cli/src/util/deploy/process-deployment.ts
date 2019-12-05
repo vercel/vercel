@@ -6,7 +6,8 @@ import {
   createDeployment,
   createLegacyDeployment,
   DeploymentOptions,
-} from 'now-client/dist';
+  NowClientOptions,
+} from 'now-client';
 import wait from '../output/wait';
 import { Output } from '../output';
 // @ts-ignore
@@ -22,9 +23,9 @@ export default async function processDeployment({
   requestBody,
   uploadStamp,
   deployStamp,
-  legacy,
-  env,
+  isLegacy,
   quiet,
+  force,
   nowConfig,
 }: {
   now: Now;
@@ -34,28 +35,36 @@ export default async function processDeployment({
   requestBody: DeploymentOptions;
   uploadStamp: () => number;
   deployStamp: () => number;
-  legacy: boolean;
-  env: any;
+  isLegacy: boolean;
   quiet: boolean;
   nowConfig?: NowConfig;
+  force?: boolean;
 }) {
   const { warn, log, debug, note } = output;
   let bar: Progress | null = null;
 
-  const path0 = paths[0];
-  const opts: DeploymentOptions = {
-    ...requestBody,
-    debug: now._debug,
+  const { env = {} } = requestBody;
+
+  const nowClientOptions: NowClientOptions = {
+    teamId: now.currentTeam,
     apiUrl: now._apiUrl,
+    token: now._token,
+    debug: now._debug,
     userAgent: ua,
+    path: paths[0],
+    force,
   };
 
-  if (!legacy) {
+  if (!isLegacy) {
     let queuedSpinner = null;
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(path0, opts, nowConfig)) {
+    for await (const event of createDeployment(
+      nowClientOptions,
+      requestBody,
+      nowConfig
+    )) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -112,7 +121,7 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          const version = legacy ? `${chalk.grey('[v1]')} ` : '';
+          const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
           log(`https://${event.payload.url} ${version}${deployStamp()}`);
         } else {
           process.stdout.write(`https://${event.payload.url}`);
@@ -178,7 +187,11 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(path0, opts, nowConfig)) {
+    for await (const event of createLegacyDeployment(
+      nowClientOptions,
+      requestBody,
+      nowConfig
+    )) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -226,7 +239,7 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          const version = legacy ? `${chalk.grey('[v1]')} ` : '';
+          const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
           log(`${event.payload.url} ${version}${deployStamp()}`);
         } else {
           process.stdout.write(`https://${event.payload.url}`);

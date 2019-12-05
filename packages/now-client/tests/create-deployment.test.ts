@@ -28,10 +28,12 @@ describe('create v2 deployment', () => {
 
   it('will display an empty deployment warning', async () => {
     for await (const event of createDeployment(
-      path.resolve(__dirname, 'fixtures', 'v2'),
       {
         token,
-        name: 'now-client-tests-v2',
+        path: path.resolve(__dirname, 'fixtures', 'v2'),
+      },
+      {
+        name: 'now-clien-tests-v2',
       }
     )) {
       if (event.type === 'warning') {
@@ -47,9 +49,11 @@ describe('create v2 deployment', () => {
 
   it('will report correct file count event', async () => {
     for await (const event of createDeployment(
-      path.resolve(__dirname, 'fixtures', 'v2'),
       {
         token,
+        path: path.resolve(__dirname, 'fixtures', 'v2'),
+      },
+      {
         name: 'now-client-tests-v2',
       }
     )) {
@@ -66,9 +70,11 @@ describe('create v2 deployment', () => {
 
   it('will create a v2 deployment', async () => {
     for await (const event of createDeployment(
-      path.resolve(__dirname, 'fixtures', 'v2'),
       {
         token,
+        path: path.resolve(__dirname, 'fixtures', 'v2'),
+      },
+      {
         name: 'now-client-tests-v2',
       }
     )) {
@@ -82,9 +88,11 @@ describe('create v2 deployment', () => {
 
   it('will create a v2 deployment with correct file permissions', async () => {
     for await (const event of createDeployment(
-      path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
       {
         token,
+        path: path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
+      },
+      {
         name: 'now-client-tests-v2',
       }
     )) {
@@ -104,10 +112,12 @@ describe('create v2 deployment', () => {
 
   it('will create a v2 deployment and ignore files specified in .nowignore', async () => {
     for await (const event of createDeployment(
-      path.resolve(__dirname, 'fixtures', 'nowignore'),
       {
         token,
-        name: 'now-client-tests-v2-ignore',
+        path: path.resolve(__dirname, 'fixtures', 'nowignore'),
+      },
+      {
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'ready') {
