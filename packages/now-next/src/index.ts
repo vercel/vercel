@@ -76,7 +76,7 @@ interface BuildParamsType extends BuildOptions {
 }
 
 export const version = 2;
-
+const htmlContentType = 'text/html; charset=utf-8'
 const nowDevChildProcesses = new Set<ChildProcess>();
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
@@ -352,7 +352,6 @@ export const build = async ({
     await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
-  const exportedPageRoutes: Route[] = [];
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
@@ -483,18 +482,14 @@ export const build = async ({
         return;
       }
 
-      const staticRoute = path.join(entryDirectory, page);
+      const staticRoute = path.join(entryDirectory, pathname);
       staticPages[staticRoute] = staticPageFiles[page];
+      staticPages[staticRoute].contentType = htmlContentType
 
       if (isDynamicRoute(pathname)) {
         dynamicPages.push(routeName);
         return;
       }
-
-      exportedPageRoutes.push({
-        src: `^${path.join('/', entryDirectory, pathname)}$`,
-        dest: path.join('/', staticRoute),
-      });
     });
 
     const pageKeys = Object.keys(pages);
@@ -743,18 +738,10 @@ export const build = async ({
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
 
-        const outputPathPageHtml = outputPathPage.concat('.html');
-        // we need to remove the existing lambda or else it takes priority
-        // TODO: investigate breaking this up so we don't create a lambda
-        // we throw away (we've sped this up a lot so it's fairly minimal)
-        delete lambdas[outputSrcPathPage]
-
-        prerenders[outputPathPageHtml] = htmlFsRef;
+        prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
-        exportedPageRoutes.push({
-          src: path.posix.join('/', outputPathPage),
-          dest: outputPathPageHtml,
-        });
+        // we need to set the contentType since we removed the extension
+        (prerenders[outputPathPage] as FileFsRef).contentType = htmlContentType
       } else {
         const lambda = lambdas[outputSrcPathPage];
         if (lambda == null) {
@@ -846,11 +833,6 @@ export const build = async ({
     routesManifest
   ).then(arr =>
     arr.map(route => {
-      // make sure .html is added to dest for now until
-      // outputting static files to clean routes is available
-      if (staticPages[`${route.dest}.html`.substr(1)]) {
-        route.dest = `${route.dest}.html`;
-      }
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
       return route;
     })
@@ -887,6 +869,8 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
+      // redirects take the highest priority
+      ...redirects,
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
@@ -905,10 +889,7 @@ export const build = async ({
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
-      ...redirects,
       ...rewrites,
-      // Static exported pages (.html rewrites)
-      ...exportedPageRoutes,
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
