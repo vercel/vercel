@@ -6,9 +6,9 @@ export default async function detectVue({
   const hasVue = await hasDependency('@vue/cli-service');
   if (!hasVue) return false;
   return {
-    buildCommand: ['vue-cli-service', 'build'],
+    buildCommand: 'vue-cli-service build',
     buildDirectory: 'dist',
-    devCommand: ['vue-cli-service', 'serve', '--port', '$PORT'],
+    devCommand: 'vue-cli-service serve --port $PORT',
     routes: [
       {
         src: '^/[^/]*\\.(js|txt|ico|json)',

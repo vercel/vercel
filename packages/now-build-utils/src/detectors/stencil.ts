@@ -6,17 +6,9 @@ export default async function detectStencil({
   const hasStencil = await hasDependency('@stencil/core');
   if (!hasStencil) return false;
   return {
-    buildCommand: ['stencil', 'build'],
+    buildCommand: 'stencil build',
     buildDirectory: 'www',
-    devCommand: [
-      'stencil',
-      'build',
-      '--dev',
-      '--watch',
-      '--serve',
-      '--port',
-      '$PORT',
-    ],
+    devCommand: 'stencil build --dev --watch --serve --port $PORT',
     routes: [
       {
         handle: 'filesystem',
