@@ -9,8 +9,11 @@ import {
   PackageJson,
   BuilderFunctions,
 } from '@now/build-utils';
+import { NowConfig } from 'now-client';
 import { NowRedirect, NowRewrite, NowHeader, Route } from '@now/routing-utils';
 import { Output } from '../output';
+
+export { NowConfig };
 
 export interface DevServerOptions {
   output: Output;
@@ -30,24 +33,6 @@ export interface BuildMatch extends BuildConfig {
 }
 
 export type RouteConfig = Route;
-
-export interface NowConfig {
-  name?: string;
-  version?: number;
-  env?: EnvConfig;
-  build?: {
-    env?: EnvConfig;
-  };
-  builds?: BuildConfig[];
-  routes?: RouteConfig[];
-  files?: string[];
-  cleanUrls?: boolean;
-  rewrites?: NowRewrite[];
-  redirects?: NowRedirect[];
-  headers?: NowHeader[];
-  trailingSlash?: boolean;
-  functions?: BuilderFunctions;
-}
 
 export interface HttpHandler {
   (req: http.IncomingMessage, res: http.ServerResponse): void;

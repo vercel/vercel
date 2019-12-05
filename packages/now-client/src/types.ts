@@ -1,18 +1,25 @@
-import { BuilderFunctions } from '@now/build-utils';
+import { Builder, BuilderFunctions } from '@now/build-utils';
+import { NowHeader, Route, NowRedirect, NowRewrite } from '@now/routing-utils';
 
-export interface Route {
-  src: string;
-  dest: string;
-  headers?: {
-    [key: string]: string;
-  };
-  status?: number;
-  methods?: string[];
+export interface Dictionary<T> {
+  [key: string]: T;
 }
 
-export interface Build {
-  src: string;
-  use: string;
+/**
+ * Options for `now-client` or
+ * properties that should not
+ * be part of the payload.
+ */
+export interface NowClientOptions {
+  token: string;
+  path: string | string[];
+  debug?: boolean;
+  teamId?: string;
+  apiUrl?: string;
+  force?: boolean;
+  userAgent?: string;
+  defaultName?: string;
+  isDirectory?: boolean;
 }
 
 export interface Deployment {
@@ -20,13 +27,11 @@ export interface Deployment {
   deploymentId?: string;
   url: string;
   name: string;
-  meta: {
-    [key: string]: string | number | boolean;
-  };
+  meta: Dictionary<string | number | boolean>;
   version: number;
   regions: string[];
   routes: Route[];
-  builds?: Build[];
+  builds?: Builder[];
   functions?: BuilderFunctions;
   plan: string;
   public: boolean;
@@ -47,13 +52,9 @@ export interface Deployment {
     | 'ERROR';
   createdAt: string;
   createdIn: string;
-  env: {
-    [key: string]: string;
-  };
+  env: Dictionary<string>;
   build: {
-    env: {
-      [key: string]: string;
-    };
+    env: Dictionary<string>;
   };
   target: string;
   alias: string[];
@@ -91,52 +92,69 @@ export interface DeploymentGithubData {
   autoJobCancelation: boolean;
 }
 
-export interface DeploymentOptions {
+interface LegacyNowConfig {
+  type?: string;
+  aliases?: string | string[];
+}
+
+export interface NowConfig extends LegacyNowConfig {
+  name?: string;
+  version?: number;
+  env?: Dictionary<string>;
+  build?: {
+    env?: Dictionary<string>;
+  };
+  builds?: Builder[];
+  routes?: Route[];
+  files?: string[];
+  cleanUrls?: boolean;
+  rewrites?: NowRewrite[];
+  redirects?: NowRedirect[];
+  headers?: NowHeader[];
+  trailingSlash?: boolean;
+  functions?: BuilderFunctions;
+  github?: DeploymentGithubData;
+  scope?: string;
+  alias?: string | string[];
+}
+
+interface LegacyDeploymentOptions {
+  project?: string;
+  forceNew?: boolean;
+  description?: string;
+  registryAuthToken?: string;
+  engines?: Dictionary<string>;
+  sessionAffinity?: 'ip' | 'key' | 'random';
+  deploymentType?: 'NPM' | 'STATIC' | 'DOCKER';
+  scale?: Dictionary<{
+    min?: number;
+    max?: number | 'auto';
+  }>;
+  limits?: {
+    duration?: number;
+    maxConcurrentReqs?: number;
+    timeout?: number;
+  };
+  // Can't be NowConfig, since we don't
+  // include all legacy types here
+  config?: Dictionary<any>;
+}
+
+/**
+ * Options that will be sent to the API.
+ */
+export interface DeploymentOptions extends LegacyDeploymentOptions {
   version?: number;
   regions?: string[];
   routes?: Route[];
-  builds?: Build[];
+  builds?: Builder[];
   functions?: BuilderFunctions;
-  env?: {
-    [key: string]: string;
-  };
+  env?: Dictionary<string>;
   build?: {
-    env: {
-      [key: string]: string;
-    };
+    env: Dictionary<string>;
   };
   target?: string;
-  token?: string | null;
-  teamId?: string;
-  force?: boolean;
   name?: string;
-  defaultName?: string;
-  isDirectory?: boolean;
-  path?: string | string[];
-  github?: DeploymentGithubData;
-  scope?: string;
   public?: boolean;
-  forceNew?: boolean;
-  deploymentType?: 'NPM' | 'STATIC' | 'DOCKER';
-  registryAuthToken?: string;
-  engines?: { [key: string]: string };
-  sessionAffinity?: 'ip' | 'random';
-  config?: { [key: string]: any };
-  debug?: boolean;
-  apiUrl?: string;
-  userAgent?: string;
+  meta?: Dictionary<string>;
 }
-
-export interface NowJsonOptions {
-  github?: DeploymentGithubData;
-  scope?: string;
-  type?: 'NPM' | 'STATIC' | 'DOCKER';
-  version?: number;
-  files?: string[];
-}
-
-export type CreateDeploymentFunction = (
-  path: string | string[],
-  options?: DeploymentOptions,
-  nowConfig?: NowJsonOptions
-) => AsyncIterableIterator<any>;
