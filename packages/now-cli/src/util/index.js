@@ -132,6 +132,9 @@ export default class Now extends EventEmitter {
         target: target || undefined
     };
 
+    // Ignore specific items from Now.json
+    delete requestBody.scope;
+
     if (isLegacy) {
       // Read `registry.npmjs.org` authToken from .npmrc
       const registryAuthToken = type === 'npm' && forwardNpm
