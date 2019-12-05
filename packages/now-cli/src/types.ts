@@ -205,7 +205,7 @@ export interface SRVRecordData extends GenericDNSRecordData {
   };
 };
 
-export type MXRecordData = {
+export interface MXRecordData extends GenericDNSRecordData {
   name: string;
   type: 'MX';
   value: string;
