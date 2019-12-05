@@ -90,7 +90,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        path: path.resolve(__dirname, 'fixtures', 'v2')
+        path: path.resolve(__dirname, 'fixtures', 'v2-file-permissions')
       },
       {
         name: 'now-client-tests-v2'
