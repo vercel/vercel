@@ -92,7 +92,7 @@ export const build = async ({
 
   await installRequirement({
     dependency: 'werkzeug',
-    workPath: workPath,
+    workPath,
     meta,
   });
 
