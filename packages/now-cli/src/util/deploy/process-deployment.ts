@@ -6,7 +6,7 @@ import {
   createDeployment,
   createLegacyDeployment,
   DeploymentOptions,
-  NowClientOptions
+  NowClientOptions,
 } from 'now-client';
 import wait from '../output/wait';
 import { Output } from '../output';
@@ -52,7 +52,7 @@ export default async function processDeployment({
     debug: now._debug,
     userAgent: ua,
     path: paths[0],
-    force
+    force,
   };
 
   if (!isLegacy) {
@@ -60,7 +60,11 @@ export default async function processDeployment({
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(nowClientOptions, requestBody, nowConfig)) {
+    for await (const event of createDeployment(
+      nowClientOptions,
+      requestBody,
+      nowConfig
+    )) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -183,7 +187,11 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(nowClientOptions, requestBody, nowConfig)) {
+    for await (const event of createLegacyDeployment(
+      nowClientOptions,
+      requestBody,
+      nowConfig
+    )) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }

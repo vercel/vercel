@@ -13,10 +13,10 @@ describe('path handling', () => {
       await createDeployment(
         {
           token,
-          path: './fixtures/v2/now.json'
+          path: './fixtures/v2/now.json',
         },
         {
-          name: 'now-client-tests-v2'
+          name: 'now-client-tests-v2',
         }
       );
     } catch (e) {
@@ -29,7 +29,7 @@ describe('path handling', () => {
       await createDeployment(
         {
           token,
-          path: ['./fixtures/v2/now.json']
+          path: ['./fixtures/v2/now.json'],
         },
         {
           name: 'now-client-tests-v2',

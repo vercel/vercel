@@ -14,7 +14,7 @@ export default function buildCreateDeployment(version: number) {
   return async function* createDeployment(
     clientOptions: NowClientOptions,
     deploymentOptions: DeploymentOptions,
-    nowConfig: NowConfig = {},
+    nowConfig: NowConfig = {}
   ): AsyncIterableIterator<any> {
     const { path } = clientOptions;
 
@@ -45,7 +45,8 @@ export default function buildCreateDeployment(version: number) {
       });
     }
 
-    clientOptions.isDirectory = !Array.isArray(path) && lstatSync(path).isDirectory();
+    clientOptions.isDirectory =
+      !Array.isArray(path) && lstatSync(path).isDirectory();
 
     let rootFiles: string[];
 
@@ -152,7 +153,14 @@ export default function buildCreateDeployment(version: number) {
     // from getting confused about a deployment that renders 404.
     if (
       fileList.length === 0 ||
-      fileList.every(item => item ? item.split('/').pop()!.startsWith('.') : true)
+      fileList.every(item =>
+        item
+          ? item
+              .split('/')
+              .pop()!
+              .startsWith('.')
+          : true
+      )
     ) {
       debug(
         `Deployment path has no files (or only dotfiles). Yielding a warning event`
@@ -181,7 +189,12 @@ export default function buildCreateDeployment(version: number) {
     deploymentOptions.version = version;
 
     debug(`Creating the deployment and starting upload...`);
-    for await (const event of upload(files, nowConfig, clientOptions, deploymentOptions)) {
+    for await (const event of upload(
+      files,
+      nowConfig,
+      clientOptions,
+      deploymentOptions
+    )) {
       debug(`Yielding a '${event.type}' event`);
       yield event;
     }

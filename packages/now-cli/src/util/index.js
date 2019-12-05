@@ -121,15 +121,15 @@ export default class Now extends EventEmitter {
     const uploadStamp = stamp();
 
     let requestBody = {
-        ...nowConfig,
-        env,
-        build,
-        public: wantsPublic || nowConfig.public,
-        name,
-        project,
-        meta,
-        regions,
-        target: target || undefined
+      ...nowConfig,
+      env,
+      build,
+      public: wantsPublic || nowConfig.public,
+      name,
+      project,
+      meta,
+      regions,
+      target: target || undefined,
     };
 
     // Ignore specific items from Now.json
@@ -137,9 +137,10 @@ export default class Now extends EventEmitter {
 
     if (isLegacy) {
       // Read `registry.npmjs.org` authToken from .npmrc
-      const registryAuthToken = type === 'npm' && forwardNpm
-        ? await readAuthToken(paths[0]) || await readAuthToken(homedir())
-        : undefined;
+      const registryAuthToken =
+        type === 'npm' && forwardNpm
+          ? (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
+          : undefined;
 
       requestBody = {
         env,
@@ -171,7 +172,7 @@ export default class Now extends EventEmitter {
       deployStamp,
       quiet,
       nowConfig,
-      force: forceNew
+      force: forceNew,
     });
 
     // We report about files whose sizes are too big

@@ -8,7 +8,12 @@ import {
 import { checkDeploymentStatus } from './check-deployment-status';
 import { generateQueryString } from './utils/query-string';
 import { isReady, isAliasAssigned } from './utils/ready-state';
-import { Deployment, DeploymentOptions, NowConfig, NowClientOptions } from './types';
+import {
+  Deployment,
+  DeploymentOptions,
+  NowConfig,
+  NowClientOptions,
+} from './types';
 
 async function* createDeployment(
   files: Map<string, DeploymentFile>,
@@ -108,7 +113,11 @@ export async function* deploy(
     }
   }
 
-  if (files.size === 1 && !deploymentOptions.builds && !deploymentOptions.routes) {
+  if (
+    files.size === 1 &&
+    !deploymentOptions.builds &&
+    !deploymentOptions.routes
+  ) {
     debug(`Assigning '/' route for single file deployment`);
     const filePath = Array.from(files.values())[0].names[0];
 
@@ -126,7 +135,11 @@ export async function* deploy(
     debug('No name provided. Defaulting to', deploymentOptions.name);
   }
 
-  if (deploymentOptions.version === 1 && !deploymentOptions.deploymentType && nowConfig.type) {
+  if (
+    deploymentOptions.version === 1 &&
+    !deploymentOptions.deploymentType &&
+    nowConfig.type
+  ) {
     debug(`Setting 'type' for 1.0 deployment to '${nowConfig.type}'`);
     deploymentOptions.deploymentType = nowConfig.type.toUpperCase() as DeploymentOptions['deploymentType'];
   }
@@ -137,7 +150,11 @@ export async function* deploy(
     delete deploymentOptions.config.version;
   }
 
-  if (deploymentOptions.version === 1 && !deploymentOptions.forceNew && clientOptions.force) {
+  if (
+    deploymentOptions.version === 1 &&
+    !deploymentOptions.forceNew &&
+    clientOptions.force
+  ) {
     debug(`Setting 'forceNew' for 1.0 deployment`);
     deploymentOptions.forceNew = clientOptions.force;
   }
@@ -174,7 +191,10 @@ export async function* deploy(
 
     try {
       debug('Waiting for deployment to be ready...');
-      for await (const event of checkDeploymentStatus(deployment, clientOptions)) {
+      for await (const event of checkDeploymentStatus(
+        deployment,
+        clientOptions
+      )) {
         yield event;
       }
     } catch (e) {

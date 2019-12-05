@@ -31,7 +31,7 @@ describe('create v1 deployment', () => {
     for await (const event of createLegacyDeployment(
       {
         token,
-        path: path.resolve(__dirname, 'fixtures', 'v1', 'static')
+        path: path.resolve(__dirname, 'fixtures', 'v1', 'static'),
       },
       {
         name: 'now-client-tests-v1-static',
@@ -51,7 +51,7 @@ describe('create v1 deployment', () => {
     for await (const event of createLegacyDeployment(
       {
         token,
-        path: path.resolve(__dirname, 'fixtures', 'v1', 'npm')
+        path: path.resolve(__dirname, 'fixtures', 'v1', 'npm'),
       },
       {
         name: 'now-client-tests-v1-npm',
@@ -74,7 +74,7 @@ describe('create v1 deployment', () => {
         path: path.resolve(__dirname, 'fixtures', 'v1', 'docker'),
       },
       {
-        name: 'now-client-tests-v1-docker'
+        name: 'now-client-tests-v1-docker',
       }
     )) {
       if (event.type === 'ready') {

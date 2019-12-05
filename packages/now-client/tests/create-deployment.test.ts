@@ -30,10 +30,10 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        path: path.resolve(__dirname, 'fixtures', 'v2')
+        path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
-        name: 'now-clien-tests-v2'
+        name: 'now-clien-tests-v2',
       }
     )) {
       if (event.type === 'warning') {
@@ -51,10 +51,10 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        path: path.resolve(__dirname, 'fixtures', 'v2')
+        path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
-        name: 'now-client-tests-v2'
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'file_count') {
@@ -72,10 +72,10 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        path: path.resolve(__dirname, 'fixtures', 'v2')
+        path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
-        name: 'now-client-tests-v2'
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'ready') {
@@ -90,10 +90,10 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        path: path.resolve(__dirname, 'fixtures', 'v2-file-permissions')
+        path: path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
       },
       {
-        name: 'now-client-tests-v2'
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'ready') {
@@ -114,10 +114,10 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        path: path.resolve(__dirname, 'fixtures', 'nowignore')
+        path: path.resolve(__dirname, 'fixtures', 'nowignore'),
       },
       {
-        name: 'now-client-tests-v2'
+        name: 'now-client-tests-v2',
       }
     )) {
       if (event.type === 'ready') {

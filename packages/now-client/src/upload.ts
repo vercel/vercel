@@ -43,7 +43,12 @@ export async function* upload(
 
   debug('Determining necessary files for upload...');
 
-  for await (const event of deploy(files, nowConfig, clientOptions, deploymentOptions)) {
+  for await (const event of deploy(
+    files,
+    nowConfig,
+    clientOptions,
+    deploymentOptions
+  )) {
     if (event.type === 'error') {
       if (event.payload.code === 'missing_files') {
         missingFiles = event.payload.missing;
@@ -189,7 +194,12 @@ export async function* upload(
 
   try {
     debug('Starting deployment creation');
-    for await (const event of deploy(files, nowConfig, clientOptions, deploymentOptions)) {
+    for await (const event of deploy(
+      files,
+      nowConfig,
+      clientOptions,
+      deploymentOptions
+    )) {
       if (event.type === 'alias-assigned') {
         debug('Deployment is ready');
         return yield event;

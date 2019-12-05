@@ -9,7 +9,12 @@ import {
   isAliasError,
 } from './utils/ready-state';
 import { createDebug } from './utils';
-import { Dictionary, Deployment, NowClientOptions, DeploymentBuild } from './types';
+import {
+  Dictionary,
+  Deployment,
+  NowClientOptions,
+  DeploymentBuild,
+} from './types';
 
 interface DeploymentStatus {
   type: string;
