@@ -58,10 +58,8 @@ export default async function add(
  
   const { domain, data: argData } = parsedParams;
 
-
   if (argData && argData.name.endsWith(domain)) {
     output.log(`'Domain identified inside the subdomain argument. The following record will be created':`);
-    const type = argData
     switch (argData.type) {
       case 'MX':
         output.log(
