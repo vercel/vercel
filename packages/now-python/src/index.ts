@@ -135,7 +135,7 @@ export const build = async ({
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await installRequirementsFile({
       filePath: requirementsTxtPath,
-      workDir: workPath,
+      workPath,
       meta,
     });
   } else if (fsFiles['requirements.txt']) {
@@ -143,7 +143,7 @@ export const build = async ({
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await installRequirementsFile({
       filePath: requirementsTxtPath,
-      workDir: workPath,
+      workPath,
       meta,
     });
   }

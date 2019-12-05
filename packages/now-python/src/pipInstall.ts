@@ -38,7 +38,7 @@ async function areRequirementsInstalled(requirementsPath: string, cwd: string) {
   }
 }
 
-async function pipInstall(workDir: string, args: string[]) {
+async function pipInstall(workPath: string, args: string[]) {
   const target = '.';
   // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
   //
@@ -65,7 +65,7 @@ async function pipInstall(workDir: string, args: string[]) {
         ...args,
       ],
       {
-        cwd: workDir,
+        cwd: workPath,
         stdio: 'pipe',
       }
     );
@@ -101,20 +101,20 @@ export async function installRequirement({
 
 interface InstallRequirementsFileArg {
   filePath: string;
-  workDir: string;
+  workPath: string;
   meta: Meta;
   args?: string[];
 }
 
 export async function installRequirementsFile({
   filePath,
-  workDir,
+  workPath,
   meta,
   args = [],
 }: InstallRequirementsFileArg) {
-  if (meta.isDev && (await areRequirementsInstalled(filePath, workDir))) {
+  if (meta.isDev && (await areRequirementsInstalled(filePath, workPath))) {
     debug(`Skipping requirements file installation, already installed`);
     return;
   }
-  await pipInstall(workDir, ['-r', filePath, ...args]);
+  await pipInstall(workPath, ['-r', filePath, ...args]);
 }
