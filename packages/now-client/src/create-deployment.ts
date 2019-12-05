@@ -3,27 +3,22 @@ import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 import readdir from 'recursive-readdir';
 import { relative, join, isAbsolute } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
-import uploadAndDeploy from './upload';
+import { upload } from './upload';
 import { getNowIgnore, createDebug, parseNowJSON } from './utils';
 import { DeploymentError } from './errors';
-import {
-  CreateDeploymentFunction,
-  DeploymentOptions,
-  NowJsonOptions,
-} from './types';
-import { Options } from './deploy';
+import { NowConfig, NowClientOptions, DeploymentOptions } from './types';
 
 export { EVENTS } from './utils';
 
-export default function buildCreateDeployment(
-  version: number
-): CreateDeploymentFunction {
+export default function buildCreateDeployment(version: number) {
   return async function* createDeployment(
-    path: string | string[],
-    options: DeploymentOptions = {},
-    nowConfig?: NowJsonOptions
+    clientOptions: NowClientOptions,
+    deploymentOptions: DeploymentOptions,
+    nowConfig: NowConfig = {}
   ): AsyncIterableIterator<any> {
-    const debug = createDebug(options.debug);
+    const { path } = clientOptions;
+
+    const debug = createDebug(clientOptions.debug);
     const cwd = process.cwd();
 
     debug('Creating deployment...');
@@ -39,9 +34,9 @@ export default function buildCreateDeployment(
       });
     }
 
-    if (typeof options.token !== 'string') {
+    if (typeof clientOptions.token !== 'string') {
       debug(
-        `Error: 'token' is expected to be a string. Received ${typeof options.token}`
+        `Error: 'token' is expected to be a string. Received ${typeof clientOptions.token}`
       );
 
       throw new DeploymentError({
@@ -50,7 +45,8 @@ export default function buildCreateDeployment(
       });
     }
 
-    const isDirectory = !Array.isArray(path) && lstatSync(path).isDirectory();
+    clientOptions.isDirectory =
+      !Array.isArray(path) && lstatSync(path).isDirectory();
 
     let rootFiles: string[];
 
@@ -70,7 +66,7 @@ export default function buildCreateDeployment(
       });
     }
 
-    if (isDirectory && !Array.isArray(path)) {
+    if (clientOptions.isDirectory && !Array.isArray(path)) {
       debug(`Provided 'path' is a directory. Reading subpaths... `);
       rootFiles = await readRootFolder(path);
       debug(`Read ${rootFiles.length} subpaths`);
@@ -91,7 +87,7 @@ export default function buildCreateDeployment(
 
     debug('Building file tree...');
 
-    if (isDirectory && !Array.isArray(path)) {
+    if (clientOptions.isDirectory && !Array.isArray(path)) {
       // Directory path
       const dirContents = await readdir(path, ignores);
       const relativeFileList = dirContents.map(filePath =>
@@ -157,15 +153,14 @@ export default function buildCreateDeployment(
     // from getting confused about a deployment that renders 404.
     if (
       fileList.length === 0 ||
-      fileList.every((item): boolean => {
-        if (!item) {
-          return true;
-        }
-
-        const segments = item.split('/');
-
-        return segments[segments.length - 1].startsWith('.');
-      })
+      fileList.every(item =>
+        item
+          ? item
+              .split('/')
+              .pop()!
+              .startsWith('.')
+          : true
+      )
     ) {
       debug(
         `Deployment path has no files (or only dotfiles). Yielding a warning event`
@@ -182,45 +177,24 @@ export default function buildCreateDeployment(
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);
     yield { type: 'hashes-calculated', payload: mapToObject(files) };
 
-    const {
-      token,
-      teamId,
-      force,
-      defaultName,
-      debug: debug_,
-      apiUrl,
-      userAgent,
-      ...metadata
-    } = options;
-
-    if (apiUrl) {
-      debug(`Using provided API URL: ${apiUrl}`);
+    if (clientOptions.apiUrl) {
+      debug(`Using provided API URL: ${clientOptions.apiUrl}`);
     }
 
-    if (userAgent) {
-      debug(`Using provided user agent: ${userAgent}`);
+    if (clientOptions.userAgent) {
+      debug(`Using provided user agent: ${clientOptions.userAgent}`);
     }
 
     debug(`Setting platform version to ${version}`);
-    metadata.version = version;
-
-    const deploymentOpts: Options = {
-      debug: debug_,
-      totalFiles: files.size,
-      nowConfig,
-      token,
-      isDirectory,
-      path,
-      teamId,
-      force,
-      defaultName,
-      metadata,
-      apiUrl,
-      userAgent,
-    };
+    deploymentOptions.version = version;
 
     debug(`Creating the deployment and starting upload...`);
-    for await (const event of uploadAndDeploy(files, deploymentOpts)) {
+    for await (const event of upload(
+      files,
+      nowConfig,
+      clientOptions,
+      deploymentOptions
+    )) {
       debug(`Yielding a '${event.type}' event`);
       yield event;
     }

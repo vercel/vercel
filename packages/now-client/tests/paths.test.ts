@@ -10,10 +10,15 @@ describe('path handling', () => {
 
   it('will fali with a relative path', async () => {
     try {
-      await createDeployment('./fixtures/v2/now.json', {
-        token,
-        name: 'now-client-tests-v2',
-      });
+      await createDeployment(
+        {
+          token,
+          path: './fixtures/v2/now.json',
+        },
+        {
+          name: 'now-client-tests-v2',
+        }
+      );
     } catch (e) {
       expect(e.code).toEqual('invalid_path');
     }
@@ -21,10 +26,15 @@ describe('path handling', () => {
 
   it('will fali with an array of relative paths', async () => {
     try {
-      await createDeployment(['./fixtures/v2/now.json'], {
-        token,
-        name: 'now-client-tests-v2',
-      });
+      await createDeployment(
+        {
+          token,
+          path: ['./fixtures/v2/now.json'],
+        },
+        {
+          name: 'now-client-tests-v2',
+        }
+      );
     } catch (e) {
       expect(e.code).toEqual('invalid_path');
     }
