@@ -6,9 +6,9 @@ export default async function detectSaber({
   const hasSaber = await hasDependency('saber');
   if (!hasSaber) return false;
   return {
-    buildCommand: ['saber', 'build'],
+    buildCommand: 'saber build',
     buildDirectory: 'public',
-    devCommand: ['saber', '--port', '$PORT'],
+    devCommand: 'saber --port $PORT',
     routes: [
       {
         src: '/_saber/.*',

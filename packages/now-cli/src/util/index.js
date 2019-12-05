@@ -53,7 +53,6 @@ export default class Now extends EventEmitter {
       nowConfig = {},
       hasNowJson = false,
       sessionAffinity = 'random',
-      atlas = false,
 
       // Latest
       name,
@@ -71,39 +70,21 @@ export default class Now extends EventEmitter {
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
-    const isBuilds = type === null;
+    const isLegacy = type !== null;
 
     let files = [];
     let hashes = {};
     const relatives = {};
     let engines;
     let deployment;
-    let requestBody = {};
 
-    if (isBuilds) {
-      requestBody = {
-        token: this._token,
-        teamId: this.currentTeam,
-        env,
-        build,
-        public: wantsPublic || nowConfig.public,
-        name,
-        project,
-        meta,
-        regions,
-        force: forceNew,
-      };
-
-      if (target) {
-        requestBody.target = target;
-      }
-    } else if (type === 'npm') {
+    if (type === 'npm') {
       files = await getNpmFiles(paths[0], pkg, nowConfig, opts);
 
       // A `start` or `now-start` npm script, or a `server.js` file
       // in the root directory of the deployment are required
       if (
-        !isBuilds &&
+        isLegacy &&
         !hasNpmStart(pkg) &&
         !hasFile(paths[0], files, 'server.js')
       ) {
@@ -139,30 +120,29 @@ export default class Now extends EventEmitter {
 
     const uploadStamp = stamp();
 
-    if (isBuilds) {
-      deployment = await processDeployment({
-        now: this,
-        output: this._output,
-        hashes,
-        paths,
-        requestBody,
-        uploadStamp,
-        deployStamp,
-        quiet,
-        nowConfig,
-      });
-    } else {
-      // Read `registry.npmjs.org` authToken from .npmrc
-      let authToken;
+    let requestBody = {
+      ...nowConfig,
+      env,
+      build,
+      public: wantsPublic || nowConfig.public,
+      name,
+      project,
+      meta,
+      regions,
+      target: target || undefined,
+    };
 
-      if (type === 'npm' && forwardNpm) {
-        authToken =
-          (await readAuthToken(paths[0])) || (await readAuthToken(homedir()));
-      }
+    // Ignore specific items from Now.json
+    delete requestBody.scope;
+
+    if (isLegacy) {
+      // Read `registry.npmjs.org` authToken from .npmrc
+      const registryAuthToken =
+        type === 'npm' && forwardNpm
+          ? (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
+          : undefined;
 
       requestBody = {
-        token: this._token,
-        teamId: this.currentTeam,
         env,
         build,
         meta,
@@ -172,30 +152,28 @@ export default class Now extends EventEmitter {
         project,
         description,
         deploymentType: type,
-        registryAuthToken: authToken,
+        registryAuthToken,
         engines,
         scale,
         sessionAffinity,
         limits: nowConfig.limits,
-        atlas,
         config: nowConfig,
-        functions: nowConfig.functions,
       };
-
-      deployment = await processDeployment({
-        legacy: true,
-        now: this,
-        output: this._output,
-        hashes,
-        paths,
-        requestBody,
-        uploadStamp,
-        deployStamp,
-        quiet,
-        env,
-        nowConfig,
-      });
     }
+
+    deployment = await processDeployment({
+      isLegacy,
+      now: this,
+      output: this._output,
+      hashes,
+      paths,
+      requestBody,
+      uploadStamp,
+      deployStamp,
+      quiet,
+      nowConfig,
+      force: forceNew,
+    });
 
     // We report about files whose sizes are too big
     let missingVersion = false;
@@ -228,7 +206,7 @@ export default class Now extends EventEmitter {
       }
     }
 
-    if (!isBuilds && !quiet && type === 'npm' && deployment.nodeVersion) {
+    if (isLegacy && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
           chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`

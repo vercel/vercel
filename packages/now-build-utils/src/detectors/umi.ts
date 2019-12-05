@@ -6,9 +6,9 @@ export default async function detectUmiJS({
   const hasUmi = await hasDependency('umi');
   if (!hasUmi) return false;
   return {
-    buildCommand: ['umi', 'build'],
+    buildCommand: 'umi build',
     buildDirectory: 'dist',
-    devCommand: ['umi', 'dev', '--port', '$PORT'],
+    devCommand: 'umi dev --port $PORT',
     routes: [
       {
         handle: 'filesystem',

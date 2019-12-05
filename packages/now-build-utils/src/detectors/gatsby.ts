@@ -8,9 +8,9 @@ export default async function detectGatsby({
     return false;
   }
   return {
-    buildCommand: ['gatsby', 'build'],
+    buildCommand: 'gatsby build',
     buildDirectory: 'public',
-    devCommand: ['gatsby', 'develop', '-p', '$PORT'],
+    devCommand: 'gatsby develop -p $PORT',
     cachePattern: '.cache/**',
   };
 }

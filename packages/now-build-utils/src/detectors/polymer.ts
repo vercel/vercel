@@ -6,9 +6,9 @@ export default async function detectPolymer({
   const hasPolymer = await hasDependency('polymer-cli');
   if (!hasPolymer) return false;
   return {
-    buildCommand: ['polymer', 'build'],
+    buildCommand: 'polymer build',
     buildDirectory: 'build',
-    devCommand: ['polymer', 'serve', '--port', '$PORT'],
+    devCommand: 'polymer serve --port $PORT',
     routes: [
       {
         handle: 'filesystem',

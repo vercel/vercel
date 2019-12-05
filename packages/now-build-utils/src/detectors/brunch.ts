@@ -10,8 +10,8 @@ export default async function detectBrunch({
   if (!hasConfig) return false;
 
   return {
-    buildCommand: ['brunch', 'build', '--production'],
+    buildCommand: 'brunch build --production',
     buildDirectory: 'public',
-    devCommand: ['brunch', 'watch', '--server', '--port', '$PORT'],
+    devCommand: 'brunch watch --server --port $PORT',
   };
 }

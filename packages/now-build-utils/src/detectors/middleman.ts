@@ -7,8 +7,8 @@ export default async function detectMiddleman({
   if (!hasConfig) return false;
 
   return {
-    buildCommand: ['bundle', 'exec', 'middleman', 'build'],
+    buildCommand: 'bundle exec middleman build',
     buildDirectory: 'build',
-    devCommand: ['bundle', 'exec', 'middleman', 'server', '-p', '$PORT'],
+    devCommand: 'bundle exec middleman server -p $PORT',
   };
 }

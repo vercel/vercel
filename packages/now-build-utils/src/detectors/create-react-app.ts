@@ -8,10 +8,10 @@ export default async function detectCreateReactApp({
     return false;
   }
   return {
-    buildCommand: ['react-scripts', 'build'],
+    buildCommand: 'react-scripts build',
     buildDirectory: 'build',
-    devCommand: ['react-scripts', 'start'],
-    devEnv: { BROWSER: 'none' },
+    devCommand: 'react-scripts start',
+    devVariables: { BROWSER: 'none' },
     routes: [
       {
         src: '/static/(.*)',
