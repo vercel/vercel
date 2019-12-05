@@ -57,7 +57,6 @@ export default async function add(
   }
  
   const { domain, data: argData } = parsedParams;
-
   if (argData && argData.name.endsWith(domain)) {
     output.log(`'Domain identified inside the subdomain argument. The following record will be created':`);
     switch (argData.type) {
@@ -77,7 +76,10 @@ export default async function add(
         );
         break;
     }
-    await promptBool(`Do you want to create this record on ${argData.name}.${domain}?`)
+    if (!await promptBool(`Do you want to create this record on ${argData.name}.${domain}?`)) {
+      output.log(`Aborted`);
+      return 1;
+    }
   }
 
   const addStamp = stamp();
