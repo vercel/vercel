@@ -1,6 +1,6 @@
 import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
-import fetch_ from 'node-fetch';
+import fetch_, { RequestInit } from 'node-fetch';
 import { join, sep } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
@@ -111,10 +111,18 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
   return { ig, ignores };
 }
 
+interface FetchOpts extends RequestInit {
+  apiUrl?: string;
+  method?: string;
+  teamId?: string;
+  headers?: { [key: string]: any };
+  userAgent?: string;
+}
+
 export const fetch = async (
   url: string,
   token: string,
-  opts: any = {},
+  opts: FetchOpts = {},
   debugEnabled?: boolean
 ): Promise<any> => {
   semaphore.acquire();
@@ -133,11 +141,14 @@ export const fetch = async (
     delete opts.teamId;
   }
 
+  const userAgent = opts.userAgent || `now-client-v${pkgVersion}`;
+  delete opts.userAgent;
+
   opts.headers = {
     ...opts.headers,
     authorization: `Bearer ${token}`,
     accept: 'application/json',
-    'user-agent': `now-client-v${pkgVersion}`,
+    'user-agent': userAgent,
   };
 
   debug(`${opts.method || 'GET'} ${url}`);

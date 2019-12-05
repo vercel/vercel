@@ -124,6 +124,7 @@ export interface DeploymentOptions {
   config?: { [key: string]: any };
   debug?: boolean;
   apiUrl?: string;
+  userAgent?: string;
 }
 
 export interface NowJsonOptions {

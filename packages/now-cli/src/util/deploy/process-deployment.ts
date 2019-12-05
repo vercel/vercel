@@ -12,6 +12,7 @@ import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';
 import { NowConfig } from '../dev/types';
+import ua from '../ua';
 
 export default async function processDeployment({
   now,
@@ -46,6 +47,7 @@ export default async function processDeployment({
     ...requestBody,
     debug: now._debug,
     apiUrl: now._apiUrl,
+    userAgent: ua,
   };
 
   if (!legacy) {
