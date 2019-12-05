@@ -6,8 +6,8 @@ export default async function detectSapper({
   const hasSapper = await hasDependency('sapper');
   if (!hasSapper) return false;
   return {
-    buildCommand: ['sapper', 'export'],
+    buildCommand: 'sapper export',
     buildDirectory: '__sapper__/export',
-    devCommand: ['sapper', 'dev', '--port', '$PORT'],
+    devCommand: 'sapper dev --port $PORT',
   };
 }
