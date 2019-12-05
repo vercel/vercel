@@ -194,7 +194,7 @@ export type DNSRecord = {
   updated: number;
 };
 
-type SRVRecordData = {
+export type SRVRecordData = {
   name: string;
   type: 'SRV';
   srv: {
@@ -205,19 +205,49 @@ type SRVRecordData = {
   };
 };
 
-type MXRecordData = {
+export type MXRecordData = {
   name: string;
   type: 'MX';
   value: string;
   mxPriority: number;
 };
 
+interface GenericDNSRecordData {
+  name: string;
+  value: string;
+}
+
+export interface ARecordData extends GenericDNSRecordData {
+  type: 'A';
+}
+
+export interface AAAARecordData extends GenericDNSRecordData {
+  type: 'AAAA';
+}
+
+export interface ALIASRecordData extends GenericDNSRecordData {
+  type: 'ALIAS';
+}
+
+export interface CAARecordData extends GenericDNSRecordData {
+  type: 'CAA';
+}
+
+export interface CNAMERecordData extends GenericDNSRecordData {
+  type: 'CNAME';
+}
+
+export interface TXTRecordData extends GenericDNSRecordData {
+  type: 'TXT';
+}
+
 export type DNSRecordData =
-  | {
-      name: string;
-      type: string;
-      value: string;
-    }
+  | ARecordData
+  | AAAARecordData
+  | ALIASRecordData
+  | CAARecordData
+  | CNAMERecordData
+  | TXTRecordData
   | SRVRecordData
   | MXRecordData;
 
