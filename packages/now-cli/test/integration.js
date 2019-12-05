@@ -1456,7 +1456,7 @@ test('use `--debug` CLI flag', async t => {
   // get the content
   const response = await fetch(href);
   const content = await response.text();
-  t.is(content.trim(), '1');
+  t.is(content.trim(), 'off');
 });
 
 test('try to deploy non-existing path', async t => {
