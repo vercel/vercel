@@ -194,7 +194,7 @@ export type DNSRecord = {
   updated: number;
 };
 
-export interface SRVRecordData extends GenericDNSRecordData {
+export interface SRVRecordData {
   name: string;
   type: 'SRV';
   srv: {
@@ -206,9 +206,6 @@ export interface SRVRecordData extends GenericDNSRecordData {
 };
 
 export interface MXRecordData extends GenericDNSRecordData {
-  name: string;
-  type: 'MX';
-  value: string;
   mxPriority: number;
 };
 
