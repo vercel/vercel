@@ -352,11 +352,11 @@ export interface DetectorParameters {
 }
 
 export interface DetectorOutput {
-  buildCommand: string[];
+  buildCommand: string;
   buildDirectory: string;
-  buildEnv?: Env;
-  devCommand?: string[];
-  devEnv?: Env;
+  buildVariables?: Env;
+  devCommand?: string;
+  devVariables?: Env;
   minNodeRange?: string;
   cachePattern?: string;
   routes?: Route[];

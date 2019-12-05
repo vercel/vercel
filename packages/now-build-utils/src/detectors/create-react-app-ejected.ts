@@ -8,10 +8,10 @@ export default async function detectCreateReactAppEjected({
     return false;
   }
   return {
-    buildCommand: ['node', 'scripts/build.js'],
+    buildCommand: 'node scripts/build.js',
     buildDirectory: 'build',
-    devCommand: ['node', 'scripts/start.js'],
-    devEnv: { BROWSER: 'none' },
+    devCommand: 'node scripts/start.js',
+    devVariables: { BROWSER: 'none' },
     routes: [
       {
         src: '/static/(.*)',

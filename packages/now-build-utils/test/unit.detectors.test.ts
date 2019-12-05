@@ -68,7 +68,7 @@ test('detectDefaults() - angular', async () => {
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
   assert.equal(result.buildDirectory, 'dist');
-  assert.deepEqual(result.buildCommand, ['ng', 'build']);
+  assert.deepEqual(result.buildCommand, 'ng build');
 });
 
 test('detectDefaults() - brunch', async () => {
@@ -77,7 +77,7 @@ test('detectDefaults() - brunch', async () => {
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
   assert.equal(result.buildDirectory, 'public');
-  assert.deepEqual(result.buildCommand, ['brunch', 'build', '--production']);
+  assert.deepEqual(result.buildCommand, 'brunch build --production');
 });
 
 test('detectDefaults() - hugo', async () => {
@@ -86,7 +86,7 @@ test('detectDefaults() - hugo', async () => {
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
   assert.equal(result.buildDirectory, 'public');
-  assert.deepEqual(result.buildCommand, ['hugo']);
+  assert.deepEqual(result.buildCommand, 'hugo');
 });
 
 test('detectDefaults() - jekyll', async () => {
@@ -95,7 +95,7 @@ test('detectDefaults() - jekyll', async () => {
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
   assert.equal(result.buildDirectory, '_site');
-  assert.deepEqual(result.buildCommand, ['jekyll', 'build']);
+  assert.deepEqual(result.buildCommand, 'jekyll build');
 });
 
 test('detectDefaults() - middleman', async () => {
@@ -104,10 +104,5 @@ test('detectDefaults() - middleman', async () => {
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
   assert.equal(result.buildDirectory, 'build');
-  assert.deepEqual(result.buildCommand, [
-    'bundle',
-    'exec',
-    'middleman',
-    'build',
-  ]);
+  assert.deepEqual(result.buildCommand, 'bundle exec middleman build');
 });

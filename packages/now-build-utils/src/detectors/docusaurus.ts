@@ -6,8 +6,8 @@ export default async function detectDocusaurus({
   const hasDocusaurus = await hasDependency('docusaurus');
   if (!hasDocusaurus) return false;
   return {
-    buildCommand: ['docusaurus-build'],
+    buildCommand: 'docusaurus-build',
     buildDirectory: 'build',
-    devCommand: ['docusaurus-start', '--port', '$PORT'],
+    devCommand: 'docusaurus-start --port $PORT',
   };
 }
