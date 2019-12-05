@@ -49,8 +49,8 @@ export default function parseAddArgs(
             }
           } as SRVRecordData
         };
-        return null
       }
+      return null
     case 'MX':
       if (args.length === 5) {
         return {
