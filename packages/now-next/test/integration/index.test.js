@@ -14,7 +14,7 @@ it(
     const {
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'standard'));
-    expect(output['index.html']).toBeDefined();
+    expect(output['index']).toBeDefined();
     expect(output.goodbye).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
@@ -274,7 +274,7 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'serverless-config-object'));
 
-    expect(output['index.html']).toBeDefined();
+    expect(output['index']).toBeDefined();
     expect(output.goodbye).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
@@ -308,7 +308,7 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'serverless-no-config'));
 
-    expect(output['index.html']).toBeDefined();
+    expect(output['index']).toBeDefined();
     expect(output.goodbye).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
@@ -344,7 +344,7 @@ it(
       path.join(__dirname, 'serverless-no-config-build')
     );
 
-    expect(output['index.html']).toBeDefined();
+    expect(output['index']).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)

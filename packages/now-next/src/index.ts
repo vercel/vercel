@@ -1,5 +1,4 @@
 import { ChildProcess, fork } from 'child_process';
-import url from 'url'
 import {
   pathExists,
   readFile,
@@ -60,8 +59,8 @@ import {
 
 import {
   convertRedirects,
-  convertRewrites
-} from '@now/routing-utils/dist/superstatic'
+  convertRewrites,
+} from '@now/routing-utils/dist/superstatic';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -77,7 +76,7 @@ interface BuildParamsType extends BuildOptions {
 }
 
 export const version = 2;
-
+const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
@@ -353,7 +352,6 @@ export const build = async ({
     await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
-  const exportedPageRoutes: Route[] = [];
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
@@ -484,18 +482,14 @@ export const build = async ({
         return;
       }
 
-      const staticRoute = path.join(entryDirectory, page);
+      const staticRoute = path.join(entryDirectory, pathname);
       staticPages[staticRoute] = staticPageFiles[page];
+      staticPages[staticRoute].contentType = htmlContentType;
 
       if (isDynamicRoute(pathname)) {
         dynamicPages.push(routeName);
         return;
       }
-
-      exportedPageRoutes.push({
-        src: `^${path.join('/', entryDirectory, pathname)}$`,
-        dest: path.join('/', staticRoute),
-      });
     });
 
     const pageKeys = Object.keys(pages);
@@ -743,14 +737,9 @@ export const build = async ({
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
-
-        const outputPathPageHtml = outputPathPage.concat('.html');
-        prerenders[outputPathPageHtml] = htmlFsRef;
+        htmlFsRef.contentType = htmlContentType;
+        prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
-        exportedPageRoutes.push({
-          src: path.posix.join('/', outputPathPage),
-          dest: outputPathPageHtml,
-        });
       } else {
         const lambda = lambdas[outputSrcPathPage];
         if (lambda == null) {
@@ -832,7 +821,7 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion)
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
 
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
@@ -842,25 +831,20 @@ export const build = async ({
     routesManifest
   ).then(arr =>
     arr.map(route => {
-      // make sure .html is added to dest for now until
-      // outputting static files to clean routes is available
-      if (staticPages[`${route.dest}.html`.substr(1)]) {
-        route.dest = `${route.dest}.html`;
-      }
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
       return route;
     })
   );
 
-  const rewrites: Route[] = []
-  const redirects: Route[] = []
+  const rewrites: Route[] = [];
+  const redirects: Route[] = [];
 
   if (routesManifest) {
-    switch(routesManifest.version) {
+    switch (routesManifest.version) {
       case 1: {
-        redirects.push(...convertRedirects(routesManifest.redirects))
-        rewrites.push(...convertRewrites(routesManifest.rewrites))
-        break
+        redirects.push(...convertRedirects(routesManifest.redirects));
+        rewrites.push(...convertRewrites(routesManifest.rewrites));
+        break;
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
@@ -871,24 +855,6 @@ export const build = async ({
       }
     }
   }
-
-  const topRoutes = [
-    // Before we handle static files we need to set proper caching headers
-    {
-      // This ensures we only match known emitted-by-Next.js files and not
-      // user-emitted files which may be missing a hash in their filename.
-      src: path.join(
-        '/',
-        entryDirectory,
-        '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
-      ),
-      // Next.js assets contain a hash or entropy in their filenames, so they
-      // are guaranteed to be unique and cacheable indefinitely.
-      headers: { 'cache-control': 'public,max-age=31536000,immutable' },
-      continue: true,
-    },
-    { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
-  ]
 
   return {
     output: {
@@ -901,17 +867,27 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
-      ...topRoutes,
+      // redirects take the highest priority
       ...redirects,
-      ...rewrites,
-      // we need to re-apply the routes above rewrites in-case the are
-      // rewriting to one of those routes
-      ...topRoutes,
-      // Static exported pages (.html rewrites)
-      ...exportedPageRoutes,
+      // Before we handle static files we need to set proper caching headers
+      {
+        // This ensures we only match known emitted-by-Next.js files and not
+        // user-emitted files which may be missing a hash in their filename.
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
+        // Next.js assets contain a hash or entropy in their filenames, so they
+        // are guaranteed to be unique and cacheable indefinitely.
+        headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+        continue: true,
+      },
+      { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+      ...rewrites,
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
