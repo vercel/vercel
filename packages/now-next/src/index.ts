@@ -633,7 +633,7 @@ export const build = async ({
           return;
         }
 
-        const pathname = normalizePage(page.replace(/\.js$/, ''));
+        const pathname = page.replace(/\.js$/, '');
 
         if (isDynamicRoute(pathname)) {
           dynamicPages.push(normalizePage(pathname));
@@ -723,9 +723,7 @@ export const build = async ({
         ({ initialRevalidate, srcRoute, dataRoute } = pr);
       }
 
-      const outputPathPage = normalizePage(
-        path.posix.join(entryDirectory, routeFileNoExt)
-      );
+      const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt)
       const outputSrcPathPage =
         srcRoute == null
           ? outputPathPage
