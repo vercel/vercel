@@ -59,8 +59,8 @@ import {
 
 import {
   convertRedirects,
-  convertRewrites
-} from '@now/routing-utils/dist/superstatic'
+  convertRewrites,
+} from '@now/routing-utils/dist/superstatic';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -76,7 +76,7 @@ interface BuildParamsType extends BuildOptions {
 }
 
 export const version = 2;
-const htmlContentType = 'text/html; charset=utf-8'
+const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
@@ -484,7 +484,7 @@ export const build = async ({
 
       const staticRoute = path.join(entryDirectory, pathname);
       staticPages[staticRoute] = staticPageFiles[page];
-      staticPages[staticRoute].contentType = htmlContentType
+      staticPages[staticRoute].contentType = htmlContentType;
 
       if (isDynamicRoute(pathname)) {
         dynamicPages.push(routeName);
@@ -723,7 +723,7 @@ export const build = async ({
         ({ initialRevalidate, srcRoute, dataRoute } = pr);
       }
 
-      const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt)
+      const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
       const outputSrcPathPage =
         srcRoute == null
           ? outputPathPage
@@ -737,7 +737,7 @@ export const build = async ({
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
-        htmlFsRef.contentType = htmlContentType
+        htmlFsRef.contentType = htmlContentType;
         prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
       } else {
@@ -821,7 +821,7 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion)
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
 
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
@@ -836,15 +836,15 @@ export const build = async ({
     })
   );
 
-  const rewrites: Route[] = []
-  const redirects: Route[] = []
+  const rewrites: Route[] = [];
+  const redirects: Route[] = [];
 
   if (routesManifest) {
-    switch(routesManifest.version) {
+    switch (routesManifest.version) {
       case 1: {
-        redirects.push(...convertRedirects(routesManifest.redirects))
-        rewrites.push(...convertRewrites(routesManifest.rewrites))
-        break
+        redirects.push(...convertRedirects(routesManifest.redirects));
+        rewrites.push(...convertRewrites(routesManifest.rewrites));
+        break;
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
