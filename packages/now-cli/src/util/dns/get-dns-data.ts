@@ -60,7 +60,7 @@ export default async function getDNSData(
   }
 }
 
-async function getData(output: Output, type: string) {
+async function getData(output: Output, type: string): Promise<DNSRecordData | null> {
   const name = await getRecordName(type);
   if (type === 'SRV') {
     const priority = await getNumber(`- ${type} priority: `);
