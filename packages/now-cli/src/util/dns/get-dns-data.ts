@@ -8,13 +8,24 @@ import {
   CNAMERecordData,
   TXTRecordData,
   SRVRecordData,
-  MXRecordData
+  MXRecordData,
 } from '../../types';
 import textInput from '../input/text';
 import promptBool from '../input/prompt-bool';
 import { Output } from '../output';
 
-const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];
+const RECORD_TYPES = [
+  'A',
+  'AAAA',
+  'ALIAS',
+  'CAA',
+  'CNAME',
+  'MX',
+  'SRV',
+  'TXT',
+] as const;
+const possibleTypes = new Set<string>(RECORD_TYPES);
+type RecordType = typeof RECORD_TYPES[number];
 
 export default async function getDNSData(
   output: Output,
@@ -26,42 +37,27 @@ export default async function getDNSData(
 
   try {
     // first ask for type, branch from there
-    const possibleTypes = new Set(RECORD_TYPES);
+
     const type = (await textInput({
       label: `- Record type (${RECORD_TYPES.join(', ')}): `,
-      validateValue: (v: string) =>
-        Boolean(v && possibleTypes.has(v.trim().toUpperCase()))
+      validateValue: v => possibleTypes.has(v.trim().toUpperCase()),
     }))
       .trim()
       .toUpperCase();
 
-    switch (type) {
-      case 'SRV':
-        return (await getData(output, type)) as SRVRecordData
-      case 'MX':
-        return (await getData(output, type)) as MXRecordData
-      case 'A':
-        return (await getData(output, type)) as ARecordData
-      case 'AAAA':
-        return (await getData(output, type)) as AAAARecordData
-      case 'ALIAS':
-        return (await getData(output, type)) as ALIASRecordData
-      case 'CAA':
-        return (await getData(output, type)) as CAARecordData
-      case 'CNAME':
-        return (await getData(output, type)) as CNAMERecordData
-      case 'TXT':
-        return (await getData(output, type)) as TXTRecordData
-      default:
-        return null
-    }
+    const data = await getData(output, type as RecordType);
+    return data;
   } catch (error) {
     return null;
   }
 }
 
-async function getData(output: Output, type: string): Promise<DNSRecordData | null> {
+async function getData(
+  output: Output,
+  type: RecordType
+): Promise<DNSRecordData | null> {
   const name = await getRecordName(type);
+
   if (type === 'SRV') {
     const priority = await getNumber(`- ${type} priority: `);
     const weight = await getNumber(`- ${type} weight: `);
@@ -74,18 +70,20 @@ async function getData(output: Output, type: string): Promise<DNSRecordData | nu
         target
       )}.`
     );
-    return (await verifyData())
-      ? {
-          name,
-          type,
-          srv: {
-            priority,
-            weight,
-            port,
-            target
-          }
-        }
-      : null;
+    if (!(await verifyData())) {
+      return null;
+    }
+    const record: SRVRecordData = {
+      name,
+      type,
+      srv: {
+        priority,
+        weight,
+        port,
+        target,
+      },
+    };
+    return record;
   }
 
   if (type === 'MX') {
@@ -96,34 +94,38 @@ async function getData(output: Output, type: string): Promise<DNSRecordData | nu
         `${mxPriority}`
       )} ${chalk.cyan(value)}`
     );
-    return (await verifyData())
-      ? {
-          name,
-          value,
-          type,
-          mxPriority
-        }
-      : null;
+    if (!(await verifyData())) {
+      return null;
+    }
+    const record: MXRecordData = {
+      name,
+      value,
+      type,
+      mxPriority,
+    };
+    return record;
   }
 
   const value = await getTrimmedString(`- ${type} value: `);
   output.log(`${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(value)}`);
-  return (await verifyData())
-    ? {
-        name,
-        value,
-        type
-      }
-      : null;
+  if (!(await verifyData())) {
+    return null;
+  }
+  const record = {
+    name,
+    value,
+    type,
+  };
+  return record;
 }
 
 async function verifyData() {
   return promptBool('Is this correct?');
 }
 
-async function getRecordName(type: string) {
+async function getRecordName(type: RecordType) {
   const input = await textInput({
-    label: `- ${type} name: `
+    label: `- ${type} name: `,
   });
   return input === '@' ? '' : input;
 }
@@ -132,14 +134,14 @@ async function getNumber(label: string) {
   return Number(
     await textInput({
       label,
-      validateValue: v => Boolean(v && Number(v))
+      validateValue: v => Boolean(v && Number(v)),
     })
   );
 }
 async function getTrimmedString(label: string) {
   const res = await textInput({
     label,
-    validateValue: v => Boolean(v && v.trim().length > 0)
+    validateValue: v => Boolean(v && v.trim().length > 0),
   });
   return res.trim();
 }
