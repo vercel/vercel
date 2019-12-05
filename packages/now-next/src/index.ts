@@ -902,13 +902,13 @@ export const build = async ({
         continue: true,
       },
       { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
+      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
+      // folder
       { handle: 'filesystem' },
       ...redirects,
       ...rewrites,
       // Static exported pages (.html rewrites)
       ...exportedPageRoutes,
-      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
-      // folder
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
