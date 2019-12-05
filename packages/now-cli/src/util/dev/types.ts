@@ -9,11 +9,11 @@ import {
   PackageJson,
   BuilderFunctions,
 } from '@now/build-utils';
-import { NowConfig, EnvConfig } from 'now-client';
+import { NowConfig } from 'now-client';
 import { NowRedirect, NowRewrite, NowHeader, Route } from '@now/routing-utils';
 import { Output } from '../output';
 
-export { NowConfig, EnvConfig };
+export { NowConfig };
 
 export interface DevServerOptions {
   output: Output;

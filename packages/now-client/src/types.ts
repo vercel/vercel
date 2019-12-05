@@ -5,12 +5,21 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
+/**
+ * Options for `now-client` or
+ * properties that should not
+ * be part of the payload.
+ */
 export interface NowClientOptions {
   token: string;
+  path: string | string[];
   debug?: boolean;
   teamId?: string;
   apiUrl?: string;
+  force?: boolean;
   userAgent?: string;
+  defaultName?: string;
+  isDirectory?: boolean;
 }
 
 export interface Deployment {
@@ -84,7 +93,7 @@ export interface DeploymentGithubData {
 }
 
 interface LegacyNowConfig {
-  type?: 'NPM' | 'STATIC' | 'DOCKER';
+  type?: string;
   aliases?: string | string[];
 }
 
@@ -109,7 +118,32 @@ export interface NowConfig extends LegacyNowConfig {
   alias?: string | string[];
 }
 
-export interface DeploymentOptions {
+interface LegacyDeploymentOptions {
+  project?: string;
+  forceNew?: boolean;
+  description?: string;
+  registryAuthToken?: string;
+  engines?: Dictionary<string>;
+  sessionAffinity?: 'ip' | 'key' | 'random';
+  deploymentType?: 'NPM' | 'STATIC' | 'DOCKER';
+  scale?: Dictionary<{
+    min?: number;
+    max?: number | 'auto';
+  }>;
+  limits?: {
+    duration?: number;
+    maxConcurrentReqs?: number;
+    timeout?: number;
+  };
+  // Can't be NowConfig, since we don't
+  // include all legacy types here
+  config?: Dictionary<any>;
+}
+
+/**
+ * Options that will be sent to the API.
+ */
+export interface DeploymentOptions extends LegacyDeploymentOptions {
   version?: number;
   regions?: string[];
   routes?: Route[];
@@ -120,20 +154,7 @@ export interface DeploymentOptions {
     env: Dictionary<string>;
   };
   target?: string;
-  token?: string | null;
-  teamId?: string;
-  force?: boolean;
   name?: string;
-  defaultName?: string;
-  isDirectory?: boolean;
-  path?: string | string[];
-  github?: DeploymentGithubData;
-  scope?: string;
   public?: boolean;
-  forceNew?: boolean;
-  deploymentType?: 'NPM' | 'STATIC' | 'DOCKER';
-  registryAuthToken?: string;
-  engines?: Dictionary<string>;
-  sessionAffinity?: 'ip' | 'random';
-  config?: Dictionary<any>;
+  meta?: Dictionary<string>;
 }
