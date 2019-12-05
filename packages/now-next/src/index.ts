@@ -737,11 +737,9 @@ export const build = async ({
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
-
+        htmlFsRef.contentType = htmlContentType
         prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
-        // we need to set the contentType since we removed the extension
-        (prerenders[outputPathPage] as FileFsRef).contentType = htmlContentType
       } else {
         const lambda = lambdas[outputSrcPathPage];
         if (lambda == null) {
