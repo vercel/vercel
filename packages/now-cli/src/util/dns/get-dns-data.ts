@@ -1,5 +1,15 @@
 import chalk from 'chalk';
-import { DNSRecordData } from '../../types';
+import {
+  DNSRecordData,
+  ARecordData,
+  AAAARecordData,
+  ALIASRecordData,
+  CAARecordData,
+  CNAMERecordData,
+  TXTRecordData,
+  SRVRecordData,
+  MXRecordData
+} from '../../types';
 import textInput from '../input/text';
 import promptBool from '../input/prompt-bool';
 import { Output } from '../output';
@@ -25,64 +35,83 @@ export default async function getDNSData(
       .trim()
       .toUpperCase();
 
-    const name = await getRecordName(type);
-
-    if (type === 'SRV') {
-      const priority = await getNumber(`- ${type} priority: `);
-      const weight = await getNumber(`- ${type} weight: `);
-      const port = await getNumber(`- ${type} port: `);
-      const target = await getTrimmedString(`- ${type} target: `);
-      output.log(
-        `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
-          `${priority}`
-        )} ${chalk.cyan(`${weight}`)} ${chalk.cyan(`${port}`)} ${chalk.cyan(
-          target
-        )}.`
-      );
-      return (await verifyData())
-        ? {
-            name,
-            type,
-            srv: {
-              priority,
-              weight,
-              port,
-              target
-            }
-          }
-        : null;
+    switch (type) {
+      case 'SRV':
+        return (await getData(output, type)) as SRVRecordData
+      case 'MX':
+        return (await getData(output, type)) as MXRecordData
+      case 'A':
+        return (await getData(output, type)) as ARecordData
+      case 'AAAA':
+        return (await getData(output, type)) as AAAARecordData
+      case 'ALIAS':
+        return (await getData(output, type)) as ALIASRecordData
+      case 'CAA':
+        return (await getData(output, type)) as CAARecordData
+      case 'CNAME':
+        return (await getData(output, type)) as CNAMERecordData
+      case 'TXT':
+        return (await getData(output, type)) as TXTRecordData
+      default:
+        return null
     }
-
-    if (type === 'MX') {
-      const mxPriority = await getNumber(`- ${type} priority: `);
-      const value = await getTrimmedString(`- ${type} host: `);
-      output.log(
-        `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
-          `${mxPriority}`
-        )} ${chalk.cyan(value)}`
-      );
-      return (await verifyData())
-        ? {
-            name,
-            type,
-            value,
-            mxPriority
-          }
-        : null;
-    }
-
-    const value = await getTrimmedString(`- ${type} value: `);
-    output.log(`${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(value)}`);
-    return (await verifyData())
-      ? {
-          name,
-          type,
-          value
-        }
-      : null;
   } catch (error) {
     return null;
   }
+}
+
+async function getData(output: Output, type: string) {
+  const name = await getRecordName(type);
+  if (type === 'SRV') {
+    const priority = await getNumber(`- ${type} priority: `);
+    const weight = await getNumber(`- ${type} weight: `);
+    const port = await getNumber(`- ${type} port: `);
+    const target = await getTrimmedString(`- ${type} target: `);
+    output.log(
+      `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
+        `${priority}`
+      )} ${chalk.cyan(`${weight}`)} ${chalk.cyan(`${port}`)} ${chalk.cyan(
+        target
+      )}.`
+    );
+    return (await verifyData())
+      ? {
+          name,
+          srv: {
+            priority,
+            weight,
+            port,
+            target
+          }
+        }
+      : null;
+  }
+
+  if (type === 'MX') {
+    const mxPriority = await getNumber(`- ${type} priority: `);
+    const value = await getTrimmedString(`- ${type} host: `);
+    output.log(
+      `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
+        `${mxPriority}`
+      )} ${chalk.cyan(value)}`
+    );
+    return (await verifyData())
+      ? {
+          name,
+          value,
+          mxPriority
+        }
+      : null;
+  }
+
+  const value = await getTrimmedString(`- ${type} value: `);
+  output.log(`${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(value)}`);
+  return (await verifyData())
+    ? {
+        name,
+        value
+      }
+      : null;
 }
 
 async function verifyData() {

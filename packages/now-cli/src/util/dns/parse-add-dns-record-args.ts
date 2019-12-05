@@ -1,4 +1,14 @@
-import { DNSRecordData } from '../../types';
+import {
+  DNSRecordData,
+  ARecordData,
+  AAAARecordData,
+  ALIASRecordData,
+  CAARecordData,
+  CNAMERecordData,
+  TXTRecordData,
+  SRVRecordData,
+  MXRecordData
+} from '../../types';
 
 export default function parseAddArgs(
   args: string[]
@@ -23,39 +33,67 @@ export default function parseAddArgs(
     return null;
   }
 
-  if (type === 'MX' && args.length === 5) {
-    return {
-      domain,
-      data: { name, type, value, mxPriority: Number(args[4]) }
-    };
-  }
-
-  if (type === 'SRV' && args.length === 7) {
-    return {
-      domain,
-      data: {
-        name,
-        type,
-        srv: {
-          priority: Number(value),
-          weight: Number(args[4]),
-          port: Number(args[5]),
-          target: args[6]
+  switch (type) {
+    case 'SRV':
+      if (args.length === 7) {
+        return {
+          domain,
+          data: {
+            name,
+            srv: {
+              priority: Number(value),
+              weight: Number(args[4]),
+              port: Number(args[5]),
+              target: args[6]
+            }
+          } as SRVRecordData
+        };
+        return null
+      }
+    case 'MX':
+      if (args.length === 5) {
+        return {
+          domain,
+          data: { name, value, mxPriority: Number(args[4]) } as MXRecordData
+        };
+      }
+      return null
+    default:
+      if (args.length === 4) {
+        switch (type) {
+          case 'A':
+            return {
+              domain,
+              data: { name, value } as ARecordData
+            };
+          case 'AAAA':
+            return {
+              domain,
+              data: { name, value } as AAAARecordData
+            };
+          case 'ALIAS':
+            return {
+              domain,
+              data: { name, value } as ALIASRecordData
+            };
+          case 'CAA':
+            return {
+              domain,
+              data: { name, value } as CAARecordData
+            };
+          case 'CNAME':
+            return {
+              domain,
+              data: { name, value } as CNAMERecordData
+            };
+          case 'TXT':
+            return {
+              domain,
+              data: { name, value } as TXTRecordData
+            };
         }
       }
-    };
+      return null
   }
-
-  if (args.length === 4) {
-    return {
-      domain,
-      data: {
-        name,
-        type,
-        value
-      }
-    };
-  }
-
   return null;
 }
