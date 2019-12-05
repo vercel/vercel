@@ -45,7 +45,7 @@ export default function buildCreateDeployment(version: number) {
       });
     }
 
-    const isDirectory = !Array.isArray(path) && lstatSync(path).isDirectory();
+    clientOptions.isDirectory = !Array.isArray(path) && lstatSync(path).isDirectory();
 
     let rootFiles: string[];
 
@@ -65,7 +65,7 @@ export default function buildCreateDeployment(version: number) {
       });
     }
 
-    if (isDirectory && !Array.isArray(path)) {
+    if (clientOptions.isDirectory && !Array.isArray(path)) {
       debug(`Provided 'path' is a directory. Reading subpaths... `);
       rootFiles = await readRootFolder(path);
       debug(`Read ${rootFiles.length} subpaths`);
@@ -86,7 +86,7 @@ export default function buildCreateDeployment(version: number) {
 
     debug('Building file tree...');
 
-    if (isDirectory && !Array.isArray(path)) {
+    if (clientOptions.isDirectory && !Array.isArray(path)) {
       // Directory path
       const dirContents = await readdir(path, ignores);
       const relativeFileList = dirContents.map(filePath =>

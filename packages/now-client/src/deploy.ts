@@ -111,12 +111,11 @@ export async function* deploy(
   if (files.size === 1 && !deploymentOptions.builds && !deploymentOptions.routes) {
     debug(`Assigning '/' route for single file deployment`);
     const filePath = Array.from(files.values())[0].names[0];
-    const segments = filePath.split('/');
 
     deploymentOptions.routes = [
       {
         src: '/',
-        dest: `/${segments[segments.length - 1]}`,
+        dest: `/${filePath.split('/').pop()}`,
       },
     ];
   }

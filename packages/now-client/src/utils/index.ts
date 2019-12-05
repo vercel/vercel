@@ -128,6 +128,7 @@ export const fetch = async (
   const debug = createDebug(debugEnabled);
   let time: number;
 
+
   url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
   delete opts.apiUrl;
 

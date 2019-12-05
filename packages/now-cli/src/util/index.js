@@ -70,7 +70,7 @@ export default class Now extends EventEmitter {
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
-    const isLegacy = type === null;
+    const isLegacy = type !== null;
 
     let files = [];
     let hashes = {};
@@ -129,7 +129,7 @@ export default class Now extends EventEmitter {
         project,
         meta,
         regions,
-        target
+        target: target || undefined
     };
 
     if (isLegacy) {
