@@ -13,7 +13,7 @@ import {
   BuildOptions,
   debug,
 } from '@now/build-utils';
-import { installRequirement, installRequirementsFile } from './pipInstall';
+import { installRequirement, installRequirementsFile } from './install';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
