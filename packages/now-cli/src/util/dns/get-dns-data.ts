@@ -77,6 +77,7 @@ async function getData(output: Output, type: string) {
     return (await verifyData())
       ? {
           name,
+          type,
           srv: {
             priority,
             weight,
@@ -99,6 +100,7 @@ async function getData(output: Output, type: string) {
       ? {
           name,
           value,
+          type,
           mxPriority
         }
       : null;
@@ -109,7 +111,8 @@ async function getData(output: Output, type: string) {
   return (await verifyData())
     ? {
         name,
-        value
+        value,
+        type
       }
       : null;
 }

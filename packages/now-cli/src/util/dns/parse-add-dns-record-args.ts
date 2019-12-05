@@ -40,6 +40,7 @@ export default function parseAddArgs(
           domain,
           data: {
             name,
+            type,
             srv: {
               priority: Number(value),
               weight: Number(args[4]),
@@ -54,7 +55,7 @@ export default function parseAddArgs(
       if (args.length === 5) {
         return {
           domain,
-          data: { name, value, mxPriority: Number(args[4]) } as MXRecordData
+          data: { name, value, type, mxPriority: Number(args[4]) } as MXRecordData
         };
       }
       return null
@@ -64,32 +65,32 @@ export default function parseAddArgs(
           case 'A':
             return {
               domain,
-              data: { name, value } as ARecordData
+              data: { name, value, type } as ARecordData
             };
           case 'AAAA':
             return {
               domain,
-              data: { name, value } as AAAARecordData
+              data: { name, value, type } as AAAARecordData
             };
           case 'ALIAS':
             return {
               domain,
-              data: { name, value } as ALIASRecordData
+              data: { name, value, type } as ALIASRecordData
             };
           case 'CAA':
             return {
               domain,
-              data: { name, value } as CAARecordData
+              data: { name, value, type } as CAARecordData
             };
           case 'CNAME':
             return {
               domain,
-              data: { name, value } as CNAMERecordData
+              data: { name, value, type } as CNAMERecordData
             };
           case 'TXT':
             return {
               domain,
-              data: { name, value } as TXTRecordData
+              data: { name, value, type } as TXTRecordData
             };
         }
       }
