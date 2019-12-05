@@ -16,10 +16,9 @@ async function isInstalled(dependency: string, cwd: string) {
 
 const makeRequirementsCheckCode = (requirementsPath: string) => `
 import distutils.text_file
-import pkg_resources
-from pkg_resources import DistributionNotFound, VersionConflict
+import importlib.util
 dependencies = distutils.text_file.TextFile(filename='${requirementsPath}').readlines()
-pkg_resources.require(dependencies)
+assert all([importlib.util.find_spec(x) is not None for x in dependencies])
 `;
 
 async function areRequirementsInstalled(requirementsPath: string, cwd: string) {
