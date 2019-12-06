@@ -910,7 +910,7 @@ export const build = async ({
 export const prepareCache = async ({
   workPath,
   entrypoint,
-}: PrepareCacheOptions) => {
+}: PrepareCacheOptions): Promise<Files> => {
   debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
@@ -930,8 +930,6 @@ export const prepareCache = async ({
   const cache = {
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
   };
   debug('Cache file manifest produced');
   return cache;
