@@ -415,12 +415,9 @@ export async function build({
 export async function prepareCache({
   entrypoint,
   workPath,
-}: PrepareCacheOptions) {
+}: PrepareCacheOptions): Promise<Files> {
   // default cache paths
-  const defaultCacheFiles = await glob(
-    '{node_modules/**,package-lock.json,yarn.lock}',
-    workPath
-  );
+  const defaultCacheFiles = await glob('node_modules/**', workPath);
 
   // framework specific cache paths
   let frameworkCacheFiles: { [path: string]: FileFsRef } | null = null;
