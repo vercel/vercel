@@ -344,9 +344,9 @@ test(
     await testPath(200, '/sub/index.html/', 'Sub Index Page');
     await testPath(200, '/sub/another.html/', 'Sub Another Page');
     await testPath(200, '/style.css/', 'body { color: green }');
-    await testPath(307, '/about.html', '', { Location: '/about.html/' });
-    await testPath(307, '/sub', '', { Location: '/sub/' });
-    await testPath(307, '/sub/another.html', '', {
+    await testPath(308, '/about.html', '', { Location: '/about.html/' });
+    await testPath(308, '/sub', '', { Location: '/sub/' });
+    await testPath(308, '/sub/another.html', '', {
       Location: '/sub/another.html/',
     });
   })
@@ -362,9 +362,9 @@ test(
     await testPath(200, '/sub/index.html', 'Sub Index Page');
     await testPath(200, '/sub/another.html', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(307, '/about.html/', '', { Location: '/about.html' });
-    await testPath(307, '/sub/', '', { Location: '/sub' });
-    await testPath(307, '/sub/another.html/', '', {
+    await testPath(308, '/about.html/', '', { Location: '/about.html' });
+    await testPath(308, '/sub/', '', { Location: '/sub' });
+    await testPath(308, '/sub/another.html/', '', {
       Location: '/sub/another.html',
     });
   })
