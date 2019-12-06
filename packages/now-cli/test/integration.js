@@ -2039,7 +2039,7 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
   );
 });
 
-test.only('ensure `github` and `scope` are not sent to the API', async t => {
+test('ensure `github` and `scope` are not sent to the API', async t => {
     const directory = fixture('github-and-scope-config');
     const output = await execute([directory]);
 
