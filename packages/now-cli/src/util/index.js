@@ -134,6 +134,7 @@ export default class Now extends EventEmitter {
 
     // Ignore specific items from Now.json
     delete requestBody.scope;
+    delete requestBody.github;
 
     if (isLegacy) {
       // Read `registry.npmjs.org` authToken from .npmrc
