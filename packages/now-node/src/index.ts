@@ -393,10 +393,9 @@ export async function build({
   return { output: lambda, watch };
 }
 
-export async function prepareCache({ workPath }: PrepareCacheOptions) {
-  return {
-    ...(await glob('node_modules/**', workPath)),
-    ...(await glob('package-lock.json', workPath)),
-    ...(await glob('yarn.lock', workPath)),
-  };
+export async function prepareCache({
+  workPath,
+}: PrepareCacheOptions): Promise<Files> {
+  const cache = await glob('node_modules/**', workPath);
+  return cache;
 }
