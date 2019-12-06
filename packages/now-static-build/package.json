@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-integration-once": "jest --env node --verbose --runInBand",
+    "test-unit": "jest --env node --verbose --runInBand test/unit.test.js",
+    "test-integration-once": "jest --env node --verbose --runInBand test/integration.test.js",
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {
