@@ -919,35 +919,6 @@ test('ensure we render a prompt when deploying home directory', async t => {
   t.true(stderr.includes('> Aborted'));
 });
 
-test('ensure the `alias` property is not sent to the API', async t => {
-  const directory = fixture('config-alias-property');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
 test('ensure the `scope` property works with email', async t => {
   const directory = fixture('config-scope-property-email');
 
@@ -2056,7 +2027,6 @@ test('deploy a Lambda with a specific runtime', async t => {
   t.is(build.use, 'now-php@0.0.7', JSON.stringify(build, null, 2));
 });
 
-// We need to skip this test until `now-php` supports Runtime version 3
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory]);
@@ -2067,6 +2037,13 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
     /Function Runtimes must have a valid version/gim,
     formatOutput(output)
   );
+});
+
+test('ensure `github` and `scope` are not sent to the API', async t => {
+    const directory = fixture('github-and-scope-config');
+    const output = await execute([directory]);
+
+    t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test.after.always(async () => {
