@@ -155,7 +155,7 @@ export async function runNpmInstall(
     commandArgs = args.filter(a => a !== '--prefer-offline');
     await spawnAsync(
       'npm',
-      commandArgs.concat(['install', '--unsafe-perm']),
+      commandArgs.concat(['install', '--no-audit', '--unsafe-perm']),
       opts
     );
   } else {
