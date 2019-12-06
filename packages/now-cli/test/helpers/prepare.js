@@ -463,6 +463,15 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
+    'github-and-scope-config': {
+      'index.txt': 'I Am a Website!',
+      'now.json': JSON.stringify({
+        scope: 'i-do-not-exist',
+        github: {
+          name: 'github-repo'
+        }
+      })
+    }
   };
 
   for (const typeName of Object.keys(spec)) {
