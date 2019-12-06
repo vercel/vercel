@@ -463,7 +463,10 @@ CMD ["node", "index.js"]`,
       'now.json': JSON.stringify({
         scope: 'i-do-not-exist',
         github: {
-          name: 'github-repo'
+          autoAlias: true,
+          autoJobCancelation: true,
+          enabled: true,
+          silent: true
         }
       })
     }
