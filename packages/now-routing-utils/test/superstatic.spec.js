@@ -58,12 +58,12 @@ test('convertCleanUrls true', () => {
     {
       src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: '/$1' },
-      status: 301,
+      status: 308,
     },
     {
       src: '^/(.*)\\.html/?$',
       headers: { Location: '/$1' },
-      status: 301,
+      status: 308,
     },
   ];
   deepEqual(actual, expected);
@@ -94,12 +94,12 @@ test('convertCleanUrls true, trailingSlash true', () => {
     {
       src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: '/$1/' },
-      status: 301,
+      status: 308,
     },
     {
       src: '^/(.*)\\.html/?$',
       headers: { Location: '/$1/' },
-      status: 301,
+      status: 308,
     },
   ];
   deepEqual(actual, expected);
@@ -165,12 +165,12 @@ test('convertRedirects', () => {
     {
       src: '^\\/some\\/old\\/path$',
       headers: { Location: '/some/new/path' },
-      status: 307,
+      status: 308,
     },
     {
       src: '^\\/next(\\.js)?$',
       headers: { Location: 'https://nextjs.org' },
-      status: 307,
+      status: 308,
     },
     {
       src: '^\\/firebase(?:\\/(.*))$',
@@ -180,12 +180,12 @@ test('convertRedirects', () => {
     {
       src: '^\\/projects(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
       headers: { Location: '/projects.html?id=$1&action=$2' },
-      status: 307,
+      status: 308,
     },
     {
       src: '^\\/old(?:\\/([^\\/#\\?]+?))\\/path$',
       headers: { Location: '/new/path/$1' },
-      status: 307,
+      status: 308,
     },
   ];
 
@@ -310,7 +310,7 @@ test('convertTrailingSlash enabled', () => {
     {
       src: '^/(.*[^\\/])$',
       headers: { Location: '/$1/' },
-      status: 307,
+      status: 308,
     },
   ];
   deepEqual(actual, expected);
@@ -328,7 +328,7 @@ test('convertTrailingSlash disabled', () => {
     {
       src: '^/(.*)\\/$',
       headers: { Location: '/$1' },
-      status: 307,
+      status: 308,
     },
   ];
   deepEqual(actual, expected);
