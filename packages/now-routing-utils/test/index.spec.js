@@ -377,6 +377,28 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('fails if check is not boolean', () => {
+    assertError(
+      [
+        // @ts-ignore
+        {
+          check: 'false',
+        },
+      ],
+      [
+        {
+          dataPath: '[0].check',
+          keyword: 'type',
+          message: 'should be boolean',
+          params: {
+            type: 'boolean',
+          },
+          schemaPath: '#/items/properties/check/type',
+        },
+      ]
+    );
+  });
+
   test('fails if status is not number', () => {
     assertError(
       [
@@ -492,7 +514,7 @@ describe('getTransformedRoutes', () => {
         status: 302,
       },
       { handle: 'filesystem' },
-      { src: '^/v1$', dest: '/v2/api.py', continue: true },
+      { src: '^/v1$', dest: '/v2/api.py', check: true },
     ];
     assert.deepEqual(actual.error, null);
     assert.deepEqual(actual.routes, expected);
@@ -547,22 +569,5 @@ describe('getTransformedRoutes', () => {
     const nowConfig = { routes: null };
     const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.routes, null);
-  });
-
-  test('should error when builder version 4 uses routes', () => {
-    const nowConfig = { routes: [{ src: '/page', dest: '/another' }] };
-    const actual = getTransformedRoutes({ nowConfig, builderVersion: 4 });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_builder_result');
-  });
-
-  test('should not error when builder version 4 uses rewrites', () => {
-    const nowConfig = {
-      rewrites: [{ source: '/page', destination: '/another' }],
-    };
-    const actual = getTransformedRoutes({ nowConfig, builderVersion: 4 });
-    assert.equal(actual.error, null);
-    assert.notEqual(actual.routes, null);
-    assertValid(actual.routes);
   });
 });

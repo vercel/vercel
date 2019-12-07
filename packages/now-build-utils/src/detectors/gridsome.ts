@@ -8,8 +8,8 @@ export default async function detectGridsome({
     return false;
   }
   return {
-    buildCommand: ['gridsome', 'build'],
+    buildCommand: 'gridsome build',
     buildDirectory: 'dist',
-    devCommand: ['gridsome', 'develop', '-p', '$PORT'],
+    devCommand: 'gridsome develop -p $PORT',
   };
 }

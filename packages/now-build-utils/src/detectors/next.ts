@@ -6,8 +6,8 @@ export default async function detectNext({
   const hasNext = await hasDependency('next');
   if (!hasNext) return false;
   return {
-    buildCommand: ['next', 'build'],
+    buildCommand: 'next build',
     buildDirectory: 'build',
-    devCommand: ['next', '-p', '$PORT'],
+    devCommand: 'next -p $PORT',
   };
 }

@@ -19,8 +19,8 @@ export default async function detectHugo({
     return false;
   }
   return {
-    buildCommand: ['hugo'],
+    buildCommand: 'hugo',
     buildDirectory: config.publishDir || 'public',
-    devCommand: ['hugo', 'server', '-D', '-w', '-p', '$PORT'],
+    devCommand: 'hugo server -D -w -p $PORT',
   };
 }

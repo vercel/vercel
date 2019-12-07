@@ -154,6 +154,22 @@ function testFixtureStdio(directory, fn) {
   };
 }
 
+test(
+  '[now dev] validate routes that use `check: true`',
+  testFixtureStdio('routes-check-true', async (t, port) => {
+    const result = await fetchWithRetry(
+      `http://localhost:${port}/blog/post`,
+      3
+    );
+    const response = await result;
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Blog Home/gm);
+  })
+);
+
 test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);

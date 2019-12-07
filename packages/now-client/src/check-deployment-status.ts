@@ -8,7 +8,13 @@ import {
   isAliasAssigned,
   isAliasError,
 } from './utils/ready-state';
-import { Deployment, DeploymentBuild } from './types';
+import { createDebug } from './utils';
+import {
+  Dictionary,
+  Deployment,
+  NowClientOptions,
+  DeploymentBuild,
+} from './types';
 
 interface DeploymentStatus {
   type: string;
@@ -16,22 +22,22 @@ interface DeploymentStatus {
 }
 
 /* eslint-disable */
-export default async function* checkDeploymentStatus(
+export async function* checkDeploymentStatus(
   deployment: Deployment,
-  token: string,
-  version: number | undefined,
-  teamId: string | undefined,
-  debug: Function,
-  apiUrl?: string
+  clientOptions: NowClientOptions
 ): AsyncIterableIterator<DeploymentStatus> {
+  const { version } = deployment;
+  const { token, teamId, apiUrl, userAgent } = clientOptions;
+  const debug = createDebug(clientOptions.debug);
+
   let deploymentState = deployment;
   let allBuildsCompleted = false;
-  const buildsState: { [key: string]: DeploymentBuild } = {};
+  const buildsState: Dictionary<DeploymentBuild> = {};
 
   const apiDeployments = getApiDeploymentsUrl({
     version,
     builds: deployment.builds,
-    functions: deployment.functions
+    functions: deployment.functions,
   });
 
   debug(`Using ${version ? `${version}.0` : '2.0'} API for status checks`);
@@ -54,7 +60,7 @@ export default async function* checkDeploymentStatus(
           teamId ? `?teamId=${teamId}` : ''
         }`,
         token,
-        { apiUrl }
+        { apiUrl, userAgent }
       );
 
       const data = await buildsData.json();
@@ -91,7 +97,8 @@ export default async function* checkDeploymentStatus(
         `${apiDeployments}/${deployment.id || deployment.deploymentId}${
           teamId ? `?teamId=${teamId}` : ''
         }`,
-        token
+        token,
+        { apiUrl, userAgent }
       );
       const deploymentUpdate = await deploymentData.json();
 

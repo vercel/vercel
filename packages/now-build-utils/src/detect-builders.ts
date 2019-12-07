@@ -18,7 +18,7 @@ const config: Config = { zeroConfig: true };
 const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
   code: 'missing_build_script',
   message:
-    'Your `package.json` file is missing a `build` property inside the `script` property.' +
+    'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
     '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-build-script',
 };
 

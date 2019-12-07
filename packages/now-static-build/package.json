@@ -1,6 +1,6 @@
 {
   "name": "@now/static-build",
-  "version": "0.12.3-canary.2",
+  "version": "0.13.1-canary.0",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/static-builds",
@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-integration-once": "jest --env node --verbose --runInBand",
+    "test-unit": "jest --env node --verbose --runInBand test/unit.test.js",
+    "test-integration-once": "jest --env node --verbose --runInBand test/integration.test.js",
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {
