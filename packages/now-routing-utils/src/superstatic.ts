@@ -30,12 +30,12 @@ export function convertCleanUrls(
     routes.push({
       src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: loc },
-      status: 301,
+      status: 308,
     });
     routes.push({
       src: '^/(.*)\\.html/?$',
       headers: { Location: loc },
-      status: 301,
+      status: 308,
     });
   }
   return routes;
