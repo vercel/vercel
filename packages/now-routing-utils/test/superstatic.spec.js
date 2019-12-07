@@ -58,12 +58,12 @@ test('convertCleanUrls true', () => {
     {
       src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: '/$1' },
-      status: 301,
+      status: 308,
     },
     {
       src: '^/(.*)\\.html/?$',
       headers: { Location: '/$1' },
-      status: 301,
+      status: 308,
     },
   ];
   deepEqual(actual, expected);
@@ -94,12 +94,12 @@ test('convertCleanUrls true, trailingSlash true', () => {
     {
       src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: '/$1/' },
-      status: 301,
+      status: 308,
     },
     {
       src: '^/(.*)\\.html/?$',
       headers: { Location: '/$1/' },
-      status: 301,
+      status: 308,
     },
   ];
   deepEqual(actual, expected);

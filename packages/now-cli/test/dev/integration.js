@@ -307,10 +307,10 @@ test(
     await testPath(200, '/sub', 'Sub Index Page');
     await testPath(200, '/sub/another', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(301, '/index.html', '', { Location: '/' });
-    await testPath(301, '/about.html', '', { Location: '/about' });
-    await testPath(301, '/sub/index.html', '', { Location: '/sub' });
-    await testPath(301, '/sub/another.html', '', { Location: '/sub/another' });
+    await testPath(308, '/index.html', '', { Location: '/' });
+    await testPath(308, '/about.html', '', { Location: '/about' });
+    await testPath(308, '/sub/index.html', '', { Location: '/sub' });
+    await testPath(308, '/sub/another.html', '', { Location: '/sub/another' });
   })
 );
 
@@ -324,10 +324,10 @@ test(
       await testPath(200, '/sub/', 'Sub Index Page');
       await testPath(200, '/sub/another/', 'Sub Another Page');
       await testPath(200, '/style.css/', 'body { color: green }');
-      await testPath(301, '/index.html', '', { Location: '/' });
-      await testPath(301, '/about.html', '', { Location: '/about/' });
-      await testPath(301, '/sub/index.html', '', { Location: '/sub/' });
-      await testPath(301, '/sub/another.html', '', {
+      await testPath(308, '/index.html', '', { Location: '/' });
+      await testPath(308, '/about.html', '', { Location: '/about/' });
+      await testPath(308, '/sub/index.html', '', { Location: '/sub/' });
+      await testPath(308, '/sub/another.html', '', {
         Location: '/sub/another/',
       });
     }
