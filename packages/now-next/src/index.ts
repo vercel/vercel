@@ -201,7 +201,7 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const dotNextStatic = path.join(entryPath, '.next/static');
 
-  debug(`${name} Downloading user files...`);
+  debug('Downloading user files...');
   await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
