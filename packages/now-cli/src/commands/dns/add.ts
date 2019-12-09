@@ -76,7 +76,7 @@ export default async function add(
         );
         break;
     }
-    if (!await promptBool(`Do you want to create this record on ${chalk.bold(argData.name)}.${chalk.bold(domain)}?`)) {
+    if (!await promptBool(`Do you want to create this record on "${chalk.bold(argData.name)}.${chalk.bold(domain)}?"`)) {
       output.log(`Aborted`);
       return 1;
     }
