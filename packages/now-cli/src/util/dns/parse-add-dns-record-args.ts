@@ -36,65 +36,61 @@ export default function parseAddArgs(
   switch (type) {
     case 'SRV':
       if (args.length === 7) {
-        return {
-          domain,
-          data: {
-            name,
-            type,
-            srv: {
-              priority: Number(value),
-              weight: Number(args[4]),
-              port: Number(args[5]),
-              target: args[6]
-            }
-          } as SRVRecordData
-        };
+        const data: SRVRecordData = {
+          name,
+          type,
+          srv: {
+            priority: Number(value),
+            weight: Number(args[4]),
+            port: Number(args[5]),
+            target: args[6]
+          }
+        }
+        return { domain, data};
       }
       return null
     case 'MX':
       if (args.length === 5) {
-        return {
-          domain,
-          data: { name, value, type, mxPriority: Number(args[4]) } as MXRecordData
-        };
+        const data: MXRecordData = { name, type, value, mxPriority: Number(args[4]) };
+        return { domain, data };
       }
       return null
-    default:
-      if (args.length === 4) {
-        switch (type) {
-          case 'A':
-            return {
-              domain,
-              data: { name, value, type } as ARecordData
-            };
-          case 'AAAA':
-            return {
-              domain,
-              data: { name, value, type } as AAAARecordData
-            };
-          case 'ALIAS':
-            return {
-              domain,
-              data: { name, value, type } as ALIASRecordData
-            };
-          case 'CAA':
-            return {
-              domain,
-              data: { name, value, type } as CAARecordData
-            };
-          case 'CNAME':
-            return {
-              domain,
-              data: { name, value, type } as CNAMERecordData
-            };
-          case 'TXT':
-            return {
-              domain,
-              data: { name, value, type } as TXTRecordData
-            };
+      case 'A':
+        if (args.length === 4) {
+          const data: ARecordData = { name, value, type };
+          return { domain, data };
         }
-      }
-      return null
+        return null
+      case 'AAAA':
+        if (args.length === 4) {
+          const data: AAAARecordData = { name, value, type };
+          return { domain, data };
+        }
+        return null
+      case 'ALIAS':
+        if (args.length === 4) {
+          const data: ALIASRecordData = { name, value, type };
+          return { domain, data };
+        }
+        return null
+      case 'CAA':
+        if (args.length === 4) {
+          const data: CAARecordData = { name, value, type };
+          return { domain, data };
+        }
+        return null
+      case 'CNAME':
+        if (args.length === 4) {
+          const data: CNAMERecordData = { name, value, type };
+          return { domain, data };
+        }
+        return null
+      case 'TXT':
+        if (args.length === 4) {
+          const data: TXTRecordData = { name, value, type };
+          return { domain, data };
+        }
+        return null
   }
   return null;
 }
