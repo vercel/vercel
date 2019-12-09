@@ -207,6 +207,7 @@ export interface SRVRecordData {
 
 export interface MXRecordData extends GenericDNSRecordData {
   mxPriority: number;
+  type: 'MX';
 };
 
 interface GenericDNSRecordData {

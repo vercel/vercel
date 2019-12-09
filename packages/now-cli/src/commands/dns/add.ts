@@ -62,7 +62,7 @@ export default async function add(
     switch (argData.type) {
       case 'MX':
         output.log(
-          chalk.bold(`${argData.type} ${argData.value} ${argData.mxPriority}`)
+          chalk.bold(`${argData.type} ${argData.value} ${argData.mxPriority || ''}`)
         );
         break;
       case 'SRV':
