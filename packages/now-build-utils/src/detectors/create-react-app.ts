@@ -1,14 +1,14 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectCreateReactApp({
-  fs: { hasDependency },
+  fs: { hasDependency, getPackageJsonBuildCommand },
 }: DetectorParameters): Promise<DetectorResult> {
   const hasReactScripts = await hasDependency('react-scripts');
   if (!hasReactScripts) {
     return false;
   }
   return {
-    buildCommand: 'react-scripts build',
+    buildCommand: (await getPackageJsonBuildCommand()) || 'react-scripts build',
     buildDirectory: 'build',
     devCommand: 'react-scripts start',
     devVariables: { BROWSER: 'none' },

@@ -68,7 +68,7 @@ test('detectDefaults() - angular', async () => {
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
   assert.equal(result.buildDirectory, 'dist');
-  assert.deepEqual(result.buildCommand, 'ng build');
+  assert.deepEqual(result.buildCommand, 'yarn build');
 });
 
 test('detectDefaults() - brunch', async () => {
@@ -77,7 +77,7 @@ test('detectDefaults() - brunch', async () => {
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
   assert.equal(result.buildDirectory, 'public');
-  assert.deepEqual(result.buildCommand, 'brunch build --production');
+  assert.deepEqual(result.buildCommand, 'yarn build');
 });
 
 test('detectDefaults() - hugo', async () => {

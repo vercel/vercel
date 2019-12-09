@@ -1,7 +1,7 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectBrunch({
-  fs: { hasDependency, exists },
+  fs: { hasDependency, exists, getPackageJsonBuildCommand },
 }: DetectorParameters): Promise<DetectorResult> {
   const hasBrunch = await hasDependency('brunch');
   if (!hasBrunch) return false;
@@ -10,7 +10,7 @@ export default async function detectBrunch({
   if (!hasConfig) return false;
 
   return {
-    buildCommand: 'brunch build --production',
+    buildCommand: (await getPackageJsonBuildCommand()) || 'brunch build --production',
     buildDirectory: 'public',
     devCommand: 'brunch watch --server --port $PORT',
   };
