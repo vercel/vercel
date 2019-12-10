@@ -11,7 +11,7 @@ export default async function detectPreact({
     devCommand: 'preact watch --port $PORT',
     framework: {
       slug: 'preact-cli',
-      version: await getDependencyVersion('preact-cli')
+      version: await getDependencyVersion('preact-cli'),
     },
     routes: [
       {

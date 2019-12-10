@@ -13,7 +13,7 @@ export default async function detectGridsome({
     devCommand: 'gridsome develop -p $PORT',
     framework: {
       slug: 'gridsom',
-      version: await getDependencyVersion('gridsom')
-    }
+      version: await getDependencyVersion('gridsom'),
+    },
   };
 }

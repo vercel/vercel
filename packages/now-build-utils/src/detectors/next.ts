@@ -11,7 +11,7 @@ export default async function detectNext({
     devCommand: 'next -p $PORT',
     framework: {
       slug: 'next',
-      version: await getDependencyVersion('next')
-    }
+      version: await getDependencyVersion('next'),
+    },
   };
 }

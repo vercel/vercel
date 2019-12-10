@@ -11,7 +11,7 @@ export default async function detectEleventy({
     devCommand: 'npx @11ty/eleventy --serve --watch --port $PORT',
     framework: {
       slug: '@11ty/eleventy',
-      version: await getDependencyVersion('@11ty/eleventy')
-    }
+      version: await getDependencyVersion('@11ty/eleventy'),
+    },
   };
 }

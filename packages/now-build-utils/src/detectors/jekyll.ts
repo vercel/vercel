@@ -20,7 +20,7 @@ export default async function detectJekyll({
     devCommand: 'bundle exec jekyll serve --watch --port $PORT',
     framework: {
       slug: 'jekyll',
-      version: 'latest'
-    }
+      version: 'latest',
+    },
   };
 }

@@ -11,7 +11,7 @@ export default async function detectEmber({
     devCommand: 'ember serve --port $PORT',
     framework: {
       slug: 'ember-cli',
-      version: await getDependencyVersion('ember-cli')
+      version: await getDependencyVersion('ember-cli'),
     },
     routes: [
       {

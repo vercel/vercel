@@ -11,7 +11,7 @@ export default async function detectHexo({
     devCommand: 'hexo server --port $PORT',
     framework: {
       slug: 'hexo',
-      version: await getDependencyVersion('hexo')
-    }
+      version: await getDependencyVersion('hexo'),
+    },
   };
 }

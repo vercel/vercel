@@ -25,7 +25,7 @@ export default async function detectSaber({
     ],
     framework: {
       slug: 'saber',
-      version: await getDependencyVersion('saber')
-    }
+      version: await getDependencyVersion('saber'),
+    },
   };
 }

@@ -24,7 +24,7 @@ export default async function detectHugo({
     devCommand: 'hugo server -D -w -p $PORT',
     framework: {
       slug: 'hugo',
-      version: 'latest'
-    }
+      version: 'latest',
+    },
   };
 }

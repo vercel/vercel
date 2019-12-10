@@ -11,7 +11,7 @@ export default async function detectSvelte({
     devCommand: 'sirv public --single --dev --port $PORT',
     framework: {
       slug: 'sirv-cli',
-      version: await getDependencyVersion('sirv-cli')
+      version: await getDependencyVersion('sirv-cli'),
     },
     routes: [
       {

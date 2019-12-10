@@ -11,7 +11,7 @@ export default async function detectPolymer({
     devCommand: 'polymer serve --port $PORT',
     framework: {
       slug: 'polymer-cli',
-      version: await getDependencyVersion('polymer-cli')
+      version: await getDependencyVersion('polymer-cli'),
     },
     routes: [
       {

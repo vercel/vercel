@@ -14,7 +14,7 @@ export default async function detectCreateReactApp({
     devVariables: { BROWSER: 'none' },
     framework: {
       slug: 'react-scripts',
-      version: await getDependencyVersion('react-scripts')
+      version: await getDependencyVersion('react-scripts'),
     },
     routes: [
       {

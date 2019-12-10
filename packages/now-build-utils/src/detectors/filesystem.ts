@@ -107,14 +107,18 @@ export default abstract class DetectorFilesystem {
     return this.exists('package-lock.json');
   };
 
-  public getPackageJsonCommand = async (name: string): Promise<string | null> => {
+  public getPackageJsonCommand = async (
+    name: string
+  ): Promise<string | null> => {
     const pkg = await this.readPackageJson();
     const { scripts = {} } = pkg || {};
     return scripts[name] || null;
   };
 
   public getPackageJsonBuildCommand = async (): Promise<string | null> => {
-    const buildCommand = (await this.isNpm()) ? 'npm run build' : 'yarn run build';
+    const buildCommand = (await this.isNpm())
+      ? 'npm run build'
+      : 'yarn run build';
     return (await this.getPackageJsonCommand('build')) ? buildCommand : null;
   };
 
@@ -122,7 +126,7 @@ export default abstract class DetectorFilesystem {
     const pkg = await this.readPackageJson();
     const { dependencies = {}, devDependencies = {} } = pkg || {};
     return { ...dependencies, ...devDependencies }[name];
-  }
+  };
 }
 
 async function nullEnoent<T>(p: Promise<T>): Promise<T | null> {

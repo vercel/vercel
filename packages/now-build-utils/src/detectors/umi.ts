@@ -11,7 +11,7 @@ export default async function detectUmiJS({
     devCommand: 'umi dev --port $PORT',
     framework: {
       slug: 'umi',
-      version: await getDependencyVersion('umi')
+      version: await getDependencyVersion('umi'),
     },
     routes: [
       {

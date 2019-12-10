@@ -13,7 +13,7 @@ export default async function detectCreateReactAppEjected({
     devCommand: 'node scripts/start.js',
     framework: {
       slug: 'react-dev-utils',
-      version: await getDependencyVersion('react-dev-utils')
+      version: await getDependencyVersion('react-dev-utils'),
     },
     devVariables: { BROWSER: 'none' },
     routes: [

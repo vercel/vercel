@@ -13,7 +13,7 @@ export default async function detectGatsby({
     devCommand: 'gatsby develop -p $PORT',
     framework: {
       slug: 'gatsby',
-      version: await getDependencyVersion('gatsby')
+      version: await getDependencyVersion('gatsby'),
     },
     cachePattern: '.cache/**',
   };

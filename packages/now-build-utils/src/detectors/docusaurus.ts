@@ -11,7 +11,7 @@ export default async function detectDocusaurus({
     devCommand: 'docusaurus-start --port $PORT',
     framework: {
       slug: 'docusaurus',
-      version: await getDependencyVersion('docusaurus')
-    }
+      version: await getDependencyVersion('docusaurus'),
+    },
   };
 }

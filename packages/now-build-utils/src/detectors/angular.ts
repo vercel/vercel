@@ -11,7 +11,7 @@ export default async function detectAngular({
     devCommand: 'ng serve --port $PORT',
     framework: {
       slug: '@angular/cli',
-      version: await getDependencyVersion('@angular/cli')
+      version: await getDependencyVersion('@angular/cli'),
     },
     minNodeRange: '10.x',
     routes: [

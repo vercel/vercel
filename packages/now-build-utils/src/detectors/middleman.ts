@@ -12,7 +12,7 @@ export default async function detectMiddleman({
     devCommand: 'bundle exec middleman server -p $PORT',
     framework: {
       slug: 'middleman',
-      version: 'latest'
-    }
+      version: 'latest',
+    },
   };
 }

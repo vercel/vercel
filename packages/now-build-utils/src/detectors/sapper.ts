@@ -11,7 +11,7 @@ export default async function detectSapper({
     devCommand: 'sapper dev --port $PORT',
     framework: {
       slug: 'sapper',
-      version: await getDependencyVersion('sapper')
-    }
+      version: await getDependencyVersion('sapper'),
+    },
   };
 }

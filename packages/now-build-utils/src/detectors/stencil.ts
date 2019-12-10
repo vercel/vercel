@@ -11,7 +11,7 @@ export default async function detectStencil({
     devCommand: 'stencil build --dev --watch --serve --port $PORT',
     framework: {
       slug: '@stencil/core',
-      version: await getDependencyVersion('@stencil/core')
+      version: await getDependencyVersion('@stencil/core'),
     },
     routes: [
       {
