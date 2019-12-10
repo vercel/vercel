@@ -1,7 +1,7 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectCreateReactApp({
-  fs: { hasDependency, getPackageJsonBuildCommand },
+  fs: { hasDependency, getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
   const hasReactScripts = await hasDependency('react-scripts');
   if (!hasReactScripts) {
@@ -9,9 +9,13 @@ export default async function detectCreateReactApp({
   }
   return {
     buildCommand: (await getPackageJsonBuildCommand()) || 'react-scripts build',
-    buildDirectory: 'build',
+    outputDirectory: 'build',
     devCommand: 'react-scripts start',
     devVariables: { BROWSER: 'none' },
+    framework: {
+      slug: 'react-scripts',
+      version: await getDependencyVersion('react-scripts')
+    },
     routes: [
       {
         src: '/static/(.*)',

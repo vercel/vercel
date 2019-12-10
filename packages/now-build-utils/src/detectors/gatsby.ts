@@ -1,7 +1,7 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectGatsby({
-  fs: { hasDependency, getPackageJsonBuildCommand },
+  fs: { hasDependency, getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
   const hasGatsby = await hasDependency('gatsby');
   if (!hasGatsby) {
@@ -9,8 +9,12 @@ export default async function detectGatsby({
   }
   return {
     buildCommand: (await getPackageJsonBuildCommand()) || 'gatsby build',
-    buildDirectory: 'public',
+    outputDirectory: 'public',
     devCommand: 'gatsby develop -p $PORT',
+    framework: {
+      slug: 'gatsby',
+      version: await getDependencyVersion('gatsby')
+    },
     cachePattern: '.cache/**',
   };
 }

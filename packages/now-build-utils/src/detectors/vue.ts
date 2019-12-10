@@ -1,14 +1,18 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectVue({
-  fs: { hasDependency, getPackageJsonBuildCommand },
+  fs: { hasDependency, getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
   const hasVue = await hasDependency('@vue/cli-service');
   if (!hasVue) return false;
   return {
     buildCommand: (await getPackageJsonBuildCommand()) || 'vue-cli-service build',
-    buildDirectory: 'dist',
+    outputDirectory: 'dist',
     devCommand: 'vue-cli-service serve --port $PORT',
+    framework: {
+      slug: '@vue/cli-service',
+      version: await getDependencyVersion('@vue/cli-service')
+    },
     routes: [
       {
         src: '^/[^/]*\\.(js|txt|ico|json)',
