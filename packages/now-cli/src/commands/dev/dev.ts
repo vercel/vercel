@@ -18,7 +18,7 @@ export default async function dev(
   output: Output
 ) {
   output.dim(
-    `Now CLI ${pkg.version} dev (beta) — https://zeit.co/feedback/dev`
+    `Now CLI ${pkg.version} dev (beta) — https://zeit.co/feedback`
   );
 
   const [dir = '.'] = args;
