@@ -662,6 +662,35 @@ test('list the payment methods', async t => {
   t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
+test.only('domains inspect', async t => {
+  const domainName = `inspect-${contextName}.org`;
+
+  const addRes = await execa(
+    binaryPath,
+    [`domains`, `add`, domainName, ...defaultArgs],
+    { reject: false }
+  );
+  t.is(addRes.code, 0);
+
+  const { stderr, code } = await execa(
+    binaryPath,
+    ['domains', 'inspect', domainName, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  const rmRes = await execa(
+    binaryPath,
+    [`domains`, `rm`, domainName, ...defaultArgs],
+    { reject: false, input: 'y' }
+  );
+  t.is(rmRes.code, 0);
+
+  t.is(code, 0);
+  t.true(!stderr.includes(`Renewal Price`));
+});
+
 test('try to purchase a domain', async t => {
   const { stderr, code } = await execa(
     binaryPath,

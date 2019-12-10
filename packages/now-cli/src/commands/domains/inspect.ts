@@ -127,11 +127,11 @@ export default async function inspect(
       domain.txtVerifiedAt
     )}\n`
   );
-  renewalPrice &&
-    domain.boughtAt &&
+  if (renewalPrice && domain.boughtAt) {
     output.print(
       `    ${chalk.cyan('Renewal Price')}\t\t$${renewalPrice} USD\n`
     );
+  }
   output.print(`    ${chalk.cyan('CDN Enabled')}\t\t\t${true}\n`);
   output.print('\n');
 
