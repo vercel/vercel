@@ -3,7 +3,7 @@ import { DetectorParameters, DetectorResult } from '../types';
 export default async function detectGenericNodeProject({
   fs: { isNpm, getPackageJsonCommand },
 }: DetectorParameters): Promise<DetectorResult> {
-  const isNpm = await isNpm();
+  const useNpm = await isNpm();
   const devCommand = await getPackageJsonCommand('dev');
   const buildCommand = await getPackageJsonCommand('build');
 
@@ -12,8 +12,10 @@ export default async function detectGenericNodeProject({
   }
 
   return {
-    buildCommand: `${isNpm ? 'npm' : 'yarn'} run build`,
-    devCommand: `${isNpm ? 'npm' : 'yarn'} run ${devCommand ? 'dev' : 'build'}`,
+    buildCommand: `${useNpm ? 'npm' : 'yarn'} run build`,
+    devCommand: `${useNpm ? 'npm' : 'yarn'} run ${
+      devCommand ? 'dev' : 'build'
+    }`,
     outputDirectory: 'dist',
   };
 }
