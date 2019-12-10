@@ -13,6 +13,7 @@ import {
   Lambda,
   Route,
 } from '@now/build-utils';
+import { isSymbolicLink } from '@now/build-utils/dist/fs/download';
 
 type stringMap = { [key: string]: string };
 
@@ -340,6 +341,7 @@ export async function getRoutesManifest(
     );
   }
 
+  // eslint-disable-next-line
   const routesManifest: RoutesManifest = require(pathRoutesManifest);
 
   return routesManifest;
@@ -455,9 +457,13 @@ export const ExperimentalTraceVersion = `9.0.4-canary.1`;
 
 export type PseudoLayer = {
   [fileName: string]: {
-    crc32: number;
-    compBuffer: Buffer;
-    uncompressedSize: number;
+    crc32?: number;
+    compBuffer?: Buffer;
+    uncompressedSize?: number;
+
+    file?: FileFsRef;
+    isSymlink?: boolean;
+    symlinkTarget?: string;
   };
 };
 
@@ -481,13 +487,22 @@ export async function createPseudoLayer(files: {
 
   for (const fileName of Object.keys(files)) {
     const file = files[fileName];
-    const origBuffer = await streamToBuffer(file.toStream());
-    const compBuffer = await compressBuffer(origBuffer);
-    pseudoLayer[fileName] = {
-      compBuffer,
-      crc32: crc32.unsigned(origBuffer),
-      uncompressedSize: origBuffer.byteLength,
-    };
+
+    if (isSymbolicLink(file.mode)) {
+      pseudoLayer[fileName] = {
+        file,
+        isSymlink: true,
+        symlinkTarget: await fs.readlink(file.fsPath),
+      };
+    } else {
+      const origBuffer = await streamToBuffer(file.toStream());
+      const compBuffer = await compressBuffer(origBuffer);
+      pseudoLayer[fileName] = {
+        compBuffer,
+        crc32: crc32.unsigned(origBuffer),
+        uncompressedSize: origBuffer.byteLength,
+      };
+    }
   }
 
   return pseudoLayer;
@@ -520,10 +535,33 @@ export async function createLambdaFromPseudoLayers({
   const zipFile = new ZipFile();
   const addedFiles = new Set();
 
+  const names = Object.keys(files).sort();
+  const symlinkTargets = new Map<string, string>();
+
+  for (const name of names) {
+    const file = files[name];
+    if (file.mode && isSymbolicLink(file.mode) && file.type === 'FileFsRef') {
+      const symlinkTarget = await fs.readlink((file as FileFsRef).fsPath);
+      symlinkTargets.set(name, symlinkTarget);
+    }
+  }
+
   // apply pseudo layers (already compressed objects)
   for (const layer of layers) {
     for (const seedKey of Object.keys(layer)) {
-      const { compBuffer, crc32, uncompressedSize } = layer[seedKey];
+      const item = layer[seedKey];
+
+      if (item.isSymlink) {
+        const { symlinkTarget, file } = item;
+
+        // eslint-disable-next-line
+        zipFile.addBuffer(Buffer.from(symlinkTarget!, 'utf8'), seedKey, {
+          // eslint-disable-next-line
+          mode: file!.mode,
+        });
+        continue;
+      }
+      const { compBuffer, crc32, uncompressedSize } = item;
 
       // @ts-ignore: `addDeflatedBuffer` is a valid function, but missing on the type
       zipFile.addDeflatedBuffer(compBuffer, seedKey, {
@@ -539,8 +577,16 @@ export async function createLambdaFromPseudoLayers({
     // was already added in a pseudo layer
     if (addedFiles.has(fileName)) continue;
     const file = files[fileName];
-    const fileBuffer = await streamToBuffer(file.toStream());
-    zipFile.addBuffer(fileBuffer, fileName);
+    const symlinkTarget = symlinkTargets.get(fileName);
+
+    if (typeof symlinkTarget === 'string') {
+      zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), fileName, {
+        mode: file.mode,
+      });
+    } else {
+      const fileBuffer = await streamToBuffer(file.toStream());
+      zipFile.addBuffer(fileBuffer, fileName);
+    }
   }
   zipFile.end();
 
