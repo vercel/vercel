@@ -122,11 +122,6 @@ module.exports = async session => {
     'single-dotfile': {
       '.testing': 'i am a dotfile',
     },
-    'config-alias-property': {
-      'now.json':
-        '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
-      'index.html': '<span>test alias</span',
-    },
     'config-scope-property-email': {
       'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }`,
       'index.html': '<span>test scope email</span',
@@ -188,6 +183,31 @@ RUN mkdir /public
 RUN echo $NONCE > /public/index.html
       `,
     },
+    'build-env-debug': {
+      'now.json':
+        '{ "builds": [ { "src": "index.js", "use": "@now/node" } ], "version": 2 }',
+      'package.json': `
+{
+  "scripts": {
+    "now-build": "node now-build.js"
+  }
+}
+      `,
+      'now-build.js': `
+const fs = require('fs');
+fs.writeFileSync(
+  'index.js',
+  fs
+    .readFileSync('index.js', 'utf8')
+    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
+);
+      `,
+      'index.js': `
+module.exports = (req, res) => {
+  res.status(200).send('BUILD_ENV_DEBUG')
+}
+      `,
+    },
     'now-revert-alias-1': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
       'now.json': getRevertAliasConfigFile(),
@@ -220,11 +240,103 @@ RUN echo $NONCE > /public/index.html
     'static-deployment': {
       'index.txt': 'Hello World',
     },
+    nowignore: {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': 'ignore.txt',
+    },
+    'nowignore-allowlist': {
+      'index.txt': 'Hello World',
+      'ignore.txt': 'Should be ignored',
+      '.nowignore': '*\n!index.txt',
+    },
     'failing-build': {
       'package.json': JSON.stringify({
         scripts: {
           build: 'echo hello && exit 1',
         },
+      }),
+    },
+    'failing-alias': {
+      'now.json': JSON.stringify(
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+      ),
+    },
+    'local-config-cloud-v1': {
+      '.gitignore': '*.html',
+      'index.js': `
+const { createServer } = require('http');
+const { readFileSync } = require('fs');
+const svr = createServer((req, res) => {
+  const { url = '/' } = req;
+  const file = '.' + url;
+  console.log('reading file ' + file);
+  try {
+    let contents = readFileSync(file, 'utf8');
+    res.end(contents || '');
+  } catch (e) {
+    res.statusCode = 404;
+    res.end('Not found');
+  }
+});
+svr.listen(3000);`,
+      'main.html': '<h1>hello main</h1>',
+      'test.html': '<h1>hello test</h1>',
+      'folder/file1.txt': 'file1',
+      'folder/sub/file2.txt': 'file2',
+      Dockerfile: `FROM mhart/alpine-node:latest
+LABEL name "now-cli-dockerfile-${session}"
+
+RUN mkdir /app
+WORKDIR /app
+COPY . /app
+RUN yarn
+
+EXPOSE 3000
+CMD ["node", "index.js"]`,
+      'now.json': JSON.stringify({
+        version: 1,
+        type: 'docker',
+        features: {
+          cloud: 'v1',
+        },
+        files: ['.gitignore', 'folder', 'index.js', 'main.html'],
+      }),
+      'now-test.json': JSON.stringify({
+        version: 1,
+        type: 'docker',
+        features: {
+          cloud: 'v1',
+        },
+        files: ['.gitignore', 'folder', 'index.js', 'test.html'],
+      }),
+    },
+    'local-config-v2': {
+      [`main-${session}.html`]: '<h1>hello main</h1>',
+      [`test-${session}.html`]: '<h1>hello test</h1>',
+      'now.json': JSON.stringify({
+        version: 2,
+        name: 'original',
+        builds: [{ src: `main-${session}.html`, use: '@now/static' }],
+        routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
+      }),
+      'now-test.json': JSON.stringify({
+        version: 2,
+        name: 'secondary',
+        builds: [{ src: `test-${session}.html`, use: '@now/static' }],
+        routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
+      }),
+    },
+    'local-config-above-target': {
+      'now-root.json': JSON.stringify({
+        version: 2,
+        name: 'root-level',
+      }),
+      'dir/index.html': '<h1>hello index</h1>',
+      'dir/another.html': '<h1>hello another</h1>',
+      'dir/now.json': JSON.stringify({
+        version: 2,
+        name: 'nested-level',
       }),
     },
     'alias-rules': {
@@ -261,6 +373,103 @@ RUN echo $NONCE > /public/index.html
         },
       }),
     },
+    'lambda-with-128-memory': {
+      'api/memory.js': `
+        module.exports = (req, res) => {
+          res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 128,
+          },
+        },
+      }),
+    },
+    'lambda-with-200-memory': {
+      'api/memory.js': `
+        module.exports = (req, res) => {
+          res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 200,
+          },
+        },
+      }),
+    },
+    'lambda-with-3-second-timeout': {
+      'api/wait-for/[sleep].js': `
+        const sleep = t => new Promise(r => setTimeout(r, t));
+
+        module.exports = async (req, res) => {
+          await sleep(parseInt(req.query.sleep || 1) * 1000);
+          res.end('done');
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 128,
+            maxDuration: 3,
+          },
+        },
+      }),
+    },
+    'lambda-with-1000-second-timeout': {
+      'api/wait-for/[sleep].js': `
+        const sleep = t => new Promise(r => setTimeout(r, t));
+
+        module.exports = async (req, res) => {
+          await sleep(parseInt(req.query.sleep || 1) * 1000);
+          res.end('done');
+        };
+      `,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.js': {
+            memory: 128,
+            maxDuration: 1000,
+          },
+        },
+      }),
+    },
+    'lambda-with-php-runtime': {
+      'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.php': {
+            runtime: 'now-php@0.0.7',
+          },
+        },
+      }),
+    },
+    'lambda-with-invalid-runtime': {
+      'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
+      'now.json': JSON.stringify({
+        functions: {
+          'api/**/*.php': {
+            memory: 128,
+            runtime: 'now-php@canary',
+          },
+        },
+      }),
+    },
+    'github-and-scope-config': {
+      'index.txt': 'I Am a Website!',
+      'now.json': JSON.stringify({
+        scope: 'i-do-not-exist',
+        github: {
+          autoAlias: true,
+          autoJobCancelation: true,
+          enabled: true,
+          silent: true
+        }
+      })
+    }
   };
 
   for (const typeName of Object.keys(spec)) {

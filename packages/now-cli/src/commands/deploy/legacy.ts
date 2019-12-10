@@ -39,6 +39,7 @@ import eventListenerToGenerator from '../../util/event-listener-to-generator';
 import formatLogOutput from '../../util/output/format-log-output';
 // @ts-ignore
 import getEventsStream from '../../util/deploy/get-events-stream';
+import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 // @ts-ignore
 import getInstanceIndex from '../../util/deploy/get-instance-index';
 import joinWords from '../../util/output/join-words';
@@ -62,6 +63,7 @@ import {
   TooManyRequests,
   VerifyScaleTimeout,
   DeploymentsRateLimited,
+  NotDomainOwner,
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
@@ -269,6 +271,10 @@ export default async function main(
     paths = [process.cwd()];
   }
 
+  if (!(await shouldDeployDir(argv._[0], output))) {
+    return 0;
+  }
+
   // Options
   forceNew = argv.force;
   deploymentName = argv.name;
@@ -290,13 +296,23 @@ export default async function main(
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  const infoUrl = (await canUseZeroConfig(paths[0]))
-    ? 'https://zeit.co/guides/migrate-to-zeit-now'
-    : 'https://zeit.co/docs/v2/advanced/platform/changes-in-now-2-0';
+  const infoUrl = 'https://zeit.co/guides/migrate-to-zeit-now';
 
   warn(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
   );
+
+  if (argv.prod || argv.target) {
+    error(
+      `The option ${cmd(
+        argv.prod ? '--prod' : '--target'
+      )} is not supported for Now 1.0 deployments. To manually alias a deployment, use ${cmd(
+        'now alias'
+      )} instead.`
+    );
+    await exit(1);
+    return 1;
+  }
 
   const {
     authConfig: { token },
@@ -792,6 +808,7 @@ async function sync({
 
       if (
         deployment instanceof DomainNotFound ||
+        deployment instanceof NotDomainOwner ||
         deployment instanceof DomainPermissionDenied ||
         deployment instanceof DomainVerificationFailed ||
         deployment instanceof SchemaValidationFailed ||

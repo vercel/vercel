@@ -20,18 +20,18 @@ async function main() {
       .toString()
       .trim();
 
-    const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/canary...HEAD';
+    const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
 
     const changed = diff
       .split('\n')
       .filter(item => Boolean(item) && item.includes('packages/'))
-      .map(item => relative('packages', item).split('/')[0]);
+      .map(item => relative('packages', item).split('/')[0])
+      .concat('now-cli'); // Always run tests for Now CLI
 
     matches = Array.from(new Set(changed));
 
     if (matches.length === 0) {
-      matches.push('now-cli');
       matches.push('now-node');
       console.log('No packages changed. Using default packages.');
     }

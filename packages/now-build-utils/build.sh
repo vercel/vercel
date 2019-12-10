@@ -1,6 +1,12 @@
+#!/bin/sh
+set -eu
+out="dist"
+
+rm -rf "$out"
+
 tsc
 
-rm dist/index.js
-ncc build src/index.ts -o dist/main
-mv dist/main/index.js dist/index.js
-rm -rf dist/main
+rm "$out/index.js"
+ncc build "src/index.ts" -o "$out/main"
+mv "$out/main/index.js" "$out/index.js"
+rm -rf "$out/main"

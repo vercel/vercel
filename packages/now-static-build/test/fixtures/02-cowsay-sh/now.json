@@ -3,11 +3,13 @@
   "builds": [
     { "src": "some-build.sh", "use": "@now/static-build" },
     { "src": "node10sh/build.sh", "use": "@now/static-build" },
+    { "src": "node12sh/build.sh", "use": "@now/static-build" },
     { "src": "subdirectory/some-build.sh", "use": "@now/static-build" }
   ],
   "probes": [
     { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
     { "path": "/node10sh/", "mustContain": "node:v10" },
+    { "path": "/node12sh/", "mustContain": "node:v12" },
     { "path": "/subdirectory/", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
   ]
 }

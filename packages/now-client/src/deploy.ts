@@ -1,55 +1,54 @@
 import { DeploymentFile } from './utils/hashes';
 import {
-  parseNowJSON,
   fetch,
-  API_DEPLOYMENTS,
   prepareFiles,
-  API_DEPLOYMENTS_LEGACY,
+  createDebug,
+  getApiDeploymentsUrl,
 } from './utils';
-import checkDeploymentStatus from './deployment-status';
+import { checkDeploymentStatus } from './check-deployment-status';
 import { generateQueryString } from './utils/query-string';
-
-export interface Options {
-  metadata: DeploymentOptions;
-  totalFiles: number;
-  path: string | string[];
-  token: string;
-  teamId?: string;
-  force?: boolean;
-  isDirectory?: boolean;
-  defaultName?: string;
-  preflight?: boolean;
-}
+import { isReady, isAliasAssigned } from './utils/ready-state';
+import {
+  Deployment,
+  DeploymentOptions,
+  NowConfig,
+  NowClientOptions,
+} from './types';
 
 async function* createDeployment(
-  metadata: DeploymentOptions,
   files: Map<string, DeploymentFile>,
-  options: Options
+  clientOptions: NowClientOptions,
+  deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<{ type: string; payload: any }> {
-  const preparedFiles = prepareFiles(files, options);
+  const debug = createDebug(clientOptions.debug);
+  const preparedFiles = prepareFiles(files, clientOptions);
+  const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
 
-  let apiDeployments =
-    metadata.version === 2 ? API_DEPLOYMENTS : API_DEPLOYMENTS_LEGACY;
+  debug('Sending deployment creation API request');
   try {
     const dpl = await fetch(
-      `${apiDeployments}${generateQueryString(options)}`,
-      options.token,
+      `${apiDeployments}${generateQueryString(clientOptions)}`,
+      clientOptions.token,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${options.token}`,
         },
         body: JSON.stringify({
-          ...metadata,
+          ...deploymentOptions,
           files: preparedFiles,
         }),
+        apiUrl: clientOptions.apiUrl,
+        userAgent: clientOptions.userAgent,
       }
     );
 
     const json = await dpl.json();
 
+    debug('Deployment response:', JSON.stringify(json));
+
     if (!dpl.ok || json.error) {
+      debug('Error: Deployment request status is', dpl.status);
       // Return error object
       return yield {
         type: 'error',
@@ -61,7 +60,12 @@ async function* createDeployment(
 
     for (const [name, value] of dpl.headers.entries()) {
       if (name.startsWith('x-now-warning-')) {
+        debug('Deployment created with a warning:', value);
         yield { type: 'warning', payload: value };
+      }
+      if (name.startsWith('x-now-notice-')) {
+        debug('Deployment created with a notice:', value);
+        yield { type: 'notice', payload: value };
       }
     }
 
@@ -71,112 +75,132 @@ async function* createDeployment(
   }
 }
 
-const getDefaultName = (
-  path: string | string[] | undefined,
-  isDirectory: boolean | undefined,
-  files: Map<string, DeploymentFile>
-): string => {
-  if (isDirectory && typeof path === 'string') {
-    const segments = path.split('/');
-
-    return segments[segments.length - 1];
-  } else {
-    const filePath = Array.from(files.values())[0].names[0];
-    const segments = filePath.split('/');
-
-    return segments[segments.length - 1];
-  }
-};
-
-export default async function* deploy(
+function getDefaultName(
   files: Map<string, DeploymentFile>,
-  options: Options
+  clientOptions: NowClientOptions
+): string {
+  const debug = createDebug(clientOptions.debug);
+  const { isDirectory, path } = clientOptions;
+
+  if (isDirectory && typeof path === 'string') {
+    debug('Provided path is a directory. Using last segment as default name');
+    return path.split('/').pop()!;
+  } else {
+    debug(
+      'Provided path is not a directory. Using last segment of the first file as default name'
+    );
+    const filePath = Array.from(files.values())[0].names[0];
+    return filePath.split('/').pop()!;
+  }
+}
+
+export async function* deploy(
+  files: Map<string, DeploymentFile>,
+  nowConfig: NowConfig,
+  clientOptions: NowClientOptions,
+  deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<{ type: string; payload: any }> {
-  const nowJson: DeploymentFile | undefined = Array.from(files.values()).find(
-    (file: DeploymentFile): boolean => {
-      return Boolean(
-        file.names.find((name: string): boolean => name.includes('now.json'))
-      );
-    }
-  );
-  const nowJsonMetadata: NowJsonOptions = parseNowJSON(nowJson);
-
-  delete nowJsonMetadata.github;
-  delete nowJsonMetadata.scope;
-
-  const meta = options.metadata || {};
-  const metadata = { ...nowJsonMetadata, ...meta };
+  const debug = createDebug(clientOptions.debug);
 
   // Check if we should default to a static deployment
-  if (!metadata.version && !metadata.name) {
-    metadata.version = 2;
-    metadata.name =
-      options.totalFiles === 1
-        ? 'file'
-        : getDefaultName(options.path, options.isDirectory, files);
+  if (!deploymentOptions.version && !deploymentOptions.name) {
+    deploymentOptions.version = 2;
+    deploymentOptions.name =
+      files.size === 1 ? 'file' : getDefaultName(files, clientOptions);
+
+    if (deploymentOptions.name === 'file') {
+      debug('Setting deployment name to "file" for single-file deployment');
+    }
   }
 
-  if (options.totalFiles === 1 && !metadata.builds && !metadata.routes) {
+  if (
+    files.size === 1 &&
+    !deploymentOptions.builds &&
+    !deploymentOptions.routes
+  ) {
+    debug(`Assigning '/' route for single file deployment`);
     const filePath = Array.from(files.values())[0].names[0];
-    const segments = filePath.split('/');
 
-    metadata.routes = [
+    deploymentOptions.routes = [
       {
         src: '/',
-        dest: `/${segments[segments.length - 1]}`,
+        dest: `/${filePath.split('/').pop()}`,
       },
     ];
   }
 
-  if (!metadata.name) {
-    metadata.name =
-      options.defaultName ||
-      getDefaultName(options.path, options.isDirectory, files);
+  if (!deploymentOptions.name) {
+    deploymentOptions.name =
+      clientOptions.defaultName || getDefaultName(files, clientOptions);
+    debug('No name provided. Defaulting to', deploymentOptions.name);
   }
 
-  if (metadata.version === 1 && !metadata.deploymentType) {
-    metadata.deploymentType = nowJsonMetadata.type;
+  if (
+    deploymentOptions.version === 1 &&
+    !deploymentOptions.deploymentType &&
+    nowConfig.type
+  ) {
+    debug(`Setting 'type' for 1.0 deployment to '${nowConfig.type}'`);
+    deploymentOptions.deploymentType = nowConfig.type.toUpperCase() as DeploymentOptions['deploymentType'];
   }
 
-  if (metadata.version === 1) {
-    const nowConfig = { ...nowJsonMetadata };
-    delete nowConfig.version;
+  if (deploymentOptions.version === 1 && !deploymentOptions.config) {
+    debug(`Writing 'config' values for 1.0 deployment`);
+    deploymentOptions.config = { ...nowConfig };
+    delete deploymentOptions.config.version;
+  }
 
-    metadata.config = {
-      ...nowConfig,
-      ...metadata.config,
-    };
+  if (
+    deploymentOptions.version === 1 &&
+    !deploymentOptions.forceNew &&
+    clientOptions.force
+  ) {
+    debug(`Setting 'forceNew' for 1.0 deployment`);
+    deploymentOptions.forceNew = clientOptions.force;
   }
 
   let deployment: Deployment | undefined;
 
   try {
-    for await (const event of createDeployment(metadata, files, options)) {
+    debug('Creating deployment');
+    for await (const event of createDeployment(
+      files,
+      clientOptions,
+      deploymentOptions
+    )) {
       if (event.type === 'created') {
+        debug('Deployment created');
         deployment = event.payload;
       }
 
       yield event;
     }
   } catch (e) {
+    debug('An unexpected error occurred when creating the deployment');
     return yield { type: 'error', payload: e };
   }
 
   if (deployment) {
-    if (deployment.readyState === 'READY') {
-      return yield { type: 'ready', payload: deployment };
+    if (isReady(deployment) && isAliasAssigned(deployment)) {
+      debug('Deployment state changed to READY 3');
+      yield { type: 'ready', payload: deployment };
+
+      debug('Deployment alias assigned');
+      return yield { type: 'alias-assigned', payload: deployment };
     }
 
     try {
+      debug('Waiting for deployment to be ready...');
       for await (const event of checkDeploymentStatus(
         deployment,
-        options.token,
-        metadata.version,
-        options.teamId
+        clientOptions
       )) {
         yield event;
       }
     } catch (e) {
+      debug(
+        'An unexpected error occurred while waiting for deployment to be ready'
+      );
       return yield { type: 'error', payload: e };
     }
   }

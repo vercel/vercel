@@ -52,16 +52,26 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
         ):
             body = base64.b64decode(body)
 
+        request_body = body.encode('utf-8') if isinstance(body, str) else body
         conn = http.client.HTTPConnection('0.0.0.0', port)
-        conn.request(method, path, headers=headers, body=body)
+        conn.request(method, path, headers=headers, body=request_body)
         res = conn.getresponse()
-        data = res.read().decode('utf-8')
 
-        return {
+        return_dict = {
             'statusCode': res.status,
             'headers': format_headers(res.headers),
-            'body': data,
         }
+
+        data = res.read()
+
+        try:
+            return_dict['body'] = data.decode('utf-8')
+        except UnicodeDecodeError:
+            return_dict['body'] = base64.b64encode(data).decode('utf-8')
+            return_dict['encoding'] = 'base64'
+
+        return return_dict
+
 elif 'app' in __now_variables:
     if (
         not inspect.iscoroutinefunction(__NOW_HANDLER_FILENAME.app) and

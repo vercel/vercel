@@ -7,8 +7,13 @@ import {
   FileFsRef,
   Lambda,
   PackageJson,
+  BuilderFunctions,
 } from '@now/build-utils';
+import { NowConfig } from 'now-client';
+import { NowRedirect, NowRewrite, NowHeader, Route } from '@now/routing-utils';
 import { Output } from '../output';
+
+export { NowConfig };
 
 export interface DevServerOptions {
   output: Output;
@@ -27,27 +32,7 @@ export interface BuildMatch extends BuildConfig {
   buildProcess?: ChildProcess;
 }
 
-export interface RouteConfig {
-  src: string;
-  dest: string;
-  methods?: string[];
-  headers?: HttpHeadersConfig;
-  status?: number;
-  handle?: string;
-  continue?: boolean;
-}
-
-export interface NowConfig {
-  name?: string;
-  version?: number;
-  env?: EnvConfig;
-  build?: {
-    env?: EnvConfig;
-  };
-  builds?: BuildConfig[];
-  routes?: RouteConfig[];
-  files?: string[];
-}
+export type RouteConfig = Route;
 
 export interface HttpHandler {
   (req: http.IncomingMessage, res: http.ServerResponse): void;
@@ -100,7 +85,7 @@ export interface BuilderConfigAttr {
 }
 
 export interface Builder {
-  version?: 2;
+  version?: 1 | 2 | 3 | 4;
   config?: BuilderConfigAttr;
   build(
     params: BuilderParams
@@ -117,6 +102,20 @@ export interface Builder {
 
 export interface BuildResult {
   output: BuilderOutputs;
+  routes: RouteConfig[];
+  watch: string[];
+  distPath?: string;
+}
+
+export interface BuildResultV3 {
+  output: Lambda;
+  routes: RouteConfig[];
+  watch: string[];
+  distPath?: string;
+}
+
+export interface BuildResultV4 {
+  output: { [filePath: string]: Lambda };
   routes: RouteConfig[];
   watch: string[];
   distPath?: string;

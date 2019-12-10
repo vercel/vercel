@@ -1,5 +1,18 @@
 #!/usr/bin/env node
 
+import error from './util/output/error';
+import param from './util/output/param';
+import info from './util/output/info';
+try {
+  // Test to see if cwd has been deleted before
+  // importing 3rd party packages that might need cwd.
+  process.cwd();
+} catch (e) {
+  if (e && e.message && e.message.includes('uv_cwd')) {
+    console.error(error('The current working directory does not exist.'));
+    process.exit(1);
+  }
+}
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -11,9 +24,6 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import error from './util/output/error';
-import param from './util/output/param.ts';
-import info from './util/output/info';
 import getNowDir from './util/config/global-path';
 import {
   getDefaultConfig,
@@ -29,15 +39,15 @@ import getUser from './util/get-user.ts';
 import Client from './util/client.ts';
 import NowTeams from './util/teams';
 import cmd from './util/output/cmd';
-import highlight from './util/output/highlight';
 import { handleError } from './util/error';
+import highlight from './util/output/highlight';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
-import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 import getUpdateCommand from './util/get-update-command';
+import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -453,6 +463,23 @@ const main = async argv_ => {
         error({
           message: `You defined ${param('--token')}, but it's missing a value`,
           slug: 'missing-token-value',
+        })
+      );
+
+      return 1;
+    }
+
+    const invalid = token.match(/(\W)/g);
+    if (invalid) {
+      const notContain = Array.from(new Set(invalid)).sort();
+      console.error(
+        error({
+          message: `You defined ${param(
+            '--token'
+          )}, but its contents are invalid. Must not contain: ${notContain
+            .map(c => JSON.stringify(c))
+            .join(', ')}`,
+          slug: 'invalid-token-value',
         })
       );
 

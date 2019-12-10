@@ -1,8 +1,8 @@
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
-import { Lambda, createLambda } from './lambda';
-import { Prerender, PrerenderGroup } from './prerender';
+import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
+import { Prerender } from './prerender';
 import download, { DownloadedFiles } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob from './fs/glob';
@@ -22,6 +22,7 @@ import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import { detectBuilders } from './detect-builders';
 import { detectRoutes } from './detect-routes';
+import DetectorFilesystem from './detectors/filesystem';
 import debug from './debug';
 
 export {
@@ -29,9 +30,9 @@ export {
   FileFsRef,
   FileRef,
   Lambda,
+  DetectorFilesystem,
   createLambda,
   Prerender,
-  PrerenderGroup,
   download,
   DownloadedFiles,
   getWriteableDirectory,
@@ -51,6 +52,8 @@ export {
   detectBuilders,
   detectRoutes,
   debug,
+  getLambdaOptionsFromFunction,
 };
 
+export { detectDefaults } from './detectors';
 export * from './types';
