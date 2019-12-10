@@ -88,7 +88,9 @@ for (const builder of buildersToTestWith) {
 
 it('Test `detectBuilders` and `detectRoutes`', async () => {
   const fixture = path.join(__dirname, 'fixtures', '01-zero-config-api');
-  const detectorResult = await detectDefaults(new LocalFilesystem(fixture));
+  const detectorResult = await detectDefaults({
+    fs: new LocalFilesystem(fixture),
+  });
   const fileList = await glob('**', fixture);
   const files = Object.keys(fileList);
 
@@ -149,7 +151,9 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
 
 it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
   const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
-  const detectorResult = await detectDefaults(new LocalFilesystem(fixture));
+  const detectorResult = await detectDefaults({
+    fs: new LocalFilesystem(fixture),
+  });
   const fileList = await glob('**', fixture);
   const files = Object.keys(fileList);
 
