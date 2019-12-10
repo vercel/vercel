@@ -798,6 +798,125 @@ describe('Test `detectBuilders`', () => {
     expect(defaultRoutes[0].src).toBe('/(.*)');
     expect(defaultRoutes[0].dest).toBe('/dist/$1');
   });
+
+  it('Custom static output directory with api', async () => {
+    const detected = {
+      outputDirectory: 'output',
+    };
+
+    const files = ['api/user.ts', 'output/index.html', 'output/style.css'];
+
+    const { builders } = await detectBuilders(files, detected);
+
+    expect(builders.length).toBe(2);
+    expect(builders[1].src).toBe('output/**/*');
+    expect(builders[1].use).toBe('@now/static');
+
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(3);
+    expect(defaultRoutes[1].status).toBe(404);
+    expect(defaultRoutes[2].src).toBe('/(.*)');
+    expect(defaultRoutes[2].dest).toBe('/output/$1');
+  });
+
+  it('Custom directory for Serverless Functions', async () => {
+    const files = ['server/_lib/db.ts', 'server/user.ts', 'server/team.ts'];
+
+    const functions = {
+      'server/**/*.ts': {
+        memory: 128,
+        runtime: '@now/node@1.2.1',
+      },
+    };
+
+    const { builders } = await detectBuilders(files, null, { functions });
+
+    expect(builders.length).toBe(3);
+    expect(builders[0]).toEqual({
+      use: '@now/node@1.2.1',
+      src: 'server/team.ts',
+      config: {
+        zeroConfig: true,
+        functions: {
+          'server/**/*.ts': {
+            memory: 128,
+            runtime: '@now/node@1.2.1',
+          },
+        },
+      },
+    });
+    expect(builders[1]).toEqual({
+      use: '@now/node@1.2.1',
+      src: 'server/user.ts',
+      config: {
+        zeroConfig: true,
+        functions: {
+          'server/**/*.ts': {
+            memory: 128,
+            runtime: '@now/node@1.2.1',
+          },
+        },
+      },
+    });
+    // This is expected, since only "api + full static" is supported
+    // no other directory, so everything else will be deployed
+    expect(builders[2].use).toBe('@now/static');
+
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(3);
+    expect(defaultRoutes[0].dest).toBe('/server/team.ts');
+    expect(defaultRoutes[0].src).toBe('^/server/(team\\/|team|team\\.ts)$');
+    expect(defaultRoutes[1].dest).toBe('/server/user.ts');
+    expect(defaultRoutes[1].src).toBe('^/server/(user\\/|user|user\\.ts)$');
+    expect(defaultRoutes[2].status).toBe(404);
+  });
+
+  it('Custom directory for Serverless Functions + Next.js', async () => {
+    const detected = {
+      buildCommand: 'yarn build',
+      framework: {
+        slug: 'next',
+        version: '9.0.0',
+      },
+    };
+
+    const functions = {
+      'server/**/*.ts': {
+        runtime: '@now/node@1.2.1',
+      },
+    };
+
+    const files = ['package.json', 'pages/index.ts', 'server/user.ts'];
+
+    const { builders } = await detectBuilders(files, detected, { functions });
+
+    expect(builders.length).toBe(2);
+    expect(builders[0]).toEqual({
+      use: '@now/node@1.2.1',
+      src: 'server/user.ts',
+      config: {
+        zeroConfig: true,
+        functions,
+      },
+    });
+    expect(builders[1]).toEqual({
+      use: '@now/next',
+      src: 'package.json',
+      config: {
+        buildCommand: 'yarn build',
+        zeroConfig: true,
+      },
+    });
+
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(2);
+    expect(defaultRoutes[0].dest).toBe('/server/user.ts');
+    expect(defaultRoutes[0].src).toBe('^/server/(user\\/|user|user\\.ts)$');
+    expect(defaultRoutes[1].status).toBe(404);
+  });
 });
 
 it('Test `detectRoutes`', async () => {

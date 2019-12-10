@@ -217,7 +217,10 @@ async function detectApiRoutes(
   for (const file of sortedFiles) {
     // We only consider every file in the api directory
     // as we will strip extensions as well as resolving "[segments]"
-    if (!file.startsWith('api/')) {
+    if (
+      !file.startsWith('api/') &&
+      !builders.some(b => b.src === file && b.config!.functions)
+    ) {
       continue;
     }
 
