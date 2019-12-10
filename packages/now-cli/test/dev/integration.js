@@ -1145,7 +1145,7 @@ test(
   })
 );
 
-test.only(
+test(
   '[now dev] Use public with a custom Serverless Function in `server/date.js',
   testFixtureStdio('public-and-server-as-api', async (t, port) => {
     const response = await fetchWithRetry(

@@ -9,6 +9,7 @@ import docusaurus from './docusaurus';
 import eleventy from './eleventy';
 import ember from './ember';
 import gatsby from './gatsby';
+import genericNodeProject from './generic-node-project';
 import gridsome from './gridsome';
 import hexo from './hexo';
 import hugo from './hugo';
@@ -44,6 +45,7 @@ export const pkgDetectors: Detector[] = [
   svelte,
   umi,
   vue,
+  genericNodeProject,
 ];
 
 export const detectors: Detector[] = [hugo, jekyll, middleman];
