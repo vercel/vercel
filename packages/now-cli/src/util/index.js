@@ -53,7 +53,6 @@ export default class Now extends EventEmitter {
       nowConfig = {},
       hasNowJson = false,
       sessionAffinity = 'random',
-      atlas = false,
 
       // Latest
       name,
@@ -71,39 +70,21 @@ export default class Now extends EventEmitter {
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
-    const isBuilds = type === null;
+    const isLegacy = type !== null;
 
     let files = [];
     let hashes = {};
     const relatives = {};
     let engines;
     let deployment;
-    let requestBody = {};
 
-    if (isBuilds) {
-      requestBody = {
-        token: this._token,
-        teamId: this.currentTeam,
-        env,
-        build,
-        public: wantsPublic || nowConfig.public,
-        name,
-        project,
-        meta,
-        regions,
-        force: forceNew,
-      };
-
-      if (target) {
-        requestBody.target = target;
-      }
-    } else if (type === 'npm') {
+    if (type === 'npm') {
       files = await getNpmFiles(paths[0], pkg, nowConfig, opts);
 
       // A `start` or `now-start` npm script, or a `server.js` file
       // in the root directory of the deployment are required
       if (
-        !isBuilds &&
+        isLegacy &&
         !hasNpmStart(pkg) &&
         !hasFile(paths[0], files, 'server.js')
       ) {
@@ -139,29 +120,30 @@ export default class Now extends EventEmitter {
 
     const uploadStamp = stamp();
 
-    if (isBuilds) {
-      deployment = await processDeployment({
-        now: this,
-        debug,
-        hashes,
-        paths,
-        requestBody,
-        uploadStamp,
-        deployStamp,
-        quiet,
-      });
-    } else {
-      // Read `registry.npmjs.org` authToken from .npmrc
-      let authToken;
+    let requestBody = {
+      ...nowConfig,
+      env,
+      build,
+      public: wantsPublic || nowConfig.public,
+      name,
+      project,
+      meta,
+      regions,
+      target: target || undefined,
+    };
 
-      if (type === 'npm' && forwardNpm) {
-        authToken =
-          (await readAuthToken(paths[0])) || (await readAuthToken(homedir()));
-      }
+    // Ignore specific items from Now.json
+    delete requestBody.scope;
+    delete requestBody.github;
+
+    if (isLegacy) {
+      // Read `registry.npmjs.org` authToken from .npmrc
+      const registryAuthToken =
+        type === 'npm' && forwardNpm
+          ? (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
+          : undefined;
 
       requestBody = {
-        token: this._token,
-        teamId: this.currentTeam,
         env,
         build,
         meta,
@@ -171,28 +153,28 @@ export default class Now extends EventEmitter {
         project,
         description,
         deploymentType: type,
-        registryAuthToken: authToken,
+        registryAuthToken,
         engines,
         scale,
         sessionAffinity,
         limits: nowConfig.limits,
-        atlas,
         config: nowConfig,
       };
-
-      deployment = await processDeployment({
-        legacy: true,
-        now: this,
-        debug,
-        hashes,
-        paths,
-        requestBody,
-        uploadStamp,
-        deployStamp,
-        quiet,
-        env,
-      });
     }
+
+    deployment = await processDeployment({
+      isLegacy,
+      now: this,
+      output: this._output,
+      hashes,
+      paths,
+      requestBody,
+      uploadStamp,
+      deployStamp,
+      quiet,
+      nowConfig,
+      force: forceNew,
+    });
 
     // We report about files whose sizes are too big
     let missingVersion = false;
@@ -225,7 +207,7 @@ export default class Now extends EventEmitter {
       }
     }
 
-    if (!isBuilds && !quiet && type === 'npm' && deployment.nodeVersion) {
+    if (isLegacy && !quiet && type === 'npm' && deployment.nodeVersion) {
       if (engines && engines.node && !missingVersion) {
         log(
           chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
@@ -377,7 +359,7 @@ export default class Now extends EventEmitter {
     if (!app && !Object.keys(meta).length) {
       // Get the 35 latest projects and their latest deployment
       const query = new URLSearchParams({ limit: 35 });
-      const projects = await fetchRetry(`/projects/list?${query}`);
+      const projects = await fetchRetry(`/v2/projects/?${query}`);
 
       const deployments = await Promise.all(
         projects.map(async ({ id: projectId }) => {
@@ -447,11 +429,11 @@ export default class Now extends EventEmitter {
         host = host.slice(0, -1);
       }
 
-      const url = `/v3/now/hosts/${encodeURIComponent(
+      const url = `/v10/now/deployments/get?url=${encodeURIComponent(
         host
-      )}?resolve=1&noState=1`;
+      )}&resolve=1&noState=1`;
 
-      const { deployment } = await this.retry(
+      const deployment = await this.retry(
         async bail => {
           const res = await this._fetch(url);
 
@@ -477,7 +459,7 @@ export default class Now extends EventEmitter {
     }
 
     const url = `/${
-      isBuilds ? 'v9' : 'v5'
+      isBuilds ? 'v11' : 'v5'
     }/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(

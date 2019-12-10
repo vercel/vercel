@@ -2,19 +2,17 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["esnext", "dom"],
+    "lib": ["esnext"],
     "module": "CommonJS",
     "moduleResolution": "node",
-    "outDir": "./dist",
-    "resolveJsonModule": true,
+    "outDir": "dist",
     "strictNullChecks": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
     "target": "ES2015",
-    "downlevelIteration": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "downlevelIteration": true
   },
-  "include": ["./src", "./types"]
+  "include": ["./src"]
 }

@@ -63,9 +63,6 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
-      - run:
-          name: Installing apt dependencies
-          command: sudo apt install -y rsync
       - attach_workspace:
           at: .
       - run:
@@ -115,15 +112,12 @@ jobs:
 
   test-integration-macos-node-8:
     macos:
-      xcode: '9.2.0'
+      xcode: '9.0.1'
     working_directory: ~/repo
     steps:
       - checkout
       - attach_workspace:
           at: .
-      - run:
-          name: Update Node.js
-          command: curl -sfLS install-node.now.sh/8.11 | sh -s -- --yes
       - run:
           name: Output version
           command: node --version
@@ -208,15 +202,12 @@ jobs:
 
   test-integration-macos-now-dev-node-8:
     macos:
-      xcode: '9.2.0'
+      xcode: '9.0.1'
     working_directory: ~/repo
     steps:
       - checkout
       - attach_workspace:
           at: .
-      - run:
-          name: Update Node.js
-          command: curl -sfLS install-node.now.sh/8.11 | sh -s -- --yes
       - run:
           name: Output version
           command: node --version
@@ -331,6 +322,24 @@ jobs:
       - run:
           name: Running Integration Tests Once
           command: yarn test-integration-once --clean false
+
+  test-unit:
+    docker:
+      - image: circleci/node:10
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Compiling `now dev` HTML error templates
+          command: node packages/now-cli/scripts/compile-templates.js
+      - run:
+          name: Output version
+          command: node --version
+      - run:
+          name: Running Unit Tests
+          command: yarn test-unit --clean false
 
   coverage:
     docker:
@@ -466,6 +475,9 @@ workflows:
       - test-integration-once:
           requires:
             - build
+      - test-unit:
+          requires:
+            - build
           filters:
             tags:
               only: /.*/
@@ -484,6 +496,7 @@ workflows:
             - test-integration-linux-now-dev-node-10
             - test-integration-linux-now-dev-node-12
             - test-integration-once
+            - test-unit
             - test-lint
           filters:
             tags:

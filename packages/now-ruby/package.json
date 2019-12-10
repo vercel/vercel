@@ -1,10 +1,10 @@
 {
   "name": "@now/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
-  "version": "0.1.5-canary.3",
+  "version": "1.0.1-canary.0",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/v2/deployments/official-builders/ruby-now-ruby",
+  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/ruby",
   "files": [
     "dist",
     "now_init.rb"

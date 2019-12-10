@@ -31,7 +31,7 @@ function testFixture(name, fn) {
         readyResolve = resolve;
       });
 
-      const debug = false;
+      const debug = true;
       const output = createOutput({ debug });
       const origReady = output.ready;
 
@@ -329,8 +329,8 @@ test(
       // HTML response
       const res = await fetch(`${server.address}/does-not-exist`, {
         headers: {
-          Accept: 'text/html'
-        }
+          Accept: 'text/html',
+        },
       });
       t.is(res.status, 404);
       t.is(res.headers.get('content-type'), 'text/html; charset=utf-8');
@@ -342,8 +342,8 @@ test(
       // JSON response
       const res = await fetch(`${server.address}/does-not-exist`, {
         headers: {
-          Accept: 'application/json'
-        }
+          Accept: 'application/json',
+        },
       });
       t.is(res.status, 404);
       t.is(res.headers.get('content-type'), 'application/json');
@@ -401,10 +401,10 @@ test('[DevServer] parseListen()', t => {
   t.deepEqual(parseListen('127.0.0.1:3005'), [3005, '127.0.0.1']);
   t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
   t.deepEqual(parseListen('unix:/home/user/server.sock'), [
-    '/home/user/server.sock'
+    '/home/user/server.sock',
   ]);
   t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
-    '\\\\.\\pipe\\PipeName'
+    '\\\\.\\pipe\\PipeName',
   ]);
 
   let err;

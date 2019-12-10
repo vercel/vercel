@@ -5,36 +5,76 @@ import pluralize from 'pluralize';
 import {
   createDeployment,
   createLegacyDeployment,
-} from '../../../../now-client';
+  DeploymentOptions,
+  NowClientOptions,
+} from 'now-client';
 import wait from '../output/wait';
-import createOutput from '../output';
+import { Output } from '../output';
+// @ts-ignore
+import Now from '../../util';
+import { NowConfig } from '../dev/types';
+import ua from '../ua';
 
 export default async function processDeployment({
   now,
-  debug,
+  output,
   hashes,
   paths,
   requestBody,
   uploadStamp,
   deployStamp,
-  legacy,
-  env,
+  isLegacy,
   quiet,
-}: any) {
-  const { warn, log } = createOutput({ debug });
+  force,
+  nowConfig,
+}: {
+  now: Now;
+  output: Output;
+  hashes: { [key: string]: any };
+  paths: string[];
+  requestBody: DeploymentOptions;
+  uploadStamp: () => number;
+  deployStamp: () => number;
+  isLegacy: boolean;
+  quiet: boolean;
+  nowConfig?: NowConfig;
+  force?: boolean;
+}) {
+  const { warn, log, debug, note } = output;
   let bar: Progress | null = null;
 
-  if (!legacy) {
+  const { env = {} } = requestBody;
+
+  const nowClientOptions: NowClientOptions = {
+    teamId: now.currentTeam,
+    apiUrl: now._apiUrl,
+    token: now._token,
+    debug: now._debug,
+    userAgent: ua,
+    path: paths[0],
+    force,
+  };
+
+  if (!isLegacy) {
+    let queuedSpinner = null;
     let buildSpinner = null;
     let deploySpinner = null;
 
-    for await (const event of createDeployment(paths[0], requestBody)) {
+    for await (const event of createDeployment(
+      nowClientOptions,
+      requestBody,
+      nowConfig
+    )) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
 
       if (event.type === 'warning') {
         warn(event.payload);
+      }
+
+      if (event.type === 'notice') {
+        note(event.payload);
       }
 
       if (event.type === 'file_count') {
@@ -52,28 +92,17 @@ export default async function processDeployment({
           );
         }
 
-        const size = Object.values(hashes).reduce((acc: number, file: any) => {
-          const fileSize = file.data.byteLength || file.data.length;
-
-          return acc + fileSize;
-        }, 0);
-
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        bar = new Progress(
-          `${chalk.gray(
-            '>'
-          )} Upload [:bar] :percent :etas (${size}) [${missingSize}]`,
-          {
-            width: 20,
-            complete: '=',
-            incomplete: '',
-            total: missingSize,
-            clear: true,
-          }
-        );
+        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
+          width: 20,
+          complete: '=',
+          incomplete: '',
+          total: missingSize,
+          clear: true,
+        });
       }
 
       if (event.type === 'file-uploaded') {
@@ -92,20 +121,34 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          const version = legacy ? `${chalk.grey('v1')} ` : '';
+          const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
           log(`https://${event.payload.url} ${version}${deployStamp()}`);
         } else {
           process.stdout.write(`https://${event.payload.url}`);
         }
+
+        if (queuedSpinner === null) {
+          queuedSpinner = wait('Queued...');
+        }
       }
 
-      if (event.type === 'build-state-changed') {
+      if (
+        event.type === 'build-state-changed' &&
+        event.payload.readyState === 'BUILDING'
+      ) {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+
         if (buildSpinner === null) {
           buildSpinner = wait('Building...');
         }
       }
 
       if (event.type === 'all-builds-completed') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
         if (buildSpinner) {
           buildSpinner();
         }
@@ -115,10 +158,12 @@ export default async function processDeployment({
 
       // Handle error events
       if (event.type === 'error') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
         if (buildSpinner) {
           buildSpinner();
         }
-
         if (deploySpinner) {
           deploySpinner();
         }
@@ -127,7 +172,13 @@ export default async function processDeployment({
       }
 
       // Handle ready event
-      if (event.type === 'ready') {
+      if (event.type === 'alias-assigned') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+        if (buildSpinner) {
+          buildSpinner();
+        }
         if (deploySpinner) {
           deploySpinner();
         }
@@ -136,7 +187,11 @@ export default async function processDeployment({
       }
     }
   } else {
-    for await (const event of createLegacyDeployment(paths[0], requestBody)) {
+    for await (const event of createLegacyDeployment(
+      nowClientOptions,
+      requestBody,
+      nowConfig
+    )) {
       if (event.type === 'hashes-calculated') {
         hashes = event.payload;
       }
@@ -155,28 +210,17 @@ export default async function processDeployment({
           );
         }
 
-        const size = Object.values(hashes).reduce((acc: number, file: any) => {
-          const fileSize = file.data.byteLength || file.data.length;
-
-          return acc + fileSize;
-        }, 0);
-
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        bar = new Progress(
-          `${chalk.gray(
-            '>'
-          )} Upload [:bar] :percent :etas (${size}) [${missingSize}]`,
-          {
-            width: 20,
-            complete: '=',
-            incomplete: '',
-            total: missingSize,
-            clear: true,
-          }
-        );
+        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
+          width: 20,
+          complete: '=',
+          incomplete: '',
+          total: missingSize,
+          clear: true,
+        });
       }
 
       if (event.type === 'file-uploaded') {
@@ -195,7 +239,8 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          log(`${event.payload.url} ${chalk.gray(`[v2]`)} ${deployStamp()}`);
+          const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
+          log(`${event.payload.url} ${version}${deployStamp()}`);
         } else {
           process.stdout.write(`https://${event.payload.url}`);
         }
