@@ -84,7 +84,7 @@ export const build = async ({
   entrypoint,
   config,
 }: BuildOptions) => {
-  debug('downloading files...');
+  debug('Downloading user files...');
 
   await download(files, workPath);
 
