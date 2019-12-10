@@ -45,7 +45,6 @@ export const pkgDetectors: Detector[] = [
   svelte,
   umi,
   vue,
-  genericNodeProject,
 ];
 
 export const detectors: Detector[] = [hugo, jekyll, middleman];
@@ -82,6 +81,9 @@ export async function detectDefaults(
     // If no `package.json` framework was detected then check the non-pkg ones
     d = params.detectors || detectors;
     result = await firstTruthy(d.map(detector => detector(params)));
+  }
+  if (!result) {
+    result = await genericNodeProject(params);
   }
   return result;
 }
