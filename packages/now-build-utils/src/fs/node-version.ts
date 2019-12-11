@@ -51,7 +51,8 @@ export async function getSupportedNodeVersion(
         'Found `engines` in `package.json` with an unsupported Node.js version range: ' +
           engineRange +
           '\nPlease use one of the following supported ranges: ' +
-          JSON.stringify(supportedOptions.map(o => o.range))
+          JSON.stringify(supportedOptions.map(o => o.range)) +
+          '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html'
       );
     }
   }
@@ -66,7 +67,8 @@ export async function getSupportedNodeVersion(
       `Warning: Node.js ${range} will be discontinued on ${d}.\n` +
         `Deployments created on or after ${d} will fail to build.\n` +
         'Please use one of the following supported `engines` in `package.json`: ' +
-        JSON.stringify(validRanges)
+        JSON.stringify(validRanges) +
+        '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html'
     );
   }
 
