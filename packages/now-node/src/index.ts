@@ -63,10 +63,7 @@ async function downloadInstallAndBundle({
   config,
   meta,
 }: DownloadOptions) {
-  debug('Downloading user files...');
-  const downloadTime = Date.now();
   const downloadedFiles = await download(files, workPath, meta);
-  debug(`download complete [${Date.now() - downloadTime}ms]`);
 
   console.log('Installing dependencies...');
   const installTime = Date.now();
