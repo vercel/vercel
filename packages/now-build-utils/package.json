@@ -32,6 +32,7 @@
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",
+    "boxen": "4.2.0",
     "cross-spawn": "6.0.5",
     "end-of-stream": "1.4.1",
     "execa": "^1.0.0",
