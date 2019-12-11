@@ -1,4 +1,5 @@
 import { intersects } from 'semver';
+import boxen from 'boxen';
 import { NodeVersion } from '../types';
 import debug from '../debug';
 
@@ -64,11 +65,14 @@ export async function getSupportedNodeVersion(
       .filter(o => !o.discontinueDate)
       .map(o => o.range);
     console.warn(
-      `Warning: Node.js ${range} will be discontinued on ${d}.\n` +
-        `Deployments created on or after ${d} will fail to build.\n` +
-        'Please use one of the following supported `engines` in `package.json`: ' +
-        JSON.stringify(validRanges) +
-        '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html'
+      boxen(
+        `Warning: Node.js ${range} will be discontinued on ${d}.\n` +
+          `Deployments created on or after ${d} will fail to build.\n` +
+          'Please use one of the following supported `engines` in `package.json`: ' +
+          JSON.stringify(validRanges) +
+          '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html',
+        { padding: 1 }
+      )
     );
   }
 
