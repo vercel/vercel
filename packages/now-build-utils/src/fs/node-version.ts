@@ -36,13 +36,14 @@ export async function getSupportedNodeVersion(
       );
     }
   } else {
-    const found = supportedOptions.some(o => {
+    const found = allOptions.some(o => {
       // the array is already in order so return the first
       // match which will be the newest version of node
       selection = o;
       return intersects(o.range, engineRange);
     });
-    if (found) {
+    const discontinued = isDiscontinued(selection);
+    if (found && !discontinued) {
       if (!silent) {
         debug(
           'Found `engines` in `package.json`, selecting range: ' +
@@ -50,18 +51,15 @@ export async function getSupportedNodeVersion(
         );
       }
     } else {
-      const nodeVersion = allOptions.find(o => {
-        return intersects(o.range, engineRange);
-      });
       throw new Error(
         'Found `engines` in `package.json` with an unsupported Node.js version range: ' +
-        engineRange +
-        '\nPlease use one of the following supported ranges: ' +
-        JSON.stringify(supportedOptions.map(o => o.range)) +
-        (nodeVersion && isDiscontinued(nodeVersion))
-          ? '\nThis change is the result of a decision made by an upstream infrastructure provider (AWS).' +
-            '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html'
-          : ''
+          engineRange +
+          '\nPlease use one of the following supported ranges: ' +
+          JSON.stringify(supportedOptions.map(o => o.range)) +
+          (discontinued
+            ? '\nThis change is the result of a decision made by an upstream infrastructure provider (AWS).' +
+              '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html'
+            : '')
       );
     }
   }
