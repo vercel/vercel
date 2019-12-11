@@ -341,7 +341,7 @@ export async function getRoutesManifest(
     );
   }
 
-  // eslint-disable-next-line
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const routesManifest: RoutesManifest = require(pathRoutesManifest);
 
   return routesManifest;

@@ -163,23 +163,19 @@ const name = '[@now/next]';
 const urls: stringMap = {};
 
 function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
-  // The runtime env vars are encoded and passed in as `argv[2]`, so that the
-  // dev-server process can replace them onto `process.env` after the Next.js
-  // "prepare" step
-  const encodedEnv = Buffer.from(JSON.stringify(runtimeEnv)).toString('base64');
-
-  // `env` is omitted since that
-  // makes it default to `process.env`
-  const forked = fork(path.join(__dirname, 'dev-server.js'), [encodedEnv], {
+  // `env` is omitted since that makes it default to `process.env`
+  const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
     cwd: entryPath,
     execArgv: [],
   });
 
   const getUrl = () =>
     new Promise<string>((resolve, reject) => {
-      forked.on('message', resolve);
-      forked.on('error', reject);
+      forked.once('message', resolve);
+      forked.once('error', reject);
     });
+
+  forked.send({ dir: entryPath, runtimeEnv });
 
   return { forked, getUrl };
 }

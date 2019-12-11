@@ -2040,10 +2040,10 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
 });
 
 test('ensure `github` and `scope` are not sent to the API', async t => {
-    const directory = fixture('github-and-scope-config');
-    const output = await execute([directory]);
+  const directory = fixture('github-and-scope-config');
+  const output = await execute([directory]);
 
-    t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test.after.always(async () => {
