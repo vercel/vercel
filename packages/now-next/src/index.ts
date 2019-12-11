@@ -4,6 +4,7 @@ import {
   readFile,
   unlink as unlinkFile,
   writeFile,
+  lstatSync,
 } from 'fs-extra';
 import os from 'os';
 import path from 'path';
@@ -197,7 +198,7 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const dotNextStatic = path.join(entryPath, '.next/static');
 
-  debug(`${name} Downloading user files...`);
+  debug('Downloading user files...');
   await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
@@ -579,9 +580,11 @@ export const build = async ({
           // Initial files are manually added to the lambda later
           return;
         }
+        const { mode } = lstatSync(path.join(workPath, file));
 
         files[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
+          mode,
         });
       };
 

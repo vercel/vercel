@@ -501,12 +501,12 @@ describe('getTransformedRoutes', () => {
       {
         src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
         headers: { Location: '/$1' },
-        status: 301,
+        status: 308,
       },
       {
         src: '^/(.*)\\.html/?$',
         headers: { Location: '/$1' },
-        status: 301,
+        status: 308,
       },
       {
         src: '^/help$',

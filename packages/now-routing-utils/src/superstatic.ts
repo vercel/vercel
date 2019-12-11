@@ -30,12 +30,12 @@ export function convertCleanUrls(
     routes.push({
       src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: loc },
-      status: 301,
+      status: 308,
     });
     routes.push({
       src: '^/(.*)\\.html/?$',
       headers: { Location: loc },
-      status: 301,
+      status: 308,
     });
   }
   return routes;
@@ -48,7 +48,7 @@ export function convertRedirects(redirects: NowRedirect[]): Route[] {
     const route: Route = {
       src,
       headers: { Location: loc },
-      status: r.statusCode || 307,
+      status: r.statusCode || 308,
     };
     return route;
   });
@@ -84,13 +84,13 @@ export function convertTrailingSlash(enable: boolean): Route[] {
     routes.push({
       src: '^/(.*[^\\/])$',
       headers: { Location: '/$1/' },
-      status: 307,
+      status: 308,
     });
   } else {
     routes.push({
       src: '^/(.*)\\/$',
       headers: { Location: '/$1' },
-      status: 307,
+      status: 308,
     });
   }
   return routes;
