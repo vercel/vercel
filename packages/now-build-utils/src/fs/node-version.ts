@@ -67,7 +67,9 @@ export async function getSupportedNodeVersion(
       .map(o => o.range);
     console.warn(
       boxen(
-        `Warning: Node.js ${range} will be discontinued on ${d}.` +
+        'WARNING' +
+          '\n' +
+          `\nNode.js ${range} will be discontinued on ${d}.` +
           `\nDeployments created on or after ${d} will fail to build.` +
           '\nPlease use one of the following supported `engines` in `package.json`: ' +
           JSON.stringify(validRanges) +
