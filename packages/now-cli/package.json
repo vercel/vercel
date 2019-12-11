@@ -146,7 +146,6 @@
     "ora": "3.4.0",
     "pcre-to-regexp": "1.0.0",
     "pluralize": "7.0.0",
-    "pre-commit": "1.2.2",
     "printf": "0.2.5",
     "progress": "2.0.3",
     "promisepipe": "3.0.0",
