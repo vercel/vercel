@@ -48,7 +48,7 @@ export async function getSupportedNodeVersion(
       }
     } else {
       throw new Error(
-        'Found `engines` in `package.json` with an unsupported node range: ' +
+        'Found `engines` in `package.json` with an unsupported Node.js version range: ' +
           engineRange +
           '\nPlease use one of the following supported ranges: ' +
           JSON.stringify(supportedOptions.map(o => o.range))
@@ -63,7 +63,7 @@ export async function getSupportedNodeVersion(
       .filter(o => !o.discontinueDate)
       .map(o => o.range);
     console.warn(
-      `Warning: Node ${range} will be discontinued on ${d}.\n` +
+      `Warning: Node.js ${range} will be discontinued on ${d}.\n` +
         `Deployments created on or after ${d} will fail to build.\n` +
         'Please use one of the following supported `engines` in `package.json`: ' +
         JSON.stringify(validRanges)
