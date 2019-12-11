@@ -80,7 +80,7 @@ export default async function download(
   );
 
   const duration = Date.now() - start;
-  debug(`Downloaded ${filenames.length} source files [${duration}ms]`);
+  debug(`Downloaded ${filenames.length} source files: ${duration}ms`);
 
   return files2;
 }
