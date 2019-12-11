@@ -3,7 +3,7 @@ import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
 import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
 import { Prerender } from './prerender';
-import download, { DownloadedFiles } from './fs/download';
+import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob from './fs/glob';
 import rename from './fs/rename';
@@ -52,6 +52,7 @@ export {
   detectBuilders,
   detectRoutes,
   debug,
+  isSymbolicLink,
   getLambdaOptionsFromFunction,
 };
 
