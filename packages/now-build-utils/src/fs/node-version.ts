@@ -9,7 +9,7 @@ const supportedOptions: NodeVersion[] = [
     major: 8,
     range: '8.10.x',
     runtime: 'nodejs8.10',
-    discontinueDate: new Date('2020-01-01'),
+    discontinueDate: new Date('2020-01-06'),
   },
 ].filter(o => !isDiscontinued(o));
 
