@@ -53,7 +53,7 @@ export async function getSupportedNodeVersion(
           engineRange +
           '\nPlease use one of the following supported ranges: ' +
           JSON.stringify(supportedOptions.map(o => o.range)) +
-          '\nThis change is a result of a decision made by an upstream infrastructure provider (AWS).' +
+          '\nThis change is the result of a decision made by an upstream infrastructure provider (AWS).' +
           '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html'
       );
     }
@@ -73,7 +73,7 @@ export async function getSupportedNodeVersion(
           `\nDeployments created on or after ${d} will fail to build.` +
           '\nPlease use one of the following supported `engines` in `package.json`: ' +
           JSON.stringify(validRanges) +
-          '\nThis change is a result of a decision made by an upstream infrastructure provider (AWS).' +
+          '\nThis change is the result of a decision made by an upstream infrastructure provider (AWS).' +
           '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html',
         { padding: 1 }
       )
