@@ -125,7 +125,7 @@ export default abstract class DetectorFilesystem {
   public getDependencyVersion = async (name: string): Promise<string> => {
     const pkg = await this.readPackageJson();
     const { dependencies = {}, devDependencies = {} } = pkg || {};
-    return { ...dependencies, ...devDependencies }[name];
+    return dependencies[name] || devDependencies[name];
   };
 }
 
