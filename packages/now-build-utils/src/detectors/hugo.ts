@@ -20,7 +20,11 @@ export default async function detectHugo({
   }
   return {
     buildCommand: 'hugo',
-    buildDirectory: config.publishDir || 'public',
+    outputDirectory: config.publishDir || 'public',
     devCommand: 'hugo server -D -w -p $PORT',
+    framework: {
+      slug: 'hugo',
+      version: 'latest',
+    },
   };
 }

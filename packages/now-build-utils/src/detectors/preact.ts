@@ -1,14 +1,18 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectPreact({
-  fs: { hasDependency },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasPreact = await hasDependency('preact-cli');
-  if (!hasPreact) return false;
+  const version = await getDependencyVersion('preact-cli');
+  if (!version) return false;
   return {
-    buildCommand: 'preact build',
-    buildDirectory: 'build',
+    buildCommand: (await getPackageJsonBuildCommand()) || 'preact build',
+    outputDirectory: 'build',
     devCommand: 'preact watch --port $PORT',
+    framework: {
+      slug: 'preact-cli',
+      version,
+    },
     routes: [
       {
         handle: 'filesystem',

@@ -1,6 +1,12 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
-import { PackageJson, Builder, Config, BuilderFunctions } from './types';
+import {
+  Builder,
+  Config,
+  BuilderFunctions,
+  DetectorResult,
+  DetectorOutput,
+} from './types';
 
 interface ErrorResponse {
   code: string;
@@ -10,26 +16,6 @@ interface ErrorResponse {
 interface Options {
   tag?: 'canary' | 'latest' | string;
   functions?: BuilderFunctions;
-}
-
-const src = 'package.json';
-const config: Config = { zeroConfig: true };
-
-const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
-  code: 'missing_build_script',
-  message:
-    'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
-    '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-build-script',
-};
-
-// Static builders are special cased in `@now/static-build`
-function getBuilders({ tag }: Options = {}): Map<string, Builder> {
-  const withTag = tag ? `@${tag}` : '';
-  const config = { zeroConfig: true };
-
-  return new Map<string, Builder>([
-    ['next', { src, use: `@now/next${withTag}`, config }],
-  ]);
 }
 
 // Must be a function to ensure that the returned
@@ -47,13 +33,8 @@ function getApiBuilders({ tag }: Pick<Options, 'tag'> = {}): Builder[] {
   ];
 }
 
-function hasPublicDirectory(files: string[]) {
-  return files.some(name => name.startsWith('public/'));
-}
-
-function hasBuildScript(pkg: PackageJson | undefined) {
-  const { scripts = {} } = pkg || {};
-  return Boolean(scripts && scripts['build']);
+function hasDirectory(fileName: string, files: string[]) {
+  return files.some(name => name.startsWith(`${fileName}/`));
 }
 
 function getApiFunctionBuilder(
@@ -91,39 +72,49 @@ function getApiFunctionBuilder(
   return use ? { use, src, config } : prevBuilder;
 }
 
-async function detectFrontBuilder(
-  pkg: PackageJson,
+function detectFrontBuilder(
+  detectorResult: Partial<DetectorOutput>,
   builders: Builder[],
   options: Options
-): Promise<Builder> {
+): Builder {
   const { tag } = options;
   const withTag = tag ? `@${tag}` : '';
-  for (const [dependency, builder] of getBuilders(options)) {
-    const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
 
-    // Return the builder when a dependency matches
-    if (deps[dependency]) {
-      if (options.functions) {
-        Object.entries(options.functions).forEach(([key, func]) => {
-          // When the builder is not used yet we'll use it for the frontend
-          if (
-            builders.every(
-              b => !(b.config && b.config.functions && b.config.functions[key])
-            )
-          ) {
-            if (!builder.config) builder.config = {};
-            if (!builder.config.functions) builder.config.functions = {};
-            builder.config.functions[key] = { ...func };
-          }
-        });
-      }
+  const { framework, buildCommand, outputDirectory } = detectorResult;
 
-      return builder;
-    }
+  const frameworkSlug = framework ? framework.slug : null;
+
+  const config: Config = {
+    zeroConfig: true,
+  };
+
+  if (buildCommand) {
+    config.buildCommand = buildCommand;
   }
 
-  // By default we'll choose the `static-build` builder
-  return { src, use: `@now/static-build${withTag}`, config };
+  if (outputDirectory) {
+    config.outputDirectory = outputDirectory;
+  }
+
+  // All unused functions will be used for the frontend
+  if (options.functions) {
+    Object.entries(options.functions).forEach(([key, func]) => {
+      if (
+        builders.every(
+          b => !(b.config && b.config.functions && b.config.functions[key])
+        )
+      ) {
+        config.functions = config.functions || {};
+        config.functions[key] = { ...func };
+      }
+    });
+  }
+
+  if (frameworkSlug === 'next') {
+    return { src: 'package.json', use: `@now/next${withTag}`, config };
+  }
+
+  return { src: 'package.json', use: `@now/static-build${withTag}`, config };
 }
 
 // Files that match a specific pattern will get ignored
@@ -139,10 +130,6 @@ export function getIgnoreApiFilter(optionsOrBuilders: Options | Builder[]) {
   }
 
   return (file: string) => {
-    if (!file.startsWith('api/')) {
-      return false;
-    }
-
     if (file.includes('/.')) {
       return false;
     }
@@ -169,10 +156,7 @@ export function sortFiles(fileA: string, fileB: string) {
   return fileA.localeCompare(fileB);
 }
 
-async function detectApiBuilders(
-  files: string[],
-  options: Options
-): Promise<Builder[]> {
+function detectApiBuilders(files: string[], options: Options): Builder[] {
   const builds = files
     .sort(sortFiles)
     .filter(getIgnoreApiFilter(options))
@@ -188,10 +172,10 @@ async function detectApiBuilders(
 
 // When a package has files that conflict with `/api` routes
 // e.g. Next.js pages/api we'll check it here and return an error.
-async function checkConflictingFiles(
+function checkConflictingFiles(
   files: string[],
   builders: Builder[]
-): Promise<ErrorResponse | null> {
+): ErrorResponse | null {
   // For Next.js
   if (builders.some(b => b.use.startsWith('@now/next'))) {
     const hasApiPages = files.some(file => file.startsWith('pages/api/'));
@@ -211,10 +195,10 @@ async function checkConflictingFiles(
 
 // When e.g. Next.js receives a `functions` property it has to make sure,
 // that it can handle those files, otherwise there are unused functions.
-async function checkUnusedFunctionsOnFrontendBuilder(
+function checkUnusedFunctionsOnFrontendBuilder(
   files: string[],
   builder: Builder
-): Promise<ErrorResponse | null> {
+): ErrorResponse | null {
   const { config: { functions = undefined } = {} } = builder;
 
   if (!functions) return null;
@@ -231,7 +215,9 @@ async function checkUnusedFunctionsOnFrontendBuilder(
       ) {
         return {
           code: 'unused_function',
-          message: `The function for ${matchedFile} can't be handled by any builder`,
+          message:
+            `The function for "${matchedFile}" can't be handled by any runtime. ` +
+            `Please provide one with the "runtime" option.`,
         };
       }
     }
@@ -241,8 +227,6 @@ async function checkUnusedFunctionsOnFrontendBuilder(
 }
 
 function validateFunctions(files: string[], { functions = {} }: Options) {
-  const apiBuilders = getApiBuilders();
-
   for (const [path, func] of Object.entries(functions)) {
     if (path.length > 256) {
       return {
@@ -312,15 +296,6 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
             'Function Runtimes must have a valid version, for example `now-php@1.0.0`.',
         };
       }
-
-      if (
-        apiBuilders.some(b => func.runtime && func.runtime.startsWith(b.use))
-      ) {
-        return {
-          code: 'invalid_function_runtime',
-          message: `The function Runtime ${func.runtime} is not a Community Runtime and must not be specified.`,
-        };
-      }
     }
 
     if (func.includeFiles !== undefined) {
@@ -349,7 +324,7 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
 // to determine what builders to use
 export async function detectBuilders(
   files: string[],
-  pkg?: PackageJson | undefined | null,
+  detectorResult: Partial<DetectorResult> | null = null,
   options: Options = {}
 ): Promise<{
   builders: Builder[] | null;
@@ -370,19 +345,23 @@ export async function detectBuilders(
   }
 
   // Detect all builders for the `api` directory before anything else
-  const builders = await detectApiBuilders(files, options);
+  const builders = detectApiBuilders(files, options);
 
-  if (pkg && hasBuildScript(pkg)) {
-    const frontendBuilder = await detectFrontBuilder(pkg, builders, options);
+  if (detectorResult && detectorResult.buildCommand) {
+    const frontendBuilder = detectFrontBuilder(
+      detectorResult,
+      builders,
+      options
+    );
     builders.push(frontendBuilder);
 
-    const conflictError = await checkConflictingFiles(files, builders);
+    const conflictError = checkConflictingFiles(files, builders);
 
     if (conflictError) {
       warnings.push(conflictError);
     }
 
-    const unusedFunctionError = await checkUnusedFunctionsOnFrontendBuilder(
+    const unusedFunctionError = checkUnusedFunctionsOnFrontendBuilder(
       files,
       frontendBuilder
     );
@@ -394,34 +373,35 @@ export async function detectBuilders(
         warnings,
       };
     }
-  } else {
-    if (pkg && builders.length === 0) {
-      // We only show this error when there are no api builders
-      // since the dependencies of the pkg could be used for those
-      errors.push(MISSING_BUILD_SCRIPT_ERROR);
-      return { errors, warnings, builders: null };
-    }
-
-    // We allow a `public` directory
-    // when there are no build steps
-    if (hasPublicDirectory(files)) {
-      builders.push({
-        use: '@now/static',
-        src: 'public/**/*',
-        config,
-      });
-    } else if (
-      builders.length > 0 &&
-      files.some(f => !f.startsWith('api/') && f !== 'package.json')
-    ) {
-      // Everything besides the api directory
-      // and package.json can be served as static files
-      builders.push({
-        use: '@now/static',
-        src: '!{api/**,package.json}',
-        config,
-      });
-    }
+  } else if (
+    detectorResult &&
+    detectorResult.outputDirectory &&
+    hasDirectory(detectorResult.outputDirectory, files)
+  ) {
+    builders.push({
+      use: '@now/static',
+      src: [...detectorResult.outputDirectory.split('/'), '**', '*']
+        .filter(Boolean)
+        .join('/'),
+      config: { zeroConfig: true },
+    });
+  } else if (hasDirectory('public', files)) {
+    builders.push({
+      use: '@now/static',
+      src: 'public/**/*',
+      config: { zeroConfig: true },
+    });
+  } else if (
+    builders.length > 0 &&
+    files.some(f => !f.startsWith('api/') && f !== 'package.json')
+  ) {
+    // Everything besides the api directory
+    // and package.json can be served as static files
+    builders.push({
+      use: '@now/static',
+      src: '!{api/**,package.json}',
+      config: { zeroConfig: true },
+    });
   }
 
   return {

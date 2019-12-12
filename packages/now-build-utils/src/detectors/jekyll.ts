@@ -16,7 +16,11 @@ export default async function detectJekyll({
   }
   return {
     buildCommand: 'jekyll build',
-    buildDirectory: config.destination || '_site',
+    outputDirectory: config.destination || '_site',
     devCommand: 'bundle exec jekyll serve --watch --port $PORT',
+    framework: {
+      slug: 'jekyll',
+      version: 'latest',
+    },
   };
 }
