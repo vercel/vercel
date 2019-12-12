@@ -119,7 +119,7 @@ export default abstract class DetectorFilesystem {
     const buildCommand = (await this.isNpm())
       ? 'npm run build'
       : 'yarn run build';
-    return this.getPackageJsonCommand('build') ? buildCommand : null;
+    return (await this.getPackageJsonCommand('build')) ? buildCommand : null;
   };
 
   public getDependencyVersion = async (name: string): Promise<string> => {
