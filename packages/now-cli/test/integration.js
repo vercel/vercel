@@ -770,7 +770,7 @@ test('create wildcard alias for deployment', async t => {
   // Retries to make sure we consider the time it takes to update
   const response = await retry(
     async () => {
-      const response = fetch(`https://test.${contextName}.now.sh`);
+      const response = await fetch(`https://test.${contextName}.now.sh`);
 
       if (response.ok) {
         return response;
