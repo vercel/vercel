@@ -466,10 +466,10 @@ CMD ["node", "index.js"]`,
           autoAlias: true,
           autoJobCancelation: true,
           enabled: true,
-          silent: true
-        }
-      })
-    }
+          silent: true,
+        },
+      }),
+    },
   };
 
   for (const typeName of Object.keys(spec)) {

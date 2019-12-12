@@ -84,8 +84,6 @@ export const build = async ({
   entrypoint,
   config,
 }: BuildOptions) => {
-  debug('Downloading user files...');
-
   await download(files, workPath);
 
   const { gemHome, bundlerPath } = await installBundler();

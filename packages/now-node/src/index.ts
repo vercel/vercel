@@ -26,6 +26,7 @@ import {
   shouldServe,
   Config,
   debug,
+  isSymbolicLink,
 } from '@now/build-utils';
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
@@ -55,13 +56,6 @@ const BRIDGE_FILENAME = '___now_bridge';
 const HELPERS_FILENAME = '___now_helpers';
 const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support';
 
-const S_IFMT = 61440; /* 0170000 type of file */
-const S_IFLNK = 40960; /* 0120000 symbolic link */
-
-function isSymbolicLink(mode: number): boolean {
-  return (mode & S_IFMT) === S_IFLNK;
-}
-
 async function downloadInstallAndBundle({
   files,
   entrypoint,
@@ -69,10 +63,7 @@ async function downloadInstallAndBundle({
   config,
   meta,
 }: DownloadOptions) {
-  debug('Downloading user files...');
-  const downloadTime = Date.now();
   const downloadedFiles = await download(files, workPath, meta);
-  debug(`download complete [${Date.now() - downloadTime}ms]`);
 
   console.log('Installing dependencies...');
   const installTime = Date.now();

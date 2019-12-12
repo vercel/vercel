@@ -70,7 +70,6 @@ import {
   InvalidRegionOrDCForScale,
 } from '../../util/errors';
 import { SchemaValidationFailed } from '../../util/errors';
-import handleCertError from '../../util/certs/handle-cert-error';
 import readPackage from '../../util/read-package';
 
 interface Env {
@@ -800,11 +799,6 @@ async function sync({
         paths,
         createArgs
       );
-
-      const handledResult = handleCertError(output, deployment);
-      if (handledResult === 1) {
-        return handledResult;
-      }
 
       if (
         deployment instanceof DomainNotFound ||
