@@ -1,14 +1,18 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectStencil({
-  fs: { hasDependency },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasStencil = await hasDependency('@stencil/core');
-  if (!hasStencil) return false;
+  const version = await getDependencyVersion('@stencil/core');
+  if (!version) return false;
   return {
-    buildCommand: 'stencil build',
-    buildDirectory: 'www',
+    buildCommand: (await getPackageJsonBuildCommand()) || 'stencil build',
+    outputDirectory: 'www',
     devCommand: 'stencil build --dev --watch --serve --port $PORT',
+    framework: {
+      slug: '@stencil/core',
+      version,
+    },
     routes: [
       {
         handle: 'filesystem',

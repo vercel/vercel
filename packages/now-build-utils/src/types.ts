@@ -354,7 +354,7 @@ export interface DetectorParameters {
 
 export interface DetectorOutput {
   buildCommand: string;
-  buildDirectory: string;
+  outputDirectory: string;
   buildVariables?: Env;
   devCommand?: string;
   devVariables?: Env;
@@ -366,6 +366,10 @@ export interface DetectorOutput {
   redirects?: NowRedirect[];
   headers?: NowHeader[];
   trailingSlash?: boolean;
+  framework?: {
+    slug: string;
+    version: string;
+  }
 }
 
 export type DetectorResult = DetectorOutput | false;

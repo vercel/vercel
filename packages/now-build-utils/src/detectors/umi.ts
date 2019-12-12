@@ -1,14 +1,18 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectUmiJS({
-  fs: { hasDependency },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasUmi = await hasDependency('umi');
-  if (!hasUmi) return false;
+  const version = await getDependencyVersion('umi');
+  if (!version) return false;
   return {
-    buildCommand: 'umi build',
-    buildDirectory: 'dist',
+    buildCommand: (await getPackageJsonBuildCommand()) || 'umi build',
+    outputDirectory: 'dist',
     devCommand: 'umi dev --port $PORT',
+    framework: {
+      slug: 'umi',
+      version,
+    },
     routes: [
       {
         handle: 'filesystem',
