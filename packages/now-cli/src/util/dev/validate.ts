@@ -59,6 +59,14 @@ const functionsSchema = {
           minimum: 1,
           maximum: 900,
         },
+        includeFiles: {
+          type: 'string',
+          maxLength: 256,
+        },
+        excludeFiles: {
+          type: 'string',
+          maxLength: 256,
+        },
       },
     },
   },
