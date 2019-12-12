@@ -57,4 +57,5 @@ export {
 };
 
 export { detectDefaults } from './detectors';
+export * from './schemas';
 export * from './types';
