@@ -1,10 +1,10 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectGridsome({
-  fs: { hasDependency, getPackageJsonBuildCommand, getDependencyVersion },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasGridsome = await hasDependency('gridsome');
-  if (!hasGridsome) {
+  const version = await getDependencyVersion('gridsome');
+  if (!version) {
     return false;
   }
   return {
@@ -13,7 +13,7 @@ export default async function detectGridsome({
     devCommand: 'gridsome develop -p $PORT',
     framework: {
       slug: 'gridsom',
-      version: await getDependencyVersion('gridsom'),
+      version,
     },
   };
 }

@@ -1,10 +1,10 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectCreateReactAppEjected({
-  fs: { hasDependency, getDependencyVersion },
+  fs: { getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasReactDevUtils = await hasDependency('react-dev-utils');
-  if (!hasReactDevUtils) {
+  const version = await getDependencyVersion('react-dev-utils');
+  if (!version) {
     return false;
   }
   return {
@@ -13,7 +13,7 @@ export default async function detectCreateReactAppEjected({
     devCommand: 'node scripts/start.js',
     framework: {
       slug: 'react-dev-utils',
-      version: await getDependencyVersion('react-dev-utils'),
+      version,
     },
     devVariables: { BROWSER: 'none' },
     routes: [

@@ -1,17 +1,17 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectSvelte({
-  fs: { hasDependency, getPackageJsonBuildCommand, getDependencyVersion },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasSvelte = await hasDependency('sirv-cli');
-  if (!hasSvelte) return false;
+  const version = await getDependencyVersion('sirv-cli');
+  if (!version) return false;
   return {
     buildCommand: (await getPackageJsonBuildCommand()) || 'rollup -c',
     outputDirectory: 'public',
     devCommand: 'sirv public --single --dev --port $PORT',
     framework: {
       slug: 'sirv-cli',
-      version: await getDependencyVersion('sirv-cli'),
+      version,
     },
     routes: [
       {

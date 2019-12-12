@@ -1,17 +1,17 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectEmber({
-  fs: { hasDependency, getPackageJsonBuildCommand, getDependencyVersion },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasEmber = await hasDependency('ember-cli');
-  if (!hasEmber) return false;
+  const version = await getDependencyVersion('ember-cli');
+  if (!version) return false;
   return {
     buildCommand: (await getPackageJsonBuildCommand()) || 'ember build',
     outputDirectory: 'dist',
     devCommand: 'ember serve --port $PORT',
     framework: {
       slug: 'ember-cli',
-      version: await getDependencyVersion('ember-cli'),
+      version,
     },
     routes: [
       {
