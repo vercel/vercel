@@ -313,8 +313,8 @@ export async function build({
 
     if (
       meta.isDev &&
-      ((pkg && devScript && pkg.scripts && pkg.scripts[devScript]) ||
-        config.devCommand)
+      (config.devCommand ||
+        (pkg && devScript && pkg.scripts && pkg.scripts[devScript]))
     ) {
       let devPort: number | undefined = nowDevScriptPorts.get(entrypoint);
 
