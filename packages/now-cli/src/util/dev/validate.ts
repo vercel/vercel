@@ -61,11 +61,11 @@ const functionsSchema = {
         },
         includeFiles: {
           type: 'string',
-          maxLength: 4096,
+          maxLength: 256,
         },
         excludeFiles: {
           type: 'string',
-          maxLength: 4096,
+          maxLength: 256,
         },
       },
     },
