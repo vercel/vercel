@@ -9,6 +9,8 @@ import glob from './fs/glob';
 import rename from './fs/rename';
 import {
   spawnAsync,
+  execCommand,
+  spawnCommand,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
@@ -41,6 +43,8 @@ export {
   spawnAsync,
   installDependencies,
   runPackageJsonScript,
+  execCommand,
+  spawnCommand,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,

@@ -39,6 +39,24 @@ export function spawnAsync(
   });
 }
 
+export async function execCommand(command: string, options: SpawnOptions = {}) {
+  if (process.platform === 'win32') {
+    await spawnAsync('cmd.exe', ['/C', command], options);
+  } else {
+    await spawnAsync('sh', ['-c', command], options);
+  }
+
+  return true;
+}
+
+export function spawnCommand(command: string, options: SpawnOptions = {}) {
+  if (process.platform === 'win32') {
+    return spawn('cmd.exe', ['/C', command], options);
+  }
+
+  return spawn('sh', ['-c', command], options);
+}
+
 async function chmodPlusX(fsPath: string) {
   const s = await fs.stat(fsPath);
   const newMode = s.mode | 64 | 8 | 1; // eslint-disable-line no-bitwise
