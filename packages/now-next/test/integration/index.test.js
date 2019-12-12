@@ -6,7 +6,7 @@ const FOUR_MINUTES = 240000;
 
 beforeAll(() => {
   process.env.NEXT_TELEMETRY_DISABLED = '1';
-})
+});
 
 it(
   'Should build the standard example',

@@ -1,4 +1,5 @@
 import path from 'path';
+import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
 import { File, Files, Meta } from '../types';
 import { remove, mkdirp, readlink, symlink } from 'fs-extra';
@@ -39,8 +40,12 @@ export default async function download(
   basePath: string,
   meta?: Meta
 ): Promise<DownloadedFiles> {
-  const { isDev = false, skipDownload = false, filesChanged = null, filesRemoved = null } =
-    meta || {};
+  const {
+    isDev = false,
+    skipDownload = false,
+    filesChanged = null,
+    filesRemoved = null,
+  } = meta || {};
 
   if (isDev || skipDownload) {
     // In `now dev`, the `download()` function is a no-op because
@@ -48,11 +53,14 @@ export default async function download(
     // source files are already available.
     return files as DownloadedFiles;
   }
+  debug('Downloading deployment source files...');
 
+  const start = Date.now();
   const files2: DownloadedFiles = {};
+  const filenames = Object.keys(files);
 
   await Promise.all(
-    Object.keys(files).map(async name => {
+    filenames.map(async name => {
       // If the file does not exist anymore, remove it.
       if (Array.isArray(filesRemoved) && filesRemoved.includes(name)) {
         await removeFile(basePath, name);
@@ -70,6 +78,9 @@ export default async function download(
       files2[name] = await downloadFile(file, fsPath);
     })
   );
+
+  const duration = Date.now() - start;
+  debug(`Downloaded ${filenames.length} source files: ${duration}ms`);
 
   return files2;
 }
