@@ -16,9 +16,10 @@ export const functionsSchema = {
           maxLength: 256,
         },
         memory: {
-          type: 'number',
-          minimum: 128,
-          maximum: 3008,
+          // Number between 128 and 3008 in steps of 64
+          enum: Object.keys(Array.from({ length: 50 }))
+            .slice(2, 48)
+            .map(x => Number(x) * 64),
         },
         maxDuration: {
           type: 'number',

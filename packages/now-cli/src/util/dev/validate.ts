@@ -8,6 +8,7 @@ import {
   trailingSlashSchema,
 } from '@now/routing-utils';
 import { NowConfig } from './types';
+import { functionsSchema } from '@now/build-utils';
 
 const ajv = new Ajv();
 
@@ -31,35 +32,6 @@ const buildsSchema = {
         maxLength: 256,
       },
       config: { type: 'object' },
-    },
-  },
-};
-
-const functionsSchema = {
-  type: 'object',
-  minProperties: 1,
-  maxProperties: 50,
-  additionalProperties: false,
-  patternProperties: {
-    '^.{1,256}$': {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        runtime: {
-          type: 'string',
-          maxLength: 256,
-        },
-        memory: {
-          enum: Object.keys(Array.from({ length: 50 }))
-            .slice(2, 48)
-            .map(x => Number(x) * 64),
-        },
-        maxDuration: {
-          type: 'number',
-          minimum: 1,
-          maximum: 900,
-        },
-      },
     },
   },
 };
