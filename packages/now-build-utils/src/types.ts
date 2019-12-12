@@ -304,6 +304,7 @@ export interface NodeVersion {
   major: number;
   range: string;
   runtime: string;
+  discontinueDate?: Date;
 }
 
 export interface Builder {
