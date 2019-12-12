@@ -8,33 +8,9 @@ import {
   trailingSlashSchema,
 } from '@now/routing-utils';
 import { NowConfig } from './types';
-import { functionsSchema } from '@now/build-utils';
+import { functionsSchema, buildsSchema } from '@now/build-utils';
 
 const ajv = new Ajv();
-
-const buildsSchema = {
-  type: 'array',
-  minItems: 0,
-  maxItems: 128,
-  items: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['use'],
-    properties: {
-      src: {
-        type: 'string',
-        minLength: 1,
-        maxLength: 4096,
-      },
-      use: {
-        type: 'string',
-        minLength: 3,
-        maxLength: 256,
-      },
-      config: { type: 'object' },
-    },
-  },
-};
 
 const validateBuilds = ajv.compile(buildsSchema);
 const validateRoutes = ajv.compile(routesSchema);
