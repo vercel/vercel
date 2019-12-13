@@ -6,7 +6,7 @@ A Runtime is an npm module that exposes a `build` function and optionally an `an
 Official Runtimes are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `now.json` configuration file.
 However, the `use` property will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo url which is useful for testing your Runtime.
 
-See the [Runtimes Documentation](https://zeit.co/docs/v2/advanced/runtimes) to view example usage.
+See the [Runtimes Documentation](https://zeit.co/docs/runtimes) to view example usage.
 
 ## Runtime Exports
 
