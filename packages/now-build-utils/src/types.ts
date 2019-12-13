@@ -52,6 +52,10 @@ export interface Config {
   zeroConfig?: boolean;
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
+  framework?: {
+    slug: string;
+    version: string;
+  };
 }
 
 export interface Meta {
@@ -369,7 +373,7 @@ export interface DetectorOutput {
   framework?: {
     slug: string;
     version: string;
-  }
+  };
 }
 
 export type DetectorResult = DetectorOutput | false;
