@@ -312,7 +312,7 @@ export async function build({
     console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
-    if (pkg) {
+    if (pkg && (config.buildCommand || config.devCommand)) {
       // We want to add `node_modules/.bin` after `npm install`
       const { stdout } = await execAsync('yarn', ['bin'], {
         cwd: entrypointDir,
