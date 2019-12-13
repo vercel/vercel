@@ -70,12 +70,17 @@ export async function getSupportedNodeVersion(
     const validRanges = supportedOptions
       .filter(o => !o.discontinueDate)
       .map(o => o.range);
+    const prevTerm = process.env.TERM;
+    if (!prevTerm) {
+      // workaround for https://github.com/sindresorhus/term-size/issues/13
+      process.env.TERM = 'xterm';
+    }
     console.warn(
       boxen(
-        'WARNING' +
+        'NOTICE' +
           '\n' +
-          `\nNode.js ${range} will be discontinued on ${d}.` +
-          `\nDeployments created on or after ${d} will fail to build.` +
+          `\nNode.js version ${range} has reached end-of-life.` +
+          `\nAs a result, deployments created on or after ${d} will fail to build.` +
           '\nPlease use one of the following supported `engines` in `package.json`: ' +
           JSON.stringify(validRanges) +
           '\nThis change is the result of a decision made by an upstream infrastructure provider (AWS).' +
@@ -83,6 +88,7 @@ export async function getSupportedNodeVersion(
         { padding: 1 }
       )
     );
+    process.env.TERM = prevTerm;
   }
 
   return selection;
