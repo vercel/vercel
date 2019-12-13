@@ -9,6 +9,7 @@ import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
+  execAsync,
   spawnAsync,
   execCommand,
   spawnCommand,
@@ -306,13 +307,28 @@ export async function build({
       minNodeRange,
       config
     );
-    let spawnOpts = getSpawnOptions(meta, nodeVersion);
+    const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
     console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
-    // Since `runNpmInstall` changes the PATH
-    spawnOpts = getSpawnOptions(meta, nodeVersion);
+    if (pkg) {
+      // We want to add `node_modules/.bin` after `npm install`
+      const { stdout } = await execAsync('yarn', ['bin'], {
+        cwd: entrypointDir,
+      });
+
+      spawnOpts.env = {
+        ...spawnOpts.env,
+        PATH: `${stdout.trim()}${path.delimiter}${
+          spawnOpts.env ? spawnOpts.env.PATH : ''
+        }`,
+      };
+
+      debug(
+        `Added "${stdout.trim()}" to PATH env because a package.json file was found.`
+      );
+    }
 
     if (
       meta.isDev &&

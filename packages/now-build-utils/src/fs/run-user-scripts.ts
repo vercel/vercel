@@ -1,7 +1,6 @@
 import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
-import execa from 'execa';
 import debug from '../debug';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
@@ -40,14 +39,46 @@ export function spawnAsync(
   });
 }
 
-export async function execCommand(command: string, options: SpawnOptions = {}) {
-  if (process.platform === 'win32') {
-    await spawnAsync('cmd.exe', ['/C', command], options);
-  } else {
-    await spawnAsync('sh', ['-c', command], options);
-  }
+export function execAsync(
+  command: string,
+  args: string[],
+  opts: SpawnOptions = {}
+) {
+  return new Promise<{ stdout: string; stderr: string; code: number }>(
+    (resolve, reject) => {
+      opts.stdio = 'pipe';
 
-  return true;
+      let stdout: Buffer = Buffer.from('');
+      let stderr: Buffer = Buffer.from('');
+
+      const child = spawn(command, args, opts);
+
+      child.stderr!.on('data', data => {
+        stderr = Buffer.concat([stderr, data]);
+      });
+
+      child.stdout!.on('data', data => {
+        stdout = Buffer.concat([stdout, data]);
+      });
+
+      child.on('error', reject);
+      child.on('close', (code, signal) => {
+        if (code !== 0) {
+          return reject(
+            new Error(
+              `Program "${command}" exited with non-zero exit code ${code} ${signal}.`
+            )
+          );
+        }
+
+        return resolve({
+          code,
+          stdout: stdout.toString(),
+          stderr: stderr.toString(),
+        });
+      });
+    }
+  );
 }
 
 export function spawnCommand(command: string, options: SpawnOptions = {}) {
@@ -56,6 +87,16 @@ export function spawnCommand(command: string, options: SpawnOptions = {}) {
   }
 
   return spawn('sh', ['-c', command], options);
+}
+
+export async function execCommand(command: string, options: SpawnOptions = {}) {
+  if (process.platform === 'win32') {
+    await spawnAsync('cmd.exe', ['/C', command], options);
+  } else {
+    await spawnAsync('sh', ['-c', command], options);
+  }
+
+  return true;
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -163,10 +204,7 @@ export async function runNpmInstall(
 
   let commandArgs = args;
   debug(`Installing to ${destPath}`);
-  const { hasPackageLockJson, packageJson } = await scanParentDirs(
-    destPath,
-    true
-  );
+  const { hasPackageLockJson } = await scanParentDirs(destPath);
 
   const opts = { cwd: destPath, ...spawnOpts } || {
     cwd: destPath,
@@ -185,23 +223,6 @@ export async function runNpmInstall(
       'yarn',
       commandArgs.concat(['--ignore-engines', '--cwd', destPath]),
       opts
-    );
-  }
-
-  if (packageJson) {
-    // Add `node_modules/.bin` to the PATH env
-    const { stdout } = hasPackageLockJson
-      ? await execa('npm', ['bin'], { cwd: destPath })
-      : await execa('yarn', ['bin'], { cwd: destPath });
-
-    process.env.PATH = `${stdout.trim()}${path.delimiter}${process.env.PATH}`;
-
-    debug(
-      `Added "${stdout.trim()}" to PATH because a package.json file was found.`
-    );
-  } else {
-    debug(
-      `Do *NOT* add "node_modules/.bin" to PATH because no package.json was found.`
     );
   }
 }
