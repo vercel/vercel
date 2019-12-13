@@ -306,10 +306,13 @@ export async function build({
       minNodeRange,
       config
     );
-    const spawnOpts = getSpawnOptions(meta, nodeVersion);
+    let spawnOpts = getSpawnOptions(meta, nodeVersion);
 
     console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
+
+    // Since `runNpmInstall` changes the PATH
+    spawnOpts = getSpawnOptions(meta, nodeVersion);
 
     if (
       meta.isDev &&

@@ -1,6 +1,7 @@
 import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
+import execa from 'execa';
 import debug from '../debug';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
@@ -162,7 +163,10 @@ export async function runNpmInstall(
 
   let commandArgs = args;
   debug(`Installing to ${destPath}`);
-  const { hasPackageLockJson } = await scanParentDirs(destPath);
+  const { hasPackageLockJson, packageJson } = await scanParentDirs(
+    destPath,
+    true
+  );
 
   const opts = { cwd: destPath, ...spawnOpts } || {
     cwd: destPath,
@@ -181,6 +185,23 @@ export async function runNpmInstall(
       'yarn',
       commandArgs.concat(['--ignore-engines', '--cwd', destPath]),
       opts
+    );
+  }
+
+  if (packageJson) {
+    // Add `node_modules/.bin` to the PATH env
+    const { stdout } = hasPackageLockJson
+      ? await execa('npm', ['bin'], { cwd: destPath })
+      : await execa('yarn', ['bin'], { cwd: destPath });
+
+    process.env.PATH = `${stdout.trim()}${path.delimiter}${process.env.PATH}`;
+
+    debug(
+      `Added "${stdout.trim()}" to PATH because a package.json file was found.`
+    );
+  } else {
+    debug(
+      `Do *NOT* add "node_modules/.bin" to PATH because no package.json was found.`
     );
   }
 }
