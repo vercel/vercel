@@ -36,10 +36,6 @@ const testsThatFailToBuild = new Set([
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (fixture !== '45-node-modules-bin-path') {
-    continue;
-  }
-
   if (testsThatFailToBuild.has(fixture)) {
     // eslint-disable-next-line no-loop-func
     it(`should not build ${fixture}`, async () => {
