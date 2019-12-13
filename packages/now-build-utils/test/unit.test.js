@@ -497,6 +497,10 @@ describe('Test `detectBuilders`', () => {
       config: {
         zeroConfig: true,
         buildCommand: 'yarn build',
+        framework: {
+          slug: 'next',
+          version: '9.0.0',
+        },
         functions: {
           'pages/api/teams/**': {
             memory: 128,
@@ -564,6 +568,10 @@ describe('Test `detectBuilders`', () => {
       config: {
         zeroConfig: true,
         buildCommand: 'yarn build',
+        framework: {
+          slug: 'next',
+          version: '9.0.0',
+        },
       },
     });
   });
@@ -905,8 +913,12 @@ describe('Test `detectBuilders`', () => {
       use: '@now/next',
       src: 'package.json',
       config: {
-        buildCommand: 'yarn build',
         zeroConfig: true,
+        buildCommand: 'yarn build',
+        framework: {
+          slug: 'next',
+          version: '9.0.0',
+        },
       },
     });
 
