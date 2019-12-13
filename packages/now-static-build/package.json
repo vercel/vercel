@@ -1,6 +1,6 @@
 {
   "name": "@now/static-build",
-  "version": "0.13.2-canary.0",
+  "version": "0.13.2-canary.1",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/static-builds",
@@ -27,6 +27,5 @@
     "is-port-reachable": "2.0.1",
     "ms": "2.1.2",
     "typescript": "3.5.2"
-  },
-  "dependencies": {}
+  }
 }
