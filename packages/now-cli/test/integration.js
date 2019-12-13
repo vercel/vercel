@@ -493,6 +493,35 @@ test('list the payment methods', async t => {
   t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
+test('domains inspect', async t => {
+  const domainName = `inspect-${contextName}.org`;
+
+  const addRes = await execa(
+    binaryPath,
+    [`domains`, `add`, domainName, ...defaultArgs],
+    { reject: false }
+  );
+  t.is(addRes.exitCode, 0);
+
+  const { stderr, exitCode } = await execa(
+    binaryPath,
+    ['domains', 'inspect', domainName, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  const rmRes = await execa(
+    binaryPath,
+    [`domains`, `rm`, domainName, ...defaultArgs],
+    { reject: false, input: 'y' }
+  );
+  t.is(rmRes.exitCode, 0);
+
+  t.is(exitCode, 0);
+  t.true(!stderr.includes(`Renewal Price`));
+});
+
 test('try to purchase a domain', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -767,7 +796,19 @@ test('create wildcard alias for deployment', async t => {
   t.true(stdout.startsWith(goal));
 
   // Send a test request to the alias
-  const response = await fetch(`https://test.${contextName}.now.sh`);
+  // Retries to make sure we consider the time it takes to update
+  const response = await retry(
+    async () => {
+      const response = await fetch(`https://test.${contextName}.now.sh`);
+
+      if (response.ok) {
+        return response;
+      }
+
+      throw new Error(`Error: Returned code ${response.status}`);
+    },
+    { retries: 3 }
+  );
   const content = await response.text();
 
   t.true(response.ok);
@@ -2040,10 +2081,10 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
 });
 
 test('ensure `github` and `scope` are not sent to the API', async t => {
-    const directory = fixture('github-and-scope-config');
-    const output = await execute([directory]);
+  const directory = fixture('github-and-scope-config');
+  const output = await execute([directory]);
 
-    t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test.after.always(async () => {

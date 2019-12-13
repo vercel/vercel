@@ -9,6 +9,7 @@ import docusaurus from './docusaurus';
 import eleventy from './eleventy';
 import ember from './ember';
 import gatsby from './gatsby';
+import genericNodeProject from './generic-node-project';
 import gridsome from './gridsome';
 import hexo from './hexo';
 import hugo from './hugo';
@@ -80,6 +81,9 @@ export async function detectDefaults(
     // If no `package.json` framework was detected then check the non-pkg ones
     d = params.detectors || detectors;
     result = await firstTruthy(d.map(detector => detector(params)));
+  }
+  if (!result) {
+    result = await genericNodeProject(params);
   }
   return result;
 }

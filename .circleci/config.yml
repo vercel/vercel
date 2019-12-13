@@ -340,6 +340,10 @@ jobs:
       - run:
           name: Running Unit Tests
           command: yarn test-unit --clean false
+      - persist_to_workspace:
+          root: .
+          paths:
+            - packages/now-cli/.nyc_output
 
   coverage:
     docker:
@@ -349,12 +353,6 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - run:
-          name: Compiling `now dev` HTML error templates
-          command: node packages/now-cli/scripts/compile-templates.js
-      - run:
-          name: Run unit tests
-          command: yarn workspace now run test-unit
       - run:
           name: Run coverage report
           command: yarn workspace now run coverage

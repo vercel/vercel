@@ -8,7 +8,10 @@ import getWriteableDirectory from './fs/get-writable-directory';
 import glob from './fs/glob';
 import rename from './fs/rename';
 import {
+  execAsync,
   spawnAsync,
+  execCommand,
+  spawnCommand,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
@@ -38,9 +41,12 @@ export {
   getWriteableDirectory,
   glob,
   rename,
+  execAsync,
   spawnAsync,
   installDependencies,
   runPackageJsonScript,
+  execCommand,
+  spawnCommand,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -57,4 +63,5 @@ export {
 };
 
 export { detectDefaults } from './detectors';
+export * from './schemas';
 export * from './types';

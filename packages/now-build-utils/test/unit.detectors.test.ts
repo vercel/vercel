@@ -67,8 +67,8 @@ test('detectDefaults() - angular', async () => {
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
-  assert.equal(result.buildDirectory, 'dist');
-  assert.deepEqual(result.buildCommand, 'ng build');
+  assert.equal(result.outputDirectory, 'dist');
+  assert.deepEqual(result.buildCommand, 'yarn run build');
 });
 
 test('detectDefaults() - brunch', async () => {
@@ -76,8 +76,8 @@ test('detectDefaults() - brunch', async () => {
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
-  assert.equal(result.buildDirectory, 'public');
-  assert.deepEqual(result.buildCommand, 'brunch build --production');
+  assert.equal(result.outputDirectory, 'public');
+  assert.deepEqual(result.buildCommand, 'yarn run build');
 });
 
 test('detectDefaults() - hugo', async () => {
@@ -85,7 +85,7 @@ test('detectDefaults() - hugo', async () => {
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
-  assert.equal(result.buildDirectory, 'public');
+  assert.equal(result.outputDirectory, 'public');
   assert.deepEqual(result.buildCommand, 'hugo');
 });
 
@@ -94,7 +94,7 @@ test('detectDefaults() - jekyll', async () => {
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
-  assert.equal(result.buildDirectory, '_site');
+  assert.equal(result.outputDirectory, '_site');
   assert.deepEqual(result.buildCommand, 'jekyll build');
 });
 
@@ -103,6 +103,6 @@ test('detectDefaults() - middleman', async () => {
   const fs = new LocalFilesystem(dir);
   const result = await detectDefaults({ fs });
   if (!result) throw new Error('Expected result');
-  assert.equal(result.buildDirectory, 'build');
+  assert.equal(result.outputDirectory, 'build');
   assert.deepEqual(result.buildCommand, 'bundle exec middleman build');
 });
