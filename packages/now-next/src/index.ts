@@ -371,7 +371,7 @@ export const build = async ({
         },
       });
 
-      await runPackageJsonScript(entryPath, 'now-do-not-use-export', {
+      await runPackageJsonScript(entryPath, 'now-automatic-next-export', {
         ...spawnOpts,
         env,
       });
