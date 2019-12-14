@@ -334,6 +334,27 @@ export const build = async ({
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
 
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const rewrites: Route[] = [];
+  const redirects: Route[] = [];
+
+  if (routesManifest) {
+    switch (routesManifest.version) {
+      case 1: {
+        redirects.push(...convertRedirects(routesManifest.redirects));
+        rewrites.push(...convertRewrites(routesManifest.rewrites));
+        break;
+      }
+      default: {
+        // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
+      }
+    }
+  }
+
   if (isLegacy) {
     debug('Running npm install --production...');
     await runNpmInstall(
@@ -819,8 +840,6 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
-
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
     entryDirectory,
@@ -833,26 +852,6 @@ export const build = async ({
       return route;
     })
   );
-
-  const rewrites: Route[] = [];
-  const redirects: Route[] = [];
-
-  if (routesManifest) {
-    switch (routesManifest.version) {
-      case 1: {
-        redirects.push(...convertRedirects(routesManifest.redirects));
-        rewrites.push(...convertRewrites(routesManifest.rewrites));
-        break;
-      }
-      default: {
-        // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
-        throw new Error(
-          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-        );
-      }
-    }
-  }
 
   return {
     output: {
