@@ -364,7 +364,7 @@ export const build = async ({
         ...pkg,
         scripts: {
           ...pkg.scripts,
-          'now-do-not-use-export': `next export --outdir "${path.resolve(
+          'now-automatic-next-export': `next export --outdir "${path.resolve(
             entryPath,
             'out'
           )}"`,
