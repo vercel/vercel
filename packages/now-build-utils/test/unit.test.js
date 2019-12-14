@@ -1,9 +1,14 @@
 const path = require('path');
 const fs = require('fs-extra');
-const execa = require('execa');
 const assert = require('assert');
 const { createZip } = require('../dist/lambda');
-const { glob, download, detectBuilders, detectRoutes } = require('../');
+const {
+  glob,
+  download,
+  detectBuilders,
+  detectRoutes,
+  spawnAsync,
+} = require('../');
 const {
   getSupportedNodeVersion,
   defaultSelection,
@@ -39,7 +44,7 @@ it('should create zip files with symlinks properly', async () => {
   await fs.mkdirp(outDir);
 
   await fs.writeFile(outFile, await createZip(files));
-  await execa('unzip', [outFile], { cwd: outDir });
+  await spawnAsync('unzip', [outFile], { cwd: outDir });
 
   const [linkStat, aStat] = await Promise.all([
     fs.lstat(path.join(outDir, 'link.txt')),
@@ -497,10 +502,6 @@ describe('Test `detectBuilders`', () => {
       config: {
         zeroConfig: true,
         buildCommand: 'yarn build',
-        framework: {
-          slug: 'next',
-          version: '9.0.0',
-        },
         functions: {
           'pages/api/teams/**': {
             memory: 128,
@@ -568,10 +569,6 @@ describe('Test `detectBuilders`', () => {
       config: {
         zeroConfig: true,
         buildCommand: 'yarn build',
-        framework: {
-          slug: 'next',
-          version: '9.0.0',
-        },
       },
     });
   });
@@ -913,12 +910,8 @@ describe('Test `detectBuilders`', () => {
       use: '@now/next',
       src: 'package.json',
       config: {
-        zeroConfig: true,
         buildCommand: 'yarn build',
-        framework: {
-          slug: 'next',
-          version: '9.0.0',
-        },
+        zeroConfig: true,
       },
     });
 

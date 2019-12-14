@@ -9,10 +9,7 @@ import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
-  execAsync,
   spawnAsync,
-  execCommand,
-  spawnCommand,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -163,32 +160,7 @@ function getPkg(entrypoint: string, workPath: string) {
   return pkg;
 }
 
-function getFramework(config: Config, pkg?: PackageJson | null) {
-  if (config && config.framework && (config.framework as any).slug) {
-    const framework = frameworks.find(
-      ({ dependency }) => dependency === (config.framework as any).slug!
-    );
-
-    if (framework) {
-      if (!framework.getOutputDirName && config.outputDirectory) {
-        return {
-          ...framework,
-          getOutputDirName(prefix: string) {
-            return Promise.resolve(
-              path.join(prefix, config.outputDirectory as string)
-            );
-          },
-        };
-      }
-
-      return framework;
-    }
-  }
-
-  if (!pkg) {
-    return;
-  }
-
+function getFramework(pkg: PackageJson) {
   const dependencies = Object.assign({}, pkg.dependencies, pkg.devDependencies);
   const framework = frameworks.find(
     ({ dependency }) => dependencies[dependency || '']
@@ -205,22 +177,18 @@ export async function build({
 }: BuildOptions) {
   await download(files, workPath, meta);
 
-  debug(`config:\n${JSON.stringify(config, null, 2)}`);
-
   const mountpoint = path.dirname(entrypoint);
   const entrypointDir = path.join(workPath, mountpoint);
 
   let distPath = path.join(
     workPath,
     path.dirname(entrypoint),
-    (config && (config.distDir as string)) ||
-      (config.outputDirectory as string) ||
-      'dist'
+    (config && (config.distDir as string)) || 'dist'
   );
 
   const pkg = getPkg(entrypoint, workPath);
 
-  if (pkg || config.buildCommand) {
+  if (pkg) {
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
@@ -229,7 +197,7 @@ export async function build({
     let minNodeRange: string | undefined = undefined;
 
     const routes: Route[] = [];
-    const devScript = pkg ? getCommand(pkg, 'dev', config) : null;
+    const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (config.zeroConfig) {
       if (existsSync(gemfilePath) && !meta.isDev) {
@@ -276,13 +244,9 @@ export async function build({
       }
 
       // `public` is the default for zero config
-      distPath = path.join(
-        workPath,
-        path.dirname(entrypoint),
-        (config.outputDirectory as string) || 'public'
-      );
+      distPath = path.join(workPath, path.dirname(entrypoint), 'public');
 
-      framework = getFramework(config, pkg);
+      framework = getFramework(pkg);
     }
 
     if (framework) {
@@ -312,37 +276,11 @@ export async function build({
     console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
-    if (pkg && (config.buildCommand || config.devCommand)) {
-      // We want to add `node_modules/.bin` after `npm install`
-      const { stdout } = await execAsync('yarn', ['bin'], {
-        cwd: entrypointDir,
-      });
-
-      spawnOpts.env = {
-        ...spawnOpts.env,
-        PATH: `${stdout.trim()}${path.delimiter}${
-          spawnOpts.env ? spawnOpts.env.PATH : ''
-        }`,
-      };
-
-      debug(
-        `Added "${stdout.trim()}" to PATH env because a package.json file was found.`
-      );
-    }
-
-    if (
-      meta.isDev &&
-      (config.devCommand ||
-        (pkg && devScript && pkg.scripts && pkg.scripts[devScript]))
-    ) {
+    if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
       let devPort: number | undefined = nowDevScriptPorts.get(entrypoint);
 
       if (typeof devPort === 'number') {
-        debug(
-          '`%s` server already running for %j',
-          config.devCommand || devScript,
-          entrypoint
-        );
+        debug('`%s` server already running for %j', devScript, entrypoint);
       } else {
         // Run the `now-dev` or `dev` script out-of-bounds, since it is assumed that
         // it will launch a dev server that never "completes"
@@ -355,11 +293,7 @@ export async function build({
           env: { ...process.env, PORT: String(devPort) },
         };
 
-        const child: ChildProcess =
-          typeof config.devCommand === 'string'
-            ? spawnCommand(config.devCommand, opts)
-            : spawn('yarn', ['run', devScript!], opts);
-
+        const child: ChildProcess = spawn('yarn', ['run', devScript], opts);
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         nowDevChildProcesses.add(child);
 
@@ -394,30 +328,24 @@ export async function build({
       );
     } else {
       if (meta.isDev) {
-        debug(`WARN: A dev script is missing.`);
+        debug(`WARN: "${devScript}" script is missing from package.json`);
         debug(
           'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
         );
       }
 
-      const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
-      debug(
-        `Running "${config.buildCommand ||
-          buildScript}" script in "${entrypoint}"`
-      );
+      const buildScript = getCommand(pkg, 'build', config as Config);
+      debug(`Running "${buildScript}" script in "${entrypoint}"`);
 
-      const found =
-        typeof config.buildCommand === 'string'
-          ? await execCommand(config.buildCommand, {
-              ...spawnOpts,
-              cwd: entrypointDir,
-            })
-          : await runPackageJsonScript(entrypointDir, buildScript!, spawnOpts);
+      const found = await runPackageJsonScript(
+        entrypointDir,
+        buildScript,
+        spawnOpts
+      );
 
       if (!found) {
         throw new Error(
-          `Missing required "${config.buildCommand ||
-            buildScript}" script in "${entrypoint}"`
+          `Missing required "${buildScript}" script in "${entrypoint}"`
         );
       }
 
@@ -486,7 +414,6 @@ export async function build({
 export async function prepareCache({
   entrypoint,
   workPath,
-  config,
 }: PrepareCacheOptions): Promise<Files> {
   // default cache paths
   const defaultCacheFiles = await glob('node_modules/**', workPath);
@@ -496,7 +423,7 @@ export async function prepareCache({
 
   const pkg = getPkg(entrypoint, workPath);
   if (pkg) {
-    const framework = getFramework(config, pkg);
+    const framework = getFramework(pkg);
 
     if (framework && framework.cachePattern) {
       frameworkCacheFiles = await glob(framework.cachePattern, workPath);
