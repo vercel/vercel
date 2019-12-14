@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@now/next" }],
+  "probes": [
+    {
+      "path": "/index.html",
+      "mustContain": "Hi There"
+    },
+    {
+      "path": "/about.html",
+      "mustContain": "Hi on About"
+    },
+    {
+      "path": "/",
+      "mustContain": "Hi There"
+    },
+    {
+      "path": "/about",
+      "mustContain": "Hi on About"
+    }
+  ]
+}
