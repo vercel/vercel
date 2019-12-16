@@ -624,6 +624,73 @@ export type NextPrerenderedRoutes = {
   };
 };
 
+export async function getExportIntent(
+  entryPath: string
+): Promise<false | { trailingSlash: boolean }> {
+  const pathExportMarker = path.join(entryPath, '.next', 'export-marker.json');
+  const hasExportMarker: boolean = await fs
+    .access(pathExportMarker, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasExportMarker) {
+    return false;
+  }
+
+  const manifest: {
+    version: 1;
+    exportTrailingSlash: boolean;
+    hasExportPathMap: boolean;
+  } = JSON.parse(await fs.readFile(pathExportMarker, 'utf8'));
+
+  switch (manifest.version) {
+    case 1: {
+      if (manifest.hasExportPathMap !== true) {
+        return false;
+      }
+
+      return { trailingSlash: manifest.exportTrailingSlash };
+    }
+
+    default: {
+      return false;
+    }
+  }
+}
+
+export async function getExportStatus(
+  entryPath: string
+): Promise<false | { success: boolean; outDirectory: string }> {
+  const pathExportDetail = path.join(entryPath, '.next', 'export-detail.json');
+  const hasExportDetail: boolean = await fs
+    .access(pathExportDetail, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasExportDetail) {
+    return false;
+  }
+
+  const manifest: {
+    version: 1;
+    success: boolean;
+    outDirectory: string;
+  } = JSON.parse(await fs.readFile(pathExportDetail, 'utf8'));
+
+  switch (manifest.version) {
+    case 1: {
+      return {
+        success: !!manifest.success,
+        outDirectory: manifest.outDirectory,
+      };
+    }
+
+    default: {
+      return false;
+    }
+  }
+}
+
 export async function getPrerenderManifest(
   entryPath: string
 ): Promise<NextPrerenderedRoutes> {
