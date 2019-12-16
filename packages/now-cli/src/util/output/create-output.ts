@@ -19,6 +19,13 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function warn(str: string, slug: string | null = null) {
+    const prevTerm = process.env.TERM;
+
+    if (!prevTerm) {
+      // workaround for https://github.com/sindresorhus/term-size/issues/13
+      process.env.TERM = 'xterm';
+    }
+
     print(
       boxen(
         chalk.bold.yellow('WARN! ') +
@@ -36,6 +43,8 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       )
     );
     print('\n');
+
+    process.env.TERM = prevTerm;
   }
 
   function note(str: string) {
