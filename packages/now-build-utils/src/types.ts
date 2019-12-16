@@ -52,6 +52,9 @@ export interface Config {
   zeroConfig?: boolean;
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
+  outputDirectory?: string;
+  buildCommand?: string;
+  devCommand?: string;
   framework?: {
     slug: string;
     version: string;

@@ -164,19 +164,19 @@ function getPkg(entrypoint: string, workPath: string) {
 }
 
 function getFramework(config: Config, pkg?: PackageJson | null) {
-  if (config && config.framework && (config.framework as any).slug) {
+  const { framework: configFramework, outputDirectory } = config;
+
+  if (configFramework && configFramework.slug) {
     const framework = frameworks.find(
-      ({ dependency }) => dependency === (config.framework as any).slug!
+      ({ dependency }) => dependency === configFramework.slug
     );
 
     if (framework) {
-      if (!framework.getOutputDirName && config.outputDirectory) {
+      if (!framework.getOutputDirName && outputDirectory) {
         return {
           ...framework,
           getOutputDirName(prefix: string) {
-            return Promise.resolve(
-              path.join(prefix, config.outputDirectory as string)
-            );
+            return Promise.resolve(path.join(prefix, outputDirectory));
           },
         };
       }
