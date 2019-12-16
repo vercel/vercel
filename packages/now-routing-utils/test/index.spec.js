@@ -455,6 +455,82 @@ describe('normalizeRoutes', () => {
       ]
     );
   });
+
+  test('fails if routes after `handle: hit` use `dest`', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/user$',
+        dest: '^/api/user$',
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You cannot assign "dest" after "handle: hit"'
+    );
+  });
+
+  test('fails if routes after `handle: hit` do not use `continue: true`', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/user$',
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "continue: true" after "handle: hit"'
+    );
+  });
+
+  test('fails if routes after `handle: miss` do not use `check: true`', () => {
+    const input = [
+      {
+        handle: 'miss',
+      },
+      {
+        src: '^/user$',
+        dest: '^/api/user$',
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "check: true" after "handle: miss"'
+    );
+  });
+
+  test('fails if routes after `handle: miss` do not use `continue: true`', () => {
+    const input = [
+      {
+        handle: 'miss',
+      },
+      {
+        src: '^/user$',
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "continue: true" after "handle: miss"'
+    );
+  });
 });
 
 describe('getTransformedRoutes', () => {
