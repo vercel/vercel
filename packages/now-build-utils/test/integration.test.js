@@ -30,6 +30,11 @@ class LocalFilesystem extends DetectorFilesystem {
   _readFile(name) {
     return fs.readFile(path.join(this.dir, name));
   }
+
+  async _scan(pattern) {
+    const files = await glob(pattern, { cwd: this.dir });
+    return Object.keys(files);
+  }
 }
 
 beforeAll(async () => {
