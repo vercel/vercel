@@ -352,7 +352,7 @@ export async function build({
         const opts: SpawnOptions = {
           cwd: entrypointDir,
           stdio: 'inherit',
-          env: { ...process.env, PORT: String(devPort) },
+          env: { ...spawnOpts.env, PORT: String(devPort) },
         };
 
         const child: ChildProcess =
