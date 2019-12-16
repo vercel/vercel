@@ -355,10 +355,11 @@ export const build = async ({
   }
 
   const exportIntent = await getExportIntent(entryPath);
-  if (exportIntent) {
-    const { trailingSlash } = exportIntent;
+  const userExport = await getExportStatus(entryPath);
 
-    const userExport = await getExportStatus(entryPath);
+  if (exportIntent || userExport) {
+    const { trailingSlash = true } = exportIntent || {};
+
     if (!userExport) {
       await writePackageJson(entryPath, {
         ...pkg,
@@ -378,15 +379,9 @@ export const build = async ({
     }
 
     const resultingExport = await getExportStatus(entryPath);
-    if (!resultingExport) {
+    if (!resultingExport || resultingExport.success !== true) {
       throw new Error(
         'Exporting Next.js app failed. Please check your build logs and contact us if this continues.'
-      );
-    }
-
-    if (resultingExport.success !== true) {
-      throw new Error(
-        'Export of Next.js app failed. Please check your build logs.'
       );
     }
 

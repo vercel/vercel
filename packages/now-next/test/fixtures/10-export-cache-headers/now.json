@@ -7,6 +7,10 @@
       "responseHeaders": {
         "cache-control": "public,max-age=31536000,immutable"
       }
+    },
+    {
+      "path": "/",
+      "mustContain": "nextExport\":true"
     }
   ]
 }

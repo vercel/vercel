@@ -9,6 +9,10 @@
     {
       "path": "/about",
       "mustContain": "Hi on About"
+    },
+    {
+      "path": "/",
+      "mustContain": "nextExport\":true"
     }
   ]
 }
