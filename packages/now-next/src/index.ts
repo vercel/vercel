@@ -358,7 +358,7 @@ export const build = async ({
   const userExport = await getExportStatus(entryPath);
 
   if (exportIntent || userExport) {
-    const { trailingSlash = true } = exportIntent || {};
+    const { trailingSlash = false } = exportIntent || {};
 
     if (!userExport) {
       await writePackageJson(entryPath, {
