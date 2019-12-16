@@ -55,9 +55,18 @@ describe('normalizeRoutes', () => {
       { handle: 'filesystem' },
       { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' },
       { handle: 'hit' },
-      { src: '^/hit-me$', dest: '/api/hit-miss' },
+      {
+        src: '^/hit-me$',
+        headers: { 'Cache-Control': 'max-age=20' },
+        continue: true,
+      },
       { handle: 'miss' },
-      { src: '^/missed-me$', dest: '/api/missed-me' },
+      { src: '^/missed-me$', dest: '/api/missed-me', check: true },
+      {
+        src: '^/missed-me$',
+        headers: { 'Cache-Control': 'max-age=10' },
+        continue: true,
+      },
     ];
 
     assertValid(routes);
