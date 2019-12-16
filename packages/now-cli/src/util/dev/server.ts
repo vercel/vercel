@@ -22,6 +22,8 @@ import {
   PackageJson,
   detectBuilders,
   detectRoutes,
+  detectDefaults,
+  DetectorFilesystem,
 } from '@now/build-utils';
 
 import { once } from '../once';
@@ -98,6 +100,25 @@ function sortBuilders(buildA: Builder, buildB: Builder) {
   }
 
   return 0;
+}
+
+class DevDetectorFilesystem extends DetectorFilesystem {
+  private dir: string;
+  private files: string[];
+
+  constructor(dir: string, files: string[]) {
+    super();
+    this.dir = dir;
+    this.files = files;
+  }
+
+  _exists(name: string): Promise<boolean> {
+    return Promise.resolve(this.files.includes(name));
+  }
+
+  _readFile(name: string): Promise<Buffer> {
+    return fs.readFile(join(this.dir, name));
+  }
 }
 
 export default class DevServer {
@@ -477,8 +498,6 @@ export default class DevServer {
       return this.cachedNowConfig;
     }
 
-    const pkg = await this.getPackageJson();
-
     // The default empty `now.json` is used to serve all files as static
     // when no `now.json` is present
     let config: NowConfig = this.cachedNowConfig || { version: 2 };
@@ -526,10 +545,18 @@ export default class DevServer {
 
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      const { builders, warnings, errors } = await detectBuilders(files, pkg, {
-        tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
-        functions: config.functions,
+      const detectorResult = await detectDefaults({
+        fs: new DevDetectorFilesystem(this.cwd, files),
       });
+
+      const { builders, warnings, errors } = await detectBuilders(
+        files,
+        detectorResult,
+        {
+          tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
+          functions: config.functions,
+        }
+      );
 
       if (errors) {
         this.output.error(errors[0].message);
@@ -573,29 +600,6 @@ export default class DevServer {
 
     this.cachedNowConfig = config;
     return config;
-  }
-
-  async getPackageJson(): Promise<PackageJson | null> {
-    const pkgPath = join(this.cwd, 'package.json');
-    let pkg: PackageJson | null = null;
-
-    this.output.debug('Reading `package.json` file');
-
-    try {
-      pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        this.output.debug('No `package.json` file present');
-      } else if (err.name === 'SyntaxError') {
-        this.output.warn(
-          `There is a syntax error in the \`package.json\` file: ${err.message}`
-        );
-      } else {
-        throw err;
-      }
-    }
-
-    return pkg;
   }
 
   async tryValidateOrExit(

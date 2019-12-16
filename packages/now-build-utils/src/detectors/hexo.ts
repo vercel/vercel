@@ -1,13 +1,17 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectHexo({
-  fs: { hasDependency },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasHexo = await hasDependency('hexo');
-  if (!hasHexo) return false;
+  const version = await getDependencyVersion('hexo');
+  if (!version) return false;
   return {
-    buildCommand: 'hexo generate',
-    buildDirectory: 'public',
+    buildCommand: (await getPackageJsonBuildCommand()) || 'hexo generate',
+    outputDirectory: 'public',
     devCommand: 'hexo server --port $PORT',
+    framework: {
+      slug: 'hexo',
+      version,
+    },
   };
 }

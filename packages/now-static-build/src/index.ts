@@ -175,7 +175,6 @@ export async function build({
   config,
   meta = {},
 }: BuildOptions) {
-  debug('Downloading user files...');
   await download(files, workPath, meta);
 
   const mountpoint = path.dirname(entrypoint);

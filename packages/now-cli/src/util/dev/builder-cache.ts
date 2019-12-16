@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import execa from 'execa';
 import semver from 'semver';
 import pipe from 'promisepipe';
@@ -8,7 +7,6 @@ import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
 import { join, resolve } from 'path';
-import { funCacheDir } from '@zeit/fun';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
@@ -17,7 +15,6 @@ import {
   readFile,
   readJSON,
   writeFile,
-  remove,
 } from 'fs-extra';
 import pkg from '../../../package.json';
 
@@ -104,11 +101,7 @@ export async function prepareBuilderDir() {
 
   if (!hasBundledBuilders(dependencies)) {
     const extractor = extract(builderDir);
-    await pipe(
-      createReadStream(bundledTarballPath),
-      createGunzip(),
-      extractor
-    );
+    await pipe(createReadStream(bundledTarballPath), createGunzip(), extractor);
   }
 
   return builderDir;

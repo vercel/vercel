@@ -77,7 +77,6 @@ export const build = async ({
   meta = {},
   config,
 }: BuildOptions) => {
-  debug('Downloading user files...');
   let downloadedFiles = await download(originalFiles, workPath, meta);
 
   if (meta.isDev) {

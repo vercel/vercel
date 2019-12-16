@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [{ "src": "packages/web/next.config.js", "use": "@now/next" }],
+  "routes": [{ "src": "/(.*)", "dest": "/packages/web/$1", "continue": true }],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "hello world <!-- -->6"
+    }
+  ]
+}

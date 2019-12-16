@@ -1,13 +1,13 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectSaber({
-  fs: { hasDependency },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasSaber = await hasDependency('saber');
-  if (!hasSaber) return false;
+  const version = await getDependencyVersion('saber');
+  if (!version) return false;
   return {
-    buildCommand: 'saber build',
-    buildDirectory: 'public',
+    buildCommand: (await getPackageJsonBuildCommand()) || 'saber build',
+    outputDirectory: 'public',
     devCommand: 'saber --port $PORT',
     routes: [
       {
@@ -23,5 +23,9 @@ export default async function detectSaber({
         dest: '404.html',
       },
     ],
+    framework: {
+      slug: 'saber',
+      version,
+    },
   };
 }
