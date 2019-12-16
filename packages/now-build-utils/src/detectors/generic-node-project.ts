@@ -11,7 +11,7 @@ export default async function detectGenericNodeProject({
   // We have to skip this when `/public` exists
   // for compatability reasons, since it worked
   // like this before.
-  if (!buildCommand || !hasPublic.length) {
+  if (!buildCommand || hasPublic.length) {
     return false;
   }
 
