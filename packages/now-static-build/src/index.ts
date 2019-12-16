@@ -353,10 +353,8 @@ export async function build({
           env: { ...spawnOpts.env, PORT: String(devPort) },
         };
 
-        const child: ChildProcess =
-          typeof config.devCommand === 'string'
-            ? spawnCommand(config.devCommand, opts)
-            : spawn('yarn', ['run', devScript!], opts);
+        const cmd = config.devCommand || `yarn run ${devScript}`;
+        const child: ChildProcess = spawnCommand(cmd, opts);
 
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         nowDevChildProcesses.add(child);
