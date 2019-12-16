@@ -379,9 +379,15 @@ export const build = async ({
     }
 
     const resultingExport = await getExportStatus(entryPath);
-    if (!resultingExport || resultingExport.success !== true) {
+    if (!resultingExport) {
       throw new Error(
         'Exporting Next.js app failed. Please check your build logs and contact us if this continues.'
+      );
+    }
+
+    if (resultingExport.success !== true) {
+      throw new Error(
+        'Export of Next.js app failed. Please check your build logs.'
       );
     }
 
