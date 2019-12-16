@@ -48,17 +48,17 @@ export function execAsync(
     (resolve, reject) => {
       opts.stdio = 'pipe';
 
-      let stdout: Buffer = Buffer.from('');
-      let stderr: Buffer = Buffer.from('');
+      const stdoutList: Buffer[] = [];
+      const stderrList: Buffer[] = [];
 
       const child = spawn(command, args, opts);
 
       child.stderr!.on('data', data => {
-        stderr = Buffer.concat([stderr, data]);
+        stderrList.push(data);
       });
 
       child.stdout!.on('data', data => {
-        stdout = Buffer.concat([stdout, data]);
+        stdoutList.push(data);
       });
 
       child.on('error', reject);
@@ -73,8 +73,8 @@ export function execAsync(
 
         return resolve({
           code,
-          stdout: stdout.toString(),
-          stderr: stderr.toString(),
+          stdout: Buffer.concat(stdoutList).toString(),
+          stderr: Buffer.concat(stderrList).toString(),
         });
       });
     }
