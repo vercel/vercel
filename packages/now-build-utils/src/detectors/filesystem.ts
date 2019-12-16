@@ -30,16 +30,28 @@ import { PackageJson } from '../types';
 export default abstract class DetectorFilesystem {
   protected abstract _readFile(name: string): Promise<Buffer>;
   protected abstract _exists(name: string): Promise<boolean>;
+  protected abstract _scan(pattern: string): Promise<string[]>;
 
   private existsCache: Map<string, Promise<boolean>>;
   private readFileCache: Map<string, Promise<Buffer>>;
   private readJsonCache: Map<string, Promise<any>>;
+  private scanCache: Map<string, Promise<string[]>>;
 
   constructor() {
+    this.scanCache = new Map();
     this.existsCache = new Map();
     this.readFileCache = new Map();
     this.readJsonCache = new Map();
   }
+
+  public scan = async (pattern: string): Promise<string[]> => {
+    let p = this.scanCache.get(pattern);
+    if (!p) {
+      p = this._scan(pattern);
+      this.scanCache.set(pattern, p);
+    }
+    return p;
+  };
 
   public exists = async (name: string): Promise<boolean> => {
     let p = this.existsCache.get(name);
