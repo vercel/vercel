@@ -39,6 +39,66 @@ export function spawnAsync(
   });
 }
 
+export function execAsync(
+  command: string,
+  args: string[],
+  opts: SpawnOptions = {}
+) {
+  return new Promise<{ stdout: string; stderr: string; code: number }>(
+    (resolve, reject) => {
+      opts.stdio = 'pipe';
+
+      const stdoutList: Buffer[] = [];
+      const stderrList: Buffer[] = [];
+
+      const child = spawn(command, args, opts);
+
+      child.stderr!.on('data', data => {
+        stderrList.push(data);
+      });
+
+      child.stdout!.on('data', data => {
+        stdoutList.push(data);
+      });
+
+      child.on('error', reject);
+      child.on('close', (code, signal) => {
+        if (code !== 0) {
+          return reject(
+            new Error(
+              `Program "${command}" exited with non-zero exit code ${code} ${signal}.`
+            )
+          );
+        }
+
+        return resolve({
+          code,
+          stdout: Buffer.concat(stdoutList).toString(),
+          stderr: Buffer.concat(stderrList).toString(),
+        });
+      });
+    }
+  );
+}
+
+export function spawnCommand(command: string, options: SpawnOptions = {}) {
+  if (process.platform === 'win32') {
+    return spawn('cmd.exe', ['/C', command], options);
+  }
+
+  return spawn('sh', ['-c', command], options);
+}
+
+export async function execCommand(command: string, options: SpawnOptions = {}) {
+  if (process.platform === 'win32') {
+    await spawnAsync('cmd.exe', ['/C', command], options);
+  } else {
+    await spawnAsync('sh', ['-c', command], options);
+  }
+
+  return true;
+}
+
 async function chmodPlusX(fsPath: string) {
   const s = await fs.stat(fsPath);
   const newMode = s.mode | 64 | 8 | 1; // eslint-disable-line no-bitwise
