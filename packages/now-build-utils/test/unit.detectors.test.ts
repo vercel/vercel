@@ -1,3 +1,4 @@
+import glob from 'glob';
 import assert from 'assert';
 import { join } from 'path';
 import { readFile, pathExists } from 'fs-extra';
@@ -18,6 +19,25 @@ class LocalFilesystem extends DetectorFilesystem {
 
   _readFile(name: string): Promise<Buffer> {
     return readFile(join(this.dir, name));
+  }
+
+  _scan(pattern: string): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+      glob(
+        pattern,
+        {
+          cwd: this.dir,
+        },
+        (error, files) => {
+          if (error) {
+            reject(files);
+            return;
+          }
+
+          resolve(files);
+        }
+      );
+    });
   }
 }
 
