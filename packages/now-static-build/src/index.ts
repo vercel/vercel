@@ -162,8 +162,8 @@ function getPkg(entrypoint: string, workPath: string) {
   return pkg;
 }
 
-function getFramework(config: Config, pkg?: PackageJson | null) {
-  const { framework: configFramework, outputDirectory } = config;
+function getFramework(config: Config | null, pkg?: PackageJson | null) {
+  const { framework: configFramework, outputDirectory } = config || {};
 
   if (configFramework && configFramework.slug) {
     const framework = frameworks.find(
