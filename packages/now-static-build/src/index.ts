@@ -205,8 +205,6 @@ export async function build({
 }: BuildOptions) {
   await download(files, workPath, meta);
 
-  debug(`config:\n${JSON.stringify(config, null, 2)}`);
-
   const mountpoint = path.dirname(entrypoint);
   const entrypointDir = path.join(workPath, mountpoint);
 
