@@ -17,7 +17,7 @@ import getURL from './helpers/get-url';
 import {
   npm as getNpmFiles_,
   docker as getDockerFiles_,
-  staticFiles as getStaticFiles_
+  staticFiles as getStaticFiles_,
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
 import { isValidName } from '../src/util/is-valid-name';
@@ -32,7 +32,7 @@ const fixture = name => join(prefix, name);
 const getNpmFiles = async dir => {
   const { pkg, nowConfig, hasNowJson } = await readMetadata(dir, {
     quiet: true,
-    strict: false
+    strict: false,
   });
 
   return getNpmFiles_(dir, pkg, nowConfig, { hasNowJson, output });
@@ -41,7 +41,7 @@ const getNpmFiles = async dir => {
 const getDockerFiles = async dir => {
   const { nowConfig, hasNowJson } = await readMetadata(dir, {
     quiet: true,
-    strict: false
+    strict: false,
   });
 
   return getDockerFiles_(dir, nowConfig, { hasNowJson, output });
@@ -51,7 +51,7 @@ const getStaticFiles = async (dir, isBuilds = false) => {
   const { nowConfig, hasNowJson } = await readMetadata(dir, {
     deploymentType: 'static',
     quiet: true,
-    strict: false
+    strict: false,
   });
 
   return getStaticFiles_(dir, nowConfig, { hasNowJson, output, isBuilds });
@@ -169,11 +169,9 @@ test('`now.files` overrides `.gitignore` in Static with custom config path', asy
   const path = 'now-json-static-gitignore-override';
 
   // Simulate custom args passed by the user
-  process.argv = [...process.argv, '--local-config', './now.json']
+  process.argv = [...process.argv, '--local-config', './now.json'];
 
-  let files = await getStaticFiles(
-    fixture(path)
-  );
+  let files = await getStaticFiles(fixture(path));
 
   files = files.sort(alpha);
 
@@ -185,9 +183,7 @@ test('`now.files` overrides `.gitignore` in Static with custom config path', asy
 
 test('`now.files` overrides `.gitignore` in Static', async t => {
   const path = 'now-json-static-gitignore-override';
-  let files = await getStaticFiles(
-    fixture(path)
-  );
+  let files = await getStaticFiles(fixture(path));
   files = files.sort(alpha);
 
   t.is(files.length, 3);
@@ -337,7 +333,7 @@ test('support docker', async t => {
 test('gets correct name of docker deployment', async t => {
   const { name, deploymentType } = await readMetadata(fixture('dockerfile'), {
     quiet: true,
-    strict: false
+    strict: false,
   });
 
   t.is(deploymentType, 'docker');
@@ -375,7 +371,7 @@ test('throw for unsupported `now.json` type property', async t => {
   try {
     await readMetadata(f, {
       quiet: true,
-      strict: false
+      strict: false,
     });
   } catch (err) {
     t.is(err.code, 'unsupported_deployment_type');
@@ -387,7 +383,7 @@ test('support `now.json` files with package.json non quiet', async t => {
   const f = fixture('now-json-no-name');
   const { deploymentType } = await readMetadata(f, {
     quiet: false,
-    strict: false
+    strict: false,
   });
 
   t.is(deploymentType, 'npm');
@@ -404,7 +400,7 @@ test('support `now.json` files with package.json non quiet', async t => {
 test('support `now.json` files with package.json non quiet not specified', async t => {
   const f = fixture('now-json-no-name');
   const { deploymentType } = await readMetadata(f, {
-    strict: false
+    strict: false,
   });
 
   t.is(deploymentType, 'npm');
@@ -423,7 +419,7 @@ test('No commands in Dockerfile with automatic strictness', async t => {
 
   try {
     await readMetadata(f, {
-      quiet: true
+      quiet: true,
     });
   } catch (err) {
     t.is(err.code, 'no_dockerfile_commands');
@@ -437,7 +433,7 @@ test('No commands in Dockerfile', async t => {
   try {
     await readMetadata(f, {
       quiet: true,
-      strict: true
+      strict: true,
     });
   } catch (err) {
     t.is(err.code, 'no_dockerfile_commands');
@@ -451,7 +447,7 @@ test('Missing Dockerfile for `docker` type', async t => {
   try {
     await readMetadata(f, {
       quiet: true,
-      strict: true
+      strict: true,
     });
   } catch (err) {
     t.is(err.code, 'dockerfile_missing');
@@ -463,7 +459,7 @@ test('support `now.json` files with Dockerfile', async t => {
   const f = fixture('now-json-docker');
   const { deploymentType, nowConfig, hasNowJson } = await readMetadata(f, {
     quiet: true,
-    strict: false
+    strict: false,
   });
   t.is(deploymentType, 'docker');
 
@@ -479,7 +475,7 @@ test('load name from Dockerfile', async t => {
   const f = fixture('now-json-docker-name');
   const { deploymentType, name } = await readMetadata(f, {
     quiet: true,
-    strict: false
+    strict: false,
   });
 
   t.is(deploymentType, 'docker');
@@ -490,7 +486,7 @@ test('support `now.json` files with Dockerfile non quiet', async t => {
   const f = fixture('now-json-docker');
   const { deploymentType, nowConfig, hasNowJson } = await readMetadata(f, {
     quiet: false,
-    strict: false
+    strict: false,
   });
   t.is(deploymentType, 'docker');
 
@@ -507,7 +503,7 @@ test('throws when both `now.json` and `package.json:now` exist', async t => {
   try {
     await readMetadata(fixture('now-json-throws'), {
       quiet: true,
-      strict: false
+      strict: false,
     });
   } catch (err) {
     e = err;
@@ -523,7 +519,7 @@ test('throws when `package.json` and `Dockerfile` exist', async t => {
   try {
     await readMetadata(fixture('multiple-manifests-throws'), {
       quiet: true,
-      strict: false
+      strict: false,
     });
   } catch (err) {
     e = err;
@@ -536,7 +532,7 @@ test('support `package.json:now.type` to bypass multiple manifests error', async
   const f = fixture('type-in-package-now-with-dockerfile');
   const { type, nowConfig, hasNowJson } = await readMetadata(f, {
     quiet: true,
-    strict: false
+    strict: false,
   });
   t.is(type, 'npm');
   t.is(nowConfig.type, 'npm');
@@ -544,16 +540,16 @@ test('support `package.json:now.type` to bypass multiple manifests error', async
 });
 
 test('friendly error for malformed JSON', async t => {
-  const err = await t.throwsAsync(
-    () => readMetadata(fixture('json-syntax-error'), {
+  const err = await t.throwsAsync(() =>
+    readMetadata(fixture('json-syntax-error'), {
       quiet: true,
-      strict: false
+      strict: false,
     })
   );
   t.is(err.name, 'JSONError');
   t.is(
     err.message,
-    'Unexpected token \'o\' at 2:5 in test/fixtures/unit/json-syntax-error/package.json\n    oops\n    ^'
+    "Unexpected token 'o' at 2:5 in test/fixtures/unit/json-syntax-error/package.json\n    oops\n    ^"
   );
 });
 
@@ -597,7 +593,7 @@ test('`wait` utility does not invoke spinner before n miliseconds', async t => {
   const oraStub = sinon.stub().returns({
     color: '',
     start: () => {},
-    stop: () => {}
+    stop: () => {},
   });
 
   const timeOut = 200;
@@ -612,7 +608,7 @@ test('`wait` utility invokes spinner after n miliseconds', async t => {
   const oraStub = sinon.stub().returns({
     color: '',
     start: () => {},
-    stop: () => {}
+    stop: () => {},
   });
 
   const timeOut = 200;
@@ -635,7 +631,7 @@ test('`wait` utility does not invoke spinner when stopped before delay', async t
   const oraStub = sinon.stub().returns({
     color: '',
     start: () => {},
-    stop: () => {}
+    stop: () => {},
   });
 
   const timeOut = 200;
@@ -694,8 +690,8 @@ test('4xx response error as correct JSON', async t => {
   const fn = async (req, res) => {
     send(res, 400, {
       error: {
-        message: 'The request is not correct'
-      }
+        message: 'The request is not correct',
+      },
     });
   };
 
@@ -721,7 +717,7 @@ test('5xx response error as HTML', async t => {
 test('5xx response error with random JSON', async t => {
   const fn = async (req, res) => {
     send(res, 500, {
-      wrong: 'property'
+      wrong: 'property',
     });
   };
 
@@ -733,23 +729,27 @@ test('5xx response error with random JSON', async t => {
 });
 
 test('getProjectName with argv - option 1', t => {
-  const project = getProjectName({argv: {
-    name: 'abc'
-  }});
+  const project = getProjectName({
+    argv: {
+      name: 'abc',
+    },
+  });
   t.is(project, 'abc');
 });
 
 test('getProjectName with argv - option 2', t => {
-  const project = getProjectName({argv: {
-    '--name': 'abc'
-  }});
+  const project = getProjectName({
+    argv: {
+      '--name': 'abc',
+    },
+  });
   t.is(project, 'abc');
 });
 
 test('getProjectName with now.json', t => {
   const project = getProjectName({
     argv: {},
-    nowConfig: {name: 'abc'}
+    nowConfig: { name: 'abc' },
   });
   t.is(project, 'abc');
 });
@@ -758,7 +758,7 @@ test('getProjectName with a file', t => {
   const project = getProjectName({
     argv: {},
     nowConfig: {},
-    isFile: true
+    isFile: true,
   });
   t.is(project, 'files');
 });
@@ -767,7 +767,7 @@ test('getProjectName with a multiple files', t => {
   const project = getProjectName({
     argv: {},
     nowConfig: {},
-    paths: ['/tmp/aa/abc.png', '/tmp/aa/bbc.png']
+    paths: ['/tmp/aa/abc.png', '/tmp/aa/bbc.png'],
   });
   t.is(project, 'files');
 });
@@ -776,7 +776,7 @@ test('getProjectName with a directory', t => {
   const project = getProjectName({
     argv: {},
     nowConfig: {},
-    paths: ['/tmp/aa']
+    paths: ['/tmp/aa'],
   });
   t.is(project, 'aa');
 });
@@ -797,8 +797,8 @@ test('4xx error message with proper message', async t => {
   const fn = async (req, res) => {
     send(res, 403, {
       error: {
-        message: 'This is a test'
-      }
+        message: 'This is a test',
+      },
     });
   };
 
@@ -813,8 +813,8 @@ test('5xx error message with proper message', async t => {
   const fn = async (req, res) => {
     send(res, 500, {
       error: {
-        message: 'This is a test'
-      }
+        message: 'This is a test',
+      },
     });
   };
 
@@ -842,8 +842,8 @@ test('4xx response error as correct JSON with more properties', async t => {
     send(res, 403, {
       error: {
         message: 'The request is not correct',
-        additionalProperty: 'test'
-      }
+        additionalProperty: 'test',
+      },
     });
   };
 
@@ -861,8 +861,8 @@ test('429 response error with retry header', async t => {
 
     send(res, 429, {
       error: {
-        message: 'You were rate limited'
-      }
+        message: 'You were rate limited',
+      },
     });
   };
 
@@ -878,8 +878,8 @@ test('429 response error without retry header', async t => {
   const fn = async (req, res) => {
     send(res, 429, {
       error: {
-        message: 'You were rate limited'
-      }
+        message: 'You were rate limited',
+      },
     });
   };
 
@@ -891,8 +891,41 @@ test('429 response error without retry header', async t => {
   t.is(formatted.retryAfter, undefined);
 });
 
-test('guess user\'s intention with custom didYouMean', async t => {
-  const examples = ['apollo','create-react-app','docz','gatsby','go','gridsome','html-minifier','mdx-deck','monorepo','nextjs','nextjs-news','nextjs-static','node-server','nodejs','nodejs-canvas-partyparrot','nodejs-coffee','nodejs-express','nodejs-hapi','nodejs-koa','nodejs-koa-ts','nodejs-pdfkit','nuxt-static','optipng','php-7','puppeteer-screenshot','python','redirect','serverless-ssr-reddit','static','vue','vue-ssr','vuepress'];
+test("guess user's intention with custom didYouMean", async t => {
+  const examples = [
+    'apollo',
+    'create-react-app',
+    'docz',
+    'gatsby',
+    'go',
+    'gridsome',
+    'html-minifier',
+    'mdx-deck',
+    'monorepo',
+    'nextjs',
+    'nextjs-news',
+    'nextjs-static',
+    'node-server',
+    'nodejs',
+    'nodejs-canvas-partyparrot',
+    'nodejs-coffee',
+    'nodejs-express',
+    'nodejs-hapi',
+    'nodejs-koa',
+    'nodejs-koa-ts',
+    'nodejs-pdfkit',
+    'nuxt-static',
+    'optipng',
+    'php-7',
+    'puppeteer-screenshot',
+    'python',
+    'redirect',
+    'serverless-ssr-reddit',
+    'static',
+    'vue',
+    'vue-ssr',
+    'vuepress',
+  ];
 
   t.is(didYouMean('md', examples, 0.7), 'mdx-deck');
   t.is(didYouMean('koa', examples, 0.7), 'nodejs-koa');
@@ -906,16 +939,26 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = null;
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
-    t.regex(reason, /Dockerfile/gm);
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile,
+    });
+    t.regex(reason, /Deploying to Now 2\.0 automatically/gm);
   }
 
   {
     const localConfig = undefined;
-    const pkg = { scripts: { 'start': 'echo hi' } };
+    const pkg = { scripts: { start: 'echo hi' } };
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile,
+    });
     t.is(reason, null);
   }
 
@@ -924,16 +967,26 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = { scripts: { 'now-start': 'echo hi' } };
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile,
+    });
     t.is(reason, null);
   }
 
   {
-    const localConfig = { 'version': 1 };
+    const localConfig = { version: 1 };
     const pkg = null;
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile,
+    });
     t.is(reason, null);
   }
 
@@ -942,16 +995,26 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = null;
     const hasDockerfile = true;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile,
+    });
     t.is(reason, null);
   }
 
   {
     const localConfig = undefined;
-    const pkg = { scripts: { 'build': 'echo hi' } };
+    const pkg = { scripts: { build: 'echo hi' } };
     const hasDockerfile = false;
     const hasServerfile = false;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile,
+    });
     t.regex(reason, /package\.json/gm);
   }
 
@@ -960,7 +1023,12 @@ test('check platform version chanage with `preferV2Deployment`', async t => {
     const pkg = null;
     const hasDockerfile = false;
     const hasServerfile = true;
-    const reason = await preferV2Deployment({ localConfig, pkg, hasDockerfile, hasServerfile });
+    const reason = await preferV2Deployment({
+      localConfig,
+      pkg,
+      hasDockerfile,
+      hasServerfile,
+    });
     t.is(reason, null);
   }
 });
