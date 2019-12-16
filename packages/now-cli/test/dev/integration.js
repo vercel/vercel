@@ -1161,20 +1161,3 @@ test(
     );
   })
 );
-
-test(
-  '[now dev] Use public with a build command and an API',
-  testFixtureStdio('buildscript-and-api-and-public', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/`);
-    validateResponseHeaders(t, response);
-    t.is(response.status, 200);
-    t.regex(await response.text(), /This is my website./gm);
-
-    const apiResponse = await fetchWithRetry(
-      `http://localhost:${port}/api/date`
-    );
-    validateResponseHeaders(t, apiResponse);
-    t.is(apiResponse.status, 200);
-    t.regex(await apiResponse.text(), /Today: /gm);
-  })
-);

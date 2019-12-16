@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { join } from 'path';
 import { readFile, pathExists } from 'fs-extra';
-import { glob, detectDefaults, DetectorFilesystem } from '../src';
+import { detectDefaults, DetectorFilesystem } from '../src';
 import { firstTruthy } from '../src/detectors';
 
 class LocalFilesystem extends DetectorFilesystem {
@@ -18,11 +18,6 @@ class LocalFilesystem extends DetectorFilesystem {
 
   _readFile(name: string): Promise<Buffer> {
     return readFile(join(this.dir, name));
-  }
-
-  async _scan(pattern: string): Promise<string[]> {
-    const files = await glob(pattern, { cwd: this.dir });
-    return Object.keys(files);
   }
 }
 
