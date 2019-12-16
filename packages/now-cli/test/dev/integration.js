@@ -1162,7 +1162,7 @@ test(
   })
 );
 
-test.only(
+test(
   '[now dev] Use public with a build command and an API',
   testFixtureStdio('buildscript-and-api-and-public', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/`);
