@@ -54,6 +54,10 @@ describe('normalizeRoutes', () => {
       },
       { handle: 'filesystem' },
       { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' },
+      { handle: 'hit' },
+      { src: '^/hit-me$', dest: '/api/hit-miss' },
+      { handle: 'miss' },
+      { src: '^/missed-me$', dest: '/api/missed-me' },
     ];
 
     assertValid(routes);

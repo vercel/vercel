@@ -19,6 +19,8 @@ import {
 export { getCleanUrls } from './superstatic';
 export { mergeRoutes } from './merge';
 
+export const validHandlers = new Set<string>(['filesystem', 'hit', 'miss']);
+
 export function isHandler(route: Route): route is Handler {
   return typeof (route as Handler).handle !== 'undefined';
 }
@@ -37,14 +39,13 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
 
   for (const route of routes) {
     if (isHandler(route)) {
-      // typeof { handle: string }
       if (Object.keys(route).length !== 1) {
         errors.push({
           message: `Cannot have any other keys when handle is used (handle: ${route.handle})`,
           handle: route.handle,
         });
       }
-      if (!['filesystem'].includes(route.handle)) {
+      if (!validHandlers.has(route.handle)) {
         errors.push({
           message: `This is not a valid handler (handle: ${route.handle})`,
           handle: route.handle,
