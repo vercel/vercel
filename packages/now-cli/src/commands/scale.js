@@ -239,7 +239,7 @@ export default async function main(ctx) {
     return 1;
   }
   if (deployment.version === 2) {
-    output.error('Cannot scale a deployment containing builds');
+    output.error('Cannot scale a Now 2.0 deployment');
     now.close();
     return 1;
   }
