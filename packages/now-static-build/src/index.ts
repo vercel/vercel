@@ -1,6 +1,5 @@
 import ms from 'ms';
 import path from 'path';
-import spawn from 'cross-spawn';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import { ChildProcess, SpawnOptions } from 'child_process';
