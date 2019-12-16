@@ -119,10 +119,6 @@ class DevDetectorFilesystem extends DetectorFilesystem {
   _readFile(name: string): Promise<Buffer> {
     return fs.readFile(join(this.dir, name));
   }
-
-  _scan(pattern: string): Promise<string[]> {
-    return Promise.resolve(this.files.filter(file => minimatch(file, pattern)));
-  }
 }
 
 export default class DevServer {
