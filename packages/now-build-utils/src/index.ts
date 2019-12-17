@@ -3,12 +3,15 @@ import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
 import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
 import { Prerender } from './prerender';
-import download, { DownloadedFiles } from './fs/download';
+import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob from './fs/glob';
 import rename from './fs/rename';
 import {
+  execAsync,
   spawnAsync,
+  execCommand,
+  spawnCommand,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
@@ -38,9 +41,12 @@ export {
   getWriteableDirectory,
   glob,
   rename,
+  execAsync,
   spawnAsync,
   installDependencies,
   runPackageJsonScript,
+  execCommand,
+  spawnCommand,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -52,8 +58,13 @@ export {
   detectBuilders,
   detectRoutes,
   debug,
+  isSymbolicLink,
   getLambdaOptionsFromFunction,
 };
 
+export { detectBuildersLegacy } from './detect-builders-legacy';
+export { detectRoutesLegacy } from './detect-routes-legacy';
+
 export { detectDefaults } from './detectors';
+export * from './schemas';
 export * from './types';

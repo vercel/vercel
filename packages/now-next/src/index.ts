@@ -1,15 +1,3 @@
-import { ChildProcess, fork } from 'child_process';
-import {
-  pathExists,
-  readFile,
-  unlink as unlinkFile,
-  writeFile,
-} from 'fs-extra';
-import os from 'os';
-import path from 'path';
-import resolveFrom from 'resolve-from';
-import semver from 'semver';
-
 import {
   BuildOptions,
   Config,
@@ -19,6 +7,7 @@ import {
   FileBlob,
   FileFsRef,
   Files,
+  getLambdaOptionsFromFunction,
   getNodeVersion,
   getSpawnOptions,
   glob,
@@ -29,10 +18,24 @@ import {
   Route,
   runNpmInstall,
   runPackageJsonScript,
-  getLambdaOptionsFromFunction,
 } from '@now/build-utils';
+import {
+  convertRedirects,
+  convertRewrites,
+} from '@now/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
-
+import { ChildProcess, fork } from 'child_process';
+import {
+  lstatSync,
+  pathExists,
+  readFile,
+  unlink as unlinkFile,
+  writeFile,
+} from 'fs-extra';
+import os from 'os';
+import path from 'path';
+import resolveFrom from 'resolve-from';
+import semver from 'semver';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import {
@@ -42,10 +45,14 @@ import {
   excludeFiles,
   ExperimentalTraceVersion,
   getDynamicRoutes,
+  getExportIntent,
+  getExportStatus,
   getNextConfig,
   getPathsInside,
   getPrerenderManifest,
   getRoutes,
+  getRoutesManifest,
+  getSourceFilePathFromPage,
   isDynamicRoute,
   normalizePackageJson,
   normalizePage,
@@ -53,14 +60,7 @@ import {
   stringMap,
   syncEnvVars,
   validateEntrypoint,
-  getSourceFilePathFromPage,
-  getRoutesManifest,
 } from './utils';
-
-import {
-  convertRedirects,
-  convertRewrites,
-} from '@now/routing-utils/dist/superstatic';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -162,23 +162,19 @@ const name = '[@now/next]';
 const urls: stringMap = {};
 
 function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
-  // The runtime env vars are encoded and passed in as `argv[2]`, so that the
-  // dev-server process can replace them onto `process.env` after the Next.js
-  // "prepare" step
-  const encodedEnv = Buffer.from(JSON.stringify(runtimeEnv)).toString('base64');
-
-  // `env` is omitted since that
-  // makes it default to `process.env`
-  const forked = fork(path.join(__dirname, 'dev-server.js'), [encodedEnv], {
+  // `env` is omitted since that makes it default to `process.env`
+  const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
     cwd: entryPath,
     execArgv: [],
   });
 
   const getUrl = () =>
     new Promise<string>((resolve, reject) => {
-      forked.on('message', resolve);
-      forked.on('error', reject);
+      forked.once('message', resolve);
+      forked.once('error', reject);
     });
+
+  forked.send({ dir: entryPath, runtimeEnv });
 
   return { forked, getUrl };
 }
@@ -201,7 +197,6 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const dotNextStatic = path.join(entryPath, '.next/static');
 
-  debug(`${name} Downloading user files...`);
   await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
@@ -337,6 +332,122 @@ export const build = async ({
   const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
+
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const rewrites: Route[] = [];
+  const redirects: Route[] = [];
+
+  if (routesManifest) {
+    switch (routesManifest.version) {
+      case 1: {
+        redirects.push(...convertRedirects(routesManifest.redirects));
+        rewrites.push(...convertRewrites(routesManifest.rewrites));
+        break;
+      }
+      default: {
+        // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
+      }
+    }
+  }
+
+  const exportIntent = await getExportIntent(entryPath);
+  const userExport = await getExportStatus(entryPath);
+
+  if (exportIntent || userExport) {
+    const { trailingSlash = false } = exportIntent || {};
+
+    if (!userExport) {
+      await writePackageJson(entryPath, {
+        ...pkg,
+        scripts: {
+          ...pkg.scripts,
+          'now-automatic-next-export': `next export --outdir "${path.resolve(
+            entryPath,
+            'out'
+          )}"`,
+        },
+      });
+
+      await runPackageJsonScript(entryPath, 'now-automatic-next-export', {
+        ...spawnOpts,
+        env,
+      });
+    }
+
+    const resultingExport = await getExportStatus(entryPath);
+    if (!resultingExport) {
+      throw new Error(
+        'Exporting Next.js app failed. Please check your build logs and contact us if this continues.'
+      );
+    }
+
+    if (resultingExport.success !== true) {
+      throw new Error(
+        'Export of Next.js app failed. Please check your build logs.'
+      );
+    }
+
+    const outDirectory = resultingExport.outDirectory;
+
+    debug(`next export should use trailing slash: ${trailingSlash}`);
+
+    // This handles pages, `public/`, and `static/`.
+    const filesAfterBuild = await glob('**', outDirectory);
+
+    const output: Files = { ...filesAfterBuild };
+
+    // Strip `.html` extensions from build output
+    Object.entries(output)
+      .filter(([name]) => name.endsWith('.html'))
+      .forEach(([name, value]) => {
+        const cleanName = name.slice(0, -5);
+        delete output[name];
+        output[cleanName] = value;
+        if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
+          value.contentType = value.contentType || 'text/html; charset=utf-8';
+        }
+      });
+
+    return {
+      output,
+      routes: [
+        // TODO: low priority: handle trailingSlash
+
+        // redirects take the highest priority
+        ...redirects,
+        // Before we handle static files we need to set proper caching headers
+        {
+          // This ensures we only match known emitted-by-Next.js files and not
+          // user-emitted files which may be missing a hash in their filename.
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          // Next.js assets contain a hash or entropy in their filenames, so they
+          // are guaranteed to be unique and cacheable indefinitely.
+          headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+          continue: true,
+        },
+        {
+          src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
+        },
+        // Next.js pages, `static/` folder, reserved assets, and `public/`
+        // folder
+        { handle: 'filesystem' },
+        ...rewrites,
+
+        // Dynamic routes
+        // TODO: do we want to do this?: ...dynamicRoutes,
+      ],
+      watch: [],
+      childProcesses: [],
+    };
+  }
 
   if (isLegacy) {
     debug('Running npm install --production...');
@@ -583,9 +694,11 @@ export const build = async ({
           // Initial files are manually added to the lambda later
           return;
         }
+        const { mode } = lstatSync(path.join(workPath, file));
 
         files[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
+          mode,
         });
       };
 
@@ -821,8 +934,6 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
-
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
     entryDirectory,
@@ -835,26 +946,6 @@ export const build = async ({
       return route;
     })
   );
-
-  const rewrites: Route[] = [];
-  const redirects: Route[] = [];
-
-  if (routesManifest) {
-    switch (routesManifest.version) {
-      case 1: {
-        redirects.push(...convertRedirects(routesManifest.redirects));
-        rewrites.push(...convertRewrites(routesManifest.rewrites));
-        break;
-      }
-      default: {
-        // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
-        throw new Error(
-          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-        );
-      }
-    }
-  }
 
   return {
     output: {
@@ -910,7 +1001,7 @@ export const build = async ({
 export const prepareCache = async ({
   workPath,
   entrypoint,
-}: PrepareCacheOptions) => {
+}: PrepareCacheOptions): Promise<Files> => {
   debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
@@ -930,8 +1021,6 @@ export const prepareCache = async ({
   const cache = {
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
   };
   debug('Cache file manifest produced');
   return cache;

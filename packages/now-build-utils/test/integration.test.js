@@ -4,12 +4,33 @@ const {
   packAndDeploy,
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment');
-const { glob, detectBuilders, detectRoutes } = require('../');
+const {
+  glob,
+  detectBuilders,
+  detectRoutes,
+  DetectorFilesystem,
+  detectDefaults,
+} = require('../');
 
 jest.setTimeout(4 * 60 * 1000);
 
 const builderUrl = '@canary';
 let buildUtilsUrl;
+
+class LocalFilesystem extends DetectorFilesystem {
+  constructor(dir) {
+    super();
+    this.dir = dir;
+  }
+
+  _exists(name) {
+    return fs.pathExists(path.join(this.dir, name));
+  }
+
+  _readFile(name) {
+    return fs.readFile(path.join(this.dir, name));
+  }
+}
 
 beforeAll(async () => {
   const buildUtilsPath = path.resolve(__dirname, '..');
@@ -67,7 +88,9 @@ for (const builder of buildersToTestWith) {
 
 it('Test `detectBuilders` and `detectRoutes`', async () => {
   const fixture = path.join(__dirname, 'fixtures', '01-zero-config-api');
-  const pkg = await fs.readJSON(path.join(fixture, 'package.json'));
+  const detectorResult = await detectDefaults({
+    fs: new LocalFilesystem(fixture),
+  });
   const fileList = await glob('**', fixture);
   const files = Object.keys(fileList);
 
@@ -110,7 +133,7 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
     },
   ];
 
-  const { builders } = await detectBuilders(files, pkg);
+  const { builders } = await detectBuilders(files, detectorResult);
   const { defaultRoutes } = await detectRoutes(files, builders);
 
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };
@@ -128,7 +151,9 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
 
 it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
   const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
-  const pkg = await fs.readJSON(path.join(fixture, 'package.json'));
+  const detectorResult = await detectDefaults({
+    fs: new LocalFilesystem(fixture),
+  });
   const fileList = await glob('**', fixture);
   const files = Object.keys(fileList);
 
@@ -192,7 +217,7 @@ it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
     },
   ];
 
-  const { builders } = await detectBuilders(files, pkg);
+  const { builders } = await detectBuilders(files, detectorResult);
   const { defaultRoutes } = await detectRoutes(files, builders);
 
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };

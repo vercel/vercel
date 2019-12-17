@@ -1,13 +1,17 @@
 import { DetectorParameters, DetectorResult } from '../types';
 
 export default async function detectDocusaurus({
-  fs: { hasDependency },
+  fs: { getPackageJsonBuildCommand, getDependencyVersion },
 }: DetectorParameters): Promise<DetectorResult> {
-  const hasDocusaurus = await hasDependency('docusaurus');
-  if (!hasDocusaurus) return false;
+  const version = await getDependencyVersion('docusaurus');
+  if (!version) return false;
   return {
-    buildCommand: 'docusaurus-build',
-    buildDirectory: 'build',
+    buildCommand: (await getPackageJsonBuildCommand()) || 'docusaurus-build',
+    outputDirectory: 'build',
     devCommand: 'docusaurus-start --port $PORT',
+    framework: {
+      slug: 'docusaurus',
+      version,
+    },
   };
 }

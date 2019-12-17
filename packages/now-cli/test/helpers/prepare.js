@@ -122,11 +122,6 @@ module.exports = async session => {
     'single-dotfile': {
       '.testing': 'i am a dotfile',
     },
-    'config-alias-property': {
-      'now.json':
-        '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
-      'index.html': '<span>test alias</span',
-    },
     'config-scope-property-email': {
       'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }`,
       'index.html': '<span>test scope email</span',
@@ -204,7 +199,7 @@ fs.writeFileSync(
   'index.js',
   fs
     .readFileSync('index.js', 'utf8')
-    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG),
+    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
 );
       `,
       'index.js': `
@@ -460,6 +455,18 @@ CMD ["node", "index.js"]`,
             memory: 128,
             runtime: 'now-php@canary',
           },
+        },
+      }),
+    },
+    'github-and-scope-config': {
+      'index.txt': 'I Am a Website!',
+      'now.json': JSON.stringify({
+        scope: 'i-do-not-exist',
+        github: {
+          autoAlias: true,
+          autoJobCancelation: true,
+          enabled: true,
+          silent: true,
         },
       }),
     },

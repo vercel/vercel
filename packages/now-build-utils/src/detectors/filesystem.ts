@@ -102,6 +102,31 @@ export default abstract class DetectorFilesystem {
     const { dependencies = {}, devDependencies = {} } = pkg || {};
     return name in dependencies || name in devDependencies;
   };
+
+  public isNpm = async (): Promise<boolean> => {
+    return this.exists('package-lock.json');
+  };
+
+  public getPackageJsonCommand = async (
+    name: string
+  ): Promise<string | null> => {
+    const pkg = await this.readPackageJson();
+    const { scripts = {} } = pkg || {};
+    return scripts[name] || null;
+  };
+
+  public getPackageJsonBuildCommand = async (): Promise<string | null> => {
+    const buildCommand = (await this.isNpm())
+      ? 'npm run build'
+      : 'yarn run build';
+    return (await this.getPackageJsonCommand('build')) ? buildCommand : null;
+  };
+
+  public getDependencyVersion = async (name: string): Promise<string> => {
+    const pkg = await this.readPackageJson();
+    const { dependencies = {}, devDependencies = {} } = pkg || {};
+    return dependencies[name] || devDependencies[name];
+  };
 }
 
 async function nullEnoent<T>(p: Promise<T>): Promise<T | null> {

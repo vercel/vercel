@@ -58,9 +58,7 @@ export default async function preferV2Deployment({
       )} is missing a ${cmd('start')} script. ${INFO}`;
     }
   } else if (!pkg && !hasDockerfile) {
-    return `Deploying to Now 2.0, because no ${highlight(
-      'Dockerfile'
-    )} was found. ${INFO}`;
+    return `Deploying to Now 2.0 automatically. ${INFO}`;
   }
 
   if (client && projectName) {

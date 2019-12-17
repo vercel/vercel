@@ -493,6 +493,35 @@ test('list the payment methods', async t => {
   t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
+test('domains inspect', async t => {
+  const domainName = `inspect-${contextName}.org`;
+
+  const addRes = await execa(
+    binaryPath,
+    [`domains`, `add`, domainName, ...defaultArgs],
+    { reject: false }
+  );
+  t.is(addRes.exitCode, 0);
+
+  const { stderr, exitCode } = await execa(
+    binaryPath,
+    ['domains', 'inspect', domainName, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  const rmRes = await execa(
+    binaryPath,
+    [`domains`, `rm`, domainName, ...defaultArgs],
+    { reject: false, input: 'y' }
+  );
+  t.is(rmRes.exitCode, 0);
+
+  t.is(exitCode, 0);
+  t.true(!stderr.includes(`Renewal Price`));
+});
+
 test('try to purchase a domain', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -767,7 +796,19 @@ test('create wildcard alias for deployment', async t => {
   t.true(stdout.startsWith(goal));
 
   // Send a test request to the alias
-  const response = await fetch(`https://test.${contextName}.now.sh`);
+  // Retries to make sure we consider the time it takes to update
+  const response = await retry(
+    async () => {
+      const response = await fetch(`https://test.${contextName}.now.sh`);
+
+      if (response.ok) {
+        return response;
+      }
+
+      throw new Error(`Error: Returned code ${response.status}`);
+    },
+    { retries: 3 }
+  );
   const content = await response.text();
 
   t.true(response.ok);
@@ -874,7 +915,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   // Ensure the warning is printed
   t.true(
     stderr.includes(
-      '> WARN! There are no files (or only files starting with a dot) inside your deployment.'
+      'WARN! There are no files (or only files starting with a dot) inside your deployment.'
     )
   );
 
@@ -917,35 +958,6 @@ test('ensure we render a prompt when deploying home directory', async t => {
     )
   );
   t.true(stderr.includes('> Aborted'));
-});
-
-test('ensure the `alias` property is not sent to the API', async t => {
-  const directory = fixture('config-alias-property');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
 });
 
 test('ensure the `scope` property works with email', async t => {
@@ -1456,7 +1468,7 @@ test('use `--debug` CLI flag', async t => {
   // get the content
   const response = await fetch(href);
   const content = await response.text();
-  t.is(content.trim(), '1');
+  t.is(content.trim(), 'off');
 });
 
 test('try to deploy non-existing path', async t => {
@@ -2056,7 +2068,6 @@ test('deploy a Lambda with a specific runtime', async t => {
   t.is(build.use, 'now-php@0.0.7', JSON.stringify(build, null, 2));
 });
 
-// We need to skip this test until `now-php` supports Runtime version 3
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory]);
@@ -2067,6 +2078,13 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
     /Function Runtimes must have a valid version/gim,
     formatOutput(output)
   );
+});
+
+test('ensure `github` and `scope` are not sent to the API', async t => {
+  const directory = fixture('github-and-scope-config');
+  const output = await execute([directory]);
+
+  t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test.after.always(async () => {

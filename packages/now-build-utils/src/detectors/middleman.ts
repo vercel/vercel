@@ -8,7 +8,11 @@ export default async function detectMiddleman({
 
   return {
     buildCommand: 'bundle exec middleman build',
-    buildDirectory: 'build',
+    outputDirectory: 'build',
     devCommand: 'bundle exec middleman server -p $PORT',
+    framework: {
+      slug: 'middleman',
+      version: 'latest',
+    },
   };
 }
