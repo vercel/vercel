@@ -13,9 +13,7 @@ export default async function detectGenericNodeProject({
 
   return {
     buildCommand: `${useNpm ? 'npm' : 'yarn'} run build`,
-    devCommand: `${useNpm ? 'npm' : 'yarn'} run ${
-      devCommand ? 'dev' : 'build'
-    }`,
+    devCommand: useNpm && devCommand ? `yarn run ${devCommand}` : undefined,
     outputDirectory: 'public',
   };
 }

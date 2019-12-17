@@ -15,6 +15,11 @@ let port = 3000;
 const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
+// Adds Hugo to the PATH
+process.env.PATH = `${path.resolve(fixture('08-hugo'))}${path.delimiter}${
+  process.env.PATH
+}`;
+
 function fetchWithRetry(url, retries = 3, opts = {}) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -128,17 +133,15 @@ function testFixtureStdio(directory, fn) {
         readyResolve = resolve;
       });
 
+      console.log(`> testing ${directory}`);
       dev = execa(binaryPath, ['dev', dir, '-l', port]);
       dev.stderr.on('data', async data => {
         output += data.toString();
-        if (data.toString().includes('Ready! Available at')) {
+        if (output.includes('Ready! Available at')) {
           readyResolve();
         }
 
-        if (
-          data.toString().includes('Command failed') ||
-          data.toString().includes('Error!')
-        ) {
+        if (output.includes('Command failed') || output.includes('Error!')) {
           dev.kill('SIGTERM');
           console.log(output);
           process.exit(1);
@@ -511,13 +514,12 @@ if (satisfies(process.version, '>= 6.9.0 <7.0.0 || >= 8.9.0')) {
   test(
     '[now dev] 06-gridsome',
     testFixtureStdio('06-gridsome', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
+      const response = await fetch(`http://localhost:${port}`);
 
       validateResponseHeaders(t, response);
 
       const body = await response.text();
-      t.regex(body, /Hello, world!/gm);
+      t.regex(body, /<div id="app"><\/div>/gm);
     })
   );
 } else {
@@ -529,8 +531,7 @@ if (satisfies(process.version, '>= 6.9.0 <7.0.0 || >= 8.9.0')) {
 test(
   '[now dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async (t, port) => {
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
 
     validateResponseHeaders(t, response);
 
@@ -542,8 +543,7 @@ test(
 test(
   '[now dev] 08-hugo',
   testFixtureStdio('08-hugo', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+    const response = await fetch(`http://localhost:${port}`);
 
     validateResponseHeaders(t, response);
 
@@ -840,8 +840,7 @@ if (satisfies(process.version, '>= 8.10.0')) {
 test(
   '[now dev] 22-brunch',
   testFixtureStdio('22-brunch', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}`, 50);
 
     validateResponseHeaders(t, response);
 
