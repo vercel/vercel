@@ -168,6 +168,8 @@ test('convertRedirects', () => {
       source: '/feedback/((?!general).*)',
       destination: '/feedback/general',
     },
+    { source: '/firebase/:id', destination: 'https://$1.firebase.com/' },
+    { source: '/firebase/:id', destination: 'https://$1.firebase.com:8080/' },
   ]);
 
   const expected = [
@@ -218,6 +220,20 @@ test('convertRedirects', () => {
       src: '^\\/feedback(?:\\/((?!general).*))$',
       status: 308,
     },
+    {
+      headers: {
+        Location: 'https://$1.firebase.com/?id=$1',
+      },
+      src: '^\\/firebase(?:\\/([^\\/#\\?]+?))$',
+      status: 308,
+    },
+    {
+      headers: {
+        Location: 'https://$1.firebase.com:8080/?id=$1',
+      },
+      src: '^\\/firebase(?:\\/([^\\/#\\?]+?))$',
+      status: 308,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -231,6 +247,8 @@ test('convertRedirects', () => {
     ['/catchall/first', '/catchall/first/second'],
     ['/another-catch/first', '/another-catch/first/second'],
     ['/feedback/another'],
+    ['/firebase/user-1', '/firebase/another-1'],
+    ['/firebase/user-1', '/firebase/another-1'],
   ];
 
   const mustNotMatch = [
@@ -242,6 +260,8 @@ test('convertRedirects', () => {
     ['/random-catch'],
     ['/another-catch'],
     ['/feedback/general'],
+    ['/firebase/user/1', '/firebase/another/1'],
+    ['/firebase/user/1', '/firebase/another/1'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -257,6 +277,8 @@ test('convertRewrites', () => {
       source: '/another-catch/:hello+/',
       destination: '/another-catch/:hello+',
     },
+    { source: '/firebase/:id', destination: 'https://$1.firebase.com/' },
+    { source: '/firebase/:id', destination: 'https://$1.firebase.com:8080/' },
   ]);
 
   const expected = [
@@ -282,6 +304,16 @@ test('convertRewrites', () => {
       dest: '/another-catch/$1',
       check: true,
     },
+    {
+      check: true,
+      dest: 'https://$1.firebase.com/?id=$1',
+      src: '^\\/firebase(?:\\/([^\\/#\\?]+?))$',
+    },
+    {
+      check: true,
+      dest: 'https://$1.firebase.com:8080/?id=$1',
+      src: '^\\/firebase(?:\\/([^\\/#\\?]+?))$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -292,6 +324,8 @@ test('convertRewrites', () => {
     ['/projects/one/edit', '/projects/two/edit'],
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
+    ['/firebase/user-1', '/firebase/another-1'],
+    ['/firebase/user-1', '/firebase/another-1'],
   ];
 
   const mustNotMatch = [
@@ -300,6 +334,8 @@ test('convertRewrites', () => {
     ['/projects/edit', '/projects/two/delete', '/projects'],
     ['/random-catch/'],
     ['/another-catch/'],
+    ['/firebase/user/1', '/firebase/another/1'],
+    ['/firebase/user/1', '/firebase/another/1'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
