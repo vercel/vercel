@@ -23,6 +23,7 @@
     "path-to-regexp": "6.1.0"
   },
   "devDependencies": {
+    "@types/node": "12.12.20",
     "ajv": "^6.0.0",
     "typescript": "3.5.2"
   },
