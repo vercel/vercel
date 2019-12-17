@@ -109,7 +109,7 @@ function isString(key: any): key is string {
 
 function replaceSegments(segments: string[], destination: string): string {
   const parsedDestination = parseUrl(destination, true);
-  let { pathname } = parsedDestination;
+  let { pathname='' } = parsedDestination;
   pathname = pathname || '';
 
   if (pathname.includes(':') && segments.length > 0) {
@@ -117,7 +117,7 @@ function replaceSegments(segments: string[], destination: string): string {
     const indexes: { [k: string]: string } = {};
 
     segments.forEach((name, index) => {
-      indexes[name] = `${toSegmentDest(index)}`;
+      indexes[name] = toSegmentDest(index);
     });
     pathname = compiler(indexes);
     destination = formatUrl({
