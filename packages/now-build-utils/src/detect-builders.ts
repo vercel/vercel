@@ -75,6 +75,7 @@ function getApiFunctionBuilder(
 function detectFrontBuilder(
   detectorResult: Partial<DetectorOutput>,
   builders: Builder[],
+  files: string[],
   options: Options
 ): Builder {
   const { tag } = options;
@@ -125,6 +126,15 @@ function detectFrontBuilder(
 
   if (frameworkSlug === 'next') {
     return { src: 'package.json', use: `@now/next${withTag}`, config };
+  }
+
+  if (frameworkSlug === 'hugo') {
+    const source = files.find(file =>
+      ['config.yaml', 'config.toml', 'config.json'].includes(file)
+    );
+    if (source) {
+      return { src: source, use: `@now/static-build${withTag}`, config };
+    }
   }
 
   return { src: 'package.json', use: `@now/static-build${withTag}`, config };
@@ -364,6 +374,7 @@ export async function detectBuilders(
     const frontendBuilder = detectFrontBuilder(
       detectorResult,
       builders,
+      files,
       options
     );
     builders.push(frontendBuilder);
