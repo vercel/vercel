@@ -239,6 +239,11 @@ test('convertRewrites', () => {
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/firebase/(.*)', destination: 'https://www.firebase.com' },
     { source: '/projects/:id/edit', destination: '/projects.html' },
+    { source: '/catchall/:hello*/', destination: '/catchall/:hello*' },
+    {
+      source: '/another-catch/:hello+/',
+      destination: '/another-catch/:hello+',
+    },
   ]);
 
   const expected = [
@@ -253,6 +258,17 @@ test('convertRewrites', () => {
       dest: '/projects.html?id=$1',
       check: true,
     },
+    {
+      src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?\\/$',
+      dest: '/catchall/$1',
+      check: true,
+    },
+    {
+      src:
+        '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))\\/$',
+      dest: '/another-catch/$1',
+      check: true,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -261,14 +277,16 @@ test('convertRewrites', () => {
     ['/some/old/path'],
     ['/firebase/one', '/firebase/two'],
     ['/projects/one/edit', '/projects/two/edit'],
-    ['/old/one/path', '/old/two/path'],
+    ['/catchall/first/', '/catchall/first/second/'],
+    ['/another-catch/first/', '/another-catch/first/second/'],
   ];
 
   const mustNotMatch = [
     ['/nope'],
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/delete', '/projects'],
-    ['/old/path', '/old/two/foo', '/old'],
+    ['/random-catch/'],
+    ['/another-catch/'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
