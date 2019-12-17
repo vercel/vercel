@@ -159,6 +159,11 @@ test('convertRedirects', () => {
       destination: '/projects.html',
     },
     { source: '/old/:segment/path', destination: '/new/path/:segment' },
+    { source: '/catchall/:hello*', destination: '/catchall/:hello*/' },
+    {
+      source: '/another-catch/:hello+',
+      destination: '/another-catch/:hello+/',
+    },
   ]);
 
   const expected = [
@@ -187,6 +192,21 @@ test('convertRedirects', () => {
       headers: { Location: '/new/path/$1' },
       status: 308,
     },
+    {
+      headers: {
+        Location: '/catchall/$1/',
+      },
+      src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      status: 308,
+    },
+    {
+      headers: {
+        Location: '/another-catch/$1/',
+      },
+      src:
+        '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))$',
+      status: 308,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -197,6 +217,8 @@ test('convertRedirects', () => {
     ['/firebase/one', '/firebase/2', '/firebase/-', '/firebase/dir/sub'],
     ['/projects/one/edit', '/projects/two/edit'],
     ['/old/one/path', '/old/two/path'],
+    ['/catchall/first', '/catchall/first/second'],
+    ['/another-catch/first', '/another-catch/first/second'],
   ];
 
   const mustNotMatch = [
@@ -205,6 +227,8 @@ test('convertRedirects', () => {
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/three/delete', '/projects'],
     ['/old/path', '/old/two/foo', '/old'],
+    ['/random-catch'],
+    ['/another-catch'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

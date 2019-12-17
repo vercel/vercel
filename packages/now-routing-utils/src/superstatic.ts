@@ -110,8 +110,9 @@ function isString(key: any): key is string {
 function replaceSegments(segments: string[], destination: string): string {
   if (destination.includes(':')) {
     segments.forEach((name, index) => {
-      const r = new RegExp(':' + name, 'g');
-      destination = destination.replace(r, toSegmentDest(index));
+      const part = `:${name}`;
+      const r = new RegExp(`(${part}\\*|${part}\\+|${part})`, 'g');
+      destination = destination.replace(r, '$' + toSegmentDest(index));
     });
   } else if (segments.length > 0) {
     let prefix = '?';
