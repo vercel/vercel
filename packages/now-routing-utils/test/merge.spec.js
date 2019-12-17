@@ -308,3 +308,56 @@ test('mergeRoutes check true, continue true, handle filesystem top', () => {
   ];
   deepEqual(actual, expected);
 });
+
+test('mergeRoutes multiple handle values', () => {
+  const userRoutes = [
+    { handle: 'filesystem' },
+    { src: '/user1', dest: '/u1' },
+    { handle: 'miss' },
+    { src: '/user2', dest: '/u2' },
+    { handle: 'hit' },
+    { src: '/user3', dest: '/u3' },
+  ];
+  const builds = [
+    {
+      use: '@now/node',
+      entrypoint: 'api/home.js',
+      routes: [
+        { handle: 'filesystem' },
+        { src: '/node1', dest: '/n1' },
+        { handle: 'hit' },
+        { src: '/node2', dest: '/n2', continue: true },
+        { handle: 'miss' },
+        { src: '/node3', dest: '/n3', check: true },
+      ],
+    },
+    {
+      use: '@now/python',
+      entrypoint: 'api/users.py',
+      routes: [
+        { handle: 'filesystem' },
+        { src: '/python1', dest: '/py1' },
+        { handle: 'hit' },
+        { src: '/python2', dest: '/py2', check: true },
+        { handle: 'miss' },
+        { src: '/python3', dest: '/py3', continue: true },
+      ],
+    },
+  ];
+  const actual = mergeRoutes({ userRoutes, builds });
+  const expected = [
+    { handle: 'filesystem' },
+    { dest: '/u1', src: '/user1' },
+    { dest: '/n1', src: '/node1' },
+    { dest: '/py1', src: '/python1' },
+    { handle: 'miss' },
+    { continue: true, dest: '/py3', src: '/python3' },
+    { dest: '/u2', src: '/user2' },
+    { check: true, dest: '/n3', src: '/node3' },
+    { handle: 'hit' },
+    { continue: true, dest: '/n2', src: '/node2' },
+    { dest: '/u3', src: '/user3' },
+    { check: true, dest: '/py2', src: '/python2' },
+  ];
+  deepEqual(actual, expected);
+});
