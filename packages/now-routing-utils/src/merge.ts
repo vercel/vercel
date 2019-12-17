@@ -53,7 +53,6 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
   let userPrevHandle: HandleValue | null = null;
   (userRoutes || []).forEach(route => {
     if (isHandler(route)) {
-      userHandleMap.set(route.handle, []);
       userPrevHandle = route.handle;
     } else {
       const routes = userHandleMap.get(userPrevHandle);
@@ -75,7 +74,6 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
       let builderPrevHandle: HandleValue | null = null;
       br[use].forEach(route => {
         if (isHandler(route)) {
-          builderHandleMap.set(route.handle, []);
           builderPrevHandle = route.handle;
         } else {
           const routes = builderHandleMap.get(builderPrevHandle);
