@@ -131,14 +131,11 @@ function testFixtureStdio(directory, fn) {
       dev = execa(binaryPath, ['dev', dir, '-l', port]);
       dev.stderr.on('data', async data => {
         output += data.toString();
-        if (data.toString().includes('Ready! Available at')) {
+        if (output.includes('Ready! Available at')) {
           readyResolve();
         }
 
-        if (
-          data.toString().includes('Command failed') ||
-          data.toString().includes('Error!')
-        ) {
+        if (output.includes('Command failed') || output.includes('Error!')) {
           dev.kill('SIGTERM');
           console.log(output);
           process.exit(1);
@@ -511,13 +508,12 @@ if (satisfies(process.version, '>= 6.9.0 <7.0.0 || >= 8.9.0')) {
   test(
     '[now dev] 06-gridsome',
     testFixtureStdio('06-gridsome', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
+      const response = await fetch(`http://localhost:${port}`);
 
       validateResponseHeaders(t, response);
 
       const body = await response.text();
-      t.regex(body, /Hello, world!/gm);
+      t.regex(body, /<div id="app"><\/div>/gm);
     })
   );
 } else {
