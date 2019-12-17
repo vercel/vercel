@@ -165,7 +165,7 @@ test('convertRedirects', () => {
       destination: '/another-catch/:hello+/',
     },
     {
-      source: '/feedback((?!/general).*)',
+      source: '/feedback/((?!general).*)',
       destination: '/feedback/general',
     },
   ]);
@@ -215,7 +215,7 @@ test('convertRedirects', () => {
       headers: {
         Location: '/feedback/general',
       },
-      src: '^\\/feedback((?!\\/general).*)$',
+      src: '^\\/feedback(?:\\/((?!general).*))$',
       status: 308,
     },
   ];
@@ -230,7 +230,7 @@ test('convertRedirects', () => {
     ['/old/one/path', '/old/two/path'],
     ['/catchall/first', '/catchall/first/second'],
     ['/another-catch/first', '/another-catch/first/second'],
-    ['/feedback', '/feedbackk', '/feedback/another'],
+    ['/feedback/another'],
   ];
 
   const mustNotMatch = [
