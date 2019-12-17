@@ -164,6 +164,10 @@ test('convertRedirects', () => {
       source: '/another-catch/:hello+',
       destination: '/another-catch/:hello+/',
     },
+    {
+      source: '/feedback((?!/general).*)',
+      destination: '/feedback/general',
+    },
   ]);
 
   const expected = [
@@ -207,6 +211,13 @@ test('convertRedirects', () => {
         '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))$',
       status: 308,
     },
+    {
+      headers: {
+        Location: '/feedback/general',
+      },
+      src: '^\\/feedback((?!\\/general).*)$',
+      status: 308,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -219,6 +230,7 @@ test('convertRedirects', () => {
     ['/old/one/path', '/old/two/path'],
     ['/catchall/first', '/catchall/first/second'],
     ['/another-catch/first', '/another-catch/first/second'],
+    ['/feedback', '/feedbackk', '/feedback/another'],
   ];
 
   const mustNotMatch = [
@@ -229,6 +241,7 @@ test('convertRedirects', () => {
     ['/old/path', '/old/two/foo', '/old'],
     ['/random-catch'],
     ['/another-catch'],
+    ['/feedback/general'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
