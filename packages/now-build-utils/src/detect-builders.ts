@@ -80,13 +80,26 @@ function detectFrontBuilder(
   const { tag } = options;
   const withTag = tag ? `@${tag}` : '';
 
-  const { framework, buildCommand, outputDirectory } = detectorResult;
+  const {
+    framework,
+    buildCommand,
+    outputDirectory,
+    devCommand,
+  } = detectorResult;
 
   const frameworkSlug = framework ? framework.slug : null;
 
   const config: Config = {
     zeroConfig: true,
   };
+
+  if (framework) {
+    config.framework = framework;
+  }
+
+  if (devCommand) {
+    config.devCommand = devCommand;
+  }
 
   if (buildCommand) {
     config.buildCommand = buildCommand;
