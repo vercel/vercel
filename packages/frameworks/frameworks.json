@@ -10,55 +10,64 @@
     "name": "Gatsby",
     "slug": "gatsby",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/gatsby.svg",
-    "tagline": "Gatsby helps developers build blazing fast websites and apps with React."
+    "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
+    "website": "https://gatsbyjs.org"
   },
   {
     "name": "Nuxt.js",
     "slug": "nuxtjs",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/nuxt.svg",
-    "tagline": "Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js."
+    "tagline": "Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.",
+    "website": "https://nuxtjs.org"
   },
   {
     "name": "Create-React-App",
     "slug": "create-react-app",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/react.svg",
-    "tagline": "Create React App allows you to get going with React in no time."
+    "tagline": "Create React App allows you to get going with React in no time.",
+    "website": "https://create-react-app.dev"
   },
   {
     "name": "Svelte",
     "slug": "svelte",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/svelte.svg",
-    "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. "
+    "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. ",
+    "website": "https://svelte.dev"
   },
   {
     "name": "Vue.js",
     "slug": "vue",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/vue.svg",
-    "tagline": "Vue.js is a versatile JavaScript framework that is as approachable as it is performant."
+    "tagline": "Vue.js is a versatile JavaScript framework that is as approachable as it is performant.",
+    "website": "https://vuejs.org"
   },
   {
     "name": "Angular",
     "slug": "angular",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/angular.svg",
-    "tagline": "Angular is a TypeScript-based cross-platform framework from Google."
+    "tagline": "Angular is a TypeScript-based cross-platform framework from Google.",
+    "website": "https://angular.io"
   },
   {
     "name": "Hugo",
     "slug": "hugo",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/hugo.svg",
-    "tagline": "Hugo is the world’s fastest framework for building websites, written in Go."
+    "tagline": "Hugo is the world’s fastest framework for building websites, written in Go.",
+    "website": "https://gohugo.io"
   },
   {
     "name": "Sapper",
     "slug": "sapper",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/svelte.svg",
-    "tagline": "Sapper is a framework for building high-performance universal web apps with Svelte."
+    "tagline": "Sapper is a framework for building high-performance universal web apps with Svelte.",
+    "website": "https://sapper.svelte.dev"
   },
   {
     "name": "UmiJS",
     "slug": "umijs",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/umi.svg",
-    "tagline": "UmiJS is an extensible enterprise-level React application framework."
+    "tagline": "UmiJS is an extensible enterprise-level React application framework.",
+    "website": "https://umijs.org"
   },
   {
     "name": "Vanilla",
@@ -70,24 +79,28 @@
     "name": "Storybook",
     "slug": "storybook",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/storybook.svg",
-    "tagline": "Storybook is an open source tool for developing UI components in isolation for React, Vue, and Angular."
+    "tagline": "Storybook is an open source tool for developing UI components in isolation for React, Vue, and Angular.",
+    "website": "https://storybook.js.org"
   },
   {
     "name": "Preact",
     "slug": "preact",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/preact.svg",
-    "tagline": "Preact is a fast 3kB alternative to React with the same modern API."
+    "tagline": "Preact is a fast 3kB alternative to React with the same modern API.",
+    "website": "https://preactjs.com"
   },
   {
     "name": "Docz",
     "slug": "docz",
     "logo": "https://raw.githubusercontent.com/zeit/now-examples/master/.github/images/docz.svg",
-    "tagline": "Docz makes it easy to write and publish beautiful interactive documentation for your code."
+    "tagline": "Docz makes it easy to write and publish beautiful interactive documentation for your code.",
+    "website": "https://docz.site"
   },
   {
     "name": "mdx-deck",
     "slug": "mdx-deck",
-    "tagline": "MDX Deck allows you to swiftly create React MDX-based presentation decks."
+    "tagline": "MDX Deck allows you to swiftly create React MDX-based presentation decks.",
+    "website": "https://github.com/jxnblk/mdx-deck"
   },
   {
     "name": "Gridsome",
