@@ -16,7 +16,9 @@ const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
 // Adds Hugo to the PATH
-process.env.PATH = `${fixture('08-hugo')}${path.delimiter}${process.env.PATH}`;
+process.env.PATH = `${path.resolve(fixture('08-hugo'))}${path.delimiter}${
+  process.env.PATH
+}`;
 
 function fetchWithRetry(url, retries = 3, opts = {}) {
   return new Promise(async (resolve, reject) => {
