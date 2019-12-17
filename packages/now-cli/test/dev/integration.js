@@ -15,6 +15,9 @@ let port = 3000;
 const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
+// Adds Hugo to the PATH
+process.env.PATH = `${fixture('08-hugo')}${path.delimiter}${process.env.PATH}`;
+
 function fetchWithRetry(url, retries = 3, opts = {}) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -538,8 +541,7 @@ test(
 test(
   '[now dev] 08-hugo',
   testFixtureStdio('08-hugo', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+    const response = await fetch(`http://localhost:${port}`);
 
     validateResponseHeaders(t, response);
 
