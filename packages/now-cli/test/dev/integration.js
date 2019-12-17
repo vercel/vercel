@@ -131,6 +131,7 @@ function testFixtureStdio(directory, fn) {
         readyResolve = resolve;
       });
 
+      console.log(`> testing ${directory}`);
       dev = execa(binaryPath, ['dev', dir, '-l', port]);
       dev.stderr.on('data', async data => {
         output += data.toString();
@@ -528,8 +529,7 @@ if (satisfies(process.version, '>= 6.9.0 <7.0.0 || >= 8.9.0')) {
 test(
   '[now dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async (t, port) => {
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
 
     validateResponseHeaders(t, response);
 
