@@ -18,7 +18,9 @@ const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
 // For the Hugo executable
-process.env.PATH = `${fixture('08-hugo')}${path.delimeter}${process.env.PATH}`;
+process.env.PATH = `${path.resolve(fixture('08-hugo'))}${path.delimiter}${
+  process.env.PATH
+}`;
 
 let processCounter = 0;
 const processList = new Map();
