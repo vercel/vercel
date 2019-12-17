@@ -7,13 +7,13 @@
 
 To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
 
-```
+```sh
 npm i -g now
 ```
 
 To quickly start a new project, run the following commands:
 
-```
+```sh
 now init        # Pick an example project to clone
 cd <PROJECT>    # Change directory to the newly created project
 now dev         # Run locally during development
