@@ -62,9 +62,6 @@ export {
   getLambdaOptionsFromFunction,
 };
 
-export { detectBuildersLegacy } from './detect-builders-legacy';
-export { detectRoutesLegacy } from './detect-routes-legacy';
-
 export { detectDefaults } from './detectors';
 export * from './schemas';
 export * from './types';
