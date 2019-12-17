@@ -840,7 +840,7 @@ if (satisfies(process.version, '>= 8.10.0')) {
 test(
   '[now dev] 22-brunch',
   testFixtureStdio('22-brunch', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
+    const response = await fetchWithRetry(`http://localhost:${port}`, 50);
 
     validateResponseHeaders(t, response);
 
