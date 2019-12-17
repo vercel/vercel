@@ -129,9 +129,8 @@ function detectFrontBuilder(
   }
 
   if (frameworkSlug === 'hugo') {
-    const source = files.find(file =>
-      ['config.yaml', 'config.toml', 'config.json'].includes(file)
-    );
+    const configFiles = new Set(['config.yaml', 'config.toml', 'config.json']);
+    const source = files.find(file => configFiles.has(file));
     if (source) {
       return { src: source, use: `@now/static-build${withTag}`, config };
     }
