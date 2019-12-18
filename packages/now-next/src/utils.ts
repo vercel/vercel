@@ -11,9 +11,9 @@ import {
   FileFsRef,
   streamToBuffer,
   Lambda,
-  Route,
   isSymbolicLink,
 } from '@now/build-utils';
+import { Route, Source } from '@now/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -279,13 +279,13 @@ async function getRoutes(
     if (!isPublic) continue;
 
     const fileName = path.relative('public', relativePath);
-    const route = {
+    const route: Source = {
       src: `${prefix}${fileName}`,
       dest: `${url}/${fileName}`,
     };
 
     // Only add the route if a page is not already using it
-    if (!routes.some(r => r.src === route.src)) {
+    if (!routes.some(r => (r as Source).src === route.src)) {
       routes.push(route);
     }
   }

@@ -1,7 +1,7 @@
 import { readdir, stat, readFile, unlink } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
-import { Route } from '@now/build-utils';
+import { Route } from '@now/routing-utils';
 
 const readirPromise = promisify(readdir);
 const readFilePromise = promisify(readFile);
