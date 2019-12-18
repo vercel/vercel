@@ -13,47 +13,7 @@ import {
   BuildOptions,
   debug,
 } from '@now/build-utils';
-
-async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
-  const target = '.';
-  // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
-  //
-  // Disable installing to the Python user install directory, which is
-  // the default behavior on Debian systems and causes error:
-  //
-  // distutils.errors.DistutilsOptionError: can't combine user with
-  // prefix, exec_prefix/home, or install_(plat)base
-  process.env.PIP_USER = '0';
-  debug(
-    `Running "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
-      ' '
-    )}"...`
-  );
-  try {
-    await execa(
-      pipPath,
-      [
-        'install',
-        '--disable-pip-version-check',
-        '--target',
-        target,
-        '--upgrade',
-        ...args,
-      ],
-      {
-        cwd: workDir,
-        stdio: 'pipe',
-      }
-    );
-  } catch (err) {
-    console.log(
-      `Failed to run "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
-        ' '
-      )}"...`
-    );
-    throw err;
-  }
-}
+import { installRequirement, installRequirementsFile } from './install';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
@@ -70,16 +30,17 @@ async function pipenvConvert(cmd: string, srcDir: string) {
 
 export const version = 3;
 
-export const build = async ({
-  workPath,
-  files: originalFiles,
+export async function downloadFilesInWorkPath({
   entrypoint,
-  meta = {},
+  workPath,
+  files,
+  meta,
   config,
-}: BuildOptions) => {
-  let downloadedFiles = await download(originalFiles, workPath, meta);
 
-  if (meta.isDev) {
+}: BuildOptions) {
+    debug('Downloading user files...');
+    let downloadedFiles = await download(files, workPath, meta);
+    if (meta && meta.isDev) {
     let base = null;
 
     if (config && config.zeroConfig) {
@@ -93,8 +54,23 @@ export const build = async ({
     downloadedFiles = await glob('**', destNow);
     workPath = destNow;
   }
+  return workPath;
+}
 
-  const pipPath = 'pip3';
+export const build = async ({
+  workPath,
+  files: originalFiles,
+  entrypoint,
+  meta = {},
+  config,
+}: BuildOptions) => {
+  workPath = await downloadFilesInWorkPath({
+    workPath,
+    files: originalFiles,
+    entrypoint,
+    meta,
+    config,
+  });
 
   try {
     // See: https://stackoverflow.com/a/44728772/376773
@@ -113,8 +89,13 @@ export const build = async ({
     throw err;
   }
 
-  console.log('Installing dependencies...');
-  await pipInstall(pipPath, workPath, 'werkzeug');
+  console.log('Installing required dependencies...');
+
+  await installRequirement({
+    dependency: 'werkzeug',
+    workPath,
+    meta,
+  });
 
   let fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
@@ -133,12 +114,12 @@ export const build = async ({
     // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
     // it into a separate folder.
     const tempDir = await getWriteableDirectory();
-    await pipInstall(
-      pipPath,
-      tempDir,
-      'pipfile-requirements',
-      '--no-warn-script-location'
-    );
+    await installRequirement({
+      dependency: 'pipfile-requirements',
+      workPath: tempDir,
+      meta,
+      args: ['--no-warn-script-location'],
+    });
 
     // Python needs to know where to look up all the packages we just installed.
     // We tell it to use the same location as used with `--target`
@@ -153,11 +134,19 @@ export const build = async ({
   if (fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
-    await pipInstall(pipPath, workPath, '-r', requirementsTxtPath);
+    await installRequirementsFile({
+      filePath: requirementsTxtPath,
+      workPath,
+      meta,
+    });
   } else if (fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
-    await pipInstall(pipPath, workPath, '-r', requirementsTxtPath);
+    await installRequirementsFile({
+      filePath: requirementsTxtPath,
+      workPath,
+      meta,
+    });
   }
 
   const originalPyPath = join(__dirname, '..', 'now_init.py');
@@ -197,3 +186,6 @@ export const build = async ({
 };
 
 export { shouldServe };
+
+// internal only - expect breaking changes if other packages depend on these exports
+export { installRequirement, installRequirementsFile };
