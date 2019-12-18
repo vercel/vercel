@@ -277,8 +277,14 @@ test('convertRewrites', () => {
       source: '/another-catch/:hello+/',
       destination: '/another-catch/:hello+',
     },
-    { source: '/firebase/:id', destination: 'https://$1.firebase.com/' },
-    { source: '/firebase/:id', destination: 'https://$1.firebase.com:8080/' },
+    {
+      source: '/firebase/([a-zA-Z]{1,})',
+      destination: 'https://$1.firebase.com/',
+    },
+    {
+      source: '/firebase/([a-zA-Z]{1,})',
+      destination: 'https://$1.firebase.com:8080/',
+    },
   ]);
 
   const expected = [
@@ -306,13 +312,13 @@ test('convertRewrites', () => {
     },
     {
       check: true,
-      dest: 'https://$1.firebase.com/?id=$1',
-      src: '^\\/firebase(?:\\/([^\\/#\\?]+?))$',
+      dest: 'https://$1.firebase.com/',
+      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
     },
     {
       check: true,
-      dest: 'https://$1.firebase.com:8080/?id=$1',
-      src: '^\\/firebase(?:\\/([^\\/#\\?]+?))$',
+      dest: 'https://$1.firebase.com:8080/',
+      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
     },
   ];
 
@@ -324,8 +330,8 @@ test('convertRewrites', () => {
     ['/projects/one/edit', '/projects/two/edit'],
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
-    ['/firebase/user-1', '/firebase/another-1'],
-    ['/firebase/user-1', '/firebase/another-1'],
+    ['/firebase/admin', '/firebase/anotherAdmin'],
+    ['/firebase/admin', '/firebase/anotherAdmin'],
   ];
 
   const mustNotMatch = [
