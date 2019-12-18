@@ -159,6 +159,24 @@ test('convertRedirects', () => {
       destination: '/projects.html',
     },
     { source: '/old/:segment/path', destination: '/new/path/:segment' },
+    { source: '/catchall/:hello*', destination: '/catchall/:hello*/' },
+    {
+      source: '/another-catch/:hello+',
+      destination: '/another-catch/:hello+/',
+    },
+    {
+      source: '/feedback/((?!general).*)',
+      destination: '/feedback/general',
+    },
+    {
+      source: '/firebase/([a-zA-Z]{1,})',
+      destination: 'https://$1.firebase.com/',
+    },
+    {
+      source: '/firebase/([a-zA-Z]{1,})',
+      destination: 'https://$1.firebase.com:8080/',
+    },
+    { source: '/catchme/:id*', destination: '/api/user' },
   ]);
 
   const expected = [
@@ -187,6 +205,49 @@ test('convertRedirects', () => {
       headers: { Location: '/new/path/$1' },
       status: 308,
     },
+    {
+      headers: {
+        Location: '/catchall/$1/',
+      },
+      src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      status: 308,
+    },
+    {
+      headers: {
+        Location: '/another-catch/$1/',
+      },
+      src:
+        '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))$',
+      status: 308,
+    },
+    {
+      headers: {
+        Location: '/feedback/general',
+      },
+      src: '^\\/feedback(?:\\/((?!general).*))$',
+      status: 308,
+    },
+    {
+      status: 308,
+      headers: {
+        Location: 'https://$1.firebase.com/',
+      },
+      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
+    },
+    {
+      status: 308,
+      headers: {
+        Location: 'https://$1.firebase.com:8080/',
+      },
+      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
+    },
+    {
+      status: 308,
+      headers: {
+        Location: '/api/user?id=$1',
+      },
+      src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -197,6 +258,12 @@ test('convertRedirects', () => {
     ['/firebase/one', '/firebase/2', '/firebase/-', '/firebase/dir/sub'],
     ['/projects/one/edit', '/projects/two/edit'],
     ['/old/one/path', '/old/two/path'],
+    ['/catchall/first', '/catchall/first/second'],
+    ['/another-catch/first', '/another-catch/first/second'],
+    ['/feedback/another'],
+    ['/firebase/admin', '/firebase/anotherAdmin'],
+    ['/firebase/admin', '/firebase/anotherAdmin'],
+    ['/catchme/id-1', '/catchme/id/2'],
   ];
 
   const mustNotMatch = [
@@ -205,6 +272,12 @@ test('convertRedirects', () => {
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/three/delete', '/projects'],
     ['/old/path', '/old/two/foo', '/old'],
+    ['/random-catch'],
+    ['/another-catch'],
+    ['/feedback/general'],
+    ['/firebase/user/1', '/firebase/another/1'],
+    ['/firebase/user/1', '/firebase/another/1'],
+    ['/catchm', '/random'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -215,6 +288,20 @@ test('convertRewrites', () => {
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/firebase/(.*)', destination: 'https://www.firebase.com' },
     { source: '/projects/:id/edit', destination: '/projects.html' },
+    { source: '/catchall/:hello*/', destination: '/catchall/:hello*' },
+    {
+      source: '/another-catch/:hello+/',
+      destination: '/another-catch/:hello+',
+    },
+    {
+      source: '/firebase/([a-zA-Z]{1,})',
+      destination: 'https://$1.firebase.com/',
+    },
+    {
+      source: '/firebase/([a-zA-Z]{1,})',
+      destination: 'https://$1.firebase.com:8080/',
+    },
+    { source: '/catchme/:id*', destination: '/api/user' },
   ]);
 
   const expected = [
@@ -229,6 +316,32 @@ test('convertRewrites', () => {
       dest: '/projects.html?id=$1',
       check: true,
     },
+    {
+      src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?\\/$',
+      dest: '/catchall/$1',
+      check: true,
+    },
+    {
+      src:
+        '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))\\/$',
+      dest: '/another-catch/$1',
+      check: true,
+    },
+    {
+      check: true,
+      dest: 'https://$1.firebase.com/',
+      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
+    },
+    {
+      check: true,
+      dest: 'https://$1.firebase.com:8080/',
+      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
+    },
+    {
+      check: true,
+      dest: '/api/user?id=$1',
+      src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -237,14 +350,22 @@ test('convertRewrites', () => {
     ['/some/old/path'],
     ['/firebase/one', '/firebase/two'],
     ['/projects/one/edit', '/projects/two/edit'],
-    ['/old/one/path', '/old/two/path'],
+    ['/catchall/first/', '/catchall/first/second/'],
+    ['/another-catch/first/', '/another-catch/first/second/'],
+    ['/firebase/admin', '/firebase/anotherAdmin'],
+    ['/firebase/admin', '/firebase/anotherAdmin'],
+    ['/catchme/id-1', '/catchme/id/2'],
   ];
 
   const mustNotMatch = [
     ['/nope'],
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/delete', '/projects'],
-    ['/old/path', '/old/two/foo', '/old'],
+    ['/random-catch/'],
+    ['/another-catch/'],
+    ['/firebase/user/1', '/firebase/another/1'],
+    ['/firebase/user/1', '/firebase/another/1'],
+    ['/catchm', '/random'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
