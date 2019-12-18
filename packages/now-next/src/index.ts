@@ -75,6 +75,7 @@ interface BuildParamsType extends BuildOptions {
   meta: BuildParamsMeta;
 }
 
+// bump for now/routing-utils
 export const version = 2;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
