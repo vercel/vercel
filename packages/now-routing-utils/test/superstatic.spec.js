@@ -176,6 +176,7 @@ test('convertRedirects', () => {
       source: '/firebase/([a-zA-Z]{1,})',
       destination: 'https://$1.firebase.com:8080/',
     },
+    { source: '/catchme/:id*', destination: '/api/user' },
   ]);
 
   const expected = [
@@ -240,6 +241,13 @@ test('convertRedirects', () => {
       },
       src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
     },
+    {
+      status: 308,
+      headers: {
+        Location: '/api/user?id=$1',
+      },
+      src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -255,6 +263,7 @@ test('convertRedirects', () => {
     ['/feedback/another'],
     ['/firebase/admin', '/firebase/anotherAdmin'],
     ['/firebase/admin', '/firebase/anotherAdmin'],
+    ['/catchme/id-1', '/catchme/id/2'],
   ];
 
   const mustNotMatch = [
@@ -268,6 +277,7 @@ test('convertRedirects', () => {
     ['/feedback/general'],
     ['/firebase/user/1', '/firebase/another/1'],
     ['/firebase/user/1', '/firebase/another/1'],
+    ['/catchm', '/random'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -291,6 +301,7 @@ test('convertRewrites', () => {
       source: '/firebase/([a-zA-Z]{1,})',
       destination: 'https://$1.firebase.com:8080/',
     },
+    { source: '/catchme/:id*', destination: '/api/user' },
   ]);
 
   const expected = [
@@ -326,6 +337,11 @@ test('convertRewrites', () => {
       dest: 'https://$1.firebase.com:8080/',
       src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
     },
+    {
+      check: true,
+      dest: '/api/user?id=$1',
+      src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -338,6 +354,7 @@ test('convertRewrites', () => {
     ['/another-catch/first/', '/another-catch/first/second/'],
     ['/firebase/admin', '/firebase/anotherAdmin'],
     ['/firebase/admin', '/firebase/anotherAdmin'],
+    ['/catchme/id-1', '/catchme/id/2'],
   ];
 
   const mustNotMatch = [
@@ -348,6 +365,7 @@ test('convertRewrites', () => {
     ['/another-catch/'],
     ['/firebase/user/1', '/firebase/another/1'],
     ['/firebase/user/1', '/firebase/another/1'],
+    ['/catchm', '/random'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
