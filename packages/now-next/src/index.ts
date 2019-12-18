@@ -15,10 +15,10 @@ import {
   PackageJson,
   PrepareCacheOptions,
   Prerender,
-  Route,
   runNpmInstall,
   runPackageJsonScript,
 } from '@now/build-utils';
+import { Route } from '@now/routing-utils';
 import {
   convertRedirects,
   convertRewrites,

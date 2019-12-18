@@ -1,6 +1,7 @@
 import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
 import DetectorFilesystem from './detectors/filesystem';
+import { Route } from '@now/routing-utils';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -19,18 +20,6 @@ export interface File {
 
 export interface Files {
   [filePath: string]: File;
-}
-
-export interface Route {
-  src?: string;
-  dest?: string;
-  handle?: string;
-  type?: string;
-  headers?: {
-    [key: string]: string;
-  };
-  continue?: boolean;
-  status?: number;
 }
 
 export interface Config {
