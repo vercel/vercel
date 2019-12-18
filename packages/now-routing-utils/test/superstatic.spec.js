@@ -168,8 +168,14 @@ test('convertRedirects', () => {
       source: '/feedback/((?!general).*)',
       destination: '/feedback/general',
     },
-    { source: '/firebase/:id', destination: 'https://$1.firebase.com/' },
-    { source: '/firebase/:id', destination: 'https://$1.firebase.com:8080/' },
+    {
+      source: '/firebase/([a-zA-Z]{1,})',
+      destination: 'https://$1.firebase.com/',
+    },
+    {
+      source: '/firebase/([a-zA-Z]{1,})',
+      destination: 'https://$1.firebase.com:8080/',
+    },
   ]);
 
   const expected = [
@@ -221,18 +227,18 @@ test('convertRedirects', () => {
       status: 308,
     },
     {
-      headers: {
-        Location: 'https://$1.firebase.com/?id=$1',
-      },
-      src: '^\\/firebase(?:\\/([^\\/#\\?]+?))$',
       status: 308,
+      headers: {
+        Location: 'https://$1.firebase.com/',
+      },
+      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
     },
     {
-      headers: {
-        Location: 'https://$1.firebase.com:8080/?id=$1',
-      },
-      src: '^\\/firebase(?:\\/([^\\/#\\?]+?))$',
       status: 308,
+      headers: {
+        Location: 'https://$1.firebase.com:8080/',
+      },
+      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
     },
   ];
 
@@ -247,8 +253,8 @@ test('convertRedirects', () => {
     ['/catchall/first', '/catchall/first/second'],
     ['/another-catch/first', '/another-catch/first/second'],
     ['/feedback/another'],
-    ['/firebase/user-1', '/firebase/another-1'],
-    ['/firebase/user-1', '/firebase/another-1'],
+    ['/firebase/admin', '/firebase/anotherAdmin'],
+    ['/firebase/admin', '/firebase/anotherAdmin'],
   ];
 
   const mustNotMatch = [
