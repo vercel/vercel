@@ -625,18 +625,6 @@ describe('Test `detectBuilders`', () => {
     expect(errors[0].code).toBe('unused_function');
   });
 
-  it('Do not allow function non Community Runtimes', async () => {
-    const functions = {
-      'api/test.js': { memory: 128, runtime: '@now/node@1.0.0' },
-    };
-    const files = ['api/test.js'];
-
-    const { errors } = await detectBuilders(files, null, { functions });
-
-    expect(errors).toBeDefined();
-    expect(errors[0].code).toBe('invalid_function_runtime');
-  });
-
   it('Must include includeFiles config property', async () => {
     const functions = {
       'api/test.js': { includeFiles: 'text/include.txt' },
@@ -735,6 +723,215 @@ describe('Test `detectBuilders`', () => {
 
     expect(errors).not.toBe(null);
     expect(errors[0].code).toBe('invalid_function_source');
+  });
+
+  it('Custom static output directory', async () => {
+    const projectSettings = {
+      outputDirectory: 'dist',
+    };
+
+    const files = ['dist/index.html', 'dist/style.css'];
+
+    const { builders } = await detectBuilders(files, null, { projectSettings });
+
+    expect(builders.length).toBe(1);
+    expect(builders[0].src).toBe('dist/**/*');
+    expect(builders[0].use).toBe('@now/static');
+
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(1);
+    expect(defaultRoutes[0].src).toBe('/(.*)');
+    expect(defaultRoutes[0].dest).toBe('/dist/$1');
+  });
+
+  it('Custom static output directory with api', async () => {
+    const projectSettings = {
+      outputDirectory: 'output',
+    };
+
+    const files = ['api/user.ts', 'output/index.html', 'output/style.css'];
+
+    const { builders } = await detectBuilders(files, null, { projectSettings });
+
+    expect(builders.length).toBe(2);
+    expect(builders[1].src).toBe('output/**/*');
+    expect(builders[1].use).toBe('@now/static');
+
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(3);
+    expect(defaultRoutes[1].status).toBe(404);
+    expect(defaultRoutes[2].src).toBe('/(.*)');
+    expect(defaultRoutes[2].dest).toBe('/output/$1');
+  });
+
+  it('Custom directory for Serverless Functions', async () => {
+    const files = ['server/_lib/db.ts', 'server/user.ts', 'server/team.ts'];
+
+    const functions = {
+      'server/**/*.ts': {
+        memory: 128,
+        runtime: '@now/node@1.2.1',
+      },
+    };
+
+    const { builders } = await detectBuilders(files, null, { functions });
+
+    expect(builders.length).toBe(3);
+    expect(builders[0]).toEqual({
+      use: '@now/node@1.2.1',
+      src: 'server/team.ts',
+      config: {
+        zeroConfig: true,
+        functions: {
+          'server/**/*.ts': {
+            memory: 128,
+            runtime: '@now/node@1.2.1',
+          },
+        },
+      },
+    });
+    expect(builders[1]).toEqual({
+      use: '@now/node@1.2.1',
+      src: 'server/user.ts',
+      config: {
+        zeroConfig: true,
+        functions: {
+          'server/**/*.ts': {
+            memory: 128,
+            runtime: '@now/node@1.2.1',
+          },
+        },
+      },
+    });
+    // This is expected, since only "api + full static" is supported
+    // no other directory, so everything else will be deployed
+    expect(builders[2].use).toBe('@now/static');
+
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(3);
+    expect(defaultRoutes[0].dest).toBe('/server/team.ts');
+    expect(defaultRoutes[0].src).toBe('^/server/(team\\/|team|team\\.ts)$');
+    expect(defaultRoutes[1].dest).toBe('/server/user.ts');
+    expect(defaultRoutes[1].src).toBe('^/server/(user\\/|user|user\\.ts)$');
+    expect(defaultRoutes[2].status).toBe(404);
+  });
+
+  it('Custom directory for Serverless Functions + Next.js', async () => {
+    const pkg = {
+      scripts: {
+        build: 'next build',
+      },
+      dependencies: {
+        next: '9.0.0',
+      },
+    };
+
+    const functions = {
+      'server/**/*.ts': {
+        runtime: '@now/node@1.2.1',
+      },
+    };
+
+    const files = ['package.json', 'pages/index.ts', 'server/user.ts'];
+
+    const { builders } = await detectBuilders(files, pkg, {
+      functions,
+      projectSettings: { framework: 'next' },
+    });
+
+    expect(builders.length).toBe(2);
+    expect(builders[0]).toEqual({
+      use: '@now/node@1.2.1',
+      src: 'server/user.ts',
+      config: {
+        zeroConfig: true,
+        functions,
+      },
+    });
+    expect(builders[1]).toEqual({
+      use: '@now/next',
+      src: 'package.json',
+      config: {
+        zeroConfig: true,
+        framework: 'next',
+      },
+    });
+
+    const { defaultRoutes } = await detectRoutes(files, builders);
+
+    expect(defaultRoutes.length).toBe(2);
+    expect(defaultRoutes[0].dest).toBe('/server/user.ts');
+    expect(defaultRoutes[0].src).toBe('^/server/(user\\/|user|user\\.ts)$');
+    expect(defaultRoutes[1].status).toBe(404);
+  });
+
+  it('Framework with non-package.json entrypoint', async () => {
+    const files = ['config.yaml'];
+    const projectSettings = {
+      framework: 'hugo',
+    };
+
+    const { builders } = await detectBuilders(files, null, { projectSettings });
+
+    expect(builders).toEqual([
+      {
+        use: '@now/static-build',
+        src: 'config.yaml',
+        config: {
+          zeroConfig: true,
+          framework: 'hugo',
+        },
+      },
+    ]);
+  });
+
+  it('No framework, only package.json', async () => {
+    const files = ['package.json'];
+    const pkg = {
+      scripts: {
+        build: 'build.sh',
+      },
+    };
+
+    const { builders } = await detectBuilders(files, pkg);
+
+    expect(builders).toEqual([
+      {
+        use: '@now/static-build',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
+  it('Framework with an API', async () => {
+    const files = ['config.rb', 'api/date.rb'];
+    const projectSettings = { framework: 'middleman' };
+
+    const { builders } = await detectBuilders(files, null, { projectSettings });
+
+    expect(builders).toEqual([
+      {
+        use: '@now/ruby',
+        src: 'api/date.rb',
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@now/static-build',
+        src: 'config.rb',
+        config: {
+          zeroConfig: true,
+          framework: 'middleman',
+        },
+      },
+    ]);
   });
 });
 

@@ -55,10 +55,7 @@ export interface Config {
   outputDirectory?: string;
   buildCommand?: string;
   devCommand?: string;
-  framework?: {
-    slug: string;
-    version: string;
-  };
+  framework?: string;
 }
 
 export interface Meta {

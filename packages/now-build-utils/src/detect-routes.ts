@@ -217,7 +217,10 @@ async function detectApiRoutes(
   for (const file of sortedFiles) {
     // We only consider every file in the api directory
     // as we will strip extensions as well as resolving "[segments]"
-    if (!file.startsWith('api/')) {
+    if (
+      !file.startsWith('api/') &&
+      !builders.some(b => b.src === file && b.config!.functions)
+    ) {
       continue;
     }
 
@@ -271,14 +274,16 @@ async function detectApiRoutes(
   return { defaultRoutes, error: null };
 }
 
-function hasPublicBuilder(builders: Builder[]): boolean {
-  return builders.some(
+function getPublicBuilder(builders: Builder[]): Builder | null {
+  const builder = builders.find(
     builder =>
       builder.use === '@now/static' &&
-      builder.src === 'public/**/*' &&
+      /^.*\/\*\*\/\*$/.test(builder.src) &&
       builder.config &&
       builder.config.zeroConfig === true
   );
+
+  return builder || null;
 }
 
 export async function detectRoutes(
@@ -286,11 +291,14 @@ export async function detectRoutes(
   builders: Builder[]
 ): Promise<RoutesResult> {
   const routesResult = await detectApiRoutes(files, builders);
+  const publicBuilder = getPublicBuilder(builders);
 
-  if (routesResult.defaultRoutes && hasPublicBuilder(builders)) {
+  if (routesResult.defaultRoutes && publicBuilder) {
+    const directory = publicBuilder.src.replace('/**/*', '');
+
     routesResult.defaultRoutes.push({
       src: '/(.*)',
-      dest: '/public/$1',
+      dest: `/${directory}/$1`,
     });
   }
 

@@ -23,8 +23,6 @@ import {
 } from './fs/run-user-scripts';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
-import { detectBuilders } from './detect-builders';
-import { detectRoutes } from './detect-routes';
 import DetectorFilesystem from './detectors/filesystem';
 import debug from './debug';
 
@@ -55,13 +53,15 @@ export {
   getSpawnOptions,
   streamToBuffer,
   shouldServe,
-  detectBuilders,
-  detectRoutes,
   debug,
   isSymbolicLink,
   getLambdaOptionsFromFunction,
 };
 
+export { detectBuilders } from './detect-builders';
+export { detectRoutes } from './detect-routes';
+
 export { detectDefaults } from './detectors';
+
 export * from './schemas';
 export * from './types';
