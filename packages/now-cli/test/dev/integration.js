@@ -2,9 +2,10 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import test from 'ava';
 import path from 'path';
-import execa from 'execa';
+import _execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
+import retry from 'async-retry';
 import { satisfies } from 'semver';
 import { getDistTag } from '../../src/util/get-dist-tag';
 import { version as cliVersion } from '../../package.json';
@@ -12,33 +13,87 @@ import { version as cliVersion } from '../../package.json';
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
+
 const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => path.join('test', 'dev', 'fixtures', name);
 
-// Adds Hugo to the PATH
+// For the Hugo executable
 process.env.PATH = `${path.resolve(fixture('08-hugo'))}${path.delimiter}${
   process.env.PATH
 }`;
 
+let processCounter = 0;
+const processList = new Map();
+
+function execa(...args) {
+  const procId = ++processCounter;
+  const child = _execa(...args);
+
+  processList.set(procId, child);
+  child.on('exit', () => processList.delete(procId));
+
+  return child;
+}
+
 function fetchWithRetry(url, retries = 3, opts = {}) {
-  return new Promise(async (resolve, reject) => {
-    try {
+  return retry(
+    async () => {
       const res = await fetch(url, opts);
+
       if (!res.ok) {
-        throw new Error('Responded with status ' + res.status);
+        const text = await res.text();
+        throw new Error(
+          `Failed to fetch ${url} with status ${res.status}:` +
+            `\n\n${text}\n\n`
+        );
       }
-      resolve(res);
-    } catch (error) {
-      if (retries === 0) {
-        reject(error);
-        return;
-      }
-      await sleep(1000);
-      fetchWithRetry(url, retries - 1, opts)
-        .then(resolve)
-        .catch(reject);
+
+      return res;
+    },
+    {
+      retries,
+      factor: 1,
     }
-  });
+  );
+}
+
+function createResolver() {
+  let resolver;
+  const p = new Promise(res => (resolver = res));
+  p.resolve = resolver;
+  return p;
+}
+
+function formatOutput({ stderr, stdout }) {
+  return `Received:\n"${stderr}"\n"${stdout}"`;
+}
+
+function printOutput(fixture, stdout, stderr) {
+  const lines = (
+    `\nOutput for "${fixture}"\n` +
+    `\n----- stdout -----\n` +
+    stdout +
+    `\n----- stderr -----\n` +
+    stderr
+  ).split('\n');
+
+  const getPrefix = nr => {
+    return nr === 0 ? '╭' : nr === lines.length - 1 ? '╰' : '│';
+  };
+
+  console.log(
+    lines.map((line, index) => ` ${getPrefix(index)} ${line}`).join('\n')
+  );
+}
+
+function shouldSkip(t, name, versions) {
+  if (!satisfies(process.version, versions)) {
+    console.log(`Skipping "${name}" because it requires "${versions}".`);
+    t.pass();
+    return true;
+  }
+
+  return false;
 }
 
 function validateResponseHeaders(t, res) {
@@ -49,6 +104,37 @@ function validateResponseHeaders(t, res) {
       res.headers.get('x-now-id')
     )
   );
+}
+
+async function exec(directory, args = []) {
+  return execa(binaryPath, ['dev', directory, ...args], {
+    reject: false,
+  });
+}
+
+async function runNpmInstall(fixturePath) {
+  if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+    if (process.platform === 'darwin' && satisfies(process.version, '8.x')) {
+      await execa('yarn', ['cache', 'clean']);
+    }
+
+    return execa('yarn', ['install'], { cwd: fixturePath });
+  }
+}
+
+async function getPackedBuilderPath(builderDirName) {
+  const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
+  const output = await execa('npm', ['pack'], {
+    cwd: packagePath,
+  });
+
+  if (output.exitCode !== 0 || output.stdout.trim() === '') {
+    throw new Error(
+      `Failed to pack ${builderDirName}: ${formatOutput(output)}`
+    );
+  }
+
+  return path.join(packagePath, output.stdout.trim());
 }
 
 async function testPath(t, port, status, path, expectedText, headers = {}) {
@@ -68,52 +154,47 @@ async function testPath(t, port, status, path, expectedText, headers = {}) {
   }
 }
 
-async function exec(directory, args = []) {
-  return execa(binaryPath, ['dev', directory, ...args], {
-    reject: false,
-  });
-}
-
-async function runNpmInstall(fixturePath) {
-  if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    if (process.platform === 'darwin' && satisfies(process.version, '8.x')) {
-      await execa('yarn', ['cache', 'clean']);
-    }
-
-    return execa('yarn', ['install'], { cwd: fixturePath });
-  }
-}
-
-function formatOutput({ stderr, stdout }) {
-  return `Received:\n"${stderr}"\n"${stdout}"`;
-}
-
-async function getPackedBuilderPath(builderDirName) {
-  const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
-  const output = await execa('npm', ['pack'], {
-    cwd: packagePath,
-  });
-
-  if (output.exitCode !== 0 || output.stdout.trim() === '') {
-    throw new Error(
-      `Failed to pack ${builderDirName}: ${formatOutput(output)}`
-    );
-  }
-
-  return path.join(packagePath, output.stdout.trim());
-}
-
 async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
-  port = ++port;
-  return {
-    dev: execa(binaryPath, ['dev', directory, '-l', String(port), ...args], {
+  const dev = execa(
+    binaryPath,
+    ['dev', directory, '-l', String(port), ...args],
+    {
       reject: false,
       detached: true,
-      stdio: 'ignore',
+      stdio: 'pipe',
       ...opts,
-    }),
+    }
+  );
+
+  const stdoutList = [];
+  const stderrList = [];
+
+  const exitResolver = createResolver();
+
+  dev.stderr.on('data', data => stderrList.push(Buffer.from(data)));
+  dev.stdout.on('data', data => stdoutList.push(Buffer.from(data)));
+
+  dev.on('exit', () => {
+    const stdout = Buffer.concat(stdoutList).toString();
+    const stderr = Buffer.concat(stderrList).toString();
+    printOutput(directory, stdout, stderr);
+    exitResolver.resolve();
+  });
+
+  dev.on('error', () => {
+    exitResolver.resolve();
+  });
+
+  dev._kill = dev.kill;
+  dev.kill = async (...args) => {
+    dev._kill(...args);
+    await exitResolver;
+  };
+
+  return {
+    dev,
     port,
   };
 }
@@ -125,46 +206,88 @@ function testFixtureStdio(directory, fn) {
 
     await runNpmInstall(dir);
 
+    const stdoutList = [];
+    const stderrList = [];
+
+    const readyResolver = createResolver();
+    const exitResolver = createResolver();
+
     try {
-      port = ++port;
-      let output = '';
-      let readyResolve;
-      let readyPromise = new Promise(resolve => {
-        readyResolve = resolve;
-      });
+      let stderr = '';
 
-      console.log(`> testing ${directory}`);
       dev = execa(binaryPath, ['dev', dir, '-l', port]);
-      dev.stderr.on('data', async data => {
-        output += data.toString();
-        if (output.includes('Ready! Available at')) {
-          readyResolve();
+
+      dev.stdout.on('data', data => stdoutList.push(data));
+
+      dev.stderr.on('data', data => {
+        stderrList.push(data);
+
+        stderr += data.toString();
+        if (stderr.includes('Ready! Available at')) {
+          readyResolver.resolve();
         }
 
-        if (output.includes('Command failed') || output.includes('Error!')) {
+        if (stderr.includes(`Requested port ${port} is already in use`)) {
           dev.kill('SIGTERM');
-          console.log(output);
-          process.exit(1);
+          throw new Error(`Failed for "${directory}" with port ${port}.`);
+        }
+
+        if (stderr.includes('Command failed') || stderr.includes('Error!')) {
+          dev.kill('SIGTERM');
+          throw new Error(`Failed for "${directory}".`);
         }
       });
 
-      await readyPromise;
+      dev.on('exit', () => {
+        const stdout = Buffer.concat(stdoutList).toString();
+        const stderr = Buffer.concat(stderrList).toString();
+        printOutput(directory, stdout, stderr);
+        exitResolver.resolve();
+      });
+
+      dev.on('error', () => {
+        exitResolver.resolve();
+      });
+
+      await readyResolver;
       const helperTestPath = (...args) => testPath(t, port, ...args);
       await fn(t, port, helperTestPath);
     } finally {
       dev.kill('SIGTERM');
+      await exitResolver;
     }
   };
 }
 
+test.beforeEach(() => {
+  port = ++port;
+});
+
+test.afterEach(async () => {
+  await Promise.all(
+    Array.from(processList).map(([procId, proc]) => {
+      if (proc.killed === false) {
+        console.log(
+          `killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`
+        );
+
+        try {
+          process.kill(proc.pid, 'SIGTERM');
+        } catch (err) {
+          // Was already killed
+          if (err.errno !== 'ESRCH') {
+            throw err;
+          }
+        }
+      }
+    })
+  );
+});
+
 test(
   '[now dev] validate routes that use `check: true`',
   testFixtureStdio('routes-check-true', async (t, port) => {
-    const result = await fetchWithRetry(
-      `http://localhost:${port}/blog/post`,
-      3
-    );
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}/blog/post`);
 
     validateResponseHeaders(t, response);
 
@@ -255,20 +378,19 @@ test('[now dev] validate mixed routes and rewrites', async t => {
   t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/gm);
 });
 
+// Test seems unstable: It won't return sometimes.
 test('[now dev] validate env var names', async t => {
   const directory = fixture('invalid-env-var-name');
   const { dev } = await testFixture(directory, { stdio: 'pipe' });
 
   try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
     let stderr = '';
     dev.stderr.setEncoding('utf8');
 
-    await new Promise(resolve => {
+    await new Promise((resolve, reject) => {
       dev.stderr.on('data', b => {
-        stderr += b;
+        stderr += b.toString();
+
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
@@ -281,19 +403,23 @@ test('[now dev] validate env var names', async t => {
           resolve();
         }
       });
+
+      dev.on('error', reject);
+      dev.on('exit', resolve);
     });
 
     t.pass();
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
+
+  t.pass();
 });
 
 test(
   '[now dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async (t, port) => {
-    const result = await fetchWithRetry(`http://localhost:${port}/hello`, 3);
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}/hello`, 3);
 
     validateResponseHeaders(t, response);
 
@@ -385,8 +511,7 @@ test(
 test(
   '[now dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async (t, port) => {
-    const result = await fetchWithRetry(`http://localhost:${port}`, 60);
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}`, 60);
 
     validateResponseHeaders(t, response);
 
@@ -399,88 +524,76 @@ test(
 
 test('[now dev] 01-node', async t => {
   const directory = fixture('01-node');
-  const { dev, port } = await testFixture(directory);
 
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-    const response = await result;
+  const tester = testFixtureStdio('01-node', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
     validateResponseHeaders(t, response);
 
     const body = await response.text();
     t.regex(body, /A simple deployment with the Now API!/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
+  });
+
+  await tester(t);
 });
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
-if (satisfies(process.version, '10.x')) {
-  test('[now dev] 02-angular-node', async t => {
-    const directory = fixture('02-angular-node');
-    const { dev, port } = await testFixture(directory, { stdio: 'pipe' }, [
-      '--debug',
-    ]);
+test('[now dev] 02-angular-node', async t => {
+  if (shouldSkip(t, '02-angular-node', '10.x')) return;
 
-    let stderr = '';
+  const directory = fixture('02-angular-node');
+  const { dev, port } = await testFixture(directory, { stdio: 'pipe' }, [
+    '--debug',
+  ]);
 
-    try {
-      dev.stderr.on('data', async data => {
-        stderr += data.toString();
-      });
+  let stderr = '';
 
-      // start `now dev` detached in child_process
-      dev.unref();
+  try {
+    dev.stderr.on('data', async data => {
+      stderr += data.toString();
+    });
 
-      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-      const response = await result;
+    // start `now dev` detached in child_process
+    dev.unref();
 
-      validateResponseHeaders(t, response);
+    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
 
-      const body = await response.text();
-      t.regex(body, /Angular \+ Node.js API/gm);
-    } finally {
-      dev.kill('SIGTERM');
-    }
+    validateResponseHeaders(t, response);
 
-    if (isCanary()) {
-      stderr.includes('@now/build-utils@canary');
-    } else {
-      stderr.includes('@now/build-utils@latest');
-    }
+    const body = await response.text();
+    t.regex(body, /Angular \+ Node.js API/gm);
+  } finally {
+    dev.kill('SIGTERM');
+  }
+
+  await sleep(5000);
+
+  if (isCanary()) {
+    stderr.includes('@now/build-utils@canary');
+  } else {
+    stderr.includes('@now/build-utils@latest');
+  }
+});
+
+test('[now dev] 03-aurelia', async t => {
+  if (shouldSkip(t, '03-aurelia', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
+
+  const tester = testFixtureStdio('03-aurelia', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Aurelia Navigation Skeleton/gm);
   });
-} else {
-  console.log('Skipping `02-angular-node` test since it requires Node >= 10.9');
-}
 
-// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
-if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
-  test(
-    '[now dev] 03-aurelia',
-    testFixtureStdio('03-aurelia', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
-
-      validateResponseHeaders(t, response);
-
-      const body = await response.text();
-      t.regex(body, /Aurelia Navigation Skeleton/gm);
-    })
-  );
-} else {
-  console.log(
-    'Skipping `03-aurelia` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
-  );
-}
+  await tester(t);
+});
 
 // test(
 //   '[now dev] 04-create-react-app-node',
 //   testFixtureStdio('create-react-app', async(t, port) => {
-//     const result = fetch(`http://localhost:${port}`);
-//     const response = await result;
+//     const response = await fetch(`http://localhost:${port}`);
 
 //     validateResponseHeaders(t, response);
 
@@ -489,44 +602,35 @@ if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
 //   })
 // );
 
-// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
-if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
-  test(
-    '[now dev] 05-gatsby',
-    testFixtureStdio('05-gatsby', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
+test('[now dev] 05-gatsby', async t => {
+  if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
-      validateResponseHeaders(t, response);
+  const tester = testFixtureStdio('05-gatsby', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
-      const body = await response.text();
-      t.regex(body, /Gatsby Default Starter/gm);
-    })
-  );
-} else {
-  console.log(
-    'Skipping `05-gatsby` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
-  );
-}
+    validateResponseHeaders(t, response);
 
-// mini-css-extract-plugin has `engines: { node: ">= 6.9.0 <7.0.0 || >= 8.9.0" }` in its `package.json`
-if (satisfies(process.version, '>= 6.9.0 <7.0.0 || >= 8.9.0')) {
-  test(
-    '[now dev] 06-gridsome',
-    testFixtureStdio('06-gridsome', async (t, port) => {
-      const response = await fetch(`http://localhost:${port}`);
+    const body = await response.text();
+    t.regex(body, /Gatsby Default Starter/gm);
+  });
 
-      validateResponseHeaders(t, response);
+  await tester(t);
+});
 
-      const body = await response.text();
-      t.regex(body, /<div id="app"><\/div>/gm);
-    })
-  );
-} else {
-  console.log(
-    'Skipping `06-gridsome` test since it requires Node >= 6.9.0 <7.0.0 || >= 8.9.0'
-  );
-}
+test('[now dev] 06-gridsome', async t => {
+  if (shouldSkip(t, '06-gridsome', '>= 6.9.0 <7.0.0 || >= 8.9.0')) return;
+
+  const tester = testFixtureStdio('06-gridsome', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /<div id="app"><\/div>/gm);
+  });
+
+  await tester(t);
+});
 
 test(
   '[now dev] 07-hexo-node',
@@ -553,23 +657,16 @@ test(
 );
 
 test('[now dev] 10-nextjs-node', async t => {
-  const directory = fixture('10-nextjs-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-    const response = await result;
+  const tester = testFixtureStdio('10-nextjs-node', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
     validateResponseHeaders(t, response);
 
     const body = await response.text();
     t.regex(body, /Next.js \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
+  });
+
+  await tester(t);
 });
 
 // test('[now dev] 11-nuxtjs-node', async t => {
@@ -580,8 +677,7 @@ test('[now dev] 10-nextjs-node', async t => {
 //     // start `now dev` detached in child_process
 //     dev.unref();
 
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-//     const response = await result;
+//     const response = await fetchWithRetry(`http://localhost:${port}`, 180);
 
 //     validateResponseHeaders(t, response);
 
@@ -601,15 +697,14 @@ test('[now dev] 12-polymer-node', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
 
     validateResponseHeaders(t, response);
 
     const body = await response.text();
     t.regex(body, /Polymer \+ Node.js API/gm);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -621,15 +716,14 @@ test('[now dev] 13-preact-node', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
 
     validateResponseHeaders(t, response);
 
     const body = await response.text();
     t.regex(body, /Preact \+ Node.js API/gm);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -641,15 +735,14 @@ test('[now dev] 14-svelte-node', async t => {
     // start `now dev` detached in child_process
     dev.unref();
 
-    const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-    const response = await result;
+    const response = await fetchWithRetry(`http://localhost:${port}`, 80);
 
     validateResponseHeaders(t, response);
 
     const body = await response.text();
     t.regex(body, /Svelte \+ Node.js API/gm);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -661,8 +754,7 @@ test('[now dev] 14-svelte-node', async t => {
 //     // start `now dev` detached in child_process
 //     dev.unref();
 
-//     const result = await fetchWithRetry(`http://localhost:${port}`, 80);
-//     const response = await result;
+//     const response = await fetchWithRetry(`http://localhost:${port}`, 80);
 
 //     validateResponseHeaders(t, response);
 
@@ -674,50 +766,47 @@ test('[now dev] 14-svelte-node', async t => {
 //   }
 // });
 
-if (satisfies(process.version, '^8.12.0 || >=9.7.0')) {
-  test('[now dev] 16-vue-node', async t => {
-    const directory = fixture('16-vue-node');
-    const { dev, port } = await testFixture(directory);
+test('[now dev] 16-vue-node', async t => {
+  if (shouldSkip(t, '16-vue-node', '^8.12.0 || >=9.7.0')) return;
 
-    try {
-      // start `now dev` detached in child_process
-      dev.unref();
+  const directory = fixture('16-vue-node');
+  const { dev, port } = await testFixture(directory);
 
-      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-      const response = await result;
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
 
-      validateResponseHeaders(t, response);
+    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
 
-      const body = await response.text();
-      t.regex(body, /Vue.js \+ Node.js API/gm);
-    } finally {
-      dev.kill('SIGTERM');
-    }
-  });
-  test('[now dev] 17-vuepress-node', async t => {
-    const directory = fixture('17-vuepress-node');
-    const { dev, port } = await testFixture(directory);
+    validateResponseHeaders(t, response);
 
-    try {
-      // start `now dev` detached in child_process
-      dev.unref();
+    const body = await response.text();
+    t.regex(body, /Vue.js \+ Node.js API/gm);
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
 
-      const result = await fetchWithRetry(`http://localhost:${port}`, 180);
-      const response = await result;
+test('[now dev] 17-vuepress-node', async t => {
+  if (shouldSkip(t, '17-vuepress-node', '^8.12.0 || >=9.7.0')) return;
 
-      validateResponseHeaders(t, response);
+  const directory = fixture('17-vuepress-node');
+  const { dev, port } = await testFixture(directory);
 
-      const body = await response.text();
-      t.regex(body, /VuePress \+ Node.js API/gm);
-    } finally {
-      dev.kill('SIGTERM');
-    }
-  });
-} else {
-  console.log(
-    'Skipping `10-vue-node` and `17-vuepress-node` test since it requires Node ^8.12.0 || >=9.7.0'
-  );
-}
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /VuePress \+ Node.js API/gm);
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
 
 test('[now dev] double slashes redirect', async t => {
   const directory = fixture('01-node');
@@ -769,35 +858,29 @@ test('[now dev] double slashes redirect', async t => {
       );
     }
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
-// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
-if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
-  test(
-    '[now dev] 18-marko',
-    testFixtureStdio('18-marko', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
+test('[now dev] 18-marko', async t => {
+  if (shouldSkip(t, '18-marko', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
-      validateResponseHeaders(t, response);
+  const tester = testFixtureStdio('18-marko', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
-      const body = await response.text();
-      t.regex(body, /Marko Starter/gm);
-    })
-  );
-} else {
-  console.log(
-    'Skipping `18-marko` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
-  );
-}
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Marko Starter/gm);
+  });
+
+  await tester(t);
+});
 
 test(
   '[now dev] 19-mithril',
   testFixtureStdio('19-mithril', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+    const response = await fetch(`http://localhost:${port}`);
 
     validateResponseHeaders(t, response);
 
@@ -809,8 +892,7 @@ test(
 test(
   '[now dev] 20-riot',
   testFixtureStdio('20-riot', async (t, port) => {
-    const result = fetch(`http://localhost:${port}`);
-    const response = await result;
+    const response = await fetch(`http://localhost:${port}`);
 
     validateResponseHeaders(t, response);
 
@@ -819,23 +901,20 @@ test(
   })
 );
 
-// @static/charge has `engines: { node: ">= 8.10.0" }` in its `package.json`
-if (satisfies(process.version, '>= 8.10.0')) {
-  test(
-    '[now dev] 21-charge',
-    testFixtureStdio('21-charge', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
+test('[now dev] 21-charge', async t => {
+  if (shouldSkip(t, '21-charge', '>= 8.10.0')) return;
 
-      validateResponseHeaders(t, response);
+  const tester = testFixtureStdio('21-charge', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
-      const body = await response.text();
-      t.regex(body, /Welcome to my new Charge site/gm);
-    })
-  );
-} else {
-  console.log('Skipping `21-charge` test since it requires Node >= 8.10.0');
-}
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Welcome to my new Charge site/gm);
+  });
+
+  await tester(t);
+});
 
 test(
   '[now dev] 22-brunch',
@@ -849,49 +928,43 @@ test(
   })
 );
 
-// react-dev-utils has `engines: { node: ">= 8.10" }` in its `package.json`
-if (satisfies(process.version, '>= 8.10')) {
-  test(
-    '[now dev] 23-docusaurus',
-    testFixtureStdio('23-docusaurus', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
+test('[now dev] 23-docusaurus', async t => {
+  if (shouldSkip(t, '23-docusaurus', '>= 8.10')) return;
 
-      validateResponseHeaders(t, response);
+  const tester = testFixtureStdio('23-docusaurus', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
-      const body = await response.text();
-      t.regex(body, /Test Site · A website for testing/gm);
-    })
-  );
-} else {
-  console.log('Skipping `23-docusaurus` test since it requires Node >= 8.10');
-}
+    validateResponseHeaders(t, response);
 
-// eslint has `engines: { node: ">^6.14.0 || ^8.10.0 || >=9.10.0" }` in its `package.json`
-if (satisfies(process.version, '>^6.14.0 || ^8.10.0 || >=9.10.0')) {
-  test(
-    '[now dev] 24-ember',
-    testFixtureStdio('24-ember', async (t, port) => {
-      const result = fetch(`http://localhost:${port}`);
-      const response = await result;
+    const body = await response.text();
+    t.regex(body, /Test Site · A website for testing/gm);
+  });
 
-      validateResponseHeaders(t, response);
+  await tester(t);
+});
 
-      const body = await response.text();
-      t.regex(body, /HelloWorld/gm);
-    })
-  );
-} else {
-  console.log(
-    'Skipping `24-ember` test since it requires Node >= ^6.14.0 || ^8.10.0 || >=9.10.0'
-  );
-}
+test('[now dev] 24-ember', async t => {
+  if (shouldSkip(t, '24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
+
+  const tester = await testFixtureStdio('24-ember', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /HelloWorld/gm);
+  });
+
+  tester(t);
+});
 
 test('[now dev] temporary directory listing', async t => {
   const directory = fixture('temporary-directory-listing');
   const { dev, port } = await testFixture(directory);
 
   try {
+    await fs.unlink(path.join(directory, 'index.txt')).catch(() => null);
+
     // start `now dev` detached in child_process
     dev.unref();
 
@@ -916,19 +989,24 @@ test('[now dev] temporary directory listing', async t => {
       await sleep(ms('1s'));
     }
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
 test('[now dev] add a `package.json` to trigger `@now/static-build`', async t => {
   const directory = fixture('trigger-static-build');
-  const { dev, port } = await testFixture(directory);
 
-  try {
-    dev.unref();
+  await fs.unlink(path.join(directory, 'package.json')).catch(() => null);
 
+  await fs
+    .unlink(path.join(directory, 'public', 'index.txt'))
+    .catch(() => null);
+
+  await fs.rmdir(path.join(directory, 'public')).catch(() => null);
+
+  const tester = testFixtureStdio('trigger-static-build', async (t, port) => {
     {
-      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const response = await fetch(`http://localhost:${port}`);
       validateResponseHeaders(t, response);
       const body = await response.text();
       t.is(body.trim(), 'hello:index.txt');
@@ -936,25 +1014,27 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
 
     const rnd = Math.random().toString();
     const pkg = {
+      private: true,
       scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
     };
+
     await fs.writeFile(
       path.join(directory, 'package.json'),
       JSON.stringify(pkg)
     );
 
     // Wait until file events have been processed
-    await sleep(ms('3s'));
+    await sleep(ms('2s'));
 
     {
-      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+      const response = await fetch(`http://localhost:${port}`);
       validateResponseHeaders(t, response);
       const body = await response.text();
       t.is(body.trim(), rnd);
     }
-  } finally {
-    dev.kill('SIGTERM');
-  }
+  });
+
+  await tester(t);
 });
 
 test('[now dev] no build matches warning', async t => {
@@ -978,39 +1058,42 @@ test('[now dev] no build matches warning', async t => {
 
     t.pass();
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
-if (satisfies(process.version, '^8.10.0 || ^10.13.0 || >=11.10.1')) {
-  test('[now dev] do not recursivly check the path', async t => {
-    const directory = fixture('handle-filesystem-missing');
-    const { dev, port } = await testFixture(directory);
+test('[now dev] do not recursivly check the path', async t => {
+  if (
+    shouldSkip(
+      t,
+      'do not recursivly check the path',
+      '^8.10.0 || ^10.13.0 || >=11.10.1'
+    )
+  )
+    return;
 
-    try {
-      dev.unref();
+  const directory = fixture('handle-filesystem-missing');
+  const { dev, port } = await testFixture(directory);
 
-      {
-        const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-        validateResponseHeaders(t, response);
-        const body = await response.text();
-        t.is(body.trim(), 'hello');
-      }
+  try {
+    dev.unref();
 
-      {
-        const response = await fetch(`http://localhost:${port}/favicon.txt`);
-        validateResponseHeaders(t, response);
-        t.is(response.status, 404);
-      }
-    } finally {
-      dev.kill('SIGTERM');
+    {
+      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+      validateResponseHeaders(t, response);
+      const body = await response.text();
+      t.is(body.trim(), 'hello');
     }
-  });
-} else {
-  console.log(
-    'Skipping `do not recursivly check the path` test since it requires Node ^8.10.0 || ^10.13.0 || >=11.10.1'
-  );
-}
+
+    {
+      const response = await fetch(`http://localhost:${port}/favicon.txt`);
+      validateResponseHeaders(t, response);
+      t.is(response.status, 404);
+    }
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
 
 test('[now dev] render warning for empty cwd dir', async t => {
   const directory = fixture('empty');
@@ -1041,7 +1124,7 @@ test('[now dev] render warning for empty cwd dir', async t => {
     validateResponseHeaders(t, response);
     t.is(response.status, 404);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -1100,42 +1183,35 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     const text2 = await resp2.text();
     t.is(text2.trim(), 'hello second', stderr.join(''));
   } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[now dev] 25-nextjs-src-dir', async t => {
+  if (shouldSkip(t, '25-nextjs-src-dir', '>= 8.9.0')) return;
+
+  const directory = fixture('25-nextjs-src-dir');
+  const { dev, port } = await testFixture(directory);
+
+  try {
+    // start `now dev` detached in child_process
+    dev.unref();
+
+    const response = await fetchWithRetry(`http://localhost:${port}`, 80);
+
+    validateResponseHeaders(t, response);
+
+    const body = await response.text();
+    t.regex(body, /Next.js \+ Node.js API/gm);
+  } finally {
     dev.kill('SIGTERM');
   }
 });
 
-if (satisfies(process.version, '>= 8.9.0')) {
-  test('[now dev] 25-nextjs-src-dir', async t => {
-    const directory = fixture('25-nextjs-src-dir');
-    const { dev, port } = await testFixture(directory);
-
-    try {
-      // start `now dev` detached in child_process
-      dev.unref();
-
-      const response = await fetchWithRetry(`http://localhost:${port}`, 80);
-
-      validateResponseHeaders(t, response);
-
-      const body = await response.text();
-      t.regex(body, /Next.js \+ Node.js API/gm);
-    } finally {
-      dev.kill('SIGTERM');
-    }
-  });
-} else {
-  console.log(
-    'Skipping `25-nextjs-src-dir` test since it requires Node >= 8.9.0'
-  );
-}
-
 test(
   '[now dev] Use runtime from the functions property',
   testFixtureStdio('custom-runtime', async (t, port) => {
-    const response = await fetchWithRetry(
-      `http://localhost:${port}/api/user`,
-      3
-    );
+    const response = await fetchWithRetry(`http://localhost:${port}/api/user`);
 
     validateResponseHeaders(t, response);
 
