@@ -1,6 +1,6 @@
 import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
-import DetectorFilesystem from './detectors/filesystem';
+import { DetectorFilesystem } from './detectors/filesystem';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -377,3 +377,15 @@ export interface DetectorOutput {
 }
 
 export type DetectorResult = DetectorOutput | false;
+
+export interface FrameworkDetectionItem {
+  name: string;
+  slug: string;
+  logo: string;
+  tagline: string;
+  website: string;
+  detectors?: {
+    hasFile?: string;
+    hasDependency?: string;
+  }[];
+}

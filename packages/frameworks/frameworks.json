@@ -4,21 +4,24 @@
     "slug": "nextjs",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/next.svg",
     "tagline": "Next.js makes you productive with React instantly — whether you want to build static or dynamic sites. ",
-    "website": "https://nextjs.org"
+    "website": "https://nextjs.org",
+    "detectors": [{ "hasDependency": "next" }]
   },
   {
     "name": "Gatsby",
     "slug": "gatsby",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gatsby.svg",
     "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
-    "website": "https://gatsbyjs.org"
+    "website": "https://gatsbyjs.org",
+    "detectors": [{ "hasDependency": "gatsby" }]
   },
   {
     "name": "Nuxt.js",
     "slug": "nuxtjs",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/nuxt.svg",
     "tagline": "Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.",
-    "website": "https://nuxtjs.org"
+    "website": "https://nuxtjs.org",
+    "detectors": [{ "hasDependency": "nuxt" }]
   },
   {
     "name": "Create-React-App",

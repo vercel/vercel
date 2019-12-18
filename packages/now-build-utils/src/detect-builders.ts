@@ -132,7 +132,7 @@ function detectFrontBuilder(
     });
   }
 
-  if (framework === 'next') {
+  if (framework === 'nextjs') {
     return { src: 'package.json', use: `@now/next${withTag}`, config };
   }
 

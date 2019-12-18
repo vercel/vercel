@@ -27,7 +27,7 @@ import { PackageJson } from '../types';
  * functions. The easiest way to do this is to use the `=` syntax when defining
  * methods in this class definition.
  */
-export default abstract class DetectorFilesystem {
+export abstract class DetectorFilesystem {
   protected abstract _readFile(name: string): Promise<Buffer>;
   protected abstract _exists(name: string): Promise<boolean>;
 
