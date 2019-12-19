@@ -200,7 +200,8 @@ interface RoutesResult {
 
 async function detectApiRoutes(
   files: string[],
-  builders: Builder[]
+  builders: Builder[],
+  featHandleMiss: boolean
 ): Promise<RoutesResult> {
   if (!files || files.length === 0) {
     return { defaultRoutes: null, error: null };
@@ -213,7 +214,7 @@ async function detectApiRoutes(
     .sort(sortFiles)
     .sort(sortFilesBySegmentCount);
 
-  const defaultRoutes: Route[] = [];
+  let defaultRoutes: Route[] = [];
 
   for (const file of sortedFiles) {
     // We only consider every file in the api directory
@@ -265,11 +266,27 @@ async function detectApiRoutes(
   }
 
   // 404 Route to disable directory listing
-  if (defaultRoutes.length) {
-    defaultRoutes.push({
-      status: 404,
-      src: '/api(\\/.*)?$',
-    });
+  if (defaultRoutes.length > 0) {
+    if (featHandleMiss) {
+      defaultRoutes = [
+        { handle: 'miss' },
+        {
+          src: '/api/(.+)\\.\\w+',
+          dest: '/api/$1',
+          check: true,
+        },
+        {
+          status: 404,
+          src: '/api(/.*)?$',
+          continue: true,
+        },
+      ];
+    } else {
+      defaultRoutes.push({
+        status: 404,
+        src: '/api(/.*)?$',
+      });
+    }
   }
 
   return { defaultRoutes, error: null };
@@ -287,16 +304,22 @@ function getPublicBuilder(builders: Builder[]): Builder | null {
   return builder || null;
 }
 
+export function detectOutputDirectory(builders: Builder[]): string | null {
+  // TODO: We eventually want to save the output directory to
+  // builder.config.outputDirectory so it is only detected once
+  const publicBuilder = getPublicBuilder(builders);
+  return publicBuilder ? publicBuilder.src.replace('/**/*', '') : null;
+}
+
 export async function detectRoutes(
   files: string[],
-  builders: Builder[]
+  builders: Builder[],
+  featHandleMiss = false
 ): Promise<RoutesResult> {
-  const routesResult = await detectApiRoutes(files, builders);
-  const publicBuilder = getPublicBuilder(builders);
+  const routesResult = await detectApiRoutes(files, builders, featHandleMiss);
+  const directory = detectOutputDirectory(builders);
 
-  if (routesResult.defaultRoutes && publicBuilder) {
-    const directory = publicBuilder.src.replace('/**/*', '');
-
+  if (routesResult.defaultRoutes && directory && !featHandleMiss) {
     routesResult.defaultRoutes.push({
       src: '/(.*)',
       dest: `/${directory}/$1`,
