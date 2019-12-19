@@ -99,9 +99,13 @@ export async function prepareBuilderDir() {
     (await readFileOrNull(join(builderDir, 'package.json'), 'utf8')) || '{}';
   const { dependencies = {} } = JSON.parse(existingPackageJson);
 
-  if (!hasBundledBuilders(dependencies)) {
+  if (hasBundledBuilders(dependencies)) {
     const extractor = extract(builderDir);
-    await pipe(createReadStream(bundledTarballPath), createGunzip(), extractor);
+    await pipe(
+      createReadStream(bundledTarballPath),
+      createGunzip(),
+      extractor
+    );
   }
 
   return builderDir;
@@ -228,13 +232,22 @@ export async function installBuilders(
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
+  const bundeledBuilders = getBundledBuilders();
 
   packages.push(getBuildUtils(packages));
 
   // Filter out any packages that come packaged with `now-cli`
-  const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkgBefore)
-  );
+  const packagesToInstall = packages
+    .filter(p => filterPackage(p, distTag, buildersPkgBefore))
+    .map(p => {
+      // We'll use the local builders for testing
+      if (process.env.NODE_ENV === 'test' && bundeledBuilders.includes(p)) {
+        const dirName = `now-${p.replace('@now/', '')}`;
+        return join(__dirname, '..', '..', '..', dirName);
+      }
+
+      return p;
+    });
 
   if (packagesToInstall.length === 0) {
     output.debug('No builders need to be installed');
@@ -289,7 +302,11 @@ export async function updateBuilders(
   if (!builderDir) {
     builderDir = await builderDirPromise;
   }
-  const packages = Array.from(packagesSet);
+
+  // Do not update the builders during tests
+  const packages =
+    process.env.NODE_ENV === 'test' ? [] : Array.from(packagesSet);
+
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
