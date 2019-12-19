@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import { Route, Source } from '@now/routing-utils';
+import { Route } from '@now/routing-utils';
 import { Builder } from './types';
 import { getIgnoreApiFilter, sortFiles } from './detect-builders';
 
@@ -314,17 +314,16 @@ export function detectOutputDirectory(builders: Builder[]): string | null {
 export async function detectRoutes(
   files: string[],
   builders: Builder[],
-  featHandleMiss: boolean
+  featHandleMiss = false
 ): Promise<RoutesResult> {
   const routesResult = await detectApiRoutes(files, builders, featHandleMiss);
   const directory = detectOutputDirectory(builders);
 
   if (routesResult.defaultRoutes && directory && !featHandleMiss) {
-    const route: Source = {
+    routesResult.defaultRoutes.push({
       src: '/(.*)',
       dest: `/${directory}/$1`,
-    };
-    routesResult.defaultRoutes.push(route);
+    });
   }
 
   return routesResult;

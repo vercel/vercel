@@ -570,8 +570,7 @@ export default class DevServer {
       if (builders) {
         const { defaultRoutes, error: routesError } = await detectRoutes(
           files,
-          builders,
-          false // TODO: enable after implementing `handle: miss`
+          builders
         );
 
         config.builds = config.builds || [];
