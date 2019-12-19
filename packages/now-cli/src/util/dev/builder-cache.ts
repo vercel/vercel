@@ -99,7 +99,7 @@ export async function prepareBuilderDir() {
     (await readFileOrNull(join(builderDir, 'package.json'), 'utf8')) || '{}';
   const { dependencies = {} } = JSON.parse(existingPackageJson);
 
-  if (hasBundledBuilders(dependencies)) {
+  if (!hasBundledBuilders(dependencies)) {
     const extractor = extract(builderDir);
     await pipe(
       createReadStream(bundledTarballPath),
@@ -232,7 +232,6 @@ export async function installBuilders(
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
-  const bundeledBuilders = getBundledBuilders();
 
   packages.push(getBuildUtils(packages));
 
