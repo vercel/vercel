@@ -277,14 +277,14 @@ async function detectApiRoutes(
         },
         {
           status: 404,
-          src: '/api(\\/.*)?$',
+          src: '/api(/.*)?$',
           continue: true,
         },
       ];
     } else {
       defaultRoutes.push({
         status: 404,
-        src: '/api(\\/.*)?$',
+        src: '/api(/.*)?$',
       });
     }
   }
