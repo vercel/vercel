@@ -2,8 +2,8 @@
  * This converts Superstatic configuration to Now.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
-
-import { pathToRegexp, Key } from 'path-to-regexp';
+import { parse as parseUrl, format as formatUrl } from 'url';
+import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
 
 export function getCleanUrls(
@@ -108,10 +108,21 @@ function isString(key: any): key is string {
 }
 
 function replaceSegments(segments: string[], destination: string): string {
-  if (destination.includes(':')) {
+  const parsedDestination = parseUrl(destination, true);
+  let { pathname } = parsedDestination;
+  pathname = pathname || '';
+
+  if (pathname.includes(':') && segments.length > 0) {
+    const compiler = compile(pathname);
+    const indexes: { [k: string]: string } = {};
+
     segments.forEach((name, index) => {
-      const r = new RegExp(':' + name, 'g');
-      destination = destination.replace(r, toSegmentDest(index));
+      indexes[name] = toSegmentDest(index);
+    });
+    pathname = compiler(indexes);
+    destination = formatUrl({
+      ...parsedDestination,
+      pathname,
     });
   } else if (segments.length > 0) {
     let prefix = '?';

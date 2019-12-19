@@ -1,5 +1,6 @@
 import { parse as parsePath } from 'path';
-import { Route, Builder } from './types';
+import { Route } from '@now/routing-utils';
+import { Builder } from './types';
 import { getIgnoreApiFilter, sortFiles } from './detect-builders';
 
 function escapeName(name: string) {

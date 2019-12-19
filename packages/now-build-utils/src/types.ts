@@ -20,18 +20,6 @@ export interface Files {
   [filePath: string]: File;
 }
 
-export interface Route {
-  src?: string;
-  dest?: string;
-  handle?: string;
-  type?: string;
-  headers?: {
-    [key: string]: string;
-  };
-  continue?: boolean;
-  status?: number;
-}
-
 export interface Config {
   [key: string]:
     | string

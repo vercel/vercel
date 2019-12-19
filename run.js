@@ -42,14 +42,20 @@ async function main() {
   }
 
   // Sort the matches such that `utils` modules are compiled first,
-  // because other packages may rely on them
-  // We also need to ensure that `now-client` is built before the CLI
+  // because other packages (such as builders) depend on them.
+  // We also need to ensure that `now-cli` is built last.
 
   matches.sort((a, b) => {
-    if (a.endsWith('-utils') && !b.endsWith('-utils')) {
+    if (a === 'now-routing-utils' && b !== 'now-routing-utils') {
       return -1;
     }
-    if (b.endsWith('-utils') && !a.endsWith('-utils')) {
+    if (b === 'now-routing-utils' && a !== 'now-routing-utils') {
+      return 1;
+    }
+    if (a === 'now-build-utils' && b !== 'now-build-utils') {
+      return -1;
+    }
+    if (b === 'now-build-utils' && a !== 'now-build-utils') {
       return 1;
     }
     if (a === 'now-cli' && b !== 'now-cli') {

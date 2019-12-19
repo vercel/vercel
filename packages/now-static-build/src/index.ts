@@ -21,13 +21,13 @@ import {
   getSpawnOptions,
   Files,
   FileFsRef,
-  Route,
   BuildOptions,
   Config,
   debug,
   PackageJson,
   PrepareCacheOptions,
 } from '@now/build-utils';
+import { Route, Source } from '@now/routing-utils';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -120,8 +120,8 @@ const nowDevChildProcesses = new Set<ChildProcess>();
   });
 });
 
-const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
-  const basic: Route = {
+const getDevRoute = (srcBase: string, devPort: number, route: Source) => {
+  const basic: Source = {
     src: `${srcBase}${route.src}`,
     dest: `http://localhost:${devPort}${route.dest}`,
   };

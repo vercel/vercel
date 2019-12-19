@@ -15,10 +15,10 @@ import {
   PackageJson,
   PrepareCacheOptions,
   Prerender,
-  Route,
   runNpmInstall,
   runPackageJsonScript,
 } from '@now/build-utils';
+import { Route } from '@now/routing-utils';
 import {
   convertRedirects,
   convertRewrites,
@@ -354,29 +354,11 @@ export const build = async ({
     }
   }
 
-  const exportIntent = await getExportIntent(entryPath);
   const userExport = await getExportStatus(entryPath);
 
-  if (exportIntent || userExport) {
+  if (userExport) {
+    const exportIntent = await getExportIntent(entryPath);
     const { trailingSlash = false } = exportIntent || {};
-
-    if (!userExport) {
-      await writePackageJson(entryPath, {
-        ...pkg,
-        scripts: {
-          ...pkg.scripts,
-          'now-automatic-next-export': `next export --outdir "${path.resolve(
-            entryPath,
-            'out'
-          )}"`,
-        },
-      });
-
-      await runPackageJsonScript(entryPath, 'now-automatic-next-export', {
-        ...spawnOpts,
-        env,
-      });
-    }
 
     const resultingExport = await getExportStatus(entryPath);
     if (!resultingExport) {
