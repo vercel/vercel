@@ -1,4 +1,4 @@
-import { detectBuilders, detectRoutes } from '../src';
+const { detectBuilders, detectRoutes } = require('../dist');
 
 describe('Test `detectBuilders`', () => {
   it('package.json + no build', async () => {
@@ -725,7 +725,7 @@ describe('Test `detectBuilders`', () => {
 
     const { builders } = await detectBuilders(files, pkg, {
       functions,
-      projectSettings: { framework: 'next' },
+      projectSettings: { framework: 'nextjs' },
     });
 
     expect(builders.length).toBe(2);
@@ -742,7 +742,7 @@ describe('Test `detectBuilders`', () => {
       src: 'package.json',
       config: {
         zeroConfig: true,
-        framework: 'next',
+        framework: 'nextjs',
       },
     });
 

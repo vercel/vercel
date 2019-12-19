@@ -114,7 +114,7 @@ function detectFrontBuilder(
     };
 
     if (deps['next']) {
-      framework = 'next';
+      framework = 'nextjs';
     }
   }
 
