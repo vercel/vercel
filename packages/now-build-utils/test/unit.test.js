@@ -1000,7 +1000,7 @@ it('Test `detectRoutes`', async () => {
     const { builders } = await detectBuilders(files);
     const { defaultRoutes } = await detectRoutes(files, builders);
     expect(defaultRoutes[2].status).toBe(404);
-    expect(defaultRoutes[2].src).toBe('/api(\\/.*)?$');
+    expect(defaultRoutes[2].src).toBe('/api(/.*)?$');
     expect(defaultRoutes[3].src).toBe('/(.*)');
     expect(defaultRoutes[3].dest).toBe('/public/$1');
     expect(defaultRoutes.length).toBe(4);
@@ -1020,7 +1020,7 @@ it('Test `detectRoutes`', async () => {
     const { builders } = await detectBuilders(files, detected);
     const { defaultRoutes } = await detectRoutes(files, builders);
     expect(defaultRoutes[1].status).toBe(404);
-    expect(defaultRoutes[1].src).toBe('/api(\\/.*)?$');
+    expect(defaultRoutes[1].src).toBe('/api(/.*)?$');
     expect(defaultRoutes.length).toBe(2);
   }
 
