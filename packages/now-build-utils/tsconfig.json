@@ -13,8 +13,7 @@
     "outDir": "./dist",
     "types": ["node", "jest"],
     "strict": true,
-    "target": "esnext",
-    "resolveJsonModule": true
+    "target": "esnext"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

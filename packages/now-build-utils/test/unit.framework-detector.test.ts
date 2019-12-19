@@ -1,7 +1,13 @@
-import _FrameworkList, { Framework } from '@now/frameworks';
+import path from 'path';
+import { readFileSync } from 'fs-extra';
+import { Framework } from '@now/frameworks';
 import { detectFramework, DetectorFilesystem } from '../src';
 
-const frameworkList = _FrameworkList as Framework[];
+const frameworkList = JSON.parse(
+  readFileSync(
+    path.join(__dirname, '..', '..', 'frameworks', 'frameworks.json')
+  ).toString()
+) as Framework[];
 
 class VirtualFilesystem extends DetectorFilesystem {
   private files: Map<string, Buffer>;
