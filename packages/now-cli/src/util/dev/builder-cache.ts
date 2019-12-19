@@ -237,17 +237,9 @@ export async function installBuilders(
   packages.push(getBuildUtils(packages));
 
   // Filter out any packages that come packaged with `now-cli`
-  const packagesToInstall = packages
-    .filter(p => filterPackage(p, distTag, buildersPkgBefore))
-    .map(p => {
-      // We'll use the local builders for testing
-      if (process.env.NODE_ENV === 'test' && bundeledBuilders.includes(p)) {
-        const dirName = `now-${p.replace('@now/', '')}`;
-        return join(__dirname, '..', '..', '..', dirName);
-      }
-
-      return p;
-    });
+  const packagesToInstall = packages.filter(p =>
+    filterPackage(p, distTag, buildersPkgBefore)
+  );
 
   if (packagesToInstall.length === 0) {
     output.debug('No builders need to be installed');
@@ -303,12 +295,7 @@ export async function updateBuilders(
     builderDir = await builderDirPromise;
   }
 
-  // Do not update the builders during tests
-  const bundeledBuilders = getBundledBuilders();
-  const packages = Array.from(packagesSet).filter(p => {
-    return process.env.NODE_ENV === 'test' && bundeledBuilders.includes(p);
-  });
-
+  const packages = Array.from(packagesSet);
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
