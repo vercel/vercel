@@ -1,34 +1,68 @@
-import { FrameworkDetectionItem } from './types';
+import { Framework, FrameworkDetectionItem } from '@now/frameworks';
 import { DetectorFilesystem } from './detectors/filesystem';
 
 export interface DetectFrameworkOptions {
   fs: DetectorFilesystem;
-  frameworkList: FrameworkDetectionItem[];
+  frameworkList: Framework[];
 }
 
-async function matches(
-  fs: DetectorFilesystem,
-  framework: FrameworkDetectionItem
-) {
+async function matches(fs: DetectorFilesystem, framework: Framework) {
   const { detectors } = framework;
 
   if (!detectors) {
     return false;
   }
 
-  const result = await Promise.all(
-    detectors.map(async keyValue => {
-      if (keyValue.hasDependency) {
-        return fs.hasDependency(keyValue.hasDependency);
-      }
+  const { every, some } = detectors;
 
-      if (keyValue.hasFile) {
-        return fs.exists(keyValue.hasFile);
-      }
+  if (every !== undefined && !Array.isArray(every)) {
+    return false;
+  }
 
-      return true;
-    })
-  );
+  if (some !== undefined && !Array.isArray(some)) {
+    return false;
+  }
+
+  const check = async ({ file, matchContent }: FrameworkDetectionItem) => {
+    if (!file) {
+      return false;
+    }
+
+    if ((await fs.exists(file)) === false) {
+      return false;
+    }
+
+    if (matchContent) {
+      const regex = new RegExp(matchContent, 'gm');
+      const content = await fs.readFile(file);
+
+      if (!regex.test(content.toString())) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const result: boolean[] = [];
+
+  if (every) {
+    const everyResult = await Promise.all(every.map(item => check(item)));
+    result.push(...everyResult);
+  }
+
+  if (some) {
+    let someResult = false;
+
+    for (const item of some) {
+      if (await check(item)) {
+        someResult = true;
+        break;
+      }
+    }
+
+    result.push(someResult);
+  }
 
   return result.every(res => res === true);
 }

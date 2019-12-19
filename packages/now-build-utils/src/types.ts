@@ -1,6 +1,5 @@
 import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
-import { DetectorFilesystem } from './detectors/filesystem';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -346,46 +345,4 @@ export interface NowHeader {
 export interface NowHeaderKeyValue {
   key: string;
   value: string;
-}
-
-export type Detector = (params: DetectorParameters) => Promise<DetectorResult>;
-
-export interface DetectorParameters {
-  fs: DetectorFilesystem;
-  detectors?: Detector[];
-  pkgDetectors?: Detector[];
-}
-
-export interface DetectorOutput {
-  buildCommand: string;
-  outputDirectory: string;
-  buildVariables?: Env;
-  devCommand?: string;
-  devVariables?: Env;
-  minNodeRange?: string;
-  cachePattern?: string;
-  routes?: Route[];
-  cleanUrls?: boolean;
-  rewrites?: NowRewrite[];
-  redirects?: NowRedirect[];
-  headers?: NowHeader[];
-  trailingSlash?: boolean;
-  framework?: {
-    slug: string;
-    version: string;
-  };
-}
-
-export type DetectorResult = DetectorOutput | false;
-
-export interface FrameworkDetectionItem {
-  name: string;
-  slug: string;
-  logo: string;
-  tagline: string;
-  website: string;
-  detectors?: {
-    hasFile?: string;
-    hasDependency?: string;
-  }[];
 }

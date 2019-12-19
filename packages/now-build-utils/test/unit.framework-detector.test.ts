@@ -1,26 +1,30 @@
-import _FrameworkList from '../../frameworks/frameworks.json';
-import {
-  detectFramework,
-  DetectorFilesystem,
-  FrameworkDetectionItem,
-} from '../src';
+import _FrameworkList, { Framework } from '@now/frameworks';
+import { detectFramework, DetectorFilesystem } from '../src';
 
-const frameworkList = _FrameworkList as FrameworkDetectionItem[];
+const frameworkList = _FrameworkList as Framework[];
 
 class VirtualFilesystem extends DetectorFilesystem {
-  private files: { [key: string]: string | Buffer };
+  private files: Map<string, Buffer>;
 
   constructor(files: { [key: string]: string | Buffer }) {
     super();
-    this.files = files;
+    this.files = new Map();
+    Object.entries(files).map(([key, value]) => {
+      const buffer = typeof value === 'string' ? Buffer.from(value) : value;
+      this.files.set(key, buffer);
+    });
   }
 
-  async _exists(name: string) {
-    return this.files[name];
+  async _exists(name: string): Promise<boolean> {
+    return this.files.has(name);
   }
 
-  async _readFile(name: string) {
-    const file = this.files[name];
+  async _readFile(name: string): Promise<Buffer> {
+    const file = this.files.get(name);
+
+    if (file === undefined) {
+      throw new Error('File does not exist');
+    }
 
     if (typeof file === 'string') {
       return Buffer.from(file);
@@ -31,6 +35,15 @@ class VirtualFilesystem extends DetectorFilesystem {
 }
 
 describe('#detectFramework', () => {
+  it('Do not detect anything', async () => {
+    const fs = new VirtualFilesystem({
+      'README.md': '# hi',
+      'api/cheese.js': 'export default (req, res) => res.end("cheese");',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe(null);
+  });
+
   it('Detect Next.js', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
@@ -65,5 +78,45 @@ describe('#detectFramework', () => {
     });
 
     expect(await detectFramework({ fs, frameworkList })).toBe('gatsby');
+  });
+
+  it('Detect Hugo #1', async () => {
+    const fs = new VirtualFilesystem({
+      'config.yaml': 'config',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  });
+
+  it('Detect Hugo #2', async () => {
+    const fs = new VirtualFilesystem({
+      'config.json': 'config',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  });
+
+  it('Detect Hugo #3', async () => {
+    const fs = new VirtualFilesystem({
+      'config.toml': 'config',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  });
+
+  it('Detect Jekyll', async () => {
+    const fs = new VirtualFilesystem({
+      '_config.yml': 'config',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('jekyll');
+  });
+
+  it('Detect Middleman', async () => {
+    const fs = new VirtualFilesystem({
+      'config.rb': 'config',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('middleman');
   });
 });
