@@ -116,6 +116,12 @@ export interface NowConfig extends LegacyNowConfig {
   github?: DeploymentGithubData;
   scope?: string;
   alias?: string | string[];
+  projectSettings?: {
+    devCommand?: string | null;
+    buildCommand?: string | null;
+    outputDirectory?: string | null;
+    framework?: string | null;
+  };
 }
 
 interface LegacyDeploymentOptions {
