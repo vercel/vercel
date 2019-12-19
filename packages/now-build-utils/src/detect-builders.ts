@@ -427,6 +427,7 @@ export async function detectBuilders(
         src: `${outputDirectory}/**/*`,
         config: {
           zeroConfig: true,
+          outputDirectory,
         },
       });
     } else if (hasDirectory('public', files)) {
@@ -435,6 +436,7 @@ export async function detectBuilders(
         src: 'public/**/*',
         config: {
           zeroConfig: true,
+          outputDirectory: 'public',
         },
       });
     } else if (
