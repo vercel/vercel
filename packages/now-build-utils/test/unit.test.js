@@ -936,6 +936,189 @@ describe('Test `detectBuilders`', () => {
   });
 });
 
+it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
+  const featHandleMiss = true;
+
+  const expectedRoutes = [
+    { handle: 'miss' },
+    {
+      src: '/api/(.+)\\.\\w+',
+      dest: '/api/$1',
+      check: true,
+    },
+    {
+      status: 404,
+      src: '/api(/.*)?$',
+      continue: true,
+    },
+  ];
+
+  {
+    const files = ['api/user.go', 'api/team.js', 'api/package.json'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual(expectedRoutes);
+  }
+
+  {
+    const files = ['api/user.go', 'api/user.js'];
+
+    const { builders } = await detectBuilders(files);
+    const { error } = await detectRoutes(files, builders, featHandleMiss);
+    expect(error.code).toBe('conflicting_file_path');
+  }
+
+  {
+    const files = ['api/[user].go', 'api/[team]/[id].js'];
+
+    const { builders } = await detectBuilders(files);
+    const { error } = await detectRoutes(files, builders, featHandleMiss);
+    expect(error.code).toBe('conflicting_file_path');
+  }
+
+  {
+    const files = ['api/[team]/[team].js'];
+
+    const { builders } = await detectBuilders(files);
+    const { error } = await detectRoutes(files, builders, featHandleMiss);
+    expect(error.code).toBe('conflicting_path_segment');
+  }
+
+  {
+    const files = ['api/date/index.js', 'api/date/index.go'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes, error } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toBe(null);
+    expect(error.code).toBe('conflicting_file_path');
+  }
+
+  {
+    const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual(expectedRoutes);
+  }
+
+  {
+    const files = [
+      'public/index.html',
+      'api/[endpoint].js',
+      'api/[endpoint]/[id].js',
+    ];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual(expectedRoutes);
+  }
+
+  {
+    const detected = {
+      buildCommand: 'yarn build',
+      framework: {
+        slug: 'next',
+        version: '9.0.0',
+      },
+    };
+
+    const files = ['public/index.html', 'api/[endpoint].js'];
+
+    const { builders } = await detectBuilders(files, detected);
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual(expectedRoutes);
+  }
+
+  {
+    const files = ['public/index.html'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual([]);
+  }
+
+  {
+    const files = ['api/date/index.js', 'api/date.js'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual(expectedRoutes);
+  }
+
+  {
+    const files = ['api/date.js', 'api/[date]/index.js'];
+
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual(expectedRoutes);
+  }
+
+  {
+    const files = [
+      'api/index.ts',
+      'api/index.d.ts',
+      'api/users/index.ts',
+      'api/users/index.d.ts',
+      'api/food.ts',
+      'api/ts/gold.ts',
+    ];
+    const { builders } = await detectBuilders(files);
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual(expectedRoutes);
+  }
+
+  {
+    // use a custom runtime
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const files = ['api/user.php'];
+
+    const { builders } = await detectBuilders(files, null, { functions });
+    const { defaultRoutes } = await detectRoutes(
+      files,
+      builders,
+      featHandleMiss
+    );
+    expect(defaultRoutes).toStrictEqual(expectedRoutes);
+  }
+});
+
 it('Test `detectRoutes`', async () => {
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
@@ -1000,7 +1183,7 @@ it('Test `detectRoutes`', async () => {
     const { builders } = await detectBuilders(files);
     const { defaultRoutes } = await detectRoutes(files, builders);
     expect(defaultRoutes[2].status).toBe(404);
-    expect(defaultRoutes[2].src).toBe('/api(\\/.*)?$');
+    expect(defaultRoutes[2].src).toBe('/api(/.*)?$');
     expect(defaultRoutes[3].src).toBe('/(.*)');
     expect(defaultRoutes[3].dest).toBe('/public/$1');
     expect(defaultRoutes.length).toBe(4);
@@ -1020,7 +1203,7 @@ it('Test `detectRoutes`', async () => {
     const { builders } = await detectBuilders(files, detected);
     const { defaultRoutes } = await detectRoutes(files, builders);
     expect(defaultRoutes[1].status).toBe(404);
-    expect(defaultRoutes[1].src).toBe('/api(\\/.*)?$');
+    expect(defaultRoutes[1].src).toBe('/api(/.*)?$');
     expect(defaultRoutes.length).toBe(2);
   }
 
