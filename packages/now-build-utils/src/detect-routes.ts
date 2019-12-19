@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import { Route } from '@now/routing-utils';
+import { Route, Source } from '@now/routing-utils';
 import { Builder } from './types';
 import { getIgnoreApiFilter, sortFiles } from './detect-builders';
 
@@ -315,10 +315,14 @@ export async function detectRoutes(
   if (routesResult.defaultRoutes && publicBuilder) {
     const directory = publicBuilder.src.replace('/**/*', '');
 
-    routesResult.defaultRoutes.push({
+    const route: Source = {
       src: '/(.*)',
       dest: `/${directory}/$1`,
-    });
+    };
+    if (featHandleMiss) {
+      route.check = true;
+    }
+    routesResult.defaultRoutes.push(route);
   }
 
   return routesResult;
