@@ -304,8 +304,10 @@ export async function updateBuilders(
   }
 
   // Do not update the builders during tests
-  const packages =
-    process.env.NODE_ENV === 'test' ? [] : Array.from(packagesSet);
+  const bundeledBuilders = getBundledBuilders();
+  const packages = Array.from(packagesSet).filter(p => {
+    return process.env.NODE_ENV === 'test' && bundeledBuilders.includes(p);
+  });
 
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
