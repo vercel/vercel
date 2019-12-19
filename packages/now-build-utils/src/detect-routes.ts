@@ -221,7 +221,7 @@ async function detectApiRoutes(
     // as we will strip extensions as well as resolving "[segments]"
     if (
       !file.startsWith('api/') &&
-      !builders.some(b => b.src === file && b.config!.functions)
+      !builders.some(b => b.src === file && b.config && b.config.functions)
     ) {
       continue;
     }
