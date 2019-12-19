@@ -304,24 +304,26 @@ function getPublicBuilder(builders: Builder[]): Builder | null {
   return builder || null;
 }
 
+export function detectOutputDirectory(builders: Builder[]): string | null {
+  // TODO: We eventually want to save the output directory to
+  // builder.config.outputDirectory so it is only detected once
+  const publicBuilder = getPublicBuilder(builders);
+  return publicBuilder ? publicBuilder.src.replace('/**/*', '') : null;
+}
+
 export async function detectRoutes(
   files: string[],
   builders: Builder[],
   featHandleMiss: boolean
 ): Promise<RoutesResult> {
   const routesResult = await detectApiRoutes(files, builders, featHandleMiss);
-  const publicBuilder = getPublicBuilder(builders);
+  const directory = detectOutputDirectory(builders);
 
-  if (routesResult.defaultRoutes && publicBuilder) {
-    const directory = publicBuilder.src.replace('/**/*', '');
-
+  if (routesResult.defaultRoutes && directory && !featHandleMiss) {
     const route: Source = {
       src: '/(.*)',
       dest: `/${directory}/$1`,
     };
-    if (featHandleMiss) {
-      route.check = true;
-    }
     routesResult.defaultRoutes.push(route);
   }
 

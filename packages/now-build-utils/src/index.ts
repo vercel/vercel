@@ -24,7 +24,7 @@ import {
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import { detectBuilders } from './detect-builders';
-import { detectRoutes } from './detect-routes';
+import { detectRoutes, detectOutputDirectory } from './detect-routes';
 import DetectorFilesystem from './detectors/filesystem';
 import debug from './debug';
 
@@ -57,6 +57,7 @@ export {
   shouldServe,
   detectBuilders,
   detectRoutes,
+  detectOutputDirectory,
   debug,
   isSymbolicLink,
   getLambdaOptionsFromFunction,
