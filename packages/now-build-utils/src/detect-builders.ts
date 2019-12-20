@@ -37,7 +37,7 @@ function hasDirectory(name: string, files: string[]) {
   return files.some(file => file.startsWith(`${name}/`));
 }
 
-function hasBuildScript(pkg: PackageJson | undefined) {
+function hasBuildScript(pkg: PackageJson | undefined | null) {
   const { scripts = {} } = pkg || {};
   return Boolean(scripts && scripts['build']);
 }
