@@ -961,6 +961,7 @@ export const build = async ({
       // folder
       { handle: 'filesystem' },
       ...rewrites,
+      { handle: 'miss' },
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
