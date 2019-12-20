@@ -421,22 +421,15 @@ export async function detectBuilders(
 
     // We allow a `public` directory
     // when there are no build steps
-    if (outputDirectory && hasDirectory(outputDirectory, files)) {
+    const outDir = outputDirectory || 'public';
+
+    if (hasDirectory(outDir, files)) {
       builders.push({
         use: '@now/static',
-        src: `${outputDirectory}/**/*`,
+        src: `${outDir}/**/*`,
         config: {
           zeroConfig: true,
-          outputDirectory,
-        },
-      });
-    } else if (hasDirectory('public', files)) {
-      builders.push({
-        use: '@now/static',
-        src: 'public/**/*',
-        config: {
-          zeroConfig: true,
-          outputDirectory: 'public',
+          outputDirectory: outDir,
         },
       });
     } else if (
