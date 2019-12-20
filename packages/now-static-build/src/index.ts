@@ -222,13 +222,6 @@ export async function build({
   const buildCommand: string | undefined =
     config.buildCommand || (framework && framework.buildCommand);
 
-  console.log({
-    framework,
-    buildCommand,
-    devCommand,
-    config,
-  });
-
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
