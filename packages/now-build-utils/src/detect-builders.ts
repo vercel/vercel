@@ -384,7 +384,7 @@ export async function detectBuilders(
   const { projectSettings = {} } = options;
   const { outputDirectory, buildCommand, framework } = projectSettings;
 
-  if ((pkg && hasBuildScript(pkg)) || buildCommand || framework) {
+  if (hasBuildScript(pkg) || buildCommand || framework) {
     const frontendBuilder = detectFrontBuilder(pkg, builders, files, options);
     builders.push(frontendBuilder);
 
