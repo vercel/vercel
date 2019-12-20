@@ -1,6 +1,6 @@
 {
   "name": "@now/build-utils",
-  "version": "1.2.1-canary.2",
+  "version": "1.2.1-canary.3",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
