@@ -176,14 +176,25 @@ async function testFixture(directory, opts = {}, args = []) {
   dev.stderr.on('data', data => stderrList.push(Buffer.from(data)));
   dev.stdout.on('data', data => stdoutList.push(Buffer.from(data)));
 
+  let printedOutput = false;
+
   dev.on('exit', () => {
-    const stdout = Buffer.concat(stdoutList).toString();
-    const stderr = Buffer.concat(stderrList).toString();
-    printOutput(directory, stdout, stderr);
+    if (!printedOutput) {
+      const stdout = Buffer.concat(stdoutList).toString();
+      const stderr = Buffer.concat(stderrList).toString();
+      printOutput(directory, stdout, stderr);
+      printedOutput = true;
+    }
     exitResolver.resolve();
   });
 
   dev.on('error', () => {
+    if (!printedOutput) {
+      const stdout = Buffer.concat(stdoutList).toString();
+      const stderr = Buffer.concat(stderrList).toString();
+      printOutput(directory, stdout, stderr);
+      printedOutput = true;
+    }
     exitResolver.resolve();
   });
 
@@ -214,10 +225,13 @@ function testFixtureStdio(directory, fn) {
 
     try {
       let stderr = '';
+      let printedOutput = false;
 
       dev = execa(binaryPath, ['dev', dir, '-l', port]);
 
-      dev.stdout.on('data', data => stdoutList.push(data));
+      dev.stdout.on('data', data => {
+        stdoutList.push(data);
+      });
 
       dev.stderr.on('data', data => {
         stderrList.push(data);
@@ -239,13 +253,22 @@ function testFixtureStdio(directory, fn) {
       });
 
       dev.on('exit', () => {
-        const stdout = Buffer.concat(stdoutList).toString();
-        const stderr = Buffer.concat(stderrList).toString();
-        printOutput(directory, stdout, stderr);
+        if (!printedOutput) {
+          const stdout = Buffer.concat(stdoutList).toString();
+          const stderr = Buffer.concat(stderrList).toString();
+          printOutput(directory, stdout, stderr);
+          printedOutput = true;
+        }
         exitResolver.resolve();
       });
 
       dev.on('error', () => {
+        if (!printedOutput) {
+          const stdout = Buffer.concat(stdoutList).toString();
+          const stderr = Buffer.concat(stderrList).toString();
+          printOutput(directory, stdout, stderr);
+          printedOutput = true;
+        }
         exitResolver.resolve();
       });
 
@@ -265,7 +288,7 @@ test.beforeEach(() => {
 
 test.afterEach(async () => {
   await Promise.all(
-    Array.from(processList).map(([procId, proc]) => {
+    Array.from(processList).map(([_procId, proc]) => {
       if (proc.killed === false) {
         console.log(
           `killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`
@@ -523,8 +546,6 @@ test(
 );
 
 test('[now dev] 01-node', async t => {
-  const directory = fixture('01-node');
-
   const tester = testFixtureStdio('01-node', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -624,9 +645,7 @@ test('[now dev] 06-gridsome', async t => {
     const response = await fetch(`http://localhost:${port}`);
 
     validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /<div id="app"><\/div>/gm);
+    t.is(response.status, 200, await response.text());
   });
 
   await tester(t);
@@ -651,8 +670,9 @@ test(
 
     validateResponseHeaders(t, response);
 
-    const body = await response.text();
-    t.regex(body, /Hugo on ZEIT Now/gm);
+    // const body = await response.text();
+    // t.regex(body, /Hugo on ZEIT Now/gm);
+    t.is(response.status, 200, await response.text());
   })
 );
 

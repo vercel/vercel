@@ -19,4 +19,5 @@ packages/now-cli/test/dev/fixtures/08-hugo/hugo
 packages/now-cli/test/dev/fixtures/**/dist
 packages/now-cli/test/dev/fixtures/**/public
 packages/now-cli/test/fixtures/integration
+test/lib/deployment/failed-page.txt
 .DS_Store

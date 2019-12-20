@@ -101,7 +101,11 @@ export async function prepareBuilderDir() {
 
   if (!hasBundledBuilders(dependencies)) {
     const extractor = extract(builderDir);
-    await pipe(createReadStream(bundledTarballPath), createGunzip(), extractor);
+    await pipe(
+      createReadStream(bundledTarballPath),
+      createGunzip(),
+      extractor
+    );
   }
 
   return builderDir;
@@ -289,6 +293,7 @@ export async function updateBuilders(
   if (!builderDir) {
     builderDir = await builderDirPromise;
   }
+
   const packages = Array.from(packagesSet);
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');

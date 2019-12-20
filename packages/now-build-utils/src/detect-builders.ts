@@ -1,12 +1,6 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
-import {
-  Builder,
-  Config,
-  BuilderFunctions,
-  DetectorResult,
-  DetectorOutput,
-} from './types';
+import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 
 interface ErrorResponse {
   code: string;
@@ -16,6 +10,12 @@ interface ErrorResponse {
 interface Options {
   tag?: 'canary' | 'latest' | string;
   functions?: BuilderFunctions;
+  projectSettings?: {
+    framework?: string | null;
+    devCommand?: string | null;
+    buildCommand?: string | null;
+    outputDirectory?: string | null;
+  };
 }
 
 // Must be a function to ensure that the returned
@@ -33,8 +33,13 @@ function getApiBuilders({ tag }: Pick<Options, 'tag'> = {}): Builder[] {
   ];
 }
 
-function hasDirectory(fileName: string, files: string[]) {
-  return files.some(name => name.startsWith(`${fileName}/`));
+function hasDirectory(name: string, files: string[]) {
+  return files.some(file => file.startsWith(`${name}/`));
+}
+
+function hasBuildScript(pkg: PackageJson | undefined | null) {
+  const { scripts = {} } = pkg || {};
+  return Boolean(scripts && scripts['build']);
 }
 
 function getApiFunctionBuilder(
@@ -73,22 +78,14 @@ function getApiFunctionBuilder(
 }
 
 function detectFrontBuilder(
-  detectorResult: Partial<DetectorOutput>,
+  pkg: PackageJson | null | undefined,
   builders: Builder[],
   files: string[],
   options: Options
 ): Builder {
-  const { tag } = options;
+  const { tag, projectSettings = {} } = options;
   const withTag = tag ? `@${tag}` : '';
-
-  const {
-    framework,
-    buildCommand,
-    outputDirectory,
-    devCommand,
-  } = detectorResult;
-
-  const frameworkSlug = framework ? framework.slug : null;
+  let { framework } = projectSettings;
 
   const config: Config = {
     zeroConfig: true,
@@ -98,45 +95,63 @@ function detectFrontBuilder(
     config.framework = framework;
   }
 
-  if (devCommand) {
-    config.devCommand = devCommand;
+  if (projectSettings.devCommand) {
+    config.devCommand = projectSettings.devCommand;
   }
 
-  if (buildCommand) {
-    config.buildCommand = buildCommand;
+  if (projectSettings.buildCommand) {
+    config.buildCommand = projectSettings.buildCommand;
   }
 
-  if (outputDirectory) {
-    config.outputDirectory = outputDirectory;
+  if (projectSettings.outputDirectory) {
+    config.outputDirectory = projectSettings.outputDirectory;
   }
 
-  // All unused functions will be used for the frontend
+  if (pkg) {
+    const deps: PackageJson['dependencies'] = {
+      ...pkg.dependencies,
+      ...pkg.devDependencies,
+    };
+
+    if (deps['next']) {
+      framework = 'nextjs';
+    }
+  }
+
   if (options.functions) {
     Object.entries(options.functions).forEach(([key, func]) => {
+      // When the builder is not used yet we'll use it for the frontend
       if (
         builders.every(
           b => !(b.config && b.config.functions && b.config.functions[key])
         )
       ) {
-        config.functions = config.functions || {};
+        if (!config.functions) config.functions = {};
         config.functions[key] = { ...func };
       }
     });
   }
 
-  if (frameworkSlug === 'next') {
+  if (framework === 'nextjs') {
     return { src: 'package.json', use: `@now/next${withTag}`, config };
   }
 
-  if (frameworkSlug === 'hugo') {
-    const configFiles = new Set(['config.yaml', 'config.toml', 'config.json']);
-    const source = files.find(file => configFiles.has(file));
-    if (source) {
-      return { src: source, use: `@now/static-build${withTag}`, config };
-    }
-  }
+  // Entrypoints for other frameworks
+  const entrypoints = new Set([
+    'package.json',
+    'config.yaml',
+    'config.toml',
+    'config.json',
+    '_config.yml',
+    'config.yml',
+    'config.rb',
+  ]);
 
-  return { src: 'package.json', use: `@now/static-build${withTag}`, config };
+  const source = pkg
+    ? 'package.json'
+    : files.find(file => entrypoints.has(file)) || 'package.json';
+
+  return { src: source, use: `@now/static-build${withTag}`, config };
 }
 
 // Files that match a specific pattern will get ignored
@@ -237,9 +252,7 @@ function checkUnusedFunctionsOnFrontendBuilder(
       ) {
         return {
           code: 'unused_function',
-          message:
-            `The function for "${matchedFile}" can't be handled by any runtime. ` +
-            `Please provide one with the "runtime" option.`,
+          message: `The function for ${matchedFile} can't be handled by any builder`,
         };
       }
     }
@@ -346,7 +359,7 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
 // to determine what builders to use
 export async function detectBuilders(
   files: string[],
-  detectorResult: Partial<DetectorResult> | null = null,
+  pkg?: PackageJson | undefined | null,
   options: Options = {}
 ): Promise<{
   builders: Builder[] | null;
@@ -368,14 +381,11 @@ export async function detectBuilders(
 
   // Detect all builders for the `api` directory before anything else
   const builders = detectApiBuilders(files, options);
+  const { projectSettings = {} } = options;
+  const { outputDirectory, buildCommand, framework } = projectSettings;
 
-  if (detectorResult && detectorResult.buildCommand) {
-    const frontendBuilder = detectFrontBuilder(
-      detectorResult,
-      builders,
-      files,
-      options
-    );
+  if (hasBuildScript(pkg) || buildCommand || framework) {
+    const frontendBuilder = detectFrontBuilder(pkg, builders, files, options);
     builders.push(frontendBuilder);
 
     const conflictError = checkConflictingFiles(files, builders);
@@ -396,35 +406,46 @@ export async function detectBuilders(
         warnings,
       };
     }
-  } else if (
-    detectorResult &&
-    detectorResult.outputDirectory &&
-    hasDirectory(detectorResult.outputDirectory, files)
-  ) {
-    builders.push({
-      use: '@now/static',
-      src: [...detectorResult.outputDirectory.split('/'), '**', '*']
-        .filter(Boolean)
-        .join('/'),
-      config: { zeroConfig: true },
-    });
-  } else if (hasDirectory('public', files)) {
-    builders.push({
-      use: '@now/static',
-      src: 'public/**/*',
-      config: { zeroConfig: true },
-    });
-  } else if (
-    builders.length > 0 &&
-    files.some(f => !f.startsWith('api/') && f !== 'package.json')
-  ) {
-    // Everything besides the api directory
-    // and package.json can be served as static files
-    builders.push({
-      use: '@now/static',
-      src: '!{api/**,package.json}',
-      config: { zeroConfig: true },
-    });
+  } else {
+    if (pkg && builders.length === 0) {
+      // We only show this error when there are no api builders
+      // since the dependencies of the pkg could be used for those
+      errors.push({
+        code: 'missing_build_script',
+        message:
+          'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
+          '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-build-script',
+      });
+      return { errors, warnings, builders: null };
+    }
+
+    // We allow a `public` directory
+    // when there are no build steps
+    const outDir = outputDirectory || 'public';
+
+    if (hasDirectory(outDir, files)) {
+      builders.push({
+        use: '@now/static',
+        src: `${outDir}/**/*`,
+        config: {
+          zeroConfig: true,
+          outputDirectory: outDir,
+        },
+      });
+    } else if (
+      builders.length > 0 &&
+      files.some(f => !f.startsWith('api/') && f !== 'package.json')
+    ) {
+      // Everything besides the api directory
+      // and package.json can be served as static files
+      builders.push({
+        use: '@now/static',
+        src: '!{api/**,package.json}',
+        config: {
+          zeroConfig: true,
+        },
+      });
+    }
   }
 
   return {

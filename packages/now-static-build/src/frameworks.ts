@@ -1,6 +1,7 @@
 import { readdir, stat, readFile, unlink } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
+import { readConfigFile } from '@now/build-utils';
 import { Route } from '@now/routing-utils';
 
 const readirPromise = promisify(readdir);
@@ -22,6 +23,7 @@ const isDir = async (file: string): Promise<boolean> =>
 export const frameworks: Framework[] = [
   {
     name: 'Gatsby.js',
+    slug: 'gatsby',
     dependency: 'gatsby',
     getOutputDirName: async () => 'public',
     defaultRoutes: async (dirPrefix: string) => {
@@ -48,21 +50,25 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Hexo',
+    slug: 'hexo',
     dependency: 'hexo',
     getOutputDirName: async () => 'public',
   },
   {
     name: 'Eleventy',
+    slug: 'eleventy',
     dependency: '@11ty/eleventy',
     getOutputDirName: async () => '_site',
   },
   {
     name: 'Docusaurus 2.0',
+    slug: 'docusaurus',
     dependency: '@docusaurus/core',
     getOutputDirName: async () => 'build',
   },
   {
     name: 'Preact',
+    slug: 'preact',
     dependency: 'preact-cli',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -77,6 +83,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Ember',
+    slug: 'ember',
     dependency: 'ember-cli',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -91,6 +98,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Vue.js',
+    slug: 'vue',
     dependency: '@vue/cli-service',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -115,6 +123,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Angular',
+    slug: 'angular',
     dependency: '@angular/cli',
     minNodeRange: '10.x',
     getOutputDirName: async (dirPrefix: string) => {
@@ -141,6 +150,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Polymer',
+    slug: 'polymer',
     dependency: 'polymer-cli',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
@@ -162,6 +172,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Svelte',
+    slug: 'svelte',
     dependency: 'sirv-cli',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
@@ -176,6 +187,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Create React App',
+    slug: 'create-react-app',
     dependency: 'react-scripts',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -205,6 +217,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Create React App (ejected)',
+    slug: 'create-react-app',
     dependency: 'react-dev-utils',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -234,11 +247,13 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Gridsome',
+    slug: 'gridsome',
     dependency: 'gridsome',
     getOutputDirName: async () => 'dist',
   },
   {
     name: 'UmiJS',
+    slug: 'umijs',
     dependency: 'umi',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -253,6 +268,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Docusaurus 1.0',
+    slug: 'docusaurus',
     dependency: 'docusaurus',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
@@ -269,11 +285,13 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Sapper',
+    slug: 'sapper',
     dependency: 'sapper',
     getOutputDirName: async () => '__sapper__/export',
   },
   {
     name: 'Saber',
+    slug: 'saber',
     dependency: 'saber',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
@@ -293,6 +311,7 @@ export const frameworks: Framework[] = [
   },
   {
     name: 'Stencil',
+    slug: 'stencil',
     dependency: '@stencil/core',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
@@ -305,13 +324,50 @@ export const frameworks: Framework[] = [
       },
     ],
   },
+  {
+    name: 'Nuxt.js',
+    slug: 'nuxtjs',
+    dependency: 'nuxt',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Hugo',
+    slug: 'hugo',
+    buildCommand: 'hugo -D',
+    devCommand: 'hugo server -D -w -p $PORT',
+    getOutputDirName: async (dirPrefix: string): Promise<string> => {
+      const config = await readConfigFile(
+        ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
+          return join(dirPrefix, fileName);
+        })
+      );
+
+      console.log(`trying to read file at ${dirPrefix}`);
+      console.log('got config', config);
+
+      return (config && config.publishDir) || 'public';
+    },
+  },
+  {
+    name: 'Jekyll',
+    slug: 'jekyll',
+    buildCommand: 'jekyll build',
+    devCommand: 'bundle exec jekyll serve --watch --port $PORT',
+    getOutputDirName: async (dirPrefix: string): Promise<string> => {
+      const config = await readConfigFile(join(dirPrefix, '_config.yml'));
+      return (config && config.destination) || '_site';
+    },
+  },
 ];
 
 export interface Framework {
   name: string;
+  slug: string;
   dependency?: string;
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   minNodeRange?: string;
   cachePattern?: string;
+  buildCommand?: string;
+  devCommand?: string;
 }

@@ -23,9 +23,6 @@ import {
 } from './fs/run-user-scripts';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
-import { detectBuilders } from './detect-builders';
-import { detectRoutes, detectOutputDirectory } from './detect-routes';
-import DetectorFilesystem from './detectors/filesystem';
 import debug from './debug';
 
 export {
@@ -33,7 +30,6 @@ export {
   FileFsRef,
   FileRef,
   Lambda,
-  DetectorFilesystem,
   createLambda,
   Prerender,
   download,
@@ -55,17 +51,16 @@ export {
   getSpawnOptions,
   streamToBuffer,
   shouldServe,
-  detectBuilders,
-  detectRoutes,
-  detectOutputDirectory,
   debug,
   isSymbolicLink,
   getLambdaOptionsFromFunction,
 };
 
-export { detectBuildersLegacy } from './detect-builders-legacy';
-export { detectRoutesLegacy } from './detect-routes-legacy';
+export { detectRoutes, detectOutputDirectory } from './detect-routes';
+export { detectBuilders } from './detect-builders';
+export { detectFramework } from './detect-framework';
+export { DetectorFilesystem } from './detectors/filesystem';
+export { readConfigFile } from './fs/read-config-file';
 
-export { detectDefaults } from './detectors';
 export * from './schemas';
 export * from './types';
