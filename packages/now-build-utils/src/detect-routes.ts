@@ -58,7 +58,7 @@ function createRouteFromPath(
       // We can't use `URLSearchParams` because `$` would get escaped
       query.push(`${name}=$${counter++}`);
       isDynamic = true;
-      return `([^\\/]+)`;
+      return `([^/]+)`;
     } else if (isLast) {
       const { name: fileName, ext } = parsePath(segment);
       const isIndex = fileName === 'index';

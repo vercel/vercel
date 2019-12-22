@@ -948,7 +948,7 @@ it('Test `detectRoutes`', async () => {
 
     expect(defaultRoutes!.length).toBe(3);
     expect((defaultRoutes![0] as any).src).toBe(
-      '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$'
+      '^/api/([^/]+)(\\/|\\/index|\\/index\\.js)?$'
     );
     expect((defaultRoutes![0] as any).dest).toBe(
       '/api/[date]/index.js?date=$1'
@@ -1071,12 +1071,12 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^\\/]+)/([^\\/]+)$',
+        src: '^/api/([^/]+)/([^/]+)$',
         dest: '/api/[endpoint]/[id].js?endpoint=$1&id=$2',
         check: true,
       },
       {
-        src: '^/api/([^\\/]+)$',
+        src: '^/api/([^/]+)$',
         dest: '/api/[endpoint].js?endpoint=$1',
         check: true,
       },
@@ -1104,12 +1104,12 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^\\/]+)/([^\\/]+)$',
+        src: '^/api/([^/]+)/([^/]+)$',
         dest: '/api/[endpoint]/[id].js?endpoint=$1&id=$2',
         check: true,
       },
       {
-        src: '^/api/([^\\/]+)$',
+        src: '^/api/([^/]+)$',
         dest: '/api/[endpoint].js?endpoint=$1',
         check: true,
       },
@@ -1148,7 +1148,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^\\/]+)$',
+        src: '^/api/([^/]+)$',
         dest: '/api/[endpoint].js?endpoint=$1',
         check: true,
       },
@@ -1214,7 +1214,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^\\/]+)(\\/|\\/index|\\/index\\.js)?$',
+        src: '^/api/([^/]+)(\\/|\\/index|\\/index\\.js)?$',
         dest: '/api/[date]/index.js?date=$1',
         check: true,
       },
