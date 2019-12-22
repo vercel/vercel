@@ -452,6 +452,18 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function_runtime');
   });
 
+  it('no missing version on special npm import', async () => {
+    const functions = { 'api/index.pc': { runtime: 'https://haha' } };
+    const files = ['api/index.pc'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors).toBe(null);
+    expect(builders!.length).toBe(1);
+    expect(builders![0].use).toBe('https://haha');
+  });
+
   it('use a custom runtime', async () => {
     const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
     const files = ['api/user.php'];

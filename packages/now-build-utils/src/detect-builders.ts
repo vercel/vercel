@@ -322,14 +322,32 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
     }
 
     if (func.runtime !== undefined) {
-      const tag = `${func.runtime}`.split('@').pop();
+      const { runtime } = func;
 
-      if (!tag || !validSemver(tag)) {
-        return {
-          code: 'invalid_function_runtime',
-          message:
-            'Function Runtimes must have a valid version, for example `now-php@1.0.0`.',
-        };
+      // Only check for tag if none of these other possible options are used: https://docs.npmjs.com/cli/install
+      if (
+        !runtime.startsWith('https://') &&
+        !runtime.startsWith('http://') &&
+        !runtime.startsWith('git://') &&
+        !runtime.startsWith('git+ssh://') &&
+        !runtime.startsWith('git+http://') &&
+        !runtime.startsWith('git+https://') &&
+        !runtime.startsWith('git+file://') &&
+        !(runtime.includes('/') && !runtime.startsWith('@')) &&
+        !runtime.startsWith('github:') &&
+        !runtime.startsWith('gist:') &&
+        !runtime.startsWith('bitbucket:') &&
+        !runtime.startsWith('gitlab:')
+      ) {
+        const tag = `${runtime}`.split('@').pop();
+
+        if (!tag || !validSemver(tag)) {
+          return {
+            code: 'invalid_function_runtime',
+            message:
+              'Function Runtimes must have a valid version, for example `now-php@1.0.0`.',
+          };
+        }
       }
     }
 
