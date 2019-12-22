@@ -307,7 +307,7 @@ export async function detectRoutes(
     if (hasApiRoutes) {
       defaultRoutes.push({
         status: 404,
-        src: '/api(/.*)?$',
+        src: '^/api(/.*)?$',
       });
     }
     if (directory) {
