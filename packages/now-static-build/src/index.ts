@@ -163,20 +163,12 @@ function getPkg(entrypoint: string, workPath: string) {
 }
 
 function getFramework(config: Config | null, pkg?: PackageJson | null) {
-  const { framework: configFramework = null, outputDirectory = null } =
-    config || {};
+  const { framework: configFramework = null } = config || {};
 
   if (configFramework) {
     const framework = frameworks.find(({ slug }) => slug === configFramework);
 
     if (framework) {
-      if (outputDirectory) {
-        return {
-          ...framework,
-          getOutputDirName: async () => outputDirectory,
-        };
-      }
-
       return framework;
     }
   }
@@ -418,7 +410,9 @@ export async function build({
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
 
       if (framework) {
-        const outputDirName = await framework.getOutputDirName(outputDirPrefix);
+        const outputDirName = config.outputDirectory
+          ? config.outputDirectory
+          : await framework.getOutputDirName(outputDirPrefix);
 
         distPath = path.join(outputDirPrefix, outputDirName);
       } else if (!config || !config.distDir) {
