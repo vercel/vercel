@@ -37,7 +37,7 @@ async function* createDeployment(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: body,
+      body,
       apiUrl: clientOptions.apiUrl,
       userAgent: clientOptions.userAgent,
     });
