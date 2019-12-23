@@ -114,13 +114,13 @@ export async function* deploy(
 
   if (
     files.size === 1 &&
-    typeof deploymentOptions.builds === 'undefined' &&
-    typeof deploymentOptions.routes === 'undefined' &&
-    typeof deploymentOptions.cleanUrls === 'undefined' &&
-    typeof deploymentOptions.rewrites === 'undefined' &&
-    typeof deploymentOptions.redirects === 'undefined' &&
-    typeof deploymentOptions.headers === 'undefined' &&
-    typeof deploymentOptions.trailingSlash === 'undefined'
+    deploymentOptions.builds === undefined &&
+    deploymentOptions.routes === undefined &&
+    deploymentOptions.cleanUrls === undefined &&
+    deploymentOptions.rewrites === undefined &&
+    deploymentOptions.redirects === undefined &&
+    deploymentOptions.headers === undefined &&
+    deploymentOptions.trailingSlash === undefined
   ) {
     debug(`Assigning '/' route for single file deployment`);
     const filePath = Array.from(files.values())[0].names[0];
