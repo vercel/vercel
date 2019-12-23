@@ -10,6 +10,7 @@ interface ErrorResponse {
 interface Options {
   tag?: 'canary' | 'latest' | string;
   functions?: BuilderFunctions;
+  ignoreBuildScript?: boolean;
   projectSettings?: {
     framework?: string | null;
     devCommand?: string | null;
@@ -407,7 +408,7 @@ export async function detectBuilders(
       };
     }
   } else {
-    if (pkg && builders.length === 0) {
+    if (!options.ignoreBuildScript && pkg && builders.length === 0) {
       // We only show this error when there are no api builders
       // since the dependencies of the pkg could be used for those
       errors.push({
