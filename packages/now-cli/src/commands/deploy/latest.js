@@ -40,6 +40,8 @@ import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import shouldDeployDir from '../../util/deploy/should-deploy-dir';
+import promptBool from '../../util/input/prompt-bool';
+import promptText from '../../util/input/text';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -375,6 +377,65 @@ export default async function main(
       createArgs,
       ctx
     );
+
+    if (
+      deployment instanceof Error &&
+      deployment.code === 'missing_project_settings'
+    ) {
+      let { framework, projectSettings = {} } = deployment;
+
+      if (!argv['--yes']) {
+        const result = framework
+          ? await promptBool(
+              `We've detected the ${framework.name} framework. Continue? y/N`
+            )
+          : false;
+
+        if (!framework) {
+          output.log(
+            `Please provide some information about your project since this is the first deployment.`
+          );
+        }
+
+        if (!result) {
+          const buildCommand = await promptText({
+            label: chalk.gray`> Enter a build command: `,
+            placeholder: projectSettings.buildCommand || undefined,
+            trailing: '\n',
+          });
+
+          const outputDirectory = await promptText({
+            label: chalk.gray`> Enter the output directory: `,
+            placeholder: projectSettings.outputDirectory || undefined,
+            trailing: '\n',
+          });
+
+          const devCommand = await promptText({
+            label: chalk.gray`> Enter a dev command: `,
+            placeholder: projectSettings.devCommand || undefined,
+            trailing: '\n',
+          });
+
+          projectSettings = {
+            framework: null,
+            buildCommand: buildCommand || null,
+            outputDirectory: outputDirectory || null,
+            devCommand: devCommand || null,
+          };
+        }
+      }
+
+      createArgs.projectSettings = projectSettings;
+
+      deployment = await createDeploy(
+        output,
+        now,
+        contextName,
+        paths,
+        createArgs,
+        ctx
+      );
+    }
 
     if (deployment instanceof NotDomainOwner) {
       output.error(deployment);

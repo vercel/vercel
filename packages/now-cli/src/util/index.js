@@ -66,6 +66,7 @@ export default class Now extends EventEmitter {
       forceNew = false,
       target = null,
       deployStamp,
+      projectSettings,
     }
   ) {
     const opts = { output: this._output, hasNowJson };
@@ -130,6 +131,7 @@ export default class Now extends EventEmitter {
       meta,
       regions,
       target: target || undefined,
+      projectSettings,
     };
 
     // Ignore specific items from Now.json

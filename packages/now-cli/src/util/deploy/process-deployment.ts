@@ -168,7 +168,16 @@ export default async function processDeployment({
           deploySpinner();
         }
 
-        throw await now.handleDeploymentError(event.payload, { hashes, env });
+        const error = await now.handleDeploymentError(event.payload, {
+          hashes,
+          env,
+        });
+
+        if (error.code === 'missing_project_settings') {
+          return error;
+        }
+
+        throw error;
       }
 
       // Handle ready event
