@@ -2010,7 +2010,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /memory should be equal to one of the allowed values/gm,
+    /Functions must have a memory value between 128 and 3008 in steps of 64\./gm,
     formatOutput(output)
   );
 });
