@@ -23,24 +23,25 @@ async function* createDeployment(
   const debug = createDebug(clientOptions.debug);
   const preparedFiles = prepareFiles(files, clientOptions);
   const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
-  const url = `${apiDeployments}${generateQueryString(clientOptions)}`;
-  const body = JSON.stringify({
-    ...deploymentOptions,
-    files: preparedFiles,
-  });
 
-  debug('Sending deployment creation API request to ' + url);
-
+  debug('Sending deployment creation API request');
   try {
-    const dpl = await fetch(url, clientOptions.token, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body,
-      apiUrl: clientOptions.apiUrl,
-      userAgent: clientOptions.userAgent,
-    });
+    const dpl = await fetch(
+      `${apiDeployments}${generateQueryString(clientOptions)}`,
+      clientOptions.token,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...deploymentOptions,
+          files: preparedFiles,
+        }),
+        apiUrl: clientOptions.apiUrl,
+        userAgent: clientOptions.userAgent,
+      }
+    );
 
     const json = await dpl.json();
 
