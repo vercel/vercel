@@ -284,7 +284,7 @@ async function detectApiRoutes(
     } else if (
       defaultRoutes.some(
         route =>
-          (route as Source).dest && (route as Source).dest!.startsWith('/api')
+          (route as Source).dest && (route as Source).dest!.startsWith('/api/')
       )
     ) {
       defaultRoutes.push({
