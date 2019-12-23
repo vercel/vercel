@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import { Route } from '@now/routing-utils';
+import { Route, isHandler } from '@now/routing-utils';
 import { Builder } from './types';
 import { getIgnoreApiFilter, sortFiles } from './detect-builders';
 
@@ -281,7 +281,12 @@ async function detectApiRoutes(
           continue: true,
         },
       ];
-    } else {
+    } else if (
+      defaultRoutes.some(
+        route =>
+          !isHandler(route) && route.dest && route.dest.startsWith('/api/')
+      )
+    ) {
       defaultRoutes.push({
         status: 404,
         src: '/api(/.*)?$',
