@@ -170,12 +170,10 @@ function getFramework(config: Config | null, pkg?: PackageJson | null) {
     const framework = frameworks.find(({ slug }) => slug === configFramework);
 
     if (framework) {
-      if (!framework.getOutputDirName && outputDirectory) {
+      if (outputDirectory) {
         return {
           ...framework,
-          getOutputDirName(prefix: string) {
-            return Promise.resolve(path.join(prefix, outputDirectory));
-          },
+          getOutputDirName: async () => outputDirectory,
         };
       }
 
