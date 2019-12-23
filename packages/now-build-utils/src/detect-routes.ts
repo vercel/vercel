@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import { Route, Source } from '@now/routing-utils';
+import { Route, isHandler } from '@now/routing-utils';
 import { Builder } from './types';
 import { getIgnoreApiFilter, sortFiles } from './detect-builders';
 
