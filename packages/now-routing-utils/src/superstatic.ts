@@ -2,6 +2,7 @@
  * This converts Superstatic configuration to Now.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
+import { isString } from 'util';
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
@@ -105,10 +106,6 @@ function sourceToRegex(source: string): { src: string; segments: string[] } {
   const r = pathToRegexp(source, keys, { strict: true });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };
-}
-
-function isString(key: any): key is string {
-  return typeof key === 'string';
 }
 
 function replaceSegments(segments: string[], destination: string): string {
