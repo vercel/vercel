@@ -4,70 +4,329 @@
     "slug": "nextjs",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/next.svg",
     "tagline": "Next.js makes you productive with React instantly — whether you want to build static or dynamic sites. ",
-    "website": "https://nextjs.org"
+    "website": "https://nextjs.org",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
     "name": "Gatsby",
     "slug": "gatsby",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gatsby.svg",
     "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
-    "website": "https://gatsbyjs.org"
+    "website": "https://gatsbyjs.org",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"gatsby\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
-    "name": "Nuxt.js",
-    "slug": "nuxtjs",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/nuxt.svg",
-    "tagline": "Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.",
-    "website": "https://nuxtjs.org"
+    "name": "Hexo",
+    "slug": "hexo",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hexo.svg",
+    "tagline": "Hexo is a fast, simple & powerful blog framework powered by Node.js.",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"hexo\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
-    "name": "Create-React-App",
-    "slug": "create-react-app",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/react.svg",
-    "tagline": "Create React App allows you to get going with React in no time.",
-    "website": "https://create-react-app.dev"
+    "name": "Eleventy",
+    "slug": "eleventy",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/eleventy.svg",
+    "tagline": "11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@11ty\\/eleventy\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
-    "name": "Svelte",
-    "slug": "svelte",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
-    "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. ",
-    "website": "https://svelte.dev"
+    "name": "Docusaurus",
+    "slug": "docusaurus",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
+    "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
+    "detectors": {
+      "some": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"docusaurus\":\\s*\".+?\"[^}]*}"
+        },
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@docusaurus\\/core\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Preact",
+    "slug": "preact",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/preact.svg",
+    "tagline": "Preact is a fast 3kB alternative to React with the same modern API.",
+    "website": "https://preactjs.com",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"preact-cli\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Ember",
+    "slug": "ember",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ember.svg",
+    "tagline": "Ember.js helps webapp developers be more productive out of the box.",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"ember-cli\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
     "name": "Vue.js",
     "slug": "vue",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vue.svg",
     "tagline": "Vue.js is a versatile JavaScript framework that is as approachable as it is performant.",
-    "website": "https://vuejs.org"
+    "website": "https://vuejs.org",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@vue\\/cli-service\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
     "name": "Angular",
     "slug": "angular",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/angular.svg",
     "tagline": "Angular is a TypeScript-based cross-platform framework from Google.",
-    "website": "https://angular.io"
+    "website": "https://angular.io",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@angular\\/cli\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
-    "name": "Hugo",
-    "slug": "hugo",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hugo.svg",
-    "tagline": "Hugo is the world’s fastest framework for building websites, written in Go.",
-    "website": "https://gohugo.io"
+    "name": "Polymer",
+    "slug": "polymer",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/polymer.svg",
+    "tagline": "Polymer is an open-source webapps library from Google, for building using Web Components.",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"polymer-cli\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
-    "name": "Sapper",
-    "slug": "sapper",
+    "name": "Svelte",
+    "slug": "svelte",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
-    "tagline": "Sapper is a framework for building high-performance universal web apps with Svelte.",
-    "website": "https://sapper.svelte.dev"
+    "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. ",
+    "website": "https://svelte.dev",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"sirv-cli\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Create-React-App",
+    "slug": "create-react-app",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/react.svg",
+    "tagline": "Create React App allows you to get going with React in no time.",
+    "website": "https://create-react-app.dev",
+    "detectors": {
+      "some": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"react-scripts\":\\s*\".+?\"[^}]*}"
+        },
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"react-dev-utils\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Gridsome",
+    "slug": "gridsome",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gridsome.svg",
+    "tagline": "Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default.",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"gridsome\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
   },
   {
     "name": "UmiJS",
     "slug": "umijs",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/umi.svg",
     "tagline": "UmiJS is an extensible enterprise-level React application framework.",
-    "website": "https://umijs.org"
+    "website": "https://umijs.org",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"umi\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Sapper",
+    "slug": "sapper",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
+    "tagline": "Sapper is a framework for building high-performance universal web apps with Svelte.",
+    "website": "https://sapper.svelte.dev",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"sapper\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Saber",
+    "slug": "saber",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/saber.svg",
+    "tagline": "Saber is a framework for building static sites in Vue.js that supports data from any source.",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"saber\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Stencil",
+    "slug": "stencil",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/stencil.svg",
+    "tagline": "Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems.",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@stencil\\/core\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Nuxt.js",
+    "slug": "nuxtjs",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/nuxt.svg",
+    "tagline": "Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.",
+    "website": "https://nuxtjs.org",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"nuxt\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Hugo",
+    "slug": "hugo",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hugo.svg",
+    "tagline": "Hugo is the world’s fastest framework for building websites, written in Go.",
+    "website": "https://gohugo.io",
+    "detectors": {
+      "some": [
+        {
+          "file": "config.yaml"
+        },
+        {
+          "file": "config.toml"
+        },
+        {
+          "file": "config.json"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Jekyll",
+    "slug": "jekyll",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/jekyll.svg",
+    "tagline": "Jekyll makes it super easy to transform your plain text into static websites and blogs.",
+    "detectors": {
+      "every": [
+        {
+          "file": "_config.yml"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Brunch",
+    "slug": "brunch",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/brunch.svg",
+    "tagline": "Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development.",
+    "detectors": {
+      "every": [
+        {
+          "file": "brunch-config.js"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Middleman",
+    "slug": "middleman",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/middleman.svg",
+    "tagline": "Middleman is a static site generator that uses all the shortcuts and tools in modern web development.",
+    "detectors": {
+      "every": [
+        {
+          "file": "config.rb"
+        }
+      ]
+    }
   },
   {
     "name": "Vanilla",
@@ -83,13 +342,6 @@
     "website": "https://storybook.js.org"
   },
   {
-    "name": "Preact",
-    "slug": "preact",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/preact.svg",
-    "tagline": "Preact is a fast 3kB alternative to React with the same modern API.",
-    "website": "https://preactjs.com"
-  },
-  {
     "name": "Docz",
     "slug": "docz",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docz.svg",
@@ -103,28 +355,10 @@
     "website": "https://github.com/jxnblk/mdx-deck"
   },
   {
-    "name": "Gridsome",
-    "slug": "gridsome",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gridsome.svg",
-    "tagline": "Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default."
-  },
-  {
     "name": "Aurelia",
     "slug": "aurelia",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/aurelia.svg",
     "tagline": "Aurelia is an all-in-one framework for building web, desktop, and mobile applications."
-  },
-  {
-    "name": "Ember",
-    "slug": "ember",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ember.svg",
-    "tagline": "Ember.js helps webapp developers be more productive out of the box."
-  },
-  {
-    "name": "Docusaurus",
-    "slug": "docusaurus",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
-    "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites."
   },
   {
     "name": "VuePress",
@@ -143,21 +377,9 @@
     "tagline": "Riot.js lets you build user interfaces with custom tags using simple and enjoyable syntax."
   },
   {
-    "name": "Jekyll",
-    "slug": "jekyll",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/jekyll.svg",
-    "tagline": "Jekyll makes it super easy to transform your plain text into static websites and blogs."
-  },
-  {
     "name": "Marko.js",
     "slug": "marko",
     "tagline": "Marko is a super fast UI library that makes building web apps fun."
-  },
-  {
-    "name": "Hexo",
-    "slug": "hexo",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hexo.svg",
-    "tagline": "Hexo is a fast, simple & powerful blog framework powered by Node.js."
   },
   {
     "name": "Mithril.js",
@@ -177,34 +399,10 @@
     "tagline": "HyperApp is a low-footprint framework for building web interfaces without a learning curve."
   },
   {
-    "name": "Polymer",
-    "slug": "polymer",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/polymer.svg",
-    "tagline": "Polymer is an open-source webapps library from Google, for building using Web Components."
-  },
-  {
-    "name": "Brunch",
-    "slug": "brunch",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/brunch.svg",
-    "tagline": "Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development."
-  },
-  {
-    "name": "Saber",
-    "slug": "saber",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/saber.svg",
-    "tagline": "Saber is a framework for building static sites in Vue.js that supports data from any source."
-  },
-  {
-    "name": "Eleventy",
-    "slug": "eleventy",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/eleventy.svg",
-    "tagline": "11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll."
-  },
-  {
     "name": "Zola",
     "slug": "zola",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/zola.svg",
-    "tagline": "Zola is a one-stop static site engine for all of your static needs. "
+    "tagline": "Zola is a one-stop static site engine for all of your static needs."
   },
   {
     "name": "Pelican",
@@ -218,12 +416,6 @@
     "tagline": "MkDocs is a fast, simple and downright gorgeous static site generator that's geared towards building project documentation."
   },
   {
-    "name": "Middleman",
-    "slug": "middleman",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/middleman.svg",
-    "tagline": "Middleman is a static site generator that uses all the shortcuts and tools in modern web development."
-  },
-  {
     "name": "Assemble",
     "slug": "assemble",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/assemble.svg",
@@ -234,12 +426,6 @@
     "slug": "ionic-react",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic-react.svg",
     "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework."
-  },
-  {
-    "name": "Stencil",
-    "slug": "stencil",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/stencil.svg",
-    "tagline": "Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems."
   },
   {
     "name": "Foundation",

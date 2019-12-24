@@ -1,7 +1,3 @@
-import yaml from 'js-yaml';
-import toml from '@iarna/toml';
-import { PackageJson } from '../types';
-
 /**
  * `DetectorFilesystem` is an abstract class that represents a virtual filesystem
  * to perform read-only operations on in order to detect which framework is being
@@ -27,18 +23,16 @@ import { PackageJson } from '../types';
  * functions. The easiest way to do this is to use the `=` syntax when defining
  * methods in this class definition.
  */
-export default abstract class DetectorFilesystem {
+export abstract class DetectorFilesystem {
   protected abstract _readFile(name: string): Promise<Buffer>;
   protected abstract _exists(name: string): Promise<boolean>;
 
   private existsCache: Map<string, Promise<boolean>>;
   private readFileCache: Map<string, Promise<Buffer>>;
-  private readJsonCache: Map<string, Promise<any>>;
 
   constructor() {
     this.existsCache = new Map();
     this.readFileCache = new Map();
-    this.readJsonCache = new Map();
   }
 
   public exists = async (name: string): Promise<boolean> => {
@@ -58,84 +52,4 @@ export default abstract class DetectorFilesystem {
     }
     return p;
   };
-
-  public readJson = async <T>(name: string): Promise<T> => {
-    let p = this.readJsonCache.get(name);
-    if (!p) {
-      p = this.readFile(name).then(d => JSON.parse(d.toString('utf8')));
-      this.readJsonCache.set(name, p);
-    }
-    return p;
-  };
-
-  public readFileOrNull = async (name: string): Promise<Buffer | null> => {
-    return nullEnoent(this.readFile(name));
-  };
-
-  public readJsonOrNull = async <T>(name: string): Promise<T | null> => {
-    return nullEnoent(this.readJson<T>(name));
-  };
-
-  public readPackageJson = async (): Promise<PackageJson | null> => {
-    return await this.readJsonOrNull<PackageJson>('package.json');
-  };
-
-  public readConfigFile = async <T>(...names: string[]): Promise<T | null> => {
-    for (const name of names) {
-      const data = await this.readFileOrNull(name);
-      if (data) {
-        const str = data.toString('utf8');
-        if (name.endsWith('.json')) {
-          return JSON.parse(str);
-        } else if (name.endsWith('.toml')) {
-          return (toml.parse(str) as unknown) as T;
-        } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
-          return yaml.safeLoad(str, { filename: name });
-        }
-      }
-    }
-    return null;
-  };
-
-  public hasDependency = async (name: string): Promise<boolean> => {
-    const pkg = await this.readPackageJson();
-    const { dependencies = {}, devDependencies = {} } = pkg || {};
-    return name in dependencies || name in devDependencies;
-  };
-
-  public isNpm = async (): Promise<boolean> => {
-    return this.exists('package-lock.json');
-  };
-
-  public getPackageJsonCommand = async (
-    name: string
-  ): Promise<string | null> => {
-    const pkg = await this.readPackageJson();
-    const { scripts = {} } = pkg || {};
-    return scripts[name] || null;
-  };
-
-  public getPackageJsonBuildCommand = async (): Promise<string | null> => {
-    const buildCommand = (await this.isNpm())
-      ? 'npm run build'
-      : 'yarn run build';
-    return (await this.getPackageJsonCommand('build')) ? buildCommand : null;
-  };
-
-  public getDependencyVersion = async (name: string): Promise<string> => {
-    const pkg = await this.readPackageJson();
-    const { dependencies = {}, devDependencies = {} } = pkg || {};
-    return dependencies[name] || devDependencies[name];
-  };
-}
-
-async function nullEnoent<T>(p: Promise<T>): Promise<T | null> {
-  try {
-    return await p;
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      return null;
-    }
-    throw err;
-  }
 }

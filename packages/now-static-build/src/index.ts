@@ -163,24 +163,12 @@ function getPkg(entrypoint: string, workPath: string) {
 }
 
 function getFramework(config: Config | null, pkg?: PackageJson | null) {
-  const { framework: configFramework = null, outputDirectory = null } =
-    config || {};
+  const { framework: configFramework = null } = config || {};
 
-  if (configFramework && configFramework.slug) {
-    const framework = frameworks.find(
-      ({ dependency }) => dependency === configFramework.slug
-    );
+  if (configFramework) {
+    const framework = frameworks.find(({ slug }) => slug === configFramework);
 
     if (framework) {
-      if (!framework.getOutputDirName && outputDirectory) {
-        return {
-          ...framework,
-          getOutputDirName(prefix: string) {
-            return Promise.resolve(path.join(prefix, outputDirectory));
-          },
-        };
-      }
-
       return framework;
     }
   }
@@ -218,12 +206,17 @@ export async function build({
 
   const pkg = getPkg(entrypoint, workPath);
 
-  if (pkg || config.buildCommand) {
+  const framework = getFramework(config, pkg);
+  const devCommand: string | undefined =
+    config.devCommand || (framework && framework.devCommand);
+  const buildCommand: string | undefined =
+    config.buildCommand || (framework && framework.buildCommand);
+
+  if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
-    let framework: Framework | undefined = undefined;
     let minNodeRange: string | undefined = undefined;
 
     const routes: Route[] = [];
@@ -279,8 +272,6 @@ export async function build({
         path.dirname(entrypoint),
         (config.outputDirectory as string) || 'public'
       );
-
-      framework = getFramework(config, pkg);
     }
 
     if (framework) {
@@ -310,7 +301,7 @@ export async function build({
     console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
-    if (pkg && (config.buildCommand || config.devCommand)) {
+    if (pkg && (buildCommand || devCommand)) {
       // We want to add `node_modules/.bin` after `npm install`
       const { stdout } = await execAsync('yarn', ['bin'], {
         cwd: entrypointDir,
@@ -330,7 +321,7 @@ export async function build({
 
     if (
       meta.isDev &&
-      (config.devCommand ||
+      (devCommand ||
         (pkg && devScript && pkg.scripts && pkg.scripts[devScript]))
     ) {
       let devPort: number | undefined = nowDevScriptPorts.get(entrypoint);
@@ -338,7 +329,7 @@ export async function build({
       if (typeof devPort === 'number') {
         debug(
           '`%s` server already running for %j',
-          config.devCommand || devScript,
+          devCommand || devScript,
           entrypoint
         );
       } else {
@@ -353,7 +344,7 @@ export async function build({
           env: { ...spawnOpts.env, PORT: String(devPort) },
         };
 
-        const cmd = config.devCommand || `yarn run ${devScript}`;
+        const cmd = devCommand || `yarn run ${devScript}`;
         const child: ChildProcess = spawnCommand(cmd, opts);
 
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
@@ -398,13 +389,12 @@ export async function build({
 
       const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
       debug(
-        `Running "${config.buildCommand ||
-          buildScript}" script in "${entrypoint}"`
+        `Running "${buildCommand || buildScript}" script in "${entrypoint}"`
       );
 
       const found =
-        typeof config.buildCommand === 'string'
-          ? await execCommand(config.buildCommand, {
+        typeof buildCommand === 'string'
+          ? await execCommand(buildCommand, {
               ...spawnOpts,
               cwd: entrypointDir,
             })
@@ -412,7 +402,7 @@ export async function build({
 
       if (!found) {
         throw new Error(
-          `Missing required "${config.buildCommand ||
+          `Missing required "${buildCommand ||
             buildScript}" script in "${entrypoint}"`
         );
       }
@@ -420,7 +410,9 @@ export async function build({
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
 
       if (framework) {
-        const outputDirName = await framework.getOutputDirName(outputDirPrefix);
+        const outputDirName = config.outputDirectory
+          ? config.outputDirectory
+          : await framework.getOutputDirName(outputDirPrefix);
 
         distPath = path.join(outputDirPrefix, outputDirName);
       } else if (!config || !config.distDir) {

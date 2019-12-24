@@ -1,0 +1,18 @@
+{
+  "builds": [
+    {
+      "use": "@now/static-build",
+      "src": "config.toml",
+      "config": {
+        "zeroConfig": true,
+        "framework": "hugo"
+      }
+    }
+  ],
+  "build": {
+    "env": {
+      "NOW_BUILDER_DEBUG": "1"
+    }
+  },
+  "probes": [{ "path": "/", "mustContain": "My First Post" }]
+}
