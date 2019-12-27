@@ -351,6 +351,7 @@
   {
     "name": "mdx-deck",
     "slug": "mdx-deck",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/mdx-deck.svg",
     "tagline": "MDX Deck allows you to swiftly create React MDX-based presentation decks.",
     "website": "https://github.com/jxnblk/mdx-deck"
   },
@@ -363,6 +364,7 @@
   {
     "name": "VuePress",
     "slug": "vuepress",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vuepress.png",
     "tagline": "VuePress is the performant way to create static sites with Vue.js."
   },
   {
@@ -374,11 +376,13 @@
   {
     "name": "Riot.js",
     "slug": "riot",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/riot.svg",
     "tagline": "Riot.js lets you build user interfaces with custom tags using simple and enjoyable syntax."
   },
   {
     "name": "Marko.js",
     "slug": "marko",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/marko.png",
     "tagline": "Marko is a super fast UI library that makes building web apps fun."
   },
   {
@@ -390,6 +394,7 @@
   {
     "name": "Metalsmith",
     "slug": "metalsmith",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/metalsmith.png",
     "tagline": "Metalsmith is an extremely simple, extendable static site generator."
   },
   {
@@ -407,6 +412,7 @@
   {
     "name": "Pelican",
     "slug": "pelican",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/pelican.png",
     "tagline": "Pelican is a versatile static site generator, written in Python."
   },
   {
@@ -430,6 +436,7 @@
   {
     "name": "Foundation",
     "slug": "foundation",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/foundation.svg",
     "tagline": "Foundation is the most advanced responsive front-end framework in the world."
   }
 ]
