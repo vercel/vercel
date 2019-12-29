@@ -311,6 +311,13 @@ CMD ["node", "index.js"]`,
         files: ['.gitignore', 'folder', 'index.js', 'test.html'],
       }),
     },
+    'redirects-v2': {
+      'now.json': JSON.stringify({
+        version: 2,
+        name: 'redirects-v2',
+        redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
+      }),
+    },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',

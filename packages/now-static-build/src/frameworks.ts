@@ -328,7 +328,8 @@ export const frameworks: Framework[] = [
     name: 'Nuxt.js',
     slug: 'nuxtjs',
     dependency: 'nuxt',
-    getOutputDirName: async () => 'public',
+    buildCommand: 'nuxt generate',
+    getOutputDirName: async () => 'dist',
   },
   {
     name: 'Hugo',
@@ -342,9 +343,6 @@ export const frameworks: Framework[] = [
         })
       );
 
-      console.log(`trying to read file at ${dirPrefix}`);
-      console.log('got config', config);
-
       return (config && config.publishDir) || 'public';
     },
   },
@@ -357,6 +355,18 @@ export const frameworks: Framework[] = [
       const config = await readConfigFile(join(dirPrefix, '_config.yml'));
       return (config && config.destination) || '_site';
     },
+  },
+  {
+    name: 'Brunch',
+    slug: 'brunch',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Middleman',
+    slug: 'middleman',
+    buildCommand: 'bundle exec middleman build',
+    devCommand: 'bundle exec middleman server -p $PORT',
+    getOutputDirName: async () => 'build',
   },
 ];
 
