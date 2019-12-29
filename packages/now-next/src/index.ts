@@ -336,12 +336,17 @@ export const build = async ({
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
+  let nextBasePath: string | undefined;
 
   if (routesManifest) {
     switch (routesManifest.version) {
-      case 1: {
+      case 1:
+      case 2: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
+        if (routesManifest.basePath) {
+          nextBasePath = routesManifest.basePath;
+        }
         break;
       }
       default: {
@@ -398,6 +403,17 @@ export const build = async ({
       output,
       routes: [
         // TODO: low priority: handle trailingSlash
+
+        // Add top level rewrite for basePath if provided
+        ...(nextBasePath
+          ? [
+              {
+                src: `${nextBasePath}/(.*)`,
+                dest: `/$1`,
+                continue: true,
+              },
+            ]
+          : []),
 
         // redirects take the highest priority
         ...redirects,
@@ -940,6 +956,17 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
+      // Add top level rewrite for basePath if provided
+      ...(nextBasePath
+        ? [
+            {
+              src: `${nextBasePath}/(.*)`,
+              dest: `/$1`,
+              continue: true,
+            },
+          ]
+        : []),
+
       // redirects take the highest priority
       ...redirects,
       // Before we handle static files we need to set proper caching headers

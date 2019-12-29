@@ -308,6 +308,7 @@ type RoutesManifestRegex = {
 };
 
 export type RoutesManifest = {
+  basePath: string;
   redirects: (Redirect & RoutesManifestRegex)[];
   rewrites: (Rewrite & RoutesManifestRegex)[];
   dynamicRoutes: {
@@ -360,7 +361,8 @@ export async function getDynamicRoutes(
 
   if (routesManifest) {
     switch (routesManifest.version) {
-      case 1: {
+      case 1:
+      case 2: {
         return routesManifest.dynamicRoutes.map(
           ({ page, regex }: { page: string; regex: string }) => {
             return {
