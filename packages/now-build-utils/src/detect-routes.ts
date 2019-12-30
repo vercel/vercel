@@ -200,7 +200,6 @@ function sortFilesBySegmentCount(fileA: string, fileB: string): number {
 interface ApiRoutesResult {
   defaultRoutes: Source[] | null;
   dynamicRoutes: Source[] | null;
-  staticRoutes: Source[] | null;
   error: { [key: string]: string } | null;
 }
 
@@ -216,7 +215,6 @@ async function detectApiRoutes(
   if (!files || files.length === 0) {
     return {
       defaultRoutes: null,
-      staticRoutes: null,
       dynamicRoutes: null,
       error: null,
     };
@@ -231,7 +229,6 @@ async function detectApiRoutes(
 
   const defaultRoutes: Source[] = [];
   const dynamicRoutes: Source[] = [];
-  const staticRoutes: Source[] = [];
 
   for (const file of sortedFiles) {
     // We only consider every file in the api directory
@@ -248,7 +245,6 @@ async function detectApiRoutes(
     if (conflictingSegment) {
       return {
         defaultRoutes: null,
-        staticRoutes: null,
         dynamicRoutes: null,
         error: {
           code: 'conflicting_path_segment',
@@ -271,7 +267,6 @@ async function detectApiRoutes(
 
       return {
         defaultRoutes: null,
-        staticRoutes: null,
         dynamicRoutes: null,
         error: {
           code: 'conflicting_file_path',
@@ -286,13 +281,11 @@ async function detectApiRoutes(
     const out = createRouteFromPath(file);
     if (out.isDynamic) {
       dynamicRoutes.push(out.route);
-    } else {
-      staticRoutes.push(out.route);
     }
     defaultRoutes.push(out.route);
   }
 
-  return { defaultRoutes, staticRoutes, dynamicRoutes, error: null };
+  return { defaultRoutes, dynamicRoutes, error: null };
 }
 
 function getPublicBuilder(builders: Builder[]): Builder | null {
@@ -321,7 +314,7 @@ export async function detectRoutes(
   cleanUrls = false
 ): Promise<RoutesResult> {
   const result = await detectApiRoutes(files, builders);
-  const { staticRoutes, defaultRoutes: allRoutes, error } = result;
+  const { dynamicRoutes, defaultRoutes: allRoutes, error } = result;
   if (error) {
     return { defaultRoutes: null, error };
   }
@@ -347,8 +340,8 @@ export async function detectRoutes(
           check: true,
         });
       }
-      if (staticRoutes) {
-        staticRoutes.forEach(r => {
+      if (dynamicRoutes) {
+        dynamicRoutes.forEach(r => {
           if (r.dest) {
             r.check = true;
           } else {
