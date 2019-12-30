@@ -270,6 +270,36 @@ async function detectApiRoutes(
     const out = createRouteFromPath(file);
     defaultRoutes.push(out.route);
     isDynamic = isDynamic || out.isDynamic;
+    defaultRoutes.push(createRouteFromPath(file));
+  }
+
+  // 404 Route to disable directory listing
+  if (defaultRoutes.length > 0) {
+    if (featHandleMiss) {
+      defaultRoutes = [
+        { handle: 'miss' },
+        {
+          src: '/api/(.+)\\.\\w+',
+          dest: '/api/$1',
+          check: true,
+        },
+        {
+          status: 404,
+          src: '/api(/.*)?$',
+          continue: true,
+        },
+      ];
+    } else if (
+      defaultRoutes.some(
+        route =>
+          !isHandler(route) && route.dest && route.dest.startsWith('/api/')
+      )
+    ) {
+      defaultRoutes.push({
+        status: 404,
+        src: '/api(/.*)?$',
+      });
+    }
   }
 
   return { defaultRoutes, error: null, isDynamic };

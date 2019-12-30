@@ -700,7 +700,7 @@ describe('Test `detectBuilders`', () => {
 
     const { defaultRoutes } = await detectRoutes(files, builders!);
 
-    expect(defaultRoutes!.length).toBe(3);
+    expect(defaultRoutes!.length).toBe(2);
     expect((defaultRoutes![0] as any).dest).toBe('/server/team.ts');
     expect((defaultRoutes![0] as any).src).toBe(
       '^/server/(team\\/|team|team\\.ts)$'
@@ -709,7 +709,6 @@ describe('Test `detectBuilders`', () => {
     expect((defaultRoutes![1] as any).src).toBe(
       '^/server/(user\\/|user|user\\.ts)$'
     );
-    expect((defaultRoutes![2] as any).status).toBe(404);
   });
 
   it('Custom directory for Serverless Functions + Next.js', async () => {
@@ -755,12 +754,11 @@ describe('Test `detectBuilders`', () => {
 
     const { defaultRoutes } = await detectRoutes(files, builders!);
 
-    expect(defaultRoutes!.length).toBe(2);
+    expect(defaultRoutes!.length).toBe(1);
     expect((defaultRoutes![0] as any).dest).toBe('/server/user.ts');
     expect((defaultRoutes![0] as any).src).toBe(
       '^/server/(user\\/|user|user\\.ts)$'
     );
-    expect((defaultRoutes![1] as any).status).toBe(404);
   });
 
   it('Framework with non-package.json entrypoint', async () => {
