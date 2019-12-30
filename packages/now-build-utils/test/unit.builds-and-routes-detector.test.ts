@@ -993,21 +993,6 @@ it('Test `detectRoutes`', async () => {
 it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
   const featHandleMiss = true;
 
-  const expectedWithoutHandleMiss = [
-    {
-      src: '^/api/(team\\/|team|team\\.js)$',
-      dest: '/api/team.js',
-    },
-    {
-      src: '^/api/(user\\/|user|user\\.go)$',
-      dest: '/api/user.go',
-    },
-    {
-      status: 404,
-      src: '^/api(/.*)?$',
-    },
-  ];
-
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
@@ -1017,7 +1002,29 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       builders!,
       featHandleMiss
     );
-    expect(defaultRoutes).toStrictEqual(expectedWithoutHandleMiss);
+    expect(defaultRoutes).toStrictEqual([
+      { handle: 'miss' },
+      {
+        src: '^/api/(.+)\\.\\w+$',
+        dest: '/api/$1',
+        check: true,
+      },
+      {
+        src: '^/api/(team\\/|team|team\\.js)$',
+        dest: '/api/team.js',
+        check: true,
+      },
+      {
+        src: '^/api/(user\\/|user|user\\.go)$',
+        dest: '/api/user.go',
+        check: true,
+      },
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+        continue: true,
+      },
+    ]);
   }
 
   {
@@ -1069,13 +1076,8 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^/]+)/([^/]+)$',
-        dest: '/api/[endpoint]/[id].js?endpoint=$1&id=$2',
-        check: true,
-      },
-      {
-        src: '^/api/([^/]+)$',
-        dest: '/api/[endpoint].js?endpoint=$1',
+        src: '^/api/(.+)\\.\\w+$',
+        dest: '/api/$1',
         check: true,
       },
       {
@@ -1102,13 +1104,8 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^/]+)/([^/]+)$',
-        dest: '/api/[endpoint]/[id].js?endpoint=$1&id=$2',
-        check: true,
-      },
-      {
-        src: '^/api/([^/]+)$',
-        dest: '/api/[endpoint].js?endpoint=$1',
+        src: '^/api/(.+)\\.\\w+$',
+        dest: '/api/$1',
         check: true,
       },
       {
@@ -1146,8 +1143,8 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^/]+)$',
-        dest: '/api/[endpoint].js?endpoint=$1',
+        src: '^/api/(.+)\\.\\w+$',
+        dest: '/api/$1',
         check: true,
       },
       {
@@ -1171,6 +1168,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         src: '/(.*)',
         dest: '/public/$1',
+        check: true,
       },
     ]);
   }
@@ -1185,17 +1183,26 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       featHandleMiss
     );
     expect(defaultRoutes).toStrictEqual([
+      { handle: 'miss' },
+      {
+        src: '^/api/(.+)\\.\\w+$',
+        dest: '/api/$1',
+        check: true,
+      },
       {
         src: '^/api/date(\\/|\\/index|\\/index\\.js)?$',
         dest: '/api/date/index.js',
+        check: true,
       },
       {
         src: '^/api/(date\\/|date|date\\.js)$',
         dest: '/api/date.js',
+        check: true,
       },
       {
         status: 404,
         src: '^/api(/.*)?$',
+        continue: true,
       },
     ]);
   }
@@ -1212,8 +1219,8 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^/]+)(\\/|\\/index|\\/index\\.js)?$',
-        dest: '/api/[date]/index.js?date=$1',
+        src: '^/api/(.+)\\.\\w+$',
+        dest: '/api/$1',
         check: true,
       },
       {
@@ -1246,14 +1253,33 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     );
 
     expect(defaultRoutes).toStrictEqual([
-      { src: '^/api/ts/(gold\\/|gold|gold\\.ts)$', dest: '/api/ts/gold.ts' },
+      { handle: 'miss' },
+      {
+        src: '^/api/(.+)\\.\\w+$',
+        dest: '/api/$1',
+        check: true,
+      },
+      {
+        src: '^/api/ts/(gold\\/|gold|gold\\.ts)$',
+        dest: '/api/ts/gold.ts',
+        check: true,
+      },
       {
         src: '^/api/users(\\/|\\/index|\\/index\\.ts)?$',
         dest: '/api/users/index.ts',
+        check: true,
       },
-      { src: '^/api/(food\\/|food|food\\.ts)$', dest: '/api/food.ts' },
-      { src: '^/api(\\/|\\/index|\\/index\\.ts)?$', dest: '/api/index.ts' },
-      { status: 404, src: '^/api(/.*)?$' },
+      {
+        src: '^/api/(food\\/|food|food\\.ts)$',
+        dest: '/api/food.ts',
+        check: true,
+      },
+      {
+        src: '^/api(\\/|\\/index|\\/index\\.ts)?$',
+        dest: '/api/index.ts',
+        check: true,
+      },
+      { status: 404, src: '^/api(/.*)?$', continue: true },
     ]);
   }
 
@@ -1269,8 +1295,18 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       featHandleMiss
     );
     expect(defaultRoutes).toStrictEqual([
-      { src: '^/api/(user\\/|user|user\\.php)$', dest: '/api/user.php' },
-      { status: 404, src: '^/api(/.*)?$' },
+      { handle: 'miss' },
+      {
+        src: '^/api/(.+)\\.\\w+$',
+        dest: '/api/$1',
+        check: true,
+      },
+      {
+        src: '^/api/(user\\/|user|user\\.php)$',
+        dest: '/api/user.php',
+        check: true,
+      },
+      { status: 404, src: '^/api(/.*)?$', continue: true },
     ]);
   }
 });

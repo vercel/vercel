@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import { Route, isHandler } from '@now/routing-utils';
+import { Route, Source } from '@now/routing-utils';
 import { Builder } from './types';
 import { getIgnoreApiFilter, sortFiles } from './detect-builders';
 
@@ -43,7 +43,7 @@ function getSegmentName(segment: string): string | null {
 
 function createRouteFromPath(
   filePath: string
-): { route: Route; isDynamic: boolean } {
+): { route: Source; isDynamic: boolean } {
   const parts = filePath.split('/');
 
   let counter = 1;
@@ -86,7 +86,7 @@ function createRouteFromPath(
     : `^/${srcParts.join('/')}$`;
 
   const dest = `/${filePath}${query.length ? '?' : ''}${query.join('&')}`;
-  const route: Route = { src, dest };
+  const route: Source = { src, dest };
   return { route, isDynamic };
 }
 
@@ -197,18 +197,29 @@ function sortFilesBySegmentCount(fileA: string, fileB: string): number {
   return 0;
 }
 
+interface ApiRoutesResult {
+  defaultRoutes: Source[] | null;
+  dynamicRoutes: Source[] | null;
+  staticRoutes: Source[] | null;
+  error: { [key: string]: string } | null;
+}
+
 interface RoutesResult {
   defaultRoutes: Route[] | null;
   error: { [key: string]: string } | null;
-  isDynamic?: boolean;
 }
 
 async function detectApiRoutes(
   files: string[],
   builders: Builder[]
-): Promise<RoutesResult> {
+): Promise<ApiRoutesResult> {
   if (!files || files.length === 0) {
-    return { defaultRoutes: null, error: null };
+    return {
+      defaultRoutes: null,
+      staticRoutes: null,
+      dynamicRoutes: null,
+      error: null,
+    };
   }
 
   // The deepest routes need to be
@@ -218,8 +229,9 @@ async function detectApiRoutes(
     .sort(sortFiles)
     .sort(sortFilesBySegmentCount);
 
-  const defaultRoutes: Route[] = [];
-  let isDynamic = false;
+  const defaultRoutes: Source[] = [];
+  const dynamicRoutes: Source[] = [];
+  const staticRoutes: Source[] = [];
 
   for (const file of sortedFiles) {
     // We only consider every file in the api directory
@@ -236,6 +248,8 @@ async function detectApiRoutes(
     if (conflictingSegment) {
       return {
         defaultRoutes: null,
+        staticRoutes: null,
+        dynamicRoutes: null,
         error: {
           code: 'conflicting_path_segment',
           message:
@@ -257,6 +271,8 @@ async function detectApiRoutes(
 
       return {
         defaultRoutes: null,
+        staticRoutes: null,
+        dynamicRoutes: null,
         error: {
           code: 'conflicting_file_path',
           message:
@@ -268,41 +284,15 @@ async function detectApiRoutes(
     }
 
     const out = createRouteFromPath(file);
-    defaultRoutes.push(out.route);
-    isDynamic = isDynamic || out.isDynamic;
-    defaultRoutes.push(createRouteFromPath(file));
-  }
-
-  // 404 Route to disable directory listing
-  if (defaultRoutes.length > 0) {
-    if (featHandleMiss) {
-      defaultRoutes = [
-        { handle: 'miss' },
-        {
-          src: '/api/(.+)\\.\\w+',
-          dest: '/api/$1',
-          check: true,
-        },
-        {
-          status: 404,
-          src: '/api(/.*)?$',
-          continue: true,
-        },
-      ];
-    } else if (
-      defaultRoutes.some(
-        route =>
-          !isHandler(route) && route.dest && route.dest.startsWith('/api/')
-      )
-    ) {
-      defaultRoutes.push({
-        status: 404,
-        src: '/api(/.*)?$',
-      });
+    if (out.isDynamic) {
+      dynamicRoutes.push(out.route);
+    } else {
+      staticRoutes.push(out.route);
     }
+    defaultRoutes.push(out.route);
   }
 
-  return { defaultRoutes, error: null, isDynamic };
+  return { defaultRoutes, staticRoutes, dynamicRoutes, error: null };
 }
 
 function getPublicBuilder(builders: Builder[]): Builder | null {
@@ -327,38 +317,74 @@ export function detectOutputDirectory(builders: Builder[]): string | null {
 export async function detectRoutes(
   files: string[],
   builders: Builder[],
-  featHandleMiss = false
+  featHandleMiss = false,
+  cleanUrls = false
 ): Promise<RoutesResult> {
-  const routesResult = await detectApiRoutes(files, builders);
-  const { defaultRoutes, isDynamic } = routesResult;
+  const result = await detectApiRoutes(files, builders);
+  const { staticRoutes, defaultRoutes: allRoutes, error } = result;
+  if (error) {
+    return { defaultRoutes: null, error };
+  }
   const directory = detectOutputDirectory(builders);
-  if (defaultRoutes) {
-    const hasApiRoutes = defaultRoutes.length > 0;
-    if (hasApiRoutes) {
-      defaultRoutes.push({
-        status: 404,
-        src: '^/api(/.*)?$',
-      });
-    }
-    if (directory) {
-      defaultRoutes.push({
-        src: '/(.*)',
-        dest: `/${directory}/$1`,
-      });
-    }
-    if (featHandleMiss && hasApiRoutes && isDynamic) {
-      defaultRoutes.forEach(r => {
-        if (!isHandler(r)) {
+  const defaultRoutes: Route[] = [];
+  if (allRoutes && allRoutes.length > 0) {
+    const hasApiRoutes = allRoutes.some(
+      r => r.dest && r.dest.startsWith('/api/')
+    );
+    if (featHandleMiss) {
+      defaultRoutes.push({ handle: 'miss' });
+      if (cleanUrls) {
+        defaultRoutes.push({
+          src: '^/api/(.+)\\.\\w+$',
+          headers: { Location: '/api/$1' },
+          status: 308,
+          continue: true,
+        });
+      } else {
+        defaultRoutes.push({
+          src: '^/api/(.+)\\.\\w+$',
+          dest: '/api/$1',
+          check: true,
+        });
+      }
+      if (staticRoutes) {
+        staticRoutes.forEach(r => {
           if (r.dest) {
             r.check = true;
           } else {
             r.continue = true;
           }
-        }
-      });
-      defaultRoutes.unshift({ handle: 'miss' });
+          defaultRoutes.push(r);
+        });
+      }
+      if (hasApiRoutes) {
+        defaultRoutes.push({
+          src: '^/api(/.*)?$',
+          status: 404,
+          continue: true,
+        });
+      }
+    } else {
+      defaultRoutes.push(...allRoutes);
+      if (hasApiRoutes) {
+        defaultRoutes.push({
+          status: 404,
+          src: '^/api(/.*)?$',
+        });
+      }
     }
   }
 
-  return routesResult;
+  if (directory) {
+    const outDirRoute: Source = {
+      src: '/(.*)',
+      dest: `/${directory}/$1`,
+    };
+    if (featHandleMiss) {
+      outDirRoute.check = true;
+    }
+    defaultRoutes.push(outDirRoute);
+  }
+
+  return { defaultRoutes, error };
 }
