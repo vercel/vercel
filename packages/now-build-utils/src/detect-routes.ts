@@ -356,11 +356,18 @@ export async function detectRoutes(
       defaultRoutes.push({ handle: 'miss' });
       if (cleanUrls) {
         const loc = trailingSlash ? '/$1/' : '/$1';
-        redirectRoutes.push({
-          src: '^/(api(?:/(?!index)[^/.]+)*)(?:\\.\\w+|/index(?:\\.\\w+)?)/?$',
-          headers: { Location: loc },
-          status: 308,
-        });
+        const extensions = builders
+          .map(b => parsePath(b.src).ext)
+          .filter(Boolean);
+        if (extensions.length > 0) {
+          const exts = extensions.map(ext => ext.slice(1)).join('|');
+          const group = `(?:${exts})`;
+          redirectRoutes.push({
+            src: `^/(api(?:/(?!index)[^/.]+)*)(?:\\.${group}|/index(?:\\.${group})?)/?$`,
+            headers: { Location: loc },
+            status: 308,
+          });
+        }
       } else {
         defaultRoutes.push({
           src: '^/api/(.+)\\.\\w+$',

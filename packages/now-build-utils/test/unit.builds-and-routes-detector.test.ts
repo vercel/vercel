@@ -1,3 +1,4 @@
+import { Source, Route } from '@now/routing-utils';
 import { detectBuilders, detectRoutes } from '../src';
 
 describe('Test `detectBuilders`', () => {
@@ -1283,13 +1284,15 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
 it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () => {
   const featHandleMiss = true;
   const cleanUrls = true;
-  const expectedRedirects = [
-    {
-      src: '^/(api(?:/(?!index)[^/.]+)*)(?:\\.\\w+|/index(?:\\.\\w+)?)/?$',
-      headers: { Location: '/$1' },
-      status: 308,
-    },
-  ];
+  const testHeaders = (redirectRoutes: Route[] | null) => {
+    if (!redirectRoutes || redirectRoutes.length === 0) {
+      throw new Error('Expected one redirect but found none');
+    }
+    const sources = redirectRoutes as Source[];
+    const first = sources[0];
+    expect(first).toBeDefined();
+    expect(first.headers).toStrictEqual({ Location: '/$1' });
+  };
 
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
@@ -1301,7 +1304,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       featHandleMiss,
       cleanUrls
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
 
@@ -1376,7 +1379,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       featHandleMiss,
       cleanUrls
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1411,7 +1414,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       featHandleMiss,
       cleanUrls
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1452,7 +1455,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       featHandleMiss,
       cleanUrls
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1491,7 +1494,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       featHandleMiss,
       cleanUrls
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1512,7 +1515,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       featHandleMiss,
       cleanUrls
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1544,7 +1547,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       featHandleMiss,
       cleanUrls
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       { status: 404, src: '^/api(/.*)?$', continue: true },
@@ -1563,7 +1566,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       featHandleMiss,
       cleanUrls
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       { status: 404, src: '^/api(/.*)?$', continue: true },
@@ -1575,30 +1578,15 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   const featHandleMiss = true;
   const cleanUrls = true;
   const trailingSlash = true;
-  const expectedRedirects = [
-    {
-      src: '^/(api(?:/(?!index)[^/.]+)*)(?:\\.\\w+|/index(?:\\.\\w+)?)/?$',
-      headers: { Location: '/$1/' },
-      status: 308,
-    },
-  ];
-
-  {
-    // expected redirect should match inputs
-    const r = new RegExp(expectedRedirects[0].src);
-    const getMatch = (str: string): string | null => {
-      const match = r.exec(str);
-      return match ? match[1] : null;
-    };
-
-    expect(getMatch('/api/index')).toBe('api');
-    expect(getMatch('/api/index.js')).toBe('api');
-    expect(getMatch('/api/user.js')).toBe('api/user');
-    expect(getMatch('/api/user.prod.js')).toBe('api/user.prod');
-    expect(getMatch('/api/user/index.js')).toBe('api/user');
-    expect(getMatch('/api/user')).toBe(null);
-    expect(getMatch('/api/user/get')).toBe(null);
-  }
+  const testHeaders = (redirectRoutes: Route[] | null) => {
+    if (!redirectRoutes || redirectRoutes.length === 0) {
+      throw new Error('Expected one redirect but found none');
+    }
+    const sources = redirectRoutes as Source[];
+    const first = sources[0];
+    expect(first).toBeDefined();
+    expect(first.headers).toStrictEqual({ Location: '/$1/' });
+  };
 
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
@@ -1611,7 +1599,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       cleanUrls,
       trailingSlash
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1620,6 +1608,33 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         continue: true,
       },
     ]);
+
+    // expected redirect should match inputs
+    const first = (redirectRoutes || [])[0] as Source;
+    console.log('first regex found: ' + first.src);
+    const r = new RegExp(first.src);
+    const getMatch = (str: string): string | null => {
+      const match = r.exec(str);
+      return match ? match[1] : null;
+    };
+
+    expect(getMatch('/api/index')).toBe('api');
+    expect(getMatch('/api/index.js')).toBe('api');
+    expect(getMatch('/api/user.js')).toBe('api/user');
+    expect(getMatch('/api/user.prod.js')).toBe('api/user.prod');
+    expect(getMatch('/api/user/index.js')).toBe('api/user');
+    expect(getMatch('/api/user')).toBe(null);
+    expect(getMatch('/api/user/get')).toBe(null);
+
+    expect(getMatch('/api/index.go')).toBe('api');
+    expect(getMatch('/api/user.go')).toBe('api/user');
+    expect(getMatch('/api/user.prod.go')).toBe('api/user.prod');
+    expect(getMatch('/api/user/index.go')).toBe('api/user');
+
+    expect(getMatch('/api/index.cpp')).toBe(null);
+    expect(getMatch('/api/user.cpp')).toBe(null);
+    expect(getMatch('/api/user.prod.cpp')).toBe(null);
+    expect(getMatch('/api/user/index.cpp')).toBe(null);
   }
 
   {
@@ -1633,7 +1648,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       cleanUrls,
       trailingSlash
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1669,7 +1684,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       cleanUrls,
       trailingSlash
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1711,7 +1726,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       cleanUrls,
       trailingSlash
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1738,7 +1753,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       cleanUrls,
       trailingSlash
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1760,7 +1775,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       cleanUrls,
       trailingSlash
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -1793,7 +1808,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       cleanUrls,
       trailingSlash
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       { status: 404, src: '^/api(/.*)?$', continue: true },
@@ -1813,7 +1828,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       cleanUrls,
       trailingSlash
     );
-    expect(redirectRoutes).toStrictEqual(expectedRedirects);
+    testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       { status: 404, src: '^/api(/.*)?$', continue: true },
