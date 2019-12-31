@@ -339,7 +339,8 @@ export const build = async ({
 
   if (routesManifest) {
     switch (routesManifest.version) {
-      case 1: {
+      case 1:
+      case 2: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
         break;
