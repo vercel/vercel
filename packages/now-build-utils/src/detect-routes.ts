@@ -93,7 +93,7 @@ function createRouteFromPath(
 
   let route: Source;
   if (featHandleMiss) {
-    const extensionless = filePath.slice(0, -ext.length);
+    const extensionless = ext ? filePath.slice(0, -ext.length) : filePath;
     route = {
       src,
       dest: `/${extensionless}${queryString}`,
