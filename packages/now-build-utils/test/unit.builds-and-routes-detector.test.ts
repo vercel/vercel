@@ -1072,12 +1072,12 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       },
       {
         src: '^/api/([^/]+)/([^/]+)$',
-        dest: '/api/[endpoint]/[id].js?endpoint=$1&id=$2',
+        dest: '/api/[endpoint]/[id]?endpoint=$1&id=$2',
         check: true,
       },
       {
         src: '^/api/([^/]+)$',
-        dest: '/api/[endpoint].js?endpoint=$1',
+        dest: '/api/[endpoint]?endpoint=$1',
         check: true,
       },
       {
@@ -1110,12 +1110,12 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       },
       {
         src: '^/api/([^/]+)/([^/]+)$',
-        dest: '/api/[endpoint]/[id].js?endpoint=$1&id=$2',
+        dest: '/api/[endpoint]/[id]?endpoint=$1&id=$2',
         check: true,
       },
       {
         src: '^/api/([^/]+)$',
-        dest: '/api/[endpoint].js?endpoint=$1',
+        dest: '/api/[endpoint]?endpoint=$1',
         check: true,
       },
       {
@@ -1159,7 +1159,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       },
       {
         src: '^/api/([^/]+)$',
-        dest: '/api/[endpoint].js?endpoint=$1',
+        dest: '/api/[endpoint]?endpoint=$1',
         check: true,
       },
       {
@@ -1230,7 +1230,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       },
       {
         src: '^/api/([^/]+)(\\/|\\/index|\\/index\\.js)?$',
-        dest: '/api/[date]/index.js?date=$1',
+        dest: '/api/[date]/index?date=$1',
         check: true,
       },
       {

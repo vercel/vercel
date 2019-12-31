@@ -42,7 +42,9 @@ function getSegmentName(segment: string): string | null {
 }
 
 function createRouteFromPath(
-  filePath: string
+  filePath: string,
+  featHandleMiss: boolean,
+  cleanUrls: boolean
 ): { route: Source; isDynamic: boolean } {
   const parts = filePath.split('/');
 
@@ -67,26 +69,42 @@ function createRouteFromPath(
       const names = [
         isIndex ? prefix : `${fileName}\\/`,
         prefix + escapeName(fileName),
-        prefix + escapeName(fileName) + escapeName(ext),
+        featHandleMiss && cleanUrls
+          ? ''
+          : prefix + escapeName(fileName) + escapeName(ext),
       ].filter(Boolean);
 
       // Either filename with extension, filename without extension
-      // or nothing when the filename is `index`
+      // or nothing when the filename is `index`.
+      // When `cleanUrls: true` then do *not* add the filename with extension.
       return `(${names.join('|')})${isIndex ? '?' : ''}`;
     }
 
     return segment;
   });
 
-  const { name: fileName } = parsePath(filePath);
+  const { name: fileName, ext } = parsePath(filePath);
   const isIndex = fileName === 'index';
+  const queryString = `${query.length ? '?' : ''}${query.join('&')}`;
 
   const src = isIndex
     ? `^/${srcParts.slice(0, -1).join('/')}${srcParts.slice(-1)[0]}$`
     : `^/${srcParts.join('/')}$`;
 
-  const dest = `/${filePath}${query.length ? '?' : ''}${query.join('&')}`;
-  const route: Source = { src, dest };
+  let route: Source;
+  if (featHandleMiss) {
+    const extensionless = filePath.slice(0, -ext.length);
+    route = {
+      src,
+      dest: `/${extensionless}${queryString}`,
+      check: true,
+    };
+  } else {
+    route = {
+      src,
+      dest: `/${filePath}${queryString}`,
+    };
+  }
   return { route, isDynamic };
 }
 
@@ -210,7 +228,9 @@ interface RoutesResult {
 
 async function detectApiRoutes(
   files: string[],
-  builders: Builder[]
+  builders: Builder[],
+  featHandleMiss: boolean,
+  cleanUrls: boolean
 ): Promise<ApiRoutesResult> {
   if (!files || files.length === 0) {
     return {
@@ -278,7 +298,7 @@ async function detectApiRoutes(
       };
     }
 
-    const out = createRouteFromPath(file);
+    const out = createRouteFromPath(file, featHandleMiss, cleanUrls);
     if (out.isDynamic) {
       dynamicRoutes.push(out.route);
     }
@@ -313,7 +333,12 @@ export async function detectRoutes(
   featHandleMiss = false,
   cleanUrls = false
 ): Promise<RoutesResult> {
-  const result = await detectApiRoutes(files, builders);
+  const result = await detectApiRoutes(
+    files,
+    builders,
+    featHandleMiss,
+    cleanUrls
+  );
   const { dynamicRoutes, defaultRoutes: allRoutes, error } = result;
   if (error) {
     return { defaultRoutes: null, error };
@@ -341,14 +366,7 @@ export async function detectRoutes(
         });
       }
       if (dynamicRoutes) {
-        dynamicRoutes.forEach(r => {
-          if (r.dest) {
-            r.check = true;
-          } else {
-            r.continue = true;
-          }
-          defaultRoutes.push(r);
-        });
+        defaultRoutes.push(...dynamicRoutes);
       }
       if (hasApiRoutes) {
         defaultRoutes.push({
