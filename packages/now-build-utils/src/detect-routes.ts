@@ -360,7 +360,6 @@ export async function detectRoutes(
           src: '^/api/(.+)\\.\\w+$',
           headers: { Location: loc },
           status: 308,
-          continue: true,
         });
       } else {
         defaultRoutes.push({

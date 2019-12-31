@@ -1289,7 +1289,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       src: '^/api/(.+)\\.\\w+$',
       headers: { Location: '/api/$1' },
       status: 308,
-      continue: true,
     },
   ];
 
@@ -1582,7 +1581,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       src: '^/api/(.+)\\.\\w+$',
       headers: { Location: '/api/$1/' },
       status: 308,
-      continue: true,
     },
   ];
 
