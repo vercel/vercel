@@ -386,15 +386,11 @@ export async function detectRoutes(
     }
   }
 
-  if (directory) {
-    const outDirRoute: Source = {
+  if (!featHandleMiss && directory) {
+    defaultRoutes.push({
       src: '/(.*)',
       dest: `/${directory}/$1`,
-    };
-    if (featHandleMiss) {
-      outDirRoute.check = true;
-    }
-    defaultRoutes.push(outDirRoute);
+    });
   }
 
   return { defaultRoutes, error };

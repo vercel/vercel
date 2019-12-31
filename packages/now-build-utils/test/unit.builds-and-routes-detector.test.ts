@@ -1123,11 +1123,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         src: '^/api(/.*)?$',
         continue: true,
       },
-      {
-        src: '/(.*)',
-        dest: '/public/$1',
-        check: true,
-      },
     ]);
   }
 
@@ -1179,13 +1174,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       builders!,
       featHandleMiss
     );
-    expect(defaultRoutes).toStrictEqual([
-      {
-        src: '/(.*)',
-        dest: '/public/$1',
-        check: true,
-      },
-    ]);
+    expect(defaultRoutes).toStrictEqual([]);
   }
 
   {
