@@ -331,7 +331,8 @@ export async function detectRoutes(
   files: string[],
   builders: Builder[],
   featHandleMiss = false,
-  cleanUrls = false
+  cleanUrls = false,
+  trailingSlash?: boolean
 ): Promise<RoutesResult> {
   const result = await detectApiRoutes(
     files,
@@ -352,9 +353,10 @@ export async function detectRoutes(
     if (featHandleMiss) {
       defaultRoutes.push({ handle: 'miss' });
       if (cleanUrls) {
+        const loc = trailingSlash ? '/api/$1/' : '/api/$1';
         defaultRoutes.push({
           src: '^/api/(.+)\\.\\w+$',
-          headers: { Location: '/api/$1' },
+          headers: { Location: loc },
           status: 308,
           continue: true,
         });
