@@ -1283,10 +1283,14 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
 it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () => {
   const featHandleMiss = true;
   const cleanUrls = true;
-
   const expectedRedirects = [
     {
-      src: '^/api/(.+)\\.\\w+$',
+      src: '^/api/(?:(.+)/)?index(?:\\.w+)?/?$',
+      headers: { Location: '/api/$1' },
+      status: 308,
+    },
+    {
+      src: '^/api/(.+)\\.\\w+/?$',
       headers: { Location: '/api/$1' },
       status: 308,
     },
@@ -1578,7 +1582,12 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   const trailingSlash = true;
   const expectedRedirects = [
     {
-      src: '^/api/(.+)\\.\\w+$',
+      src: '^/api/(?:(.+)/)?index(?:\\.w+)?/?$',
+      headers: { Location: '/api/$1/' },
+      status: 308,
+    },
+    {
+      src: '^/api/(.+)\\.\\w+/?$',
       headers: { Location: '/api/$1/' },
       status: 308,
     },

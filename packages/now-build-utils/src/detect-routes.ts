@@ -357,7 +357,12 @@ export async function detectRoutes(
       if (cleanUrls) {
         const loc = trailingSlash ? '/api/$1/' : '/api/$1';
         redirectRoutes.push({
-          src: '^/api/(.+)\\.\\w+$',
+          src: '^/api/(?:(.+)/)?index(?:\\.w+)?/?$',
+          headers: { Location: loc },
+          status: 308,
+        });
+        redirectRoutes.push({
+          src: '^/api/(.+)\\.\\w+/?$',
           headers: { Location: loc },
           status: 308,
         });
