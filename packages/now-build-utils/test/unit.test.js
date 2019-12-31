@@ -50,7 +50,7 @@ it('should create zip files with symlinks properly', async () => {
 
 it('should only match supported node versions', async () => {
   expect(await getSupportedNodeVersion('10.x')).toHaveProperty('major', 10);
-  expect(await getSupportedNodeVersion('8.10.x')).toHaveProperty('major', 8);
+  expect(await getSupportedNodeVersion('12.x')).toHaveProperty('major', 12);
   expect(getSupportedNodeVersion('8.11.x')).rejects.toThrow();
   expect(getSupportedNodeVersion('6.x')).rejects.toThrow();
   expect(getSupportedNodeVersion('999.x')).rejects.toThrow();
