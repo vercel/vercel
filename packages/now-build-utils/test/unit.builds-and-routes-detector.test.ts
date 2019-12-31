@@ -1291,7 +1291,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
     const sources = redirectRoutes as Source[];
     const first = sources[0];
     expect(first).toBeDefined();
-    expect(first.headers).toStrictEqual({ Location: '/$1' });
+    expect(first.headers).toStrictEqual({ Location: '/api/$1' });
   };
 
   {
@@ -1307,13 +1307,33 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
-
       {
         status: 404,
         src: '^/api(/.*)?$',
         continue: true,
       },
     ]);
+
+    // expected redirect should match inputs
+    const getLocation = createReplaceLocaation(redirectRoutes);
+
+    expect(getLocation('/api/index')).toBe('/api/');
+    expect(getLocation('/api/index.js')).toBe('/api/');
+    expect(getLocation('/api/user.js')).toBe('/api/user/');
+    expect(getLocation('/api/user.prod.js')).toBe('/api/user.prod/');
+    expect(getLocation('/api/user/index.js')).toBe('/api/user/');
+    expect(getLocation('/api/user')).toBe(null);
+    expect(getLocation('/api/user/get')).toBe(null);
+
+    expect(getLocation('/api/index.go')).toBe('/api/');
+    expect(getLocation('/api/user.go')).toBe('/api/user/');
+    expect(getLocation('/api/user.prod.go')).toBe('/api/user.prod/');
+    expect(getLocation('/api/user/index.go')).toBe('/api/user/');
+
+    expect(getLocation('/api/index.cpp')).toBe(null);
+    expect(getLocation('/api/user.cpp')).toBe(null);
+    expect(getLocation('/api/user.prod.cpp')).toBe(null);
+    expect(getLocation('/api/user/index.cpp')).toBe(null);
   }
 
   {
@@ -1585,7 +1605,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
     const sources = redirectRoutes as Source[];
     const first = sources[0];
     expect(first).toBeDefined();
-    expect(first.headers).toStrictEqual({ Location: '/$1/' });
+    expect(first.headers).toStrictEqual({ Location: '/api/$1/' });
   };
 
   {
@@ -1610,31 +1630,25 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
     ]);
 
     // expected redirect should match inputs
-    const first = (redirectRoutes || [])[0] as Source;
-    console.log('first regex found: ' + first.src);
-    const r = new RegExp(first.src);
-    const getMatch = (str: string): string | null => {
-      const match = r.exec(str);
-      return match ? match[1] : null;
-    };
+    const getLocation = createReplaceLocaation(redirectRoutes);
 
-    expect(getMatch('/api/index')).toBe('api');
-    expect(getMatch('/api/index.js')).toBe('api');
-    expect(getMatch('/api/user.js')).toBe('api/user');
-    expect(getMatch('/api/user.prod.js')).toBe('api/user.prod');
-    expect(getMatch('/api/user/index.js')).toBe('api/user');
-    expect(getMatch('/api/user')).toBe(null);
-    expect(getMatch('/api/user/get')).toBe(null);
+    expect(getLocation('/api/index')).toBe('/api/');
+    expect(getLocation('/api/index.js')).toBe('/api/');
+    expect(getLocation('/api/user.js')).toBe('/api/user/');
+    expect(getLocation('/api/user.prod.js')).toBe('/api/user.prod/');
+    expect(getLocation('/api/user/index.js')).toBe('/api/user/');
+    expect(getLocation('/api/user')).toBe(null);
+    expect(getLocation('/api/user/get')).toBe(null);
 
-    expect(getMatch('/api/index.go')).toBe('api');
-    expect(getMatch('/api/user.go')).toBe('api/user');
-    expect(getMatch('/api/user.prod.go')).toBe('api/user.prod');
-    expect(getMatch('/api/user/index.go')).toBe('api/user');
+    expect(getLocation('/api/index.go')).toBe('/api/');
+    expect(getLocation('/api/user.go')).toBe('/api/user/');
+    expect(getLocation('/api/user.prod.go')).toBe('/api/user.prod/');
+    expect(getLocation('/api/user/index.go')).toBe('/api/user/');
 
-    expect(getMatch('/api/index.cpp')).toBe(null);
-    expect(getMatch('/api/user.cpp')).toBe(null);
-    expect(getMatch('/api/user.prod.cpp')).toBe(null);
-    expect(getMatch('/api/user/index.cpp')).toBe(null);
+    expect(getLocation('/api/index.cpp')).toBe(null);
+    expect(getLocation('/api/user.cpp')).toBe(null);
+    expect(getLocation('/api/user.prod.cpp')).toBe(null);
+    expect(getLocation('/api/user/index.cpp')).toBe(null);
   }
 
   {
@@ -1835,3 +1849,18 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
     ]);
   }
 });
+
+function createReplaceLocaation(redirectRoutes: Route[] | null) {
+  const redirectSources = (redirectRoutes || []) as Source[];
+  return (filePath: string): string | null => {
+    for (const r of redirectSources) {
+      const m = new RegExp(r.src).exec(filePath);
+      console.log({ filePath, r, m });
+      if (m && m[1] && r.headers) {
+        const match = m[1];
+        return r.headers['Location'].replace('$1', match);
+      }
+    }
+    return null;
+  };
+}
