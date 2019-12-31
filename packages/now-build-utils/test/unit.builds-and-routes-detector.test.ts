@@ -1317,18 +1317,18 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
     // expected redirect should match inputs
     const getLocation = createReplaceLocaation(redirectRoutes);
 
-    expect(getLocation('/api/index')).toBe('/api/');
-    expect(getLocation('/api/index.js')).toBe('/api/');
-    expect(getLocation('/api/user.js')).toBe('/api/user/');
-    expect(getLocation('/api/user.prod.js')).toBe('/api/user.prod/');
-    expect(getLocation('/api/user/index.js')).toBe('/api/user/');
+    expect(getLocation('/api/index')).toBe('/api');
+    expect(getLocation('/api/index.js')).toBe('/api');
+    expect(getLocation('/api/user.js')).toBe('/api/user');
+    expect(getLocation('/api/user.prod.js')).toBe('/api/user.prod');
+    expect(getLocation('/api/user/index.js')).toBe('/api/user');
     expect(getLocation('/api/user')).toBe(null);
     expect(getLocation('/api/user/get')).toBe(null);
 
-    expect(getLocation('/api/index.go')).toBe('/api/');
-    expect(getLocation('/api/user.go')).toBe('/api/user/');
-    expect(getLocation('/api/user.prod.go')).toBe('/api/user.prod/');
-    expect(getLocation('/api/user/index.go')).toBe('/api/user/');
+    expect(getLocation('/api/index.go')).toBe('/api');
+    expect(getLocation('/api/user.go')).toBe('/api/user');
+    expect(getLocation('/api/user.prod.go')).toBe('/api/user.prod');
+    expect(getLocation('/api/user/index.go')).toBe('/api/user');
 
     expect(getLocation('/api/index.cpp')).toBe(null);
     expect(getLocation('/api/user.cpp')).toBe(null);
