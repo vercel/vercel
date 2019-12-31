@@ -355,14 +355,9 @@ export async function detectRoutes(
     if (featHandleMiss) {
       defaultRoutes.push({ handle: 'miss' });
       if (cleanUrls) {
-        const loc = trailingSlash ? '/api/$1/' : '/api/$1';
+        const loc = trailingSlash ? '/$1/' : '/$1';
         redirectRoutes.push({
-          src: '^/api/(?:(.+)/)?index(?:\\.w+)?/?$',
-          headers: { Location: loc },
-          status: 308,
-        });
-        redirectRoutes.push({
-          src: '^/api/(.+)\\.\\w+/?$',
+          src: '^/(api(?:/(?!index)[^/.]+)*)(?:\\.\\w+|/index(?:\\.\\w+)?)/?$',
           headers: { Location: loc },
           status: 308,
         });

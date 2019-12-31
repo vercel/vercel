@@ -1285,13 +1285,8 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
   const cleanUrls = true;
   const expectedRedirects = [
     {
-      src: '^/api/(?:(.+)/)?index(?:\\.w+)?/?$',
-      headers: { Location: '/api/$1' },
-      status: 308,
-    },
-    {
-      src: '^/api/(.+)\\.\\w+/?$',
-      headers: { Location: '/api/$1' },
+      src: '^/(api(?:/(?!index)[^/.]+)*)(?:\\.\\w+|/index(?:\\.\\w+)?)/?$',
+      headers: { Location: '/$1' },
       status: 308,
     },
   ];
@@ -1582,16 +1577,28 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   const trailingSlash = true;
   const expectedRedirects = [
     {
-      src: '^/api/(?:(.+)/)?index(?:\\.w+)?/?$',
-      headers: { Location: '/api/$1/' },
-      status: 308,
-    },
-    {
-      src: '^/api/(.+)\\.\\w+/?$',
-      headers: { Location: '/api/$1/' },
+      src: '^/(api(?:/(?!index)[^/.]+)*)(?:\\.\\w+|/index(?:\\.\\w+)?)/?$',
+      headers: { Location: '/$1/' },
       status: 308,
     },
   ];
+
+  {
+    // expected redirect should match inputs
+    const r = new RegExp(expectedRedirects[0].src);
+    const getMatch = (str: string): string | null => {
+      const match = r.exec(str);
+      return match ? match[1] : null;
+    };
+
+    expect(getMatch('/api/index')).toBe('api');
+    expect(getMatch('/api/index.js')).toBe('api');
+    expect(getMatch('/api/user.js')).toBe('api/user');
+    expect(getMatch('/api/user.prod.js')).toBe('api/user.prod');
+    expect(getMatch('/api/user/index.js')).toBe('api/user');
+    expect(getMatch('/api/user')).toBe(null);
+    expect(getMatch('/api/user/get')).toBe(null);
+  }
 
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
