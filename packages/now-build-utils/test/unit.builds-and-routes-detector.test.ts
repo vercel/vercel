@@ -1315,7 +1315,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
     ]);
 
     // expected redirect should match inputs
-    const getLocation = createReplaceLocaation(redirectRoutes);
+    const getLocation = createReplaceLocation(redirectRoutes);
 
     expect(getLocation('/api/index')).toBe('/api');
     expect(getLocation('/api/index.js')).toBe('/api');
@@ -1630,7 +1630,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
     ]);
 
     // expected redirect should match inputs
-    const getLocation = createReplaceLocaation(redirectRoutes);
+    const getLocation = createReplaceLocation(redirectRoutes);
 
     expect(getLocation('/api/index')).toBe('/api/');
     expect(getLocation('/api/index.js')).toBe('/api/');
@@ -1850,7 +1850,11 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   }
 });
 
-function createReplaceLocaation(redirectRoutes: Route[] | null) {
+/**
+ * Create a function that will replace matched redirects
+ * similar to how it works with `now-proxy` in production.
+ */
+function createReplaceLocation(redirectRoutes: Route[] | null) {
   const redirectSources = (redirectRoutes || []) as Source[];
   return (filePath: string): string | null => {
     for (const r of redirectSources) {
