@@ -223,6 +223,7 @@ interface ApiRoutesResult {
 
 interface RoutesResult {
   defaultRoutes: Route[] | null;
+  redirectRoutes: Route[] | null;
   error: { [key: string]: string } | null;
 }
 
@@ -342,10 +343,11 @@ export async function detectRoutes(
   );
   const { dynamicRoutes, defaultRoutes: allRoutes, error } = result;
   if (error) {
-    return { defaultRoutes: null, error };
+    return { defaultRoutes: null, redirectRoutes: null, error };
   }
   const directory = detectOutputDirectory(builders);
   const defaultRoutes: Route[] = [];
+  const redirectRoutes: Route[] = [];
   if (allRoutes && allRoutes.length > 0) {
     const hasApiRoutes = allRoutes.some(
       r => r.dest && r.dest.startsWith('/api/')
@@ -354,7 +356,7 @@ export async function detectRoutes(
       defaultRoutes.push({ handle: 'miss' });
       if (cleanUrls) {
         const loc = trailingSlash ? '/api/$1/' : '/api/$1';
-        defaultRoutes.push({
+        redirectRoutes.push({
           src: '^/api/(.+)\\.\\w+$',
           headers: { Location: loc },
           status: 308,
@@ -395,5 +397,5 @@ export async function detectRoutes(
     });
   }
 
-  return { defaultRoutes, error };
+  return { defaultRoutes, redirectRoutes, error };
 }
