@@ -1860,8 +1860,8 @@ function createReplaceLocation(redirectRoutes: Route[] | null) {
     for (const r of redirectSources) {
       const m = new RegExp(r.src).exec(filePath);
       console.log({ filePath, r, m });
-      if (m && m[1] && r.headers) {
-        const match = m[1];
+      if (m && r.headers) {
+        const match = m[1] || '';
         return r.headers['Location'].replace('$1', match);
       }
     }
