@@ -13,6 +13,10 @@
       "mustContain": "hello from index"
     },
     {
+      "path": "/docs",
+      "mustContain": "hello from index"
+    },
+    {
       "path": "/docs/another",
       "mustContain": "hello from another"
     }

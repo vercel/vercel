@@ -336,6 +336,7 @@ export const build = async ({
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
+  const nextBasePathRoute: Route[] = [];
   let nextBasePath: string | undefined;
 
   if (routesManifest) {
@@ -344,8 +345,25 @@ export const build = async ({
       case 2: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
-        if (routesManifest.basePath) {
+        if (routesManifest.basePath && routesManifest.basePath !== '/') {
           nextBasePath = routesManifest.basePath;
+
+          if (!nextBasePath.startsWith('/')) {
+            throw new Error(
+              'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+            );
+          }
+          if (nextBasePath.endsWith('/')) {
+            throw new Error(
+              'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+            );
+          }
+
+          nextBasePathRoute.push({
+            src: `^${nextBasePath}(?:$|/(.*))$`,
+            dest: `/$1`,
+            continue: true,
+          });
         }
         break;
       }
@@ -405,15 +423,7 @@ export const build = async ({
         // TODO: low priority: handle trailingSlash
 
         // Add top level rewrite for basePath if provided
-        ...(nextBasePath
-          ? [
-              {
-                src: `${nextBasePath}/(.*)`,
-                dest: `/$1`,
-                continue: true,
-              },
-            ]
-          : []),
+        ...nextBasePathRoute,
 
         // redirects take the highest priority
         ...redirects,
@@ -957,15 +967,7 @@ export const build = async ({
     },
     routes: [
       // Add top level rewrite for basePath if provided
-      ...(nextBasePath
-        ? [
-            {
-              src: `${nextBasePath}/(.*)`,
-              dest: `/$1`,
-              continue: true,
-            },
-          ]
-        : []),
+      ...nextBasePathRoute,
 
       // redirects take the highest priority
       ...redirects,
