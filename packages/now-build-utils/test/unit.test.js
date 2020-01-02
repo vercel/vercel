@@ -4,7 +4,7 @@ const assert = require('assert');
 const { createZip } = require('../dist/lambda');
 const { glob, spawnAsync, download } = require('../');
 const { getSupportedNodeVersion } = require('../dist/fs/node-version');
-const { getNodeVersion } = require('../dist');
+const { getNodeVersion, getLatestNodeVersion } = require('../dist');
 
 it('should re-create symlinks properly', async () => {
   const files = await glob('**', path.join(__dirname, 'symlinks'));
@@ -83,6 +83,10 @@ it('should select correct node version in getNodeVersion()', async () => {
   expect(
     await getNodeVersion('/tmp', '10.x', { nodeVersion: '12.x' })
   ).toHaveProperty('major', 10);
+});
+
+it('should get latest node version', async () => {
+  expect(await getLatestNodeVersion()).toHaveProperty('major', 12);
 });
 
 it('should support require by path for legacy builders', () => {

@@ -16,15 +16,19 @@ const allOptions: NodeVersion[] = [
 
 const supportedOptions = allOptions.filter(o => !isDiscontinued(o));
 
-const defaultSelection = supportedOptions.find(
-  o => o.major === 8
-) as NodeVersion;
+export function getOldestNodeVersion(): NodeVersion {
+  return allOptions[allOptions.length - 1];
+}
+
+export function getLatestNodeVersion(): NodeVersion {
+  return allOptions[0];
+}
 
 export async function getSupportedNodeVersion(
   engineRange?: string,
   silent?: boolean
 ): Promise<NodeVersion> {
-  let selection = defaultSelection;
+  let selection = getOldestNodeVersion();
 
   if (!engineRange) {
     if (!silent) {
