@@ -355,7 +355,6 @@ export async function detectRoutes(
     if (featHandleMiss) {
       defaultRoutes.push({ handle: 'miss' });
       if (cleanUrls) {
-        const loc = trailingSlash ? '/api/$1/' : '/api/$1';
         const extensions = builders
           .map(b => parsePath(b.src).ext)
           .filter(Boolean);
@@ -363,13 +362,13 @@ export async function detectRoutes(
           const exts = extensions.map(ext => ext.slice(1)).join('|');
           const group = `(?:\\.(?:${exts}))`;
           redirectRoutes.push({
-            src: `^/api/(?:(.+)/)?index${group}?/?$`,
-            headers: { Location: loc },
+            src: `^/(api(?:.+)?)/index${group}?/?$`,
+            headers: { Location: trailingSlash ? '/$1/' : '/$1' },
             status: 308,
           });
           redirectRoutes.push({
             src: `^/api/(.+)${group}/?$`,
-            headers: { Location: loc },
+            headers: { Location: trailingSlash ? '/api/$1/' : '/api/$1' },
             status: 308,
           });
         }
