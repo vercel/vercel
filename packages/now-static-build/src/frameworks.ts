@@ -122,6 +122,14 @@ export const frameworks: Framework[] = [
     ],
   },
   {
+    name: 'Scully',
+    slug: 'scully',
+    dependency: '@scullyio/init',
+    minNodeRange: '10.x',
+    buildCommand: 'ng build && scully',
+    getOutputDirName: async () => 'dist/static',
+  },
+  {
     name: 'Angular',
     slug: 'angular',
     dependency: '@angular/cli',

@@ -125,4 +125,17 @@ describe('#detectFramework', () => {
 
     expect(await detectFramework({ fs, frameworkList })).toBe('middleman');
   });
+
+  it('Detect Scully', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@angular/cli': 'latest',
+          '@scullyio/init': 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('scully');
+  });
 });
