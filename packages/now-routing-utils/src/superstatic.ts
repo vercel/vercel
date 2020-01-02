@@ -2,6 +2,7 @@
  * This converts Superstatic configuration to Now.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
+import { isString } from 'util';
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
@@ -22,7 +23,8 @@ export function getCleanUrls(
 
 export function convertCleanUrls(
   cleanUrls: boolean,
-  trailingSlash: boolean | undefined
+  trailingSlash?: boolean,
+  status = 308
 ): Route[] {
   const routes: Route[] = [];
   if (cleanUrls) {
@@ -30,25 +32,28 @@ export function convertCleanUrls(
     routes.push({
       src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: loc },
-      status: 308,
+      status,
     });
     routes.push({
       src: '^/(.*)\\.html/?$',
       headers: { Location: loc },
-      status: 308,
+      status,
     });
   }
   return routes;
 }
 
-export function convertRedirects(redirects: NowRedirect[]): Route[] {
+export function convertRedirects(
+  redirects: NowRedirect[],
+  defaultStatus = 308
+): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const loc = replaceSegments(segments, r.destination);
     const route: Route = {
       src,
       headers: { Location: loc },
-      status: r.statusCode || 308,
+      status: r.statusCode || defaultStatus,
     };
     return route;
   });
@@ -78,19 +83,19 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
   });
 }
 
-export function convertTrailingSlash(enable: boolean): Route[] {
+export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   const routes: Route[] = [];
   if (enable) {
     routes.push({
       src: '^/(.*[^\\/])$',
       headers: { Location: '/$1/' },
-      status: 308,
+      status,
     });
   } else {
     routes.push({
       src: '^/(.*)\\/$',
       headers: { Location: '/$1' },
-      status: 308,
+      status,
     });
   }
   return routes;
@@ -101,10 +106,6 @@ function sourceToRegex(source: string): { src: string; segments: string[] } {
   const r = pathToRegexp(source, keys, { strict: true });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };
-}
-
-function isString(key: any): key is string {
-  return typeof key === 'string';
 }
 
 function replaceSegments(segments: string[], destination: string): string {

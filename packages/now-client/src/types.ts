@@ -153,6 +153,11 @@ export interface DeploymentOptions extends LegacyDeploymentOptions {
   version?: number;
   regions?: string[];
   routes?: Route[];
+  cleanUrls?: boolean;
+  rewrites?: NowRewrite[];
+  redirects?: NowRedirect[];
+  headers?: NowHeader[];
+  trailingSlash?: boolean;
   builds?: Builder[];
   functions?: BuilderFunctions;
   env?: Dictionary<string>;

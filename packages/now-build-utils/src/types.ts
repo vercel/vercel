@@ -43,6 +43,7 @@ export interface Config {
   buildCommand?: string;
   devCommand?: string;
   framework?: string;
+  nodeVersion?: string;
 }
 
 export interface Meta {

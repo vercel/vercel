@@ -21,6 +21,7 @@ import {
   getNodeVersion,
   getSpawnOptions,
 } from './fs/run-user-scripts';
+import { getLatestNodeVersion } from './fs/node-version';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import debug from './debug';
@@ -48,6 +49,7 @@ export {
   runPipInstall,
   runShellScript,
   getNodeVersion,
+  getLatestNodeVersion,
   getSpawnOptions,
   streamToBuffer,
   shouldServe,
