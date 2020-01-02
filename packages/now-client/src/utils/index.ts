@@ -1,6 +1,7 @@
 import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
-import fetch_, { RequestInit } from 'node-fetch';
+import { RequestInit } from 'node-fetch';
+import fetch_ from './fetch';
 import { join, sep } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
