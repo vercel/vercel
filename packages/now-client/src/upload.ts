@@ -169,8 +169,9 @@ export async function* upload(
         return result;
       },
       {
-        retries: 3,
-        factor: 2,
+        retries: 5,
+        factor: 3,
+        minTimeout: 100,
       }
     );
   });
