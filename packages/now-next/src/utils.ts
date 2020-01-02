@@ -308,7 +308,7 @@ type RoutesManifestRegex = {
 };
 
 export type RoutesManifest = {
-  basePath: string;
+  basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
   rewrites: (Rewrite & RoutesManifestRegex)[];
   dynamicRoutes: {
