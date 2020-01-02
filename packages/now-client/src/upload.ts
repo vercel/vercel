@@ -170,8 +170,8 @@ export async function* upload(
       },
       {
         retries: 5,
-        factor: 3,
-        minTimeout: 100,
+        factor: 6,
+        minTimeout: 10,
       }
     );
   });
