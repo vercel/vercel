@@ -3,10 +3,8 @@ const fs = require('fs-extra');
 const assert = require('assert');
 const { createZip } = require('../dist/lambda');
 const { glob, spawnAsync, download } = require('../');
-const {
-  getSupportedNodeVersion,
-  defaultSelection,
-} = require('../dist/fs/node-version');
+const { getSupportedNodeVersion } = require('../dist/fs/node-version');
+const { getNodeVersion, getLatestNodeVersion } = require('../dist');
 
 it('should re-create symlinks properly', async () => {
   const files = await glob('**', path.join(__dirname, 'symlinks'));
@@ -50,14 +48,11 @@ it('should create zip files with symlinks properly', async () => {
 
 it('should only match supported node versions', async () => {
   expect(await getSupportedNodeVersion('10.x')).toHaveProperty('major', 10);
-  expect(await getSupportedNodeVersion('8.10.x')).toHaveProperty('major', 8);
+  expect(await getSupportedNodeVersion('12.x')).toHaveProperty('major', 12);
   expect(getSupportedNodeVersion('8.11.x')).rejects.toThrow();
   expect(getSupportedNodeVersion('6.x')).rejects.toThrow();
   expect(getSupportedNodeVersion('999.x')).rejects.toThrow();
   expect(getSupportedNodeVersion('foo')).rejects.toThrow();
-  expect(await getSupportedNodeVersion('')).toBe(defaultSelection);
-  expect(await getSupportedNodeVersion(null)).toBe(defaultSelection);
-  expect(await getSupportedNodeVersion(undefined)).toBe(defaultSelection);
 });
 
 it('should match all semver ranges', async () => {
@@ -76,6 +71,22 @@ it('should match all semver ranges', async () => {
   );
   expect(await getSupportedNodeVersion('~10.5.0')).toHaveProperty('major', 10);
   expect(await getSupportedNodeVersion('^10.5.0')).toHaveProperty('major', 10);
+});
+
+it('should select correct node version in getNodeVersion()', async () => {
+  expect(
+    await getNodeVersion('/tmp', undefined, { nodeVersion: '12.x' })
+  ).toHaveProperty('major', 12);
+  expect(
+    await getNodeVersion('/tmp', undefined, { nodeVersion: '10.x' })
+  ).toHaveProperty('major', 10);
+  expect(
+    await getNodeVersion('/tmp', '10.x', { nodeVersion: '12.x' })
+  ).toHaveProperty('major', 10);
+});
+
+it('should get latest node version', async () => {
+  expect(await getLatestNodeVersion()).toHaveProperty('major', 12);
 });
 
 it('should support require by path for legacy builders', () => {
