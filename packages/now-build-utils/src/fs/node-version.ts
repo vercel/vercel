@@ -16,9 +16,8 @@ const allOptions: NodeVersion[] = [
 
 const supportedOptions = allOptions.filter(o => !isDiscontinued(o));
 
-// This version should match Fargate's default in the PATH
-export const defaultSelection = supportedOptions.find(
-  o => o.major === 12
+const defaultSelection = supportedOptions.find(
+  o => o.major === 8
 ) as NodeVersion;
 
 export async function getSupportedNodeVersion(
