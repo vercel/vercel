@@ -1,6 +1,6 @@
 import nodeFetch from 'node-fetch';
-import zeitFetch from '@zeit/fetch';
+import setupZeitFetch from '@zeit/fetch';
 
-const fetch = zeitFetch(nodeFetch);
+const zeitFetch = setupZeitFetch(nodeFetch);
 
-export default fetch;
+export { zeitFetch, nodeFetch };
