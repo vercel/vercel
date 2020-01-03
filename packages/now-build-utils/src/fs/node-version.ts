@@ -89,11 +89,6 @@ export async function getSupportedNodeVersion(
     const validRanges = supportedOptions
       .filter(o => !o.discontinueDate)
       .map(o => o.range);
-    const prevTerm = process.env.TERM;
-    if (!prevTerm) {
-      // workaround for https://github.com/sindresorhus/term-size/issues/13
-      process.env.TERM = 'xterm';
-    }
     console.warn(
       boxen(
         'NOTICE' +
@@ -108,7 +103,6 @@ export async function getSupportedNodeVersion(
         { padding: 1 }
       )
     );
-    process.env.TERM = prevTerm;
   }
 
   return selection;
