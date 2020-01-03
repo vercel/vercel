@@ -1,6 +1,7 @@
 import { intersects } from 'semver';
 import boxen from 'boxen';
 import { NodeVersion } from '../types';
+import { NowBuildError } from '../errors';
 import debug from '../debug';
 
 const allOptions: NodeVersion[] = [
@@ -15,6 +16,11 @@ const allOptions: NodeVersion[] = [
 ];
 
 const supportedOptions = allOptions.filter(o => !isDiscontinued(o));
+const pleaseUse =
+  'Please use one of the following supported ranges in your `package.json`: ';
+const upstreamProvider =
+  'This change is the result of a decision made by an upstream infrastructure provider (AWS).' +
+  '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html';
 
 export function getOldestNodeVersion(): NodeVersion {
   return allOptions[allOptions.length - 1];
@@ -26,49 +32,60 @@ export function getLatestNodeVersion(): NodeVersion {
 
 export async function getSupportedNodeVersion(
   engineRange?: string,
-  silent?: boolean
+  isAuto?: boolean
 ): Promise<NodeVersion> {
   let selection = getOldestNodeVersion();
 
-  if (!engineRange) {
-    if (!silent) {
-      debug(
-        'Missing `engines` in `package.json`, using default range: ' +
-          selection.range
-      );
-    }
-  } else {
+  if (engineRange) {
     const found = allOptions.some(o => {
       // the array is already in order so return the first
       // match which will be the newest version of node
       selection = o;
       return intersects(o.range, engineRange);
     });
-    const discontinued = isDiscontinued(selection);
-    if (found && !discontinued) {
-      if (!silent) {
-        debug(
-          'Found `engines` in `package.json`, selecting range: ' +
-            selection.range
-        );
-      }
-    } else {
-      throw new Error(
-        'Found `engines` in `package.json` with an unsupported Node.js version range: ' +
-          engineRange +
-          '\nPlease use one of the following supported ranges: ' +
-          JSON.stringify(supportedOptions.map(o => o.range)) +
-          (discontinued
-            ? '\nThis change is the result of a decision made by an upstream infrastructure provider (AWS).' +
-              '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html'
-            : '')
-      );
+    if (!found) {
+      const intro = isAuto
+        ? 'This project is using an invalid version of Node.js and must be changed.'
+        : 'Found `engines` in `package.json` with an invalid Node.js version range: ' +
+          engineRange;
+      throw new NowBuildError({
+        code: 'NOW_BUILD_UTILS_NODE_VERSION_INVALID',
+        message:
+          intro +
+          '\n' +
+          pleaseUse +
+          JSON.stringify(supportedOptions.map(o => o.range)),
+      });
     }
   }
 
-  const { range, discontinueDate } = selection;
-  if (discontinueDate && !isDiscontinued(selection)) {
-    const d = discontinueDate.toISOString().split('T')[0];
+  if (isDiscontinued(selection)) {
+    const intro = isAuto
+      ? 'This project is using a discontinued version of Node.js and must be upgraded.'
+      : 'Found `engines` in `package.json` with a discontinued Node.js version range: ' +
+        engineRange;
+    throw new NowBuildError({
+      code: 'NOW_BUILD_UTILS_NODE_VERSION_DISCONTINUED',
+      message:
+        intro +
+        '\n' +
+        pleaseUse +
+        JSON.stringify(supportedOptions.map(o => o.range)) +
+        '\n' +
+        upstreamProvider,
+    });
+  }
+
+  debug(
+    isAuto
+      ? 'Using default Node.js range: ' + selection.range
+      : (engineRange ? 'Found' : 'Missing') +
+          ' `engines` in `package.json`, selecting range: ' +
+          selection.range
+  );
+
+  if (selection.discontinueDate) {
+    const d = selection.discontinueDate.toISOString().split('T')[0];
     const validRanges = supportedOptions
       .filter(o => !o.discontinueDate)
       .map(o => o.range);
@@ -81,12 +98,13 @@ export async function getSupportedNodeVersion(
       boxen(
         'NOTICE' +
           '\n' +
-          `\nNode.js version ${range} has reached end-of-life.` +
+          `\nNode.js version ${selection.range} has reached end-of-life.` +
           `\nAs a result, deployments created on or after ${d} will fail to build.` +
-          '\nPlease use one of the following supported `engines` in `package.json`: ' +
+          '\n' +
+          pleaseUse +
           JSON.stringify(validRanges) +
-          '\nThis change is the result of a decision made by an upstream infrastructure provider (AWS).' +
-          '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html',
+          '\n' +
+          upstreamProvider,
         { padding: 1 }
       )
     );

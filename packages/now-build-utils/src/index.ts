@@ -66,3 +66,4 @@ export { readConfigFile } from './fs/read-config-file';
 
 export * from './schemas';
 export * from './types';
+export * from './errors';
