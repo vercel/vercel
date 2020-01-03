@@ -47,12 +47,31 @@ it('should create zip files with symlinks properly', async () => {
 });
 
 it('should only match supported node versions', async () => {
-  expect(await getSupportedNodeVersion('10.x')).toHaveProperty('major', 10);
-  expect(await getSupportedNodeVersion('12.x')).toHaveProperty('major', 12);
-  expect(getSupportedNodeVersion('8.11.x')).rejects.toThrow();
-  expect(getSupportedNodeVersion('6.x')).rejects.toThrow();
-  expect(getSupportedNodeVersion('999.x')).rejects.toThrow();
-  expect(getSupportedNodeVersion('foo')).rejects.toThrow();
+  expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
+    'major',
+    10
+  );
+  expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
+    'major',
+    12
+  );
+  expect(getSupportedNodeVersion('8.11.x', false)).rejects.toThrow();
+  expect(getSupportedNodeVersion('6.x', false)).rejects.toThrow();
+  expect(getSupportedNodeVersion('999.x', false)).rejects.toThrow();
+  expect(getSupportedNodeVersion('foo', false)).rejects.toThrow();
+
+  expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
+    'major',
+    10
+  );
+  expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
+    'major',
+    12
+  );
+  expect(getSupportedNodeVersion('8.11.x', true)).rejects.toThrow();
+  expect(getSupportedNodeVersion('6.x', true)).rejects.toThrow();
+  expect(getSupportedNodeVersion('999.x', true)).rejects.toThrow();
+  expect(getSupportedNodeVersion('foo', true)).rejects.toThrow();
 });
 
 it('should match all semver ranges', async () => {
@@ -87,6 +106,20 @@ it('should select correct node version in getNodeVersion()', async () => {
 
 it('should get latest node version', async () => {
   expect(await getLatestNodeVersion()).toHaveProperty('major', 12);
+});
+
+it('should throw for discontinued versions', async () => {
+  // Mock a future date so that Node 8 becomes discontinued
+  const realDateNow = Date.now.bind(global.Date);
+  global.Date.now = () => new Date('2020-02-14').getTime();
+
+  expect(getSupportedNodeVersion('', false)).rejects.toThrow();
+  expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
+
+  expect(getSupportedNodeVersion('', true)).rejects.toThrow();
+  expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
+
+  global.Date.now = realDateNow;
 });
 
 it('should support require by path for legacy builders', () => {

@@ -109,6 +109,6 @@ export async function getSupportedNodeVersion(
 }
 
 function isDiscontinued({ discontinueDate }: NodeVersion): boolean {
-  const today = new Date();
-  return discontinueDate !== undefined && discontinueDate <= today;
+  const today = Date.now();
+  return discontinueDate !== undefined && discontinueDate.getTime() <= today;
 }
