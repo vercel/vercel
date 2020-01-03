@@ -302,6 +302,14 @@ export type Redirect = Rewrite & {
   statusCode?: number;
 };
 
+export type Header = {
+  source: string;
+  headers: {
+    key: string;
+    value: string;
+  }[];
+};
+
 type RoutesManifestRegex = {
   regex: string;
   regexKeys: string[];
@@ -311,6 +319,7 @@ export type RoutesManifest = {
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
   rewrites: (Rewrite & RoutesManifestRegex)[];
+  headers?: (Header & RoutesManifestRegex)[];
   dynamicRoutes: {
     page: string;
     regex: string;

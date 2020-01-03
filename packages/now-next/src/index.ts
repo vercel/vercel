@@ -22,6 +22,7 @@ import { Route } from '@now/routing-utils';
 import {
   convertRedirects,
   convertRewrites,
+  convertHeaders,
 } from '@now/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
@@ -334,6 +335,7 @@ export const build = async ({
   await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
 
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const headers: Route[] = [];
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
@@ -345,6 +347,11 @@ export const build = async ({
       case 2: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
+
+        if (routesManifest.headers) {
+          headers.push(...convertHeaders(routesManifest.headers));
+        }
+
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
           nextBasePath = routesManifest.basePath;
 
@@ -425,8 +432,6 @@ export const build = async ({
         // Add top level rewrite for basePath if provided
         ...nextBasePathRoute,
 
-        // redirects take the highest priority
-        ...redirects,
         // Before we handle static files we need to set proper caching headers
         {
           // This ensures we only match known emitted-by-Next.js files and not
@@ -441,14 +446,22 @@ export const build = async ({
           headers: { 'cache-control': 'public,max-age=31536000,immutable' },
           continue: true,
         },
+
+        // User headers
+        ...headers,
+
         {
           src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
         },
+
+        // User redirects
+        ...redirects,
+
         // Next.js pages, `static/` folder, reserved assets, and `public/`
         // folder
         { handle: 'filesystem' },
-        ...rewrites,
 
+        ...rewrites,
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
       ],
@@ -965,12 +978,20 @@ export const build = async ({
       ...staticFiles,
       ...staticDirectoryFiles,
     },
+    /*
+      Desired routes order
+      - Runtime headers
+      - User headers and redirects
+      - Runtime redirects
+      - Runtime routes
+      - Check filesystem, if nothing found continue
+      - User rewrites
+      - Builder rewrites
+    */
     routes: [
       // Add top level rewrite for basePath if provided
       ...nextBasePathRoute,
 
-      // redirects take the highest priority
-      ...redirects,
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
@@ -985,14 +1006,25 @@ export const build = async ({
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
         continue: true,
       },
+
+      // User headers
+      ...headers,
+
       { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
+
+      // User redirects
+      ...redirects,
+
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+
       ...rewrites,
+
       // Dynamic routes
       ...dynamicRoutes,
       ...dynamicDataRoutes,
+
       // Custom Next.js 404 page (TODO: do we want to remove this?)
       ...(isLegacy
         ? []

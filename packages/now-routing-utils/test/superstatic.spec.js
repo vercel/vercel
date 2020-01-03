@@ -399,12 +399,12 @@ test('convertHeaders', () => {
 
   const expected = [
     {
-      src: '(.*)+/(.*)\\.(eot|otf|ttf|ttc|woff|font\\.css)',
+      src: '^(.*)+(?:\\/(.*))\\.(eot|otf|ttf|ttc|woff|font\\.css)$',
       headers: { 'Access-Control-Allow-Origin': '*' },
       continue: true,
     },
     {
-      src: '404.html',
+      src: '^404\\.html$',
       headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
       continue: true,
     },

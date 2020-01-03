@@ -47,6 +47,20 @@
     {
       "path": "/rewrite/THIS_SHOULD_BE_GONE/another",
       "mustContain": "another"
+    },
+    {
+      "path": "/add-header",
+      "responseHeaders": {
+        "x-hello": "world",
+        "x-another": "value"
+      }
+    },
+    {
+      "path": "/catchall-header/first",
+      "responseHeaders": {
+        "x-hello": "world",
+        "x-another": "value"
+      }
     }
   ]
 }

@@ -75,7 +75,7 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
       obj[kv.key] = kv.value;
     });
     const route: Route = {
-      src: h.source,
+      src: sourceToRegex(h.source).src,
       headers: obj,
       continue: true,
     };
