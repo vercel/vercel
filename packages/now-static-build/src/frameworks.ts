@@ -323,6 +323,18 @@ export const frameworks: Framework[] = [
     dependency: '@stencil/core',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
+      { 
+        src: '/assets/(.*)',
+        headers: { 'cache-control': 'max-age=2592000' },
+      },
+      {
+        src: '/build/p-.*',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+      },
+      {
+        src: '/sw.js',
+        headers: { 'cache-control': 'no-cache' },
+      },
       {
         handle: 'filesystem',
       },
