@@ -19,6 +19,9 @@
       },
       "devCommand": {
         "value": "next dev --port $PORT"
+      },
+      "outputDirectory": {
+        "placeholder": "value from `next.config.js`"
       }
     }
   },
@@ -42,6 +45,9 @@
       },
       "devCommand": {
         "value": "gatsby develop --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
       }
     }
   },
@@ -64,6 +70,9 @@
       },
       "devCommand": {
         "value": "hexo server --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
       }
     }
   },
@@ -86,6 +95,9 @@
       },
       "devCommand": {
         "value": "npx @11ty/eleventy --serve --watch --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "_site"
       }
     }
   },
@@ -112,6 +124,9 @@
       },
       "devCommand": {
         "value": "docusaurus-start --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
       }
     }
   },
@@ -135,6 +150,9 @@
       },
       "devCommand": {
         "value": "preact watch --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
       }
     }
   },
@@ -157,6 +175,9 @@
       },
       "devCommand": {
         "value": "ember serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
       }
     }
   },
@@ -180,6 +201,9 @@
       },
       "devCommand": {
         "value": "vue-cli-service serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
       }
     }
   },
@@ -201,6 +225,9 @@
       },
       "devCommand": {
         "value": "ng serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
       }
     }
   },
@@ -224,6 +251,9 @@
       },
       "devCommand": {
         "value": "ng serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
       }
     }
   },
@@ -246,6 +276,9 @@
       },
       "devCommand": {
         "value": "polymer serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
       }
     }
   },
@@ -269,6 +302,9 @@
       },
       "devCommand": {
         "value": "sirv public --single --dev --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
       }
     }
   },
@@ -296,6 +332,9 @@
       },
       "devCommand": {
         "value": "react-scripts start"
+      },
+      "outputDirectory": {
+        "value": "build"
       }
     }
   },
@@ -318,6 +357,9 @@
       },
       "devCommand": {
         "value": "gridsome develop -p $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
       }
     }
   },
@@ -341,6 +383,9 @@
       },
       "devCommand": {
         "value": "umi dev --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
       }
     }
   },
@@ -364,6 +409,9 @@
       },
       "devCommand": {
         "value": "sapper dev --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "__sapper__/export"
       }
     }
   },
@@ -386,6 +434,9 @@
       },
       "devCommand": {
         "value": "saber --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
       }
     }
   },
@@ -408,6 +459,9 @@
       },
       "devCommand": {
         "value": "stencil build --dev --watch --serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "www"
       }
     }
   },
@@ -431,6 +485,9 @@
       },
       "devCommand": {
         "value": "nuxt"
+      },
+      "outputDirectory": {
+        "value": "dist"
       }
     }
   },
@@ -459,6 +516,9 @@
       },
       "devCommand": {
         "value": "hugo server -D -w -p $PORT"
+      },
+      "outputDirectory": {
+        "placeholder": "`public` or `publishDir` from the `config` file"
       }
     }
   },
@@ -480,6 +540,9 @@
       },
       "devCommand": {
         "value": "bundle exec jekyll serve --watch --port $PORT"
+      },
+      "outputDirectory": {
+        "placeholder": "`_site` or `destination` from `_config.yml`"
       }
     }
   },
@@ -501,6 +564,9 @@
       },
       "devCommand": {
         "value": "brunch watch --server --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
       }
     }
   },
@@ -522,6 +588,9 @@
       },
       "devCommand": {
         "value": "bundle exec middleman server -p $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
       }
     }
   },
