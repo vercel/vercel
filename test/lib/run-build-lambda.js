@@ -1,5 +1,8 @@
-const getWritableDirectory = require('../../packages/now-build-utils/fs/get-writable-directory.js');
-const glob = require('../../packages/now-build-utils/fs/glob.js');
+const {
+  getLatestNodeVersion,
+  glob,
+  getWriteableDirectory,
+} = require('@now/build-utils');
 
 function runAnalyze(wrapper, context) {
   if (wrapper.analyze) {
@@ -16,9 +19,10 @@ async function runBuildLambda(inputPath) {
   const nowJson = require(nowJsonRef.fsPath);
   expect(nowJson.builds.length).toBe(1);
   const build = nowJson.builds[0];
-  if (!build.config.nodeVersion) {
+  if (!build.config || !build.config.nodeVersion) {
     // Mimic api-deployments when a new project is created
-    build.config.nodeVersion = 12;
+    const nodeVersion = getLatestNodeVersion().range;
+    build.config = { ...build.config, nodeVersion };
   }
   expect(build.src.includes('*')).toBeFalsy();
   const entrypoint = build.src.replace(/^\//, ''); // strip leftmost slash
@@ -33,7 +37,7 @@ async function runBuildLambda(inputPath) {
     config: build.config,
   });
 
-  const workPath = await getWritableDirectory();
+  const workPath = await getWriteableDirectory();
   const buildResult = await wrapper.build({
     files: inputFiles,
     entrypoint,
