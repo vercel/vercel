@@ -211,6 +211,26 @@ test('login', async t => {
   t.is(typeof token, 'string');
 });
 
+test('deploy using only now.json with `redirects` defined', async t => {
+  const target = fixture('redirects-v2');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [target, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const i = stdout.lastIndexOf('https://');
+  const url = stdout.slice(i);
+  const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
+  const location = res.headers.get('location');
+  t.is(location, 'https://example.com/foo/bar');
+});
+
 test('deploy using --local-config flag v2', async t => {
   const target = fixture('local-config-v2');
   const configPath = path.join(target, 'now-test.json');
