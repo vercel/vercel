@@ -1,6 +1,5 @@
 import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
-import DetectorFilesystem from './detectors/filesystem';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -19,18 +18,6 @@ export interface File {
 
 export interface Files {
   [filePath: string]: File;
-}
-
-export interface Route {
-  src?: string;
-  dest?: string;
-  handle?: string;
-  type?: string;
-  headers?: {
-    [key: string]: string;
-  };
-  continue?: boolean;
-  status?: number;
 }
 
 export interface Config {
@@ -52,6 +39,11 @@ export interface Config {
   zeroConfig?: boolean;
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
+  outputDirectory?: string;
+  buildCommand?: string;
+  devCommand?: string;
+  framework?: string;
+  nodeVersion?: string;
 }
 
 export interface Meta {
@@ -343,33 +335,3 @@ export interface NowHeaderKeyValue {
   key: string;
   value: string;
 }
-
-export type Detector = (params: DetectorParameters) => Promise<DetectorResult>;
-
-export interface DetectorParameters {
-  fs: DetectorFilesystem;
-  detectors?: Detector[];
-  pkgDetectors?: Detector[];
-}
-
-export interface DetectorOutput {
-  buildCommand: string;
-  outputDirectory: string;
-  buildVariables?: Env;
-  devCommand?: string;
-  devVariables?: Env;
-  minNodeRange?: string;
-  cachePattern?: string;
-  routes?: Route[];
-  cleanUrls?: boolean;
-  rewrites?: NowRewrite[];
-  redirects?: NowRedirect[];
-  headers?: NowHeader[];
-  trailingSlash?: boolean;
-  framework?: {
-    slug: string;
-    version: string;
-  };
-}
-
-export type DetectorResult = DetectorOutput | false;

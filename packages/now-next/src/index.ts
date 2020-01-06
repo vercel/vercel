@@ -15,10 +15,10 @@ import {
   PackageJson,
   PrepareCacheOptions,
   Prerender,
-  Route,
   runNpmInstall,
   runPackageJsonScript,
 } from '@now/build-utils';
+import { Route } from '@now/routing-utils';
 import {
   convertRedirects,
   convertRewrites,
@@ -336,12 +336,35 @@ export const build = async ({
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
+  const nextBasePathRoute: Route[] = [];
+  let nextBasePath: string | undefined;
 
   if (routesManifest) {
     switch (routesManifest.version) {
-      case 1: {
+      case 1:
+      case 2: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
+        if (routesManifest.basePath && routesManifest.basePath !== '/') {
+          nextBasePath = routesManifest.basePath;
+
+          if (!nextBasePath.startsWith('/')) {
+            throw new Error(
+              'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+            );
+          }
+          if (nextBasePath.endsWith('/')) {
+            throw new Error(
+              'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+            );
+          }
+
+          nextBasePathRoute.push({
+            src: `^${nextBasePath}(?:$|/(.*))$`,
+            dest: `/$1`,
+            continue: true,
+          });
+        }
         break;
       }
       default: {
@@ -354,28 +377,11 @@ export const build = async ({
     }
   }
 
-  const exportIntent = await getExportIntent(entryPath);
-  if (exportIntent) {
-    const { trailingSlash } = exportIntent;
+  const userExport = await getExportStatus(entryPath);
 
-    const userExport = await getExportStatus(entryPath);
-    if (!userExport) {
-      await writePackageJson(entryPath, {
-        ...pkg,
-        scripts: {
-          ...pkg.scripts,
-          'now-automatic-next-export': `next export --outdir "${path.resolve(
-            entryPath,
-            'out'
-          )}"`,
-        },
-      });
-
-      await runPackageJsonScript(entryPath, 'now-automatic-next-export', {
-        ...spawnOpts,
-        env,
-      });
-    }
+  if (userExport) {
+    const exportIntent = await getExportIntent(entryPath);
+    const { trailingSlash = false } = exportIntent || {};
 
     const resultingExport = await getExportStatus(entryPath);
     if (!resultingExport) {
@@ -415,6 +421,9 @@ export const build = async ({
       output,
       routes: [
         // TODO: low priority: handle trailingSlash
+
+        // Add top level rewrite for basePath if provided
+        ...nextBasePathRoute,
 
         // redirects take the highest priority
         ...redirects,
@@ -957,6 +966,9 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
+      // Add top level rewrite for basePath if provided
+      ...nextBasePathRoute,
+
       // redirects take the highest priority
       ...redirects,
       // Before we handle static files we need to set proper caching headers

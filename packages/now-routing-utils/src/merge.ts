@@ -1,5 +1,5 @@
-import { Route, MergeRoutesProps } from './types';
-import { isHandler } from './index';
+import { Route, MergeRoutesProps, Build } from './types';
+import { isHandler, HandleValue } from './index';
 
 interface BuilderToRoute {
   [use: string]: Route[];
@@ -7,6 +7,19 @@ interface BuilderToRoute {
 
 interface BuilderRoutes {
   [entrypoint: string]: BuilderToRoute;
+}
+
+function getBuilderRoutesMapping(builds: Build[]) {
+  const builderRoutes: BuilderRoutes = {};
+  for (const { entrypoint, routes, use } of builds) {
+    if (routes) {
+      if (!builderRoutes[entrypoint]) {
+        builderRoutes[entrypoint] = {};
+      }
+      builderRoutes[entrypoint][use] = routes;
+    }
+  }
+  return builderRoutes;
 }
 
 function getCheckAndContinue(
@@ -19,7 +32,11 @@ function getCheckAndContinue(
   for (const route of routes) {
     if (isHandler(route)) {
       // Should never happen, only here to make TS happy
-      others.push(route);
+      throw new Error(
+        `Unexpected route found in getCheckAndContinue(): ${JSON.stringify(
+          route
+        )}`
+      );
     } else if (route.check) {
       checks.push(route);
     } else if (route.continue) {
@@ -32,73 +49,63 @@ function getCheckAndContinue(
 }
 
 export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
-  const usersRoutesBefore: Route[] = [];
-  const usersRoutesAfter: Route[] = [];
-  const builderRoutes: BuilderRoutes = {};
-  const builderRoutesBefore: Route[] = [];
-  const builderRoutesAfter: Route[] = [];
-
-  let foundUserDefinedFilesystem = false;
+  const userHandleMap = new Map<HandleValue | null, Route[]>();
+  let userPrevHandle: HandleValue | null = null;
   (userRoutes || []).forEach(route => {
-    if (!foundUserDefinedFilesystem) {
-      if (isHandler(route) && route.handle === 'filesystem') {
-        foundUserDefinedFilesystem = true;
-      } else {
-        usersRoutesBefore.push(route);
-      }
+    if (isHandler(route)) {
+      userPrevHandle = route.handle;
     } else {
-      usersRoutesAfter.push(route);
+      const routes = userHandleMap.get(userPrevHandle);
+      if (!routes) {
+        userHandleMap.set(userPrevHandle, [route]);
+      } else {
+        routes.push(route);
+      }
     }
   });
 
-  // Convert build results to object mapping
-  for (const build of builds) {
-    if (build.routes) {
-      if (!builderRoutes[build.entrypoint]) {
-        builderRoutes[build.entrypoint] = {};
-      }
-
-      builderRoutes[build.entrypoint][build.use] = build.routes.map(route => {
-        //route.built = true; // TODO: is this necessary?
-        return route;
-      });
-    }
-  }
-
+  const builderHandleMap = new Map<HandleValue | null, Route[]>();
+  const builderRoutes = getBuilderRoutesMapping(builds);
   const sortedPaths = Object.keys(builderRoutes).sort();
   sortedPaths.forEach(path => {
     const br = builderRoutes[path];
     const sortedBuilders = Object.keys(br).sort();
     sortedBuilders.forEach(use => {
-      let isBefore = true;
+      let builderPrevHandle: HandleValue | null = null;
       br[use].forEach(route => {
-        if (isBefore) {
-          if (isHandler(route) && route.handle === 'filesystem') {
-            isBefore = false;
-          } else {
-            builderRoutesBefore.push(route);
-          }
+        if (isHandler(route)) {
+          builderPrevHandle = route.handle;
         } else {
-          builderRoutesAfter.push(route);
+          const routes = builderHandleMap.get(builderPrevHandle);
+          if (!routes) {
+            builderHandleMap.set(builderPrevHandle, [route]);
+          } else {
+            routes.push(route);
+          }
         }
       });
     });
   });
 
-  const builderBefore = getCheckAndContinue(builderRoutesBefore);
-  const builderAfter = getCheckAndContinue(builderRoutesAfter);
-
   const outputRoutes: Route[] = [];
-  outputRoutes.push(...builderBefore.continues);
-  outputRoutes.push(...usersRoutesBefore);
-  outputRoutes.push(...builderBefore.checks);
-  outputRoutes.push(...builderBefore.others);
-  if (usersRoutesAfter.length > 0 || builderRoutesAfter.length > 0) {
-    outputRoutes.push({ handle: 'filesystem' });
+  const uniqueHandleValues = new Set([
+    ...userHandleMap.keys(),
+    ...builderHandleMap.keys(),
+  ]);
+  for (const handle of uniqueHandleValues) {
+    const userRoutes = userHandleMap.get(handle) || [];
+    const builderRoutes = builderHandleMap.get(handle) || [];
+    const builderSorted = getCheckAndContinue(builderRoutes);
+    if (
+      handle !== null &&
+      (userRoutes.length > 0 || builderRoutes.length > 0)
+    ) {
+      outputRoutes.push({ handle });
+    }
+    outputRoutes.push(...builderSorted.continues);
+    outputRoutes.push(...userRoutes);
+    outputRoutes.push(...builderSorted.checks);
+    outputRoutes.push(...builderSorted.others);
   }
-  outputRoutes.push(...builderAfter.continues);
-  outputRoutes.push(...usersRoutesAfter);
-  outputRoutes.push(...builderAfter.checks);
-  outputRoutes.push(...builderAfter.others);
   return outputRoutes;
 }

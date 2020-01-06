@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import boxen from 'boxen';
 import { format } from 'util';
 import { Console } from 'console';
 
@@ -18,10 +19,32 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function warn(str: string, slug: string | null = null) {
-    log(chalk`{yellow.bold WARN!} ${str}`);
-    if (slug !== null) {
-      log(`More details: https://err.sh/now/${slug}`);
+    const prevTerm = process.env.TERM;
+
+    if (!prevTerm) {
+      // workaround for https://github.com/sindresorhus/term-size/issues/13
+      process.env.TERM = 'xterm';
     }
+
+    print(
+      boxen(
+        chalk.bold.yellow('WARN! ') +
+          str +
+          (slug ? `\nMore details: https://err.sh/now/${slug}` : ''),
+        {
+          padding: {
+            top: 0,
+            bottom: 0,
+            left: 1,
+            right: 1,
+          },
+          borderColor: 'yellow',
+        }
+      )
+    );
+    print('\n');
+
+    process.env.TERM = prevTerm;
   }
 
   function note(str: string) {
@@ -59,7 +82,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     _times: new Map(),
     log(a: string, ...args: string[]) {
       debug(format(a, ...args));
-    }
+    },
   };
 
   async function time(label: string, fn: Promise<any> | (() => Promise<any>)) {
@@ -85,6 +108,6 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     debug,
     dim,
     time,
-    note
+    note,
   };
 }
