@@ -13,4 +13,10 @@ export interface Framework {
     every?: FrameworkDetectionItem[];
     some?: FrameworkDetectionItem[];
   };
+  settings?: {
+    [key: string]: {
+      value?: string;
+      placeholder?: string;
+    };
+  };
 }
