@@ -144,10 +144,9 @@ export async function getNodeVersion(
   meta?: Meta
 ): Promise<NodeVersion> {
   if (meta && meta.isDev) {
-    // Use the system-installed version of `node` when running via `now dev`
+    // Use the system-installed version of `node` in PATH for `now dev`
     const latest = getLatestNodeVersion();
-    const runtime = 'nodejs';
-    return { ...latest, runtime };
+    return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
   let range: string | undefined;
