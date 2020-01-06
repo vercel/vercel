@@ -1,5 +1,5 @@
 import { parse as parsePath } from 'path';
-import { Route, isHandler } from '@now/routing-utils';
+import { Route, Source } from '@now/routing-utils';
 import { Builder } from './types';
 import { getIgnoreApiFilter, sortFiles } from './detect-builders';
 
@@ -41,20 +41,26 @@ function getSegmentName(segment: string): string | null {
   return null;
 }
 
-function createRouteFromPath(filePath: string): Route {
+function createRouteFromPath(
+  filePath: string,
+  featHandleMiss: boolean,
+  cleanUrls: boolean
+): { route: Source; isDynamic: boolean } {
   const parts = filePath.split('/');
 
   let counter = 1;
   const query: string[] = [];
+  let isDynamic = false;
 
-  const srcParts = parts.map((segment, index): string => {
+  const srcParts = parts.map((segment, i): string => {
     const name = getSegmentName(segment);
-    const isLast = index === parts.length - 1;
+    const isLast = i === parts.length - 1;
 
     if (name !== null) {
       // We can't use `URLSearchParams` because `$` would get escaped
       query.push(`${name}=$${counter++}`);
-      return `([^\\/]+)`;
+      isDynamic = true;
+      return `([^/]+)`;
     } else if (isLast) {
       const { name: fileName, ext } = parsePath(segment);
       const isIndex = fileName === 'index';
@@ -63,27 +69,43 @@ function createRouteFromPath(filePath: string): Route {
       const names = [
         isIndex ? prefix : `${fileName}\\/`,
         prefix + escapeName(fileName),
-        prefix + escapeName(fileName) + escapeName(ext),
+        featHandleMiss && cleanUrls
+          ? ''
+          : prefix + escapeName(fileName) + escapeName(ext),
       ].filter(Boolean);
 
       // Either filename with extension, filename without extension
-      // or nothing when the filename is `index`
+      // or nothing when the filename is `index`.
+      // When `cleanUrls: true` then do *not* add the filename with extension.
       return `(${names.join('|')})${isIndex ? '?' : ''}`;
     }
 
     return segment;
   });
 
-  const { name: fileName } = parsePath(filePath);
+  const { name: fileName, ext } = parsePath(filePath);
   const isIndex = fileName === 'index';
+  const queryString = `${query.length ? '?' : ''}${query.join('&')}`;
 
   const src = isIndex
     ? `^/${srcParts.slice(0, -1).join('/')}${srcParts.slice(-1)[0]}$`
     : `^/${srcParts.join('/')}$`;
 
-  const dest = `/${filePath}${query.length ? '?' : ''}${query.join('&')}`;
-
-  return { src, dest };
+  let route: Source;
+  if (featHandleMiss) {
+    const extensionless = ext ? filePath.slice(0, -ext.length) : filePath;
+    route = {
+      src,
+      dest: `/${extensionless}${queryString}`,
+      check: true,
+    };
+  } else {
+    route = {
+      src,
+      dest: `/${filePath}${queryString}`,
+    };
+  }
+  return { route, isDynamic };
 }
 
 // Check if the path partially matches and has the same
@@ -193,18 +215,30 @@ function sortFilesBySegmentCount(fileA: string, fileB: string): number {
   return 0;
 }
 
+interface ApiRoutesResult {
+  defaultRoutes: Source[] | null;
+  dynamicRoutes: Source[] | null;
+  error: { [key: string]: string } | null;
+}
+
 interface RoutesResult {
   defaultRoutes: Route[] | null;
+  redirectRoutes: Route[] | null;
   error: { [key: string]: string } | null;
 }
 
 async function detectApiRoutes(
   files: string[],
   builders: Builder[],
-  featHandleMiss: boolean
-): Promise<RoutesResult> {
+  featHandleMiss: boolean,
+  cleanUrls: boolean
+): Promise<ApiRoutesResult> {
   if (!files || files.length === 0) {
-    return { defaultRoutes: null, error: null };
+    return {
+      defaultRoutes: null,
+      dynamicRoutes: null,
+      error: null,
+    };
   }
 
   // The deepest routes need to be
@@ -214,7 +248,8 @@ async function detectApiRoutes(
     .sort(sortFiles)
     .sort(sortFilesBySegmentCount);
 
-  let defaultRoutes: Route[] = [];
+  const defaultRoutes: Source[] = [];
+  const dynamicRoutes: Source[] = [];
 
   for (const file of sortedFiles) {
     // We only consider every file in the api directory
@@ -231,6 +266,7 @@ async function detectApiRoutes(
     if (conflictingSegment) {
       return {
         defaultRoutes: null,
+        dynamicRoutes: null,
         error: {
           code: 'conflicting_path_segment',
           message:
@@ -252,6 +288,7 @@ async function detectApiRoutes(
 
       return {
         defaultRoutes: null,
+        dynamicRoutes: null,
         error: {
           code: 'conflicting_file_path',
           message:
@@ -262,39 +299,14 @@ async function detectApiRoutes(
       };
     }
 
-    defaultRoutes.push(createRouteFromPath(file));
-  }
-
-  // 404 Route to disable directory listing
-  if (defaultRoutes.length > 0) {
-    if (featHandleMiss) {
-      defaultRoutes = [
-        { handle: 'miss' },
-        {
-          src: '/api/(.+)\\.\\w+',
-          dest: '/api/$1',
-          check: true,
-        },
-        {
-          status: 404,
-          src: '/api(/.*)?$',
-          continue: true,
-        },
-      ];
-    } else if (
-      defaultRoutes.some(
-        route =>
-          !isHandler(route) && route.dest && route.dest.startsWith('/api/')
-      )
-    ) {
-      defaultRoutes.push({
-        status: 404,
-        src: '/api(/.*)?$',
-      });
+    const out = createRouteFromPath(file, featHandleMiss, cleanUrls);
+    if (out.isDynamic) {
+      dynamicRoutes.push(out.route);
     }
+    defaultRoutes.push(out.route);
   }
 
-  return { defaultRoutes, error: null };
+  return { defaultRoutes, dynamicRoutes, error: null };
 }
 
 function getPublicBuilder(builders: Builder[]): Builder | null {
@@ -319,17 +331,81 @@ export function detectOutputDirectory(builders: Builder[]): string | null {
 export async function detectRoutes(
   files: string[],
   builders: Builder[],
-  featHandleMiss = false
+  featHandleMiss = false,
+  cleanUrls = false,
+  trailingSlash?: boolean
 ): Promise<RoutesResult> {
-  const routesResult = await detectApiRoutes(files, builders, featHandleMiss);
+  const result = await detectApiRoutes(
+    files,
+    builders,
+    featHandleMiss,
+    cleanUrls
+  );
+  const { dynamicRoutes, defaultRoutes: allRoutes, error } = result;
+  if (error) {
+    return { defaultRoutes: null, redirectRoutes: null, error };
+  }
   const directory = detectOutputDirectory(builders);
+  const defaultRoutes: Route[] = [];
+  const redirectRoutes: Route[] = [];
+  if (allRoutes && allRoutes.length > 0) {
+    const hasApiRoutes = allRoutes.some(
+      r => r.dest && r.dest.startsWith('/api/')
+    );
+    if (featHandleMiss) {
+      defaultRoutes.push({ handle: 'miss' });
+      if (cleanUrls) {
+        const extensions = builders
+          .map(b => parsePath(b.src).ext)
+          .filter(Boolean);
+        if (extensions.length > 0) {
+          const exts = extensions.map(ext => ext.slice(1)).join('|');
+          const group = `(?:\\.(?:${exts}))`;
+          redirectRoutes.push({
+            src: `^/(api(?:.+)?)/index${group}?/?$`,
+            headers: { Location: trailingSlash ? '/$1/' : '/$1' },
+            status: 308,
+          });
+          redirectRoutes.push({
+            src: `^/api/(.+)${group}/?$`,
+            headers: { Location: trailingSlash ? '/api/$1/' : '/api/$1' },
+            status: 308,
+          });
+        }
+      } else {
+        defaultRoutes.push({
+          src: '^/api/(.+)\\.\\w+$',
+          dest: '/api/$1',
+          check: true,
+        });
+      }
+      if (dynamicRoutes) {
+        defaultRoutes.push(...dynamicRoutes);
+      }
+      if (hasApiRoutes) {
+        defaultRoutes.push({
+          src: '^/api(/.*)?$',
+          status: 404,
+          continue: true,
+        });
+      }
+    } else {
+      defaultRoutes.push(...allRoutes);
+      if (hasApiRoutes) {
+        defaultRoutes.push({
+          status: 404,
+          src: '^/api(/.*)?$',
+        });
+      }
+    }
+  }
 
-  if (routesResult.defaultRoutes && directory && !featHandleMiss) {
-    routesResult.defaultRoutes.push({
+  if (!featHandleMiss && directory) {
+    defaultRoutes.push({
       src: '/(.*)',
       dest: `/${directory}/$1`,
     });
   }
 
-  return routesResult;
+  return { defaultRoutes, redirectRoutes, error };
 }
