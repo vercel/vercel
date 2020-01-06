@@ -304,7 +304,6 @@ export type Redirect = Rewrite & {
 
 type RoutesManifestRegex = {
   regex: string;
-  regexKeys: string[];
 };
 
 export type RoutesManifest = {
