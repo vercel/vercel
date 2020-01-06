@@ -104,6 +104,17 @@ it('should select correct node version in getNodeVersion()', async () => {
   ).toHaveProperty('major', 10);
 });
 
+it('should ignore node version in now dev getNodeVersion()', async () => {
+  expect(
+    await getNodeVersion(
+      '/tmp',
+      undefined,
+      { nodeVersion: '1' },
+      { isDev: true }
+    )
+  ).toHaveProperty('runtime', 'nodejs');
+});
+
 it('should get latest node version', async () => {
   expect(await getLatestNodeVersion()).toHaveProperty('major', 12);
 });
