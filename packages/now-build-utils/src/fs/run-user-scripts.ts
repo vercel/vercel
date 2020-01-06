@@ -7,7 +7,7 @@ import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import { cpus } from 'os';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
-import { getSupportedNodeVersion } from './node-version';
+import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 
 export function spawnAsync(
   command: string,
@@ -140,8 +140,15 @@ export function getSpawnOptions(
 export async function getNodeVersion(
   destPath: string,
   minNodeVersion?: string,
-  config?: Config
+  config?: Config,
+  meta?: Meta
 ): Promise<NodeVersion> {
+  if (meta && meta.isDev) {
+    // Use the system-installed version of `node` when running via `now dev`
+    const latest = getLatestNodeVersion();
+    const runtime = 'nodejs';
+    return { ...latest, runtime };
+  }
   const { packageJson } = await scanParentDirs(destPath, true);
   let range: string | undefined;
   let isAuto = false;

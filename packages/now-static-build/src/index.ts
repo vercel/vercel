@@ -300,7 +300,8 @@ export async function build({
     const nodeVersion = await getNodeVersion(
       entrypointDir,
       minNodeRange,
-      config
+      config,
+      meta
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
