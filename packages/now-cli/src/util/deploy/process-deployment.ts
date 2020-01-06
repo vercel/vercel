@@ -71,16 +71,6 @@ export default async function processDeployment({
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
 
-        if (!quiet) {
-          log(
-            `Synced ${pluralize(
-              'file',
-              event.payload.missing.length,
-              true
-            )} ${uploadStamp()}`
-          );
-        }
-
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
@@ -110,6 +100,13 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
+          log(
+            `Synced ${pluralize(
+              'file',
+              event.payload.missing.length,
+              true
+            )} ${uploadStamp()}`
+          );
           const version = legacy ? `${chalk.grey('[v1]')} ` : '';
           log(`https://${event.payload.url} ${version}${deployStamp()}`);
         } else {
@@ -117,7 +114,10 @@ export default async function processDeployment({
         }
 
         if (queuedSpinner === null) {
-          queuedSpinner = wait('Queued...');
+          queuedSpinner =
+            event.payload.readyState === 'QUEUED'
+              ? wait('Queued...')
+              : wait('Building...');
         }
       }
 
@@ -185,15 +185,6 @@ export default async function processDeployment({
         debug(
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
-        if (!quiet) {
-          log(
-            `Synced ${pluralize(
-              'file',
-              event.payload.missing.length,
-              true
-            )} ${uploadStamp()}`
-          );
-        }
 
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
@@ -224,6 +215,13 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
+          log(
+            `Synced ${pluralize(
+              'file',
+              event.payload.missing.length,
+              true
+            )} ${uploadStamp()}`
+          );
           const version = legacy ? `${chalk.grey('[v1]')} ` : '';
           log(`${event.payload.url} ${version}${deployStamp()}`);
         } else {
