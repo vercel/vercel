@@ -44,10 +44,11 @@ export async function getSupportedNodeVersion(
       return intersects(o.range, engineRange);
     });
     if (!found) {
-      const intro = isAuto
-        ? 'This project is using an invalid version of Node.js and must be changed.'
-        : 'Found `engines` in `package.json` with an invalid Node.js version range: ' +
-          engineRange;
+      const intro =
+        isAuto || !engineRange
+          ? 'This project is using an invalid version of Node.js and must be changed.'
+          : 'Found `engines` in `package.json` with an invalid Node.js version range: ' +
+            engineRange;
       throw new NowBuildError({
         code: 'NOW_BUILD_UTILS_NODE_VERSION_INVALID',
         message:
@@ -60,10 +61,11 @@ export async function getSupportedNodeVersion(
   }
 
   if (isDiscontinued(selection)) {
-    const intro = isAuto
-      ? 'This project is using a discontinued version of Node.js and must be upgraded.'
-      : 'Found `engines` in `package.json` with a discontinued Node.js version range: ' +
-        engineRange;
+    const intro =
+      isAuto || !engineRange
+        ? 'This project is using a discontinued version of Node.js and must be upgraded.'
+        : 'Found `engines` in `package.json` with a discontinued Node.js version range: ' +
+          engineRange;
     throw new NowBuildError({
       code: 'NOW_BUILD_UTILS_NODE_VERSION_DISCONTINUED',
       message:
@@ -77,7 +79,7 @@ export async function getSupportedNodeVersion(
   }
 
   debug(
-    isAuto
+    isAuto || !engineRange
       ? 'Using default Node.js range: ' + selection.range
       : (engineRange ? 'Found' : 'Missing') +
           ' `engines` in `package.json`, selecting range: ' +
