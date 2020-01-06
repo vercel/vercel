@@ -15,14 +15,10 @@ const allOptions: NodeVersion[] = [
   },
 ];
 
-const supportedOptions = allOptions.filter(o => !isDiscontinued(o));
-const pleaseUse =
-  'Please use one of the following `engines` in your `package.json`: ' +
-  JSON.stringify(supportedOptions.map(o => o.range));
-const pleaseAdd =
-  'Please add "engines": { "node": "' +
+const pleaseSet =
+  'Please set "engines": { "node": "' +
   getLatestNodeVersion().range +
-  '" } to your `package.json` file to upgrade to Node.js ' +
+  '" } in your `package.json` file to upgrade to Node.js ' +
   getLatestNodeVersion().major;
 const upstreamProvider =
   'This change is the result of a decision made by an upstream infrastructure provider (AWS).' +
@@ -57,7 +53,7 @@ export async function getSupportedNodeVersion(
             engineRange;
       throw new NowBuildError({
         code: 'NOW_BUILD_UTILS_NODE_VERSION_INVALID',
-        message: intro + '\n' + pleaseUse,
+        message: intro + '\n' + pleaseSet,
       });
     }
   }
@@ -65,16 +61,12 @@ export async function getSupportedNodeVersion(
   if (isDiscontinued(selection)) {
     const intro =
       isAuto || !engineRange
-        ? 'This project is using a discontinued version of Node.js and must be upgraded.' +
-          '\n' +
-          pleaseAdd
+        ? 'This project is using a discontinued version of Node.js and must be upgraded.'
         : 'Found `engines` in `package.json` with a discontinued Node.js version range: ' +
-          engineRange +
-          '\n' +
-          pleaseUse;
+          engineRange;
     throw new NowBuildError({
       code: 'NOW_BUILD_UTILS_NODE_VERSION_DISCONTINUED',
-      message: intro + '\n' + upstreamProvider,
+      message: intro + '\n' + pleaseSet + '\n' + upstreamProvider,
     });
   }
 
@@ -95,7 +87,7 @@ export async function getSupportedNodeVersion(
           `\nNode.js version ${selection.range} has reached end-of-life.` +
           `\nAs a result, deployments created on or after ${d} will fail to build.` +
           '\n' +
-          (isAuto || !engineRange ? pleaseAdd : pleaseUse) +
+          pleaseSet +
           '\n' +
           upstreamProvider,
         { padding: 1 }
