@@ -22,7 +22,8 @@ const pleaseUse =
 const pleaseAdd =
   'Please add "engines": { "node": "' +
   getLatestNodeVersion().range +
-  '" } to your `package.json` file.';
+  '" } to your `package.json` file to upgrade to Node.js ' +
+  getLatestNodeVersion().major;
 const upstreamProvider =
   'This change is the result of a decision made by an upstream infrastructure provider (AWS).' +
   '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html';
