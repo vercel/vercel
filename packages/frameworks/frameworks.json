@@ -21,7 +21,7 @@
         "value": "next dev --port $PORT"
       },
       "outputDirectory": {
-        "placeholder": "value from `next.config.js`"
+        "placeholder": "Next.js default"
       }
     }
   },
