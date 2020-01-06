@@ -144,20 +144,20 @@ export async function getNodeVersion(
 ): Promise<NodeVersion> {
   const { packageJson } = await scanParentDirs(destPath, true);
   let range: string | undefined;
-  let silent = false;
+  let isAuto = false;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
     range = packageJson.engines.node;
   } else if (minNodeVersion) {
     range = minNodeVersion;
-    silent = true;
+    isAuto = true;
   } else if (config && config.nodeVersion) {
     range = config.nodeVersion;
-    silent = true;
+    isAuto = true;
   } else if (config && config.zeroConfig) {
     range = '10.x';
-    silent = true;
+    isAuto = true;
   }
-  return getSupportedNodeVersion(range, silent);
+  return getSupportedNodeVersion(range, isAuto);
 }
 
 async function scanParentDirs(destPath: string, readPackageJson = false) {
