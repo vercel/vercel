@@ -6,5 +6,6 @@
       "use": "@now/static-build",
       "config": { "distDir": "out" }
     }
-  ]
+  ],
+  "probes": [{ "path": "/", "mustContain": "output:RANDOMNESS_PLACEHOLDER" }]
 }
