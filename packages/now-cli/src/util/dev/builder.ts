@@ -83,12 +83,6 @@ async function createBuildProcess(
     NOW_REGION: 'dev1',
   };
 
-  // Builders won't show debug logs by default.
-  // The `NOW_BUILDER_DEBUG` env variable enables them.
-  if (debugEnabled) {
-    env.NOW_BUILDER_DEBUG = '1';
-  }
-
   const buildProcess = fork(modulePath, [], {
     cwd: workPath,
     env,

@@ -526,9 +526,12 @@ export default class DevServer {
 
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
+      const { projectSettings } = config;
+
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
+        ...(projectSettings ? { projectSettings } : {}),
       });
 
       if (errors) {

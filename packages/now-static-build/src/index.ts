@@ -1,6 +1,5 @@
 import ms from 'ms';
 import path from 'path';
-import spawn from 'cross-spawn';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import { ChildProcess, SpawnOptions } from 'child_process';
@@ -9,7 +8,10 @@ import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
+  execAsync,
   spawnAsync,
+  execCommand,
+  spawnCommand,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -19,13 +21,13 @@ import {
   getSpawnOptions,
   Files,
   FileFsRef,
-  Route,
   BuildOptions,
   Config,
   debug,
   PackageJson,
   PrepareCacheOptions,
 } from '@now/build-utils';
+import { Route, Source } from '@now/routing-utils';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -118,8 +120,8 @@ const nowDevChildProcesses = new Set<ChildProcess>();
   });
 });
 
-const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
-  const basic: Route = {
+const getDevRoute = (srcBase: string, devPort: number, route: Source) => {
+  const basic: Source = {
     src: `${srcBase}${route.src}`,
     dest: `http://localhost:${devPort}${route.dest}`,
   };
@@ -160,7 +162,21 @@ function getPkg(entrypoint: string, workPath: string) {
   return pkg;
 }
 
-function getFramework(pkg: PackageJson) {
+function getFramework(config: Config | null, pkg?: PackageJson | null) {
+  const { framework: configFramework = null } = config || {};
+
+  if (configFramework) {
+    const framework = frameworks.find(({ slug }) => slug === configFramework);
+
+    if (framework) {
+      return framework;
+    }
+  }
+
+  if (!pkg) {
+    return;
+  }
+
   const dependencies = Object.assign({}, pkg.dependencies, pkg.devDependencies);
   const framework = frameworks.find(
     ({ dependency }) => dependencies[dependency || '']
@@ -175,7 +191,6 @@ export async function build({
   config,
   meta = {},
 }: BuildOptions) {
-  debug('Downloading user files...');
   await download(files, workPath, meta);
 
   const mountpoint = path.dirname(entrypoint);
@@ -184,21 +199,28 @@ export async function build({
   let distPath = path.join(
     workPath,
     path.dirname(entrypoint),
-    (config && (config.distDir as string)) || 'dist'
+    (config && (config.distDir as string)) ||
+      (config.outputDirectory as string) ||
+      'dist'
   );
 
   const pkg = getPkg(entrypoint, workPath);
 
-  if (pkg) {
+  const framework = getFramework(config, pkg);
+  const devCommand: string | undefined =
+    config.devCommand || (framework && framework.devCommand);
+  const buildCommand: string | undefined =
+    config.buildCommand || (framework && framework.buildCommand);
+
+  if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
-    let framework: Framework | undefined = undefined;
     let minNodeRange: string | undefined = undefined;
 
     const routes: Route[] = [];
-    const devScript = getCommand(pkg, 'dev', config as Config);
+    const devScript = pkg ? getCommand(pkg, 'dev', config) : null;
 
     if (config.zeroConfig) {
       if (existsSync(gemfilePath) && !meta.isDev) {
@@ -245,9 +267,11 @@ export async function build({
       }
 
       // `public` is the default for zero config
-      distPath = path.join(workPath, path.dirname(entrypoint), 'public');
-
-      framework = getFramework(pkg);
+      distPath = path.join(
+        workPath,
+        path.dirname(entrypoint),
+        (config.outputDirectory as string) || 'public'
+      );
     }
 
     if (framework) {
@@ -277,11 +301,37 @@ export async function build({
     console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
-    if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
+    if (pkg && (buildCommand || devCommand)) {
+      // We want to add `node_modules/.bin` after `npm install`
+      const { stdout } = await execAsync('yarn', ['bin'], {
+        cwd: entrypointDir,
+      });
+
+      spawnOpts.env = {
+        ...spawnOpts.env,
+        PATH: `${stdout.trim()}${path.delimiter}${
+          spawnOpts.env ? spawnOpts.env.PATH : ''
+        }`,
+      };
+
+      debug(
+        `Added "${stdout.trim()}" to PATH env because a package.json file was found.`
+      );
+    }
+
+    if (
+      meta.isDev &&
+      (devCommand ||
+        (pkg && devScript && pkg.scripts && pkg.scripts[devScript]))
+    ) {
       let devPort: number | undefined = nowDevScriptPorts.get(entrypoint);
 
       if (typeof devPort === 'number') {
-        debug('`%s` server already running for %j', devScript, entrypoint);
+        debug(
+          '`%s` server already running for %j',
+          devCommand || devScript,
+          entrypoint
+        );
       } else {
         // Run the `now-dev` or `dev` script out-of-bounds, since it is assumed that
         // it will launch a dev server that never "completes"
@@ -291,10 +341,12 @@ export async function build({
         const opts: SpawnOptions = {
           cwd: entrypointDir,
           stdio: 'inherit',
-          env: { ...process.env, PORT: String(devPort) },
+          env: { ...spawnOpts.env, PORT: String(devPort) },
         };
 
-        const child: ChildProcess = spawn('yarn', ['run', devScript], opts);
+        const cmd = devCommand || `yarn run ${devScript}`;
+        const child: ChildProcess = spawnCommand(cmd, opts);
+
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         nowDevChildProcesses.add(child);
 
@@ -329,31 +381,38 @@ export async function build({
       );
     } else {
       if (meta.isDev) {
-        debug(`WARN: "${devScript}" script is missing from package.json`);
+        debug(`WARN: A dev script is missing.`);
         debug(
           'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
         );
       }
 
-      const buildScript = getCommand(pkg, 'build', config as Config);
-      debug(`Running "${buildScript}" script in "${entrypoint}"`);
-
-      const found = await runPackageJsonScript(
-        entrypointDir,
-        buildScript,
-        spawnOpts
+      const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
+      debug(
+        `Running "${buildCommand || buildScript}" script in "${entrypoint}"`
       );
+
+      const found =
+        typeof buildCommand === 'string'
+          ? await execCommand(buildCommand, {
+              ...spawnOpts,
+              cwd: entrypointDir,
+            })
+          : await runPackageJsonScript(entrypointDir, buildScript!, spawnOpts);
 
       if (!found) {
         throw new Error(
-          `Missing required "${buildScript}" script in "${entrypoint}"`
+          `Missing required "${buildCommand ||
+            buildScript}" script in "${entrypoint}"`
         );
       }
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
 
       if (framework) {
-        const outputDirName = await framework.getOutputDirName(outputDirPrefix);
+        const outputDirName = config.outputDirectory
+          ? config.outputDirectory
+          : await framework.getOutputDirName(outputDirPrefix);
 
         distPath = path.join(outputDirPrefix, outputDirName);
       } else if (!config || !config.distDir) {
@@ -415,19 +474,17 @@ export async function build({
 export async function prepareCache({
   entrypoint,
   workPath,
-}: PrepareCacheOptions) {
+  config,
+}: PrepareCacheOptions): Promise<Files> {
   // default cache paths
-  const defaultCacheFiles = await glob(
-    '{node_modules/**,package-lock.json,yarn.lock}',
-    workPath
-  );
+  const defaultCacheFiles = await glob('node_modules/**', workPath);
 
   // framework specific cache paths
   let frameworkCacheFiles: { [path: string]: FileFsRef } | null = null;
 
   const pkg = getPkg(entrypoint, workPath);
   if (pkg) {
-    const framework = getFramework(pkg);
+    const framework = getFramework(config, pkg);
 
     if (framework && framework.cachePattern) {
       frameworkCacheFiles = await glob(framework.cachePattern, workPath);
