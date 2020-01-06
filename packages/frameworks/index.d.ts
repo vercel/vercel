@@ -3,6 +3,11 @@ export interface FrameworkDetectionItem {
   matchContent?: string;
 }
 
+interface Setting {
+  value?: string;
+  placeholder?: string;
+}
+
 export interface Framework {
   name: string;
   slug: string;
@@ -14,9 +19,8 @@ export interface Framework {
     some?: FrameworkDetectionItem[];
   };
   settings?: {
-    [key: string]: {
-      value?: string;
-      placeholder?: string;
-    };
+    buildCommand?: Setting;
+    devCommand?: Setting;
+    outputDirectory?: Setting;
   };
 }
