@@ -86,7 +86,7 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
     '.wafpicke-*',
     '.lock-wscript',
     '.env',
-    '.env.build',
+    '.env.*',
     '.venv',
     'npm-debug.log',
     'config.gypi',
