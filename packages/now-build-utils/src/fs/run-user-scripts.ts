@@ -150,8 +150,10 @@ export async function getNodeVersion(
   } else if (minNodeVersion) {
     range = minNodeVersion;
     silent = true;
+  } else if (config && config.nodeVersion) {
+    range = config.nodeVersion;
+    silent = true;
   } else if (config && config.zeroConfig) {
-    // Use latest node version zero config detected
     range = '10.x';
     silent = true;
   }

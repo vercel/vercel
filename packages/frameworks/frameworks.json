@@ -120,6 +120,19 @@
     }
   },
   {
+    "name": "Scully",
+    "slug": "scully",
+    "tagline": "Scully is a static site generator for Angular.",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@scullyio\\/init\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    }
+  },
+  {
     "name": "Angular",
     "slug": "angular",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/angular.svg",

@@ -336,6 +336,8 @@ export const build = async ({
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
+  const nextBasePathRoute: Route[] = [];
+  let nextBasePath: string | undefined;
 
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -343,6 +345,26 @@ export const build = async ({
       case 2: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
+        if (routesManifest.basePath && routesManifest.basePath !== '/') {
+          nextBasePath = routesManifest.basePath;
+
+          if (!nextBasePath.startsWith('/')) {
+            throw new Error(
+              'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+            );
+          }
+          if (nextBasePath.endsWith('/')) {
+            throw new Error(
+              'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+            );
+          }
+
+          nextBasePathRoute.push({
+            src: `^${nextBasePath}(?:$|/(.*))$`,
+            dest: `/$1`,
+            continue: true,
+          });
+        }
         break;
       }
       default: {
@@ -400,6 +422,9 @@ export const build = async ({
       routes: [
         // TODO: low priority: handle trailingSlash
 
+        // Add top level rewrite for basePath if provided
+        ...nextBasePathRoute,
+
         // redirects take the highest priority
         ...redirects,
         // Before we handle static files we need to set proper caching headers
@@ -450,11 +475,7 @@ export const build = async ({
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
-  const dynamicDataRoutes: Array<{
-    src: string;
-    dest: string;
-    check: true;
-  }> = [];
+  const dynamicDataRoutes: Array<{ src: string; dest: string }> = [];
 
   const appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
@@ -880,7 +901,6 @@ export const build = async ({
         src: dataRouteRegex.replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
         // Location of lambda in builder output
         dest: path.posix.join(entryDirectory, dataRoute),
-        check: true,
       });
     });
   }
@@ -946,30 +966,11 @@ export const build = async ({
       ...staticDirectoryFiles,
     },
     routes: [
+      // Add top level rewrite for basePath if provided
+      ...nextBasePathRoute,
+
       // redirects take the highest priority
       ...redirects,
-      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
-      // folder
-      { handle: 'filesystem' },
-      ...rewrites,
-      // Custom Next.js 404 page (TODO: do we want to remove this?)
-      ...(isLegacy
-        ? []
-        : [
-            {
-              src: path.join('/', entryDirectory, '.*'),
-              dest: path.join('/', entryDirectory, '_error'),
-              status: 404,
-              check: true,
-            },
-          ]),
-      // Routes that are checked after each rewrite and no filesystem match
-      { handle: 'miss' },
-      // Dynamic routes
-      ...dynamicRoutes,
-      ...dynamicDataRoutes,
-      // Routes that are checked after filesystem match
-      { handle: 'hit' },
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
@@ -984,6 +985,24 @@ export const build = async ({
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
         continue: true,
       },
+      { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
+      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
+      // folder
+      { handle: 'filesystem' },
+      ...rewrites,
+      // Dynamic routes
+      ...dynamicRoutes,
+      ...dynamicDataRoutes,
+      // Custom Next.js 404 page (TODO: do we want to remove this?)
+      ...(isLegacy
+        ? []
+        : [
+            {
+              src: path.join('/', entryDirectory, '.*'),
+              dest: path.join('/', entryDirectory, '_error'),
+              status: 404,
+            },
+          ]),
     ],
     watch: [],
     childProcesses: [],
