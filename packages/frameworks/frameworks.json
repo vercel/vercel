@@ -265,10 +265,10 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`polymer build` or `build` from `package.json`"
+        "placeholder": "`rollup -c` or `build` from `package.json`"
       },
       "devCommand": {
-        "value": "polymer serve --port $PORT"
+        "value": "sirv public --single --dev --port $PORT"
       }
     }
   },
