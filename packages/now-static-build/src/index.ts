@@ -162,7 +162,13 @@ function getPkg(entrypoint: string, workPath: string) {
   return pkg;
 }
 
-function getFramework(config: Config | null, pkg?: PackageJson | null) {
+function getFramework(
+  config: Config | null,
+  pkg?: PackageJson | null
+): Framework | undefined {
+  if (!config || !config.zeroConfig) {
+    return;
+  }
   const { framework: configFramework = null } = config || {};
 
   if (configFramework) {
