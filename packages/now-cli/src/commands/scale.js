@@ -18,7 +18,10 @@ import getMinFromArgs from '../util/scale/get-min-from-args';
 import patchDeploymentScale from '../util/scale/patch-deployment-scale';
 import waitVerifyDeploymentScale from '../util/scale/wait-verify-deployment-scale';
 import { handleError } from '../util/error';
-import { VerifyScaleTimeout, DeploymentTypeUnsupported } from '../util/errors-ts';
+import {
+  VerifyScaleTimeout,
+  DeploymentTypeUnsupported,
+} from '../util/errors-ts';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
@@ -28,7 +31,7 @@ import {
   InvalidMaxForScale,
   InvalidMinForScale,
   InvalidScaleMinMaxRelation,
-  NotSupportedMinScaleSlots
+  NotSupportedMinScaleSlots,
 } from '../util/errors-ts';
 import { InvalidAllForScale, InvalidRegionOrDCForScale } from '../util/errors';
 import handleCertError from '../util/certs/handle-cert-error';
@@ -56,7 +59,9 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Enable your deployment in all datacenters (min: 0, max: auto)
+  ${chalk.gray(
+    '–'
+  )} Enable your deployment in all datacenters (min: 0, max: auto)
 
     ${chalk.cyan('$ now scale my-deployment-123.now.sh all')}
 
@@ -87,7 +92,7 @@ export default async function main(ctx) {
     argv = getArgs(ctx.argv.slice(2), {
       '--verify-timeout': Number,
       '--no-verify': Boolean,
-      '-n': '--no-verify'
+      '-n': '--no-verify',
     });
   } catch (err) {
     handleError(err);
@@ -100,7 +105,10 @@ export default async function main(ctx) {
   }
 
   // Prepare the context
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = argv['--debug'];
@@ -155,8 +163,7 @@ export default async function main(ctx) {
   }
   if (dcs instanceof InvalidRegionOrDCForScale) {
     output.error(
-      `The value "${dcs.meta
-        .regionOrDC}" is not a valid region or DC identifier`
+      `The value "${dcs.meta.regionOrDC}" is not a valid region or DC identifier`
     );
     now.close();
     return 1;
@@ -165,8 +172,7 @@ export default async function main(ctx) {
   const min = getMinFromArgs(argv._);
   if (min instanceof InvalidMinForScale) {
     output.error(
-      `Invalid <min> parameter "${min.meta
-        .value}". A number or "auto" were expected`
+      `Invalid <min> parameter "${min.meta.value}". A number or "auto" were expected`
     );
     now.close();
     return 1;
@@ -175,24 +181,21 @@ export default async function main(ctx) {
   const max = getMaxFromArgs(argv._);
   if (max instanceof InvalidMinForScale) {
     output.error(
-      `Invalid <min> parameter "${max.meta
-        .value}". A number or "auto" were expected`
+      `Invalid <min> parameter "${max.meta.value}". A number or "auto" were expected`
     );
     now.close();
     return 1;
   }
   if (max instanceof InvalidArgsForMinMaxScale) {
     output.error(
-      `Invalid number of arguments: expected <min> ("${max.meta
-        .min}") and [max]`
+      `Invalid number of arguments: expected <min> ("${max.meta.min}") and [max]`
     );
     now.close();
     return 1;
   }
   if (max instanceof InvalidMaxForScale) {
     output.error(
-      `Invalid <max> parameter "${max.meta
-        .value}". A number or "auto" were expected`
+      `Invalid <max> parameter "${max.meta.value}". A number or "auto" were expected`
     );
     now.close();
     return 1;
@@ -262,14 +265,15 @@ export default async function main(ctx) {
     deployment.url
   );
   if (result instanceof ForbiddenScaleMinInstances) {
-    output.error(`You can't scale to more than ${result.meta.max} min instances with your current plan.`);
+    output.error(
+      `You can't scale to more than ${result.meta.max} min instances with your current plan.`
+    );
     now.close();
     return 1;
   }
   if (result instanceof ForbiddenScaleMaxInstances) {
     output.error(
-      `You can't scale to more than ${result.meta
-        .max} max instances with your current plan.`
+      `You can't scale to more than ${result.meta.max} max instances with your current plan.`
     );
     now.close();
     return 1;
