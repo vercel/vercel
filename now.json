@@ -2,7 +2,8 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "https://zeit.co/new"
+      "destination": "https://zeit.co/new",
+      "statusCode": 307
     }
   ],
   "headers": [
