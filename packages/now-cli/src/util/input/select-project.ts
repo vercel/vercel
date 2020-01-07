@@ -16,9 +16,7 @@ export default async function selectProject(
 ): Promise<Project> {
   const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
 
-  const answers = await inquirer.prompt<{
-    ['org']: string;
-  }>({
+  const answers = await inquirer.prompt({
     name: 'org',
     type: 'list',
     message: 'Which organization contains your existing project?',
@@ -32,7 +30,7 @@ export default async function selectProject(
     ],
   });
 
-  const accountId = answers.org;
+  const accountId = answers.org as string;
 
   let project;
 

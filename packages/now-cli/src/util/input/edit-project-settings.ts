@@ -52,16 +52,14 @@ export default async function editProjectSettings(
     return projectSettings;
   }
 
-  const { settingFields } = await inquirer.prompt<{
-    ['settingFields']: (keyof ProjectSettings)[];
-  }>({
+  const { settingFields } = await inquirer.prompt({
     name: 'settingFields',
     type: 'checkbox',
     message: 'Which settings would you like to overwrite (select multiple)?',
     choices: fields,
   });
 
-  for (let field of settingFields) {
+  for (let field of settingFields as (keyof ProjectSettings)[]) {
     const fieldName = fields.find(f => f.value === field);
     settings[field] = await text({
       label: `What's your ${fieldName}?`,
