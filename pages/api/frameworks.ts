@@ -3,6 +3,8 @@ import frameworkList, { Framework } from '@now/frameworks';
 import { withApiHandler } from '../../lib/util/with-api-handler';
 
 const frameworks: Framework[] = frameworkList.map(framework => {
+  delete framework.detectors;
+
   if (framework.logo) {
     framework.logo = `https://res.cloudinary.com/zeit-inc/image/fetch/${framework.logo}`;
   }
