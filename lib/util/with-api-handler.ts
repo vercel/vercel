@@ -6,7 +6,6 @@ export function withApiHandler(handler: Handler): Handler {
   return async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Cache-Control', 's-maxage=10,stale-while-revalidate');
     res.setHeader(
       'Access-Control-Allow-Headers',
       'Authorization, Accept, Content-Type'
@@ -14,6 +13,15 @@ export function withApiHandler(handler: Handler): Handler {
 
     if (req.method === 'OPTIONS') {
       return res.status(200).json({});
+    }
+
+    if (req.method !== 'GET') {
+      return res.status(404).json({
+        error: {
+          code: 'not_found',
+          message: 'Only GET requests are supported for this endpoint.',
+        },
+      });
     }
 
     return handler(req, res);

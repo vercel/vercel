@@ -14,16 +14,5 @@ export default withApiHandler(async function(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Authorization, Accept, Content-Type'
-  );
-
-  if (req.method !== 'GET') {
-    return res.status(405).send('Method Not Allowed');
-  }
-
   return res.status(200).json(frameworks);
 });
