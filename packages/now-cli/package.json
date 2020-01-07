@@ -62,6 +62,7 @@
     "node": ">= 8"
   },
   "devDependencies": {
+    "@now/frameworks": "0.0.3",
     "@sentry/node": "5.5.0",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",
@@ -73,6 +74,7 @@
     "@types/fs-extra": "5.0.5",
     "@types/glob": "7.1.1",
     "@types/http-proxy": "1.16.2",
+    "@types/inquirer": "6.5.0",
     "@types/load-json-file": "2.0.7",
     "@types/micro": "7.3.3",
     "@types/mime-types": "2.1.0",
@@ -140,7 +142,6 @@
     "minimatch": "3.0.4",
     "mri": "1.1.0",
     "ms": "2.1.2",
-    "node-fetch": "1.7.3",
     "npm-package-arg": "6.1.0",
     "nyc": "13.2.0",
     "ora": "3.4.0",

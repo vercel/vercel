@@ -42,6 +42,12 @@ import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 import promptBool from '../../util/input/prompt-bool';
 import promptText from '../../util/input/text';
+import selectProject from '../../util/input/select-project';
+import editProjectSettings from '../../util/input/edit-project-settings';
+import {
+  getLinkedProject,
+  linkFolderToProject,
+} from '../../util/projects/link';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -222,34 +228,25 @@ export default async function main(
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
 
-  const list = paths
-    .map((path, index) => {
-      let suffix = '';
+  // check paths
+  if (paths.length > 1) {
+    output.error(`${chalk.red('Error!')} Can't deploy more than one path.`);
+    return 1;
+  }
 
-      if (paths.length > 1 && index !== paths.length - 1) {
-        suffix = index < paths.length - 2 ? ', ' : ' and ';
-      }
-
-      return chalk.bold(toHumanPath(path)) + suffix;
-    })
-    .join('');
-
-  log(`Deploying ${list} under ${chalk.bold(contextName)}`);
-
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  // build `meta`
   const meta = Object.assign(
     {},
     parseMeta(localConfig.meta),
     parseMeta(argv['--meta'])
   );
 
-  let deployStamp = stamp();
-  let deployment = null;
-
+  // --no-scale
   if (argv['--no-scale']) {
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
   }
 
+  // build `env`
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
 
@@ -311,22 +308,83 @@ export default async function main(
     return 1;
   }
 
+  // build `regions`
   const regionFlag = (argv['--regions'] || '')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
-  try {
-    // $FlowFixMe
-    const project = getProjectName({
-      argv,
-      nowConfig: localConfig,
-      isFile,
-      paths,
-    });
-    log(`Using project ${chalk.bold(project)}`);
+  // build `target`
+  let target;
+  if (argv['--target']) {
+    const deprecatedTarget = argv['--target'];
 
+    if (!['staging', 'production'].includes(deprecatedTarget)) {
+      error(
+        `The specified ${param('--target')} ${code(
+          deprecatedTarget
+        )} is not valid`
+      );
+      return 1;
+    }
+
+    if (deprecatedTarget === 'production') {
+      warn(
+        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
+      );
+    }
+
+    output.debug(`Setting target to ${deprecatedTarget}`);
+    target = deprecatedTarget;
+  } else if (argv['--prod']) {
+    output.debug('Setting target to production');
+    target = 'production';
+  }
+
+  // retrieve `project` and `org` from .now
+  const client = new Client({
+    apiUrl: ctx.apiUrl,
+    token: ctx.authConfig.token,
+    currentTeam: ctx.config.currentTeam,
+    debug: debugEnabled,
+  });
+
+  const path = paths[0];
+  const [orgName, project] = await getLinkedProject(client);
+
+  if (!project) {
+    const shouldStartSetup = await promptBool(
+      `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}? [Y/n]`
+    );
+
+    if (!shouldStartSetup) {
+      output.print(`Aborted. Project not set up.`);
+      return 0;
+    }
+
+    const shouldLinkToProject = await promptBool(
+      `Link to an existing ZEIT Now project? [y/N]`
+    );
+
+    let project;
+    if (shouldLinkToProject) {
+      project = await selectProject(output, client, ctx.config.currentTeam);
+
+      await linkFolderToProject(output, {
+        projectId: project.id,
+        orgId: project.accountId,
+      });
+    } else {
+      // later, we'll ask the directory here
+    }
+  }
+
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  let deployStamp = stamp();
+  let deployment = null;
+
+  try {
     const createArgs = {
       name: project,
       env: deploymentEnv,
@@ -340,40 +398,14 @@ export default async function main(
       regions,
       meta,
       deployStamp,
+      target,
     };
-
-    if (argv['--target']) {
-      const deprecatedTarget = argv['--target'];
-
-      if (!['staging', 'production'].includes(deprecatedTarget)) {
-        error(
-          `The specified ${param('--target')} ${code(
-            deprecatedTarget
-          )} is not valid`
-        );
-        return 1;
-      }
-
-      if (deprecatedTarget === 'production') {
-        warn(
-          'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
-        );
-      }
-
-      output.debug(`Setting target to ${deprecatedTarget}`);
-      createArgs.target = deprecatedTarget;
-    } else if (argv['--prod']) {
-      output.debug('Setting target to production');
-      createArgs.target = 'production';
-    }
-
-    deployStamp = stamp();
 
     deployment = await createDeploy(
       output,
       now,
       contextName,
-      paths,
+      [path],
       createArgs,
       ctx
     );
@@ -382,59 +414,30 @@ export default async function main(
       deployment instanceof Error &&
       deployment.code === 'missing_project_settings'
     ) {
-      let { framework, projectSettings = {} } = deployment;
+      let { projectSettings, framework } = deployment;
 
-      if (!argv['--yes']) {
-        const result = framework
-          ? await promptBool(
-              `We've detected the ${framework.name} framework. Continue? y/N`
-            )
-          : false;
+      const settings = await editProjectSettings(
+        output,
+        projectSettings,
+        framework
+      );
 
-        if (!framework) {
-          output.log(
-            `Please provide some information about your project since this is the first deployment.`
-          );
-        }
-
-        if (!result) {
-          const buildCommand = await promptText({
-            label: chalk.gray`> Enter a build command: `,
-            placeholder: projectSettings.buildCommand || undefined,
-            trailing: '\n',
-          });
-
-          const outputDirectory = await promptText({
-            label: chalk.gray`> Enter the output directory: `,
-            placeholder: projectSettings.outputDirectory || undefined,
-            trailing: '\n',
-          });
-
-          const devCommand = await promptText({
-            label: chalk.gray`> Enter a dev command: `,
-            placeholder: projectSettings.devCommand || undefined,
-            trailing: '\n',
-          });
-
-          projectSettings = {
-            framework: null,
-            buildCommand: buildCommand || null,
-            outputDirectory: outputDirectory || null,
-            devCommand: devCommand || null,
-          };
-        }
-      }
-
-      createArgs.projectSettings = projectSettings;
+      // deploy again, but send projectSettings this time
+      createArgs.projectSettings = settings;
 
       deployment = await createDeploy(
         output,
         now,
         contextName,
-        paths,
+        [path],
         createArgs,
         ctx
       );
+
+      await linkFolderToProject(output, {
+        projectId: deployment.projectId,
+        orgId: deployment.ownerId,
+      });
     }
 
     if (deployment instanceof NotDomainOwner) {
