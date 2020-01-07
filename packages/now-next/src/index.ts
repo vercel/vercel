@@ -202,7 +202,7 @@ export const build = async ({
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
 
-  const nodeVersion = await getNodeVersion(entryPath, undefined, config);
+  const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   if (!nextVersion) {
