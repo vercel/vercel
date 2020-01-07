@@ -25,12 +25,12 @@ export default withApiHandler(async function(
     extract('https://github.com/zeit/now-examples/archive/master.zip', '/tmp'),
   ]);
 
-  const exampleList = [
+  const exampleList = new Set([
     ...summary('/tmp/now-master/examples'),
     ...summary('/tmp/now-examples-master'),
-  ];
+  ]);
 
-  const existingExamples = exampleList.map(key => ({
+  const existingExamples = Array.from(exampleList).map(key => ({
     name: key,
     visible: true,
     suggestions: [],
