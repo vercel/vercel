@@ -3,6 +3,8 @@ export interface FrameworkDetectionItem {
   matchContent?: string;
 }
 
+type Setting = { value: string } | { placeholder: string }
+
 export interface Framework {
   name: string;
   slug: string;
@@ -12,5 +14,10 @@ export interface Framework {
   detectors?: {
     every?: FrameworkDetectionItem[];
     some?: FrameworkDetectionItem[];
+  };
+  settings: {
+    buildCommand: Setting;
+    devCommand: Setting;
+    outputDirectory: Setting;
   };
 }

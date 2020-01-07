@@ -59,6 +59,7 @@ export default async function processDeployment({
     let queuedSpinner = null;
     let buildSpinner = null;
     let deploySpinner = null;
+    let fileCount = null;
 
     for await (const event of createDeployment(
       nowClientOptions,
@@ -81,16 +82,7 @@ export default async function processDeployment({
         debug(
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
-
-        if (!quiet) {
-          log(
-            `Synced ${pluralize(
-              'file',
-              event.payload.missing.length,
-              true
-            )} ${uploadStamp()}`
-          );
-        }
+        fileCount = event.payload.missing.length;
 
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
@@ -121,6 +113,7 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
+          log(`Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`);
           const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
           log(`https://${event.payload.url} ${version}${deployStamp()}`);
         } else {
@@ -128,7 +121,10 @@ export default async function processDeployment({
         }
 
         if (queuedSpinner === null) {
-          queuedSpinner = wait('Queued...');
+          queuedSpinner =
+            event.payload.readyState === 'QUEUED'
+              ? wait('Queued...')
+              : wait('Building...');
         }
       }
 
@@ -196,6 +192,8 @@ export default async function processDeployment({
       }
     }
   } else {
+    let fileCount = null;
+
     for await (const event of createLegacyDeployment(
       nowClientOptions,
       requestBody,
@@ -209,16 +207,7 @@ export default async function processDeployment({
         debug(
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
-        if (!quiet) {
-          log(
-            `Synced ${pluralize(
-              'file',
-              event.payload.missing.length,
-              true
-            )} ${uploadStamp()}`
-          );
-        }
-
+        fileCount = event.payload.missing.length;
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
@@ -248,6 +237,7 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
+          log(`Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`);
           const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
           log(`${event.payload.url} ${version}${deployStamp()}`);
         } else {

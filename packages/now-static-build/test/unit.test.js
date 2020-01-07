@@ -4,6 +4,7 @@ const path = require('path');
 describe('prepareCache', () => {
   test('should cache node_modules', async () => {
     const files = await prepareCache({
+      config: { zeroConfig: true },
       workPath: path.resolve(__dirname, './cache-fixtures/default'),
       entrypoint: 'index.js',
     });
@@ -14,6 +15,7 @@ describe('prepareCache', () => {
 
   test('should cache node_modules and `.cache` folder for gatsby deployments', async () => {
     const files = await prepareCache({
+      config: { zeroConfig: true },
       workPath: path.resolve(__dirname, './cache-fixtures/gatsby'),
       entrypoint: 'package.json',
     });
