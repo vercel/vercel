@@ -35,17 +35,6 @@ function streamToBuffer(stream) {
 }
 
 export default withApiHandler(async function(req: NextApiRequest, res: NextApiResponse) {
-  const apiVersion = Number(req.query.version) || 1;
-
-  if (Number.isNaN(apiVersion) || apiVersion > 2 || apiVersion < 1) {
-    return res.status(400).json({
-      error: {
-        code: 'invalid_api_version',
-        message: 'Invalid API Version.'
-      }
-    });
-  }
-
   const ext = '.tar.gz';
   const { segment = '' } = req.query;
 
@@ -56,17 +45,13 @@ export default withApiHandler(async function(req: NextApiRequest, res: NextApiRe
   const example = segment.slice(0, -ext.length);
   let directory;
 
-  switch(apiVersion) {
-    case 2: {
-      await extract('https://github.com/zeit/now-examples/archive/master.zip', TMP_DIR);
-      directory = `${TMP_DIR}/now-examples-master/${example}`;
-      break;
-    }
-    default: {
-      // The old cli is pinned to a specific commit hash
-      await extract('https://github.com/zeit/now-examples/archive/7c7b27e49b8b17d0d3f0e1604dc74fd005cd69e3.zip', TMP_DIR);
-      directory = `${TMP_DIR}/now-examples-7c7b27e49b8b17d0d3f0e1604dc74fd005cd69e3/${example}`;
-    }
+  if (Number(req.query.version) === 1) {
+    // The old cli is pinned to a specific commit hash
+    await extract('https://github.com/zeit/now-examples/archive/7c7b27e49b8b17d0d3f0e1604dc74fd005cd69e3.zip', TMP_DIR);
+    directory = `${TMP_DIR}/now-examples-7c7b27e49b8b17d0d3f0e1604dc74fd005cd69e3/${example}`;
+  } else {
+    await extract('https://github.com/zeit/now-examples/archive/master.zip', TMP_DIR);
+    directory = `${TMP_DIR}/now-examples-master/${example}`;
   }
 
   if (!isDirectory(directory)) {
