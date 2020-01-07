@@ -3278,11 +3278,6 @@ acorn@^7.0.0:
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-7.0.0.tgz#26b8d1cd9a9b700350b71c0905546f64d1284e7a"
   integrity sha512-PaF/MduxijYYt7unVGRuds1vBC9bFxbNf+VWqhOClfdgy7RlVkQqt610ig1/yxTgsDIfW1cWDel5EBbOy3jdtQ==
 
-add@2.0.6:
-  version "2.0.6"
-  resolved "https://registry.yarnpkg.com/add/-/add-2.0.6.tgz#248f0a9f6e5a528ef2295dbeec30532130ae2235"
-  integrity sha1-JI8Kn25aUo7yKV2+7DBTITCuIjU=
-
 agent-base@4, agent-base@^4.1.0, agent-base@^4.3.0:
   version "4.3.0"
   resolved "https://registry.yarnpkg.com/agent-base/-/agent-base-4.3.0.tgz#8165f01c436009bccad0b1d122f05ed770efc6ee"
@@ -14799,11 +14794,6 @@ yarn@1.17.3:
   version "1.17.3"
   resolved "https://registry.yarnpkg.com/yarn/-/yarn-1.17.3.tgz#60e0b77d079eb78e753bb616f7592b51b6a9adce"
   integrity sha512-CgA8o7nRZaQvmeF/WBx2FC7f9W/0X59T2IaLYqgMo6637wfp5mMEsM3YXoJtKUspnpmDJKl/gGFhnqS+sON7hA==
-
-yarn@1.21.1:
-  version "1.21.1"
-  resolved "https://registry.yarnpkg.com/yarn/-/yarn-1.21.1.tgz#1d5da01a9a03492dc4a5957befc1fd12da83d89c"
-  integrity sha512-dQgmJv676X/NQczpbiDtc2hsE/pppGDJAzwlRiADMTvFzYbdxPj2WO4PcNyriSt2c4jsCMpt8UFRKHUozt21GQ==
 
 yauzl-clone@^1.0.4:
   version "1.0.4"
