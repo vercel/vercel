@@ -3,10 +3,7 @@ export interface FrameworkDetectionItem {
   matchContent?: string;
 }
 
-interface Setting {
-  value?: string;
-  placeholder?: string;
-}
+type Setting = { value: string } | { placeholder: string }
 
 export interface Framework {
   name: string;
@@ -18,9 +15,9 @@ export interface Framework {
     every?: FrameworkDetectionItem[];
     some?: FrameworkDetectionItem[];
   };
-  settings?: {
-    buildCommand?: Setting;
-    devCommand?: Setting;
-    outputDirectory?: Setting;
+  settings: {
+    buildCommand: Setting;
+    devCommand: Setting;
+    outputDirectory: Setting;
   };
 }
