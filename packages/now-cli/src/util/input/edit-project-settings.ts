@@ -27,6 +27,7 @@ export default async function editProjectSettings(
 
     for (let field of fields) {
       const defaults = framework.settings[field.value];
+
       output.print(
         `- ${chalk.bold(`${field.name}:`)} ${chalk.italic(
           `${defaults.value || defaults.placeholder}`

@@ -62,7 +62,6 @@
     "node": ">= 8"
   },
   "devDependencies": {
-    "@now/frameworks": "0.0.3",
     "@sentry/node": "5.5.0",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",
