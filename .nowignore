@@ -1,0 +1,20 @@
+*
+
+# general
+!.yarnrc
+!run.js
+
+# next
+!pages/
+!pages/**
+!lib/
+!lib/**
+!yarn.lock
+!package.json
+!next-env.d.ts
+!tsconfig.json
+
+# packages
+!packages/
+!packages/frameworks
+!packages/frameworks/**
