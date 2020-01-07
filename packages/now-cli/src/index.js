@@ -161,7 +161,7 @@ const main = async argv_ => {
     );
   }
 
-  debug(`Using Now CLI ${pkg.version}`);
+  output.print(`${chalk.grey(`Now CLI ${pkg.version}`)}\n`);
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
