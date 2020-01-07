@@ -1,5 +1,4 @@
 {
-  "name": "frameworks",
   "redirects": [
     {
       "source": "/",
@@ -26,5 +25,6 @@
         }
       ]
     }
-  ]
+  ],
+  "name": "frameworks"
 }
