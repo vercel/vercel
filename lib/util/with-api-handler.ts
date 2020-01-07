@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 type Handler = (req: NextApiRequest, res: NextApiResponse) => Promise<any>;
 
 export function withApiHandler(handler: Handler): Handler {
-  return async (req, res) => {
+  return async (req: NextApiRequest, res: NextApiResponse) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     res.setHeader(
