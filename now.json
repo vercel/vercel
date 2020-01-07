@@ -1,4 +1,5 @@
 {
+  "project": "frameworks",
   "redirects": [
     {
       "source": "/",
@@ -25,6 +26,5 @@
         }
       ]
     }
-  ],
-  "name": "frameworks"
+  ]
 }
