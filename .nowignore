@@ -3,16 +3,12 @@
 # general
 !.yarnrc
 !run.js
-
-# next
-!pages/
-!pages/**
-!lib/
-!lib/**
 !yarn.lock
 !package.json
-!next-env.d.ts
-!tsconfig.json
+
+# api
+!api/
+!api/**
 
 # packages
 !packages/

@@ -1,17 +1,18 @@
 // A proxy to get the basic info of an existing github/gitlab repo:
 // GET /info?repo=zeit/micro
 
+// @ts-ignore
 import parseGitUrl from 'parse-github-url';
-import { NextApiRequest, NextApiResponse } from 'next';
-import { withApiHandler } from '../../../lib/util/with-api-handler';
-import { getGitHubRepoInfo } from '../../../lib/examples/github-repo-info';
-import { getGitLabRepoInfo } from '../../../lib/examples/gitlab-repo-info';
+import { NowRequest, NowResponse } from '@now/node';
+import { withApiHandler } from '../_lib/util/with-api-handler';
+import { getGitHubRepoInfo } from '../_lib/examples/github-repo-info';
+import { getGitLabRepoInfo } from '../_lib/examples/gitlab-repo-info';
 
 export default withApiHandler(async function(
-  req: NextApiRequest,
-  res: NextApiResponse
+  req: NowRequest,
+  res: NowResponse
 ) {
-  const repoPath = decodeURIComponent(req.query.repo || '');
+  const repoPath = decodeURIComponent((req.query.repo as string) || '');
 
   if (!repoPath) {
     return res.status(404).json({

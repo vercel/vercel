@@ -12,18 +12,9 @@
     ]
   },
   "dependencies": {
-    "got": "10.2.1",
-    "lerna": "3.16.4",
-    "next": "9.1.7",
-    "parse-github-url": "1.0.2",
-    "react": "16.12.0",
-    "react-dom": "16.12.0",
-    "tar-fs": "2.0.0",
-    "unzip-stream": "0.3.0"
+    "lerna": "3.16.4"
   },
   "devDependencies": {
-    "@types/node": "13.1.4",
-    "@types/react": "16.9.17",
     "@typescript-eslint/eslint-plugin": "2.0.0",
     "@typescript-eslint/parser": "2.0.0",
     "@zeit/ncc": "0.20.4",
@@ -34,8 +25,7 @@
     "husky": "3.0.4",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.0",
-    "prettier": "1.18.2",
-    "typescript": "3.7.4"
+    "prettier": "1.18.2"
   },
   "scripts": {
     "lerna": "lerna",
@@ -44,14 +34,13 @@
     "publish-canary": "git pull && lerna version prerelease --preid canary --message 'Publish Canary' --exact",
     "publish-from-github": "./.circleci/publish.sh",
     "changelog": "node changelog.js",
-    "build": "node run.js build all && next build",
+    "build": "node run.js build all",
     "test-lint": "node run.js test-lint",
     "test-unit": "node run.js test-unit",
     "test-integration": "node run.js test-integration",
     "test-integration-once": "node run.js test-integration-once",
     "test-integration-now-dev": "node run.js test-integration-now-dev",
-    "lint": "eslint . --ext .ts,.js",
-    "next-dev": "next"
+    "lint": "eslint . --ext .ts,.js"
   },
   "lint-staged": {
     "*.{js,ts}": [

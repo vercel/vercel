@@ -1,9 +1,9 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NowRequest, NowResponse } from '@now/node';
 
-type Handler = (req: NextApiRequest, res: NextApiResponse) => Promise<any>;
+type Handler = (req: NowRequest, res: NowResponse) => Promise<any>;
 
 export function withApiHandler(handler: Handler): Handler {
-  return async (req: NextApiRequest, res: NextApiResponse) => {
+  return async (req: NowRequest, res: NowResponse) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     res.setHeader(

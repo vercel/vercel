@@ -1,8 +1,9 @@
 import fs from 'fs';
+// @ts-ignore
 import tar from 'tar-fs';
-import { NextApiRequest, NextApiResponse } from 'next';
-import { extract } from '../../../../lib/examples/extract';
-import { withApiHandler } from '../../../../lib/util/with-api-handler';
+import { extract } from '../../_lib/examples/extract';
+import { NowRequest, NowResponse } from '@now/node';
+import { withApiHandler } from '../../_lib/util/with-api-handler';
 
 const TMP_DIR = '/tmp';
 
@@ -10,7 +11,7 @@ function isDirectory(path: string) {
   return fs.existsSync(path) && fs.lstatSync(path).isDirectory();
 }
 
-function notFound(res, message) {
+function notFound(res: NowResponse, message: string) {
   return res.status(404).send({
     error: {
       code: 'not_found',
@@ -19,13 +20,13 @@ function notFound(res, message) {
   });
 }
 
-function streamToBuffer(stream) {
+function streamToBuffer(stream: any) {
   return new Promise((resolve, reject) => {
-    const buffers = [];
-    stream.on('error', err => {
+    const buffers: any[] = [];
+    stream.on('error', (err: any) => {
       reject(err);
     });
-    stream.on('data', b => {
+    stream.on('data', (b: any) => {
       buffers.push(b);
     });
     stream.on('end', () => {
@@ -34,11 +35,11 @@ function streamToBuffer(stream) {
   });
 }
 
-export default withApiHandler(async function(req: NextApiRequest, res: NextApiResponse) {
+export default withApiHandler(async function(req: NowRequest, res: NowResponse) {
   const ext = '.tar.gz';
   const { segment = '' } = req.query;
 
-  if (!segment.endsWith(ext)) {
+  if (Array.isArray(segment) || !segment.endsWith(ext)) {
     return notFound(res, `Missing ${ext} suffix.`);
   }
 

@@ -1,12 +1,12 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { extract } from '../../../lib/examples/extract';
-import { summary } from '../../../lib/examples/summary';
-import { mapOldToNew } from '../../../lib/examples/map-old-to-new';
-import { withApiHandler } from '../../../lib/util/with-api-handler';
+import { extract } from '../_lib/examples/extract';
+import { summary } from '../_lib/examples/summary';
+import { NowRequest, NowResponse } from '@now/node';
+import { mapOldToNew } from '../_lib/examples/map-old-to-new';
+import { withApiHandler } from '../_lib/util/with-api-handler';
 
 export default withApiHandler(async function(
-  req: NextApiRequest,
-  res: NextApiResponse
+  req: NowRequest,
+  res: NowResponse
 ) {
   if (Number(req.query.version) === 1) {
     // The old cli is pinned to a specific commit hash
