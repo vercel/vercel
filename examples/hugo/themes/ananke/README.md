@@ -15,7 +15,6 @@ Features
 - Internal templates for meta data, google analytics, and DISQUS or COMMENTO comments
 - RSS Discovery
 - Table of Contents (must declare `toc: true` in post parameter)
-- Stackbit configuration ([Stackbit](https://www.stackbit.com))
 
 Also includes examples of Hugo Features or Functions:
 
@@ -48,7 +47,8 @@ This theme uses the "Tachyons" CSS library. This will allow you to manipulate th
 
 Inside the folder of your Hugo site run:
 
-    $ git submodule add https://github.com/budparr/gohugo-theme-ananke.git themes/ananke
+    $ cd themes
+    $ git clone https://github.com/budparr/gohugo-theme-ananke.git
 
 For more information read the official [setup guide](//gohugo.io/overview/installing/) of Hugo.
 
@@ -70,7 +70,7 @@ To enable comments, add following to your config file:
 - COMMENTO:
   ```
   [params]
-    commentoEnable = true
+    commentoEnable = true`
   ```
 
 ### Change the hero background
@@ -123,7 +123,7 @@ For example, if your css files are `static/css/custom.css` and `static/css/custo
       custom_css = ["css/custom.css","css/custom2.css"]
 ```
 
-### Show Reading Time and Word Count
+### Show Reading Time and Word Contributing
 
 If you add a key of `show_reading_time` true to either the Config Params, a page or section's front matter, articles will show the reading time and word count.
 

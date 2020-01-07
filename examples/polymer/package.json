@@ -7,6 +7,7 @@
   "repository": "Polymer/polymer-starter-kit",
   "scripts": {
     "start": "polymer serve",
+    "dev": "polymer serve --port $PORT",
     "build": "polymer build",
     "lint": "polymer lint",
     "test": "polymer test",

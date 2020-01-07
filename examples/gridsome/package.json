@@ -1,9 +1,10 @@
 {
-  "name": "18-gridsome",
+  "name": "gridsomee",
   "private": true,
   "scripts": {
     "build": "gridsome build",
     "develop": "gridsome develop",
+    "dev": "gridsome develop --port $PORT",
     "explore": "gridsome explore"
   },
   "dependencies": {

@@ -1,9 +1,10 @@
 {
-  "name": "angular-app",
+  "name": "angular",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "dev": "ng serve --port $PORT",
     "build": "ng build",
     "test": "ng test",
     "lint": "ng lint",

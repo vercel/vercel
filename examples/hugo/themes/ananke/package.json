@@ -1,14 +1,11 @@
 {
   "name": "gohugo-default-theme",
-  "version": "2.5.6",
+  "version": "1.0.0",
   "description": "Base Theme to start Hugo Sites",
   "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/theNewDynamic/thenewdynamic.com.git"
-  },
-  "scripts": {
-    "version": "auto-changelog -p --template keepachangelog --commit-limit 0 && git add CHANGELOG.md"
   },
   "keywords": [
     "hugo",
@@ -19,8 +16,5 @@
   "bugs": {
     "url": "https://github.com/theNewDynamic/thenewdynamic.com/issues"
   },
-  "homepage": "https://github.com/theNewDynamic/thenewdynamic.com#readme",
-  "devDependencies": {
-    "auto-changelog": "^1.16.1"
-  }
+  "homepage": "https://github.com/theNewDynamic/thenewdynamic.com#readme"
 }

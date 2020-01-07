@@ -6,7 +6,7 @@ license = "MIT"
 licenselink = "https://github.com/budparr/gohugo-theme-ananke/blob/master/LICENSE.md"
 description = "A Base theme for building full featured Hugo sites"
 homepage = "https://github.com/budparr/gohugo-theme-ananke"
-tags = ["website", "starter", "responsive", "Disqus", "blog", "Tachyons", "Multilingual", "Stackbit"]
+tags = ["website", "starter", "responsive", "Disqus", "blog", "Tachyons", "Multilingual"]
 features = ["posts", "shortcodes", "related content", "comments"]
 min_version = "0.30.2"
 

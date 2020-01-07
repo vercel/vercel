@@ -1,33 +1,29 @@
-# Website
+![Docusaurus Logo](../.github/images/docusaurus.svg)
 
-This website is built using [Docusaurus 2](https://v2.docusaurus.io/), a modern static website generator.
+# Docusaurus Example
 
-### Installation
+This directory is a brief example of a [Docusaurus](https://docusaurus.io/) site that can be deployed with ZEIT Now and zero configuration.
 
-```
-$ yarn
-```
+## Deploy Your Own
 
-### Local Development
+Deploy your own Docusaurus project with ZEIT Now.
 
-```
-$ yarn start
-```
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/docusaurus)
 
-This command starts a local development server and open up a browser window. Most changes are reflected live without having to restart the server.
+_Live Example: https://docusaurus.now-examples.now.sh_
 
-### Build
+### How We Created This Example
 
-```
-$ yarn build
+To get started with Docusaurus for deployment with ZEIT Now, you can use the [Docusaurus CLI](https://docusaurus.io/docs/en/installation) to initialize the project:
+
+```shell
+$ docusaurus-init
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+### Deploying From Your Terminal
 
-### Deployment
+You can deploy your new Docusaurus project with a single command from your terminal using [Now CLI](https://zeit.co/download):
 
+```shell
+$ now
 ```
-$ GIT_USER=<Your GitHub username> USE_SSH=true yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.

@@ -1,17 +1,27 @@
-# Brunch app
+# Brunch Example
 
-This is a HTML5 application, built with [Brunch](http://brunch.io).
+This directory is a brief example of a [Brunch](https://brunch.io/) site that can be deployed with ZEIT Now and zero configuration.
 
-## Getting started
+## Deploy Your Own
 
-- Install (if you don't have them):
-  - [Node.js](http://nodejs.org): `brew install node` on OS X
-  - [Brunch](http://brunch.io): `npm install -g brunch`
-  - Brunch plugins and app dependencies: `npm install`
-- Run:
-  - `npm start` — watches the project with continuous rebuild. This will also launch HTTP server with [pushState](https://developer.mozilla.org/en-US/docs/Web/Guide/API/DOM/Manipulating_the_browser_history).
-  - `npm run build` — builds minified project for production
-- Learn:
-  - `public/` dir is fully auto-generated and served by HTTP server. Write your code in `app/` dir.
-  - Place static files you want to be copied from `app/assets/` to `public/`.
-  - [Brunch site](http://brunch.io), [Getting started guide](https://github.com/brunch/brunch-guide#readme)
+Deploy your own Brunch project with ZEIT Now.
+
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/brunch)
+
+_Live Example: https://brunch.now-examples.now.sh_
+
+### How We Created This Example
+
+To get started deploying Brunch with ZEIT Now, you can use the [Brunch CLI](https://brunch.io/docs/commands) to initialize the project:
+
+```shell
+$ brunch new project-name -s es6
+```
+
+### Deploying From Your Terminal
+
+You can deploy your new Brunch project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+
+```shell
+$ now
+```

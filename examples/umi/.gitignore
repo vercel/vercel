@@ -16,3 +16,7 @@
 # umi
 .umi
 .umi-production
+
+# environment variables
+.env
+.env.build

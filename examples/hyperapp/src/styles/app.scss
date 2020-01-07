@@ -1,0 +1,60 @@
+@import "variables";
+
+/* Simple reset. */
+body,
+* {
+    box-sizing: border-box;
+    margin: 0;
+}
+
+body {
+    padding: 2rem;
+    color: $color-text;
+    font-family: $font-family;
+    font-size: 18px;
+}
+
+.counter {
+    text-align: center;
+
+    h1 {
+        color: $color-heading;
+    }
+
+    section > h1 {
+        padding: 1rem 0;
+    }
+
+    button {
+        border-color: black;
+        border-radius: 3px;
+        border-style: solid;
+        border-width: 1px;
+        width: 30px;
+        height: 30px;
+        outline-color: $color-outline;
+        cursor: pointer;
+
+        &.add {
+            background-color: $color-add;
+            font-size: 20px;
+            color: black;
+        }
+
+        &.sub {
+            background-color: $color-sub;
+            font-size: 20px;
+            color: black;
+
+            &:disabled {
+                background-color: lighten($color-sub, 50%);
+                cursor: not-allowed;
+            }
+        }
+    }
+
+    .line-break {
+        width: 100%;
+        margin: 30px 0;
+    }
+}

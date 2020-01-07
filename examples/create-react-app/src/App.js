@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // Added a warning in order to make CRA not show the devPort in the console
+import React from 'react';
 import logo from './logo.svg';
 import './App.css';
 

@@ -15,18 +15,3 @@ other = "Ce qui est dans {{ .Type }}"
 
 [related]
 other = "Lié"
-
-[yourName]
-other = "Votre nom"
-
-[emailAddress]
-other = "Adresse e-mail"
-
-[message]
-other = "Message"
-
-[emailRequiredNote]
-other = "Une adresse e-mail est requise."
-
-[send]
-other = "Envoyer"

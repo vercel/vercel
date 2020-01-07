@@ -54,9 +54,3 @@
   {{- partial "new-window-icon.html" . -}}
 </a>
 {{ end }}
-{{ with .Param "slack" }}
-<a href="{{ . }}" target="_blank" class="link-transition slack link dib z-999 pt3 pt0-l mr1" title="Slack link" rel="noopener" aria-label="follow on Slack——Opens in a new window">
-  {{ partial "svg/slack.svg" (dict "size" $icon_size) }}
-  {{- partial "new-window-icon.html" . -}}
-</a>
-{{ end }}

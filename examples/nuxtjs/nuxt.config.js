@@ -29,10 +29,6 @@ export default {
    */
   plugins: [],
   /*
-   ** Nuxt.js dev-modules
-   */
-  buildModules: [],
-  /*
    ** Nuxt.js modules
    */
   modules: [],
@@ -44,5 +40,8 @@ export default {
      ** You can extend webpack config here
      */
     extend(config, ctx) {},
+  },
+  generate: {
+    dir: 'public',
   },
 };

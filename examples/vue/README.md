@@ -1,29 +1,29 @@
-# vue
+![Vue.js Logo](../.github/images/vue.svg)
 
-## Project setup
+# Vue.js Example
 
-```
-yarn install
-```
+This directory is a brief example of a [Vue.js](https://vuejs.org/) app that can be deployed with ZEIT Now and zero configuration.
 
-### Compiles and hot-reloads for development
+## Deploy Your Own
 
-```
-yarn serve
-```
+Deploy your own Vue.js project with ZEIT Now.
 
-### Compiles and minifies for production
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/vue)
 
-```
-yarn build
-```
+_Live Example: https://vue.now-examples.now.sh_
 
-### Lints and fixes files
+### How We Created This Example
 
-```
-yarn lint
+To get started with Vue.js deployed with ZEIT Now, you can use the [Vue CLI](https://cli.vuejs.org/guide/creating-a-project.html#vue-create) to initialize the project:
+
+```shell
+$ vue create
 ```
 
-### Customize configuration
+### Deploying From Your Terminal
 
-See [Configuration Reference](https://cli.vuejs.org/config/).
+You can deploy your new Vue.js project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+
+```shell
+$ now
+```

@@ -1,4 +1,5 @@
 node_modules
-*.log
+.DS_Store
 .saber
-public
+.env
+.env.build

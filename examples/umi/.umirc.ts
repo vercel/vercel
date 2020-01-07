@@ -11,7 +11,7 @@ const config: IConfig = {
         antd: false,
         dva: false,
         dynamicImport: false,
-        title: '19-umi',
+        title: 'umijs',
         dll: false,
 
         routes: {

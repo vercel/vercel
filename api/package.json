@@ -5,8 +5,7 @@
   "description": "API for the zeit/now repo",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "now-build": "yarn --cwd .. && node ../run.js build all && tsc"
+    "build": "yarn --cwd .. && node ../run.js build all"
   },
   "dependencies": {
     "got": "10.2.1",

@@ -15,18 +15,3 @@ other = "Содержание {{ .Type }}"
 
 [related]
 other = "Схожие"
-
-[yourName]
-other = "Ваше имя"
-
-[emailAddress]
-other = "Адрес электронной почты"
-
-[message]
-other = "Сообщение"
-
-[emailRequiredNote]
-other = "Требуется адрес электронной почты."
-
-[send]
-other = "трансмиссия"

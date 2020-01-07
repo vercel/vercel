@@ -22,8 +22,9 @@ Thumbs.db
 # NPM packages folder.
 node_modules/
 
-# Brunch folder for temporary files.
-tmp/
-
 # Brunch output folder.
 public/
+
+# Environment Variables
+.env
+.env.build

@@ -1,66 +1,29 @@
-_Psst — looking for a shareable component template? Go here --> [sveltejs/component-template](https://github.com/sveltejs/component-template)_
+![Svelte Logo](../.github/images/svelte.svg)
 
----
+# Svelte Example
 
-# svelte app
+This directory is a brief example of a [Svelte](https://svelte.dev/) app that can be deployed with ZEIT Now and zero configuration.
 
-This is a project template for [Svelte](https://svelte.dev) apps. It lives at https://github.com/sveltejs/template.
+## Deploy Your Own
 
-To create a new project based on this template using [degit](https://github.com/Rich-Harris/degit):
+Deploy your own Svelte project with ZEIT Now.
 
-```bash
-npx degit sveltejs/template svelte-app
-cd svelte-app
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/svelte)
+
+_Live Example: https://svelte.now-examples.now.sh_
+
+### How We Created This Example
+
+To get started with Svelte deployed with ZEIT Now, you can use [degit](https://github.com/Rich-Harris/degit) to initialize the project:
+
+```shell
+$ npx degit sveltejs/template my-svelte-project
 ```
 
-_Note that you will need to have [Node.js](https://nodejs.org) installed._
+### Deploying From Your Terminal
 
-## Get started
+You can deploy your new Svelte project with a single command from your terminal using [Now CLI](https://zeit.co/download):
 
-Install the dependencies...
-
-```bash
-cd svelte-app
-npm install
-```
-
-...then start [Rollup](https://rollupjs.org):
-
-```bash
-npm run dev
-```
-
-Navigate to [localhost:5000](http://localhost:5000). You should see your app running. Edit a component file in `src`, save it, and reload the page to see your changes.
-
-## Deploying to the web
-
-### With [now](https://zeit.co/now)
-
-Install `now` if you haven't already:
-
-```bash
-npm install -g now
-```
-
-Then, from within your project folder:
-
-```bash
-now
-```
-
-As an alternative, use the [Now desktop client](https://zeit.co/download) and simply drag the unzipped project folder to the taskbar icon.
-
-### With [surge](https://surge.sh/)
-
-Install `surge` if you haven't already:
-
-```bash
-npm install -g surge
-```
-
-Then, from within your project folder:
-
-```bash
-npm run build
-surge public
+```shell
+$ now
 ```

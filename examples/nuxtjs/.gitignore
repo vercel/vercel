@@ -1,7 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### Node template
 # Logs
-/logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -58,6 +58,7 @@ typings/
 
 # dotenv environment variables file
 .env
+.env.build
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -79,12 +80,10 @@ dist
 
 # IDE / Editor
 .idea
+.editorconfig
 
 # Service worker
 sw.*
 
 # Mac OSX
 .DS_Store
-
-# Vim swap files
-*.swp
