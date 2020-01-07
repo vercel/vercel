@@ -20,12 +20,15 @@ export default withApiHandler(async function(
     return res.send(exampleList);
   }
 
-  await extract(
-    'https://github.com/zeit/now-examples/archive/master.zip',
-    '/tmp'
-  );
+  await Promise.all([
+    extract('https://github.com/zeit/now/archive/master.zip', '/tmp'),
+    extract('https://github.com/zeit/now-examples/archive/master.zip', '/tmp'),
+  ]);
 
-  const exampleList = summary('/tmp/now-examples-master');
+  const exampleList = [
+    ...summary('/tmp/now-master/examples'),
+    ...summary('/tmp/now-examples-master'),
+  ];
 
   const existingExamples = exampleList.map(key => ({
     name: key,
@@ -39,6 +42,5 @@ export default withApiHandler(async function(
     suggestions: mapOldToNew[key],
   }));
 
-  const allExamples = existingExamples.concat(oldExamples);
-  res.send(allExamples);
+  res.status(200).json([...existingExamples, ...oldExamples]);
 });

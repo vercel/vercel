@@ -53,14 +53,14 @@ export async function getGitHubRepoInfo(repo: Repo) {
     const example = data.subdir[0];
     const exampleList = await getExampleList();
 
-    for (const t in exampleList) {
-      if (exampleList[t].path === `/${example}`) {
-        data.homepage = exampleList[t].demo;
-        data.description = exampleList[t].description;
-        data.exampleName = exampleList[t].example;
-        data.icon = exampleList[t].icon;
-        data.tagline = exampleList[t].tagline;
-        data.framework = exampleList[t].framework;
+    for (const item of exampleList) {
+      if (item.path === `/${example}`) {
+        data.homepage = item.demo;
+        data.description = item.description;
+        data.exampleName = item.example;
+        data.icon = item.icon;
+        data.tagline = item.tagline;
+        data.framework = item.framework;
         return data;
       }
     }

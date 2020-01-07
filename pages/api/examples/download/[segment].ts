@@ -52,6 +52,12 @@ export default withApiHandler(async function(req: NextApiRequest, res: NextApiRe
   } else {
     await extract('https://github.com/zeit/now-examples/archive/master.zip', TMP_DIR);
     directory = `${TMP_DIR}/now-examples-master/${example}`;
+
+    if (!isDirectory(directory)) {
+      // Use `now` instead of `now-examples` if the searched example does not exist
+      await extract('https://github.com/zeit/now/archive/master.zip', TMP_DIR);
+      directory = `${TMP_DIR}/now-master/examples/${example}`;
+    }
   }
 
   if (!isDirectory(directory)) {
