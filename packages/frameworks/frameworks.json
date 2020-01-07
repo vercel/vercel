@@ -12,6 +12,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`next build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "next dev --port $PORT"
+      },
+      "outputDirectory": {
+        "placeholder": "Next.js default"
+      }
     }
   },
   {
@@ -27,6 +38,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"gatsby\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`gatsby build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "gatsby develop --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
+      }
     }
   },
   {
@@ -41,6 +63,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"hexo\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`hexo generate` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "hexo server --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
+      }
     }
   },
   {
@@ -55,6 +88,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@11ty\\/eleventy\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npx @11ty/eleventy` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "npx @11ty/eleventy --serve --watch --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "_site"
+      }
     }
   },
   {
@@ -73,6 +117,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@docusaurus\\/core\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`docusaurus-build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "docusaurus-start --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
     }
   },
   {
@@ -88,6 +143,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"preact-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`preact build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "preact watch --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
     }
   },
   {
@@ -102,6 +168,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"ember-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`ember build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "ember serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
+      }
     }
   },
   {
@@ -117,6 +194,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@vue\\/cli-service\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`vue-cli-service build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "vue-cli-service serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
+      }
     }
   },
   {
@@ -130,6 +218,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@scullyio\\/init\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`ng build && scully` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "ng serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
+      }
     }
   },
   {
@@ -145,6 +244,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@angular\\/cli\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`ng build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "ng serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
+      }
     }
   },
   {
@@ -159,6 +269,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"polymer-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`polymer build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "polymer serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
     }
   },
   {
@@ -174,6 +295,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"sirv-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`rollup -c` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "sirv public --single --dev --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
+      }
     }
   },
   {
@@ -193,6 +325,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"react-dev-utils\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`react-scripts build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "react-scripts start"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
     }
   },
   {
@@ -207,6 +350,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"gridsome\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`gridsome build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "gridsome develop -p $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
+      }
     }
   },
   {
@@ -222,6 +376,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"umi\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`umi build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "umi dev --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "dist"
+      }
     }
   },
   {
@@ -237,6 +402,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"sapper\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`sapper export` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "sapper dev --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "__sapper__/export"
+      }
     }
   },
   {
@@ -251,6 +427,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"saber\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`saber build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "saber --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
+      }
     }
   },
   {
@@ -265,6 +452,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@stencil\\/core\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`stencil build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "stencil build --dev --watch --serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "www"
+      }
     }
   },
   {
@@ -280,6 +478,17 @@
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"nuxt\":\\s*\".+?\"[^}]*}"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`nuxt build` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "nuxt"
+      },
+      "outputDirectory": {
+        "value": "dist"
+      }
     }
   },
   {
@@ -300,6 +509,17 @@
           "file": "config.json"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "value": "hugo"
+      },
+      "devCommand": {
+        "value": "hugo server -D -w -p $PORT"
+      },
+      "outputDirectory": {
+        "placeholder": "`public` or `publishDir` from the `config` file"
+      }
     }
   },
   {
@@ -313,6 +533,17 @@
           "file": "_config.yml"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "value": "jekyll build"
+      },
+      "devCommand": {
+        "value": "bundle exec jekyll serve --watch --port $PORT"
+      },
+      "outputDirectory": {
+        "placeholder": "`_site` or `destination` from `_config.yml`"
+      }
     }
   },
   {
@@ -326,6 +557,17 @@
           "file": "brunch-config.js"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`brunch build --production` or `build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "brunch watch --server --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
+      }
     }
   },
   {
@@ -339,6 +581,17 @@
           "file": "config.rb"
         }
       ]
+    },
+    "settings": {
+      "buildCommand": {
+        "value": "bundle exec middleman build"
+      },
+      "devCommand": {
+        "value": "bundle exec middleman server -p $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
     }
   },
   {

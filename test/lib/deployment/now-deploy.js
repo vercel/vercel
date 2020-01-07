@@ -1,6 +1,5 @@
 const assert = require('assert');
 const { createHash } = require('crypto');
-const { homedir } = require('os');
 const path = require('path');
 const fetch = require('./fetch-retry.js');
 
@@ -28,7 +27,7 @@ async function nowDeploy (bodies, randomness) {
         RANDOMNESS_BUILD_ENV_VAR: randomness,
       },
     },
-    name: 'test',
+    name: 'test2020',
     files,
     builds: nowJson.builds,
     routes: nowJson.routes || [],
@@ -133,20 +132,12 @@ async function fetchWithAuth (url, opts = {}) {
   if (!opts.headers) opts.headers = {};
 
   if (!opts.headers.Authorization) {
-    const { NOW_TOKEN, CIRCLECI } = process.env;
     currentCount += 1;
     if (!token || currentCount === MAX_COUNT) {
       currentCount = 0;
-      if (NOW_TOKEN) {
-        token = NOW_TOKEN;
-      } else if (CIRCLECI) {
-        token = await fetchTokenWithRetry(
-          Buffer.from(str, 'base64').toString()
-        );
-      } else {
-        const authJsonPath = path.join(homedir(), '.now/auth.json');
-        token = require(authJsonPath).token;
-      }
+      token = await fetchTokenWithRetry(
+        Buffer.from(str, 'base64').toString()
+      );
     }
 
     opts.headers.Authorization = `Bearer ${token}`;
