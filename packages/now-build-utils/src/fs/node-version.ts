@@ -15,9 +15,11 @@ const allOptions: NodeVersion[] = [
   },
 ];
 
-const supportedOptions = allOptions.filter(o => !isDiscontinued(o));
-const pleaseUse =
-  'Please use one of the following supported ranges in your `package.json`: ';
+const pleaseSet =
+  'Please set "engines": { "node": "' +
+  getLatestNodeVersion().range +
+  '" } in your `package.json` file to upgrade to Node.js ' +
+  getLatestNodeVersion().major;
 const upstreamProvider =
   'This change is the result of a decision made by an upstream infrastructure provider (AWS).' +
   '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html';
@@ -51,11 +53,7 @@ export async function getSupportedNodeVersion(
             engineRange;
       throw new NowBuildError({
         code: 'NOW_BUILD_UTILS_NODE_VERSION_INVALID',
-        message:
-          intro +
-          '\n' +
-          pleaseUse +
-          JSON.stringify(supportedOptions.map(o => o.range)),
+        message: intro + '\n' + pleaseSet,
       });
     }
   }
@@ -68,13 +66,7 @@ export async function getSupportedNodeVersion(
           engineRange;
     throw new NowBuildError({
       code: 'NOW_BUILD_UTILS_NODE_VERSION_DISCONTINUED',
-      message:
-        intro +
-        '\n' +
-        pleaseUse +
-        JSON.stringify(supportedOptions.map(o => o.range)) +
-        '\n' +
-        upstreamProvider,
+      message: intro + '\n' + pleaseSet + '\n' + upstreamProvider,
     });
   }
 
@@ -88,9 +80,6 @@ export async function getSupportedNodeVersion(
 
   if (selection.discontinueDate) {
     const d = selection.discontinueDate.toISOString().split('T')[0];
-    const validRanges = supportedOptions
-      .filter(o => !o.discontinueDate)
-      .map(o => o.range);
     console.warn(
       boxen(
         'NOTICE' +
@@ -98,8 +87,7 @@ export async function getSupportedNodeVersion(
           `\nNode.js version ${selection.range} has reached end-of-life.` +
           `\nAs a result, deployments created on or after ${d} will fail to build.` +
           '\n' +
-          pleaseUse +
-          JSON.stringify(validRanges) +
+          pleaseSet +
           '\n' +
           upstreamProvider,
         { padding: 1 }
