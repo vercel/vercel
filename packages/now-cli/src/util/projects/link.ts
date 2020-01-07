@@ -90,5 +90,5 @@ export async function linkFolderToProject(
     // ignore errors since this is non-critical
   }
 
-  output.print(`✅ Linked (created .now and added it to .nowignore)`);
+  output.print(`✅  Linked (created .now and added it to .nowignore)\n`);
 }

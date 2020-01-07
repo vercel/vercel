@@ -15,7 +15,6 @@ import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
-import getProjectName from '../../util/get-project-name';
 import {
   BuildsRateLimited,
   DeploymentNotFound,
@@ -41,7 +40,6 @@ import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-ava
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 import promptBool from '../../util/input/prompt-bool';
-import promptText from '../../util/input/text';
 import selectProject from '../../util/input/select-project';
 import editProjectSettings from '../../util/input/edit-project-settings';
 import {
@@ -77,88 +75,75 @@ const addProcessEnv = async (log, env) => {
   }
 };
 
-const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`;
-const prepareAlias = input =>
-  isWildcardAlias(input) ? input : `https://${input}`;
-
 const printDeploymentStatus = async (
   output,
-  { readyState, alias: aliasList, aliasError },
+  { readyState, alias: aliasList, aliasError, url, target },
   deployStamp,
-  clipboardEnabled,
-  localConfig,
-  builds
+  isClipboardEnabled,
+  orgName
 ) => {
-  if (readyState === 'READY') {
-    if (aliasError && aliasError.message) {
-      output.warn(`Failed to assign aliases: ${aliasError.message}`);
-    }
+  const isProdDeployment = target === 'production';
 
-    if (Array.isArray(aliasList) && aliasList.length > 0) {
-      if (aliasList.length === 1) {
-        if (clipboardEnabled) {
-          const firstAlias = aliasList[0];
-          const preparedAlias = prepareAlias(firstAlias);
-          try {
-            await copy(`https://${firstAlias}`);
-            output.ready(
-              `Deployed to ${chalk.bold(
-                chalk.cyan(preparedAlias)
-              )} ${chalk.gray('[in clipboard]')} ${deployStamp()}`
-            );
-          } catch (err) {
-            output.debug(`Error copying to clipboard: ${err}`);
-            output.ready(
-              `Deployed to ${chalk.bold(
-                chalk.cyan(preparedAlias)
-              )} ${deployStamp()}`
-            );
-          }
-        }
-      } else {
-        output.ready(`Deployment complete ${deployStamp()}`);
-
-        // If `alias` is defined in the config, we need to
-        // copy the first one to the clipboard.
-        const matching = (localConfig.alias || [])[0];
-
-        for (const alias of aliasList) {
-          const index = aliasList.indexOf(alias);
-          const isLast = index === aliasList.length - 1;
-          const shouldCopy = matching ? alias === matching : isLast;
-
-          if (shouldCopy && clipboardEnabled) {
-            try {
-              await copy(`https://${alias}`);
-              output.print(
-                `- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray(
-                  '[in clipboard]'
-                )}\n`
-              );
-
-              continue;
-            } catch (err) {
-              output.debug(`Error copying to clipboard: ${err}`);
-            }
-          }
-
-          output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
-        }
-      }
-    } else {
-      output.ready(`Deployment complete ${deployStamp()}`);
-    }
-
-    return 0;
-  }
-
-  if (!builds) {
-    output.error(deploymentErrorMsg);
+  if (readyState !== 'READY') {
+    output.error(
+      `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+    );
     return 1;
   }
 
-  output.error(deploymentErrorMsg);
-  return 1;
+  // print inspect url
+  try {
+    const urlParts = url
+      .replace(/\..*/, '')
+      .replace('https://', '')
+      .split('-');
+    const deploymentShortId = urlParts.pop();
+    const projectName = urlParts.join('-');
+    const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
+    output.print(`🔍  Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
+  } catch (error) {}
+
+  if (aliasError) {
+    output.warn(
+      `Failed to assign aliases${
+        aliasError.message ? `: ${aliasError.message}` : ''
+      }`
+    );
+  } else {
+    // print preview/production url
+    if (Array.isArray(aliasList) && aliasList.length > 0) {
+      const prodUrl = isWildcardAlias(aliasList[0])
+        ? aliasList[0]
+        : `https://${aliasList[0]}`;
+
+      // copy to clipboard
+      let isCopiedToClipboard = false;
+      if (isClipboardEnabled) {
+        await copy(`https://${prodUrl}`)
+          .then(() => (isCopiedToClipboard = true))
+          .catch(error => output.debug(`Error copying to clipboard: ${error}`));
+      }
+
+      output.print(
+        `✅  ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+          prodUrl
+        )} ${
+          isCopiedToClipboard ? chalk.gray('[in clipboard]') : ''
+        } ${deployStamp()}\n`
+      );
+    } else {
+      output.print(`Deployment complete ${deployStamp()}\n`);
+    }
+  }
+
+  if (!isProdDeployment) {
+    // add the production domain(s) there 👇
+    output.print(
+      `ℹ️  ${chalk.grey(`To deploy to production run ${'`now --prod`'}`)}\n`
+    );
+  }
+
+  return 0;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -351,7 +336,9 @@ export default async function main(
   });
 
   const path = paths[0];
-  const [orgName, project] = await getLinkedProject(client);
+  let [orgName, project] = await getLinkedProject(client);
+
+  console.log(orgName, project ? project.name : 'no project');
 
   if (!project) {
     const shouldStartSetup = await promptBool(
@@ -359,7 +346,7 @@ export default async function main(
     );
 
     if (!shouldStartSetup) {
-      output.print(`Aborted. Project not set up.`);
+      output.print(`Aborted. Project not set up.\n`);
       return 0;
     }
 
@@ -367,7 +354,6 @@ export default async function main(
       `Link to an existing ZEIT Now project? [y/N]`
     );
 
-    let project;
     if (shouldLinkToProject) {
       project = await selectProject(output, client, ctx.config.currentTeam);
 
@@ -386,7 +372,7 @@ export default async function main(
 
   try {
     const createArgs = {
-      name: project,
+      name: project ? project.name : null,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -560,7 +546,7 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    localConfig
+    orgName
   );
 }
 
