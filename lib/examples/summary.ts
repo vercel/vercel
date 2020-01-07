@@ -3,13 +3,14 @@
  */
 
 import { join } from 'path';
-import { lstatSync, readdirSync } from 'fs';
+import { lstatSync, existsSync, readdirSync } from 'fs';
 
+const exists = (path: string) => existsSync(path);
 const isDotFile = (name: string) => name.startsWith('.');
 const isDirectory = (path: string) => lstatSync(path).isDirectory();
 
 export function summary(source: string) {
-  if (!isDirectory(source)) {
+  if (!exists(source) || !isDirectory(source)) {
     return [];
   }
 
