@@ -1240,11 +1240,6 @@
     "@nodelib/fs.scandir" "2.1.1"
     fastq "^1.6.0"
 
-"@now/frameworks@0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@now/frameworks/-/frameworks-0.0.3.tgz#01687d3af8533ce26aff0135b442a7f7a54decc2"
-  integrity sha512-ECCgUQnJz7EYojH7pI2sniYCHGTmtbTd5SbTZLHYyUCK3SBndmNjofGtdUQldIV/ar3+pi099fvMQaRqptJaSQ==
-
 "@octokit/endpoint@^5.1.0":
   version "5.3.2"
   resolved "https://registry.yarnpkg.com/@octokit/endpoint/-/endpoint-5.3.2.tgz#2deda2d869cac9ba7f370287d55667be2a808d4b"

@@ -52,19 +52,19 @@ async function main() {
 
   // Create a tarball from all the `@now` scoped builders which will be bundled
   // with Now CLI
-  // await createBuildersTarball();
+  await createBuildersTarball();
 
   // `now dev` uses chokidar to watch the filesystem, but opts-out of the
   // `fsevents` feature using `useFsEvents: false`, so delete the module here so
   // that it is not compiled by ncc, which makes the npm package size larger
   // than necessary.
-  // await remove(join(dirRoot, '../../node_modules/fsevents'));
+  await remove(join(dirRoot, '../../node_modules/fsevents'));
 
   // Compile the `doT.js` template files for `now dev`
-  // console.log();
-  // await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
-  //   stdio: 'inherit',
-  // });
+  console.log();
+  await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
+    stdio: 'inherit',
+  });
 
   // Do the initial `ncc` build
   console.log();
@@ -89,12 +89,12 @@ async function main() {
   // get compiled into the final ncc bundle file, however, we want them to be
   // present in the npm package because the contents of those files are involved
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
-  // const runtimes = join(
-  //   dirRoot,
-  //   '../../node_modules/@zeit/fun/dist/src/runtimes'
-  // );
-  // const dest = join(dirRoot, 'dist/runtimes');
-  // await cpy('**/*', dest, { parents: true, cwd: runtimes });
+  const runtimes = join(
+    dirRoot,
+    '../../node_modules/@zeit/fun/dist/src/runtimes'
+  );
+  const dest = join(dirRoot, 'dist/runtimes');
+  await cpy('**/*', dest, { parents: true, cwd: runtimes });
 
   console.log('Finished building `now-cli`');
 }
