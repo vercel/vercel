@@ -1,0 +1,233 @@
+stackbitVersion: ~0.2.39
+ssgName: custom
+publishDir: exampleSite/public
+buildCommand: cd exampleSite && hugo --gc --baseURL "/" --themesDir ../.. && cd ..
+uploadDir: uploads
+staticDir: exampleSite/static
+pagesDir: exampleSite/content
+dataDir: exampleSite
+models:
+  config:
+    type: data
+    label: Config
+    file: config.toml
+    fields:
+      - type: string
+        name: title
+        label: Title
+        required: true
+      - type: string
+        name: baseURL
+        label: Base URL
+        description: Hostname (and path) to the root
+        hidden: false
+      - type: string
+        name: languageCode
+        label: Language Code
+        hidden: true
+      - type: string
+        name: MetaDataFormat
+        label: MetaDataFormat
+        hidden: true
+      - type: string
+        name: DefaultContentLanguage
+        label: DefaultContentLanguage
+        hidden: true
+      - type: string
+        name: themesDir
+        label: Themes Directory
+        hidden: true
+      - type: string
+        name: theme
+        label: Theme Name
+        hidden: true
+      - type: string
+        name: SectionPagesMenu
+        label: Main Section
+        hidden: false
+      - type: number
+        name: Paginate
+        label: Paginate Per Page
+        hidden: false
+      - type: boolean
+        name: enableRobotsTXT
+        label: Enable Robots
+        hidden: true
+      - type: string
+        name: googleAnalytics
+        label: Google Analytics ID
+      - type: object
+        name: sitemap
+        label: sitemap
+        hidden: true
+        fields:
+          - type: string
+            name: changefreq
+            label: changefreq
+          - type: number
+            subtype: float
+            name: priority
+            label: priority
+          - type: string
+            name: filename
+            label: filename
+      - type: object
+        name: params
+        label: Params
+        description: Site parameters
+        required: true
+        fields:
+          - type: string
+            name: featured_image
+            label: Logo
+          - type: string
+            name: favicon
+            label: Favicon
+          - type: string
+            name: description
+            label: Description
+          - type: string
+            name: description
+            label: Description
+          - type: string
+            name: facebook
+            label: Facebook
+          - type: string
+            name: twitter
+            label: Twitter
+          - type: string
+            name: instagram
+            label: Instagram
+          - type: string
+            name: youtube
+            label: Youtube
+          - type: string
+            name: github
+            label: Github
+          - type: string
+            name: gitlab
+            label: Gitlab
+          - type: string
+            name: linkedin
+            label: Linkedin
+          - type: string
+            name: mastodon
+            label: Mastodon
+          - type: string
+            name: slack
+            label: Slack
+          - type: string
+            name: background_color_class
+            label: background_color_class
+          - type: number
+            name: recent_posts_number
+            label: recent_posts_number
+  home:
+    type: page
+    label: Home
+    file: _index.md
+    hideContent: false
+    singleInstance: true
+    layout: index.html
+    fields:
+      - type: string
+        name: title
+        label: Title
+        description: The title of the page.
+        required: true
+      - type: image
+        name: featured_image
+        label: Featured Image
+        description: Image displayed at in the pages intro section
+      - type: string
+        name: description
+        label: Description
+      - type: string
+        name: layout
+        label: layout
+  basicpage:
+    type: page
+    label: Basic Page
+    match: "*.md"
+    exclude: _index.md
+    layout: page/single.html
+    fields:
+      - type: string
+        name: title
+        label: Title
+        description: The title of the page.
+      - type: string
+        name: type
+        label: type
+        default: page
+      - type: boolean
+        name: omit_header_text
+        label: omit_header_text
+        description: The title of the page.
+      - type: image
+        name: featured_image
+        label: Featured Image
+        description: Image displayed at in the pages intro section
+      - type: string
+        name: description
+        label: Description
+      - type: enum
+        name: menu
+        label: Menu
+        options:
+          - label: Main Menu
+            value: main
+            type: object
+  section:
+    type: page
+    label: Section
+    match: "*/_index.md"
+    layout: _default/list.html
+    fields:
+      - type: string
+        name: title
+        label: Title
+        description: The title of the page.
+      - type: image
+        name: featured_image
+        label: Featured Image
+        description: Image displayed at in the pages intro section
+      - type: string
+        name: description
+        label: Description
+      - type: date
+        name: date
+        label: Date
+      - type: enum
+        name: menu
+        label: menu
+        default: main
+        options:
+          - label: main
+            value: main
+  post:
+    type: page
+    label: Posts
+    folder: post
+    exclude: _index.md
+    layout: _default/single.html
+    fields:
+      - type: string
+        name: title
+        label: Title
+      - type: date
+        name: date
+        label: Date
+      - type: image
+        name: featured_image
+        label: Featured Image
+        description: Image displayed at in the pages intro section
+      - type: string
+        name: description
+        label: Description
+      - type: enum
+        name: tags
+        label: tags
+      - type: boolean
+        name: draft
+        label: Draft

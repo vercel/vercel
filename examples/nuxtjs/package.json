@@ -1,0 +1,17 @@
+{
+  "name": "nuxtjs",
+  "version": "1.0.0",
+  "description": "My primo Nuxt.js project",
+  "author": "Andy Bitz",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "nuxt": "^2.0.0"
+  },
+  "devDependencies": {}
+}

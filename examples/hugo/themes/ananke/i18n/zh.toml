@@ -1,0 +1,32 @@
+[more]
+other = "更多"
+
+[allTitle]
+other = "所有 {{.Title }}"
+
+[recentTitle]
+other = "最近 {{.Title }}"
+
+[readMore]
+other = "继续阅读"
+
+[whatsInThis]
+other = "这是什么 {{ .Type }}"
+
+[related]
+other = "相关內容"
+
+[yourName]
+other = "你的名字"
+
+[emailAddress]
+other = "电邮地址"
+
+[message]
+other = "信息"
+
+[emailRequiredNote]
+other = "需要电子邮件地址。"
+
+[send]
+other = "发送"
