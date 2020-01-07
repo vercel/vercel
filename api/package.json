@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "now-build": "node ../run.js build all && tsc"
+    "now-build": "yarn --cwd .. && node ../run.js build all && tsc"
   },
   "dependencies": {
     "got": "10.2.1",
