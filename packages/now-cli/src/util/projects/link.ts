@@ -8,6 +8,7 @@ import { ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
+import { Project } from '../../types';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -20,7 +21,9 @@ interface ProjectFolderLink {
   orgId: string;
 }
 
-export async function getLinkedProject(client: Client) {
+export async function getLinkedProject(
+  client: Client
+): Promise<[string | null, Project | null]> {
   const cwd = process.cwd();
 
   try {
@@ -39,14 +42,14 @@ export async function getLinkedProject(client: Client) {
     ]);
 
     if (project instanceof ProjectNotFound || orgName === null) {
-      return null;
+      return [null, null];
     }
 
     return [orgName, project];
   } catch (error) {
     // link file does not exists, project is not linked
     if (error.code === 'ENOENT') {
-      return null;
+      return [null, null];
     }
 
     // link file can't be read
