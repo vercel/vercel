@@ -113,7 +113,11 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          log(`Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`);
+          if (fileCount) {
+            log(
+              `Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`
+            );
+          }
           const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
           log(`https://${event.payload.url} ${version}${deployStamp()}`);
         } else {
@@ -228,7 +232,11 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          log(`Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`);
+          if (fileCount) {
+            log(
+              `Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`
+            );
+          }
           const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
           log(`${event.payload.url} ${version}${deployStamp()}`);
         } else {
