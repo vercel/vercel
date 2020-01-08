@@ -1,4 +1,5 @@
 import path from 'path';
+import 'dotenv/config';
 
 import pkg from '../../../package.json';
 import DevServer from '../../util/dev/server';
@@ -21,7 +22,7 @@ export default async function dev(
 
   const [dir = '.'] = args;
   const cwd = path.resolve(dir);
-  const listen = parseListen(opts['--listen'] || '3000');
+  const listen = parseListen(opts['--listen'] || process.env.PORT || '3000');
   const debug = opts['--debug'] || false;
   const devServer = new DevServer(cwd, { output, debug });
 
