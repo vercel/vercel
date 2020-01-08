@@ -33,6 +33,10 @@ export function getLatestNodeVersion(): NodeVersion {
   return allOptions[0];
 }
 
+export function getDiscontinuedNodeVersions(): NodeVersion[] {
+  return allOptions.filter(isDiscontinued);
+}
+
 export async function getSupportedNodeVersion(
   engineRange?: string,
   isAuto?: boolean
