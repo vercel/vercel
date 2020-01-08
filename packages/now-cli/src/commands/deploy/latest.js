@@ -77,11 +77,14 @@ const addProcessEnv = async (log, env) => {
 
 const printDeploymentStatus = async (
   output,
-  { readyState, alias: aliasList, aliasError, url, target },
+  { readyState, alias: aliasList, aliasError, target },
   deployStamp,
   isClipboardEnabled,
-  orgName
+  orgName,
+  project
 ) => {
+  const isFirstDeployment =
+    project && project.targets && !project.targets.production;
   const isProdDeployment = target === 'production';
 
   if (readyState !== 'READY') {
@@ -135,6 +138,20 @@ const printDeploymentStatus = async (
     // add the production domain(s) there 👇
     output.print(
       `ℹ️  ${chalk.grey(`To deploy to production run ${'`now --prod`'}`)}\n`
+    );
+  }
+
+  if (isProdDeployment) {
+    // add a docs url there 👇
+    output.print(
+      `ℹ️  ${chalk.grey(
+        `Deployed to production. Run ${'`now --prod`'} to overwrite later.`
+      )}\n`
+    );
+    output.print(
+      `💡  ${chalk.grey(
+        `To set a custom production domain, go to https://zeit.co/${orgName}/${project.name}/domains`
+      )}\n`
     );
   }
 
@@ -545,7 +562,8 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    orgName
+    orgName,
+    project
   );
 }
 
