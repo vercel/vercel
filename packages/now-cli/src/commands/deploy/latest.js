@@ -141,7 +141,7 @@ const printDeploymentStatus = async (
     );
   }
 
-  if (isProdDeployment) {
+  if (isFirstDeployment && isProdDeployment) {
     // add a docs url there 👇
     output.print(
       `ℹ️  ${chalk.grey(
