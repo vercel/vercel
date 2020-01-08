@@ -9,6 +9,7 @@ import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
 import { Project } from '../../types';
+import { Org } from '../../types';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -21,9 +22,21 @@ interface ProjectFolderLink {
   orgId: string;
 }
 
+async function getOrg(client: Client, orgId: string): Promise<Org | null> {
+  if (orgId.startsWith('team_')) {
+    const team = await getTeamById(client, orgId);
+    if (!team) return null;
+    return { id: team.id, slug: team.slug };
+  }
+
+  const user = await getUser(client);
+  if (user.uid !== orgId) return null;
+  return { id: orgId, slug: user.username };
+}
+
 export async function getLinkedProject(
   client: Client
-): Promise<[string | null, Project | null]> {
+): Promise<[Org | null, Project | null]> {
   const cwd = process.cwd();
 
   try {
@@ -34,18 +47,16 @@ export async function getLinkedProject(
 
     const link: ProjectFolderLink = JSON.parse(json);
 
-    const [orgName, project] = await Promise.all([
-      link.orgId.startsWith('team_')
-        ? getTeamById(client, link.orgId).then(t => (t ? t.slug : null))
-        : getUser(client).then(user => user.username),
+    const [org, project] = await Promise.all([
+      getOrg(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
 
-    if (project instanceof ProjectNotFound || orgName === null) {
+    if (project instanceof ProjectNotFound || org === null) {
       return [null, null];
     }
 
-    return [orgName, project];
+    return [org, project];
   } catch (error) {
     // link file does not exists, project is not linked
     if (error.code === 'ENOENT') {

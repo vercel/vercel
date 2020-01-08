@@ -222,3 +222,8 @@ export interface Project {
   updatedAt: number;
   createdAt: number;
 }
+
+export interface Org {
+  id: string;
+  slug: string;
+}

@@ -68,7 +68,7 @@ export default class Now extends EventEmitter {
       deployStamp,
       projectSettings,
     },
-    orgName
+    org
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
@@ -177,7 +177,7 @@ export default class Now extends EventEmitter {
       quiet,
       nowConfig,
       force: forceNew,
-      orgName,
+      org,
       projectName: name,
     });
 

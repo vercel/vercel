@@ -40,13 +40,14 @@ import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-ava
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 import promptBool from '../../util/input/prompt-bool';
-import selectProject from '../../util/input/select-project';
 import editProjectSettings from '../../util/input/edit-project-settings';
 import {
   getLinkedProject,
   linkFolderToProject,
 } from '../../util/projects/link';
 import getProjectName from '../../util/get-project-name';
+import selectOrg from '../../util/input/select-org';
+import inputProject from '../../util/input/input-project';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -81,7 +82,7 @@ const printDeploymentStatus = async (
   { readyState, alias: aliasList, aliasError, target },
   deployStamp,
   isClipboardEnabled,
-  orgName,
+  org,
   project
 ) => {
   const isFirstDeployment =
@@ -151,7 +152,7 @@ const printDeploymentStatus = async (
     );
     output.print(
       `💡  ${chalk.grey(
-        `To set a custom production domain, go to https://zeit.co/${orgName}/${project.name}/domains`
+        `To set a custom production domain, go to https://zeit.co/${org.slug}/${project.name}/domains`
       )}\n`
     );
   }
@@ -349,9 +350,9 @@ export default async function main(
   });
 
   const path = paths[0];
-  let [orgName, project] = await getLinkedProject(client);
+  let [org, project] = await getLinkedProject(client);
 
-  if (!project) {
+  if (!org || !project) {
     const shouldStartSetup = await promptBool(
       `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}? [Y/n]`
     );
@@ -361,19 +362,26 @@ export default async function main(
       return 0;
     }
 
-    const shouldLinkToProject = await promptBool(
-      `Link to an existing ZEIT Now project? [y/N]`
+    org = await selectOrg(
+      'Which organization do you want to deploy to?',
+      client,
+      currentTeam
     );
 
-    if (shouldLinkToProject) {
-      project = await selectProject(output, client, ctx.config.currentTeam);
+    const detectedProjectName = getProjectName({
+      argv,
+      nowConfig: localConfig,
+      isFile,
+      paths,
+    });
 
+    project = await inputProject(output, client, org, detectedProjectName);
+
+    if (typeof project !== 'string') {
       await linkFolderToProject(output, {
         projectId: project.id,
-        orgId: project.accountId,
+        orgId: org.id,
       });
-    } else {
-      // later, we'll ask the directory here
     }
   }
 
@@ -383,14 +391,7 @@ export default async function main(
 
   try {
     const createArgs = {
-      name: project
-        ? project.name
-        : getProjectName({
-            argv,
-            nowConfig: localConfig,
-            isFile,
-            paths,
-          }),
+      name: typeof project === 'string' ? project : project.name,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -411,7 +412,7 @@ export default async function main(
       contextName,
       [path],
       createArgs,
-      orgName
+      org
     );
 
     if (
@@ -437,7 +438,7 @@ export default async function main(
         contextName,
         [path],
         createArgs,
-        orgName
+        org
       );
 
       await linkFolderToProject(output, {
@@ -566,7 +567,7 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    orgName,
+    org,
     project
   );
 }
