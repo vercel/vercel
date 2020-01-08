@@ -350,8 +350,6 @@ export default async function main(
   const path = paths[0];
   let [orgName, project] = await getLinkedProject(client);
 
-  console.log(orgName, project ? project.name : 'no project');
-
   if (!project) {
     const shouldStartSetup = await promptBool(
       `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}? [Y/n]`
