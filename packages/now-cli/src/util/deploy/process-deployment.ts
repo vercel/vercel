@@ -147,8 +147,8 @@ export default async function processDeployment({
         if (queuedSpinner === null) {
           queuedSpinner =
             event.payload.readyState === 'QUEUED'
-              ? wait('Queued...')
-              : wait('Building...');
+              ? wait('Queued')
+              : wait('Building');
         }
       }
 
@@ -161,7 +161,7 @@ export default async function processDeployment({
         }
 
         if (buildSpinner === null) {
-          buildSpinner = wait('Building...');
+          buildSpinner = wait('Building');
         }
       }
 
@@ -173,7 +173,7 @@ export default async function processDeployment({
           buildSpinner();
         }
 
-        deploySpinner = wait('Finalizing...');
+        deploySpinner = wait('Finalizing');
       }
 
       // Handle error events
