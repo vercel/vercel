@@ -187,6 +187,9 @@ export default async function processDeployment({
         if (deploySpinner) {
           deploySpinner();
         }
+        if (deployingSpinner) {
+          deployingSpinner();
+        }
 
         const error = await now.handleDeploymentError(event.payload, {
           hashes,
