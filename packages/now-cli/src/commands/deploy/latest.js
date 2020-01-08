@@ -46,6 +46,7 @@ import {
   getLinkedProject,
   linkFolderToProject,
 } from '../../util/projects/link';
+import getProjectName from '../../util/get-project-name';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -382,7 +383,14 @@ export default async function main(
 
   try {
     const createArgs = {
-      name: project ? project.name : null,
+      name: project
+        ? project.name
+        : getProjectName({
+            argv,
+            nowConfig: localConfig,
+            isFile,
+            paths,
+          }),
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -403,8 +411,7 @@ export default async function main(
       contextName,
       [path],
       createArgs,
-      orgName,
-      project ? project.name : null
+      orgName
     );
 
     if (
@@ -430,8 +437,7 @@ export default async function main(
         contextName,
         [path],
         createArgs,
-        orgName,
-        project ? project.name : null
+        orgName
       );
 
       await linkFolderToProject(output, {
