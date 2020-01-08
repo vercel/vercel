@@ -44,6 +44,7 @@ export default async function processDeployment({
   force,
   nowConfig,
   orgName,
+  projectName,
 }: {
   now: Now;
   output: Output;
@@ -57,6 +58,7 @@ export default async function processDeployment({
   nowConfig?: NowConfig;
   force?: boolean;
   orgName: string;
+  projectName: string;
 }) {
   const { warn, log, debug, note } = output;
   let bar: Progress | null = null;
@@ -77,6 +79,10 @@ export default async function processDeployment({
     let queuedSpinner = null;
     let buildSpinner = null;
     let deploySpinner = null;
+
+    let deployingSpinner = wait(
+      `Deploying ${chalk.bold(`${orgName}/${projectName}`)}`
+    );
 
     for await (const event of createDeployment(
       nowClientOptions,
@@ -126,6 +132,10 @@ export default async function processDeployment({
       }
 
       if (event.type === 'created') {
+        if (deployingSpinner) {
+          deployingSpinner();
+        }
+
         now._host = event.payload.url;
 
         if (!quiet) {

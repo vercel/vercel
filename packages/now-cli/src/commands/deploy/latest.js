@@ -388,7 +388,8 @@ export default async function main(
       contextName,
       [path],
       createArgs,
-      orgName
+      orgName,
+      project ? project.name : null
     );
 
     if (
@@ -414,7 +415,8 @@ export default async function main(
         contextName,
         [path],
         createArgs,
-        orgName
+        orgName,
+        project ? project.name : null
       );
 
       await linkFolderToProject(output, {
