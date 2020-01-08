@@ -4,7 +4,11 @@ const assert = require('assert');
 const { createZip } = require('../dist/lambda');
 const { glob, spawnAsync, download } = require('../');
 const { getSupportedNodeVersion } = require('../dist/fs/node-version');
-const { getNodeVersion, getLatestNodeVersion } = require('../dist');
+const {
+  getNodeVersion,
+  getLatestNodeVersion,
+  getDiscontinuedNodeVersions,
+} = require('../dist');
 
 it('should re-create symlinks properly', async () => {
   const files = await glob('**', path.join(__dirname, 'symlinks'));
@@ -129,6 +133,9 @@ it('should throw for discontinued versions', async () => {
 
   expect(getSupportedNodeVersion('', true)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
+
+  expect(getDiscontinuedNodeVersions().length).toBe(1);
+  expect(getDiscontinuedNodeVersions()[0]).toHaveProperty('range', '8.10.x');
 
   global.Date.now = realDateNow;
 });
