@@ -19,7 +19,8 @@ const pleaseSet =
   'Please set "engines": { "node": "' +
   getLatestNodeVersion().range +
   '" } in your `package.json` file to upgrade to Node.js ' +
-  getLatestNodeVersion().major;
+  getLatestNodeVersion().major +
+  '.';
 const upstreamProvider =
   'This change is the result of a decision made by an upstream infrastructure provider (AWS).' +
   '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html';
@@ -49,10 +50,13 @@ export async function getSupportedNodeVersion(
       const intro =
         isAuto || !engineRange
           ? 'This project is using an invalid version of Node.js and must be changed.'
-          : 'Found `engines` in `package.json` with an invalid Node.js version range: ' +
-            engineRange;
+          : 'Found `engines` in `package.json` with an invalid Node.js version range: "' +
+            engineRange +
+            '".';
       throw new NowBuildError({
         code: 'NOW_BUILD_UTILS_NODE_VERSION_INVALID',
+        link:
+          'https://zeit.co/docs/runtimes#official-runtimes/node-js/node-js-version',
         message: intro + '\n' + pleaseSet,
       });
     }
@@ -61,21 +65,26 @@ export async function getSupportedNodeVersion(
   if (isDiscontinued(selection)) {
     const intro =
       isAuto || !engineRange
-        ? 'This project is using a discontinued version of Node.js and must be upgraded.'
-        : 'Found `engines` in `package.json` with a discontinued Node.js version range: ' +
-          engineRange;
+        ? 'This project is using a discontinued version of Node.js (' +
+          selection.range +
+          ') and must be upgraded.'
+        : 'Found `engines` in `package.json` with a discontinued Node.js version range: "' +
+          engineRange +
+          '".';
     throw new NowBuildError({
       code: 'NOW_BUILD_UTILS_NODE_VERSION_DISCONTINUED',
+      link:
+        'https://zeit.co/docs/runtimes#official-runtimes/node-js/node-js-version',
       message: intro + '\n' + pleaseSet + '\n' + upstreamProvider,
     });
   }
 
   debug(
     isAuto || !engineRange
-      ? 'Using default Node.js range: ' + selection.range
-      : (engineRange ? 'Found' : 'Missing') +
-          ' `engines` in `package.json`, selecting range: ' +
-          selection.range
+      ? 'Using default Node.js range: "' + selection.range + '".'
+      : 'Found `engines` in `package.json`, selecting range: "' +
+          selection.range +
+          '".'
   );
 
   if (selection.discontinueDate) {
