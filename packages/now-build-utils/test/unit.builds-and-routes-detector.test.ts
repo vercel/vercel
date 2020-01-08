@@ -454,7 +454,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('use a custom runtime', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -462,11 +462,11 @@ describe('Test `detectBuilders`', () => {
 
     expect(errors).toBe(null);
     expect(builders!.length).toBe(1);
-    expect(builders![0].use).toBe('now-php@0.0.5');
+    expect(builders![0].use).toBe('now-php@0.0.8');
   });
 
   it('use a custom runtime but without a source', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/team.js'];
     const { errors } = await detectBuilders(files, null, {
       functions,
@@ -980,7 +980,7 @@ it('Test `detectRoutes`', async () => {
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
     const { builders } = await detectBuilders(files, null, { functions });
@@ -1260,7 +1260,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
     const { builders } = await detectBuilders(files, null, { functions });
@@ -1579,7 +1579,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
     const { builders } = await detectBuilders(files, null, { functions });
@@ -1840,7 +1840,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
     const { builders } = await detectBuilders(files, null, { functions });
