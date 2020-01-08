@@ -406,6 +406,8 @@ export default async function main(
       // deploy again, but send projectSettings this time
       createArgs.projectSettings = settings;
 
+      deployStamp = stamp();
+      createArgs.deployStamp = deployStamp;
       deployment = await createDeploy(
         output,
         now,
