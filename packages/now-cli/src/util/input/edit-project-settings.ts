@@ -23,15 +23,17 @@ export default async function editProjectSettings(
   framework: Framework | null
 ) {
   if (framework) {
-    output.print(`Auto-detected ${chalk.bold(framework.name)} settings:`);
+    output.print(`Auto-detected ${chalk.bold(framework.name)} settings:\n`);
 
     for (let field of fields) {
       const defaults = framework.settings[field.value];
 
       output.print(
-        `- ${chalk.bold(`${field.name}:`)} ${chalk.italic(
-          `${defaults.value || defaults.placeholder}`
-        )}`
+        `- ${chalk.bold(`${field.name}:`)} ${`${
+          defaults.value
+            ? defaults.value
+            : chalk.italic(`${defaults.placeholder}`)
+        }`}\n`
       );
     }
   }
@@ -59,10 +61,10 @@ export default async function editProjectSettings(
     choices: fields,
   });
 
-  for (let field of settingFields as (keyof ProjectSettings)[]) {
-    const fieldName = fields.find(f => f.value === field);
-    settings[field] = await text({
-      label: `What's your ${fieldName}?`,
+  for (let setting of settingFields as (keyof ProjectSettings)[]) {
+    const field = fields.find(f => f.value === setting);
+    settings[setting] = await text({
+      label: `What's your ${field ? field.name : setting}?`,
       trailing: '\n',
     });
   }
