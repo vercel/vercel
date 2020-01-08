@@ -15,6 +15,22 @@ import Now from '../../util';
 import { NowConfig } from '../dev/types';
 import ua from '../ua';
 
+function printInspectUrl(
+  output: Output,
+  deploymentUrl: string,
+  deployStamp: () => number,
+  orgName: string
+) {
+  const urlParts = deploymentUrl
+    .replace(/\..*/, '')
+    .replace('https://', '')
+    .split('-');
+  const deploymentShortId = urlParts.pop();
+  const projectName = urlParts.join('-');
+  const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
+  output.print(`🔍  Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
+}
+
 export default async function processDeployment({
   now,
   output,
@@ -27,6 +43,7 @@ export default async function processDeployment({
   quiet,
   force,
   nowConfig,
+  orgName,
 }: {
   now: Now;
   output: Output;
@@ -39,6 +56,7 @@ export default async function processDeployment({
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
+  orgName: string;
 }) {
   const { warn, log, debug, note } = output;
   let bar: Progress | null = null;
@@ -59,7 +77,6 @@ export default async function processDeployment({
     let queuedSpinner = null;
     let buildSpinner = null;
     let deploySpinner = null;
-    let fileCount = null;
 
     for await (const event of createDeployment(
       nowClientOptions,
@@ -82,7 +99,6 @@ export default async function processDeployment({
         debug(
           `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
         );
-        fileCount = event.payload.missing.length;
 
         const missingSize = event.payload.missing
           .map((sha: string) => event.payload.total.get(sha).data.length)
@@ -113,9 +129,7 @@ export default async function processDeployment({
         now._host = event.payload.url;
 
         if (!quiet) {
-          log(`Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`);
-          const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
-          log(`https://${event.payload.url} ${version}${deployStamp()}`);
+          printInspectUrl(output, event.payload.url, deployStamp, orgName);
         } else {
           process.stdout.write(`https://${event.payload.url}`);
         }

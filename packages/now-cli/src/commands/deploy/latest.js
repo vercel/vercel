@@ -91,18 +91,6 @@ const printDeploymentStatus = async (
     return 1;
   }
 
-  // print inspect url
-  try {
-    const urlParts = url
-      .replace(/\..*/, '')
-      .replace('https://', '')
-      .split('-');
-    const deploymentShortId = urlParts.pop();
-    const projectName = urlParts.join('-');
-    const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
-    output.print(`🔍  Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
-  } catch (error) {}
-
   if (aliasError) {
     output.warn(
       `Failed to assign aliases${
@@ -112,13 +100,20 @@ const printDeploymentStatus = async (
   } else {
     // print preview/production url
     if (Array.isArray(aliasList) && aliasList.length > 0) {
-      const prodUrl = isWildcardAlias(aliasList[0])
-        ? aliasList[0]
-        : `https://${aliasList[0]}`;
+      // search for a non now.sh/non wildcard domain
+      // but fallback to the first alias in the list
+      const mainAlias =
+        aliasList.find(
+          alias => !alias.endsWith('.now.sh') && !isWildcardAlias(alias)
+        ) || aliasList[0];
+
+      const prodUrl = isWildcardAlias(mainAlias)
+        ? mainAlias
+        : `https://${mainAlias}`;
 
       // copy to clipboard
       let isCopiedToClipboard = false;
-      if (isClipboardEnabled && !isWildcardAlias(aliasList[0])) {
+      if (isClipboardEnabled && !isWildcardAlias(mainAlias)) {
         await copy(prodUrl)
           .then(() => (isCopiedToClipboard = true))
           .catch(error => output.debug(`Error copying to clipboard: ${error}`));
@@ -393,7 +388,7 @@ export default async function main(
       contextName,
       [path],
       createArgs,
-      ctx
+      orgName
     );
 
     if (
@@ -417,7 +412,7 @@ export default async function main(
         contextName,
         [path],
         createArgs,
-        ctx
+        orgName
       );
 
       await linkFolderToProject(output, {
