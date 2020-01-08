@@ -449,7 +449,7 @@ CMD ["node", "index.js"]`,
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'now-php@0.0.7',
+            runtime: 'now-php@0.0.8',
           },
         },
       }),
