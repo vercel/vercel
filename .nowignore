@@ -10,8 +10,6 @@
 # api
 !api/
 !api/**
-!examples
-!examples/manifest.json
 
 # packages
 !packages/
