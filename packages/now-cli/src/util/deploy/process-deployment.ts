@@ -14,6 +14,7 @@ import { NowConfig } from '../dev/types';
 import { Org } from '../../types';
 import ua from '../ua';
 import processLegacyDeployment from './process-legacy-deployment';
+import { linkFolderToProject } from '../projects/link';
 
 function printInspectUrl(
   output: Output,
@@ -35,6 +36,7 @@ export default async function processDeployment({
   isLegacy,
   org,
   projectName,
+  shouldLinkFolder,
   ...args
 }: {
   now: Now;
@@ -50,6 +52,7 @@ export default async function processDeployment({
   force?: boolean;
   org: Org;
   projectName: string;
+  shouldLinkFolder: boolean;
 }) {
   if (isLegacy) return processLegacyDeployment(args);
 
@@ -141,6 +144,13 @@ export default async function processDeployment({
       }
 
       now._host = event.payload.url;
+
+      if (shouldLinkFolder) {
+        await linkFolderToProject(output, {
+          orgId: org.id,
+          projectId: event.payload.projectId,
+        });
+      }
 
       if (!quiet) {
         printInspectUrl(output, event.payload.url, deployStamp, org.slug);

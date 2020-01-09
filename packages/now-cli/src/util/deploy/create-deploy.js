@@ -10,10 +10,11 @@ export default async function createDeploy(
   contextName,
   paths,
   createArgs,
-  org
+  org,
+  shouldLinkFolder
 ) {
   try {
-    return await now.create(paths, createArgs, org);
+    return await now.create(paths, createArgs, org, shouldLinkFolder);
   } catch (error) {
     if (error.code === 'rate_limited') {
       throw new ERRORS_TS.DeploymentsRateLimited(error.message);
@@ -89,7 +90,15 @@ export default async function createDeploy(
       if (result instanceof NowError) {
         return result;
       }
-      return createDeploy(output, now, contextName, paths, createArgs, org);
+      return createDeploy(
+        output,
+        now,
+        contextName,
+        paths,
+        createArgs,
+        org,
+        shouldLinkFolder
+      );
     }
 
     if (error.code === 'not_found') {

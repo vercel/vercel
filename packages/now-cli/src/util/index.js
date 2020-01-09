@@ -68,7 +68,8 @@ export default class Now extends EventEmitter {
       deployStamp,
       projectSettings,
     },
-    org
+    org,
+    shouldLinkFolder
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
@@ -179,6 +180,7 @@ export default class Now extends EventEmitter {
       force: forceNew,
       org,
       projectName: name,
+      shouldLinkFolder,
     });
 
     // We report about files whose sizes are too big

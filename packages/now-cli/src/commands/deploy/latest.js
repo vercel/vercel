@@ -341,7 +341,6 @@ export default async function main(
     target = 'production';
   }
 
-  // retrieve `project` and `org` from .now
   const client = new Client({
     apiUrl: ctx.apiUrl,
     token: ctx.authConfig.token,
@@ -349,8 +348,10 @@ export default async function main(
     debug: debugEnabled,
   });
 
+  // retrieve `project` and `org` from .now
   const path = paths[0];
   let [org, project] = await getLinkedProject(client);
+  let shouldLinkFolder = false;
 
   if (!org || !project) {
     const shouldStartSetup = await promptBool(
@@ -382,6 +383,8 @@ export default async function main(
         projectId: project.id,
         orgId: org.id,
       });
+    } else {
+      shouldLinkFolder = true;
     }
   }
 
@@ -412,7 +415,8 @@ export default async function main(
       contextName,
       [path],
       createArgs,
-      org
+      org,
+      shouldLinkFolder
     );
 
     if (
@@ -438,13 +442,9 @@ export default async function main(
         contextName,
         [path],
         createArgs,
-        org
+        org,
+        shouldLinkFolder
       );
-
-      await linkFolderToProject(output, {
-        projectId: deployment.projectId,
-        orgId: deployment.ownerId,
-      });
     }
 
     if (deployment instanceof NotDomainOwner) {
