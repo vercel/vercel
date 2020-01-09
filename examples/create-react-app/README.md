@@ -10,7 +10,7 @@ Deploy your own React project, along with Serverless Functions, with ZEIT Now.
 
 [![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/create-react-app-functions)
 
-_Live Example: https://create-react-app-functions.now-examples.now.sh/_
+_Live Example: https://create-react-app.now-examples.now.sh/_
 
 ### How We Created This Example
 
