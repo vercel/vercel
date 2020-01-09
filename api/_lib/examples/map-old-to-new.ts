@@ -21,8 +21,8 @@ export const mapOldToNew: { [key: string]: string[] } = {
   'nuxt-static': ['nuxtjs'],
   static: ['vanilla'],
   typescript: ['gatsby-functions'],
+  umi: ['umijs'],
   'vanilla-go': ['vanilla-functions'],
   'vanilla-json-api': ['svelte-functions'],
   'vue-ssr': ['vue'],
-  umi: ['umijs'],
 };
