@@ -6,6 +6,9 @@
       "statusCode": 307
     }
   ],
+  "env": {
+    "GITHUB_ACCESS_TOKEN": "@now-api-examples-github-token"
+  },
   "headers": [
     {
       "source": "/api/frameworks",

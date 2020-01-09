@@ -101,7 +101,9 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   return routes;
 }
 
-function sourceToRegex(source: string): { src: string; segments: string[] } {
+export function sourceToRegex(
+  source: string
+): { src: string; segments: string[] } {
   const keys: Key[] = [];
   const r = pathToRegexp(source, keys, { strict: true });
   const segments = keys.map(k => k.name).filter(isString);
