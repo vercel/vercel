@@ -309,7 +309,7 @@
     }
   },
   {
-    "name": "Create-React-App",
+    "name": "Create React App",
     "slug": "create-react-app",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/react.svg",
     "tagline": "Create React App allows you to get going with React in no time.",
