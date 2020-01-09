@@ -44,12 +44,12 @@
   },
   "lint-staged": {
     "*.{js,ts}": [
-      "prettier --single-quote --trailing-comma es5 --write",
+      "prettier --single-quote --write",
       "eslint",
       "git add"
     ],
     "*.{json,md}": [
-      "prettier --single-quote --trailing-comma es5 --write",
+      "prettier --single-quote --write",
       "git add"
     ]
   },
