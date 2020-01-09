@@ -4,7 +4,7 @@ import getUser from '../get-user';
 import getTeams from '../get-teams';
 import { Org } from '../../types';
 
-type Choice = { name: string; value: Org; checked: boolean };
+type Choice = { name: string; value: Org };
 
 export default async function selectProject(
   question: string,
@@ -19,12 +19,10 @@ export default async function selectProject(
     {
       name: user.username,
       value: { type: 'user', id: user.uid, slug: user.username },
-      checked: !currentTeam,
     },
     ...teams.map<Choice>(team => ({
       name: team.name || team.slug,
       value: { type: 'team', id: team.id, slug: team.slug },
-      checked: currentTeam ? currentTeam === team.id : false,
     })),
   ];
 
