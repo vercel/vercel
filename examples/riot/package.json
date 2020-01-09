@@ -1,0 +1,33 @@
+{
+  "name": "riot-webpack",
+  "version": "0.0.1",
+  "description": "Example of webpack and riot",
+  "repository": "riot/examples",
+  "main": "app/main.js",
+  "author": "Zhomart Mukhamejanov",
+  "license": "MIT",
+  "engines": {
+    "node": ">=4.0.0"
+  },
+  "scripts": {
+    "start": "webpack-dev-server --inline --watch --hot --colors -d --port 3000",
+    "dev": "webpack-dev-server --inline --watch --hot --colors -d --port $PORT",
+    "build": "webpack -p -d --progress --colors"
+  },
+  "keywords": [
+    "riot",
+    "webpack"
+  ],
+  "devDependencies": {
+    "@babel/core": "7.4.5",
+    "@babel/preset-env": "7.4.5",
+    "babel-loader": "^8.0.6",
+    "riot": "^4.0.5",
+    "@riotjs/compiler": "^4.2.5",
+    "@riotjs/hot-reload": "4.0.0",
+    "@riotjs/webpack-loader": "^4.0.0",
+    "webpack": "^4.33.0",
+    "webpack-cli": "^3.3.2",
+    "webpack-dev-server": "^3.5.1"
+  }
+}

@@ -72,6 +72,10 @@ async function main() {
   for (const pkgName of matches) {
     await runScript(pkgName, script);
   }
+
+  execSync(
+    `mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' >> public/index.html`
+  );
 }
 
 function runScript(pkgName, script) {

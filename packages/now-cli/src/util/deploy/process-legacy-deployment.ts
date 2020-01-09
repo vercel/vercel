@@ -96,7 +96,9 @@ export default async function processDeployment({
       now._host = event.payload.url;
 
       if (!quiet) {
-        log(`Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`);
+        if (fileCount) {
+          log(`Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`);
+        }
         log(`${event.payload.url} ${chalk.grey('[v1]')} ${deployStamp()}`);
       } else {
         process.stdout.write(`https://${event.payload.url}`);

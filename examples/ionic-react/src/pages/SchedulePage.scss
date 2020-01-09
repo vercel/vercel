@@ -1,0 +1,42 @@
+#schedule-page {
+  ion-item-sliding.track-ionic ion-label {
+    border-left: 2px solid var(--ion-color-primary);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-angular ion-label {
+    border-left: 2px solid var(--ion-color-angular);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-communication ion-label {
+    border-left: 2px solid var(--ion-color-communication);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-tooling ion-label {
+    border-left: 2px solid var(--ion-color-tooling);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-services ion-label {
+    border-left: 2px solid var(--ion-color-services);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-design ion-label {
+    border-left: 2px solid var(--ion-color-design);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-workshop ion-label {
+    border-left: 2px solid var(--ion-color-workshop);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-food ion-label {
+    border-left: 2px solid var(--ion-color-food);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-documentation ion-label {
+    border-left: 2px solid var(--ion-color-documentation);
+    padding-left: 10px;
+  }
+  ion-item-sliding.track-navigation ion-label {
+    border-left: 2px solid var(--ion-color-navigation);
+    padding-left: 10px;
+  }
+}
