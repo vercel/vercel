@@ -117,11 +117,10 @@ const printDeploymentStatus = async (
         : `https://${mainAlias}`;
 
       // copy to clipboard
-      let isCopiedToClipboard = false;
       if (isClipboardEnabled && !isWildcardAlias(mainAlias)) {
-        await copy(prodUrl)
-          .then(() => (isCopiedToClipboard = true))
-          .catch(error => output.debug(`Error copying to clipboard: ${error}`));
+        await copy(prodUrl).catch(error =>
+          output.debug(`Error copying to clipboard: ${error}`)
+        );
       }
 
       output.print(
