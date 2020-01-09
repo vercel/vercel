@@ -1,4 +1,4 @@
-![Gatsby Logo](../.github/images/gatsby.svg)
+![Gatsby Logo](../packages/frameworks/logos/gatsby.svg)
 
 # Gatsby Example
 

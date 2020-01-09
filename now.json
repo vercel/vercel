@@ -20,7 +20,7 @@
       ]
     },
     {
-      "source": "/api/examples",
+      "source": "/api/examples(.*)",
       "headers": [
         {
           "key": "cache-control",

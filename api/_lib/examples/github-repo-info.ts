@@ -10,9 +10,9 @@ export async function getGitHubRepoInfo(repo: Repo) {
   const response = await fetch(`https://api.github.com/repos/${repo.repo}`, {
     headers: {
       Accept: 'application/vnd.github.machine-man-preview+json',
-      // If we don't use a personal access token, 
+      // If we don't use a personal access token,
       // it will get rate limited very easily.
-      Authorization: `Bearer ${process.env.GITHUB_ACCESS_TOKEN}`
+      Authorization: `Bearer ${process.env.GITHUB_ACCESS_TOKEN}`,
     },
   });
 
@@ -51,7 +51,9 @@ export async function getGitHubRepoInfo(repo: Repo) {
     data.subdir = repo.path.slice(subdirPath.length).split('/');
   }
 
-  if (data.id === 'zeit/now-examples' && data.subdir) {
+  const isExamples = data.id === 'zeit/now-examples' || data.id === 'zeit/now';
+
+  if (isExamples && data.subdir) {
     // from our examples, add `homepage` and `description` fields
     const example = data.subdir[0];
     const exampleList = await getExampleList();
@@ -61,7 +63,6 @@ export async function getGitHubRepoInfo(repo: Repo) {
         data.homepage = item.demo;
         data.description = item.description;
         data.exampleName = item.example;
-        data.icon = item.icon;
         data.tagline = item.tagline;
         data.framework = item.framework;
         return data;

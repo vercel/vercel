@@ -1,4 +1,4 @@
-![Svelte Logo](../.github/images/svelte.svg)
+![Svelte Logo](../packages/frameworks/logos/svelte.svg)
 
 # Svelte Example
 
