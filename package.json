@@ -44,12 +44,12 @@
   },
   "lint-staged": {
     "*.{js,ts}": [
-      "prettier --single-quote --write",
+      "prettier --write",
       "eslint",
       "git add"
     ],
     "*.{json,md}": [
-      "prettier --single-quote --write",
+      "prettier --write",
       "git add"
     ]
   },
