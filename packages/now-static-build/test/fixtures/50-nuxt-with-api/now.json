@@ -1,0 +1,25 @@
+{
+  "builds": [
+    {
+      "use": "@now/static-build",
+      "src": "package.json",
+      "config": {
+        "zeroConfig": true,
+        "framework": "nuxtjs"
+      }
+    },
+    {
+      "use": "@now/node",
+      "src": "api/**/*.js",
+      "config": {
+        "zeroConfig": true,
+        "keepBuilder": true
+      }
+    }
+  ],
+  "build": {
+    "env": {
+      "NOW_BUILDER_DEBUG": "1"
+    }
+  }
+}

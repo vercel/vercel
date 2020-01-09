@@ -1,0 +1,15 @@
+{
+  "name": "47-nuxt-with-custom-output",
+  "version": "1.0.0",
+  "main": "pages/index.js",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt generate",
+    "generate": "nuxt generate"
+  },
+  "keywords": [],
+  "private": true,
+  "dependencies": {
+    "nuxt": "2.11.0"
+  }
+}

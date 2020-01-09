@@ -54,7 +54,7 @@ async function testDeployment(
 
   const nowJson = JSON.parse(bodies['now.json']);
   for (const build of nowJson.builds) {
-    if (builderUrl) {
+    if (builderUrl && (!build.config || !build.config.keepBuilder)) {
       if (builderUrl === '@canary') {
         build.use = `${build.use}@canary`;
       } else {

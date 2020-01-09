@@ -314,15 +314,22 @@ export async function build({
         cwd: entrypointDir,
       });
 
-      spawnOpts.env = {
-        ...spawnOpts.env,
-        PATH: `${stdout.trim()}${path.delimiter}${
-          spawnOpts.env ? spawnOpts.env.PATH : ''
-        }`,
-      };
+      const binPath = stdout
+        .trim()
+        .split('\n')
+        .find(line => line.startsWith(workPath));
+
+      if (binPath) {
+        spawnOpts.env = {
+          ...spawnOpts.env,
+          PATH: `${binPath.trim()}${path.delimiter}${
+            spawnOpts.env ? spawnOpts.env.PATH : ''
+          }`,
+        };
+      }
 
       debug(
-        `Added "${stdout.trim()}" to PATH env because a package.json file was found.`
+        `Added "${binPath}" to PATH env because a package.json file was found.`
       );
     }
 
