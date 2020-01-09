@@ -33,23 +33,23 @@
     "publish-stable": "echo 'Run `yarn changelog` for instructions'",
     "publish-canary": "git pull && lerna version prerelease --preid canary --message 'Publish Canary' --exact",
     "publish-from-github": "./.circleci/publish.sh",
-    "changelog": "node changelog.js",
-    "build": "node run.js build all",
-    "test-lint": "node run.js test-lint",
-    "test-unit": "node run.js test-unit",
-    "test-integration": "node run.js test-integration",
-    "test-integration-once": "node run.js test-integration-once",
-    "test-integration-now-dev": "node run.js test-integration-now-dev",
+    "changelog": "node utils/changelog.js",
+    "build": "node utils/run.js build all",
+    "test-lint": "node utils/run.js test-lint",
+    "test-unit": "node utils/run.js test-unit",
+    "test-integration": "node utils/run.js test-integration",
+    "test-integration-once": "node utils/run.js test-integration-once",
+    "test-integration-now-dev": "node utils/run.js test-integration-now-dev",
     "lint": "eslint . --ext .ts,.js"
   },
   "lint-staged": {
     "*.{js,ts}": [
-      "prettier --write",
+      "prettier --single-quote --trailing-comma es5 --write",
       "eslint",
       "git add"
     ],
     "*.{json,md}": [
-      "prettier --write",
+      "prettier --single-quote --trailing-comma es5 --write",
       "git add"
     ]
   },
@@ -60,5 +60,75 @@
   },
   "resolutions": {
     "signal-exit": "TooTallNate/signal-exit#update/sighub-to-sigint-on-windows"
+  },
+  "eslintConfig": {
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaVersion": 2018,
+      "sourceType": "module",
+      "modules": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/eslint-recommended",
+      "plugin:@typescript-eslint/recommended",
+      "prettier",
+      "prettier/@typescript-eslint"
+    ],
+    "env": {
+      "node": true,
+      "jest": true,
+      "es6": true
+    },
+    "rules": {
+      "require-atomic-updates": 0,
+      "@typescript-eslint/ban-ts-ignore": 0,
+      "@typescript-eslint/camelcase": 0,
+      "@typescript-eslint/explicit-function-return-type": 0,
+      "@typescript-eslint/no-empty-function": 0,
+      "@typescript-eslint/no-use-before-define": 0
+    },
+    "overrides": [
+      {
+        "files": [
+          "**/*.js"
+        ],
+        "rules": {
+          "@typescript-eslint/no-var-requires": "off"
+        }
+      },
+      {
+        "files": [
+          "packages/now-cli/**/*"
+        ],
+        "rules": {
+          "lines-between-class-members": 0,
+          "no-async-promise-executor": 0,
+          "no-control-regex": 0,
+          "no-empty": 0,
+          "prefer-const": 0,
+          "prefer-destructuring": 0,
+          "@typescript-eslint/ban-types": 0,
+          "@typescript-eslint/consistent-type-assertions": 0,
+          "@typescript-eslint/member-delimiter-style": 0,
+          "@typescript-eslint/no-empty-function": 0,
+          "@typescript-eslint/no-explicit-any": 0,
+          "@typescript-eslint/no-inferrable-types": 0,
+          "@typescript-eslint/no-var-requires": 0
+        }
+      },
+      {
+        "files": [
+          "packages/now-client/**/*"
+        ],
+        "rules": {
+          "prefer-const": 0,
+          "require-atomic-updates": 0,
+          "@typescript-eslint/ban-ts-ignore": 0,
+          "@typescript-eslint/no-explicit-any": 0
+        }
+      }
+    ]
   }
 }

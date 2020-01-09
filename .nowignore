@@ -1,8 +1,9 @@
 *
 
 # general
+!utils/
+!utils/run.js
 !.yarnrc
-!run.js
 !yarn.lock
 !package.json
 
