@@ -47,6 +47,7 @@ export type User = {
     login: string;
     updatedAt: number;
   };
+  name?: string;
 };
 
 export type Team = {
