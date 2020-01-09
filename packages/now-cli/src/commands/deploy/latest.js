@@ -79,7 +79,7 @@ const addProcessEnv = async (log, env) => {
 
 const printDeploymentStatus = async (
   output,
-  { readyState, alias: aliasList, aliasError, target },
+  { readyState, alias: aliasList, aliasError, target, indications },
   deployStamp,
   isClipboardEnabled,
   org,
@@ -136,25 +136,14 @@ const printDeploymentStatus = async (
     }
   }
 
-  if (!isProdDeployment) {
-    // add the production domain(s) there 👇
-    output.print(
-      `ℹ️  ${chalk.grey(`To deploy to production run ${'`now --prod`'}`)}\n`
-    );
-  }
-
-  if (isFirstDeployment && isProdDeployment) {
-    // add a docs url there 👇
-    output.print(
-      `ℹ️  ${chalk.grey(
-        `Deployed to production. Run ${'`now --prod`'} to overwrite later.`
-      )}\n`
-    );
-    output.print(
-      `💡  ${chalk.grey(
-        `To set a custom production domain, go to https://zeit.co/${org.slug}/${project.name}/domains`
-      )}\n`
-    );
+  if (indications) {
+    const emojis = { notice: 'ℹ️', tip: '💡', warning: '⚠️' };
+    for (let indication of indications) {
+      const emoji = emojis[indication.type];
+      output.print(
+        `${emoji ? `${emoji}  ` : ''}${chalk.grey(indication.payload)}\n`
+      );
+    }
   }
 
   return 0;

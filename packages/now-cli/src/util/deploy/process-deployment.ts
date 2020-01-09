@@ -70,7 +70,7 @@ export default async function processDeployment({
     nowConfig,
   } = args;
 
-  const { warn, debug, note } = output;
+  const { debug } = output;
   let bar: Progress | null = null;
 
   const { env = {} } = requestBody;
@@ -95,6 +95,10 @@ export default async function processDeployment({
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`
   );
 
+  // collect indications to show the user once
+  // the deployment is done
+  const indications = [];
+
   for await (const event of createDeployment(
     nowClientOptions,
     requestBody,
@@ -104,13 +108,8 @@ export default async function processDeployment({
       hashes = event.payload;
     }
 
-    if (event.type === 'warning') {
-      warn(event.payload);
-    }
-
-    if (event.type === 'notice') {
-      console.log({ type: 'notice', payload: event.payload });
-      note(event.payload);
+    if (['tip', 'notice', 'warning'].includes(event.type)) {
+      indications.push(event);
     }
 
     if (event.type === 'file_count') {
@@ -237,6 +236,7 @@ export default async function processDeployment({
         deployingSpinner();
       }
 
+      event.payload.indications = indications;
       return event.payload;
     }
   }
