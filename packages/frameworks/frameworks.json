@@ -681,7 +681,8 @@
     "demo": "https://aurelia.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/aurelia.svg",
     "tagline": "Aurelia is an all-in-one framework for building web, desktop, and mobile applications.",
-    "description": "An Aurelia app, created with the Aurelia CLI."
+    "description": "An Aurelia app, created with the Aurelia CLI.",
+    "website": "https://aurelia.io"
   },
   {
     "name": "VuePress",
@@ -689,7 +690,8 @@
     "demo": "https://vuepress.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vuepress.png",
     "tagline": "VuePress is the performant way to create static sites with Vue.js.",
-    "description": "A VuePress app, created with the VuePress CLI."
+    "description": "A VuePress app, created with the VuePress CLI.",
+    "website": "https://vuepress.vuejs.org"
   },
   {
     "name": "Charge.js",
@@ -777,7 +779,8 @@
     "demo": "https://ionic-react.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic-react.svg",
     "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
-    "description": "An Ionic React site, created with the Ionic CLI."
+    "description": "An Ionic React site, created with the Ionic CLI.",
+    "website": "https://ionicframework.com"
   },
   {
     "name": "Foundation",
