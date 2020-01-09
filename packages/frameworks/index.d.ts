@@ -3,14 +3,16 @@ export interface FrameworkDetectionItem {
   matchContent?: string;
 }
 
-type Setting = { value: string } | { placeholder: string }
+type Setting = { value: string } | { placeholder: string };
 
 export interface Framework {
   name: string;
   slug: string;
   logo: string;
+  demo: string;
   tagline: string;
   website: string;
+  description: string;
   detectors?: {
     every?: FrameworkDetectionItem[];
     some?: FrameworkDetectionItem[];

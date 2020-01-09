@@ -1,4 +1,4 @@
-![Saber Logo](../.github/images/saber.svg)
+![Saber Logo](../packages/frameworks/logos/saber.svg)
 
 # Saber Example
 

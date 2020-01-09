@@ -1,3 +1,9 @@
-<div>
-  Scully on ZEIT Now.
-</div>
+<ul>
+  <li *ngFor="let post of posts$ | async">
+    <a [routerLink]="post.route">{{ post.title }}</a>
+  </li>
+</ul>
+
+<hr />
+
+<router-outlet></router-outlet>
