@@ -23,38 +23,6 @@ export default async function selectProject(
       name: team.name || team.slug,
       value: { type: 'team', id: team.id, slug: team.slug },
     })),
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
   ];
 
   const answers = await inquirer.prompt({
