@@ -2,7 +2,7 @@ import { join } from 'path';
 import { readFileSync } from 'fs';
 
 const manifest = readFileSync(
-  join('..', '..', '..', 'examples', 'manifest.json')
+  join(__dirname, '..', '..', '..', 'examples', 'manifest.json')
 );
 
 export async function getExampleList() {
