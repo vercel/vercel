@@ -1,12 +1,25 @@
-import { join } from 'path';
-import { readFileSync } from 'fs';
+import Frameworks, { Framework } from '../../../packages/frameworks';
 
-const manifest = JSON.parse(
-  readFileSync(
-    join(__dirname, '..', '..', '..', 'examples', 'manifest.json')
-  ).toString()
-);
+interface Example {
+  example: string;
+  path: string;
+  demo: string;
+  description: string;
+  tagline: string;
+  framework: string;
+}
 
-export async function getExampleList() {
-  return manifest;
+export async function getExampleList(): Promise<Example[]> {
+  return (Frameworks as Framework[])
+    .filter(f => f.demo)
+    .map(framework => {
+      return {
+        example: framework.name,
+        path: `/${framework.slug}`,
+        demo: framework.demo,
+        description: framework.tagline,
+        tagline: framework.tagline,
+        framework: framework.slug,
+      };
+    });
 }

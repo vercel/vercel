@@ -24,4 +24,5 @@ export const mapOldToNew: { [key: string]: string[] } = {
   'vanilla-go': ['vanilla-functions'],
   'vanilla-json-api': ['svelte-functions'],
   'vue-ssr': ['vue'],
+  umi: ['umijs'],
 };
