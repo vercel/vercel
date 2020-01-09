@@ -37,6 +37,7 @@ export default async function processDeployment({
   org,
   projectName,
   shouldLinkFolder,
+  isDetectingFramework,
   ...args
 }: {
   now: Now;
@@ -53,6 +54,7 @@ export default async function processDeployment({
   org: Org;
   projectName: string;
   shouldLinkFolder: boolean;
+  isDetectingFramework: boolean;
 }) {
   if (isLegacy) return processLegacyDeployment(args);
 
@@ -88,7 +90,9 @@ export default async function processDeployment({
   let deploySpinner = null;
 
   let deployingSpinner = wait(
-    `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`
+    isDetectingFramework
+      ? `Detecting framework`
+      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`
   );
 
   for await (const event of createDeployment(
@@ -105,6 +109,7 @@ export default async function processDeployment({
     }
 
     if (event.type === 'notice') {
+      console.log({ type: 'notice', payload: event.payload });
       note(event.payload);
     }
 

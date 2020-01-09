@@ -351,7 +351,7 @@ export default async function main(
   // retrieve `project` and `org` from .now
   const path = paths[0];
   let [org, project] = await getLinkedProject(client);
-  let shouldLinkFolder = false;
+  let newProjectName = null;
 
   if (!org || !project) {
     const shouldStartSetup = await promptBool(
@@ -376,15 +376,23 @@ export default async function main(
       paths,
     });
 
-    project = await inputProject(output, client, org, detectedProjectName);
+    const projectOrNewProjectName = await inputProject(
+      output,
+      client,
+      org,
+      detectedProjectName
+    );
 
-    if (typeof project !== 'string') {
+    if (typeof projectOrNewProjectName === 'string') {
+      newProjectName = projectOrNewProjectName;
+    } else {
+      project = projectOrNewProjectName;
+
+      // we can already link the project
       await linkFolderToProject(output, {
         projectId: project.id,
         orgId: org.id,
       });
-    } else {
-      shouldLinkFolder = true;
     }
   }
 
@@ -394,7 +402,7 @@ export default async function main(
 
   try {
     const createArgs = {
-      name: typeof project === 'string' ? project : project.name,
+      name: project ? project.name : newProjectName,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -416,7 +424,8 @@ export default async function main(
       [path],
       createArgs,
       org,
-      shouldLinkFolder
+      false,
+      !!newProjectName
     );
 
     if (
@@ -443,7 +452,8 @@ export default async function main(
         [path],
         createArgs,
         org,
-        shouldLinkFolder
+        !!newProjectName,
+        false
       );
     }
 

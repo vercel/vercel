@@ -11,10 +11,17 @@ export default async function createDeploy(
   paths,
   createArgs,
   org,
-  shouldLinkFolder
+  shouldLinkFolder,
+  isDetectingFramework
 ) {
   try {
-    return await now.create(paths, createArgs, org, shouldLinkFolder);
+    return await now.create(
+      paths,
+      createArgs,
+      org,
+      shouldLinkFolder,
+      isDetectingFramework
+    );
   } catch (error) {
     if (error.code === 'rate_limited') {
       throw new ERRORS_TS.DeploymentsRateLimited(error.message);
@@ -97,7 +104,8 @@ export default async function createDeploy(
         paths,
         createArgs,
         org,
-        shouldLinkFolder
+        shouldLinkFolder,
+        isDetectingFramework
       );
     }
 

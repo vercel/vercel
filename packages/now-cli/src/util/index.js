@@ -69,7 +69,8 @@ export default class Now extends EventEmitter {
       projectSettings,
     },
     org,
-    shouldLinkFolder
+    shouldLinkFolder,
+    isDetectingFramework
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
@@ -181,6 +182,7 @@ export default class Now extends EventEmitter {
       org,
       projectName: name,
       shouldLinkFolder,
+      isDetectingFramework,
     });
 
     // We report about files whose sizes are too big
