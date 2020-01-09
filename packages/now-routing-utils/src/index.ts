@@ -252,7 +252,7 @@ export function getTransformedRoutes({
         routes,
         error: createNowError(
           code,
-          'Redirect `source` contains invalid regex',
+          'Redirect `source` contains invalid regex. Read more: https://err.sh/now/invalid-route-source',
           errorsRegex
         ),
       };
@@ -265,7 +265,7 @@ export function getTransformedRoutes({
         routes,
         error: createNowError(
           code,
-          'Redirect `source` contains invalid pattern',
+          'Redirect `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
           errorsPattern
         ),
       };
@@ -299,7 +299,7 @@ export function getTransformedRoutes({
         routes,
         error: createNowError(
           code,
-          'Rewrites `source` contains invalid regex',
+          'Rewrites `source` contains invalid regex. Read more: https://err.sh/now/invalid-route-source',
           errorsRegex
         ),
       };
@@ -312,7 +312,7 @@ export function getTransformedRoutes({
         routes,
         error: createNowError(
           code,
-          'Rewrites `source` contains invalid regex',
+          'Rewrites `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
           errorsPattern
         ),
       };
