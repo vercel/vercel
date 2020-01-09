@@ -1,4 +1,4 @@
-import path from 'path';
+import { join } from 'path';
 import fs from 'fs';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
@@ -35,15 +35,13 @@ async function getOrg(client: Client, orgId: string): Promise<Org | null> {
 }
 
 export async function getLinkedProject(
-  client: Client
+  client: Client,
+  path: string
 ): Promise<[Org | null, Project | null]> {
-  const cwd = process.cwd();
-
   try {
-    const json = await readFile(
-      path.join(cwd, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
-      { encoding: 'utf8' }
-    );
+    const json = await readFile(join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE), {
+      encoding: 'utf8',
+    });
 
     const link: ProjectFolderLink = JSON.parse(json);
 
@@ -76,14 +74,13 @@ export async function getLinkedProject(
 
 export async function linkFolderToProject(
   output: Output,
+  path: string,
   projectFolderLink: ProjectFolderLink
 ) {
-  const cwd = process.cwd();
-
-  await ensureDir(path.join(cwd, NOW_FOLDER));
+  await ensureDir(join(path, NOW_FOLDER));
 
   await writeFile(
-    path.join(cwd, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
+    join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
     JSON.stringify(projectFolderLink),
     {
       encoding: 'utf8',
@@ -92,7 +89,7 @@ export async function linkFolderToProject(
 
   // update .nowignore
   try {
-    const gitIgnorePath = path.join(cwd, '.gitignore');
+    const gitIgnorePath = join(path, '.gitignore');
     const gitIgnore = (await readFile(gitIgnorePath)).toString();
     if (gitIgnore.split('\n').indexOf('.now') < 0) {
       await writeFile(gitIgnorePath, gitIgnore + '\n.now');

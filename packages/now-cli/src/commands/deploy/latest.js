@@ -336,7 +336,7 @@ export default async function main(
 
   // retrieve `project` and `org` from .now
   const path = paths[0];
-  let [org, project] = await getLinkedProject(client);
+  let [org, project] = await getLinkedProject(client, path);
   let newProjectName = null;
 
   if (!org || !project) {
@@ -375,7 +375,7 @@ export default async function main(
       project = projectOrNewProjectName;
 
       // we can already link the project
-      await linkFolderToProject(output, {
+      await linkFolderToProject(output, path, {
         projectId: project.id,
         orgId: org.id,
       });
