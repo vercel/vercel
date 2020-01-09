@@ -382,7 +382,7 @@ export default async function main(
     }
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({ apiUrl, token, debug: debugEnabled, org });
   let deployStamp = stamp();
   let deployment = null;
 

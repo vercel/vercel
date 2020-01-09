@@ -224,6 +224,7 @@ export interface Project {
 }
 
 export interface Org {
+  type: 'user' | 'team';
   id: string;
   slug: string;
 }

@@ -76,7 +76,7 @@ export default async function processDeployment({
   const { env = {} } = requestBody;
 
   const nowClientOptions: NowClientOptions = {
-    teamId: now.currentTeam,
+    teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
     token: now._token,
     debug: now._debug,

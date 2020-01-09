@@ -26,12 +26,12 @@ async function getOrg(client: Client, orgId: string): Promise<Org | null> {
   if (orgId.startsWith('team_')) {
     const team = await getTeamById(client, orgId);
     if (!team) return null;
-    return { id: team.id, slug: team.slug };
+    return { type: 'team', id: team.id, slug: team.slug };
   }
 
   const user = await getUser(client);
   if (user.uid !== orgId) return null;
-  return { id: orgId, slug: user.username };
+  return { type: 'user', id: orgId, slug: user.username };
 }
 
 export async function getLinkedProject(

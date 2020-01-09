@@ -4,6 +4,8 @@ import getUser from '../get-user';
 import getTeams from '../get-teams';
 import { Org } from '../../types';
 
+type Choice = { name: string; value: Org; checked: boolean };
+
 export default async function selectProject(
   question: string,
   client: Client,
@@ -13,15 +15,15 @@ export default async function selectProject(
 
   console.log(`current team: ${currentTeam}`);
 
-  const choices: { name: string; value: Org; checked: boolean }[] = [
+  const choices: Choice[] = [
     {
       name: user.username,
-      value: { id: user.uid, slug: user.username },
+      value: { type: 'user', id: user.uid, slug: user.username },
       checked: !currentTeam,
     },
-    ...teams.map(team => ({
+    ...teams.map<Choice>(team => ({
       name: team.name || team.slug,
-      value: { id: team.id, slug: team.slug },
+      value: { type: 'team', id: team.id, slug: team.slug },
       checked: currentTeam ? currentTeam === team.id : false,
     })),
   ];
