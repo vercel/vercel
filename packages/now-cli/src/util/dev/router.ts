@@ -4,13 +4,8 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import {
-  HttpHeadersConfig,
-  RouteConfig,
-  RouteResult,
-  NowConfig,
-} from './types';
-import { isHandler } from '@now/routing-utils';
+import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
+import { isHandler, Route } from '@now/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
@@ -31,7 +26,30 @@ export function resolveRouteParameters(
   });
 }
 
-export default async function(
+function getRoutesTypes(routes: Route[] = []) {
+  const missRoutes: Route[] = [];
+  const otherRoutes: Route[] = [];
+  let isHandleMissPhase = false;
+
+  for (const route of routes) {
+    if (isHandler(route)) {
+      isHandleMissPhase = route.handle === 'miss';
+      if (isHandleMissPhase) {
+        continue; // remove the `handle: miss`
+      }
+    }
+
+    if (isHandleMissPhase) {
+      missRoutes.push(route);
+    } else {
+      otherRoutes.push(route);
+    }
+  }
+
+  return { missRoutes, otherRoutes };
+}
+
+export default async function router(
   reqUrl: string = '/',
   reqMethod?: string,
   routes?: RouteConfig[],
@@ -41,10 +59,12 @@ export default async function(
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
   const combinedHeaders: HttpHeadersConfig = {};
 
+  const { missRoutes, otherRoutes } = getRoutesTypes(routes);
+
   // Try route match
-  if (routes) {
+  if (otherRoutes) {
     let idx = -1;
-    for (const routeConfig of routes) {
+    for (const routeConfig of otherRoutes) {
       idx++;
       if (isHandler(routeConfig)) {
         if (routeConfig.handle === 'filesystem' && devServer) {
@@ -91,11 +111,22 @@ export default async function(
         if (routeConfig.check && devServer) {
           const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(pathname);
+          // If the file is not found, `check: true` will
+          // check the miss routes, otherwise
+          // behave the same as `continue: true`
           if (!hasDestFile) {
-            // If the file is not found, `check: true` will
-            // behave the same as `continue: true`
-            reqPathname = destPath;
-            continue;
+            const result = await router(
+              reqUrl,
+              reqMethod,
+              missRoutes,
+              devServer
+            );
+            if (result.found) {
+              return result;
+            } else {
+              reqPathname = destPath;
+              continue;
+            }
           }
         }
 
