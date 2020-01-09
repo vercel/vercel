@@ -162,11 +162,7 @@ export default async function processDeployment({
         );
       }
 
-      if (!quiet) {
-        printInspectUrl(output, event.payload.url, deployStamp, org.slug);
-      } else {
-        process.stdout.write(`https://${event.payload.url}`);
-      }
+      printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
       if (queuedSpinner === null) {
         queuedSpinner =
