@@ -10,6 +10,7 @@ import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
 import { Project } from '../../types';
 import { Org } from '../../types';
+import chalk from 'chalk';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -20,6 +21,8 @@ export const NOW_PROJECT_LINK_FILE = 'project.json';
 interface ProjectFolderLink {
   projectId: string;
   orgId: string;
+  orgSlug?: string;
+  projectName?: string;
 }
 
 async function getOrg(client: Client, orgId: string): Promise<Org | null> {
@@ -75,7 +78,9 @@ export async function getLinkedProject(
 export async function linkFolderToProject(
   output: Output,
   path: string,
-  projectFolderLink: ProjectFolderLink
+  projectFolderLink: ProjectFolderLink,
+  projectName: string,
+  orgSlug: string
 ) {
   await ensureDir(join(path, NOW_FOLDER));
 
@@ -98,5 +103,9 @@ export async function linkFolderToProject(
     // ignore errors since this is non-critical
   }
 
-  output.print(`✅  Linked (created .now and added it to .nowignore)\n`);
+  output.print(
+    `✅  Linked to ${chalk.bold(
+      `${orgSlug}/${projectName}`
+    )} (created .now and added it to .nowignore)\n`
+  );
 }

@@ -150,10 +150,16 @@ export default async function processDeployment({
       now._host = event.payload.url;
 
       if (shouldLinkFolder) {
-        await linkFolderToProject(output, paths[0], {
-          orgId: org.id,
-          projectId: event.payload.projectId,
-        });
+        await linkFolderToProject(
+          output,
+          paths[0],
+          {
+            orgId: org.id,
+            projectId: event.payload.projectId,
+          },
+          projectName,
+          org.slug
+        );
       }
 
       if (!quiet) {

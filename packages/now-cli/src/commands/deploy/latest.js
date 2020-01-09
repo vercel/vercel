@@ -369,10 +369,16 @@ export default async function main(
       project = projectOrNewProjectName;
 
       // we can already link the project
-      await linkFolderToProject(output, path, {
-        projectId: project.id,
-        orgId: org.id,
-      });
+      await linkFolderToProject(
+        output,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug
+      );
     }
   }
 
