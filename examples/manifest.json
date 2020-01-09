@@ -1,0 +1,355 @@
+[
+  {
+    "example": "Next.js",
+    "path": "/nextjs",
+    "demo": "https://nextjs.now-examples.now.sh",
+    "description": "A Next.js app and a Serverless Function API.",
+    "icon": "/.github/images/next.svg",
+    "tagline": "Next.js makes you productive with React instantly — whether you want to build static or dynamic sites. ",
+    "framework": "nextjs"
+  },
+  {
+    "example": "Gatsby",
+    "path": "/gatsby-functions",
+    "demo": "https://gatsby-functions.now-examples.now.sh",
+    "description": "A Gatsby app, using the default starter theme and a Serverless Function API.",
+    "icon": "/.github/images/gatsby.svg",
+    "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
+    "framework": "gatsby"
+  },
+  {
+    "example": "Nuxt.js",
+    "path": "/nuxtjs",
+    "demo": "https://nuxtjs.now-examples.now.sh",
+    "description": "A Nuxt.js app, bootstrapped with create-nuxt-app.",
+    "icon": "/.github/images/nuxt.svg",
+    "tagline": "Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.",
+    "framework": "nuxtjs"
+  },
+  {
+    "example": "Create-React-App",
+    "path": "/create-react-app-functions",
+    "demo": "https://react-functions.now-examples.now.sh",
+    "description": "A React app, bootstrapped with create-react-app, and a Serverless Function API.",
+    "icon": "/.github/images/react.svg",
+    "tagline": "Create React App allows you to get going with React in no time.",
+    "framework": "create-react-app"
+  },
+  {
+    "example": "Svelte",
+    "path": "/svelte-functions",
+    "demo": "https://svelte-functions.now-examples.now.sh",
+    "description": "A Svelte app, using the Svelte template, and a Serverless Function API.",
+    "icon": "/.github/images/svelte.svg",
+    "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. ",
+    "framework": "svelte"
+  },
+  {
+    "example": "Vue.js",
+    "path": "/vue",
+    "demo": "https://vue.now-examples.now.sh",
+    "description": "A Vue.js app, created with the Vue CLI.",
+    "icon": "/.github/images/vue.svg",
+    "tagline": "Vue.js is a versatile JavaScript framework that is as approachable as it is performant.",
+    "framework": "vue"
+  },
+  {
+    "example": "Angular",
+    "path": "/angular",
+    "demo": "https://angular.now-examples.now.sh",
+    "description": "An Angular app, created with the Angular CLI.",
+    "icon": "/.github/images/angular.svg",
+    "tagline": "Angular is a TypeScript-based cross-platform framework from Google.",
+    "framework": "angular"
+  },
+  {
+    "example": "Hugo",
+    "path": "/hugo",
+    "demo": "https://hugo.now-examples.now.sh",
+    "description": "A Hugo site, created with the Hugo CLI.",
+    "icon": "/.github/images/hugo.svg",
+    "tagline": "Hugo is the world’s fastest framework for building websites, written in Go.",
+    "framework": "hugo"
+  },
+  {
+    "example": "Sapper",
+    "path": "/sapper",
+    "demo": "https://sapper.now-examples.now.sh",
+    "description": "A Sapper app, using the Sapper template.",
+    "icon": "/.github/images/svelte.svg",
+    "tagline": "Sapper is a framework for building high-performance universal web apps with Svelte.",
+    "framework": "sapper"
+  },
+  {
+    "example": "UmiJS",
+    "path": "/umijs",
+    "demo": "https://umijs.now-examples.now.sh",
+    "description": "An UmiJS app, created using the Umi CLI.",
+    "icon": "/.github/images/umi.svg",
+    "tagline": "UmiJS is an extensible enterprise-level React application framework.",
+    "framework": "umijs"
+  },
+  {
+    "example": "Vanilla",
+    "path": "/vanilla-functions",
+    "demo": "https://vanilla-functions.now-examples.now.sh",
+    "description": "A vanilla site and a Serverless Function API.",
+    "icon": "/.github/images/vanilla.svg",
+    "tagline": "Love the original way of making websites?",
+    "framework": "vanilla"
+  },
+  {
+    "example": "Storybook",
+    "path": "/storybook",
+    "demo": "https://storybook.now-examples.now.sh",
+    "description": "A Storybook app, using the React demo template.",
+    "icon": "/.github/images/storybook.svg",
+    "tagline": "Storybook is an open source tool for developing UI components in isolation for React, Vue, and Angular.",
+    "framework": "storybook"
+  },
+  {
+    "example": "Preact",
+    "path": "/preact",
+    "demo": "https://preact.now-examples.now.sh",
+    "description": "A Preact app, created with the Preact CLI.",
+    "icon": "/.github/images/preact.svg",
+    "tagline": "Preact is a fast 3kB alternative to React with the same modern API.",
+    "framework": "preact"
+  },
+  {
+    "example": "Docz",
+    "path": "/docz",
+    "demo": "https://docz.now-examples.now.sh",
+    "description": "A static Docz site that can be expanded upon to create documentation with ease.",
+    "icon": "/.github/images/docz.svg",
+    "tagline": "Docz makes it easy to write and publish beautiful interactive documentation for your code.",
+    "framework": "docz"
+  },
+  {
+    "example": "mdx-deck",
+    "path": "/mdx-deck",
+    "demo": "https://mdx-deck.now-examples.now.sh",
+    "description": "An mdx-deck presentation template that includes a theme.",
+    "tagline": "MDX Deck allows you to swiftly create React MDX-based presentation decks.",
+    "framework": "mdx-deck"
+  },
+  {
+    "example": "Gridsome",
+    "path": "/gridsome",
+    "demo": "https://gridsome.now-examples.now.sh",
+    "description": "A Gridsome app, created with the Gridsome CLI.",
+    "icon": "/.github/images/gridsome.svg",
+    "tagline": "Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default.",
+    "framework": "gridsome"
+  },
+  {
+    "example": "Aurelia",
+    "path": "/aurelia",
+    "demo": "https://aurelia.now-examples.now.sh",
+    "description": "An Aurelia app, created with the Aurelia CLI.",
+    "icon": "/.github/images/aurelia.svg",
+    "tagline": "Aurelia is an all-in-one framework for building web, desktop, and mobile applications.",
+    "framework": "aurelia"
+  },
+  {
+    "example": "Ember",
+    "path": "/ember",
+    "demo": "https://ember.now-examples.now.sh",
+    "description": "An Ember app, created with the Ember CLI.",
+    "icon": "/.github/images/ember.svg",
+    "tagline": "Ember.js helps webapp developers be more productive out of the box.",
+    "framework": "ember"
+  },
+  {
+    "example": "Docusaurus",
+    "path": "/docusaurus",
+    "demo": "https://docusaurus.now-examples.now.sh",
+    "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
+    "icon": "/.github/images/docusaurus.svg",
+    "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
+    "framework": "docusaurus"
+  },
+  {
+    "example": "VuePress",
+    "path": "/vuepress",
+    "demo": "https://vuepress.now-examples.now.sh",
+    "description": "A VuePress app, created with the VuePress CLI.",
+    "tagline": "VuePress is the performant way to create static sites with Vue.js.",
+    "framework": "vuepress"
+  },
+  {
+    "example": "Charge.js",
+    "path": "/charge",
+    "demo": "https://charge.now-examples.now.sh",
+    "description": "A Charge app to get you up and running.",
+    "icon": "/.github/images/chargejs.svg",
+    "tagline": "Charge is an opinionated, zero-config static site generator written in JavaScript.",
+    "framework": "charge"
+  },
+  {
+    "example": "Riot.js",
+    "path": "/riot",
+    "demo": "https://riot.now-examples.now.sh",
+    "description": "A Riot app to get you up and running.",
+    "tagline": "Riot.js lets you build user interfaces with custom tags using simple and enjoyable syntax.",
+    "framework": "riot"
+  },
+  {
+    "example": "Jekyll",
+    "path": "/jekyll",
+    "demo": "https://jekyll.now-examples.now.sh",
+    "description": "A Jekyll site, created with the Jekyll CLI.",
+    "icon": "/.github/images/jekyll.svg",
+    "tagline": "Jekyll makes it super easy to transform your plain text into static websites and blogs.",
+    "framework": "jekyll"
+  },
+  {
+    "example": "Marko.js",
+    "path": "/marko",
+    "demo": "https://marko.now-examples.now.sh",
+    "description": "A Marko app, created with the Marko CLI.",
+    "tagline": "Marko is a super fast UI library that makes building web apps fun.",
+    "framework": "marko"
+  },
+  {
+    "example": "Hexo",
+    "path": "/hexo",
+    "demo": "https://hexo.now-examples.now.sh",
+    "description": "A Hexo site, created with the Hexo CLI.",
+    "icon": "/.github/images/hexo.svg",
+    "tagline": "Hexo is a fast, simple & powerful blog framework powered by Node.js.",
+    "framework": "hexo"
+  },
+  {
+    "example": "Mithril.js",
+    "path": "/mithril",
+    "demo": "https://mithril.now-examples.now.sh",
+    "description": "A Mithril app to get you up and running.",
+    "icon": "/.github/images/mithriljs.svg",
+    "tagline": "Mithril is a lightweight modern web framework for that makes it easy to build SPAs.",
+    "framework": "mithril"
+  },
+  {
+    "example": "Metalsmith",
+    "path": "/metalsmith",
+    "demo": "https://metalsmith.now-examples.now.sh",
+    "description": "A Metalsmith app, created using the static-site starter.",
+    "tagline": "Metalsmith is an extremely simple, extendable static site generator.",
+    "framework": "metalsmith"
+  },
+  {
+    "example": "HyperApp",
+    "path": "/hyperapp",
+    "demo": "https://hyperapp.now-examples.now.sh",
+    "description": "A HyperApp app to get you up and running.",
+    "icon": "/.github/images/hyperapp.svg",
+    "tagline": "HyperApp is a low-footprint framework for building web interfaces without a learning curve.",
+    "framework": "hyperapp"
+  },
+  {
+    "example": "Polymer",
+    "path": "/polymer",
+    "demo": "https://polymer.now-examples.now.sh",
+    "description": "A Polymer app, created with the Polymer CLI.",
+    "icon": "/.github/images/polymer.svg",
+    "tagline": "Polymer is an open-source webapps library from Google, for building using Web Components.",
+    "framework": "polymer"
+  },
+  {
+    "example": "Brunch",
+    "path": "/brunch",
+    "demo": "https://brunch.now-examples.now.sh",
+    "description": "A Brunch app, created with the Brunch CLI.",
+    "icon": "/.github/images/brunch.svg",
+    "tagline": "Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development.",
+    "framework": "brunch"
+  },
+  {
+    "example": "Saber",
+    "path": "/saber",
+    "demo": "https://saber.now-examples.now.sh",
+    "description": "A Saber site, created with npm init.",
+    "icon": "/.github/images/saber.svg",
+    "tagline": "Saber is a framework for building static sites in Vue.js that supports data from any source.",
+    "framework": "saber"
+  },
+  {
+    "example": "Eleventy",
+    "path": "/eleventy",
+    "demo": "https://eleventy.now-examples.now.sh",
+    "description": "An Eleventy site, created with npm init.",
+    "icon": "/.github/images/eleventy.svg",
+    "tagline": "11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.",
+    "framework": "eleventy"
+  },
+  {
+    "example": "Zola",
+    "path": "/zola",
+    "demo": "https://zola.now-examples.now.sh",
+    "description": "A Zola site, created with the Zola CLI.",
+    "icon": "/.github/images/zola.svg",
+    "tagline": "Zola is a one-stop static site engine for all of your static needs. ",
+    "framework": "zola"
+  },
+  {
+    "example": "Pelican",
+    "path": "/pelican",
+    "demo": "https://pelican.now-examples.now.sh",
+    "description": "A Pelican site, created with the Pelican CLI.",
+    "tagline": "Pelican is a versatile static site generator, written in Python.",
+    "framework": "pelican"
+  },
+  {
+    "example": "MkDocs",
+    "path": "/mkdocs",
+    "demo": "https://mkdocs.now-examples.now.sh",
+    "description": "A MkDocs site, created with the MkDocs CLI.",
+    "icon": "/.github/images/mkdocs.svg",
+    "tagline": "MkDocs is a fast, simple and downright gorgeous static site generator that's geared towards building project documentation.",
+    "framework": "mkdocs"
+  },
+  {
+    "example": "Middleman",
+    "path": "/middleman",
+    "demo": "https://middleman.now-examples.now.sh",
+    "description": "A Middleman app, created with the Middleman CLI.",
+    "icon": "/.github/images/middleman.svg",
+    "tagline": "Middleman is a static site generator that uses all the shortcuts and tools in modern web development.",
+    "framework": "middleman"
+  },
+  {
+    "example": "Assemble",
+    "path": "/assemble",
+    "demo": "https://assemble.now-examples.now.sh",
+    "description": "An Assemble site, created from the Assemble quickstart.",
+    "icon": "/.github/images/assemble.svg",
+    "tagline": "A static site generator for Grunt.js and Yeoman, Assemble makes it dead simple to build modular sites and blogs.",
+    "framework": "assemble"
+  },
+  {
+    "example": "Ionic React",
+    "path": "/ionic-react",
+    "demo": "https://ionic-react.now-examples.now.sh",
+    "description": "An Ionic React site, created with the Ionic CLI.",
+    "icon": "/.github/images/ionic-react.svg",
+    "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
+    "framework": "ionic-react"
+  },
+  {
+    "example": "Stencil",
+    "path": "/stencil",
+    "demo": "https://stencil.now-examples.now.sh",
+    "description": "A Stencil site, created with the Stencil CLI.",
+    "icon": "/.github/images/stencil.svg",
+    "tagline": "Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems.",
+    "framework": "stencil"
+  },
+  {
+    "example": "Foundation",
+    "path": "/foundation",
+    "demo": "https://foundation.now-examples.now.sh",
+    "description": "A Foundation app, created with the Foundation CLI.",
+    "tagline": "Foundation is the most advanced responsive front-end framework in the world.",
+    "framework": "foundation"
+  }
+]
