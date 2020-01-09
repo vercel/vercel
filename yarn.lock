@@ -8881,6 +8881,14 @@ promisepipe@3.0.0:
   resolved "https://registry.yarnpkg.com/promisepipe/-/promisepipe-3.0.0.tgz#c9b6e5aa861ef5fcce6134f6f75e14f8f30bd3b2"
   integrity sha512-V6TbZDJ/ZswevgkDNpGt/YqNCiZP9ASfgU+p83uJE6NrGtvSGoOcHLiDCqkMs2+yg7F5qHdLV8d0aS8O26G/KA==
 
+prompts@2.3.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/prompts/-/prompts-2.3.0.tgz#a444e968fa4cc7e86689a74050685ac8006c4cc4"
+  integrity sha512-NfbbPPg/74fT7wk2XYQ7hAIp9zJyZp5Fu19iRbORqqy1BhtrkZ0fPafBU+7bmn8ie69DpT0R6QpJIN2oisYjJg==
+  dependencies:
+    kleur "^3.0.3"
+    sisteransi "^1.0.3"
+
 prompts@^2.0.1:
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/prompts/-/prompts-2.2.1.tgz#f901dd2a2dfee080359c0e20059b24188d75ad35"
