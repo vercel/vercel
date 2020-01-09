@@ -127,9 +127,7 @@ const printDeploymentStatus = async (
       output.print(
         `✅  ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           prodUrl
-        )} ${
-          isCopiedToClipboard ? chalk.gray('[in clipboard]') : ''
-        } ${deployStamp()}\n`
+        )} ${deployStamp()}\n`
       );
     } else {
       output.print(`Deployment complete ${deployStamp()}\n`);
