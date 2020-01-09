@@ -81,12 +81,8 @@ const printDeploymentStatus = async (
   output,
   { readyState, alias: aliasList, aliasError, target, indications },
   deployStamp,
-  isClipboardEnabled,
-  org,
-  project
+  isClipboardEnabled
 ) => {
-  const isFirstDeployment =
-    project && project.targets && !project.targets.production;
   const isProdDeployment = target === 'production';
 
   if (readyState !== 'READY') {
@@ -203,7 +199,6 @@ export default async function main(
   const {
     apiUrl,
     authConfig: { token },
-    config: { currentTeam },
   } = ctx;
   const { log, debug, error, warn } = output;
   const paths = Object.keys(stats);
@@ -330,7 +325,6 @@ export default async function main(
   const client = new Client({
     apiUrl: ctx.apiUrl,
     token: ctx.authConfig.token,
-    currentTeam: ctx.config.currentTeam,
     debug: debugEnabled,
   });
 
@@ -352,7 +346,7 @@ export default async function main(
     org = await selectOrg(
       'Which organization do you want to deploy to?',
       client,
-      currentTeam
+      ctx.config.currentTeam
     );
 
     const detectedProjectName = getProjectName({
@@ -382,7 +376,8 @@ export default async function main(
     }
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, org });
+  const currentTeam = org.type === 'team' ? org.id : undefined;
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   let deployStamp = stamp();
   let deployment = null;
 
@@ -486,7 +481,7 @@ export default async function main(
         new Client({
           apiUrl: ctx.apiUrl,
           token: ctx.authConfig.token,
-          currentTeam: ctx.config.currentTeam,
+          currentTeam: org.id,
           debug: debugEnabled,
         }),
         err.meta.domain,
@@ -562,9 +557,7 @@ export default async function main(
     output,
     deployment,
     deployStamp,
-    !argv['--no-clipboard'],
-    org,
-    project
+    !argv['--no-clipboard']
   );
 }
 
