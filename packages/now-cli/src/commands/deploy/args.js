@@ -109,7 +109,6 @@ export const latestArgs = {
   '--regions': String,
   '--target': String,
   '--prod': Boolean,
-  '--yes': Boolean,
   '-n': '--name',
   '-f': '--force',
   '-p': '--public',
@@ -117,7 +116,6 @@ export const latestArgs = {
   '-b': '--build-env',
   '-C': '--no-clipboard',
   '-m': '--meta',
-  '-y': '--yes',
 };
 
 export const legacyArgsMri = {
