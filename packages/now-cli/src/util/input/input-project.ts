@@ -1,5 +1,5 @@
 import Client from '../client';
-import text from './text';
+import inquirer from 'inquirer';
 import promptBool from './prompt-bool';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
@@ -48,13 +48,15 @@ export default async function inputProject(
 
   if (shouldLinkProject) {
     // user wants to link a project
-    let project;
+    let project: Project | ProjectNotFound | null = null;
 
     while (!project || project instanceof ProjectNotFound) {
-      const projectName = await text({
-        label: `${chalk.gray`?`} What's the name of your existing project? `,
-        trailing: '\n',
+      const answers = await inquirer.prompt({
+        type: 'input',
+        name: 'existingProjectName',
+        message: `What's the name of your existing project?`,
       });
+      const projectName = answers.existingProjectName as string;
 
       project = await getProjectByIdOrName(client, projectName, org.id);
 
@@ -67,25 +69,27 @@ export default async function inputProject(
   }
 
   // user wants to create a new project
-  let projectName;
+  let newProjectName: string | null = null;
 
-  while (!projectName) {
-    projectName = await text({
-      label: `${chalk.gray`?`} How would you like to call your new project? `,
-      trailing: '\n',
+  while (!newProjectName) {
+    const answers = await inquirer.prompt({
+      type: 'input',
+      name: 'newProjectName',
+      message: `How would you like to call your new project?`,
     });
+    newProjectName = answers.newProjectName as string;
 
     const existingProject = await getProjectByIdOrName(
       client,
-      projectName,
+      newProjectName,
       org.id
     );
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
       output.print(`${chalk.red('Error!')} Project already exists\n`);
-      projectName = null;
+      newProjectName = null;
     }
   }
 
-  return projectName;
+  return newProjectName;
 }

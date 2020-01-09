@@ -4,19 +4,19 @@ import chalk from 'chalk';
 // Here we patch inquirer to use a `>` instead of the ugly green `?`
 
 /* eslint-disable no-multiple-empty-lines, no-var, no-undef, no-eq-null, eqeqeq, semi */
-const getQuestionLegacy = function() {
-  var message = `${chalk.bold(`> ${this.opt.message}`)} `;
+// const getQuestionLegacy = function() {
+//   var message = `${chalk.bold(`> ${this.opt.message}`)} `;
 
-  // Append the default if available, and if question isn't answered
-  if (this.opt.default != null && this.status !== 'answered') {
-    message += chalk.dim(`(${this.opt.default}) `);
-  }
+//   // Append the default if available, and if question isn't answered
+//   if (this.opt.default != null && this.status !== 'answered') {
+//     message += chalk.dim(`(${this.opt.default}) `);
+//   }
 
-  return message;
-};
+//   return message;
+// };
 /* eslint-enable */
 
-inquirer.prompt.prompts.input.prototype.getQuestion = getQuestionLegacy;
+// inquirer.prompt.prompts.input.prototype.getQuestion = getQuestionLegacy;
 // inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;
 
 function listRender(choices, pointer) {
@@ -50,13 +50,23 @@ function listRender(choices, pointer) {
   return output.replace(/\n$/, '');
 }
 
-const renderList = function() {
+const getQuestion = function() {
+  let message = `${chalk.gray('?')} ${this.opt.message} `;
+
+  // Append the default if available, and if question isn't answered
+  if (this.opt.default != null && this.status !== 'answered') {
+    message += chalk.dim(`(${this.opt.default}) `);
+  }
+
+  return message;
+};
+
+inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;
+inquirer.prompt.prompts.input.prototype.getQuestion = getQuestion;
+
+inquirer.prompt.prompts.list.prototype.render = function() {
   // Render question
   let message = this.getQuestion();
-
-  // if (this.firstRender) {
-  //   message += chalk.dim('(Use arrow keys)');
-  // }
 
   // Render choices or answer depending on the state
   if (this.status === 'answered') {
@@ -76,16 +86,28 @@ const renderList = function() {
   this.screen.render(message);
 };
 
-const getQuestion = function() {
-  let message = `${chalk.gray('?')} ${this.opt.message} `;
+inquirer.prompt.prompts.input.prototype.render = function(error) {
+  let bottomContent = '';
+  let appendContent = '';
+  let message = this.getQuestion();
+  let transformer = this.opt.transformer;
+  let isFinal = this.status === 'answered';
 
-  // Append the default if available, and if question isn't answered
-  if (this.opt.default != null && this.status !== 'answered') {
-    message += chalk.dim(`(${this.opt.default}) `);
+  if (isFinal) {
+    appendContent = this.answer;
+  } else {
+    appendContent = this.rl.line;
   }
 
-  return message;
-};
+  if (transformer) {
+    message += transformer(appendContent, this.answers, { isFinal });
+  } else {
+    message += appendContent;
+  }
 
-inquirer.prompt.prompts.list.prototype.render = renderList;
-inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;
+  if (error) {
+    bottomContent = chalk.red('>> ') + error;
+  }
+
+  this.screen.render(message, bottomContent);
+};
