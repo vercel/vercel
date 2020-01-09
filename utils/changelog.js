@@ -1,4 +1,7 @@
+const { join } = require('path');
 const { execSync } = require('child_process');
+
+process.chdir(join(__dirname, '..'));
 
 const commit = execSync('git log --pretty=format:"%s %H"')
   .toString()

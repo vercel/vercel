@@ -2,6 +2,8 @@ const { execSync, spawn } = require('child_process');
 const { join, relative } = require('path');
 const { readdirSync } = require('fs');
 
+process.chdir(join(__dirname, '..'));
+
 async function main() {
   const script = process.argv[2];
   const all = process.argv[3];
