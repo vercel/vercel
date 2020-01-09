@@ -28,7 +28,7 @@ function App() {
       </h2>
       <p>
         <a
-          href="https://github.com/zeit/now-examples/tree/master/create-react-app-functions"
+          href="https://github.com/zeit/now-examples/tree/master/create-react-app"
           target="_blank"
           rel="noreferrer noopener"
         >
