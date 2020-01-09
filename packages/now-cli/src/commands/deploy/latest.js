@@ -79,15 +79,25 @@ const addProcessEnv = async (log, env) => {
 
 const printDeploymentStatus = async (
   output,
-  { readyState, alias: aliasList, aliasError, target, indications },
+  {
+    readyState,
+    alias: aliasList,
+    aliasError,
+    target,
+    indications,
+    url: deploymentUrl,
+  },
   deployStamp,
-  isClipboardEnabled
+  isClipboardEnabled,
+  quiet
 ) => {
   const isProdDeployment = target === 'production';
 
   if (readyState !== 'READY') {
     output.error(
-      `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+      `${chalk.red(
+        'Error!'
+      )} Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
     );
     return 1;
   }
@@ -100,6 +110,8 @@ const printDeploymentStatus = async (
     );
   } else {
     // print preview/production url
+    let previewUrl;
+    let isWildcard;
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       // search for a non now.sh/non wildcard domain
       // but fallback to the first alias in the list
@@ -108,25 +120,31 @@ const printDeploymentStatus = async (
           alias => !alias.endsWith('.now.sh') && !isWildcardAlias(alias)
         ) || aliasList[0];
 
-      const prodUrl = isWildcardAlias(mainAlias)
-        ? mainAlias
-        : `https://${mainAlias}`;
-
-      // copy to clipboard
-      if (isClipboardEnabled && !isWildcardAlias(mainAlias)) {
-        await copy(prodUrl).catch(error =>
-          output.debug(`Error copying to clipboard: ${error}`)
-        );
-      }
-
-      output.print(
-        `✅  ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-          prodUrl
-        )} ${deployStamp()}\n`
-      );
+      isWildcard = isWildcardAlias(mainAlias);
+      previewUrl = isWildcard ? mainAlias : `https://${mainAlias}`;
     } else {
-      output.print(`Deployment complete ${deployStamp()}\n`);
+      // fallback to deployment url
+      isWildcard = false;
+      previewUrl = deploymentUrl;
     }
+
+    // copy to clipboard
+    if (isClipboardEnabled && !isWildcard) {
+      await copy(previewUrl).catch(error =>
+        output.debug(`Error copying to clipboard: ${error}`)
+      );
+    }
+
+    // write to stdout
+    if (quiet && !isWildcard) {
+      process.stdout.write(previewUrl);
+    }
+
+    output.print(
+      `✅  ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+        previewUrl
+      )} ${deployStamp()}\n`
+    );
   }
 
   if (indications) {
@@ -138,8 +156,6 @@ const printDeploymentStatus = async (
       );
     }
   }
-
-  return 0;
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -563,7 +579,8 @@ export default async function main(
     output,
     deployment,
     deployStamp,
-    !argv['--no-clipboard']
+    !argv['--no-clipboard'],
+    quiet
   );
 }
 
