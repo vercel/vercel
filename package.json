@@ -44,12 +44,12 @@
   },
   "lint-staged": {
     "*.{js,ts}": [
-      "prettier --single-quote --trailing-comma es5 --write",
+      "prettier --write",
       "eslint",
       "git add"
     ],
     "*.{json,md}": [
-      "prettier --single-quote --trailing-comma es5 --write",
+      "prettier --write",
       "git add"
     ]
   },
@@ -60,6 +60,10 @@
   },
   "resolutions": {
     "signal-exit": "TooTallNate/signal-exit#update/sighub-to-sigint-on-windows"
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "singleQuote": true
   },
   "eslintConfig": {
     "root": true,
