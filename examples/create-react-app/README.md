@@ -1,4 +1,4 @@
-![React Logo](../.github/images/react.svg)
+![React Logo](../packages/frameworks/logos/react.svg)
 
 # React Example
 

@@ -1,4 +1,4 @@
-![Hexo Logo](../.github/images/hexo.svg)
+![Hexo Logo](../packages/frameworks/logos/hexo.svg)
 
 # Hexo Example
 

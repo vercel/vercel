@@ -1,4 +1,4 @@
-![Angular Logo](../.github/images/angular.svg)
+![Angular Logo](../packages/frameworks/logos/angular.svg)
 
 # Angular Example
 
