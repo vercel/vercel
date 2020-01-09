@@ -9,7 +9,7 @@ export interface Framework {
   name: string;
   slug: string;
   logo: string;
-  demo?: string;
+  demo: string;
   tagline: string;
   website: string;
   description: string;

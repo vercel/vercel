@@ -17,7 +17,7 @@ export async function getExampleList(): Promise<Example[]> {
         example: framework.name,
         path: `/${framework.slug}`,
         demo: framework.demo,
-        description: framework.tagline,
+        description: framework.description,
         tagline: framework.tagline,
         framework: framework.slug,
       };
