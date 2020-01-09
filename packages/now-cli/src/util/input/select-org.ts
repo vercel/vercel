@@ -1,10 +1,11 @@
 import Client from '../client';
-import prompts from 'prompts';
+import inquirer from 'inquirer';
 import getUser from '../get-user';
 import getTeams from '../get-teams';
 import { Org } from '../../types';
+import './patch-inquirer';
 
-type Choice = { title: string; value: Org };
+type Choice = { name: string; value: Org };
 
 export default async function selectProject(
   question: string,
@@ -15,21 +16,53 @@ export default async function selectProject(
 
   const choices: Choice[] = [
     {
-      title: user.name || user.username,
+      name: user.name || user.username,
       value: { type: 'user', id: user.uid, slug: user.username },
     },
     ...teams.map<Choice>(team => ({
-      title: team.name || team.slug,
+      name: team.name || team.slug,
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
+    ...teams.map<Choice>(team => ({
+      name: team.name || team.slug,
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
+    ...teams.map<Choice>(team => ({
+      name: team.name || team.slug,
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
+    ...teams.map<Choice>(team => ({
+      name: team.name || team.slug,
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
+    ...teams.map<Choice>(team => ({
+      name: team.name || team.slug,
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
+    ...teams.map<Choice>(team => ({
+      name: team.name || team.slug,
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
+    ...teams.map<Choice>(team => ({
+      name: team.name || team.slug,
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
+    ...teams.map<Choice>(team => ({
+      name: team.name || team.slug,
+      value: { type: 'team', id: team.id, slug: team.slug },
+    })),
+    ...teams.map<Choice>(team => ({
+      name: team.name || team.slug,
       value: { type: 'team', id: team.id, slug: team.slug },
     })),
   ];
 
-  const answers = await prompts({
-    type: 'select',
+  const answers = await inquirer.prompt({
+    type: 'list',
     name: 'org',
     message: question,
     choices,
-    initial: teams.findIndex(team => team.id === currentTeam) + 1,
+    default: teams.findIndex(team => team.id === currentTeam) + 1,
   });
 
   const org = answers.org;
