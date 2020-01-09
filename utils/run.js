@@ -2,6 +2,8 @@ const { execSync, spawn } = require('child_process');
 const { join, relative } = require('path');
 const { readdirSync } = require('fs');
 
+process.chdir(join(__dirname, '..'));
+
 async function main() {
   const script = process.argv[2];
   const all = process.argv[3];
@@ -13,7 +15,7 @@ async function main() {
   }
 
   if (all === 'all') {
-    matches = readdirSync(join(__dirname, 'packages'));
+    matches = readdirSync(join(__dirname, '..', 'packages'));
     console.log(`Running script "${script}" for all packages`);
   } else {
     const branch = execSync('git branch | grep "*" | cut -d " " -f2')
@@ -80,7 +82,7 @@ async function main() {
 
 function runScript(pkgName, script) {
   return new Promise((resolve, reject) => {
-    const cwd = join(__dirname, 'packages', pkgName);
+    const cwd = join(__dirname, '..', 'packages', pkgName);
     let pkgJson = null;
     try {
       pkgJson = require(join(cwd, 'package.json'));
