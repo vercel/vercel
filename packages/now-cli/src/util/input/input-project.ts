@@ -83,6 +83,7 @@ export default async function inputProject(
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
       output.print(`${chalk.red('Error!')} Project already exists\n`);
+      projectName = null;
     }
   }
 
