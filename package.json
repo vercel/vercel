@@ -62,8 +62,8 @@
     "signal-exit": "TooTallNate/signal-exit#update/sighub-to-sigint-on-windows"
   },
   "prettier": {
-    "singleQuote": true,
-    "trailingComma": "es5"
+    "trailingComma": "es5",
+    "singleQuote": true
   },
   "eslintConfig": {
     "root": true,
