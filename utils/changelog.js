@@ -35,7 +35,7 @@ const pkgs =
         .split('\n')
         .filter(line => line.startsWith('packages/'))
         .map(line => line.split('/')[1])
-        .map(pkgName => require(`./packages/${pkgName}/package.json`).name)
+        .map(pkgName => require(`../packages/${pkgName}/package.json`).name)
     )
   ).join(',') || 'now';
 

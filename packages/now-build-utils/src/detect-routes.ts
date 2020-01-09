@@ -354,30 +354,35 @@ export async function detectRoutes(
     );
     if (featHandleMiss) {
       defaultRoutes.push({ handle: 'miss' });
-      if (cleanUrls) {
-        const extensions = builders
+      const extSet = new Set(
+        builders
+          .filter(b => b.src && b.src.startsWith('api/'))
           .map(b => parsePath(b.src).ext)
-          .filter(Boolean);
-        if (extensions.length > 0) {
-          const exts = extensions.map(ext => ext.slice(1)).join('|');
-          const group = `(?:\\.(?:${exts}))`;
+          .filter(Boolean)
+      );
+      if (extSet.size > 0) {
+        const exts = Array.from(extSet)
+          .map(ext => ext.slice(1))
+          .join('|');
+        const extGroup = `(?:\\.(?:${exts}))`;
+        if (cleanUrls) {
           redirectRoutes.push({
-            src: `^/(api(?:.+)?)/index${group}?/?$`,
+            src: `^/(api(?:.+)?)/index${extGroup}?/?$`,
             headers: { Location: trailingSlash ? '/$1/' : '/$1' },
             status: 308,
           });
           redirectRoutes.push({
-            src: `^/api/(.+)${group}/?$`,
+            src: `^/api/(.+)${extGroup}/?$`,
             headers: { Location: trailingSlash ? '/api/$1/' : '/api/$1' },
             status: 308,
           });
+        } else {
+          defaultRoutes.push({
+            src: `^/api/(.+)${extGroup}$`,
+            dest: '/api/$1',
+            check: true,
+          });
         }
-      } else {
-        defaultRoutes.push({
-          src: '^/api/(.+)\\.\\w+$',
-          dest: '/api/$1',
-          check: true,
-        });
       }
       if (dynamicRoutes) {
         defaultRoutes.push(...dynamicRoutes);
