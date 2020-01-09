@@ -1006,7 +1006,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js|go))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1067,7 +1067,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1105,7 +1105,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1149,7 +1149,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1190,7 +1190,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1214,7 +1214,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1250,7 +1250,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:ts))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1272,7 +1272,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:php))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1868,7 +1868,6 @@ function createReplaceLocation(redirectRoutes: Route[] | null) {
   return (filePath: string): string | null => {
     for (const r of redirectSources) {
       const m = new RegExp(r.src).exec(filePath);
-      console.log({ filePath, r, m });
       if (m && r.headers) {
         const match = m[1] || '';
         return r.headers['Location'].replace('$1', match);
