@@ -49,7 +49,7 @@ export async function getGitHubRepoInfo(repo: Repo) {
     '/tree/' +
     repo.branch +
     '/' +
-    (repo.id === 'zeit/now' ? 'examples/' : '');
+    (data.id === 'zeit/now' ? 'examples/' : '');
 
   if (repo.path.startsWith(subdirPath)) {
     // subdir
