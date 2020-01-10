@@ -53,7 +53,8 @@ export default async function router(
   reqUrl: string = '/',
   reqMethod?: string,
   routes?: RouteConfig[],
-  devServer?: DevServer
+  devServer?: DevServer,
+  phase?: string
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
@@ -115,13 +116,11 @@ export default async function router(
           // check the miss routes, otherwise
           // behave the same as `continue: true`
           if (!hasDestFile) {
-            const result = await router(
-              reqUrl,
-              reqMethod,
-              missRoutes,
-              devServer
-            );
-            if (result.found) {
+            const result =
+              phase !== 'miss'
+                ? await router(reqUrl, reqMethod, missRoutes, devServer, 'miss')
+                : null;
+            if (result && result.found) {
               return result;
             } else {
               reqPathname = destPath;
