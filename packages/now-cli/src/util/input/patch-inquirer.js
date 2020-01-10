@@ -106,9 +106,11 @@ function renderChoices(choices, pointer) {
         ')';
     } else {
       if (i - separatorOffset === pointer) {
-        output += chalk.cyan((choice.checked ? '▸' : '▹') + ' ' + choice.name);
+        output += chalk.cyan(
+          (choice.checked ? '›▪︎' : '›▫︎') + ' ' + choice.name
+        );
       } else {
-        output += (choice.checked ? '▪︎' : '▫︎') + ' ' + choice.name;
+        output += (choice.checked ? ' ▪︎' : ' ▫︎') + ' ' + choice.name;
       }
     }
 
