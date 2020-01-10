@@ -38,12 +38,12 @@ export default async function editProjectSettings(
   }
 
   // create new settings object filled with "null" values
-  const settings: ProjectSettings = {
-    buildCommand: null,
-    outputDirectory: null,
-    devCommand: null,
-    ...projectSettings,
-  };
+  const settings: Partial<ProjectSettings> = {};
+
+  for (let field of fields) {
+    settings[field.value] =
+      (projectSettings && projectSettings[field.value]) || null;
+  }
 
   const shouldOverrideSettings = await confirm(
     `Want to override the settings?`,
@@ -51,7 +51,7 @@ export default async function editProjectSettings(
   );
 
   if (!shouldOverrideSettings) {
-    return projectSettings;
+    return settings;
   }
 
   const { settingFields } = await inquirer.prompt({
