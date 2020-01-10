@@ -66,7 +66,11 @@ export default class Now extends EventEmitter {
       forceNew = false,
       target = null,
       deployStamp,
-    }
+      projectSettings,
+    },
+    org,
+    shouldLinkFolder,
+    isDetectingFramework
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
@@ -130,6 +134,7 @@ export default class Now extends EventEmitter {
       meta,
       regions,
       target: target || undefined,
+      projectSettings,
     };
 
     // Ignore specific items from Now.json
@@ -174,6 +179,10 @@ export default class Now extends EventEmitter {
       quiet,
       nowConfig,
       force: forceNew,
+      org,
+      projectName: name,
+      shouldLinkFolder,
+      isDetectingFramework,
     });
 
     // We report about files whose sizes are too big

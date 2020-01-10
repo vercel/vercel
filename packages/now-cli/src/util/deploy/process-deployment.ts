@@ -1,10 +1,8 @@
 import bytes from 'bytes';
 import Progress from 'progress';
 import chalk from 'chalk';
-import pluralize from 'pluralize';
 import {
   createDeployment,
-  createLegacyDeployment,
   DeploymentOptions,
   NowClientOptions,
 } from 'now-client';
@@ -13,20 +11,34 @@ import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';
 import { NowConfig } from '../dev/types';
+import { Org } from '../../types';
 import ua from '../ua';
+import processLegacyDeployment from './process-legacy-deployment';
+import { linkFolderToProject } from '../projects/link';
+
+function printInspectUrl(
+  output: Output,
+  deploymentUrl: string,
+  deployStamp: () => number,
+  orgName: string
+) {
+  const urlParts = deploymentUrl
+    .replace(/\..*/, '')
+    .replace('https://', '')
+    .split('-');
+  const deploymentShortId = urlParts.pop();
+  const projectName = urlParts.join('-');
+  const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
+  output.print(`🔍  Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
+}
 
 export default async function processDeployment({
-  now,
-  output,
-  hashes,
-  paths,
-  requestBody,
-  uploadStamp,
-  deployStamp,
   isLegacy,
-  quiet,
-  force,
-  nowConfig,
+  org,
+  projectName,
+  shouldLinkFolder,
+  isDetectingFramework,
+  ...args
 }: {
   now: Now;
   output: Output;
@@ -39,14 +51,31 @@ export default async function processDeployment({
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
+  org: Org;
+  projectName: string;
+  shouldLinkFolder: boolean;
+  isDetectingFramework: boolean;
 }) {
-  const { warn, log, debug, note } = output;
+  if (isLegacy) return processLegacyDeployment(args);
+
+  let {
+    now,
+    output,
+    hashes,
+    paths,
+    requestBody,
+    deployStamp,
+    force,
+    nowConfig,
+  } = args;
+
+  const { debug } = output;
   let bar: Progress | null = null;
 
   const { env = {} } = requestBody;
 
   const nowClientOptions: NowClientOptions = {
-    teamId: now.currentTeam,
+    teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
     token: now._token,
     debug: now._debug,
@@ -55,205 +84,162 @@ export default async function processDeployment({
     force,
   };
 
-  if (!isLegacy) {
-    let queuedSpinner = null;
-    let buildSpinner = null;
-    let deploySpinner = null;
-    let fileCount = null;
+  let queuedSpinner = null;
+  let buildSpinner = null;
+  let deploySpinner = null;
 
-    for await (const event of createDeployment(
-      nowClientOptions,
-      requestBody,
-      nowConfig
-    )) {
-      if (event.type === 'hashes-calculated') {
-        hashes = event.payload;
-      }
+  let deployingSpinner = wait(
+    isDetectingFramework
+      ? `Detecting framework`
+      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
+    0
+  );
 
-      if (event.type === 'warning') {
-        warn(event.payload);
-      }
+  // collect indications to show the user once
+  // the deployment is done
+  const indications = [];
 
-      if (event.type === 'notice') {
-        note(event.payload);
-      }
+  for await (const event of createDeployment(
+    nowClientOptions,
+    requestBody,
+    nowConfig
+  )) {
+    if (event.type === 'hashes-calculated') {
+      hashes = event.payload;
+    }
 
-      if (event.type === 'file_count') {
-        debug(
-          `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
-        );
-        fileCount = event.payload.missing.length;
+    if (['tip', 'notice', 'warning'].includes(event.type)) {
+      indications.push(event);
+    }
 
-        const missingSize = event.payload.missing
-          .map((sha: string) => event.payload.total.get(sha).data.length)
-          .reduce((a: number, b: number) => a + b, 0);
+    if (event.type === 'file_count') {
+      debug(
+        `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
+      );
 
-        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
-          width: 20,
-          complete: '=',
-          incomplete: '',
-          total: missingSize,
-          clear: true,
-        });
-      }
+      const missingSize = event.payload.missing
+        .map((sha: string) => event.payload.total.get(sha).data.length)
+        .reduce((a: number, b: number) => a + b, 0);
 
-      if (event.type === 'file-uploaded') {
-        debug(
-          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-            event.payload.file.data.length
-          )})`
-        );
+      bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
+        width: 20,
+        complete: '=',
+        incomplete: '',
+        total: missingSize,
+        clear: true,
+      });
+    }
 
-        if (bar) {
-          bar.tick(event.payload.file.data.length);
-        }
-      }
+    if (event.type === 'file-uploaded') {
+      debug(
+        `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
+          event.payload.file.data.length
+        )})`
+      );
 
-      if (event.type === 'created') {
-        now._host = event.payload.url;
-
-        if (!quiet) {
-          if (fileCount) {
-            log(
-              `Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`
-            );
-          }
-          const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
-          log(`https://${event.payload.url} ${version}${deployStamp()}`);
-        } else {
-          process.stdout.write(`https://${event.payload.url}`);
-        }
-
-        if (queuedSpinner === null) {
-          queuedSpinner =
-            event.payload.readyState === 'QUEUED'
-              ? wait('Queued...')
-              : wait('Building...');
-        }
-      }
-
-      if (
-        event.type === 'build-state-changed' &&
-        event.payload.readyState === 'BUILDING'
-      ) {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-
-        if (buildSpinner === null) {
-          buildSpinner = wait('Building...');
-        }
-      }
-
-      if (event.type === 'all-builds-completed') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-
-        deploySpinner = wait('Finalizing...');
-      }
-
-      // Handle error events
-      if (event.type === 'error') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-        if (deploySpinner) {
-          deploySpinner();
-        }
-
-        throw await now.handleDeploymentError(event.payload, { hashes, env });
-      }
-
-      // Handle ready event
-      if (event.type === 'alias-assigned') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-        if (deploySpinner) {
-          deploySpinner();
-        }
-
-        return event.payload;
+      if (bar) {
+        bar.tick(event.payload.file.data.length);
       }
     }
-  } else {
-    let fileCount = null;
 
-    for await (const event of createLegacyDeployment(
-      nowClientOptions,
-      requestBody,
-      nowConfig
-    )) {
-      if (event.type === 'hashes-calculated') {
-        hashes = event.payload;
+    if (event.type === 'created') {
+      if (deployingSpinner) {
+        deployingSpinner();
       }
 
-      if (event.type === 'file_count') {
-        debug(
-          `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
+      now._host = event.payload.url;
+
+      if (shouldLinkFolder) {
+        await linkFolderToProject(
+          output,
+          paths[0],
+          {
+            orgId: org.id,
+            projectId: event.payload.projectId,
+          },
+          projectName,
+          org.slug
         );
-        fileCount = event.payload.missing.length;
-        const missingSize = event.payload.missing
-          .map((sha: string) => event.payload.total.get(sha).data.length)
-          .reduce((a: number, b: number) => a + b, 0);
-
-        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
-          width: 20,
-          complete: '=',
-          incomplete: '',
-          total: missingSize,
-          clear: true,
-        });
       }
 
-      if (event.type === 'file-uploaded') {
-        debug(
-          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-            event.payload.file.data.length
-          )})`
-        );
+      printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
-        if (bar) {
-          bar.tick(event.payload.file.data.length);
-        }
+      if (queuedSpinner === null) {
+        queuedSpinner =
+          event.payload.readyState === 'QUEUED'
+            ? wait('Queued', 0)
+            : wait('Building', 0);
+      }
+    }
+
+    if (
+      event.type === 'build-state-changed' &&
+      event.payload.readyState === 'BUILDING'
+    ) {
+      if (queuedSpinner) {
+        queuedSpinner();
       }
 
-      if (event.type === 'created') {
-        now._host = event.payload.url;
+      if (buildSpinner === null) {
+        buildSpinner = wait('Building', 0);
+      }
+    }
 
-        if (!quiet) {
-          if (fileCount) {
-            log(
-              `Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`
-            );
-          }
-          const version = isLegacy ? `${chalk.grey('[v1]')} ` : '';
-          log(`${event.payload.url} ${version}${deployStamp()}`);
-        } else {
-          process.stdout.write(`https://${event.payload.url}`);
-        }
+    if (event.type === 'all-builds-completed') {
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
+      if (buildSpinner) {
+        buildSpinner();
       }
 
-      // Handle error events
-      if (event.type === 'error') {
-        throw await now.handleDeploymentError(event.payload, { hashes, env });
+      deploySpinner = wait('Finalizing', 0);
+    }
+
+    // Handle error events
+    if (event.type === 'error') {
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
+      if (buildSpinner) {
+        buildSpinner();
+      }
+      if (deploySpinner) {
+        deploySpinner();
+      }
+      if (deployingSpinner) {
+        deployingSpinner();
       }
 
-      // Handle ready event
-      if (event.type === 'ready') {
-        log(`Build completed`);
-        return event.payload;
+      const error = await now.handleDeploymentError(event.payload, {
+        hashes,
+        env,
+      });
+
+      if (error.code === 'missing_project_settings') {
+        return error;
       }
+
+      throw error;
+    }
+
+    // Handle ready event
+    if (event.type === 'alias-assigned') {
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
+      if (buildSpinner) {
+        buildSpinner();
+      }
+      if (deploySpinner) {
+        deploySpinner();
+      }
+      if (deployingSpinner) {
+        deployingSpinner();
+      }
+
+      event.payload.indications = indications;
+      return event.payload;
     }
   }
 }

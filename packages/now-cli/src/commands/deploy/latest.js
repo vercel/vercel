@@ -15,7 +15,6 @@ import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
-import getProjectName from '../../util/get-project-name';
 import {
   BuildsRateLimited,
   DeploymentNotFound,
@@ -40,6 +39,15 @@ import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import shouldDeployDir from '../../util/deploy/should-deploy-dir';
+import confirm from '../../util/input/confirm';
+import editProjectSettings from '../../util/input/edit-project-settings';
+import {
+  getLinkedProject,
+  linkFolderToProject,
+} from '../../util/projects/link';
+import getProjectName from '../../util/get-project-name';
+import selectOrg from '../../util/input/select-org';
+import inputProject from '../../util/input/input-project';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -69,88 +77,85 @@ const addProcessEnv = async (log, env) => {
   }
 };
 
-const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`;
-const prepareAlias = input =>
-  isWildcardAlias(input) ? input : `https://${input}`;
-
 const printDeploymentStatus = async (
   output,
-  { readyState, alias: aliasList, aliasError },
+  {
+    readyState,
+    alias: aliasList,
+    aliasError,
+    target,
+    indications,
+    url: deploymentUrl,
+  },
   deployStamp,
-  clipboardEnabled,
-  localConfig,
-  builds
+  isClipboardEnabled,
+  quiet
 ) => {
-  if (readyState === 'READY') {
-    if (aliasError && aliasError.message) {
-      output.warn(`Failed to assign aliases: ${aliasError.message}`);
-    }
+  const isProdDeployment = target === 'production';
 
-    if (Array.isArray(aliasList) && aliasList.length > 0) {
-      if (aliasList.length === 1) {
-        if (clipboardEnabled) {
-          const firstAlias = aliasList[0];
-          const preparedAlias = prepareAlias(firstAlias);
-          try {
-            await copy(`https://${firstAlias}`);
-            output.ready(
-              `Deployed to ${chalk.bold(
-                chalk.cyan(preparedAlias)
-              )} ${chalk.gray('[in clipboard]')} ${deployStamp()}`
-            );
-          } catch (err) {
-            output.debug(`Error copying to clipboard: ${err}`);
-            output.ready(
-              `Deployed to ${chalk.bold(
-                chalk.cyan(preparedAlias)
-              )} ${deployStamp()}`
-            );
-          }
-        }
-      } else {
-        output.ready(`Deployment complete ${deployStamp()}`);
-
-        // If `alias` is defined in the config, we need to
-        // copy the first one to the clipboard.
-        const matching = (localConfig.alias || [])[0];
-
-        for (const alias of aliasList) {
-          const index = aliasList.indexOf(alias);
-          const isLast = index === aliasList.length - 1;
-          const shouldCopy = matching ? alias === matching : isLast;
-
-          if (shouldCopy && clipboardEnabled) {
-            try {
-              await copy(`https://${alias}`);
-              output.print(
-                `- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray(
-                  '[in clipboard]'
-                )}\n`
-              );
-
-              continue;
-            } catch (err) {
-              output.debug(`Error copying to clipboard: ${err}`);
-            }
-          }
-
-          output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
-        }
-      }
-    } else {
-      output.ready(`Deployment complete ${deployStamp()}`);
-    }
-
-    return 0;
-  }
-
-  if (!builds) {
-    output.error(deploymentErrorMsg);
+  if (readyState !== 'READY') {
+    output.error(
+      `${chalk.red(
+        'Error!'
+      )} Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+    );
     return 1;
   }
 
-  output.error(deploymentErrorMsg);
-  return 1;
+  if (aliasError) {
+    output.warn(
+      `Failed to assign aliases${
+        aliasError.message ? `: ${aliasError.message}` : ''
+      }`
+    );
+  } else {
+    // print preview/production url
+    let previewUrl;
+    let isWildcard;
+    if (Array.isArray(aliasList) && aliasList.length > 0) {
+      // search for a non now.sh/non wildcard domain
+      // but fallback to the first alias in the list
+      const mainAlias =
+        aliasList.find(
+          alias => !alias.endsWith('.now.sh') && !isWildcardAlias(alias)
+        ) || aliasList[0];
+
+      isWildcard = isWildcardAlias(mainAlias);
+      previewUrl = isWildcard ? mainAlias : `https://${mainAlias}`;
+    } else {
+      // fallback to deployment url
+      isWildcard = false;
+      previewUrl = deploymentUrl;
+    }
+
+    // copy to clipboard
+    if (isClipboardEnabled && !isWildcard) {
+      await copy(previewUrl).catch(error =>
+        output.debug(`Error copying to clipboard: ${error}`)
+      );
+    }
+
+    // write to stdout
+    if (quiet && !isWildcard) {
+      process.stdout.write(previewUrl);
+    }
+
+    output.print(
+      `✅  ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+        previewUrl
+      )} ${deployStamp()}\n`
+    );
+  }
+
+  if (indications) {
+    const emojis = { notice: 'ℹ️', tip: '💡', warning: '⚠️' };
+    for (let indication of indications) {
+      const emoji = emojis[indication.type];
+      output.print(
+        `${emoji ? `${emoji}  ` : ''}${chalk.grey(indication.payload)}\n`
+      );
+    }
+  }
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -210,7 +215,6 @@ export default async function main(
   const {
     apiUrl,
     authConfig: { token },
-    config: { currentTeam },
   } = ctx;
   const { log, debug, error, warn } = output;
   const paths = Object.keys(stats);
@@ -220,34 +224,25 @@ export default async function main(
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
 
-  const list = paths
-    .map((path, index) => {
-      let suffix = '';
+  // check paths
+  if (paths.length > 1) {
+    output.error(`${chalk.red('Error!')} Can't deploy more than one path.`);
+    return 1;
+  }
 
-      if (paths.length > 1 && index !== paths.length - 1) {
-        suffix = index < paths.length - 2 ? ', ' : ' and ';
-      }
-
-      return chalk.bold(toHumanPath(path)) + suffix;
-    })
-    .join('');
-
-  log(`Deploying ${list} under ${chalk.bold(contextName)}`);
-
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  // build `meta`
   const meta = Object.assign(
     {},
     parseMeta(localConfig.meta),
     parseMeta(argv['--meta'])
   );
 
-  let deployStamp = stamp();
-  let deployment = null;
-
+  // --no-scale
   if (argv['--no-scale']) {
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
   }
 
+  // build `env`
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
 
@@ -309,24 +304,109 @@ export default async function main(
     return 1;
   }
 
+  // build `regions`
   const regionFlag = (argv['--regions'] || '')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
-  try {
-    // $FlowFixMe
-    const project = getProjectName({
+  // build `target`
+  let target;
+  if (argv['--target']) {
+    const deprecatedTarget = argv['--target'];
+
+    if (!['staging', 'production'].includes(deprecatedTarget)) {
+      error(
+        `The specified ${param('--target')} ${code(
+          deprecatedTarget
+        )} is not valid`
+      );
+      return 1;
+    }
+
+    if (deprecatedTarget === 'production') {
+      warn(
+        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
+      );
+    }
+
+    output.debug(`Setting target to ${deprecatedTarget}`);
+    target = deprecatedTarget;
+  } else if (argv['--prod']) {
+    output.debug('Setting target to production');
+    target = 'production';
+  }
+
+  const client = new Client({
+    apiUrl: ctx.apiUrl,
+    token: ctx.authConfig.token,
+    debug: debugEnabled,
+  });
+
+  // retrieve `project` and `org` from .now
+  const path = paths[0];
+  let [org, project] = await getLinkedProject(client, path);
+  let newProjectName = null;
+
+  if (!org || !project) {
+    const shouldStartSetup = await confirm(
+      `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+      true
+    );
+
+    if (!shouldStartSetup) {
+      output.print(`Aborted. Project not set up.\n`);
+      return 0;
+    }
+
+    org = await selectOrg(
+      'Which organization do you want to deploy to?',
+      client,
+      ctx.config.currentTeam
+    );
+
+    const detectedProjectName = getProjectName({
       argv,
       nowConfig: localConfig,
       isFile,
       paths,
     });
-    log(`Using project ${chalk.bold(project)}`);
 
+    const projectOrNewProjectName = await inputProject(
+      output,
+      client,
+      org,
+      detectedProjectName
+    );
+
+    if (typeof projectOrNewProjectName === 'string') {
+      newProjectName = projectOrNewProjectName;
+    } else {
+      project = projectOrNewProjectName;
+
+      // we can already link the project
+      await linkFolderToProject(
+        output,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug
+      );
+    }
+  }
+
+  const currentTeam = org.type === 'team' ? org.id : undefined;
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  let deployStamp = stamp();
+  let deployment = null;
+
+  try {
     const createArgs = {
-      name: project,
+      name: project ? project.name : newProjectName,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -338,43 +418,48 @@ export default async function main(
       regions,
       meta,
       deployStamp,
+      target,
     };
-
-    if (argv['--target']) {
-      const deprecatedTarget = argv['--target'];
-
-      if (!['staging', 'production'].includes(deprecatedTarget)) {
-        error(
-          `The specified ${param('--target')} ${code(
-            deprecatedTarget
-          )} is not valid`
-        );
-        return 1;
-      }
-
-      if (deprecatedTarget === 'production') {
-        warn(
-          'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
-        );
-      }
-
-      output.debug(`Setting target to ${deprecatedTarget}`);
-      createArgs.target = deprecatedTarget;
-    } else if (argv['--prod']) {
-      output.debug('Setting target to production');
-      createArgs.target = 'production';
-    }
-
-    deployStamp = stamp();
 
     deployment = await createDeploy(
       output,
       now,
       contextName,
-      paths,
+      [path],
       createArgs,
-      ctx
+      org,
+      false,
+      !!newProjectName
     );
+
+    if (
+      deployment instanceof Error &&
+      deployment.code === 'missing_project_settings'
+    ) {
+      let { projectSettings, framework } = deployment;
+
+      const settings = await editProjectSettings(
+        output,
+        projectSettings,
+        framework
+      );
+
+      // deploy again, but send projectSettings this time
+      createArgs.projectSettings = settings;
+
+      deployStamp = stamp();
+      createArgs.deployStamp = deployStamp;
+      deployment = await createDeploy(
+        output,
+        now,
+        contextName,
+        [path],
+        createArgs,
+        org,
+        !!newProjectName,
+        false
+      );
+    }
 
     if (deployment instanceof NotDomainOwner) {
       output.error(deployment);
@@ -419,7 +504,7 @@ export default async function main(
         new Client({
           apiUrl: ctx.apiUrl,
           token: ctx.authConfig.token,
-          currentTeam: ctx.config.currentTeam,
+          currentTeam: org.id,
           debug: debugEnabled,
         }),
         err.meta.domain,
@@ -496,7 +581,7 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    localConfig
+    quiet
   );
 }
 
