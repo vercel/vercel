@@ -94,6 +94,11 @@ describe('create v2 deployment', () => {
       },
       {
         name: 'now-client-tests-v2',
+        projectSettings: {
+          buildCommand: null,
+          devCommand: null,
+          outputDirectory: null,
+        },
       }
     )) {
       if (event.type === 'ready') {
@@ -118,6 +123,11 @@ describe('create v2 deployment', () => {
       },
       {
         name: 'now-client-tests-v2',
+        projectSettings: {
+          buildCommand: null,
+          devCommand: null,
+          outputDirectory: null,
+        },
       }
     )) {
       if (event.type === 'ready') {
