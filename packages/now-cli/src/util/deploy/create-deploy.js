@@ -62,8 +62,6 @@ export default async function createDeploy(
     }
 
     if (error.code === 'bad_request' && error.keyword) {
-      console.log(error);
-
       throw new ERRORS.SchemaValidationFailed(
         error.message,
         error.keyword,
