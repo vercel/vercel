@@ -6,7 +6,7 @@ This directory is a brief example of using a Custom Build script that can be dep
 
 Deploy your own Custom Built project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/custom-build)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/custom-build)
 
 _Live Example: https://custom-build.now-examples.now.sh_
 

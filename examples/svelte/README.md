@@ -6,7 +6,7 @@ This directory is a brief example of a [Svelte](https://svelte.dev/) app with [S
 
 Deploy your own Svelte project, along with Serverless Functions, with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/svelte)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/svelte)
 
 _Live Example: https://svelte.now-examples.now.sh_
 

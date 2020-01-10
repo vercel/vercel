@@ -44,16 +44,19 @@ export async function getGitHubRepoInfo(repo: Repo) {
     branch: repo.branch,
   };
 
-  const subdirPath = repo.repo + '/tree/' + repo.branch + '/';
+  const subdirPath =
+    repo.repo +
+    '/tree/' +
+    repo.branch +
+    '/' +
+    (data.id === 'zeit/now' ? 'examples/' : '');
 
   if (repo.path.startsWith(subdirPath)) {
     // subdir
     data.subdir = repo.path.slice(subdirPath.length).split('/');
   }
 
-  const isExamples = data.id === 'zeit/now-examples' || data.id === 'zeit/now';
-
-  if (isExamples && data.subdir) {
+  if (data.id === 'zeit/now' && data.subdir) {
     // from our examples, add `homepage` and `description` fields
     const example = data.subdir[0];
     const exampleList = await getExampleList();

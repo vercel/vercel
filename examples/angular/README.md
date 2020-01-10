@@ -8,7 +8,7 @@ This directory is a brief example of an [Angular](https://angular.io/) app that 
 
 Deploy your own Angular project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/angular)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/angular)
 
 _Live Example: https://angular.now-examples.now.sh_
 
