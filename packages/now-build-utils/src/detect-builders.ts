@@ -168,6 +168,10 @@ export function getIgnoreApiFilter(optionsOrBuilders: Options | Builder[]) {
   }
 
   return (file: string) => {
+    if (!file.startsWith('api/')) {
+      return false;
+    }
+
     if (file.includes('/.')) {
       return false;
     }
