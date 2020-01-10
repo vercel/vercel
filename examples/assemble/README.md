@@ -6,7 +6,7 @@ This directory is a brief example of a [Assemble](http://assemble.io/) app that 
 
 Deploy your own Assemble project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/assemble)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/assemble)
 
 _Live Example: https://assemble.now-examples.now.sh_
 

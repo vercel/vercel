@@ -8,7 +8,7 @@ This directory is a brief example of a [Eleventy](https://www.11ty.io/) site tha
 
 Deploy your own Eleventy project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/eleventy)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/eleventy)
 
 _Live Example: https://eleventy.now-examples.now.sh_
 

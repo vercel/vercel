@@ -6,7 +6,7 @@ This directory is a brief example of a [Sapper](https://sapper.svelte.dev/) app 
 
 Deploy your own Sapper project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/sapper)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/sapper)
 
 _Live Example: https://sapper.now-examples.now.sh_
 

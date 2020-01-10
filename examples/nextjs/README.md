@@ -8,7 +8,7 @@ This directory is a brief example of a [Next.js](https://nextjs.org) app that ca
 
 Deploy your own Next.js project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/nextjs)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/nextjs)
 
 _Live Example: https://nextjs.now-examples.now.sh_
 

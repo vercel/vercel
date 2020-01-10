@@ -6,7 +6,7 @@ This directory is a brief example of a [Foundation](https://foundation.zurb.com/
 
 Deploy your own Foundation project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/foundation)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/foundation)
 
 _Live Example: https://foundation.now-examples.now.sh_
 
