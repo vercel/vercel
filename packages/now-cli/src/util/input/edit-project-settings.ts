@@ -28,11 +28,13 @@ export default async function editProjectSettings(
       const defaults = framework.settings[field.value];
 
       output.print(
-        `- ${chalk.bold(`${field.name}:`)} ${`${
-          defaults.value
-            ? defaults.value
-            : chalk.italic(`${defaults.placeholder}`)
-        }`}\n`
+        chalk.gray(
+          `- ${chalk.bold(`${field.name}:`)} ${`${
+            defaults.value
+              ? defaults.value
+              : chalk.italic(`${defaults.placeholder}`)
+          }`}`
+        ) + '\n'
       );
     }
   }
