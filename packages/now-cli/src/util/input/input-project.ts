@@ -16,7 +16,7 @@ export default async function inputProject(
 ): Promise<Project | string> {
   // attempt to auto-detect a project to link
   let detectedProject = null;
-  const existingProjectSpinner = wait('Searching for existing projects…');
+  const existingProjectSpinner = wait('Searching for existing projects…', 1000);
   try {
     detectedProject = await getProjectByIdOrName(
       client,
@@ -63,7 +63,7 @@ export default async function inputProject(
       });
       const projectName = answers.existingProjectName as string;
 
-      const loader = wait('Verifying project name…');
+      const loader = wait('Verifying project name…', 1000);
       project = await getProjectByIdOrName(client, projectName, org.id);
       loader();
 
@@ -86,7 +86,7 @@ export default async function inputProject(
     });
     newProjectName = answers.newProjectName as string;
 
-    const spinner = wait('Verifying project name…');
+    const spinner = wait('Verifying project name…', 1000);
     const existingProject = await getProjectByIdOrName(
       client,
       newProjectName,
