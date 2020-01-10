@@ -5,7 +5,7 @@ import { detectFramework, DetectorFilesystem } from '../src';
 
 const frameworkList = JSON.parse(
   readFileSync(
-    path.join(__dirname, '..', '..', 'frameworks', 'frameworks.json')
+    path.join(__dirname, '..', '..', 'now-frameworks', 'frameworks.json')
   ).toString()
 ) as Framework[];
 
