@@ -643,7 +643,7 @@
   {
     "name": "Vanilla",
     "slug": "vanilla",
-    "demo": "https://vanilla-functions.now-examples.now.sh",
+    "demo": "https://vanilla.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vanilla.svg",
     "tagline": "Love the original way of making websites?",
     "description": "A vanilla site and a Serverless Function API."
