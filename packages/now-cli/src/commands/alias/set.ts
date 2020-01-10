@@ -21,6 +21,7 @@ import { isValidName } from '../../util/is-valid-name';
 import upsertPathAlias from '../../util/alias/upsert-path-alias';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
+import link from '../../util/output/link';
 
 type Options = {
   '--debug': boolean;
@@ -121,7 +122,9 @@ export default async function set(
 
   if (args.length === 0 && !rules) {
     output.error(
-      `To ship to production, optionally configure your domains (URL) and run ${cmd('now --prod')}.`
+      `To ship to production, optionally configure your domains (${link(
+        'https://zeit.co/docs/v2/custom-domains/'
+      )}) and run ${cmd('now --prod')}.`
     );
     return 1;
   }
