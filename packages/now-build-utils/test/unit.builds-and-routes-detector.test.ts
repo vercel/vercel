@@ -1,5 +1,6 @@
 import { Source, Route } from '@now/routing-utils';
 import { detectBuilders, detectRoutes } from '../src';
+import { detectOutputDirectory, detectApiDirectory } from '../';
 
 describe('Test `detectBuilders`', () => {
   it('package.json + no build', async () => {
@@ -654,112 +655,6 @@ describe('Test `detectBuilders`', () => {
     expect((defaultRoutes![1] as any).status).toBe(404);
     expect((defaultRoutes![2] as any).src).toBe('/(.*)');
     expect((defaultRoutes![2] as any).dest).toBe('/output/$1');
-  });
-
-  it('Custom directory for Serverless Functions', async () => {
-    const files = ['server/_lib/db.ts', 'server/user.ts', 'server/team.ts'];
-
-    const functions = {
-      'server/**/*.ts': {
-        memory: 128,
-        runtime: '@now/node@1.2.1',
-      },
-    };
-
-    const { builders } = await detectBuilders(files, null, { functions });
-
-    expect(builders!.length).toBe(3);
-    expect(builders![0]).toEqual({
-      use: '@now/node@1.2.1',
-      src: 'server/team.ts',
-      config: {
-        zeroConfig: true,
-        functions: {
-          'server/**/*.ts': {
-            memory: 128,
-            runtime: '@now/node@1.2.1',
-          },
-        },
-      },
-    });
-    expect(builders![1]).toEqual({
-      use: '@now/node@1.2.1',
-      src: 'server/user.ts',
-      config: {
-        zeroConfig: true,
-        functions: {
-          'server/**/*.ts': {
-            memory: 128,
-            runtime: '@now/node@1.2.1',
-          },
-        },
-      },
-    });
-    // This is expected, since only "api + full static" is supported
-    // no other directory, so everything else will be deployed
-    expect(builders![2].use).toBe('@now/static');
-
-    const { defaultRoutes } = await detectRoutes(files, builders!);
-
-    expect(defaultRoutes!.length).toBe(2);
-    expect((defaultRoutes![0] as any).dest).toBe('/server/team.ts');
-    expect((defaultRoutes![0] as any).src).toBe(
-      '^/server/(team\\/|team|team\\.ts)$'
-    );
-    expect((defaultRoutes![1] as any).dest).toBe('/server/user.ts');
-    expect((defaultRoutes![1] as any).src).toBe(
-      '^/server/(user\\/|user|user\\.ts)$'
-    );
-  });
-
-  it('Custom directory for Serverless Functions + Next.js', async () => {
-    const pkg = {
-      scripts: {
-        build: 'next build',
-      },
-      dependencies: {
-        next: '9.0.0',
-      },
-    };
-
-    const functions = {
-      'server/**/*.ts': {
-        runtime: '@now/node@1.2.1',
-      },
-    };
-
-    const files = ['package.json', 'pages/index.ts', 'server/user.ts'];
-
-    const { builders } = await detectBuilders(files, pkg, {
-      functions,
-      projectSettings: { framework: 'nextjs' },
-    });
-
-    expect(builders!.length).toBe(2);
-    expect(builders![0]).toEqual({
-      use: '@now/node@1.2.1',
-      src: 'server/user.ts',
-      config: {
-        zeroConfig: true,
-        functions,
-      },
-    });
-    expect(builders![1]).toEqual({
-      use: '@now/next',
-      src: 'package.json',
-      config: {
-        zeroConfig: true,
-        framework: 'nextjs',
-      },
-    });
-
-    const { defaultRoutes } = await detectRoutes(files, builders!);
-
-    expect(defaultRoutes!.length).toBe(1);
-    expect((defaultRoutes![0] as any).dest).toBe('/server/user.ts');
-    expect((defaultRoutes![0] as any).src).toBe(
-      '^/server/(user\\/|user|user\\.ts)$'
-    );
   });
 
   it('Framework with non-package.json entrypoint', async () => {
@@ -1857,6 +1752,112 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       { status: 404, src: '^/api(/.*)?$', continue: true },
     ]);
   }
+});
+
+describe('Test `detectOutputDirectory`', () => {
+  it('should be `null` with no config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `null` with no zero config builds', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: {},
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `public` with one zero config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: { zeroConfig: true },
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe('public');
+  });
+
+  it('should be `public` with one zero config and one without config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: { zeroConfig: true },
+      },
+      {
+        use: '@now/node',
+        src: 'api/index.js',
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe('public');
+  });
+});
+
+describe('Test `detectApiDirectory`', () => {
+  it('should be `null` with no config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `null` with no zero config builds', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: {},
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `api` with one zero config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: { zeroConfig: true },
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe('api');
+  });
+
+  it('should be `api` with one zero config and one without config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: { zeroConfig: true },
+      },
+      {
+        use: '@now/php',
+        src: 'api/**/*.php',
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe('api');
+  });
 });
 
 /**

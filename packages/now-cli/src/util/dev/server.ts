@@ -877,13 +877,6 @@ export default class DevServer {
     }
   }
 
-  shouldRebuild(req: http.IncomingMessage): boolean {
-    return (
-      req.headers.pragma === 'no-cache' ||
-      req.headers['cache-control'] === 'no-cache'
-    );
-  }
-
   async send404(
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -1045,8 +1038,8 @@ export default class DevServer {
     filesChanged?: string[],
     filesRemoved?: string[]
   ) {
-    // If the requested asset wasn't found in the match's outputs, or
-    // a hard-refresh was detected, then trigger a build
+    // If the requested asset wasn't found in the match's
+    // outputs then trigger a build
     const buildKey =
       requestPath === null ? match.src : `${match.src}-${requestPath}`;
     let buildPromise = this.inProgressBuilds.get(buildKey);
@@ -1054,14 +1047,6 @@ export default class DevServer {
       // A build for `buildKey` is already in progress, so don't trigger
       // another rebuild for this request - just wait on the existing one.
       let msg = `De-duping build "${buildKey}"`;
-      if (req) msg += ` for "${req.method} ${req.url}"`;
-      this.output.debug(msg);
-    } else if (Date.now() - match.buildTimestamp < ms('2s')) {
-      // If the built asset was created less than 2s ago, then don't trigger
-      // a rebuild. The purpose of this threshold is because once an HTML page
-      // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
-      // with a `no-cache` header, so this avoids *two* rebuilds for that case.
-      let msg = `Skipping build for "${buildKey}" (not older than 2s)`;
       if (req) msg += ` for "${req.method} ${req.url}"`;
       this.output.debug(msg);
     } else {
@@ -1266,10 +1251,10 @@ export default class DevServer {
     }
 
     let foundAsset = findAsset(match, requestPath, nowConfig);
-    if ((!foundAsset || this.shouldRebuild(req)) && callLevel === 0) {
+    if (!foundAsset && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
-      // Since the `asset` was re-built, resolve it again to get the new asset
+      // Since the `asset` was just built, resolve again to get the new asset
       foundAsset = findAsset(match, requestPath, nowConfig);
     }
 
