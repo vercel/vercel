@@ -6,7 +6,7 @@ This directory is a brief example of a [Riot.js](https://riot.js.org/) app that 
 
 Deploy your own Riot.js project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/riot)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/riot)
 
 _Live Example: https://riot.now-examples.now.sh_
 

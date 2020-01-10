@@ -6,7 +6,7 @@ This directory is a brief example of a [Nuxt.js](https://nuxtjs.org) app that ca
 
 Deploy your own Nuxt.js project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/nuxtjs)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/nuxtjs)
 
 _Live Example: https://nuxtjs.now-examples.now.sh_
 

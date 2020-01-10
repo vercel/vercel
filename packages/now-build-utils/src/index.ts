@@ -62,7 +62,11 @@ export {
   getLambdaOptionsFromFunction,
 };
 
-export { detectRoutes, detectOutputDirectory } from './detect-routes';
+export {
+  detectRoutes,
+  detectOutputDirectory,
+  detectApiDirectory,
+} from './detect-routes';
 export { detectBuilders } from './detect-builders';
 export { detectFramework } from './detect-framework';
 export { DetectorFilesystem } from './detectors/filesystem';

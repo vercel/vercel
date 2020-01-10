@@ -1,4 +1,4 @@
-![Polymer Logo](../.github/images/polymer.svg)
+![Polymer Logo](../packages/frameworks/logos/polymer.svg)
 
 # Polymer Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Polymer](https://www.polymer-project.org
 
 Deploy your own Polymer project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/polymer)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/polymer)
 
 _Live Example: https://polymer.now-examples.now.sh_
 

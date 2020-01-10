@@ -6,7 +6,7 @@ This directory is a brief example of a [VuePress](https://vuepress.vuejs.org/) a
 
 Deploy your own VuePress project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/vuepress)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/vuepress)
 
 _Live Example: https://vuepress.now-examples.now.sh_
 

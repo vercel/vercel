@@ -6,7 +6,7 @@ This directory is a brief example of an [AMP](https://amp.dev/) site that can be
 
 Deploy your own AMP project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/amp)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/amp)
 
 _Live Example: https://amp.now-examples.now.sh_
 

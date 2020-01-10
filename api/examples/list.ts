@@ -8,27 +8,8 @@ export default withApiHandler(async function(
   req: NowRequest,
   res: NowResponse
 ) {
-  if (Number(req.query.version) === 1) {
-    // The old cli is pinned to a specific commit hash
-    await extract(
-      'https://github.com/zeit/now-examples/archive/7c7b27e49b8b17d0d3f0e1604dc74fd005cd69e3.zip',
-      '/tmp'
-    );
-    const exampleList = summary(
-      '/tmp/now-examples-7c7b27e49b8b17d0d3f0e1604dc74fd005cd69e3'
-    );
-    return res.send(exampleList);
-  }
-
-  await Promise.all([
-    extract('https://github.com/zeit/now/archive/master.zip', '/tmp'),
-    extract('https://github.com/zeit/now-examples/archive/master.zip', '/tmp'),
-  ]);
-
-  const exampleList = new Set([
-    ...summary('/tmp/now-master/examples'),
-    ...summary('/tmp/now-examples-master'),
-  ]);
+  await extract('https://github.com/zeit/now/archive/master.zip', '/tmp');
+  const exampleList = summary('/tmp/now-master/examples');
 
   const existingExamples = Array.from(exampleList).map(key => ({
     name: key,
