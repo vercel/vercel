@@ -30,7 +30,7 @@
   {
     "name": "Gatsby",
     "slug": "gatsby",
-    "demo": "https://gatsby-functions.now-examples.now.sh",
+    "demo": "https://gatsby.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gatsby.svg",
     "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
     "description": "A Gatsby app, using the default starter theme and a Serverless Function API.",
