@@ -1,4 +1,4 @@
-![Vue.js Logo](../.github/images/vue.svg)
+![Vue.js Logo](../packages/frameworks/logos/vue.svg)
 
 # Vue.js Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Vue.js](https://vuejs.org/) app that can
 
 Deploy your own Vue.js project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/vue)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/vue)
 
 _Live Example: https://vue.now-examples.now.sh_
 

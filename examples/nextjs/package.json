@@ -3,7 +3,7 @@
   "description": "A Next.js starter app.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now-examples/tree/master/nextjs"
+    "url": "https://github.com/zeit/now/tree/master/examples/nextjs"
   },
   "license": "MIT",
   "scripts": {

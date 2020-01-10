@@ -6,7 +6,7 @@ This directory is a brief example of a [Docz](https://www.docz.site/) site that 
 
 Deploy your own Docz project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/docz)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/docz)
 
 _Live Example: https://docz.now-examples.now.sh_
 

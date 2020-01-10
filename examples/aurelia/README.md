@@ -6,7 +6,7 @@ This directory is a brief example of an [Aurelia](https://aurelia.io/) app that 
 
 Deploy your own Aurelia project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/aurelia)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/aurelia)
 
 _Live Example: https://aurelia.now-examples.now.sh_
 
