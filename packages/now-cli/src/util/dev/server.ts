@@ -526,9 +526,12 @@ export default class DevServer {
 
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
+      const { projectSettings } = config;
+
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
+        ...(projectSettings ? { projectSettings } : {}),
       });
 
       if (errors) {
@@ -541,10 +544,11 @@ export default class DevServer {
       }
 
       if (builders) {
-        const { defaultRoutes, error: routesError } = await detectRoutes(
-          files,
-          builders
-        );
+        const {
+          defaultRoutes,
+          redirectRoutes,
+          error: routesError,
+        } = await detectRoutes(files, builders);
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
@@ -553,8 +557,12 @@ export default class DevServer {
           this.output.error(routesError.message);
           await this.exit();
         } else {
-          config.routes = config.routes || [];
-          config.routes.push(...(defaultRoutes as RouteConfig[]));
+          const routes: RouteConfig[] = [];
+          const { routes: nowConfigRoutes } = config;
+          routes.push(...(redirectRoutes || []));
+          routes.push(...(nowConfigRoutes || []));
+          routes.push(...(defaultRoutes || []));
+          config.routes = routes;
         }
       }
     }

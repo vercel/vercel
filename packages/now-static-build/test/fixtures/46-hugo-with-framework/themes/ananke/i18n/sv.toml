@@ -1,0 +1,32 @@
+[more]
+other = "Mer"
+
+[allTitle]
+other = "Alla {{.Title }}"
+
+[recentTitle]
+other = "Senaste {{.Title }}"
+
+[readMore]
+other = "läs mer"
+
+[whatsInThis]
+other = "Innehåll i {{ .Type }}"
+
+[related]
+other = "Relaterad"
+
+[yourName]
+other = "Ditt namn"
+
+[emailAddress]
+other = "E-postadress"
+
+[message]
+other = "Meddelande"
+
+[emailRequiredNote]
+other = "En e-postadress krävs."
+
+[send]
+other = "Skicka"

@@ -29,9 +29,11 @@ describe('create v1 deployment', () => {
 
   it('will create a v1 static deployment', async () => {
     for await (const event of createLegacyDeployment(
-      path.resolve(__dirname, 'fixtures', 'v1', 'static'),
       {
         token,
+        path: path.resolve(__dirname, 'fixtures', 'v1', 'static'),
+      },
+      {
         name: 'now-client-tests-v1-static',
       }
     )) {
@@ -47,9 +49,11 @@ describe('create v1 deployment', () => {
 
   it('will create a v1 npm deployment', async () => {
     for await (const event of createLegacyDeployment(
-      path.resolve(__dirname, 'fixtures', 'v1', 'npm'),
       {
         token,
+        path: path.resolve(__dirname, 'fixtures', 'v1', 'npm'),
+      },
+      {
         name: 'now-client-tests-v1-npm',
       }
     )) {
@@ -65,9 +69,11 @@ describe('create v1 deployment', () => {
 
   it('will create a v1 Docker deployment', async () => {
     for await (const event of createLegacyDeployment(
-      path.resolve(__dirname, 'fixtures', 'v1', 'docker'),
       {
         token,
+        path: path.resolve(__dirname, 'fixtures', 'v1', 'docker'),
+      },
+      {
         name: 'now-client-tests-v1-docker',
       }
     )) {

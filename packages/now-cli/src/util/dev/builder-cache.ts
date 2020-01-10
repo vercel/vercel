@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import execa from 'execa';
 import semver from 'semver';
 import pipe from 'promisepipe';
@@ -8,7 +7,6 @@ import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
 import { join, resolve } from 'path';
-import { funCacheDir } from '@zeit/fun';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
@@ -17,7 +15,6 @@ import {
   readFile,
   readJSON,
   writeFile,
-  remove,
 } from 'fs-extra';
 import pkg from '../../../package.json';
 
@@ -158,6 +155,14 @@ export function getBuildUtils(packages: string[]): string {
   return `@now/build-utils@${version}`;
 }
 
+function parseVersionSafe(rawSpec: string) {
+  try {
+    return semver.parse(rawSpec);
+  } catch (e) {
+    return null;
+  }
+}
+
 export function filterPackage(
   builderSpec: string,
   distTag: string,
@@ -165,6 +170,17 @@ export function filterPackage(
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
+  const parsedVersion = parseVersionSafe(parsed.rawSpec);
+  // skip install of already installed runtime
+  if (
+    parsed.name &&
+    parsed.type === 'version' &&
+    parsedVersion &&
+    buildersPkg.dependencies &&
+    parsedVersion.version == buildersPkg.dependencies[parsed.name]
+  ) {
+    return false;
+  }
   if (
     parsed.name &&
     parsed.type === 'tag' &&
@@ -277,6 +293,7 @@ export async function updateBuilders(
   if (!builderDir) {
     builderDir = await builderDirPromise;
   }
+
   const packages = Array.from(packagesSet);
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');

@@ -1,8 +1,8 @@
 {
   "name": "now-client",
-  "version": "5.2.4-canary.1",
-  "main": "dist/src/index.js",
-  "typings": "dist/src/index.d.ts",
+  "version": "6.0.2-canary.0",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "homepage": "https://zeit.co",
   "license": "MIT",
   "files": [
@@ -27,8 +27,6 @@
     "@types/node-fetch": "2.3.4",
     "@types/recursive-readdir": "2.2.0",
     "@zeit/ncc": "0.18.5",
-    "jest": "24.8.0",
-    "ts-jest": "24.0.2",
     "typescript": "3.5.1"
   },
   "jest": {
@@ -40,7 +38,7 @@
     ]
   },
   "dependencies": {
-    "@zeit/fetch": "5.1.0",
+    "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
     "fs-extra": "8.0.1",
