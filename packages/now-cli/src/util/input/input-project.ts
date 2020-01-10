@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { Output } from '../output';
 import { Project, Org } from '../../types';
+import wait from '../output/wait';
 
 export default async function inputProject(
   output: Output,
@@ -15,6 +16,7 @@ export default async function inputProject(
 ): Promise<Project | string> {
   // attempt to auto-detect a project to link
   let detectedProject = null;
+  const existingProjectSpinner = wait('Searching for existing projects…');
   try {
     detectedProject = await getProjectByIdOrName(
       client,
@@ -22,6 +24,7 @@ export default async function inputProject(
       org.id
     );
   } catch (error) {}
+  existingProjectSpinner();
 
   let shouldLinkProject;
 
@@ -60,7 +63,9 @@ export default async function inputProject(
       });
       const projectName = answers.existingProjectName as string;
 
+      const loader = wait('Verifying project name…');
       project = await getProjectByIdOrName(client, projectName, org.id);
+      loader();
 
       if (project instanceof ProjectNotFound) {
         output.print(`${chalk.red('Error!')} Project not found\n`);
@@ -81,11 +86,13 @@ export default async function inputProject(
     });
     newProjectName = answers.newProjectName as string;
 
+    const spinner = wait('Verifying project name…');
     const existingProject = await getProjectByIdOrName(
       client,
       newProjectName,
       org.id
     );
+    spinner();
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
       output.print(`${chalk.red('Error!')} Project already exists\n`);

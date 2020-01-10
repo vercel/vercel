@@ -65,7 +65,6 @@ export default async function processDeployment({
     paths,
     requestBody,
     deployStamp,
-    quiet,
     force,
     nowConfig,
   } = args;
