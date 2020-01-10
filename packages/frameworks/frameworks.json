@@ -30,7 +30,7 @@
   {
     "name": "Gatsby",
     "slug": "gatsby",
-    "demo": "https://gatsby-functions.now-examples.now.sh",
+    "demo": "https://gatsby.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gatsby.svg",
     "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
     "description": "A Gatsby app, using the default starter theme and a Serverless Function API.",
@@ -307,7 +307,7 @@
   {
     "name": "Svelte",
     "slug": "svelte",
-    "demo": "https://svelte-functions.now-examples.now.sh",
+    "demo": "https://svelte.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
     "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. ",
     "description": "A Svelte app, using the Svelte template, and a Serverless Function API.",
@@ -643,7 +643,7 @@
   {
     "name": "Vanilla",
     "slug": "vanilla",
-    "demo": "https://vanilla-functions.now-examples.now.sh",
+    "demo": "https://vanilla.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vanilla.svg",
     "tagline": "Love the original way of making websites?",
     "description": "A vanilla site and a Serverless Function API."
