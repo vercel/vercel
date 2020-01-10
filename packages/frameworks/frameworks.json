@@ -307,7 +307,7 @@
   {
     "name": "Svelte",
     "slug": "svelte",
-    "demo": "https://svelte-functions.now-examples.now.sh",
+    "demo": "https://svelte.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
     "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. ",
     "description": "A Svelte app, using the Svelte template, and a Serverless Function API.",
