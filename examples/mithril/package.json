@@ -1,0 +1,17 @@
+{
+  "name": "mithril",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "mithril": "^1.1.6"
+  },
+  "devDependencies": {
+    "webpack": "^4.36.1",
+    "webpack-cli": "^3.3.6"
+  },
+  "scripts": {
+    "start": "webpack src/index.js --output public/app.js -d --watch",
+    "build": "webpack src/index.js --output public/app.js -p"
+  }
+}

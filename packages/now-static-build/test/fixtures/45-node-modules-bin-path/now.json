@@ -1,0 +1,19 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@now/static-build",
+      "config": {
+        "zeroConfig": true,
+        "buildCommand": "next build && next export",
+        "outputDirectory": "out"
+      }
+    }
+  ],
+  "build": {
+    "env": {
+      "NOW_BUILDER_DEBUG": "1"
+    }
+  },
+  "probes": [{ "path": "/", "mustContain": "hello world" }]
+}

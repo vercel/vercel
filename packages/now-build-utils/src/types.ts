@@ -20,18 +20,6 @@ export interface Files {
   [filePath: string]: File;
 }
 
-export interface Route {
-  src?: string;
-  dest?: string;
-  handle?: string;
-  type?: string;
-  headers?: {
-    [key: string]: string;
-  };
-  continue?: boolean;
-  status?: number;
-}
-
 export interface Config {
   [key: string]:
     | string
@@ -51,6 +39,11 @@ export interface Config {
   zeroConfig?: boolean;
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
+  outputDirectory?: string;
+  buildCommand?: string;
+  devCommand?: string;
+  framework?: string;
+  nodeVersion?: string;
 }
 
 export interface Meta {
@@ -303,6 +296,7 @@ export interface NodeVersion {
   major: number;
   range: string;
   runtime: string;
+  discontinueDate?: Date;
 }
 
 export interface Builder {
@@ -319,4 +313,25 @@ export interface BuilderFunctions {
     includeFiles?: string;
     excludeFiles?: string;
   };
+}
+
+export interface NowRewrite {
+  source: string;
+  destination: string;
+}
+
+export interface NowRedirect {
+  source: string;
+  destination: string;
+  statusCode?: number;
+}
+
+export interface NowHeader {
+  source: string;
+  headers: NowHeaderKeyValue[];
+}
+
+export interface NowHeaderKeyValue {
+  key: string;
+  value: string;
 }

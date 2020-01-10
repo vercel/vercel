@@ -54,6 +54,19 @@ describe('normalizeRoutes', () => {
       },
       { handle: 'filesystem' },
       { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' },
+      { handle: 'hit' },
+      {
+        src: '^/hit-me$',
+        headers: { 'Cache-Control': 'max-age=20' },
+        continue: true,
+      },
+      { handle: 'miss' },
+      { src: '^/missed-me$', dest: '/api/missed-me', check: true },
+      {
+        src: '^/missed-me$',
+        headers: { 'Cache-Control': 'max-age=10' },
+        continue: true,
+      },
     ];
 
     assertValid(routes);
@@ -377,6 +390,28 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('fails if check is not boolean', () => {
+    assertError(
+      [
+        // @ts-ignore
+        {
+          check: 'false',
+        },
+      ],
+      [
+        {
+          dataPath: '[0].check',
+          keyword: 'type',
+          message: 'should be boolean',
+          params: {
+            type: 'boolean',
+          },
+          schemaPath: '#/items/properties/check/type',
+        },
+      ]
+    );
+  });
+
   test('fails if status is not number', () => {
     assertError(
       [
@@ -420,6 +455,82 @@ describe('normalizeRoutes', () => {
       ]
     );
   });
+
+  test('fails if routes after `handle: hit` use `dest`', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/user$',
+        dest: '^/api/user$',
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You cannot assign "dest" after "handle: hit"'
+    );
+  });
+
+  test('fails if routes after `handle: hit` do not use `continue: true`', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/user$',
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "continue: true" after "handle: hit"'
+    );
+  });
+
+  test('fails if routes after `handle: miss` do not use `check: true`', () => {
+    const input = [
+      {
+        handle: 'miss',
+      },
+      {
+        src: '^/user$',
+        dest: '^/api/user$',
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "check: true" after "handle: miss"'
+    );
+  });
+
+  test('fails if routes after `handle: miss` do not use `continue: true`', () => {
+    const input = [
+      {
+        handle: 'miss',
+      },
+      {
+        src: '^/user$',
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "continue: true" after "handle: miss"'
+    );
+  });
 });
 
 describe('getTransformedRoutes', () => {
@@ -457,9 +568,27 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_redirects');
   });
 
+  test('should error when redirects is invalid pattern', () => {
+    const nowConfig = {
+      redirects: [{ source: '/:?', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_redirects');
+  });
+
   test('should error when rewrites is invalid regex', () => {
     const nowConfig = {
       rewrites: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_rewrites');
+  });
+
+  test('should error when rewrites is invalid pattern', () => {
+    const nowConfig = {
+      rewrites: [{ source: '/:?', destination: '/file.html' }],
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
@@ -479,12 +608,12 @@ describe('getTransformedRoutes', () => {
       {
         src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
         headers: { Location: '/$1' },
-        status: 301,
+        status: 308,
       },
       {
         src: '^/(.*)\\.html/?$',
         headers: { Location: '/$1' },
-        status: 301,
+        status: 308,
       },
       {
         src: '^/help$',
@@ -492,7 +621,7 @@ describe('getTransformedRoutes', () => {
         status: 302,
       },
       { handle: 'filesystem' },
-      { src: '^/v1$', dest: '/v2/api.py', continue: true },
+      { src: '^/v1$', dest: '/v2/api.py', check: true },
     ];
     assert.deepEqual(actual.error, null);
     assert.deepEqual(actual.routes, expected);
@@ -547,22 +676,5 @@ describe('getTransformedRoutes', () => {
     const nowConfig = { routes: null };
     const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.routes, null);
-  });
-
-  test('should error when builder version 4 uses routes', () => {
-    const nowConfig = { routes: [{ src: '/page', dest: '/another' }] };
-    const actual = getTransformedRoutes({ nowConfig, builderVersion: 4 });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_builder_result');
-  });
-
-  test('should not error when builder version 4 uses rewrites', () => {
-    const nowConfig = {
-      rewrites: [{ source: '/page', destination: '/another' }],
-    };
-    const actual = getTransformedRoutes({ nowConfig, builderVersion: 4 });
-    assert.equal(actual.error, null);
-    assert.notEqual(actual.routes, null);
-    assertValid(actual.routes);
   });
 });

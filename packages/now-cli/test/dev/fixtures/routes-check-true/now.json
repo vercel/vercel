@@ -1,0 +1,19 @@
+{
+  "routes": [
+    {
+      "src": "/blog/(.*)",
+      "check": true,
+      "dest": "/blog?post=$1"
+    },
+    {
+      "src": "/(.*)",
+      "check": true,
+      "dest": "/src/$1"
+    },
+    {
+      "src": "/(.*)",
+      "check": true,
+      "dest": "/fake/$1"
+    }
+  ]
+}

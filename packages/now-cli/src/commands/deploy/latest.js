@@ -38,7 +38,6 @@ import {
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
-import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 
@@ -294,15 +293,11 @@ export default async function main(
     parseEnv(argv['--env'])
   );
 
-  // Enable debug mode for builders
-  const buildDebugEnv = debugEnabled ? { NOW_BUILDER_DEBUG: '1' } : {};
-
   // Merge build env out of  `build.env` from now.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
-    parseEnv(argv['--build-env']),
-    buildDebugEnv
+    parseEnv(argv['--build-env'])
   );
 
   // If there's any undefined values, then inherit them from this process
@@ -386,14 +381,12 @@ export default async function main(
       return 1;
     }
 
-    const deploymentResponse = handleCertError(
-      output,
-      await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v10')
+    const deploymentResponse = await getDeploymentByIdOrHost(
+      now,
+      contextName,
+      deployment.id,
+      'v10'
     );
-
-    if (deploymentResponse === 1) {
-      return deploymentResponse;
-    }
 
     if (
       deploymentResponse instanceof DeploymentNotFound ||
@@ -401,10 +394,6 @@ export default async function main(
       deploymentResponse instanceof InvalidDeploymentId
     ) {
       output.error(deploymentResponse.message);
-      return 1;
-    }
-
-    if (handleCertError(output, deployment) === 1) {
       return 1;
     }
 

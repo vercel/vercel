@@ -1,3 +1,5 @@
+import { HandleValue } from './index';
+
 export type NowError = {
   code: string;
   message: string;
@@ -17,11 +19,12 @@ export type Source = {
   headers?: { [name: string]: string };
   methods?: string[];
   continue?: boolean;
+  check?: boolean;
   status?: number;
 };
 
 export type Handler = {
-  handle: string;
+  handle: HandleValue;
 };
 
 export type Route = Source | Handler;
@@ -33,7 +36,17 @@ export type NormalizedRoutes = {
 
 export interface GetRoutesProps {
   nowConfig: NowConfig;
-  builderVersion?: number;
+}
+
+export interface MergeRoutesProps {
+  userRoutes?: Route[] | null | undefined;
+  builds: Build[];
+}
+
+export interface Build {
+  use: string;
+  entrypoint: string;
+  routes?: Route[];
 }
 
 export interface NowConfig {

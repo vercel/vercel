@@ -6,7 +6,7 @@ A Runtime is an npm module that exposes a `build` function and optionally an `an
 Official Runtimes are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `now.json` configuration file.
 However, the `use` property will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo url which is useful for testing your Runtime.
 
-See the [Runtimes Documentation](https://zeit.co/docs/v2/advanced/runtimes) to view example usage.
+See the [Runtimes Documentation](https://zeit.co/docs/runtimes) to view example usage.
 
 ## Runtime Exports
 
@@ -283,15 +283,15 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs12.x`
 - `nodejs10.x`
-- `nodejs8.10`
 - `go1.x`
-- `java-1.8.0-openjdk`
+- `java11`
+- `python3.8`
 - `python3.6`
-- `python2.7`
 - `dotnetcore2.1`
-- `dotnetcore2.0`
-- `dotnetcore1.0`
+- `ruby2.5`
+- `provided`
 
 ## JavaScript API
 

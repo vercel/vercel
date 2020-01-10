@@ -1,0 +1,6 @@
+node_modules
+/build
+/*.log
+*.lock
+.env
+.env.build

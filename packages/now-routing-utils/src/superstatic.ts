@@ -2,8 +2,9 @@
  * This converts Superstatic configuration to Now.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
-
-import pathToRegexp from 'path-to-regexp';
+import { isString } from 'util';
+import { parse as parseUrl, format as formatUrl } from 'url';
+import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
 
 export function getCleanUrls(
@@ -22,7 +23,8 @@ export function getCleanUrls(
 
 export function convertCleanUrls(
   cleanUrls: boolean,
-  trailingSlash: boolean | undefined
+  trailingSlash?: boolean,
+  status = 308
 ): Route[] {
   const routes: Route[] = [];
   if (cleanUrls) {
@@ -30,36 +32,40 @@ export function convertCleanUrls(
     routes.push({
       src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: loc },
-      status: 301,
+      status,
     });
     routes.push({
       src: '^/(.*)\\.html/?$',
       headers: { Location: loc },
-      status: 301,
+      status,
     });
   }
   return routes;
 }
 
-export function convertRedirects(redirects: NowRedirect[]): Route[] {
+export function convertRedirects(
+  redirects: NowRedirect[],
+  defaultStatus = 308
+): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const loc = replaceSegments(segments, r.destination);
-    return {
+    const route: Route = {
       src,
       headers: { Location: loc },
-      status: r.statusCode || 307,
+      status: r.statusCode || defaultStatus,
     };
+    return route;
   });
 }
 
 export function convertRewrites(rewrites: NowRewrite[]): Route[] {
-  const routes: Route[] = rewrites.map(r => {
+  return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
-    return { src, dest, continue: true };
+    const route: Route = { src, dest, check: true };
+    return route;
   });
-  return routes;
 }
 
 export function convertHeaders(headers: NowHeader[]): Route[] {
@@ -68,48 +74,62 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
     h.headers.forEach(kv => {
       obj[kv.key] = kv.value;
     });
-    return {
+    const route: Route = {
       src: h.source,
       headers: obj,
       continue: true,
     };
+    return route;
   });
 }
 
-export function convertTrailingSlash(enable: boolean): Route[] {
+export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   const routes: Route[] = [];
   if (enable) {
     routes.push({
       src: '^/(.*[^\\/])$',
       headers: { Location: '/$1/' },
-      status: 307,
+      status,
     });
   } else {
     routes.push({
       src: '^/(.*)\\/$',
       headers: { Location: '/$1' },
-      status: 307,
+      status,
     });
   }
   return routes;
 }
 
-function sourceToRegex(source: string): { src: string; segments: string[] } {
-  const keys: pathToRegexp.Key[] = [];
+export function sourceToRegex(
+  source: string
+): { src: string; segments: string[] } {
+  const keys: Key[] = [];
   const r = pathToRegexp(source, keys, { strict: true });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };
 }
 
-function isString(key: any): key is string {
-  return typeof key === 'string';
-}
-
 function replaceSegments(segments: string[], destination: string): string {
-  if (destination.includes(':')) {
+  const parsedDestination = parseUrl(destination, true);
+  let { pathname, hash } = parsedDestination;
+  pathname = pathname || '';
+  hash = hash || '';
+
+  if ((pathname + hash).includes(':') && segments.length > 0) {
+    const pathnameCompiler = compile(pathname);
+    const hashCompiler = compile(hash);
+    const indexes: { [k: string]: string } = {};
+
     segments.forEach((name, index) => {
-      const r = new RegExp(':' + name, 'g');
-      destination = destination.replace(r, toSegmentDest(index));
+      indexes[name] = toSegmentDest(index);
+    });
+    pathname = pathnameCompiler(indexes);
+    hash = hash ? `${hashCompiler(indexes)}` : null;
+    destination = formatUrl({
+      ...parsedDestination,
+      pathname,
+      hash,
     });
   } else if (segments.length > 0) {
     let prefix = '?';
