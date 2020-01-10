@@ -23,4 +23,3 @@ test/lib/deployment/failed-page.txt
 .DS_Store
 .next
 public
-!examples/create-react-app/public
