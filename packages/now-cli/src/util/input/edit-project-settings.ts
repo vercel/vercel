@@ -1,5 +1,4 @@
 import inquirer from 'inquirer';
-import text from './text';
 import confirm from './confirm';
 import chalk from 'chalk';
 import { Output } from '../output';
@@ -64,10 +63,13 @@ export default async function editProjectSettings(
 
   for (let setting of settingFields as (keyof ProjectSettings)[]) {
     const field = fields.find(f => f.value === setting);
-    settings[setting] = await text({
-      label: `What's your ${field ? field.name : setting}?`,
-      trailing: '\n',
+    const name = `${Date.now()}`;
+    const answers = await inquirer.prompt({
+      type: 'input',
+      name: name,
+      message: `What's your ${chalk.bold(field ? field.name : setting)}?`,
     });
+    settings[setting] = answers[name] as string;
   }
 
   return settings;

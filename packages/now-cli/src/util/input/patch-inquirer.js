@@ -1,23 +1,13 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 
-// Here we patch inquirer to use a `>` instead of the ugly green `?`
-
-/* eslint-disable no-multiple-empty-lines, no-var, no-undef, no-eq-null, eqeqeq, semi */
-// const getQuestionLegacy = function() {
-//   var message = `${chalk.bold(`> ${this.opt.message}`)} `;
-
-//   // Append the default if available, and if question isn't answered
-//   if (this.opt.default != null && this.status !== 'answered') {
-//     message += chalk.dim(`(${this.opt.default}) `);
-//   }
-
-//   return message;
-// };
-/* eslint-enable */
-
-// inquirer.prompt.prompts.input.prototype.getQuestion = getQuestionLegacy;
-// inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;
+/**
+ * Here we patch inquirer with some tweaks:
+ * - update "list" to use ● and ○ and hide tips
+ * - update "checkbox" to use ◻︎ and ◼︎ and hide tips
+ * - use '?' before questions
+ * - do not apply color to question's answer
+ */
 
 const getQuestion = function() {
   let message = `${chalk.gray('?')} ${this.opt.message} `;
@@ -39,6 +29,7 @@ const getQuestion = function() {
 };
 
 inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;
+inquirer.prompt.prompts.checkbox.prototype.getQuestion = getQuestion;
 inquirer.prompt.prompts.input.prototype.getQuestion = getQuestion;
 inquirer.prompt.prompts.confirm.prototype.getQuestion = getQuestion;
 
@@ -93,6 +84,63 @@ inquirer.prompt.prompts.list.prototype.render = function() {
   this.firstRender = false;
 
   this.screen.render(message);
+};
+
+function renderChoices(choices, pointer) {
+  let output = '';
+  let separatorOffset = 0;
+
+  choices.forEach(function(choice, i) {
+    if (choice.type === 'separator') {
+      separatorOffset++;
+      output += '' + choice + '\n';
+      return;
+    }
+
+    if (choice.disabled) {
+      separatorOffset++;
+      output += '- ' + choice.name;
+      output +=
+        ' (' +
+        (typeof choice.disabled === 'string' ? choice.disabled : 'Disabled') +
+        ')';
+    } else {
+      if (i - separatorOffset === pointer) {
+        output += chalk.cyan((choice.checked ? '▸' : '▹') + ' ' + choice.name);
+      } else {
+        output += (choice.checked ? '▪︎' : '▫︎') + ' ' + choice.name;
+      }
+    }
+
+    output += '\n';
+  });
+
+  return output.replace(/\n$/, '');
+}
+
+inquirer.prompt.prompts.checkbox.prototype.render = function(error) {
+  // Render question
+  let message = this.getQuestion();
+  let bottomContent = '';
+
+  // Render choices or answer depending on the state
+  if (this.status === 'answered') {
+    message += this.selection.length > 0 ? this.selection.join(', ') : 'None';
+  } else {
+    let choicesStr = renderChoices(this.opt.choices, this.pointer);
+    let indexPosition = this.opt.choices.indexOf(
+      this.opt.choices.getChoice(this.pointer)
+    );
+    message +=
+      '\n' +
+      this.paginator.paginate(choicesStr, indexPosition, this.opt.pageSize);
+  }
+
+  if (error) {
+    bottomContent = chalk.red('>> ') + error;
+  }
+
+  this.screen.render(message, bottomContent);
 };
 
 inquirer.prompt.prompts.input.prototype.render = function(error) {

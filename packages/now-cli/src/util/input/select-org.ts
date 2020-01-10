@@ -3,7 +3,6 @@ import inquirer from 'inquirer';
 import getUser from '../get-user';
 import getTeams from '../get-teams';
 import { Org } from '../../types';
-import './patch-inquirer';
 
 type Choice = { name: string; value: Org };
 
@@ -12,6 +11,8 @@ export default async function selectProject(
   client: Client,
   currentTeam?: string
 ): Promise<Org> {
+  require('./patch-inquirer');
+
   const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
 
   const choices: Choice[] = [
