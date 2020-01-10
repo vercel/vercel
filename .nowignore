@@ -13,5 +13,5 @@
 
 # packages
 !packages/
-!packages/frameworks
-!packages/frameworks/**
+!packages/now-frameworks
+!packages/now-frameworks/**
