@@ -1,5 +1,6 @@
 import { Source, Route } from '@now/routing-utils';
 import { detectBuilders, detectRoutes } from '../src';
+import { detectOutputDirectory, detectApiDirectory } from '../';
 
 describe('Test `detectBuilders`', () => {
   it('package.json + no build', async () => {
@@ -1751,6 +1752,112 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       { status: 404, src: '^/api(/.*)?$', continue: true },
     ]);
   }
+});
+
+describe('Test `detectOutputDirectory`', () => {
+  it('should be `null` with no config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `null` with no zero config builds', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: {},
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `public` with one zero config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: { zeroConfig: true },
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe('public');
+  });
+
+  it('should be `public` with one zero config and one without config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: { zeroConfig: true },
+      },
+      {
+        use: '@now/node',
+        src: 'api/index.js',
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe('public');
+  });
+});
+
+describe('Test `detectApiDirectory`', () => {
+  it('should be `null` with no config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `null` with no zero config builds', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: {},
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `api` with one zero config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: { zeroConfig: true },
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe('api');
+  });
+
+  it('should be `api` with one zero config and one without config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: { zeroConfig: true },
+      },
+      {
+        use: '@now/php',
+        src: 'api/**/*.php',
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe('api');
+  });
 });
 
 /**

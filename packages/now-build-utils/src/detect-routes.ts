@@ -328,6 +328,13 @@ export function detectOutputDirectory(builders: Builder[]): string | null {
   return publicBuilder ? publicBuilder.src.replace('/**/*', '') : null;
 }
 
+export function detectApiDirectory(builders: Builder[]): string | null {
+  // TODO: We eventually want to save the api directory to
+  // builder.config.apiDirectory so it is only detected once
+  const isZeroConfig = builders.some(b => b.config && b.config.zeroConfig);
+  return isZeroConfig ? 'api' : null;
+}
+
 export async function detectRoutes(
   files: string[],
   builders: Builder[],
