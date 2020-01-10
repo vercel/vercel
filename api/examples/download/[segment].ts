@@ -44,16 +44,9 @@ export default withApiHandler(async function(req: NowRequest, res: NowResponse) 
   }
 
   const example = segment.slice(0, -ext.length);
-  let directory;
 
-  if (Number(req.query.version) === 1) {
-    // The old cli is pinned to a specific commit hash
-    await extract('https://github.com/zeit/now-examples/archive/7c7b27e49b8b17d0d3f0e1604dc74fd005cd69e3.zip', TMP_DIR);
-    directory = `${TMP_DIR}/now-examples-7c7b27e49b8b17d0d3f0e1604dc74fd005cd69e3/${example}`;
-  } else {
-    await extract('https://github.com/zeit/now/archive/master.zip', TMP_DIR);
-    directory = `${TMP_DIR}/now-master/examples/${example}`;
-  }
+  await extract('https://github.com/zeit/now/archive/master.zip', TMP_DIR);
+  const directory = `${TMP_DIR}/now-master/examples/${example}`;
 
   if (!isDirectory(directory)) {
     return notFound(res, `Example '${example}' was not found.`);
