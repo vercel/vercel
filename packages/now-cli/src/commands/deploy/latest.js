@@ -39,7 +39,7 @@ import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import shouldDeployDir from '../../util/deploy/should-deploy-dir';
-import promptBool from '../../util/input/prompt-bool';
+import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';
 import {
   getLinkedProject,
@@ -350,8 +350,9 @@ export default async function main(
   let newProjectName = null;
 
   if (!org || !project) {
-    const shouldStartSetup = await promptBool(
-      `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}? [Y/n]`
+    const shouldStartSetup = await confirm(
+      `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+      true
     );
 
     if (!shouldStartSetup) {

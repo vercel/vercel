@@ -1,6 +1,6 @@
 import inquirer from 'inquirer';
 import text from './text';
-import promptBool from './prompt-bool';
+import confirm from './confirm';
 import chalk from 'chalk';
 import { Output } from '../output';
 import { Framework } from '@now/frameworks';
@@ -46,8 +46,9 @@ export default async function editProjectSettings(
     ...projectSettings,
   };
 
-  const shouldOverrideSettings = await promptBool(
-    `Want to override the settings? [y/N]`
+  const shouldOverrideSettings = await confirm(
+    `Want to override the settings?`,
+    false
   );
 
   if (!shouldOverrideSettings) {

@@ -19,6 +19,29 @@ import chalk from 'chalk';
 // inquirer.prompt.prompts.input.prototype.getQuestion = getQuestionLegacy;
 // inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;
 
+const getQuestion = function() {
+  let message = `${chalk.gray('?')} ${this.opt.message} `;
+
+  if (this.opt.type === 'confirm') {
+    if (this.opt.default === 'y/N') {
+      message += `[y/${chalk.bold('N')}] `;
+    } else {
+      message += `[${chalk.bold('Y')}/n] `;
+    }
+  }
+
+  // Append the default if available, and if question isn't answered
+  else if (this.opt.default != null && this.status !== 'answered') {
+    message += chalk.dim(`(${this.opt.default}) `);
+  }
+
+  return message;
+};
+
+inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;
+inquirer.prompt.prompts.input.prototype.getQuestion = getQuestion;
+inquirer.prompt.prompts.confirm.prototype.getQuestion = getQuestion;
+
 function listRender(choices, pointer) {
   let output = '';
   let separatorOffset = 0;
@@ -49,20 +72,6 @@ function listRender(choices, pointer) {
 
   return output.replace(/\n$/, '');
 }
-
-const getQuestion = function() {
-  let message = `${chalk.gray('?')} ${this.opt.message} `;
-
-  // Append the default if available, and if question isn't answered
-  if (this.opt.default != null && this.status !== 'answered') {
-    message += chalk.dim(`(${this.opt.default}) `);
-  }
-
-  return message;
-};
-
-inquirer.prompt.prompts.list.prototype.getQuestion = getQuestion;
-inquirer.prompt.prompts.input.prototype.getQuestion = getQuestion;
 
 inquirer.prompt.prompts.list.prototype.render = function() {
   // Render question
@@ -110,4 +119,18 @@ inquirer.prompt.prompts.input.prototype.render = function(error) {
   }
 
   this.screen.render(message, bottomContent);
+};
+
+inquirer.prompt.prompts.confirm.prototype.render = function(answer) {
+  let message = this.getQuestion();
+
+  if (this.status === 'answered') {
+    message += answer ? 'y' : 'n';
+  } else {
+    message += this.rl.line;
+  }
+
+  this.screen.render(message);
+
+  return this;
 };

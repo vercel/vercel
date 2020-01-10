@@ -1,6 +1,6 @@
 import Client from '../client';
 import inquirer from 'inquirer';
-import promptBool from './prompt-bool';
+import confirm from './confirm';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -27,22 +27,24 @@ export default async function inputProject(
 
   if (!detectedProject || detectedProject instanceof ProjectNotFound) {
     // did not auto-detect a project to link
-    shouldLinkProject = await promptBool(`Link to existing project? [y/N]`);
+    shouldLinkProject = await confirm(`Link to existing project?`, false);
   } else {
     // auto-detected a project to link
     if (
-      await promptBool(
+      await confirm(
         `Found project ${chalk.cyan(
           `“${detectedProjectName}”`
-        )} in your organization. Link to it? [Y/n]`
+        )} in your organization. Link to it?`,
+        true
       )
     ) {
       return detectedProject;
     }
 
     // user doesn't want to link the auto-detected project
-    shouldLinkProject = await promptBool(
-      `Link to different existing project? [Y/n]`
+    shouldLinkProject = await confirm(
+      `Link to different existing project?`,
+      true
     );
   }
 
