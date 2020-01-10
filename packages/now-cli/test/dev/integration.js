@@ -1239,20 +1239,3 @@ test(
     t.regex(body, /Hello, from Bash!/gm);
   })
 );
-
-test(
-  '[now dev] Use public with a custom Serverless Function in `server/date.js',
-  testFixtureStdio('public-and-server-as-api', async (t, port) => {
-    const response = await fetchWithRetry(
-      `http://localhost:${port}/server/date`
-    );
-
-    validateResponseHeaders(t, response);
-
-    t.is(response.status, 200);
-    t.is(
-      await response.text(),
-      `current hour: ${Math.floor(Date.now() / 10000)}`
-    );
-  })
-);

@@ -1,4 +1,4 @@
-import Frameworks, { Framework } from '../../../packages/frameworks';
+import Frameworks, { Framework } from '../../../packages/now-frameworks';
 
 interface Example {
   example: string;
