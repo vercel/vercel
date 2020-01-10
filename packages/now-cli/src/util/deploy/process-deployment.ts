@@ -91,7 +91,8 @@ export default async function processDeployment({
   let deployingSpinner = wait(
     isDetectingFramework
       ? `Detecting framework`
-      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`
+      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
+    0
   );
 
   // collect indications to show the user once
@@ -166,8 +167,8 @@ export default async function processDeployment({
       if (queuedSpinner === null) {
         queuedSpinner =
           event.payload.readyState === 'QUEUED'
-            ? wait('Queued')
-            : wait('Building');
+            ? wait('Queued', 0)
+            : wait('Building', 0);
       }
     }
 
@@ -180,7 +181,7 @@ export default async function processDeployment({
       }
 
       if (buildSpinner === null) {
-        buildSpinner = wait('Building');
+        buildSpinner = wait('Building', 0);
       }
     }
 
@@ -192,7 +193,7 @@ export default async function processDeployment({
         buildSpinner();
       }
 
-      deploySpinner = wait('Finalizing');
+      deploySpinner = wait('Finalizing', 0);
     }
 
     // Handle error events
