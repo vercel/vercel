@@ -125,7 +125,7 @@ const printDeploymentStatus = async (
     } else {
       // fallback to deployment url
       isWildcard = false;
-      previewUrl = deploymentUrl;
+      previewUrl = `https://${deploymentUrl}`;
     }
 
     // copy to clipboard
@@ -136,8 +136,8 @@ const printDeploymentStatus = async (
     }
 
     // write to stdout
-    if (quiet && !isWildcard) {
-      process.stdout.write(previewUrl);
+    if (quiet) {
+      process.stdout.write(`https://${deploymentUrl}`);
     }
 
     output.print(
