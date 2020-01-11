@@ -346,14 +346,17 @@ export default async function main(
 
   // retrieve `project` and `org` from .now
   const path = paths[0];
+  const yes = argv['--yes'];
   let [org, project] = await getLinkedProject(client, path);
   let newProjectName = null;
 
   if (!org || !project) {
-    const shouldStartSetup = await confirm(
-      `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-      true
-    );
+    const shouldStartSetup =
+      yes ||
+      (await confirm(
+        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        true
+      ));
 
     if (!shouldStartSetup) {
       output.print(`Aborted. Project not set up.\n`);
@@ -363,7 +366,8 @@ export default async function main(
     org = await selectOrg(
       'Which organization do you want to deploy to?',
       client,
-      ctx.config.currentTeam
+      ctx.config.currentTeam,
+      yes
     );
 
     const detectedProjectName = getProjectName({
@@ -377,7 +381,8 @@ export default async function main(
       output,
       client,
       org,
-      detectedProjectName
+      detectedProjectName,
+      yes
     );
 
     if (typeof projectOrNewProjectName === 'string') {
@@ -419,6 +424,7 @@ export default async function main(
       meta,
       deployStamp,
       target,
+      skipAutoDetectionConfirmation: yes,
     };
 
     deployment = await createDeploy(
@@ -428,7 +434,7 @@ export default async function main(
       [path],
       createArgs,
       org,
-      false,
+      yes,
       !!newProjectName
     );
 
