@@ -124,6 +124,7 @@ if (!process.env.CI) {
   });
 
   defaultArgs.push('-Q', path.join(tmpDir.name, '.now'));
+  defaultArgs.push('--yes');
 }
 
 const execute = (args, options) =>
