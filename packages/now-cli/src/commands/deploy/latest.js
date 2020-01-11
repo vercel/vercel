@@ -148,7 +148,7 @@ const printDeploymentStatus = async (
   }
 
   if (indications) {
-    const emojis = { notice: 'ℹ️', tip: '💡', warning: '⚠️' };
+    const emojis = { notice: 'ℹ️ ', tip: '💡', warning: '⚠️' };
     for (let indication of indications) {
       const emoji = emojis[indication.type];
       output.print(
