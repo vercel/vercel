@@ -13,7 +13,6 @@ import fs, { writeFile, readFile } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
-import parseList from './helpers/parse-list';
 import prepareFixtures from './helpers/prepare';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
