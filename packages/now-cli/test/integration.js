@@ -116,6 +116,9 @@ let contextName;
 
 let tmpDir;
 
+// adds --yes to skip prompts
+defaultArgs.push('--yes');
+
 if (!process.env.CI) {
   tmpDir = tmp.dirSync({
     // This ensures the directory gets
@@ -124,7 +127,6 @@ if (!process.env.CI) {
   });
 
   defaultArgs.push('-Q', path.join(tmpDir.name, '.now'));
-  defaultArgs.push('--yes');
 }
 
 const execute = (args, options) =>
