@@ -49,7 +49,7 @@ import {
 } from './validate';
 
 import isURL from './is-url';
-import devRouter from './router';
+import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
@@ -1170,12 +1170,36 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
-    const { dest, status, headers, uri_args } = await devRouter(
-      req.url,
-      req.method,
-      routes,
+    const { missRoutes, otherRoutes } = getRoutesTypes(routes);
+
+    let routeResult = await devRouter(req.url, req.method, otherRoutes, this);
+
+    let match = await findBuildMatch(
+      this.buildMatches,
+      this.files,
+      routeResult.dest,
       this
     );
+
+    if (!match && missRoutes.length > 0) {
+      // Since there was no build match, enter the miss phase
+      routeResult = await devRouter(
+        routeResult.dest || req.url,
+        req.method,
+        missRoutes,
+        this,
+        routeResult.headers
+      );
+
+      match = await findBuildMatch(
+        this.buildMatches,
+        this.files,
+        routeResult.dest,
+        this
+      );
+    }
+
+    const { dest, status, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -1209,12 +1233,6 @@ export default class DevServer {
     }
 
     const requestPath = dest.replace(/^\//, '');
-    const match = await findBuildMatch(
-      this.buildMatches,
-      this.files,
-      requestPath,
-      this
-    );
 
     if (!match) {
       if (
@@ -1468,16 +1486,7 @@ export default class DevServer {
   }
 
   async hasFilesystem(dest: string): Promise<boolean> {
-    const requestPath = dest.replace(/^\//, '');
-    if (
-      await findBuildMatch(
-        this.buildMatches,
-        this.files,
-        requestPath,
-        this,
-        true
-      )
-    ) {
+    if (await findBuildMatch(this.buildMatches, this.files, dest, this, true)) {
       return true;
     }
     return false;
@@ -1567,6 +1576,7 @@ async function findBuildMatch(
   devServer: DevServer,
   isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
+  requestPath = requestPath.replace(/^\//, '');
   for (const match of matches.values()) {
     if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
       return match;

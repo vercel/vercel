@@ -319,6 +319,21 @@ test(
   })
 );
 
+test(
+  '[now dev] handles miss after route',
+  testFixtureStdio('handle-miss-after-route', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+
+    const test = response.headers.get('test');
+    const override = response.headers.get('override');
+    t.is(test, '1', 'exected miss header to be added');
+    t.is(override, 'one', 'exected override header to not override');
+
+    const body = await response.text();
+    t.regex(body, /Blog/gm);
+  })
+);
+
 test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);

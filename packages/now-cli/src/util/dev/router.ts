@@ -26,7 +26,7 @@ export function resolveRouteParameters(
   });
 }
 
-function getRoutesTypes(routes: Route[] = []) {
+export function getRoutesTypes(routes: Route[] = []) {
   const missRoutes: Route[] = [];
   const otherRoutes: Route[] = [];
   let isHandleMissPhase = false;
@@ -49,23 +49,21 @@ function getRoutesTypes(routes: Route[] = []) {
   return { missRoutes, otherRoutes };
 }
 
-export default async function router(
+export async function devRouter(
   reqUrl: string = '/',
   reqMethod?: string,
   routes?: RouteConfig[],
   devServer?: DevServer,
-  phase?: string
+  previousHeaders?: HttpHeadersConfig
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
-  const combinedHeaders: HttpHeadersConfig = {};
-
-  const { missRoutes, otherRoutes } = getRoutesTypes(routes);
+  const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
 
   // Try route match
-  if (otherRoutes) {
+  if (routes) {
     let idx = -1;
-    for (const routeConfig of otherRoutes) {
+    for (const routeConfig of routes) {
       idx++;
       if (isHandler(routeConfig)) {
         if (routeConfig.handle === 'filesystem' && devServer) {
@@ -101,7 +99,14 @@ export default async function router(
             headers[key] = resolveRouteParameters(headers[key], match, keys);
           }
 
-          Object.assign(combinedHeaders, headers);
+          for (const [key, value] of Object.entries(headers)) {
+            // eslint-disable-next-line no-prototype-builtins
+            if (previousHeaders && previousHeaders.hasOwnProperty(key)) {
+              // don't override headers in the miss phase
+              continue;
+            }
+            combinedHeaders[key] = value;
+          }
         }
 
         if (routeConfig.continue) {
@@ -113,19 +118,10 @@ export default async function router(
           const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(pathname);
           // If the file is not found, `check: true` will
-          // check the miss routes, otherwise
           // behave the same as `continue: true`
           if (!hasDestFile) {
-            const result =
-              phase !== 'miss'
-                ? await router(reqUrl, reqMethod, missRoutes, devServer, 'miss')
-                : null;
-            if (result && result.found) {
-              return result;
-            } else {
-              reqPathname = destPath;
-              continue;
-            }
+            reqPathname = destPath;
+            continue;
           }
         }
 
