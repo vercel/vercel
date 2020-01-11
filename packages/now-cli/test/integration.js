@@ -971,7 +971,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   // Ensure the warning is printed
   t.true(
     stderr.includes(
-      'WARN! There are no files (or only files starting with a dot) inside your deployment.'
+      'There are no files (or only files starting with a dot) inside your deployment.'
     )
   );
 
