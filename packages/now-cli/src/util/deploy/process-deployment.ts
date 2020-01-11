@@ -29,7 +29,7 @@ function printInspectUrl(
   const deploymentShortId = urlParts.pop();
   const projectName = urlParts.join('-');
   const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
-  output.print(`🔍  Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
+  output.print(`🔍 Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
 }
 
 export default async function processDeployment({
