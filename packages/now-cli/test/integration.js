@@ -17,7 +17,7 @@ import prepareFixtures from './helpers/prepare';
 
 // log command when running `execa`
 function execa(file, args, options) {
-  console.log(`$ now ${arguments.join(' ')}`);
+  console.log(`$ now ${args.join(' ')}`);
   return _execa(file, args, options);
 }
 
