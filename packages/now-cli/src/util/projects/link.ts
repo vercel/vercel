@@ -104,7 +104,7 @@ export async function linkFolderToProject(
   }
 
   output.print(
-    `✅  Linked to ${chalk.bold(
+    `✅ Linked to ${chalk.bold(
       `${orgSlug}/${projectName}`
     )} (created .now and added it to .nowignore)\n`
   );

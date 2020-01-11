@@ -141,7 +141,7 @@ const printDeploymentStatus = async (
     }
 
     output.print(
-      `✅  ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+      `✅ ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
         previewUrl
       )} ${deployStamp()}\n`
     );
@@ -152,7 +152,7 @@ const printDeploymentStatus = async (
     for (let indication of indications) {
       const emoji = emojis[indication.type];
       output.print(
-        `${emoji ? `${emoji}  ` : ''}${chalk.grey(indication.payload)}\n`
+        `${emoji ? `${emoji} ` : ''}${chalk.grey(indication.payload)}\n`
       );
     }
   }
