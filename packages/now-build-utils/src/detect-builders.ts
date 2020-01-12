@@ -31,6 +31,7 @@ function getApiBuilders({ tag }: Pick<Options, 'tag'> = {}): Builder[] {
     { src: 'api/**/*.go', use: `@now/go${withTag}`, config },
     { src: 'api/**/*.py', use: `@now/python${withTag}`, config },
     { src: 'api/**/*.rb', use: `@now/ruby${withTag}`, config },
+    { src: 'api/**/*.ru', use: `@now/ruby${withTag}`, config },
   ];
 }
 
