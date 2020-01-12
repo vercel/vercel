@@ -1209,7 +1209,7 @@ test('deploy multiple static files', async t => {
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--yes'],
+    [directory, '--public', '--name', session, ...defaultArgs],
     {
       reject: false,
     }
@@ -1392,7 +1392,6 @@ test('deploy multiple static files with custom scope', async t => {
       '--scope',
       email,
       ...defaultArgs,
-      '--yes',
     ],
     {
       reject: false,
