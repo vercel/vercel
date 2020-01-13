@@ -14,7 +14,7 @@ export default async function validatePaths(
 ): Promise<number | string> {
   // can't deploy more than 1 path
   if (paths.length > 1) {
-    output.error(`${chalk.red('Error!')} Can't deploy more than one path.`);
+    output.print(`${chalk.red('Error!')} Can't deploy more than one path.\n`);
     return 1;
   }
 
@@ -27,10 +27,10 @@ export default async function validatePaths(
   } catch (error) {}
 
   if (!pathStat || !pathStat.isDirectory()) {
-    output.error(
+    output.print(
       `${chalk.red(
         'Error!'
-      )} The path you are trying to deploy is not a directory.`
+      )} The path you are trying to deploy is not a directory.\n`
     );
     return 1;
   }

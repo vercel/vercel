@@ -1430,7 +1430,7 @@ test('deploy multiple static files with custom scope', async t => {
   t.is(content.files.length, 3);
 });
 
-test('deploy single static file', async t => {
+test('deploying a file should fail', async t => {
   const file = fixture('static-single-file/first.png');
 
   const { stdout, stderr, exitCode } = await execa(
@@ -1446,18 +1446,33 @@ test('deploy single static file', async t => {
   console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(exitCode, 0);
+  t.is(exitCode, 1);
+  t.true(
+    stderr
+      .trim()
+      .endsWith('The path you are trying to deploy is not a directory.')
+  );
+});
 
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
+test('deploying more than 1 path should fail', async t => {
+  const file1 = fixture('static-multiple-files/first.png');
+  const file2 = fixture('static-multiple-files/second.png');
 
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
+  const { stdout, stderr, exitCode } = await execa(
+    binaryPath,
+    [file1, file2, '--public', '--name', session, ...defaultArgs, '--confirm'],
+    {
+      reject: false,
+    }
+  );
 
-  t.is(contentType, 'image/png');
-  t.deepEqual(await readFile(file), await response.buffer());
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  // Ensure the exit code is right
+  t.is(exitCode, 1);
+  t.true(stderr.trim().endsWith(`Can't deploy more than one path.`));
 });
 
 test('deploy a static directory', async t => {
