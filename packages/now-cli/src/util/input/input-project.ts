@@ -82,7 +82,7 @@ export default async function inputProject(
     const answers = await inquirer.prompt({
       type: 'input',
       name: 'newProjectName',
-      message: `How would you like to call your new project?`,
+      message: `What’s your project’s name?`,
     });
     newProjectName = answers.newProjectName as string;
 
