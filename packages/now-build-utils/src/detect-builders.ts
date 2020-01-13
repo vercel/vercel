@@ -237,30 +237,62 @@ function checkConflictingFiles(
 
 // When e.g. Next.js receives a `functions` property it has to make sure,
 // that it can handle those files, otherwise there are unused functions.
-function checkUnusedFunctionsOnFrontendBuilder(
+function checkUnusedFunctions(
   files: string[],
-  builder: Builder
+  apiBuilders: Builder[],
+  frontendBuilder: Builder | null,
+  options: Options
 ): ErrorResponse | null {
-  const { config: { functions = undefined } = {} } = builder;
+  const { functions = null } = options;
+  const builderUse = frontendBuilder ? frontendBuilder.use : null;
+  const builderFunctions =
+    (frontendBuilder &&
+      frontendBuilder.config &&
+      frontendBuilder.config.functions) ||
+    {};
 
-  if (!functions) return null;
+  if (!functions) {
+    return null;
+  }
 
-  if (builder.use.startsWith('@now/next')) {
-    const matchingFiles = files.filter(file =>
-      Object.keys(functions).some(key => file === key || minimatch(file, key))
-    );
+  const unmatchedFunctions = new Set(Object.keys(functions));
 
-    for (const matchedFile of matchingFiles) {
-      if (
-        !matchedFile.startsWith('src/pages/') &&
-        !matchedFile.startsWith('pages/')
-      ) {
-        return {
-          code: 'unused_function',
-          message: `The function for ${matchedFile} can't be handled by any builder`,
-        };
+  apiBuilders.forEach(builder => {
+    const builderFns = (builder.config && builder.config.functions) || {};
+
+    Object.keys(builderFns).forEach(key => {
+      unmatchedFunctions.delete(key);
+    });
+  });
+
+  if (builderUse && builderUse.startsWith('@now/next')) {
+    const functionKeys = Object.keys(builderFunctions);
+
+    for (const file of files) {
+      for (const key of functionKeys) {
+        if (file === key || minimatch(file, key)) {
+          if (!file.startsWith('src/pages/') && !file.startsWith('pages/')) {
+            return {
+              code: 'unused_function',
+              message: `The function for ${key} can't be handled by any builder`,
+            };
+          } else {
+            unmatchedFunctions.delete(key);
+          }
+        }
       }
     }
+  }
+
+  if (unmatchedFunctions.size) {
+    const [unusedFunction] = Array.from(unmatchedFunctions);
+
+    return {
+      code: 'unused_function',
+      message:
+        `The function for ${unusedFunction} can't be handled by any builder. ` +
+        `Make sure it is inside the api/ directory.`,
+    };
   }
 
   return null;
@@ -389,28 +421,10 @@ export async function detectBuilders(
   const { projectSettings = {} } = options;
   const { outputDirectory, buildCommand, framework } = projectSettings;
 
+  let frontendBuilder: Builder | null = null;
+
   if (hasBuildScript(pkg) || buildCommand || framework) {
-    const frontendBuilder = detectFrontBuilder(pkg, builders, files, options);
-    builders.push(frontendBuilder);
-
-    const conflictError = checkConflictingFiles(files, builders);
-
-    if (conflictError) {
-      warnings.push(conflictError);
-    }
-
-    const unusedFunctionError = checkUnusedFunctionsOnFrontendBuilder(
-      files,
-      frontendBuilder
-    );
-
-    if (unusedFunctionError) {
-      return {
-        builders: null,
-        errors: [unusedFunctionError],
-        warnings,
-      };
-    }
+    frontendBuilder = detectFrontBuilder(pkg, builders, files, options);
   } else {
     if (!options.ignoreBuildScript && pkg && builders.length === 0) {
       // We only show this error when there are no api builders
@@ -429,27 +443,52 @@ export async function detectBuilders(
     const outDir = outputDirectory || 'public';
 
     if (hasDirectory(outDir, files)) {
-      builders.push({
+      frontendBuilder = {
         use: '@now/static',
         src: `${outDir}/**/*`,
         config: {
           zeroConfig: true,
           outputDirectory: outDir,
         },
-      });
+      };
     } else if (
       builders.length > 0 &&
       files.some(f => !f.startsWith('api/') && f !== 'package.json')
     ) {
       // Everything besides the api directory
       // and package.json can be served as static files
-      builders.push({
+      frontendBuilder = {
         use: '@now/static',
         src: '!{api/**,package.json}',
         config: {
           zeroConfig: true,
         },
-      });
+      };
+    }
+  }
+
+  const unusedFunctionError = checkUnusedFunctions(
+    files,
+    builders,
+    frontendBuilder,
+    options
+  );
+
+  if (unusedFunctionError) {
+    return {
+      builders: null,
+      errors: [unusedFunctionError],
+      warnings,
+    };
+  }
+
+  if (frontendBuilder) {
+    builders.push(frontendBuilder);
+
+    const conflictError = checkConflictingFiles(files, builders);
+
+    if (conflictError) {
+      warnings.push(conflictError);
     }
   }
 
