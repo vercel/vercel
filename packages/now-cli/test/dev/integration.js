@@ -338,14 +338,30 @@ test(
   '[now dev] handles miss after rewrite',
   testFixtureStdio('handle-miss-after-rewrite', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/post`);
-
     const test = response.headers.get('test');
     const override = response.headers.get('override');
-    t.is(test, '1', 'exected miss header to be added');
-    t.is(override, 'one', 'exected override header to not override');
-
+    t.is(test, '1', 'expected miss header to be added');
+    t.is(override, 'one', 'expected override header to not override');
+    t.is(response.status, 200);
     const body = await response.text();
-    t.regex(body, /Blog/gm);
+    t.regex(body, /Blog Post Page/gm);
+
+    const response1 = await fetchWithRetry(
+      `http://localhost:${port}/src/blog/post.html`
+    );
+    const test1 = response.headers.get('test');
+    const override1 = response.headers.get('override');
+    t.is(test1, undefined, 'expected miss header to not be added');
+    t.is(override1, undefined, 'expected override header to not be added');
+    t.is(response1.status, 200);
+    t.regex(await response1.text(), /Blog Post Page/gm);
+
+    const response2 = await fetchWithRetry(`http://localhost:${port}/about`);
+    const test2 = response.headers.get('test');
+    const override2 = response.headers.get('override');
+    t.is(test2, undefined, 'expected miss header to be not be added');
+    t.is(override2, undefined, 'expected override header to not be added');
+    t.is(response2.status, 200);
   })
 );
 
