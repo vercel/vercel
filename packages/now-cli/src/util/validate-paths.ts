@@ -34,9 +34,6 @@ export default async function validatePaths(
     return 1;
   }
 
-  console.log(path);
-  console.log(homedir());
-
   // ask confirmation if the directory is home
   if (path === homedir()) {
     const shouldDeployHomeDirectory = await confirm(
