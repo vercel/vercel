@@ -349,6 +349,15 @@ test(
   })
 );
 
+test(
+  '[now dev] displays directoy listing after miss',
+  testFixtureStdio('handle-miss-display-dir-list', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+    const body = await response.text();
+    t.regex(body, /one.html/gm);
+  })
+);
+
 test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);
