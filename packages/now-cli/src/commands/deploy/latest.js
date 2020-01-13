@@ -222,7 +222,7 @@ export default async function main(
   const autoConfirm = argv['--confirm'];
 
   // check paths
-  const path = await validatePaths(output, paths, autoConfirm);
+  const path = await validatePaths(output, paths);
   if (typeof path === 'number') {
     return path;
   }

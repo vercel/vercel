@@ -996,20 +996,12 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(contentType, 'text/plain; charset=utf-8');
 });
 
-test('ensure we render a prompt when deploying home directory', async t => {
+test.only('ensure we render a prompt when deploying home directory', async t => {
   const directory = homedir();
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--confirm',
-    ],
+    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
       reject: false,
       input: 'N',
@@ -1025,10 +1017,10 @@ test('ensure we render a prompt when deploying home directory', async t => {
 
   t.true(
     stdout.includes(
-      '> You are deploying your home directory. Do you want to continue? [y|N]'
+      'You are deploying your home directory. Do you want to continue? [y/N]'
     )
   );
-  t.true(stderr.includes('> Aborted'));
+  t.true(stderr.includes('Aborted'));
 });
 
 test('ensure the `scope` property works with email', async t => {

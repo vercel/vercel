@@ -9,8 +9,7 @@ const stat = promisify(lstatRaw);
 
 export default async function validatePaths(
   output: Output,
-  paths: string[],
-  autoConfirm?: boolean
+  paths: string[]
 ): Promise<number | string> {
   // can't deploy more than 1 path
   if (paths.length > 1) {
@@ -35,14 +34,15 @@ export default async function validatePaths(
     return 1;
   }
 
+  console.log(path);
+  console.log(homedir());
+
   // ask confirmation if the directory is home
   if (path === homedir()) {
-    const shouldDeployHomeDirectory =
-      autoConfirm ||
-      (await confirm(
-        `You are deploying your home directory. Do you want to continue?`,
-        true
-      ));
+    const shouldDeployHomeDirectory = await confirm(
+      `You are deploying your home directory. Do you want to continue?`,
+      false
+    );
 
     if (!shouldDeployHomeDirectory) {
       output.print(`Aborted\n`);
