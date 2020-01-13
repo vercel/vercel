@@ -54,7 +54,8 @@ export async function devRouter(
   reqMethod?: string,
   routes?: RouteConfig[],
   devServer?: DevServer,
-  previousHeaders?: HttpHeadersConfig
+  previousHeaders?: HttpHeadersConfig,
+  missRoutes?: RouteConfig[]
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
@@ -67,8 +68,17 @@ export async function devRouter(
       idx++;
       if (isHandler(routeConfig)) {
         if (routeConfig.handle === 'filesystem' && devServer) {
-          if (await devServer.hasFilesystem(reqPathname)) {
+          const found = await devServer.hasFilesystem(reqPathname);
+          if (found) {
             break;
+          } else if (missRoutes && missRoutes.length > 0) {
+            // Trigger a 'miss'
+            return {
+              found: false,
+              dest: reqPathname,
+              uri_args: query,
+              headers: combinedHeaders,
+            };
           }
         }
         continue;

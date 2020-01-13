@@ -1157,7 +1157,14 @@ export default class DevServer {
 
     const { missRoutes, otherRoutes } = getRoutesTypes(routes);
 
-    let routeResult = await devRouter(req.url, req.method, otherRoutes, this);
+    let routeResult = await devRouter(
+      req.url,
+      req.method,
+      otherRoutes,
+      this,
+      {},
+      missRoutes
+    );
 
     let match = await findBuildMatch(
       this.buildMatches,

@@ -347,21 +347,24 @@ test(
     t.regex(body, /Blog Post Page/gm);
 
     const response1 = await fetchWithRetry(
-      `http://localhost:${port}/src/blog/post.html`
+      `http://localhost:${port}/blog/post`
     );
     const test1 = response.headers.get('test');
     const override1 = response.headers.get('override');
-    t.is(test1, undefined, 'expected miss header to not be added');
-    t.is(override1, undefined, 'expected override header to not be added');
+    t.is(test1, '1', 'expected miss header to be added');
+    t.is(override1, 'two', 'expected override header to be added');
     t.is(response1.status, 200);
     t.regex(await response1.text(), /Blog Post Page/gm);
 
-    const response2 = await fetchWithRetry(`http://localhost:${port}/about`);
+    const response2 = await fetchWithRetry(
+      `http://localhost:${port}/about.html`
+    );
     const test2 = response.headers.get('test');
     const override2 = response.headers.get('override');
     t.is(test2, undefined, 'expected miss header to be not be added');
     t.is(override2, undefined, 'expected override header to not be added');
     t.is(response2.status, 200);
+    t.regex(await response2.text(), /About Page/gm);
   })
 );
 
