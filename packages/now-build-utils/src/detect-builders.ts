@@ -244,7 +244,7 @@ function checkUnusedFunctions(
   options: Options
 ): ErrorResponse | null {
   const { functions = null } = options;
-  const builderUse = (frontendBuilder && frontendBuilder.use) || null;
+  const builderUse = frontendBuilder ? frontendBuilder.use : null;
   const builderFunctions =
     (frontendBuilder &&
       frontendBuilder.config &&
