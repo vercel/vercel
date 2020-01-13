@@ -996,7 +996,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(contentType, 'text/plain; charset=utf-8');
 });
 
-test.only('ensure we render a prompt when deploying home directory', async t => {
+test('ensure we render a prompt when deploying home directory', async t => {
   const directory = homedir();
 
   const { stderr, stdout, exitCode } = await execa(
