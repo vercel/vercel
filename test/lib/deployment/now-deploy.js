@@ -135,9 +135,14 @@ async function fetchWithAuth (url, opts = {}) {
     currentCount += 1;
     if (!token || currentCount === MAX_COUNT) {
       currentCount = 0;
-      token = await fetchTokenWithRetry(
-        Buffer.from(str, 'base64').toString()
-      );
+      if (process.env.NOW_TOKEN) {
+        // used for health checks
+        token = process.env.NOW_TOKEN;
+      } else {
+        token = await fetchTokenWithRetry(
+          Buffer.from(str, 'base64').toString()
+        );
+      }
     }
 
     opts.headers.Authorization = `Bearer ${token}`;

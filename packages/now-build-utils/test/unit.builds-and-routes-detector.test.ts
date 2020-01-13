@@ -722,6 +722,25 @@ describe('Test `detectBuilders`', () => {
       },
     ]);
   });
+
+  it('Error for non-api functions', async () => {
+    const files = ['server/hello.ts', 'public/index.html'];
+    const functions = {
+      'server/**/*.ts': {
+        runtime: '@now/node@1.3.1',
+      },
+    };
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toEqual([
+      {
+        code: 'unused_function',
+        message:
+          "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
+      },
+    ]);
+  });
 });
 
 it('Test `detectRoutes`', async () => {
