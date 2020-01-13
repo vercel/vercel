@@ -161,7 +161,11 @@ const main = async argv_ => {
     );
   }
 
-  output.print(`${chalk.grey(`Now CLI ${pkg.version}`)}\n`);
+  output.print(
+    `${chalk.grey(`Now CLI ${pkg.version}`)}${
+      pkg.version.includes('canary') ? ' — https://zeit.co/feedback' : ''
+    }\n`
+  );
 
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
