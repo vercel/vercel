@@ -36,8 +36,8 @@ export default async function inputProject(
     if (
       await confirm(
         `Found project ${chalk.cyan(
-          `“${detectedProjectName}”`
-        )} in your organization. Link to it?`,
+          `“${org.slug}/${detectedProjectName}”`
+        )}. Link to it?`,
         true
       )
     ) {
