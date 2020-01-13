@@ -11,7 +11,7 @@ export default async function selectProject(
   question: string,
   client: Client,
   currentTeam?: string,
-  yes?: boolean
+  autoConfirm?: boolean
 ): Promise<Org> {
   require('./patch-inquirer');
 
@@ -32,7 +32,7 @@ export default async function selectProject(
 
   const defaultOrgIndex = teams.findIndex(team => team.id === currentTeam) + 1;
 
-  if (yes) {
+  if (autoConfirm) {
     return choices[defaultOrgIndex].value;
   }
 

@@ -221,7 +221,7 @@ test('deploy using only now.json with `redirects` defined', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [target, ...defaultArgs, '--yes'],
+    [target, ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -242,7 +242,14 @@ test('deploy using --local-config flag v2', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    ['deploy', target, '--local-config', configPath, ...defaultArgs, '--yes'],
+    [
+      'deploy',
+      target,
+      '--local-config',
+      configPath,
+      ...defaultArgs,
+      '--confirm',
+    ],
     {
       reject: false,
     }
@@ -280,7 +287,7 @@ test('deploy using --local-config flag above target', async t => {
       '--local-config',
       './now-root.json',
       ...defaultArgs,
-      '--yes',
+      '--confirm',
     ],
     {
       cwd: root,
@@ -453,7 +460,7 @@ test('ignore files specified in .nowignore', async t => {
     '--name',
     session,
     ...defaultArgs,
-    '--yes',
+    '--confirm',
   ];
   const targetCall = await execa(binaryPath, args, {
     cwd: directory,
@@ -481,7 +488,7 @@ test('ignore files specified in .nowignore via allowlist', async t => {
     '--name',
     session,
     ...defaultArgs,
-    '--yes',
+    '--confirm',
   ];
   const targetCall = await execa(binaryPath, args, {
     cwd: directory,
@@ -749,7 +756,7 @@ test('set platform version using `-V` to `2`', async t => {
       '-V',
       2,
       '--force',
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -920,7 +927,7 @@ test('set platform version using `--platform-version` to `2`', async t => {
       '--platform-version',
       2,
       '--force',
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -956,7 +963,7 @@ test('ensure we render a warning for deployments with no files', async t => {
       '--name',
       session,
       ...defaultArgs,
-      '--yes',
+      '--confirm',
       '--force',
     ],
     {
@@ -1001,7 +1008,7 @@ test('ensure we render a prompt when deploying home directory', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1036,7 +1043,7 @@ test('ensure the `scope` property works with email', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1076,7 +1083,7 @@ test('ensure the `scope` property works with username', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1116,7 +1123,7 @@ test('try to create a builds deployments with wrong config', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1148,7 +1155,7 @@ test('create a builds deployments with no actual builds', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1179,7 +1186,7 @@ test('create a builds deployments without platform version flag', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1248,7 +1255,7 @@ test('create a staging deployment', async t => {
     directory,
     '--target=staging',
     ...args,
-    '--yes',
+    '--confirm',
   ]);
 
   console.log(targetCall.stderr);
@@ -1278,7 +1285,7 @@ test('create a production deployment', async t => {
     directory,
     '--target=production',
     ...args,
-    '--yes',
+    '--confirm',
   ]);
 
   console.log(targetCall.stderr);
@@ -1340,7 +1347,7 @@ test('ensure we are getting a warning for the old team flag', async t => {
       '--team',
       email,
       ...defaultArgs,
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1428,7 +1435,7 @@ test('deploy single static file', async t => {
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    [file, '--public', '--name', session, ...defaultArgs, '--yes'],
+    [file, '--public', '--name', session, ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1458,7 +1465,7 @@ test('deploy a static directory', async t => {
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--yes'],
+    [directory, '--public', '--name', session, ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1487,7 +1494,7 @@ test('use build-env', async t => {
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--yes'],
+    [directory, '--public', '--name', session, ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1529,7 +1536,7 @@ test('use `--build-env` CLI flag', async t => {
       '--build-env',
       `NONCE=${nonce}`,
       ...defaultArgs,
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1568,7 +1575,7 @@ test('use `--debug` CLI flag', async t => {
       session,
       '--debug',
       ...defaultArgs,
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -1600,7 +1607,7 @@ test('try to deploy non-existing path', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [session, ...defaultArgs, '--yes'],
+    [session, ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1620,7 +1627,7 @@ test('try to deploy with non-existing team', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [target, '--scope', session, ...defaultArgs, '--yes'],
+    [target, '--scope', session, ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1795,7 +1802,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   {
     const { stdout: deploymentUrl, stderr, exitCode } = await execute([
       firstDeployment,
-      '--yes',
+      '--confirm',
     ]);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
@@ -1815,7 +1822,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   {
     const { stdout: deploymentUrl, stderr, exitCode } = await execute([
       secondDeployment,
-      '--yes',
+      '--confirm',
     ]);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
@@ -1837,7 +1844,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   {
     const { stdout: deploymentUrl, stderr, exitCode } = await execute([
       firstDeployment,
-      '--yes',
+      '--confirm',
     ]);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
@@ -1881,7 +1888,10 @@ test('fail `now dev` dev script without now.json', async t => {
 
 test('print correct link in legacy warning', async t => {
   const deploymentPath = fixture('v1-warning-link');
-  const { exitCode, stderr, stdout } = await execute([deploymentPath, '--yes']);
+  const { exitCode, stderr, stdout } = await execute([
+    deploymentPath,
+    '--confirm',
+  ]);
 
   console.log(stderr);
   console.log(stdout);
@@ -1920,7 +1930,7 @@ test('`now rm` 404 exits quickly', async t => {
 
 test('render build errors', async t => {
   const deploymentPath = fixture('failing-build');
-  const output = await execute([deploymentPath, '--yes']);
+  const output = await execute([deploymentPath, '--confirm']);
 
   console.log(output.stderr);
   console.log(output.stdout);
@@ -1994,7 +2004,12 @@ test('now hasOwnProperty not a valid subcommand', async t => {
 
 test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
-  const output = await execute([fixturePath, '--force', '--public', '--yes']);
+  const output = await execute([
+    fixturePath,
+    '--force',
+    '--public',
+    '--confirm',
+  ]);
 
   console.log('isCanary', isCanary);
   console.log(output.stderr);
@@ -2089,7 +2104,7 @@ test('deploy with a custom API URL', async t => {
       '--api',
       'https://zeit.co/api',
       ...defaultArgs,
-      '--yes',
+      '--confirm',
     ],
     {
       reject: false,
@@ -2116,7 +2131,7 @@ test('deploy with a custom API URL', async t => {
 
 test('deploy a Lambda with 128MB of memory', async t => {
   const directory = fixture('lambda-with-128-memory');
-  const output = await execute([directory, '--yes']);
+  const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 
@@ -2133,7 +2148,7 @@ test('deploy a Lambda with 128MB of memory', async t => {
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
   const directory = fixture('lambda-with-200-memory');
-  const output = await execute([directory, '--yes']);
+  const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
@@ -2145,7 +2160,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
 
 test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   const directory = fixture('lambda-with-3-second-timeout');
-  const output = await execute([directory, '--yes']);
+  const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 
@@ -2162,7 +2177,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
 
 test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {
   const directory = fixture('lambda-with-1000-second-timeout');
-  const output = await execute([directory, '--yes']);
+  const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
@@ -2186,7 +2201,7 @@ test('invalid `--token`', async t => {
 // We need to skip this test until `now-php` supports Runtime version 3
 test('deploy a Lambda with a specific runtime', async t => {
   const directory = fixture('lambda-with-php-runtime');
-  const output = await execute([directory, '--public', '--yes']);
+  const output = await execute([directory, '--public', '--confirm']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 
@@ -2198,7 +2213,7 @@ test('deploy a Lambda with a specific runtime', async t => {
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
-  const output = await execute([directory, '--yes']);
+  const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
@@ -2210,7 +2225,7 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
 
 test('ensure `github` and `scope` are not sent to the API', async t => {
   const directory = fixture('github-and-scope-config');
-  const output = await execute([directory, '--yes']);
+  const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 });

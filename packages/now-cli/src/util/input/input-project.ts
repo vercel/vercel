@@ -13,9 +13,9 @@ export default async function inputProject(
   client: Client,
   org: Org,
   detectedProjectName: string,
-  yes: boolean
+  autoConfirm: boolean
 ): Promise<Project | string> {
-  if (yes) {
+  if (autoConfirm) {
     return detectedProjectName;
   }
 
