@@ -15,11 +15,13 @@ import {
   NowClientOptions,
 } from './types';
 
+type DeploymentEventType = 'warning' | 'tip' | 'error' | 'notice' | 'created';
+
 async function* createDeployment(
   files: Map<string, DeploymentFile>,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
-): AsyncIterableIterator<{ type: string; payload: any }> {
+): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
   const debug = createDebug(clientOptions.debug);
   const preparedFiles = prepareFiles(files, clientOptions);
   const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
@@ -67,6 +69,10 @@ async function* createDeployment(
         debug('Deployment created with a notice:', value);
         yield { type: 'notice', payload: value };
       }
+      if (name.startsWith('x-now-tip-')) {
+        debug('Deployment created with a tip:', value);
+        yield { type: 'tip', payload: value };
+      }
     }
 
     yield { type: 'created', payload: json };
@@ -84,13 +90,13 @@ function getDefaultName(
 
   if (isDirectory && typeof path === 'string') {
     debug('Provided path is a directory. Using last segment as default name');
-    return path.split('/').pop()!;
+    return path.split('/').pop() || path;
   } else {
     debug(
       'Provided path is not a directory. Using last segment of the first file as default name'
     );
     const filePath = Array.from(files.values())[0].names[0];
-    return filePath.split('/').pop()!;
+    return filePath.split('/').pop() || filePath;
   }
 }
 
