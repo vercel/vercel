@@ -38,7 +38,6 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
-import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';
 import {
@@ -48,6 +47,7 @@ import {
 import getProjectName from '../../util/get-project-name';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
+import validatePaths from '../../util/validate-paths';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -208,10 +208,6 @@ export default async function main(
     return 1;
   }
 
-  if (!(await shouldDeployDir(argv._[0], output))) {
-    return 0;
-  }
-
   const {
     apiUrl,
     authConfig: { token },
@@ -223,11 +219,12 @@ export default async function main(
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
+  const autoConfirm = argv['--confirm'];
 
   // check paths
-  if (paths.length > 1) {
-    output.error(`${chalk.red('Error!')} Can't deploy more than one path.`);
-    return 1;
+  const path = await validatePaths(output, paths, autoConfirm);
+  if (typeof path === 'number') {
+    return path;
   }
 
   // build `meta`
@@ -345,8 +342,6 @@ export default async function main(
   });
 
   // retrieve `project` and `org` from .now
-  const path = paths[0];
-  const autoConfirm = argv['--confirm'];
   let [org, project] = await getLinkedProject(client, path);
   let newProjectName = null;
 
