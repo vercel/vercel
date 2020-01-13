@@ -55,7 +55,8 @@ export async function devRouter(
   routes?: RouteConfig[],
   devServer?: DevServer,
   previousHeaders?: HttpHeadersConfig,
-  missRoutes?: RouteConfig[]
+  missRoutes?: RouteConfig[],
+  phase?: 'top' | 'miss'
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
@@ -66,6 +67,7 @@ export async function devRouter(
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
+      const isLast = idx === routes.length - 1;
       if (isHandler(routeConfig)) {
         if (routeConfig.handle === 'filesystem' && devServer) {
           const found = await devServer.hasFilesystem(reqPathname);
@@ -78,7 +80,9 @@ export async function devRouter(
               reqMethod,
               missRoutes,
               devServer,
-              previousHeaders
+              previousHeaders,
+              [],
+              'miss'
             );
             if (missResult.found) {
               return missResult;
@@ -114,18 +118,26 @@ export async function devRouter(
           }
 
           for (const [key, value] of Object.entries(headers)) {
-            // eslint-disable-next-line no-prototype-builtins
-            if (previousHeaders && previousHeaders.hasOwnProperty(key)) {
+            if (
+              phase === 'miss' &&
+              previousHeaders &&
+              // eslint-disable-next-line no-prototype-builtins
+              previousHeaders.hasOwnProperty(key)
+            ) {
               // don't override headers in the miss phase
-              continue;
+            } else {
+              combinedHeaders[key] = value;
             }
-            combinedHeaders[key] = value;
           }
         }
 
         if (routeConfig.continue) {
-          reqPathname = destPath;
-          continue;
+          if (isLast && phase === 'miss' && routeConfig.status) {
+            // Don't continue on last miss route so that 404 works
+          } else {
+            reqPathname = destPath;
+            continue;
+          }
         }
 
         if (routeConfig.check && devServer) {
@@ -141,7 +153,9 @@ export async function devRouter(
                 reqMethod,
                 missRoutes,
                 devServer,
-                previousHeaders
+                previousHeaders,
+                [],
+                'miss'
               );
               if (missResult.found) {
                 return missResult;

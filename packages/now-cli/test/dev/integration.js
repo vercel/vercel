@@ -380,7 +380,7 @@ test(
 test(
   '[now dev] does not display directoy listing after 404',
   testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+    const response = await fetch(`http://localhost:${port}/post`);
     t.is(response.status, 404);
   })
 );

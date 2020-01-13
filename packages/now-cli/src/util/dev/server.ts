@@ -1163,7 +1163,8 @@ export default class DevServer {
       otherRoutes,
       this,
       {},
-      missRoutes
+      missRoutes,
+      'top'
     );
 
     let match = await findBuildMatch(
@@ -1180,7 +1181,9 @@ export default class DevServer {
         req.method,
         missRoutes,
         this,
-        routeResult.headers
+        routeResult.headers,
+        [],
+        'miss'
       );
 
       match = await findBuildMatch(
