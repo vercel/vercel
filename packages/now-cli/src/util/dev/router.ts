@@ -73,12 +73,16 @@ export async function devRouter(
             break;
           } else if (missRoutes && missRoutes.length > 0) {
             // Trigger a 'miss'
-            return {
-              found: false,
-              dest: reqPathname,
-              uri_args: query,
-              headers: combinedHeaders,
-            };
+            const missResult = await devRouter(
+              reqUrl,
+              reqMethod,
+              missRoutes,
+              devServer,
+              previousHeaders
+            );
+            if (missResult.found) {
+              return missResult;
+            }
           }
         }
         continue;
@@ -130,8 +134,22 @@ export async function devRouter(
           // If the file is not found, `check: true` will
           // behave the same as `continue: true`
           if (!hasDestFile) {
-            reqPathname = destPath;
-            continue;
+            if (missRoutes && missRoutes.length > 0) {
+              // Trigger a 'miss'
+              const missResult = await devRouter(
+                destPath,
+                reqMethod,
+                missRoutes,
+                devServer,
+                previousHeaders
+              );
+              if (missResult.found) {
+                return missResult;
+              }
+            } else {
+              reqPathname = destPath;
+              continue;
+            }
           }
         }
 
