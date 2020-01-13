@@ -358,6 +358,14 @@ test(
   })
 );
 
+test(
+  '[now dev] does not display directoy listing after 404',
+  testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+    t.is(response.status, 404);
+  })
+);
+
 test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);
