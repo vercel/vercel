@@ -12,8 +12,13 @@ export default async function inputProject(
   output: Output,
   client: Client,
   org: Org,
-  detectedProjectName: string
+  detectedProjectName: string,
+  autoConfirm: boolean
 ): Promise<Project | string> {
+  if (autoConfirm) {
+    return detectedProjectName;
+  }
+
   // attempt to auto-detect a project to link
   let detectedProject = null;
   const existingProjectSpinner = wait('Searching for existing projects…', 1000);
@@ -36,8 +41,8 @@ export default async function inputProject(
     if (
       await confirm(
         `Found project ${chalk.cyan(
-          `“${detectedProjectName}”`
-        )} in your organization. Link to it?`,
+          `“${org.slug}/${detectedProjectName}”`
+        )}. Link to it?`,
         true
       )
     ) {
@@ -82,7 +87,7 @@ export default async function inputProject(
     const answers = await inquirer.prompt({
       type: 'input',
       name: 'newProjectName',
-      message: `How would you like to call your new project?`,
+      message: `What’s your project’s name?`,
     });
     newProjectName = answers.newProjectName as string;
 
