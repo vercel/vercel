@@ -576,11 +576,6 @@
         {
           "path": "config.json"
         }
-      ],
-      "every": [
-        {
-          "path": "content/"
-        }
       ]
     },
     "settings": {
