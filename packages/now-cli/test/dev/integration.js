@@ -369,7 +369,7 @@ test(
 );
 
 test(
-  '[now dev] displays directoy listing after miss',
+  '[now dev] displays directory listing after miss',
   testFixtureStdio('handle-miss-display-dir-list', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/post`);
     const body = await response.text();
@@ -378,10 +378,19 @@ test(
 );
 
 test(
-  '[now dev] does not display directoy listing after 404',
+  '[now dev] does not display directory listing after 404',
   testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
     const response = await fetch(`http://localhost:${port}/post`);
     t.is(response.status, 404);
+  })
+);
+
+test(
+  '[now dev] does not display directory listing after multiple 404',
+  testFixtureStdio('handle-miss-multiple-404', async (t, port) => {
+    t.is((await fetch(`http://localhost:${port}/pathA/dir`)).status, 404);
+    t.is((await fetch(`http://localhost:${port}/pathB/dir`)).status, 404);
+    t.is((await fetch(`http://localhost:${port}/pathC/dir`)).status, 200);
   })
 );
 

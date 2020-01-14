@@ -67,7 +67,6 @@ export async function devRouter(
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
-      const isLast = idx === routes.length - 1;
       if (isHandler(routeConfig)) {
         if (routeConfig.handle === 'filesystem' && devServer) {
           const found = await devServer.hasFilesystem(reqPathname);
@@ -132,8 +131,8 @@ export async function devRouter(
         }
 
         if (routeConfig.continue) {
-          if (isLast && phase === 'miss' && routeConfig.status) {
-            // Don't continue on last miss route so that 404 works
+          if (phase === 'miss' && routeConfig.status) {
+            // Don't continue on miss route so that 404 works
           } else {
             reqPathname = destPath;
             continue;
