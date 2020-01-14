@@ -25,6 +25,8 @@ export const frameworks: Framework[] = [
     name: 'Gatsby.js',
     slug: 'gatsby',
     dependency: 'gatsby',
+    buildCommand: 'gatsby build',
+    devCommand: 'gatsby develop --port $PORT',
     getOutputDirName: async () => 'public',
     defaultRoutes: async (dirPrefix: string) => {
       try {
@@ -52,18 +54,24 @@ export const frameworks: Framework[] = [
     name: 'Hexo',
     slug: 'hexo',
     dependency: 'hexo',
+    buildCommand: 'hexo generate',
+    devCommand: 'hexo server --port $PORT',
     getOutputDirName: async () => 'public',
   },
   {
     name: 'Eleventy',
     slug: 'eleventy',
     dependency: '@11ty/eleventy',
+    buildCommand: 'npx @11ty/eleventy',
+    devCommand: 'npx @11ty/eleventy --serve --watch --port $PORT',
     getOutputDirName: async () => '_site',
   },
   {
     name: 'Docusaurus 2.0',
     slug: 'docusaurus',
     dependency: '@docusaurus/core',
+    buildCommand: 'docusaurus-build',
+    devCommand: 'docusaurus-start --port $PORT',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
       const location = join(dirPrefix, base);
@@ -81,6 +89,8 @@ export const frameworks: Framework[] = [
     name: 'Preact',
     slug: 'preact',
     dependency: 'preact-cli',
+    buildCommand: 'preact build',
+    devCommand: 'preact watch --port $PORT',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
       {
@@ -96,6 +106,8 @@ export const frameworks: Framework[] = [
     name: 'Ember',
     slug: 'ember',
     dependency: 'ember-cli',
+    buildCommand: 'ember build',
+    devCommand: 'ember serve --port $PORT',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
@@ -111,6 +123,8 @@ export const frameworks: Framework[] = [
     name: 'Vue.js',
     slug: 'vue',
     dependency: '@vue/cli-service',
+    buildCommand: 'vue-cli-service build',
+    devCommand: 'vue-cli-service serve --port $PORT',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
@@ -138,6 +152,7 @@ export const frameworks: Framework[] = [
     dependency: '@scullyio/init',
     minNodeRange: '10.x',
     buildCommand: 'ng build && scully',
+    devCommand: 'ng serve --port $PORT',
     getOutputDirName: async () => 'dist/static',
   },
   {
@@ -145,6 +160,8 @@ export const frameworks: Framework[] = [
     slug: 'angular',
     dependency: '@angular/cli',
     minNodeRange: '10.x',
+    buildCommand: 'ng build',
+    devCommand: 'ng serve --port $PORT',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'dist';
       const location = join(dirPrefix, base);
@@ -171,6 +188,8 @@ export const frameworks: Framework[] = [
     name: 'Polymer',
     slug: 'polymer',
     dependency: 'polymer-cli',
+    buildCommand: 'polymer build',
+    devCommand: 'polymer serve --port $PORT',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
       const location = join(dirPrefix, base);
@@ -193,6 +212,8 @@ export const frameworks: Framework[] = [
     name: 'Svelte',
     slug: 'svelte',
     dependency: 'sirv-cli',
+    buildCommand: 'rollup -c',
+    devCommand: 'sirv public --single --dev --port $PORT',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
       {
@@ -205,15 +226,11 @@ export const frameworks: Framework[] = [
     ],
   },
   {
-    name: 'Ionic React',
-    slug: 'ionic-react',
-    dependency: '@ionic/react',
-    getOutputDirName: async () => 'build',
-  },
-  {
     name: 'Create React App',
     slug: 'create-react-app',
     dependency: 'react-scripts',
+    buildCommand: 'react-scripts build',
+    devCommand: 'react-scripts start',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
       {
@@ -244,6 +261,8 @@ export const frameworks: Framework[] = [
     name: 'Create React App (ejected)',
     slug: 'create-react-app',
     dependency: 'react-dev-utils',
+    buildCommand: 'react-scripts build',
+    devCommand: 'react-scripts start',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
       {
@@ -274,12 +293,16 @@ export const frameworks: Framework[] = [
     name: 'Gridsome',
     slug: 'gridsome',
     dependency: 'gridsome',
+    buildCommand: 'gridsome build',
+    devCommand: 'gridsome develop -p $PORT',
     getOutputDirName: async () => 'dist',
   },
   {
     name: 'UmiJS',
     slug: 'umijs',
     dependency: 'umi',
+    buildCommand: 'umi build',
+    devCommand: 'umi dev --port $PORT',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
@@ -295,6 +318,8 @@ export const frameworks: Framework[] = [
     name: 'Docusaurus 1.0',
     slug: 'docusaurus',
     dependency: 'docusaurus',
+    buildCommand: 'docusaurus-build',
+    devCommand: 'docusaurus-start --port $PORT',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
       const location = join(dirPrefix, base);
@@ -312,12 +337,16 @@ export const frameworks: Framework[] = [
     name: 'Sapper',
     slug: 'sapper',
     dependency: 'sapper',
+    buildCommand: 'sapper export',
+    devCommand: 'sapper dev --port $PORT',
     getOutputDirName: async () => '__sapper__/export',
   },
   {
     name: 'Saber',
     slug: 'saber',
     dependency: 'saber',
+    buildCommand: 'saber build',
+    devCommand: 'saber --port $PORT',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
       {
@@ -338,6 +367,8 @@ export const frameworks: Framework[] = [
     name: 'Stencil',
     slug: 'stencil',
     dependency: '@stencil/core',
+    buildCommand: 'stencil build',
+    devCommand: 'stencil build --dev --watch --serve --port $PORT',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
       {
@@ -354,6 +385,7 @@ export const frameworks: Framework[] = [
     slug: 'nuxtjs',
     dependency: 'nuxt',
     buildCommand: 'nuxt generate',
+    devCommand: 'nuxt',
     getOutputDirName: async () => 'dist',
   },
   {
@@ -384,6 +416,8 @@ export const frameworks: Framework[] = [
   {
     name: 'Brunch',
     slug: 'brunch',
+    buildCommand: 'brunch build --production',
+    devCommand: 'brunch watch --server --port $PORT',
     getOutputDirName: async () => 'public',
   },
   {
