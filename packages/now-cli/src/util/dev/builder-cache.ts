@@ -248,7 +248,7 @@ export async function installBuilders(
 
   const stopSpinner = wait(
     `Installing ${pluralize(
-      'runtime',
+      'Runtime',
       packagesToInstall.length
     )}: ${packagesToInstall.sort().join(', ')}`
   );
