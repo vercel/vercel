@@ -990,7 +990,7 @@ test('[now dev] temporary directory listing', async t => {
 
     await sleep(ms('20s'));
 
-    const firstResponse = await fetch(`http://localhost:${port}`, 180);
+    const firstResponse = await fetch(`http://localhost:${port}`);
     validateResponseHeaders(t, firstResponse);
     const body = await firstResponse.text();
     t.is(firstResponse.status, 404, `Received instead: ${body}`);

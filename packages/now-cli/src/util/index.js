@@ -67,6 +67,7 @@ export default class Now extends EventEmitter {
       target = null,
       deployStamp,
       projectSettings,
+      skipAutoDetectionConfirmation,
     },
     org,
     shouldLinkFolder,
@@ -183,6 +184,7 @@ export default class Now extends EventEmitter {
       projectName: name,
       shouldLinkFolder,
       isDetectingFramework,
+      skipAutoDetectionConfirmation,
     });
 
     // We report about files whose sizes are too big

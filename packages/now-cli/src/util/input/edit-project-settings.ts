@@ -2,7 +2,7 @@ import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
 import { Output } from '../output';
-import { Framework } from '@now/frameworks';
+import { Framework, SettingValue } from '@now/frameworks';
 
 export interface ProjectSettings {
   buildCommand: string | null;
@@ -15,6 +15,10 @@ const fields: { name: string; value: keyof ProjectSettings }[] = [
   { name: 'Output Directory', value: 'outputDirectory' },
   { name: 'Development Command', value: 'devCommand' },
 ];
+
+function isSettingValue(setting: any): setting is SettingValue {
+  return setting && typeof setting.value === 'string';
+}
 
 export default async function editProjectSettings(
   output: Output,
@@ -30,7 +34,7 @@ export default async function editProjectSettings(
       output.print(
         chalk.gray(
           `- ${chalk.bold(`${field.name}:`)} ${`${
-            defaults.value
+            isSettingValue(defaults)
               ? defaults.value
               : chalk.italic(`${defaults.placeholder}`)
           }`}`
