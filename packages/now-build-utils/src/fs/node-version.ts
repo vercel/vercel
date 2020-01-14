@@ -25,10 +25,6 @@ const upstreamProvider =
   'This change is the result of a decision made by an upstream infrastructure provider (AWS).' +
   '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html';
 
-export function getOldestNodeVersion(): NodeVersion {
-  return allOptions[allOptions.length - 1];
-}
-
 export function getLatestNodeVersion(): NodeVersion {
   return allOptions[0];
 }
@@ -41,7 +37,7 @@ export async function getSupportedNodeVersion(
   engineRange?: string,
   isAuto?: boolean
 ): Promise<NodeVersion> {
-  let selection = getOldestNodeVersion();
+  let selection = getLatestNodeVersion();
 
   if (engineRange) {
     const found = allOptions.some(o => {
