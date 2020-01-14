@@ -38,7 +38,6 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
-import shouldDeployDir from '../../util/deploy/should-deploy-dir';
 import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';
 import {
@@ -48,6 +47,7 @@ import {
 import getProjectName from '../../util/get-project-name';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
+import validatePaths from '../../util/validate-paths';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -125,7 +125,7 @@ const printDeploymentStatus = async (
     } else {
       // fallback to deployment url
       isWildcard = false;
-      previewUrl = deploymentUrl;
+      previewUrl = `https://${deploymentUrl}`;
     }
 
     // copy to clipboard
@@ -136,8 +136,8 @@ const printDeploymentStatus = async (
     }
 
     // write to stdout
-    if (quiet && !isWildcard) {
-      process.stdout.write(previewUrl);
+    if (quiet) {
+      process.stdout.write(`https://${deploymentUrl}`);
     }
 
     output.print(
@@ -208,10 +208,6 @@ export default async function main(
     return 1;
   }
 
-  if (!(await shouldDeployDir(argv._[0], output))) {
-    return 0;
-  }
-
   const {
     apiUrl,
     authConfig: { token },
@@ -223,11 +219,12 @@ export default async function main(
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
+  const autoConfirm = argv['--confirm'];
 
   // check paths
-  if (paths.length > 1) {
-    output.error(`${chalk.red('Error!')} Can't deploy more than one path.`);
-    return 1;
+  const path = await validatePaths(output, paths);
+  if (typeof path === 'number') {
+    return path;
   }
 
   // build `meta`
@@ -345,15 +342,16 @@ export default async function main(
   });
 
   // retrieve `project` and `org` from .now
-  const path = paths[0];
   let [org, project] = await getLinkedProject(client, path);
   let newProjectName = null;
 
   if (!org || !project) {
-    const shouldStartSetup = await confirm(
-      `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-      true
-    );
+    const shouldStartSetup =
+      autoConfirm ||
+      (await confirm(
+        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        true
+      ));
 
     if (!shouldStartSetup) {
       output.print(`Aborted. Project not set up.\n`);
@@ -363,7 +361,8 @@ export default async function main(
     org = await selectOrg(
       'Which organization do you want to deploy to?',
       client,
-      ctx.config.currentTeam
+      ctx.config.currentTeam,
+      autoConfirm
     );
 
     const detectedProjectName = getProjectName({
@@ -377,7 +376,8 @@ export default async function main(
       output,
       client,
       org,
-      detectedProjectName
+      detectedProjectName,
+      autoConfirm
     );
 
     if (typeof projectOrNewProjectName === 'string') {
@@ -419,6 +419,7 @@ export default async function main(
       meta,
       deployStamp,
       target,
+      skipAutoDetectionConfirmation: autoConfirm,
     };
 
     deployment = await createDeploy(
@@ -428,7 +429,7 @@ export default async function main(
       [path],
       createArgs,
       org,
-      false,
+      autoConfirm,
       !!newProjectName
     );
 

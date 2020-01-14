@@ -12,8 +12,13 @@ export default async function inputProject(
   output: Output,
   client: Client,
   org: Org,
-  detectedProjectName: string
+  detectedProjectName: string,
+  autoConfirm: boolean
 ): Promise<Project | string> {
+  if (autoConfirm) {
+    return detectedProjectName;
+  }
+
   // attempt to auto-detect a project to link
   let detectedProject = null;
   const existingProjectSpinner = wait('Searching for existing projects…', 1000);

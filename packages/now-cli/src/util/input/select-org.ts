@@ -10,7 +10,8 @@ type Choice = { name: string; value: Org };
 export default async function selectProject(
   question: string,
   client: Client,
-  currentTeam?: string
+  currentTeam?: string,
+  autoConfirm?: boolean
 ): Promise<Org> {
   require('./patch-inquirer');
 
@@ -29,12 +30,18 @@ export default async function selectProject(
     })),
   ];
 
+  const defaultOrgIndex = teams.findIndex(team => team.id === currentTeam) + 1;
+
+  if (autoConfirm) {
+    return choices[defaultOrgIndex].value;
+  }
+
   const answers = await inquirer.prompt({
     type: 'list',
     name: 'org',
     message: question,
     choices,
-    default: teams.findIndex(team => team.id === currentTeam) + 1,
+    default: defaultOrgIndex,
   });
 
   const org = answers.org;
