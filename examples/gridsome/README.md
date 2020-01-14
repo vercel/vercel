@@ -1,4 +1,4 @@
-![Gridsome Logo](../packages/frameworks/logos/gridsome.svg)
+![Gridsome Logo](../../packages/frameworks/logos/gridsome.svg)
 
 # Gridsome Example
 

@@ -6,7 +6,7 @@ This directory is a brief example of an [Ionic React](https://ionicframework.com
 
 Deploy your own Ionic React project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/ionic-react)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/ionic-react)
 
 _Live Example: https://ionic-react.now-examples.now.sh_
 
