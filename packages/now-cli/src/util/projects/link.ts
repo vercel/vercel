@@ -60,7 +60,7 @@ export async function getLinkedProject(
     return [org, project];
   } catch (error) {
     // link file does not exists, project is not linked
-    if (error.code === 'ENOENT') {
+    if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
       return [null, null];
     }
 
@@ -82,7 +82,16 @@ export async function linkFolderToProject(
   projectName: string,
   orgSlug: string
 ) {
-  await ensureDir(join(path, NOW_FOLDER));
+  try {
+    await ensureDir(join(path, NOW_FOLDER));
+  } catch (error) {
+    if (error.code === 'ENOTDIR') {
+      // folder couldn't be created because
+      // we're deploying a static file
+      return;
+    }
+    throw error;
+  }
 
   await writeFile(
     join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),

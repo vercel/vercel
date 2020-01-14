@@ -3,9 +3,13 @@ export interface FrameworkDetectionItem {
   matchContent?: string;
 }
 
-type Setting =
-  | { value: string; placeholder?: string }
-  | { value?: string; placeholder: string };
+export interface SettingPlaceholder {
+  placeholder: string;
+}
+export interface SettingValue {
+  value: string;
+}
+export type Setting = SettingValue | SettingPlaceholder;
 
 export interface Framework {
   name: string;

@@ -38,6 +38,7 @@ export default async function processDeployment({
   projectName,
   shouldLinkFolder,
   isDetectingFramework,
+  skipAutoDetectionConfirmation,
   ...args
 }: {
   now: Now;
@@ -55,6 +56,7 @@ export default async function processDeployment({
   projectName: string;
   shouldLinkFolder: boolean;
   isDetectingFramework: boolean;
+  skipAutoDetectionConfirmation?: boolean;
 }) {
   if (isLegacy) return processLegacyDeployment(args);
 
@@ -82,6 +84,7 @@ export default async function processDeployment({
     userAgent: ua,
     path: paths[0],
     force,
+    skipAutoDetectionConfirmation,
   };
 
   let queuedSpinner = null;
