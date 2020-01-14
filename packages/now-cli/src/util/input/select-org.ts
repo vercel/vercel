@@ -15,7 +15,7 @@ export default async function selectProject(
 ): Promise<Org> {
   require('./patch-inquirer');
 
-  const spinner = wait('Loading organizations…', 1000);
+  const spinner = wait('Loading scopes…', 1000);
   const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
   spinner();
 
