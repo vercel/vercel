@@ -139,7 +139,7 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  _NodeVersion?: string,
+  _nodeVersion?: string,
   _config?: Config,
   meta?: Meta
 ): Promise<NodeVersion> {
