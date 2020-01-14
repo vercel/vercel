@@ -93,7 +93,7 @@ export default async function processDeployment({
 
   let deployingSpinner = wait(
     isDetectingFramework
-      ? `Detecting framework`
+      ? `Setting up project`
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
     0
   );

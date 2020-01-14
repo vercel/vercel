@@ -26,7 +26,9 @@ export default async function editProjectSettings(
   framework: Framework | null
 ) {
   if (framework) {
-    output.print(`Auto-detected ${chalk.bold(framework.name)} settings:\n`);
+    output.print(
+      `Auto-detected project settings (${chalk.bold(framework.name)}):\n`
+    );
 
     for (let field of fields) {
       const defaults = framework.settings[field.value];
