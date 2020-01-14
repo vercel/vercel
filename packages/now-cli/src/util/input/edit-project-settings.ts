@@ -25,26 +25,6 @@ export default async function editProjectSettings(
   projectSettings: ProjectSettings | null,
   framework: Framework | null
 ) {
-  if (framework) {
-    output.print(
-      `Auto-detected project settings (${chalk.bold(framework.name)}):\n`
-    );
-
-    for (let field of fields) {
-      const defaults = framework.settings[field.value];
-
-      output.print(
-        chalk.gray(
-          `- ${chalk.bold(`${field.name}:`)} ${`${
-            isSettingValue(defaults)
-              ? defaults.value
-              : chalk.italic(`${defaults.placeholder}`)
-          }`}`
-        ) + '\n'
-      );
-    }
-  }
-
   // create new settings object filled with "null" values
   const settings: Partial<ProjectSettings> = {};
 
@@ -53,12 +33,29 @@ export default async function editProjectSettings(
       (projectSettings && projectSettings[field.value]) || null;
   }
 
-  const shouldOverrideSettings = await confirm(
-    `Want to override the settings?`,
-    false
+  if (!framework) {
+    return settings;
+  }
+
+  output.print(
+    `Auto-detected project settings (${chalk.bold(framework.name)}):\n`
   );
 
-  if (!shouldOverrideSettings) {
+  for (let field of fields) {
+    const defaults = framework.settings[field.value];
+
+    output.print(
+      chalk.gray(
+        `- ${chalk.bold(`${field.name}:`)} ${`${
+          isSettingValue(defaults)
+            ? defaults.value
+            : chalk.italic(`${defaults.placeholder}`)
+        }`}`
+      ) + '\n'
+    );
+  }
+
+  if (!(await confirm(`Want to override the settings?`, false))) {
     return settings;
   }
 
