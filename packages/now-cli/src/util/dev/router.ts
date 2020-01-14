@@ -131,7 +131,7 @@ export async function devRouter(
         }
 
         if (routeConfig.continue) {
-          if (phase === 'miss' && routeConfig.status) {
+          if (phase === 'miss' && routeConfig.status === 404) {
             // Don't continue on miss route so that 404 works
           } else {
             reqPathname = destPath;
