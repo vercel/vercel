@@ -10,7 +10,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -38,7 +38,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"gatsby\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -65,7 +65,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"hexo\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -92,7 +92,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@11ty\\/eleventy\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -119,11 +119,11 @@
     "detectors": {
       "some": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"docusaurus\":\\s*\".+?\"[^}]*}"
         },
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@docusaurus\\/core\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -151,7 +151,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"preact-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -178,7 +178,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"ember-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -206,7 +206,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@vue\\/cli-service\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -232,7 +232,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@scullyio\\/init\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -260,7 +260,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@angular\\/cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -287,7 +287,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"polymer-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -315,7 +315,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"sirv-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -343,7 +343,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@ionic\\/react\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -371,11 +371,11 @@
     "detectors": {
       "some": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"react-scripts\":\\s*\".+?\"[^}]*}"
         },
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"react-dev-utils\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -402,7 +402,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"gridsome\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -430,7 +430,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"umi\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -458,7 +458,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"sapper\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -485,7 +485,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"saber\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -512,7 +512,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@stencil\\/core\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -540,7 +540,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"nuxt\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -568,18 +568,18 @@
     "detectors": {
       "some": [
         {
-          "file": "config.yaml"
+          "path": "config.yaml"
         },
         {
-          "file": "config.toml"
+          "path": "config.toml"
         },
         {
-          "file": "config.json"
+          "path": "config.json"
         }
       ],
       "every": [
         {
-          "path": "contents/"
+          "path": "content/"
         }
       ]
     },
@@ -605,7 +605,7 @@
     "detectors": {
       "every": [
         {
-          "file": "_config.yml"
+          "path": "_config.yml"
         }
       ]
     },
@@ -631,7 +631,7 @@
     "detectors": {
       "every": [
         {
-          "file": "brunch-config.js"
+          "path": "brunch-config.js"
         }
       ]
     },
@@ -657,7 +657,7 @@
     "detectors": {
       "every": [
         {
-          "file": "config.rb"
+          "path": "config.rb"
         }
       ]
     },
@@ -683,7 +683,7 @@
     "detectors": {
       "some": [
         {
-          "file": "config.toml"
+          "path": "config.toml"
         }
       ]
     },

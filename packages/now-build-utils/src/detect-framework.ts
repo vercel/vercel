@@ -23,18 +23,22 @@ async function matches(fs: DetectorFilesystem, framework: Framework) {
     return false;
   }
 
-  const check = async ({ file, matchContent }: FrameworkDetectionItem) => {
-    if (!file) {
+  const check = async ({ path, matchContent }: FrameworkDetectionItem) => {
+    if (!path) {
       return false;
     }
 
-    if ((await fs.exists(file)) === false) {
+    if ((await fs.hasPath(path)) === false) {
       return false;
     }
 
     if (matchContent) {
+      if ((await fs.isFile(path)) === false) {
+        return false;
+      }
+
       const regex = new RegExp(matchContent, 'gm');
-      const content = await fs.readFile(file);
+      const content = await fs.readFile(path);
 
       if (!regex.test(content.toString())) {
         return false;
