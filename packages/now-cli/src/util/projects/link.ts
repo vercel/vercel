@@ -9,7 +9,7 @@ import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
 import { Project } from '../../types';
-import { Org } from '../../types';
+import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
 
 const readFile = promisify(fs.readFile);
@@ -17,13 +17,6 @@ const writeFile = promisify(fs.writeFile);
 
 export const NOW_FOLDER = '.now';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
-
-interface ProjectFolderLink {
-  projectId: string;
-  orgId: string;
-  orgSlug?: string;
-  projectName?: string;
-}
 
 async function getOrg(client: Client, orgId: string): Promise<Org | null> {
   if (orgId.startsWith('team_')) {
@@ -42,11 +35,21 @@ export async function getLinkedProject(
   path: string
 ): Promise<[Org | null, Project | null]> {
   try {
-    const json = await readFile(join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE), {
-      encoding: 'utf8',
-    });
+    let link: ProjectLink;
 
-    const link: ProjectFolderLink = JSON.parse(json);
+    if (process.env.NOW_ORG_ID && process.env.NOW_PROJECT_ID) {
+      link = {
+        orgId: process.env.NOW_ORG_ID,
+        projectId: process.env.NOW_PROJECT_ID,
+      };
+    } else {
+      const json = await readFile(
+        join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
+        { encoding: 'utf8' }
+      );
+
+      link = JSON.parse(json);
+    }
 
     const [org, project] = await Promise.all([
       getOrg(client, link.orgId),
@@ -78,7 +81,7 @@ export async function getLinkedProject(
 export async function linkFolderToProject(
   output: Output,
   path: string,
-  projectFolderLink: ProjectFolderLink,
+  projectLink: ProjectLink,
   projectName: string,
   orgSlug: string
 ) {
@@ -95,10 +98,8 @@ export async function linkFolderToProject(
 
   await writeFile(
     join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
-    JSON.stringify(projectFolderLink),
-    {
-      encoding: 'utf8',
-    }
+    JSON.stringify(projectLink),
+    { encoding: 'utf8' }
   );
 
   // update .nowignore
