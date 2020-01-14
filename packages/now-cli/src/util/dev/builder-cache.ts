@@ -172,7 +172,7 @@ export function filterPackage(
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
   const parsedVersion = parseVersionSafe(parsed.rawSpec);
-  // skip install of already installed runtime
+  // skip install of already installed Runtime
   if (
     parsed.name &&
     parsed.type === 'version' &&
@@ -242,7 +242,7 @@ export async function installBuilders(
   );
 
   if (packagesToInstall.length === 0) {
-    output.debug('No runtimes need to be installed');
+    output.debug('No Runtimes need to be installed');
     return;
   }
 
