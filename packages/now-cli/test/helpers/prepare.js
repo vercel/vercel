@@ -477,6 +477,15 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
+    'project-link': {
+      'pages/index.js':
+        'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
+      'package.json': JSON.stringify({
+        dependencies: {
+          gatsby: 'latest',
+        },
+      }),
+    },
   };
 
   for (const typeName of Object.keys(spec)) {

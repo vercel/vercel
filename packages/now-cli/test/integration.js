@@ -2237,6 +2237,152 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
+test('should show prompts to set up project', async t => {
+  const directory = fixture('project-link');
+
+  const now = execa(binaryPath, [
+    directory,
+    '--name',
+    session,
+    '--public',
+    ...defaultArgs,
+  ]);
+
+  // display output
+  now.stdout.on('data', chunk =>
+    console.log(`chunk stdout: ${chunk.toString()}`)
+  );
+  now.stderr.on('data', chunk =>
+    console.log(`chunk stderr: ${chunk.toString()}`)
+  );
+  // now.stdin.pipe(process.stdout);
+
+  const waitForPrompt = assertion =>
+    new Promise(resolve => {
+      const listener = chunk => {
+        if (assertion(chunk)) {
+          now.stdout.off('data', listener);
+          now.stderr.off('data', listener);
+          resolve();
+        }
+      };
+      now.stdout.on('data', listener);
+      now.stderr.on('data', listener);
+    });
+
+  await waitForPrompt(chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  console.log('setup and deploy passedddd');
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(chunk => chunk.includes('Link to existing project?'));
+  now.stdin.write('no\n');
+
+  await waitForPrompt(chunk => chunk.includes('What’s your project’s name?'));
+  now.stdin.write(`${session}\n`);
+
+  await waitForPrompt(chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  now.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(chunk => chunk.includes(`What's your Build Command?`));
+  now.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+
+  await waitForPrompt(chunk => chunk.includes(`What's your Output Directory?`));
+  now.stdin.write(`o\n`);
+
+  await waitForPrompt(chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  now.stdin.write(`yarn dev\n`);
+
+  await waitForPrompt(chunk => chunk.includes('Linked to'));
+
+  const output = await now;
+
+  // Ensure the exit code is right
+  t.is(output.exitCode, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(output.stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const text = await response.text();
+  t.is(text.includes('<h1>custom hello</h1>'), true, text);
+});
+
+test('should not prompt "project settings overwrite" for undetected projects', async t => {
+  const directory = fixture('static-deployment');
+
+  const now = execa(binaryPath, [
+    directory,
+    '--name',
+    session,
+    '--public',
+    ...defaultArgs,
+  ]);
+
+  // display output
+  now.stdout.on('data', chunk =>
+    console.log(`chunk stdout: ${chunk.toString()}`)
+  );
+  now.stderr.on('data', chunk =>
+    console.log(`chunk stderr: ${chunk.toString()}`)
+  );
+  // now.stdin.pipe(process.stdout);
+
+  const waitForPrompt = assertion =>
+    new Promise(resolve => {
+      const listener = chunk => {
+        if (assertion(chunk)) {
+          now.stdout.off('data', listener);
+          now.stderr.off('data', listener);
+          resolve();
+        }
+      };
+      now.stdout.on('data', listener);
+      now.stderr.on('data', listener);
+    });
+
+  await waitForPrompt(chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(chunk => chunk.includes('Link to existing project?'));
+  now.stdin.write('no\n');
+
+  await waitForPrompt(chunk => chunk.includes('What’s your project’s name?'));
+  now.stdin.write(`${session}\n`);
+
+  await waitForPrompt(chunk => {
+    if (chunk.includes('Want to override the settings?')) {
+      throw new Error();
+    }
+    return chunk.includes('Linked to');
+  });
+
+  const { exitCode } = await now;
+  t.is(exitCode, 0);
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
