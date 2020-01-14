@@ -393,6 +393,13 @@ export const frameworks: Framework[] = [
     devCommand: 'bundle exec middleman server -p $PORT',
     getOutputDirName: async () => 'build',
   },
+  {
+    name: 'Zola',
+    slug: 'zola',
+    buildCommand: 'zola build',
+    devCommand: 'zola serve --port $PORT',
+    getOutputDirName: async () => 'public',
+  },
 ];
 
 export interface Framework {

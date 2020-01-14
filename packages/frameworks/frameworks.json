@@ -576,6 +576,11 @@
         {
           "file": "config.json"
         }
+      ],
+      "every": [
+        {
+          "path": "contents/"
+        }
       ]
     },
     "settings": {
@@ -665,6 +670,32 @@
       },
       "outputDirectory": {
         "value": "build"
+      }
+    }
+  },
+  {
+    "name": "Zola",
+    "slug": "zola",
+    "demo": "https://zola.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/zola.svg",
+    "tagline": "Zola is a one-stop static site engine for all of your static needs.",
+    "description": "A Zola site, created with the Zola CLI.",
+    "detectors": {
+      "some": [
+        {
+          "file": "config.toml"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "value": "zola build"
+      },
+      "devCommand": {
+        "value": "zola serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
       }
     }
   },
@@ -768,14 +799,6 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hyperapp.svg",
     "tagline": "HyperApp is a low-footprint framework for building web interfaces without a learning curve.",
     "description": "A HyperApp app to get you up and running."
-  },
-  {
-    "name": "Zola",
-    "slug": "zola",
-    "demo": "https://zola.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/zola.svg",
-    "tagline": "Zola is a one-stop static site engine for all of your static needs.",
-    "description": "A Zola site, created with the Zola CLI."
   },
   {
     "name": "Pelican",
