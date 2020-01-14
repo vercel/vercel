@@ -163,7 +163,11 @@ const main = async argv_ => {
 
   output.print(
     `${chalk.grey(`Now CLI ${pkg.version}`)}${
-      pkg.version.includes('canary') ? ' — https://zeit.co/feedback' : ''
+      targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
+    }${
+      pkg.version.includes('canary') || targetOrSubcommand === 'dev'
+        ? ' — https://zeit.co/feedback'
+        : ''
     }\n`
   );
 
