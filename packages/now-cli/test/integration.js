@@ -2237,8 +2237,22 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('use `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
-  const directory = fixture('static-single-file');
+test.only('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+  const directory = fixture('static-deployment');
+
+  const output = await execute([directory], {
+    env: {
+      NOW_ORG_ID: 'asdf',
+      NOW_PROJECT_ID: 'asdf',
+    },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test.only('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+  const directory = fixture('static-deployment');
 
   // generate `.now`
   await execute([directory, '--confirm']);
@@ -2254,6 +2268,7 @@ test('use `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
   });
 
   t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes('Linked to'), false);
 });
 
 test.after.always(async () => {
