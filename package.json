@@ -43,7 +43,7 @@
     "lint": "eslint . --ext .ts,.js"
   },
   "lint-staged": {
-    "*.{js,ts}": [
+    "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [
       "prettier --write",
       "eslint",
       "git add"

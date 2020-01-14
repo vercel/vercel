@@ -333,6 +333,34 @@
     }
   },
   {
+    "name": "Ionic React",
+    "slug": "ionic-react",
+    "demo": "https://ionic-react.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic-react.svg",
+    "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
+    "description": "An Ionic React site, created with the Ionic CLI.",
+    "website": "https://ionicframework.com",
+    "detectors": {
+      "every": [
+        {
+          "file": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@ionic\\/react\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "stencil build --dev --watch --serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
+      }
+    }
+  },
+  {
     "name": "Create React App",
     "slug": "create-react-app",
     "demo": "https://react-functions.now-examples.now.sh",
@@ -772,15 +800,6 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/assemble.svg",
     "tagline": "A static site generator for Grunt.js and Yeoman, Assemble makes it dead simple to build modular sites and blogs.",
     "description": "An Assemble site, created from the Assemble quickstart."
-  },
-  {
-    "name": "Ionic React",
-    "slug": "ionic-react",
-    "demo": "https://ionic-react.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic-react.svg",
-    "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
-    "description": "An Ionic React site, created with the Ionic CLI.",
-    "website": "https://ionicframework.com"
   },
   {
     "name": "Foundation",

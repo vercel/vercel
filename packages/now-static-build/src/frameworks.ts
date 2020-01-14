@@ -205,6 +205,12 @@ export const frameworks: Framework[] = [
     ],
   },
   {
+    name: 'Ionic React',
+    slug: 'ionic-react',
+    dependency: '@ionic/react',
+    getOutputDirName: async () => 'build',
+  },
+  {
     name: 'Create React App',
     slug: 'create-react-app',
     dependency: 'react-scripts',
