@@ -3,6 +3,7 @@ import semver from 'semver';
 import pipe from 'promisepipe';
 import retry from 'async-retry';
 import npa from 'npm-package-arg';
+import pluralize from 'pluralize';
 import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
@@ -241,12 +242,15 @@ export async function installBuilders(
   );
 
   if (packagesToInstall.length === 0) {
-    output.debug('No builders need to be installed');
+    output.debug('No runtimes need to be installed');
     return;
   }
 
   const stopSpinner = wait(
-    `Installing builders: ${packagesToInstall.sort().join(', ')}`
+    `Installing ${pluralize(
+      'runtime',
+      packagesToInstall.length
+    )}: ${packagesToInstall.sort().join(', ')}`
   );
 
   try {
@@ -276,7 +280,7 @@ export async function installBuilders(
   const buildersPkgAfter = await readJSON(buildersPkgPath);
   for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
     if (version !== buildersPkgBefore.dependencies[name]) {
-      output.debug(`Builder "${name}" updated to version \`${version}\``);
+      output.debug(`Runtime "${name}" updated to version \`${version}\``);
       updatedPackages.push(name);
     }
   }
@@ -324,7 +328,7 @@ export async function updateBuilders(
   const buildersPkgAfter = await readJSON(buildersPkgPath);
   for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
     if (version !== buildersPkgBefore.dependencies[name]) {
-      output.debug(`Builder "${name}" updated to version \`${version}\``);
+      output.debug(`Runtime "${name}" updated to version \`${version}\``);
       updatedPackages.push(name);
     }
   }
