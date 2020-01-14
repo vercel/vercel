@@ -359,7 +359,7 @@ export default async function main(
     }
 
     org = await selectOrg(
-      'Which organization do you want to deploy to?',
+      'Which scope do you want to deploy to?',
       client,
       ctx.config.currentTeam,
       autoConfirm
