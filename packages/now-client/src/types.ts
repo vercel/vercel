@@ -20,6 +20,7 @@ export interface NowClientOptions {
   userAgent?: string;
   defaultName?: string;
   isDirectory?: boolean;
+  skipAutoDetectionConfirmation?: boolean;
 }
 
 export interface Deployment {
