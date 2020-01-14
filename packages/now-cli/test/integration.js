@@ -9,7 +9,7 @@ import _execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import fs, { writeFile, readFile } from 'fs-extra';
+import fs, { writeFile, readFile, remove } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -2233,6 +2233,25 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
 test('ensure `github` and `scope` are not sent to the API', async t => {
   const directory = fixture('github-and-scope-config');
   const output = await execute([directory, '--confirm']);
+
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('use `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+  const directory = fixture('static-single-file');
+
+  // generate `.now`
+  await execute([directory, '--confirm']);
+
+  const link = require(path.join(directory, '.now/project.json'));
+  await remove(path.join(directory, '.now'));
+
+  const output = await execute([directory], {
+    env: {
+      NOW_ORG_ID: link.orgId,
+      NOW_PROJECT_ID: link.projectId,
+    },
+  });
 
   t.is(output.exitCode, 0, formatOutput(output));
 });
