@@ -117,7 +117,7 @@ export async function linkFolderToProject(
     prependEmoji(
       `Linked to ${chalk.bold(
         `${orgSlug}/${projectName}`
-      )} (created .now and added it to .nowignore)`,
+      )} (created .now and added it to .gitignore)`,
       emoji('link')
     ) + '\n'
   );
