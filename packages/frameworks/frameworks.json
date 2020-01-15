@@ -10,7 +10,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -38,7 +38,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"gatsby\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -65,7 +65,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"hexo\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -92,7 +92,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@11ty\\/eleventy\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -119,11 +119,11 @@
     "detectors": {
       "some": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"docusaurus\":\\s*\".+?\"[^}]*}"
         },
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@docusaurus\\/core\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -151,7 +151,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"preact-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -178,7 +178,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"ember-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -206,7 +206,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@vue\\/cli-service\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -232,7 +232,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@scullyio\\/init\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -260,7 +260,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@angular\\/cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -287,7 +287,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"polymer-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -315,7 +315,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"sirv-cli\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -333,6 +333,34 @@
     }
   },
   {
+    "name": "Ionic React",
+    "slug": "ionic-react",
+    "demo": "https://ionic-react.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic-react.svg",
+    "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
+    "description": "An Ionic React site, created with the Ionic CLI.",
+    "website": "https://ionicframework.com",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@ionic\\/react\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`build` from `package.json`"
+      },
+      "devCommand": {
+        "value": "stencil build --dev --watch --serve --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "public"
+      }
+    }
+  },
+  {
     "name": "Create React App",
     "slug": "create-react-app",
     "demo": "https://react-functions.now-examples.now.sh",
@@ -343,11 +371,11 @@
     "detectors": {
       "some": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"react-scripts\":\\s*\".+?\"[^}]*}"
         },
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"react-dev-utils\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -374,7 +402,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"gridsome\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -402,7 +430,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"umi\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -430,7 +458,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"sapper\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -457,7 +485,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"saber\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -484,7 +512,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@stencil\\/core\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -512,7 +540,7 @@
     "detectors": {
       "every": [
         {
-          "file": "package.json",
+          "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"nuxt\":\\s*\".+?\"[^}]*}"
         }
       ]
@@ -540,13 +568,13 @@
     "detectors": {
       "some": [
         {
-          "file": "config.yaml"
+          "path": "config.yaml"
         },
         {
-          "file": "config.toml"
+          "path": "config.toml"
         },
         {
-          "file": "config.json"
+          "path": "config.json"
         }
       ]
     },
@@ -572,7 +600,7 @@
     "detectors": {
       "every": [
         {
-          "file": "_config.yml"
+          "path": "_config.yml"
         }
       ]
     },
@@ -598,7 +626,7 @@
     "detectors": {
       "every": [
         {
-          "file": "brunch-config.js"
+          "path": "brunch-config.js"
         }
       ]
     },
@@ -624,7 +652,7 @@
     "detectors": {
       "every": [
         {
-          "file": "config.rb"
+          "path": "config.rb"
         }
       ]
     },
@@ -772,15 +800,6 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/assemble.svg",
     "tagline": "A static site generator for Grunt.js and Yeoman, Assemble makes it dead simple to build modular sites and blogs.",
     "description": "An Assemble site, created from the Assemble quickstart."
-  },
-  {
-    "name": "Ionic React",
-    "slug": "ionic-react",
-    "demo": "https://ionic-react.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic-react.svg",
-    "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
-    "description": "An Ionic React site, created with the Ionic CLI.",
-    "website": "https://ionicframework.com"
   },
   {
     "name": "Foundation",
