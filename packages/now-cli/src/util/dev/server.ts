@@ -1170,7 +1170,7 @@ export default class DevServer {
       req.method,
       topRoutes,
       this,
-      {},
+      undefined,
       missRoutes,
       hitRoutes,
       'filesystem'

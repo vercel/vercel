@@ -125,13 +125,7 @@ export async function devRouter(
         }
 
         if (headers) {
-          // Create a clone of the `headers` object to not mutate the original one
-          headers = { ...headers };
           for (const key of Object.keys(headers)) {
-            headers[key] = resolveRouteParameters(headers[key], match, keys);
-          }
-
-          for (const [key, value] of Object.entries(headers)) {
             if (
               previousHeaders &&
               // eslint-disable-next-line no-prototype-builtins
@@ -140,6 +134,7 @@ export async function devRouter(
             ) {
               // don't override headers in the miss phase
             } else {
+              const value = resolveRouteParameters(headers[key], match, keys);
               combinedHeaders[key] = value;
             }
           }
@@ -154,11 +149,9 @@ export async function devRouter(
           }
         }
 
-        if (routeConfig.check && devServer) {
+        if (routeConfig.check && devServer && phase !== 'hit') {
           const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(pathname);
-          // If the file is not found, `check: true` will
-          // behave the same as `continue: true`
           if (!hasDestFile) {
             if (missRoutes && missRoutes.length > 0) {
               // Trigger a 'miss'
