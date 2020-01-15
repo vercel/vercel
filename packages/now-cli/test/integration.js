@@ -2264,7 +2264,6 @@ test('should show prompts to set up project', async t => {
   const now = execa(binaryPath, [directory, ...defaultArgs]);
 
   await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
-  console.log('setup and deploy passedddd');
   now.stdin.write('yes\n');
 
   await waitForPrompt(now, chunk =>
