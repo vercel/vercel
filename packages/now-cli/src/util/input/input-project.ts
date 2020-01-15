@@ -64,7 +64,7 @@ export default async function inputProject(
       const answers = await inquirer.prompt({
         type: 'input',
         name: 'existingProjectName',
-        message: `What's the name of your existing project?`,
+        message: `What’s the name of your existing project?`,
       });
       const projectName = answers.existingProjectName as string;
 
