@@ -18,7 +18,5 @@ export default withApiHandler(async function(
   req: NowRequest,
   res: NowResponse
 ) {
-  throw new Error('I am an error');
-
   return res.status(200).json(frameworks);
 });
