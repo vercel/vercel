@@ -167,7 +167,7 @@ const waitForPrompt = (cp, assertion) =>
     cp.stdout.on('data', listener);
     cp.stderr.on('data', listener);
 
-    cp.on('exit', () => resolve());
+    cp.on('exit', () => reject());
   });
 
 const getDeploymentBuildsByUrl = async url => {
