@@ -157,6 +157,7 @@ const waitForPrompt = (cp, assertion) =>
         if (a) {
           cp.stdout.off('data', listener);
           cp.stderr.off('data', listener);
+          cp.off('exit', exitListener);
           resolve();
         }
       } catch (error) {
@@ -164,10 +165,12 @@ const waitForPrompt = (cp, assertion) =>
       }
     };
 
+    const exitListener = () => reject();
+
     cp.stdout.on('data', listener);
     cp.stderr.on('data', listener);
 
-    cp.on('exit', () => reject());
+    cp.on('exit', exitListener);
   });
 
 const getDeploymentBuildsByUrl = async url => {
