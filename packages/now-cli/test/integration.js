@@ -9,7 +9,7 @@ import _execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import fs, { writeFile, readFile, remove } from 'fs-extra';
+import fs, { writeFile, readFile, remove, copy } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -2324,7 +2324,7 @@ test('should show prompts to set up project', async t => {
 
 test('should not prompt "project settings overwrite" for undetected projects', async t => {
   const directory = fixture('static-deployment');
-  const projectName = `project-link-${
+  const projectName = `static-deployment-${
     Math.random()
       .toString(36)
       .split('.')[1]
@@ -2360,6 +2360,166 @@ test('should not prompt "project settings overwrite" for undetected projects', a
     );
     return chunk.includes('Linked to');
   });
+
+  const output = await now;
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('should prefill "project name" prompt with detected project name', async t => {
+  const directory = fixture('static-deployment');
+  const projectName = `static-deployment-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.now'));
+
+  const now = execa(binaryPath, [
+    directory,
+    '--name',
+    projectName,
+    ...defaultArgs,
+  ]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What’s your project’s name? (${projectName})`)
+  );
+  now.stdin.write(`\n`);
+
+  const output = await now;
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test.only('should prefill "project name" prompt with folder name', async t => {
+  const projectName = `static-deployment-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  const src = fixture('static-deployment');
+
+  // remove previously linked project if it exists
+  await remove(path.join(src, '.now'));
+
+  const directory = path.join(src, '../', projectName);
+  await copy(src, directory);
+
+  const now = execa(binaryPath, [directory, ...defaultArgs]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What’s your project’s name? (${projectName})`)
+  );
+  now.stdin.write(`\n`);
+
+  const output = await now;
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test.only('should prefill "project name" prompt with --name', async t => {
+  const directory = fixture('static-deployment');
+  const projectName = `static-deployment-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.now'));
+
+  const now = execa(binaryPath, [
+    directory,
+    '--name',
+    projectName,
+    ...defaultArgs,
+  ]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What’s your project’s name? (${projectName})`)
+  );
+  now.stdin.write(`\n`);
+
+  const output = await now;
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test.only('should prefill "project name" prompt with now.json `name`', async t => {
+  const directory = fixture('static-deployment');
+  const projectName = `static-deployment-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.now'));
+  await fs.writeFile(
+    path.join(directory, 'now.json'),
+    JSON.stringify({
+      name: projectName,
+    })
+  );
+
+  const now = execa(binaryPath, [directory, ...defaultArgs]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What’s your project’s name? (${projectName})`)
+  );
+  now.stdin.write(`\n`);
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));

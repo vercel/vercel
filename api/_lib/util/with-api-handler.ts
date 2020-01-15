@@ -1,4 +1,5 @@
 import { NowRequest, NowResponse } from '@now/node';
+import { errorHandler } from './error-handler';
 
 type Handler = (req: NowRequest, res: NowResponse) => Promise<any>;
 
@@ -24,6 +25,20 @@ export function withApiHandler(handler: Handler): Handler {
       });
     }
 
-    return handler(req, res);
+    try {
+      const result = await handler(req, res);
+      return result;
+    } catch (error) {
+      errorHandler(error, {
+        url: req.url,
+      });
+
+      return res.status(500).json({
+        error: {
+          code: 'unexpected_error',
+          message: 'An unexpected error occurred.',
+        },
+      });
+    }
   };
 }
