@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "routes": [
+    { "handle": "hit" },
+    {
+      "src": "^/.*",
+      "headers": { "test": "1" },
+      "continue": true
+    }
+  ]
+}

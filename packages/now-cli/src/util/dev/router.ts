@@ -68,7 +68,24 @@ export async function devRouter(
         if (routeConfig.handle === 'filesystem' && devServer) {
           const found = await devServer.hasFilesystem(reqPathname);
           if (found) {
-            break;
+            if (hitRoutes && hitRoutes.length > 0) {
+              // Trigger a 'hit'
+              const hitResult = await devRouter(
+                reqUrl,
+                reqMethod,
+                hitRoutes,
+                devServer,
+                previousHeaders,
+                [],
+                [],
+                'hit'
+              );
+              if (hitResult.found) {
+                return hitResult;
+              }
+            } else {
+              break;
+            }
           } else if (missRoutes && missRoutes.length > 0) {
             // Trigger a 'miss'
             const missResult = await devRouter(
@@ -116,10 +133,10 @@ export async function devRouter(
 
           for (const [key, value] of Object.entries(headers)) {
             if (
-              phase === 'miss' &&
               previousHeaders &&
               // eslint-disable-next-line no-prototype-builtins
-              previousHeaders.hasOwnProperty(key)
+              previousHeaders.hasOwnProperty(key) &&
+              (phase === 'hit' || phase === 'miss')
             ) {
               // don't override headers in the miss phase
             } else {

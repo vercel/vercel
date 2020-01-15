@@ -394,6 +394,17 @@ test(
   })
 );
 
+test(
+  '[now dev] handles hit after handle: filesystem',
+  testFixtureStdio('handle-hit-after-fs', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/blog.html`);
+    const test = response.headers.get('test');
+    t.is(test, '1', 'expected hit header to be added');
+    const body = await response.text();
+    t.regex(body, /Blog Page/gm);
+  })
+);
+
 test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);

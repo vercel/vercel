@@ -1202,6 +1202,18 @@ export default class DevServer {
         routeResult.dest,
         this
       );
+    } else if (match && hitRoutes.length > 0) {
+      // Since there was a build match, enter the hit phase
+      routeResult = await devRouter(
+        routeResult.dest || req.url,
+        req.method,
+        hitRoutes,
+        this,
+        routeResult.headers,
+        [],
+        [],
+        'hit'
+      );
     }
 
     const { dest, status, headers, uri_args } = routeResult;
