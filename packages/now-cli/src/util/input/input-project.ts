@@ -23,17 +23,18 @@ export default async function inputProject(
   let detectedProject = null;
   const existingProjectSpinner = wait('Searching for existing projects…', 1000);
   try {
-    detectedProject = await getProjectByIdOrName(
+    const project = await getProjectByIdOrName(
       client,
       detectedProjectName,
       org.id
     );
+    detectedProject = project instanceof ProjectNotFound ? null : project;
   } catch (error) {}
   existingProjectSpinner();
 
   let shouldLinkProject;
 
-  if (!detectedProject || detectedProject instanceof ProjectNotFound) {
+  if (!detectedProject) {
     // did not auto-detect a project to link
     shouldLinkProject = await confirm(`Link to existing project?`, false);
   } else {
@@ -88,6 +89,7 @@ export default async function inputProject(
       type: 'input',
       name: 'newProjectName',
       message: `What’s your project’s name?`,
+      default: !detectedProject ? detectedProjectName : undefined,
     });
     newProjectName = answers.newProjectName as string;
 

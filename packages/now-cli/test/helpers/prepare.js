@@ -478,8 +478,7 @@ CMD ["node", "index.js"]`,
       }),
     },
     'project-link': {
-      'pages/index.js':
-        'export default () => <div><h1>Now CLI test</h1></div>',
+      'pages/index.js': 'export default () => <div><h1>Now CLI test</h1></div>',
       'package.json': JSON.stringify({
         dependencies: {
           gatsby: 'latest',
