@@ -21,3 +21,5 @@ packages/now-cli/test/dev/fixtures/**/public
 packages/now-cli/test/fixtures/integration
 test/lib/deployment/failed-page.txt
 .DS_Store
+.next
+public

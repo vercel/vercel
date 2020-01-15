@@ -36,11 +36,10 @@ export async function downloadFilesInWorkPath({
   files,
   meta,
   config,
-
 }: BuildOptions) {
-    debug('Downloading user files...');
-    let downloadedFiles = await download(files, workPath, meta);
-    if (meta && meta.isDev) {
+  debug('Downloading user files...');
+  let downloadedFiles = await download(files, workPath, meta);
+  if (meta && meta.isDev) {
     let base = null;
 
     if (config && config.zeroConfig) {

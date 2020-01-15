@@ -20,6 +20,7 @@ export interface NowClientOptions {
   userAgent?: string;
   defaultName?: string;
   isDirectory?: boolean;
+  skipAutoDetectionConfirmation?: boolean;
 }
 
 export interface Deployment {
@@ -168,4 +169,9 @@ export interface DeploymentOptions extends LegacyDeploymentOptions {
   name?: string;
   public?: boolean;
   meta?: Dictionary<string>;
+  projectSettings?: {
+    devCommand?: string | null;
+    buildCommand?: string | null;
+    outputDirectory?: string | null;
+  };
 }

@@ -1,5 +1,6 @@
 node_modules
 dist
+examples
 
 # gatsby-plugin-now
 packages/gatsby-plugin-now/test/fixtures

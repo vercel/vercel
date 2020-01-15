@@ -21,7 +21,10 @@ import {
   getNodeVersion,
   getSpawnOptions,
 } from './fs/run-user-scripts';
-import { getLatestNodeVersion } from './fs/node-version';
+import {
+  getLatestNodeVersion,
+  getDiscontinuedNodeVersions,
+} from './fs/node-version';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import debug from './debug';
@@ -50,6 +53,7 @@ export {
   runShellScript,
   getNodeVersion,
   getLatestNodeVersion,
+  getDiscontinuedNodeVersions,
   getSpawnOptions,
   streamToBuffer,
   shouldServe,
@@ -58,7 +62,11 @@ export {
   getLambdaOptionsFromFunction,
 };
 
-export { detectRoutes, detectOutputDirectory } from './detect-routes';
+export {
+  detectRoutes,
+  detectOutputDirectory,
+  detectApiDirectory,
+} from './detect-routes';
 export { detectBuilders } from './detect-builders';
 export { detectFramework } from './detect-framework';
 export { DetectorFilesystem } from './detectors/filesystem';
@@ -66,3 +74,4 @@ export { readConfigFile } from './fs/read-config-file';
 
 export * from './schemas';
 export * from './types';
+export * from './errors';

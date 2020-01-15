@@ -14,6 +14,7 @@ export type FetchOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
+  accountId?: string;
 };
 
 export default class Client extends EventEmitter {
@@ -61,11 +62,23 @@ export default class Client extends EventEmitter {
       ? `${parsedUrl.protocol}//${parsedUrl.host}`
       : '';
 
-    if (opts.useCurrentTeam !== false && this.currentTeam) {
+    if (opts.accountId || opts.useCurrentTeam !== false) {
       const query = parsedUrl.query;
-      query.teamId = this.currentTeam;
+
+      if (opts.accountId) {
+        if (opts.accountId.startsWith('team_')) {
+          query.teamId = opts.accountId;
+        } else {
+          delete query.teamId;
+        }
+      } else if (opts.useCurrentTeam !== false && this.currentTeam) {
+        query.teamId = this.currentTeam;
+      }
+
       _url = `${apiUrl}${parsedUrl.pathname}?${qs.stringify(query)}`;
+
       delete opts.useCurrentTeam;
+      delete opts.accountId;
     }
 
     if (opts.json !== false && opts.body && typeof opts.body === 'object') {

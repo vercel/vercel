@@ -990,7 +990,7 @@ test('[now dev] temporary directory listing', async t => {
 
     await sleep(ms('20s'));
 
-    const firstResponse = await fetch(`http://localhost:${port}`, 180);
+    const firstResponse = await fetch(`http://localhost:${port}`);
     validateResponseHeaders(t, firstResponse);
     const body = await firstResponse.text();
     t.is(firstResponse.status, 404, `Received instead: ${body}`);
@@ -1237,22 +1237,5 @@ test(
 
     const body = await response.text();
     t.regex(body, /Hello, from Bash!/gm);
-  })
-);
-
-test(
-  '[now dev] Use public with a custom Serverless Function in `server/date.js',
-  testFixtureStdio('public-and-server-as-api', async (t, port) => {
-    const response = await fetchWithRetry(
-      `http://localhost:${port}/server/date`
-    );
-
-    validateResponseHeaders(t, response);
-
-    t.is(response.status, 200);
-    t.is(
-      await response.text(),
-      `current hour: ${Math.floor(Date.now() / 10000)}`
-    );
   })
 );

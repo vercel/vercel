@@ -1,0 +1,60 @@
+{
+  "private": true,
+  "name": "preact",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "start": "per-env",
+    "start:production": "npm run -s serve",
+    "start:development": "npm run -s dev",
+    "build": "preact build",
+    "serve": "preact build && preact serve",
+    "dev": "preact watch --port $PORT",
+    "lint": "eslint src",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "eslint": "^4.9.0",
+    "eslint-config-synacor": "^2.0.2",
+    "identity-obj-proxy": "^3.0.0",
+    "per-env": "^1.0.2",
+    "jest": "^21.2.1",
+    "preact-cli": "^2.1.0",
+    "preact-render-spy": "^1.2.1"
+  },
+  "dependencies": {
+    "preact": "^8.2.6",
+    "preact-compat": "^3.17.0",
+    "preact-render-to-string": "^4.1.0",
+    "preact-router": "^2.5.7"
+  },
+  "jest": {
+    "verbose": true,
+    "setupFiles": [
+      "<rootDir>/tests/__mocks__/browserMocks.js"
+    ],
+    "testRegex": "(/(__tests__|tests)/.*|(\\.|/)(test|spec))\\.jsx?$",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/tests/__mocks__/*"
+    ],
+    "testURL": "http://localhost:8080",
+    "moduleFileExtensions": [
+      "js",
+      "jsx"
+    ],
+    "moduleDirectories": [
+      "node_modules"
+    ],
+    "moduleNameMapper": {
+      "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/tests/__mocks__/fileMock.js",
+      "\\.(css|less|scss)$": "identity-obj-proxy",
+      "^./style$": "identity-obj-proxy",
+      "^preact$": "<rootDir>/node_modules/preact/dist/preact.min.js",
+      "^react$": "preact-compat",
+      "^react-dom$": "preact-compat",
+      "^create-react-class$": "preact-compat/lib/create-react-class",
+      "^react-addons-css-transition-group$": "preact-css-transition-group"
+    }
+  }
+}

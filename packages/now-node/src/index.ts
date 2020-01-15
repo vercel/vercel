@@ -71,7 +71,8 @@ async function downloadInstallAndBundle({
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
     undefined,
-    config
+    config,
+    meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   await runNpmInstall(
@@ -369,16 +370,13 @@ export async function build({
     });
   }
 
-  // Use the system-installed version of `node` when running via `now dev`
-  const runtime = meta.isDev ? 'nodejs' : nodeVersion.runtime;
-
   const lambda = await createLambda({
     files: {
       ...preparedFiles,
       ...launcherFiles,
     },
     handler: `${LAUNCHER_FILENAME}.launcher`,
-    runtime,
+    runtime: nodeVersion.runtime,
   });
 
   return { output: lambda, watch };

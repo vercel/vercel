@@ -197,7 +197,7 @@ const promptForEnvFields = async (list: string[]) => {
     });
   }
 
-  require('../../util/input/patch-inquirer');
+  require('../../util/input/patch-inquirer-legacy');
 
   log('Please enter values for the following environment variables:');
   const answers = await inquirer.prompt(questions);
