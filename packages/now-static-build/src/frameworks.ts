@@ -21,7 +21,6 @@ export interface Framework {
   dependency?: string;
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
-  minNodeRange?: string;
   cachePattern?: string;
   buildCommand?: string;
   devCommand?: string;
@@ -159,7 +158,6 @@ const frameworkList: Framework[] = [
     name: 'Scully',
     slug: 'scully',
     dependency: '@scullyio/init',
-    minNodeRange: '10.x',
     buildCommand: 'ng build && scully',
     getOutputDirName: async () => 'dist/static',
   },
@@ -167,7 +165,6 @@ const frameworkList: Framework[] = [
     name: 'Angular',
     slug: 'angular',
     dependency: '@angular/cli',
-    minNodeRange: '10.x',
     buildCommand: 'ng build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'dist';

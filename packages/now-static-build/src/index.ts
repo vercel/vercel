@@ -228,7 +228,6 @@ export async function build({
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
-    let minNodeRange: string | undefined = undefined;
 
     const routes: Route[] = [];
 
@@ -288,22 +287,11 @@ export async function build({
       debug(
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
-
-      if (framework.minNodeRange) {
-        minNodeRange = framework.minNodeRange;
-        debug(
-          `${framework.name} requires Node.js ${framework.minNodeRange}. Switching...`
-        );
-      } else {
-        debug(
-          `${framework.name} does not require a specific Node.js version. Continuing ...`
-        );
-      }
     }
 
     const nodeVersion = await getNodeVersion(
       entrypointDir,
-      minNodeRange,
+      undefined,
       config,
       meta
     );
