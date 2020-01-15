@@ -30,7 +30,7 @@ function printInspectUrl(
   const [sub, ...p] = url.split('.');
   const apex = p.join('.');
 
-  const q = sub.split('-').reverse();
+  const q = sub.split('-');
   const deploymentShortId = q.pop();
   const projectName = q.join('-');
 
