@@ -13,7 +13,7 @@ import Now from '../../util';
 import { NowConfig } from '../dev/types';
 import ua from '../ua';
 
-export default async function processDeployment({
+export default async function processLegacyDeployment({
   now,
   output,
   hashes,
@@ -30,13 +30,14 @@ export default async function processDeployment({
   hashes: { [key: string]: any };
   paths: string[];
   requestBody: DeploymentOptions;
-  uploadStamp: () => number;
-  deployStamp: () => number;
+  uploadStamp: () => string;
+  deployStamp: () => string;
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
 }) {
-  const { log, debug } = output;
+  let platformVersion = 1;
+  const { log, debug, note, warn } = output;
   let bar: Progress | null = null;
 
   const { env = {} } = requestBody;
@@ -58,6 +59,14 @@ export default async function processDeployment({
     requestBody,
     nowConfig
   )) {
+    if (event.type === 'notice') {
+      note(event.payload);
+    }
+
+    if (event.type === 'warning') {
+      warn(event.payload);
+    }
+
     if (event.type === 'hashes-calculated') {
       hashes = event.payload;
     }
@@ -95,11 +104,19 @@ export default async function processDeployment({
     if (event.type === 'created') {
       now._host = event.payload.url;
 
+      if (typeof event.payload.version === 'number') {
+        platformVersion = event.payload.version;
+      }
+
       if (!quiet) {
         if (fileCount) {
           log(`Synced ${pluralize('file', fileCount, true)} ${uploadStamp()}`);
         }
-        log(`${event.payload.url} ${chalk.grey('[v1]')} ${deployStamp()}`);
+        log(
+          chalk`https://${event.payload.url} {gray [v${String(
+            platformVersion
+          )}]} ${deployStamp()}`
+        );
       } else {
         process.stdout.write(`https://${event.payload.url}`);
       }
@@ -113,6 +130,16 @@ export default async function processDeployment({
     // Handle ready event
     if (event.type === 'ready') {
       log(`Build completed`);
+
+      if (platformVersion === 1) {
+        return event.payload;
+      }
+    }
+
+    // Handle alias-assigned event
+    if (platformVersion > 1 && event.type === 'alias-assigned') {
+      log(`Alias assigned`);
+
       return event.payload;
     }
   }
