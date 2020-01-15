@@ -14,13 +14,10 @@ if (process.env.SENTRY_DSN) {
 
 export function errorHandler(error: Error, extras?: { [key: string]: any }) {
   if (!process.env.SENTRY_DSN) {
-    console.log('Do not report error, because SENTRY_DSN is missing.');
     return;
   }
 
   try {
-    console.log('Report error');
-
     withScope(scope => {
       scope.setTag('service', serviceName);
       scope.setTag('function_name', assertEnv('AWS_LAMBDA_FUNCTION_NAME'));
@@ -30,8 +27,6 @@ export function errorHandler(error: Error, extras?: { [key: string]: any }) {
       }
 
       captureException(error);
-
-      console.log('Reported error');
     });
   } catch (e) {
     console.error(`Failed to report error to Sentry: ${e}`);
