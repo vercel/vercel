@@ -433,7 +433,7 @@ function getValue(
   name: keyof NowFramework['settings']
 ) {
   const setting = framework && framework.settings && framework.settings[name];
-  return (setting as SettingValue).value;
+  return setting && (setting as SettingValue).value;
 }
 
 export const frameworks: Framework[] = frameworkList.map(partialFramework => {
