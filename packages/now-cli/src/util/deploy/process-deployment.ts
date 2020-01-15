@@ -19,7 +19,7 @@ import { linkFolderToProject } from '../projects/link';
 function printInspectUrl(
   output: Output,
   deploymentUrl: string,
-  deployStamp: () => number,
+  deployStamp: () => string,
   orgName: string
 ) {
   const urlParts = deploymentUrl
@@ -46,8 +46,8 @@ export default async function processDeployment({
   hashes: { [key: string]: any };
   paths: string[];
   requestBody: DeploymentOptions;
-  uploadStamp: () => number;
-  deployStamp: () => number;
+  uploadStamp: () => string;
+  deployStamp: () => string;
   isLegacy: boolean;
   quiet: boolean;
   nowConfig?: NowConfig;
@@ -226,7 +226,7 @@ export default async function processDeployment({
       throw error;
     }
 
-    // Handle ready event
+    // Handle alias-assigned event
     if (event.type === 'alias-assigned') {
       if (queuedSpinner) {
         queuedSpinner();
