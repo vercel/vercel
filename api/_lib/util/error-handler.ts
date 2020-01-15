@@ -4,12 +4,10 @@ import { assertEnv } from './assert-env';
 const serviceName = 'api-frameworks';
 
 if (process.env.SENTRY_DSN) {
-  const version = assertEnv('NOW_URL');
-
   init({
     dsn: assertEnv('SENTRY_DSN'),
     environment: process.env.NODE_ENV || 'production',
-    release: `${serviceName}@${version}`,
+    release: `${serviceName}`,
     integrations: [],
   });
 }
@@ -22,6 +20,7 @@ export function errorHandler(error: Error, extras?: { [key: string]: any }) {
   try {
     withScope(scope => {
       scope.setTag('service', serviceName);
+      scope.setTag('function_name', assertEnv('AWS_LAMBDA_FUNCTION_NAME'));
 
       for (const [k, v] of Object.entries(extras)) {
         scope.setExtra(k, v);
