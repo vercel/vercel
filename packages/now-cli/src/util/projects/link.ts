@@ -38,10 +38,11 @@ export async function getLinkedProject(
   try {
     let link: ProjectLink;
 
-    if (process.env.NOW_ORG_ID && process.env.NOW_PROJECT_ID) {
+    const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+    if (NOW_ORG_ID && NOW_PROJECT_ID) {
       link = {
-        orgId: process.env.NOW_ORG_ID,
-        projectId: process.env.NOW_PROJECT_ID,
+        orgId: NOW_ORG_ID,
+        projectId: NOW_PROJECT_ID,
       };
     } else {
       const json = await readFile(
