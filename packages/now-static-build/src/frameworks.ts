@@ -445,9 +445,9 @@ export const frameworks: Framework[] = frameworkList.map(partialFramework => {
   const buildCommand = getValue(frameworkItem, 'buildCommand');
   const outputDirectory = getValue(frameworkItem, 'outputDirectory');
 
-  const getOutputDirName = outputDirectory
-    ? async () => outputDirectory
-    : partialFramework.getOutputDirName;
+  const getOutputDirName = partialFramework.getOutputDirName
+    ? partialFramework.getOutputDirName
+    : async () => outputDirectory || 'public';
 
   return {
     devCommand,
