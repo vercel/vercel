@@ -1,13 +1,13 @@
 export function emoji(label: string): string | undefined {
   switch (label) {
     case 'notice':
-      return 'ℹ️';
+      return '📝';
     case 'tip':
       return '💡';
     case 'warning':
-      return '⚠️';
+      return '❗️';
     case 'link':
-      return '☑️';
+      return '🔗';
     case 'inspect':
       return '🔍';
     case 'success':
