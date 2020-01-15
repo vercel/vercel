@@ -653,7 +653,6 @@ function hasNpmStart(pkg) {
 
 function hasFile(base, files, name) {
   const relative = files.map(file => toRelative(file, base));
-  console.log(731, relative);
   return relative.indexOf(name) !== -1;
 }
 
