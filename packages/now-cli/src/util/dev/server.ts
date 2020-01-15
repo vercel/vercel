@@ -1155,16 +1155,25 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
-    const { missRoutes, otherRoutes } = getRoutesTypes(routes);
+    const handleMap = getRoutesTypes(routes);
+    const topRoutes = handleMap.get(null) || [];
+    const filesystemRoutes = handleMap.get('filesystem');
+    if (filesystemRoutes) {
+      topRoutes.push({ handle: 'filesystem' });
+      topRoutes.push(...filesystemRoutes);
+    }
+    const missRoutes = handleMap.get('miss') || [];
+    const hitRoutes = handleMap.get('hit') || [];
 
     let routeResult = await devRouter(
       req.url,
       req.method,
-      otherRoutes,
+      topRoutes,
       this,
       {},
       missRoutes,
-      'top'
+      hitRoutes,
+      'filesystem'
     );
 
     let match = await findBuildMatch(
@@ -1182,6 +1191,7 @@ export default class DevServer {
         missRoutes,
         this,
         routeResult.headers,
+        [],
         [],
         'miss'
       );

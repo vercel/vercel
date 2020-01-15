@@ -5,7 +5,7 @@ import isURL from './is-url';
 import DevServer from './server';
 
 import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
-import { isHandler, Route } from '@now/routing-utils';
+import { isHandler, Route, HandleValue } from '@now/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
@@ -27,26 +27,22 @@ export function resolveRouteParameters(
 }
 
 export function getRoutesTypes(routes: Route[] = []) {
-  const missRoutes: Route[] = [];
-  const otherRoutes: Route[] = [];
-  let isHandleMissPhase = false;
-
-  for (const route of routes) {
+  const handleMap = new Map<HandleValue | null, Route[]>();
+  let prevHandle: HandleValue | null = null;
+  routes.forEach(route => {
     if (isHandler(route)) {
-      isHandleMissPhase = route.handle === 'miss';
-      if (isHandleMissPhase) {
-        continue; // remove the `handle: miss`
+      prevHandle = route.handle;
+    } else {
+      const routes = handleMap.get(prevHandle);
+      if (!routes) {
+        handleMap.set(prevHandle, [route]);
+      } else {
+        routes.push(route);
       }
     }
+  });
 
-    if (isHandleMissPhase) {
-      missRoutes.push(route);
-    } else {
-      otherRoutes.push(route);
-    }
-  }
-
-  return { missRoutes, otherRoutes };
+  return handleMap;
 }
 
 export async function devRouter(
@@ -56,7 +52,8 @@ export async function devRouter(
   devServer?: DevServer,
   previousHeaders?: HttpHeadersConfig,
   missRoutes?: RouteConfig[],
-  phase?: 'top' | 'miss'
+  hitRoutes?: RouteConfig[],
+  phase?: HandleValue
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
@@ -80,6 +77,7 @@ export async function devRouter(
               missRoutes,
               devServer,
               previousHeaders,
+              [],
               [],
               'miss'
             );
@@ -153,6 +151,7 @@ export async function devRouter(
                 missRoutes,
                 devServer,
                 previousHeaders,
+                [],
                 [],
                 'miss'
               );
