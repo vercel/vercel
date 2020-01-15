@@ -15,11 +15,12 @@ import { Org } from '../../types';
 import ua from '../ua';
 import processLegacyDeployment from './process-legacy-deployment';
 import { linkFolderToProject } from '../projects/link';
+import { prependEmoji, emoji } from '../emoji';
 
 function printInspectUrl(
   output: Output,
   deploymentUrl: string,
-  deployStamp: () => number,
+  deployStamp: () => string,
   orgName: string
 ) {
   const urlParts = deploymentUrl
@@ -29,7 +30,12 @@ function printInspectUrl(
   const deploymentShortId = urlParts.pop();
   const projectName = urlParts.join('-');
   const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
-  output.print(`🔍 Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
+  output.print(
+    prependEmoji(
+      `Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}`,
+      emoji('inspect')
+    ) + `\n`
+  );
 }
 
 export default async function processDeployment({
@@ -46,8 +52,8 @@ export default async function processDeployment({
   hashes: { [key: string]: any };
   paths: string[];
   requestBody: DeploymentOptions;
-  uploadStamp: () => number;
-  deployStamp: () => number;
+  uploadStamp: () => string;
+  deployStamp: () => string;
   isLegacy: boolean;
   quiet: boolean;
   nowConfig?: NowConfig;
@@ -226,7 +232,7 @@ export default async function processDeployment({
       throw error;
     }
 
-    // Handle ready event
+    // Handle alias-assigned event
     if (event.type === 'alias-assigned') {
       if (queuedSpinner) {
         queuedSpinner();

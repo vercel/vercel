@@ -19,11 +19,6 @@ async function runBuildLambda(inputPath) {
   const nowJson = require(nowJsonRef.fsPath);
   expect(nowJson.builds.length).toBe(1);
   const build = nowJson.builds[0];
-  if (!build.config || !build.config.nodeVersion) {
-    // Mimic api-deployments when a new project is created
-    const nodeVersion = getLatestNodeVersion().range;
-    build.config = { ...build.config, nodeVersion };
-  }
   expect(build.src.includes('*')).toBeFalsy();
   const entrypoint = build.src.replace(/^\//, ''); // strip leftmost slash
   expect(inputFiles[entrypoint]).toBeDefined();

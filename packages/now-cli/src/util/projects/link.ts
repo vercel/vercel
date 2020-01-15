@@ -11,6 +11,7 @@ import { Output } from '../output';
 import { Project } from '../../types';
 import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
+import { prependEmoji, emoji } from '../emoji';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -114,8 +115,11 @@ export async function linkFolderToProject(
   }
 
   output.print(
-    `☑️ Linked to ${chalk.bold(
-      `${orgSlug}/${projectName}`
-    )} (created .now and added it to .nowignore)\n`
+    prependEmoji(
+      `Linked to ${chalk.bold(
+        `${orgSlug}/${projectName}`
+      )} (created .now and added it to .gitignore)`,
+      emoji('link')
+    ) + '\n'
   );
 }

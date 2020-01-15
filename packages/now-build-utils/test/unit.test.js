@@ -96,18 +96,6 @@ it('should match all semver ranges', async () => {
   expect(await getSupportedNodeVersion('^10.5.0')).toHaveProperty('major', 10);
 });
 
-it('should select correct node version in getNodeVersion()', async () => {
-  expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '12.x' })
-  ).toHaveProperty('major', 12);
-  expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '10.x' })
-  ).toHaveProperty('major', 10);
-  expect(
-    await getNodeVersion('/tmp', '10.x', { nodeVersion: '12.x' })
-  ).toHaveProperty('major', 10);
-});
-
 it('should ignore node version in now dev getNodeVersion()', async () => {
   expect(
     await getNodeVersion(

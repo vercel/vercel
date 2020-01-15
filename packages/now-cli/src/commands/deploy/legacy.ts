@@ -890,29 +890,25 @@ async function sync({
     const { url } = now;
     const dcs =
       deploymentType !== 'static' && deployment.scale
-        ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})`
+        ? chalk` ({bold ${Object.keys(deployment.scale).join(', ')})`
         : '';
 
     if (isTTY) {
+      let inClipboard = '';
+      const platformVersion = deployment.version || 1;
+
       if (clipboard) {
         try {
           await copy(url);
-          log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${chalk.gray(
-              '[in clipboard]'
-            )}${dcs} ${deployStamp()}`
-          );
+          inClipboard = chalk.gray(' [in clipboard]');
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
-          log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
-              '[v1]'
-            )} ${dcs} ${deployStamp()}`
-          );
         }
-      } else {
-        log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
       }
+
+      log(
+        chalk`{bold.cyan ${url}} {gray [v${platformVersion}]}${inClipboard}${dcs} ${deployStamp()}`
+      );
     }
 
     if (deploymentType === 'static') {
@@ -921,7 +917,7 @@ async function sync({
         noVerify = true;
       } else {
         if (!quiet) {
-          output.log(chalk`{cyan Deployment complete!}`);
+          log(chalk`{cyan Deployment complete!}`);
         }
         await exit(0);
         return;
@@ -935,7 +931,7 @@ async function sync({
       const eventsStream = await maybeGetEventsStream(now, deployment);
 
       if (!noVerify) {
-        output.log(
+        log(
           `Verifying instantiation in ${joinWords(
             Object.keys(deployment.scale).map(dc => chalk.bold(dc))
           )}`
@@ -954,13 +950,11 @@ async function sync({
             output.error(
               `Instance verification timed out (${ms(dcOrEvent.meta.timeout)})`
             );
-            output.log(
-              'Read more: https://err.sh/now-cli/verification-timeout'
-            );
+            log('Read more: https://err.sh/now-cli/verification-timeout');
             await exit(1);
           } else if (Array.isArray(dcOrEvent)) {
             const [dc, instances] = dcOrEvent;
-            output.log(
+            log(
               `${chalk.cyan(chars.tick)} Scaled ${plural(
                 'instance',
                 instances,
@@ -975,7 +969,7 @@ async function sync({
               `[${instanceIndex(dcOrEvent.payload.instanceId)}] `
             );
             formatLogOutput(dcOrEvent.payload.text, prefix).forEach(
-              (msg: string) => output.log(msg)
+              (msg: string) => log(msg)
             );
           }
         }

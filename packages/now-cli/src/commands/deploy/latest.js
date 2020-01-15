@@ -48,6 +48,7 @@ import getProjectName from '../../util/get-project-name';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
 import validatePaths from '../../util/validate-paths';
+import { prependEmoji, emoji } from '../../util/emoji';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -141,18 +142,22 @@ const printDeploymentStatus = async (
     }
 
     output.print(
-      `✅ ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-        previewUrl
-      )} ${deployStamp()}\n`
+      prependEmoji(
+        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+          previewUrl
+        )} ${deployStamp()}`,
+        emoji('success')
+      ) + `\n`
     );
   }
 
   if (indications) {
-    const emojis = { notice: 'ℹ️ ', tip: '💡', warning: '⚠️' };
     for (let indication of indications) {
-      const emoji = emojis[indication.type];
       output.print(
-        `${emoji ? `${emoji} ` : ''}${chalk.grey(indication.payload)}\n`
+        prependEmoji(
+          `${chalk.grey(indication.payload)}`,
+          emoji(indication.type)
+        ) + `\n`
       );
     }
   }

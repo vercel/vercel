@@ -139,8 +139,8 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  minNodeVersion?: string,
-  config?: Config,
+  _nodeVersion?: string,
+  _config?: Config,
   meta?: Meta
 ): Promise<NodeVersion> {
   if (meta && meta.isDev) {
@@ -150,18 +150,10 @@ export async function getNodeVersion(
   }
   const { packageJson } = await scanParentDirs(destPath, true);
   let range: string | undefined;
-  let isAuto = false;
+  let isAuto = true;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
     range = packageJson.engines.node;
-  } else if (minNodeVersion) {
-    range = minNodeVersion;
-    isAuto = true;
-  } else if (config && config.nodeVersion) {
-    range = config.nodeVersion;
-    isAuto = true;
-  } else if (config && config.zeroConfig) {
-    range = '10.x';
-    isAuto = true;
+    isAuto = false;
   }
   return getSupportedNodeVersion(range, isAuto);
 }

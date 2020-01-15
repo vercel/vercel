@@ -5,5 +5,5 @@ import elapsed from './elapsed';
  * with the ellapsed time formatted.
  */
 export default (start: number = Date.now()) => {
-  return () => elapsed(Date.now() - start);
+  return (): string => elapsed(Date.now() - start);
 };
