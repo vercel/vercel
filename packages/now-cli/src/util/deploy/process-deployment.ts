@@ -15,6 +15,7 @@ import { Org } from '../../types';
 import ua from '../ua';
 import processLegacyDeployment from './process-legacy-deployment';
 import { linkFolderToProject } from '../projects/link';
+import { prependEmoji, emoji } from '../emoji';
 
 function printInspectUrl(
   output: Output,
@@ -29,7 +30,12 @@ function printInspectUrl(
   const deploymentShortId = urlParts.pop();
   const projectName = urlParts.join('-');
   const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
-  output.print(`🔍 Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
+  output.print(
+    prependEmoji(
+      `Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}`,
+      emoji('inspect')
+    ) + `\n`
+  );
 }
 
 export default async function processDeployment({
