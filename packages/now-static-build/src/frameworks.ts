@@ -379,7 +379,6 @@ const frameworkList: Framework[] = [
     slug: 'nuxtjs',
     dependency: 'nuxt',
     buildCommand: 'nuxt generate',
-    devCommand: 'nuxt',
     getOutputDirName: async () => 'dist',
   },
   {
