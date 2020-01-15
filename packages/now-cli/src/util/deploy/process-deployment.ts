@@ -20,15 +20,24 @@ function printInspectUrl(
   output: Output,
   deploymentUrl: string,
   deployStamp: () => number,
-  orgName: string
+  orgSlug: string
 ) {
-  const urlParts = deploymentUrl
-    .replace(/\..*/, '')
-    .replace('https://', '')
-    .split('-');
-  const deploymentShortId = urlParts.pop();
-  const projectName = urlParts.join('-');
-  const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
+  const url = deploymentUrl.replace('https://', '');
+
+  // example urls:
+  // lucim-fyulaijvg.now.sh
+  // s-66p6vb23x.n8.io (custom domain suffix)
+  const [sub, ...p] = url.split('.');
+  const apex = p.join('.');
+
+  const q = sub.split('-').reverse();
+  const deploymentShortId = q.pop();
+  const projectName = q.join('-');
+
+  const inspectUrl = `https://zeit.co/${orgSlug}/${projectName}/${deploymentShortId}${
+    apex !== 'now.sh' ? `/${apex}` : ''
+  }}`;
+
   output.print(`🔍 Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
 }
 
