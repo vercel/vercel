@@ -149,16 +149,25 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 };
 
 const waitForPrompt = (cp, assertion) =>
-  new Promise(resolve => {
+  new Promise((resolve, reject) => {
     const listener = chunk => {
-      if (assertion(chunk)) {
-        cp.stdout.off('data', listener);
-        cp.stderr.off('data', listener);
-        resolve();
+      try {
+        const a = assertion(chunk);
+
+        if (a) {
+          cp.stdout.off('data', listener);
+          cp.stderr.off('data', listener);
+          resolve();
+        }
+      } catch (error) {
+        reject(error);
       }
     };
+
     cp.stdout.on('data', listener);
     cp.stderr.on('data', listener);
+
+    cp.on('exit', () => resolve());
   });
 
 const getDeploymentBuildsByUrl = async url => {
@@ -2352,12 +2361,15 @@ test('should not prompt "project settings overwrite" for undetected projects', a
   );
   now.stdin.write(`${projectName}\n`);
 
-  await waitForPrompt(now, chunk => {
-    if (chunk.includes('Want to override the settings?')) {
-      throw new Error();
-    }
-    return chunk.includes('Linked to');
-  });
+  t.notThrowsAsync(
+    waitForPrompt(now, chunk => {
+      if (chunk.includes('Want to override the settings?')) {
+        throw new Error();
+      }
+    })
+  );
+
+  await waitForPrompt(now, chunk => chunk.includes('Linked to'));
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
