@@ -3,12 +3,19 @@ import { assertEnv } from './assert-env';
 
 const serviceName = 'api-frameworks';
 
-if (process.env.SENTRY_DSN) {
+let sentryInitDone = false;
+
+function initSentry() {
+  if (sentryInitDone) {
+    return;
+  }
+
+  sentryInitDone = true;
+
   init({
     dsn: assertEnv('SENTRY_DSN'),
     environment: process.env.NODE_ENV || 'production',
     release: `${serviceName}`,
-    integrations: [],
   });
 }
 
@@ -16,6 +23,8 @@ export function errorHandler(error: Error, extras?: { [key: string]: any }) {
   if (!process.env.SENTRY_DSN) {
     return;
   }
+
+  initSentry();
 
   try {
     withScope(scope => {
