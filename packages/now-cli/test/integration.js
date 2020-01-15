@@ -152,8 +152,8 @@ const waitForPrompt = (cp, assertion) =>
   new Promise(resolve => {
     const listener = chunk => {
       if (assertion(chunk)) {
-        cp.stdout.off('data', listener);
-        cp.stderr.off('data', listener);
+        cp.stdout.off && cp.stdout.off('data', listener);
+        cp.stderr.off && cp.stderr.off('data', listener);
         resolve();
       }
     };
