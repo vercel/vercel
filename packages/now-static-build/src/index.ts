@@ -28,6 +28,7 @@ import {
   PrepareCacheOptions,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
+import { NowBuildError } from '@now/build-utils';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -44,22 +45,6 @@ async function checkForPort(
     }
     await sleep(100);
   }
-}
-
-class BuildError extends Error {
-  constructor(err: {
-    link?: string;
-    message: string;
-    hideStackTrace?: boolean;
-  }) {
-    super(err.message);
-    this.link = err.link;
-    this.name = 'BuildError';
-    this.hideStackTrace = err.hideStackTrace;
-  }
-
-  link?: string;
-  hideStackTrace?: boolean;
 }
 
 function validateDistDir(
@@ -80,39 +65,50 @@ function validateDistDir(
     : `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
 
   if (!exists()) {
-    throw new BuildError({
+    const err = new NowBuildError({
+      code: 'no_output_dir',
       message: `No output directory named "${distDirName}" found. ${
         !config.zeroConfig
           ? '\nMake sure you configure the the correct distDir'
           : ''
       }`,
       link,
-      hideStackTrace: true,
     });
+
+    err.hideStackTrace = true;
+
+    throw err;
   }
 
   if (!isDirectory()) {
-    throw new BuildError({
-      message: `Build failed because distDir is not a directory: "${distDirName}". ${
+    const err = new NowBuildError({
+      code: 'no_output_dir',
+      message: `Build failed because Output Directory is not a directory: "${distDirName}". ${
         !config.zeroConfig
           ? '\nMake sure you configure the the correct distDir'
           : ''
       }`,
       link,
-      hideStackTrace: true,
     });
+
+    err.hideStackTrace = true;
+
+    throw err;
   }
 
   if (isEmpty()) {
-    throw new BuildError({
+    const err = new NowBuildError({
+      code: 'no_output_dir',
       message: `Build failed because distDir is empty: "${distDirName}". ${
         !config.zeroConfig
           ? '\nMake sure you configure the the correct distDir'
           : ''
       }`,
       link,
-      hideStackTrace: true,
     });
+
+    err.hideStackTrace = true;
+    throw err;
   }
 }
 
