@@ -26,6 +26,7 @@ import {
   debug,
   PackageJson,
   PrepareCacheOptions,
+  NowBuildError,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
 
@@ -46,39 +47,41 @@ async function checkForPort(
   }
 }
 
-function validateDistDir(
-  distDir: string,
-  isDev: boolean | undefined,
-  config: Config
-) {
+function validateDistDir(distDir: string, config: Config) {
   const distDirName = path.basename(distDir);
   const exists = () => existsSync(distDir);
   const isDirectory = () => statSync(distDir).isDirectory();
   const isEmpty = () => readdirSync(distDir).length === 0;
 
-  const hash = isDev
-    ? '#local-development'
-    : '#configuring-the-build-output-directory';
-  const docsUrl = `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
+  const link =
+    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
-  const info = config.zeroConfig
-    ? '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory'
-    : `\nMake sure you configure the the correct distDir: ${docsUrl}`;
+  const legacyMsg = !config.zeroConfig
+    ? '\nMake sure you configure the the correct `distDir`.'
+    : '';
 
   if (!exists()) {
-    throw new Error(`No output directory named "${distDirName}" found.${info}`);
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
+      message: `No Output Directory named "${distDirName}" found. ${legacyMsg}`,
+      link,
+    });
   }
 
   if (!isDirectory()) {
-    throw new Error(
-      `Build failed because distDir is not a directory: "${distDirName}".${info}`
-    );
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_NOT_A_DIR',
+      message: `Build failed because Output Directory is not a directory: "${distDirName}". ${legacyMsg}`,
+      link,
+    });
   }
 
   if (isEmpty()) {
-    throw new Error(
-      `Build failed because distDir is empty: "${distDirName}".${info}`
-    );
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
+      message: `Build failed because Output Directory is empty: "${distDirName}". ${legacyMsg}`,
+      link,
+    });
   }
 }
 
@@ -212,21 +215,24 @@ export async function build({
 
   const pkg = getPkg(entrypoint, workPath);
 
+  const devScript = pkg ? getCommand(pkg, 'dev', config) : null;
+  const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
+
   const framework = getFramework(config, pkg);
   const devCommand: string | undefined =
-    config.devCommand || (framework && framework.devCommand);
+    config.devCommand ||
+    (devScript ? undefined : framework && framework.devCommand);
   const buildCommand: string | undefined =
-    config.buildCommand || (framework && framework.buildCommand);
+    config.buildCommand ||
+    (buildScript ? undefined : framework && framework.buildCommand);
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
-    let minNodeRange: string | undefined = undefined;
 
     const routes: Route[] = [];
-    const devScript = pkg ? getCommand(pkg, 'dev', config) : null;
 
     if (config.zeroConfig) {
       if (existsSync(gemfilePath) && !meta.isDev) {
@@ -284,22 +290,11 @@ export async function build({
       debug(
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
-
-      if (framework.minNodeRange) {
-        minNodeRange = framework.minNodeRange;
-        debug(
-          `${framework.name} requires Node.js ${framework.minNodeRange}. Switching...`
-        );
-      } else {
-        debug(
-          `${framework.name} does not require a specific Node.js version. Continuing ...`
-        );
-      }
     }
 
     const nodeVersion = await getNodeVersion(
       entrypointDir,
-      minNodeRange,
+      undefined,
       config,
       meta
     );
@@ -394,7 +389,6 @@ export async function build({
         );
       }
 
-      const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
       debug(
         `Running "${buildCommand || buildScript}" script in "${entrypoint}"`
       );
@@ -435,7 +429,7 @@ export async function build({
         }
       }
 
-      validateDistDir(distPath, meta.isDev, config);
+      validateDistDir(distPath, config);
 
       if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
@@ -462,7 +456,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-    validateDistDir(distPath, meta.isDev, config);
+    validateDistDir(distPath, config);
 
     const output = await glob('**', distPath, mountpoint);
 

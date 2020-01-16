@@ -45,7 +45,7 @@ export default async function editProjectSettings(
     const defaults = framework.settings[field.value];
 
     output.print(
-      chalk.gray(
+      chalk.dim(
         `- ${chalk.bold(`${field.name}:`)} ${`${
           isSettingValue(defaults)
             ? defaults.value

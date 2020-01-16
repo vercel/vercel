@@ -155,7 +155,7 @@ const printDeploymentStatus = async (
     for (let indication of indications) {
       output.print(
         prependEmoji(
-          `${chalk.grey(indication.payload)}`,
+          `${chalk.dim(indication.payload)}`,
           emoji(indication.type)
         ) + `\n`
       );

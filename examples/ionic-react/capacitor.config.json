@@ -1,8 +1,0 @@
-{
-  "appId": "io.ionic.starter",
-  "appName": "ionic-react-conference-app",
-  "bundledWebRuntime": false,
-  "npmClient": "npm",
-  "webDir": "build",
-  "cordova": {}
-}

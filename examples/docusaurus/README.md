@@ -1,4 +1,4 @@
-![Docusaurus Logo](../packages/frameworks/logos/docusaurus.svg)
+![Docusaurus Logo](../../packages/frameworks/logos/docusaurus.svg)
 
 # Docusaurus Example
 

@@ -12,6 +12,7 @@ import { Project } from '../../types';
 import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
 import { prependEmoji, emoji } from '../emoji';
+import wait from '../output/wait';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -53,10 +54,17 @@ export async function getLinkedProject(
       link = JSON.parse(json);
     }
 
-    const [org, project] = await Promise.all([
-      getOrg(client, link.orgId),
-      getProjectByIdOrName(client, link.projectId, link.orgId),
-    ]);
+    const spinner = wait('Retrieving project…', 1000);
+    let org: Org | null;
+    let project: Project | ProjectNotFound | null;
+    try {
+      [org, project] = await Promise.all([
+        getOrg(client, link.orgId),
+        getProjectByIdOrName(client, link.projectId, link.orgId),
+      ]);
+    } finally {
+      spinner();
+    }
 
     if (project instanceof ProjectNotFound || org === null) {
       return [null, null];
@@ -104,12 +112,18 @@ export async function linkFolderToProject(
     { encoding: 'utf8' }
   );
 
-  // update .nowignore
+  // update .gitignore
+  let isGitIgnoreUpdated = false;
   try {
     const gitIgnorePath = join(path, '.gitignore');
-    const gitIgnore = (await readFile(gitIgnorePath)).toString();
-    if (gitIgnore.split('\n').indexOf('.now') < 0) {
-      await writeFile(gitIgnorePath, gitIgnore + '\n.now');
+
+    const gitIgnore = await readFile(gitIgnorePath)
+      .then(buf => buf.toString())
+      .catch(() => null);
+
+    if (!gitIgnore || !gitIgnore.split('\n').includes('.now')) {
+      await writeFile(gitIgnorePath, gitIgnore ? `${gitIgnore}\n.now` : '.now');
+      isGitIgnoreUpdated = true;
     }
   } catch (error) {
     // ignore errors since this is non-critical
@@ -117,9 +131,9 @@ export async function linkFolderToProject(
 
   output.print(
     prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${projectName}`
-      )} (created .now and added it to .gitignore)`,
+      `Linked to ${chalk.bold(`${orgSlug}/${projectName}`)} (created .now${
+        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
+      })`,
       emoji('link')
     ) + '\n'
   );
