@@ -85,7 +85,12 @@ function validateDistDir(distDir: string, config: Config) {
   }
 }
 
-function getCommand(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
+function hasScript(script: string, pkg: PackageJson) {
+  const scripts = (pkg && pkg.scripts) || {};
+  return typeof scripts[script] === 'string';
+}
+
+function getScriptName(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
   // The `dev` script can be `now dev`
   const nowCmd = `now-${cmd}`;
 
@@ -93,17 +98,42 @@ function getCommand(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
     return nowCmd;
   }
 
-  const scripts = (pkg && pkg.scripts) || {};
-
-  if (scripts[nowCmd]) {
+  if (hasScript(nowCmd, pkg)) {
     return nowCmd;
   }
 
-  if (scripts[cmd]) {
+  if (hasScript(cmd, pkg)) {
     return cmd;
   }
 
   return zeroConfig ? cmd : nowCmd;
+}
+
+function getCommand(
+  name: 'build' | 'dev',
+  pkg: PackageJson | null,
+  config: Config,
+  framework: Framework | undefined
+) {
+  const propName = name === 'build' ? 'buildCommand' : 'devCommand';
+
+  if (typeof config[propName] === 'string') {
+    return config[propName];
+  }
+
+  if (pkg) {
+    const scriptName = getScriptName(pkg, name, config);
+
+    if (hasScript(scriptName, pkg)) {
+      return null;
+    }
+  }
+
+  if (framework) {
+    return framework[propName] || null;
+  }
+
+  return null;
 }
 
 export const version = 2;
@@ -215,16 +245,13 @@ export async function build({
 
   const pkg = getPkg(entrypoint, workPath);
 
-  const devScript = pkg ? getCommand(pkg, 'dev', config) : null;
-  const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
+  const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
+  const buildScript = pkg ? getScriptName(pkg, 'build', config) : null;
 
   const framework = getFramework(config, pkg);
-  const devCommand: string | undefined =
-    config.devCommand ||
-    (devScript ? undefined : framework && framework.devCommand);
-  const buildCommand: string | undefined =
-    config.buildCommand ||
-    (buildScript ? undefined : framework && framework.buildCommand);
+
+  const devCommand = getCommand('dev', pkg, config, framework);
+  const buildCommand = getCommand('build', pkg, config, framework);
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
@@ -389,9 +416,11 @@ export async function build({
         );
       }
 
-      debug(
-        `Running "${buildCommand || buildScript}" script in "${entrypoint}"`
-      );
+      if (buildCommand) {
+        debug(`Executing "${buildCommand}"`);
+      } else {
+        debug(`Running "${buildScript}" in "${entrypoint}"`);
+      }
 
       const found =
         typeof buildCommand === 'string'
