@@ -78,7 +78,7 @@ function validateDistDir(
 
   if (!isDirectory()) {
     throw new NowBuildError({
-      code: 'no_output_dir',
+      code: 'NOW_STATIC_BUILD_NOT_A_DIR',
       message: `Build failed because Output Directory is not a directory: "${distDirName}". ${
         !config.zeroConfig
           ? '\nMake sure you configure the the correct distDir'
