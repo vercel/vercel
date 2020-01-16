@@ -66,7 +66,7 @@ function validateDistDir(
 
   if (!exists()) {
     const err = new NowBuildError({
-      code: 'no_output_dir',
+      code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
       message: `No output directory named "${distDirName}" found. ${
         !config.zeroConfig
           ? '\nMake sure you configure the the correct distDir'
