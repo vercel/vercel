@@ -26,6 +26,7 @@ import {
   debug,
   PackageJson,
   PrepareCacheOptions,
+  NowBuildError,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
 
@@ -46,39 +47,41 @@ async function checkForPort(
   }
 }
 
-function validateDistDir(
-  distDir: string,
-  isDev: boolean | undefined,
-  config: Config
-) {
+function validateDistDir(distDir: string, config: Config) {
   const distDirName = path.basename(distDir);
   const exists = () => existsSync(distDir);
   const isDirectory = () => statSync(distDir).isDirectory();
   const isEmpty = () => readdirSync(distDir).length === 0;
 
-  const hash = isDev
-    ? '#local-development'
-    : '#configuring-the-build-output-directory';
-  const docsUrl = `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
+  const link =
+    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
-  const info = config.zeroConfig
-    ? '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory'
-    : `\nMake sure you configure the the correct distDir: ${docsUrl}`;
+  const legacyMsg = !config.zeroConfig
+    ? '\nMake sure you configure the the correct `distDir`.'
+    : '';
 
   if (!exists()) {
-    throw new Error(`No output directory named "${distDirName}" found.${info}`);
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
+      message: `No Output Directory named "${distDirName}" found. ${legacyMsg}`,
+      link,
+    });
   }
 
   if (!isDirectory()) {
-    throw new Error(
-      `Build failed because distDir is not a directory: "${distDirName}".${info}`
-    );
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_NOT_A_DIR',
+      message: `Build failed because Output Directory is not a directory: "${distDirName}". ${legacyMsg}`,
+      link,
+    });
   }
 
   if (isEmpty()) {
-    throw new Error(
-      `Build failed because distDir is empty: "${distDirName}".${info}`
-    );
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
+      message: `Build failed because Output Directory is empty: "${distDirName}". ${legacyMsg}`,
+      link,
+    });
   }
 }
 
@@ -426,7 +429,7 @@ export async function build({
         }
       }
 
-      validateDistDir(distPath, meta.isDev, config);
+      validateDistDir(distPath, config);
 
       if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
@@ -453,7 +456,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-    validateDistDir(distPath, meta.isDev, config);
+    validateDistDir(distPath, config);
 
     const output = await glob('**', distPath, mountpoint);
 
