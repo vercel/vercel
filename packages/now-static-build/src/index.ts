@@ -46,6 +46,16 @@ async function checkForPort(
   }
 }
 
+class BuildError extends Error {
+  constructor(err: { link?: string; message: string }) {
+    super(err.message);
+    this.link = err.link;
+    this.name = 'BuildError';
+  }
+
+  link?: string;
+}
+
 function validateDistDir(
   distDir: string,
   isDev: boolean | undefined,
@@ -59,26 +69,41 @@ function validateDistDir(
   const hash = isDev
     ? '#local-development'
     : '#configuring-the-build-output-directory';
-  const docsUrl = `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
-
-  const info = config.zeroConfig
-    ? '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory'
-    : `\nMake sure you configure the the correct distDir: ${docsUrl}`;
+  const link = config.zeroConfig
+    ? 'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory'
+    : `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
 
   if (!exists()) {
-    throw new Error(`No output directory named "${distDirName}" found.${info}`);
+    throw new BuildError({
+      message: `No output directory named "${distDirName}" found. ${
+        !config.zeroConfig
+          ? '\nMake sure you configure the the correct distDir'
+          : ''
+      }`,
+      link,
+    });
   }
 
   if (!isDirectory()) {
-    throw new Error(
-      `Build failed because distDir is not a directory: "${distDirName}".${info}`
-    );
+    throw new BuildError({
+      message: `Build failed because distDir is not a directory: "${distDirName}". ${
+        !config.zeroConfig
+          ? '\nMake sure you configure the the correct distDir'
+          : ''
+      }`,
+      link,
+    });
   }
 
   if (isEmpty()) {
-    throw new Error(
-      `Build failed because distDir is empty: "${distDirName}".${info}`
-    );
+    throw new BuildError({
+      message: `Build failed because distDir is empty: "${distDirName}". ${
+        !config.zeroConfig
+          ? '\nMake sure you configure the the correct distDir'
+          : ''
+      }`,
+      link,
+    });
   }
 }
 
