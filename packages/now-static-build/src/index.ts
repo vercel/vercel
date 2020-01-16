@@ -26,9 +26,9 @@ import {
   debug,
   PackageJson,
   PrepareCacheOptions,
+  NowBuildError,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
-import { NowBuildError } from '@now/build-utils';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
