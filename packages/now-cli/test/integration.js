@@ -427,7 +427,7 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `> Error! Please sign up: https://zeit.co/signup`;
+  const goal = `Error! Please sign up: https://zeit.co/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
@@ -606,7 +606,7 @@ test('try to purchase a domain', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      `> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`
+      `Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`
     )
   );
 });
@@ -633,7 +633,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
 
   t.true(
     stderr.includes(
-      `> Error! The domain "${session}-test.org" is not transferable.`
+      `Error! The domain "${session}-test.org" is not transferable.`
     )
   );
   t.is(exitCode, 1);
@@ -658,7 +658,7 @@ test('try to move an invalid domain', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  t.true(stderr.includes(`> Error! Domain not found under `));
+  t.true(stderr.includes(`Error! Domain not found under `));
   t.is(exitCode, 1);
 });
 
@@ -703,7 +703,7 @@ test('try to remove a non-existing payment method', async t => {
 test('set platform version using `-V` to invalid number', async t => {
   const directory = fixture('builds');
   const goal =
-    '> Error! The "--platform-version" option must be either `1` or `2`.';
+    'Error! The "--platform-version" option must be either `1` or `2`.';
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -727,7 +727,7 @@ test('set platform version using `-V` to invalid number', async t => {
 test('set platform version using `--platform-version` to invalid number', async t => {
   const directory = fixture('builds');
   const goal =
-    '> Error! The "--platform-version" option must be either `1` or `2`.';
+    'Error! The "--platform-version" option must be either `1` or `2`.';
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1144,7 +1144,7 @@ test('try to create a builds deployments with wrong config', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      '> Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
+      'Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
     )
   );
 });
@@ -1624,7 +1624,7 @@ test('use `--debug` CLI flag', async t => {
 });
 
 test('try to deploy non-existing path', async t => {
-  const goal = `> Error! The specified file or directory "${session}" does not exist.`;
+  const goal = `Error! The specified file or directory "${session}" does not exist.`;
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1644,7 +1644,7 @@ test('try to deploy non-existing path', async t => {
 
 test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
-  const goal = `> Error! The specified scope does not exist`;
+  const goal = `Error! The specified scope does not exist`;
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1760,7 +1760,7 @@ test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    '> Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
+    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
@@ -1781,7 +1781,7 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    '> Error! No example found for noce, run `now init` to see the list of available examples.';
+    'Error! No example found for noce, run `now init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'noce'], { cwd });
 
@@ -1797,7 +1797,7 @@ test('try to initialize example "example-404"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    '> Error! No example found for example-404, run `now init` to see the list of available examples.';
+    'Error! No example found for example-404, run `now init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'example-404'], {
     cwd,

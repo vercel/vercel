@@ -37,7 +37,7 @@ function printInspectUrl(
 
   const inspectUrl = `https://zeit.co/${orgSlug}/${projectName}/${deploymentShortId}${
     apex !== 'now.sh' ? `/${apex}` : ''
-  }}`;
+  }`;
 
   output.print(
     prependEmoji(
@@ -211,7 +211,7 @@ export default async function processDeployment({
         buildSpinner();
       }
 
-      deploySpinner = wait('Finalizing', 0);
+      deploySpinner = wait('Completing', 0);
     }
 
     // Handle error events

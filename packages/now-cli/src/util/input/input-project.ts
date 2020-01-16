@@ -69,9 +69,17 @@ export default async function inputProject(
       });
       const projectName = answers.existingProjectName as string;
 
-      const loader = wait('Verifying project name…', 1000);
-      project = await getProjectByIdOrName(client, projectName, org.id);
-      loader();
+      if (!projectName) {
+        output.error(`Project name cannot be empty`);
+        continue;
+      }
+
+      const spinner = wait('Verifying project name…', 1000);
+      try {
+        project = await getProjectByIdOrName(client, projectName, org.id);
+      } finally {
+        spinner();
+      }
 
       if (project instanceof ProjectNotFound) {
         output.print(`${chalk.red('Error!')} Project not found\n`);
@@ -93,13 +101,22 @@ export default async function inputProject(
     });
     newProjectName = answers.newProjectName as string;
 
+    if (!newProjectName) {
+      output.error(`Project name cannot be empty`);
+      continue;
+    }
+
     const spinner = wait('Verifying project name…', 1000);
-    const existingProject = await getProjectByIdOrName(
-      client,
-      newProjectName,
-      org.id
-    );
-    spinner();
+    let existingProject: Project | ProjectNotFound;
+    try {
+      existingProject = await getProjectByIdOrName(
+        client,
+        newProjectName,
+        org.id
+      );
+    } finally {
+      spinner();
+    }
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
       output.print(`${chalk.red('Error!')} Project already exists\n`);
