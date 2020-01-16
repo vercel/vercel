@@ -16,8 +16,10 @@ export default async function selectProject(
   require('./patch-inquirer');
 
   const spinner = wait('Loading scopes…', 1000);
-  const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
-  spinner();
+  const [user, teams] = await Promise.all([
+    getUser(client),
+    getTeams(client),
+  ]).finally(() => spinner());
 
   const choices: Choice[] = [
     {

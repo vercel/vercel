@@ -74,9 +74,10 @@ export default async function inputProject(
         continue;
       }
 
-      const loader = wait('Verifying project name…', 1000);
-      project = await getProjectByIdOrName(client, projectName, org.id);
-      loader();
+      const spinner = wait('Verifying project name…', 1000);
+      project = await getProjectByIdOrName(client, projectName, org.id).finally(
+        () => spinner()
+      );
 
       if (project instanceof ProjectNotFound) {
         output.print(`${chalk.red('Error!')} Project not found\n`);
@@ -108,8 +109,7 @@ export default async function inputProject(
       client,
       newProjectName,
       org.id
-    );
-    spinner();
+    ).finally(() => spinner());
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
       output.print(`${chalk.red('Error!')} Project already exists\n`);

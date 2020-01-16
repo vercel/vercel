@@ -54,8 +54,7 @@ export async function getLinkedProject(
     const [org, project] = await Promise.all([
       getOrg(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
-    ]);
-    spinner();
+    ]).finally(() => spinner());
 
     if (project instanceof ProjectNotFound || org === null) {
       return [null, null];
