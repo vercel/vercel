@@ -2488,6 +2488,40 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
+test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+  const directory = fixture('static-deployment');
+
+  const output = await execute([directory], {
+    env: {
+      NOW_ORG_ID: 'asdf',
+      NOW_PROJECT_ID: 'asdf',
+    },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+  const directory = fixture('static-deployment');
+
+  // generate `.now`
+  await execute([directory, '--confirm']);
+
+  const link = require(path.join(directory, '.now/project.json'));
+  await remove(path.join(directory, '.now'));
+
+  const output = await execute([directory], {
+    env: {
+      NOW_ORG_ID: link.orgId,
+      NOW_PROJECT_ID: link.projectId,
+    },
+  });
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes('Linked to'), false);
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);

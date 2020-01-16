@@ -351,6 +351,17 @@ export default async function main(
   let newProjectName = null;
 
   if (!org || !project) {
+    const { NOW_PROJECT_ID, NOW_ORG_ID } = process.env;
+    if (NOW_PROJECT_ID && NOW_ORG_ID) {
+      output.print(
+        `${chalk.red('Error!')} Project not found (${JSON.stringify({
+          NOW_PROJECT_ID,
+          NOW_ORG_ID,
+        })})\n`
+      );
+      return 1;
+    }
+
     const shouldStartSetup =
       autoConfirm ||
       (await confirm(
