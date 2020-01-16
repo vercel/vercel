@@ -51,10 +51,16 @@ export async function getLinkedProject(
     const link: ProjectFolderLink = JSON.parse(json);
 
     const spinner = wait('Retrieving project…', 1000);
-    const [org, project] = await Promise.all([
-      getOrg(client, link.orgId),
-      getProjectByIdOrName(client, link.projectId, link.orgId),
-    ]).finally(() => spinner());
+    let org: Org | null;
+    let project: Project | ProjectNotFound | null;
+    try {
+      [org, project] = await Promise.all([
+        getOrg(client, link.orgId),
+        getProjectByIdOrName(client, link.projectId, link.orgId),
+      ]);
+    } finally {
+      spinner();
+    }
 
     if (project instanceof ProjectNotFound || org === null) {
       return [null, null];
