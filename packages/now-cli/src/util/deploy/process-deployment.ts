@@ -37,7 +37,7 @@ function printInspectUrl(
 
   const inspectUrl = `https://zeit.co/${orgSlug}/${projectName}/${deploymentShortId}${
     apex !== 'now.sh' ? `/${apex}` : ''
-  }}`;
+  }`;
 
   output.print(
     prependEmoji(
