@@ -65,7 +65,7 @@ function validateDistDir(
     : `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
 
   if (!exists()) {
-    const err = new NowBuildError({
+    throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
       message: `No output directory named "${distDirName}" found. ${
         !config.zeroConfig
@@ -74,14 +74,10 @@ function validateDistDir(
       }`,
       link,
     });
-
-    err.hideStackTrace = true;
-
-    throw err;
   }
 
   if (!isDirectory()) {
-    const err = new NowBuildError({
+    throw new NowBuildError({
       code: 'no_output_dir',
       message: `Build failed because Output Directory is not a directory: "${distDirName}". ${
         !config.zeroConfig
@@ -90,14 +86,10 @@ function validateDistDir(
       }`,
       link,
     });
-
-    err.hideStackTrace = true;
-
-    throw err;
   }
 
   if (isEmpty()) {
-    const err = new NowBuildError({
+    throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
       message: `Build failed because distDir is empty: "${distDirName}". ${
         !config.zeroConfig
@@ -106,9 +98,6 @@ function validateDistDir(
       }`,
       link,
     });
-
-    err.hideStackTrace = true;
-    throw err;
   }
 }
 
