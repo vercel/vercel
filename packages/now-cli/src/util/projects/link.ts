@@ -102,12 +102,18 @@ export async function linkFolderToProject(
     }
   );
 
-  // update .nowignore
+  // update .gitignore
+  let isGitIgnoreUpdated = false;
   try {
     const gitIgnorePath = join(path, '.gitignore');
-    const gitIgnore = (await readFile(gitIgnorePath)).toString();
-    if (gitIgnore.split('\n').indexOf('.now') < 0) {
-      await writeFile(gitIgnorePath, gitIgnore + '\n.now');
+
+    const gitIgnore = await readFile(gitIgnorePath)
+      .then(buf => buf.toString())
+      .catch(() => null);
+
+    if (!gitIgnore || !gitIgnore.split('\n').includes('.now')) {
+      await writeFile(gitIgnorePath, gitIgnore ? `${gitIgnore}\n.now` : '.now');
+      isGitIgnoreUpdated = true;
     }
   } catch (error) {
     // ignore errors since this is non-critical
@@ -115,9 +121,9 @@ export async function linkFolderToProject(
 
   output.print(
     prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${projectName}`
-      )} (created .now and added it to .gitignore)`,
+      `Linked to ${chalk.bold(`${orgSlug}/${projectName}`)} (created .now${
+        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
+      })`,
       emoji('link')
     ) + '\n'
   );
