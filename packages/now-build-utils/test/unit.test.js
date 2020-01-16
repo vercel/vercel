@@ -4,7 +4,11 @@ const assert = require('assert');
 const { createZip } = require('../dist/lambda');
 const { glob, spawnAsync, download } = require('../');
 const { getSupportedNodeVersion } = require('../dist/fs/node-version');
-const { getNodeVersion, getLatestNodeVersion } = require('../dist');
+const {
+  getNodeVersion,
+  getLatestNodeVersion,
+  getDiscontinuedNodeVersions,
+} = require('../dist');
 
 it('should re-create symlinks properly', async () => {
   const files = await glob('**', path.join(__dirname, 'symlinks'));
@@ -92,16 +96,15 @@ it('should match all semver ranges', async () => {
   expect(await getSupportedNodeVersion('^10.5.0')).toHaveProperty('major', 10);
 });
 
-it('should select correct node version in getNodeVersion()', async () => {
+it('should ignore node version in now dev getNodeVersion()', async () => {
   expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '12.x' })
-  ).toHaveProperty('major', 12);
-  expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '10.x' })
-  ).toHaveProperty('major', 10);
-  expect(
-    await getNodeVersion('/tmp', '10.x', { nodeVersion: '12.x' })
-  ).toHaveProperty('major', 10);
+    await getNodeVersion(
+      '/tmp',
+      undefined,
+      { nodeVersion: '1' },
+      { isDev: true }
+    )
+  ).toHaveProperty('runtime', 'nodejs');
 });
 
 it('should get latest node version', async () => {
@@ -118,6 +121,9 @@ it('should throw for discontinued versions', async () => {
 
   expect(getSupportedNodeVersion('', true)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
+
+  expect(getDiscontinuedNodeVersions().length).toBe(1);
+  expect(getDiscontinuedNodeVersions()[0]).toHaveProperty('range', '8.10.x');
 
   global.Date.now = realDateNow;
 });

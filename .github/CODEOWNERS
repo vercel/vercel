@@ -16,3 +16,7 @@
 /packages/now-ruby                       @styfle @coetry @nathancahill
 /packages/now-static-build               @styfle @AndyBitz
 /packages/now-routing-utils              @dav-is
+
+/examples                                @msweeneydev @timothyis
+/examples/create-react-app               @Timer
+/examples/nextjs                         @timneutkens

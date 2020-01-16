@@ -449,7 +449,7 @@ CMD ["node", "index.js"]`,
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'now-php@0.0.7',
+            runtime: 'now-php@0.0.8',
           },
         },
       }),
@@ -474,6 +474,14 @@ CMD ["node", "index.js"]`,
           autoJobCancelation: true,
           enabled: true,
           silent: true,
+        },
+      }),
+    },
+    'project-link': {
+      'pages/index.js': 'export default () => <div><h1>Now CLI test</h1></div>',
+      'package.json': JSON.stringify({
+        dependencies: {
+          gatsby: 'latest',
         },
       }),
     },

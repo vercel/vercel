@@ -1,5 +1,6 @@
 import { Source, Route } from '@now/routing-utils';
 import { detectBuilders, detectRoutes } from '../src';
+import { detectOutputDirectory, detectApiDirectory } from '../';
 
 describe('Test `detectBuilders`', () => {
   it('package.json + no build', async () => {
@@ -454,7 +455,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('use a custom runtime', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -462,11 +463,11 @@ describe('Test `detectBuilders`', () => {
 
     expect(errors).toBe(null);
     expect(builders!.length).toBe(1);
-    expect(builders![0].use).toBe('now-php@0.0.5');
+    expect(builders![0].use).toBe('now-php@0.0.8');
   });
 
   it('use a custom runtime but without a source', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/team.js'];
     const { errors } = await detectBuilders(files, null, {
       functions,
@@ -656,112 +657,6 @@ describe('Test `detectBuilders`', () => {
     expect((defaultRoutes![2] as any).dest).toBe('/output/$1');
   });
 
-  it('Custom directory for Serverless Functions', async () => {
-    const files = ['server/_lib/db.ts', 'server/user.ts', 'server/team.ts'];
-
-    const functions = {
-      'server/**/*.ts': {
-        memory: 128,
-        runtime: '@now/node@1.2.1',
-      },
-    };
-
-    const { builders } = await detectBuilders(files, null, { functions });
-
-    expect(builders!.length).toBe(3);
-    expect(builders![0]).toEqual({
-      use: '@now/node@1.2.1',
-      src: 'server/team.ts',
-      config: {
-        zeroConfig: true,
-        functions: {
-          'server/**/*.ts': {
-            memory: 128,
-            runtime: '@now/node@1.2.1',
-          },
-        },
-      },
-    });
-    expect(builders![1]).toEqual({
-      use: '@now/node@1.2.1',
-      src: 'server/user.ts',
-      config: {
-        zeroConfig: true,
-        functions: {
-          'server/**/*.ts': {
-            memory: 128,
-            runtime: '@now/node@1.2.1',
-          },
-        },
-      },
-    });
-    // This is expected, since only "api + full static" is supported
-    // no other directory, so everything else will be deployed
-    expect(builders![2].use).toBe('@now/static');
-
-    const { defaultRoutes } = await detectRoutes(files, builders!);
-
-    expect(defaultRoutes!.length).toBe(2);
-    expect((defaultRoutes![0] as any).dest).toBe('/server/team.ts');
-    expect((defaultRoutes![0] as any).src).toBe(
-      '^/server/(team\\/|team|team\\.ts)$'
-    );
-    expect((defaultRoutes![1] as any).dest).toBe('/server/user.ts');
-    expect((defaultRoutes![1] as any).src).toBe(
-      '^/server/(user\\/|user|user\\.ts)$'
-    );
-  });
-
-  it('Custom directory for Serverless Functions + Next.js', async () => {
-    const pkg = {
-      scripts: {
-        build: 'next build',
-      },
-      dependencies: {
-        next: '9.0.0',
-      },
-    };
-
-    const functions = {
-      'server/**/*.ts': {
-        runtime: '@now/node@1.2.1',
-      },
-    };
-
-    const files = ['package.json', 'pages/index.ts', 'server/user.ts'];
-
-    const { builders } = await detectBuilders(files, pkg, {
-      functions,
-      projectSettings: { framework: 'nextjs' },
-    });
-
-    expect(builders!.length).toBe(2);
-    expect(builders![0]).toEqual({
-      use: '@now/node@1.2.1',
-      src: 'server/user.ts',
-      config: {
-        zeroConfig: true,
-        functions,
-      },
-    });
-    expect(builders![1]).toEqual({
-      use: '@now/next',
-      src: 'package.json',
-      config: {
-        zeroConfig: true,
-        framework: 'nextjs',
-      },
-    });
-
-    const { defaultRoutes } = await detectRoutes(files, builders!);
-
-    expect(defaultRoutes!.length).toBe(1);
-    expect((defaultRoutes![0] as any).dest).toBe('/server/user.ts');
-    expect((defaultRoutes![0] as any).src).toBe(
-      '^/server/(user\\/|user|user\\.ts)$'
-    );
-  });
-
   it('Framework with non-package.json entrypoint', async () => {
     const files = ['config.yaml'];
     const projectSettings = {
@@ -824,6 +719,25 @@ describe('Test `detectBuilders`', () => {
           zeroConfig: true,
           framework: 'middleman',
         },
+      },
+    ]);
+  });
+
+  it('Error for non-api functions', async () => {
+    const files = ['server/hello.ts', 'public/index.html'];
+    const functions = {
+      'server/**/*.ts': {
+        runtime: '@now/node@1.3.1',
+      },
+    };
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toEqual([
+      {
+        code: 'unused_function',
+        message:
+          "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
       },
     ]);
   });
@@ -980,7 +894,7 @@ it('Test `detectRoutes`', async () => {
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
     const { builders } = await detectBuilders(files, null, { functions });
@@ -1006,7 +920,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js|go))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1067,7 +981,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1105,7 +1019,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1149,7 +1063,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1190,7 +1104,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1214,7 +1128,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:js))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1250,7 +1164,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:ts))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1260,7 +1174,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
     const { builders } = await detectBuilders(files, null, { functions });
@@ -1272,7 +1186,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/(.+)\\.\\w+$',
+        src: '^/api/(.+)(?:\\.(?:php))$',
         dest: '/api/$1',
         check: true,
       },
@@ -1579,7 +1493,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
     const { builders } = await detectBuilders(files, null, { functions });
@@ -1840,7 +1754,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.5' } };
+    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
     const { builders } = await detectBuilders(files, null, { functions });
@@ -1859,6 +1773,112 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   }
 });
 
+describe('Test `detectOutputDirectory`', () => {
+  it('should be `null` with no config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `null` with no zero config builds', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: {},
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `public` with one zero config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: { zeroConfig: true },
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe('public');
+  });
+
+  it('should be `public` with one zero config and one without config', async () => {
+    const builders = [
+      {
+        use: '@now/static',
+        src: 'public/**/*',
+        config: { zeroConfig: true },
+      },
+      {
+        use: '@now/node',
+        src: 'api/index.js',
+      },
+    ];
+    const result = detectOutputDirectory(builders);
+    expect(result).toBe('public');
+  });
+});
+
+describe('Test `detectApiDirectory`', () => {
+  it('should be `null` with no config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `null` with no zero config builds', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: {},
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe(null);
+  });
+
+  it('should be `api` with one zero config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: { zeroConfig: true },
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe('api');
+  });
+
+  it('should be `api` with one zero config and one without config', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: { zeroConfig: true },
+      },
+      {
+        use: '@now/php',
+        src: 'api/**/*.php',
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe('api');
+  });
+});
+
 /**
  * Create a function that will replace matched redirects
  * similar to how it works with `now-proxy` in production.
@@ -1868,7 +1888,6 @@ function createReplaceLocation(redirectRoutes: Route[] | null) {
   return (filePath: string): string | null => {
     for (const r of redirectSources) {
       const m = new RegExp(r.src).exec(filePath);
-      console.log({ filePath, r, m });
       if (m && r.headers) {
         const match = m[1] || '';
         return r.headers['Location'].replace('$1', match);

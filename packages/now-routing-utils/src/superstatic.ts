@@ -101,7 +101,9 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   return routes;
 }
 
-function sourceToRegex(source: string): { src: string; segments: string[] } {
+export function sourceToRegex(
+  source: string
+): { src: string; segments: string[] } {
   const keys: Key[] = [];
   const r = pathToRegexp(source, keys, { strict: true });
   const segments = keys.map(k => k.name).filter(isString);
@@ -110,20 +112,24 @@ function sourceToRegex(source: string): { src: string; segments: string[] } {
 
 function replaceSegments(segments: string[], destination: string): string {
   const parsedDestination = parseUrl(destination, true);
-  let { pathname } = parsedDestination;
+  let { pathname, hash } = parsedDestination;
   pathname = pathname || '';
+  hash = hash || '';
 
-  if (pathname.includes(':') && segments.length > 0) {
-    const compiler = compile(pathname);
+  if ((pathname + hash).includes(':') && segments.length > 0) {
+    const pathnameCompiler = compile(pathname);
+    const hashCompiler = compile(hash);
     const indexes: { [k: string]: string } = {};
 
     segments.forEach((name, index) => {
       indexes[name] = toSegmentDest(index);
     });
-    pathname = compiler(indexes);
+    pathname = pathnameCompiler(indexes);
+    hash = hash ? `${hashCompiler(indexes)}` : null;
     destination = formatUrl({
       ...parsedDestination,
       pathname,
+      hash,
     });
   } else if (segments.length > 0) {
     let prefix = '?';

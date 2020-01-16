@@ -41,7 +41,7 @@ export function getApiDeploymentsUrl(
     return '/v10/now/deployments';
   }
 
-  return '/v11/now/deployments';
+  return '/v12/now/deployments';
 }
 
 export async function parseNowJSON(filePath?: string): Promise<NowConfig> {

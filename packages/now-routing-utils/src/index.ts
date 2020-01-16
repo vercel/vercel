@@ -14,6 +14,7 @@ import {
   convertRedirects,
   convertHeaders,
   convertTrailingSlash,
+  sourceToRegex,
 } from './superstatic';
 
 export { getCleanUrls } from './superstatic';
@@ -142,6 +143,18 @@ function checkRegexSyntax(src: string): NowErrorNested | null {
   return null;
 }
 
+function checkPatternSyntax(src: string): NowErrorNested | null {
+  try {
+    sourceToRegex(src);
+  } catch (err) {
+    return {
+      message: `Invalid pattern: "${src}"`,
+      src,
+    };
+  }
+  return null;
+}
+
 function createNowError(
   code: string,
   msg: string,
@@ -231,16 +244,29 @@ export function getTransformedRoutes({
 
   if (typeof redirects !== 'undefined') {
     const code = 'invalid_redirects';
-    const errors = redirects
+    const errorsRegex = redirects
       .map(r => checkRegexSyntax(r.source))
       .filter(notEmpty);
-    if (errors.length > 0) {
+    if (errorsRegex.length > 0) {
       return {
         routes,
         error: createNowError(
           code,
-          'Redirect `source` contains invalid regex',
-          errors
+          'Redirect `source` contains invalid regex. Read more: https://err.sh/now/invalid-route-source',
+          errorsRegex
+        ),
+      };
+    }
+    const errorsPattern = redirects
+      .map(r => checkPatternSyntax(r.source))
+      .filter(notEmpty);
+    if (errorsPattern.length > 0) {
+      return {
+        routes,
+        error: createNowError(
+          code,
+          'Redirect `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
+          errorsPattern
         ),
       };
     }
@@ -265,16 +291,29 @@ export function getTransformedRoutes({
 
   if (typeof rewrites !== 'undefined') {
     const code = 'invalid_rewrites';
-    const errors = rewrites
+    const errorsRegex = rewrites
       .map(r => checkRegexSyntax(r.source))
       .filter(notEmpty);
-    if (errors.length > 0) {
+    if (errorsRegex.length > 0) {
       return {
         routes,
         error: createNowError(
           code,
-          'Rewrites `source` contains invalid regex',
-          errors
+          'Rewrites `source` contains invalid regex. Read more: https://err.sh/now/invalid-route-source',
+          errorsRegex
+        ),
+      };
+    }
+    const errorsPattern = rewrites
+      .map(r => checkPatternSyntax(r.source))
+      .filter(notEmpty);
+    if (errorsPattern.length > 0) {
+      return {
+        routes,
+        error: createNowError(
+          code,
+          'Rewrites `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
+          errorsPattern
         ),
       };
     }
