@@ -47,13 +47,19 @@ async function checkForPort(
 }
 
 class BuildError extends Error {
-  constructor(err: { link?: string; message: string }) {
+  constructor(err: {
+    link?: string;
+    message: string;
+    hideStackTrace?: boolean;
+  }) {
     super(err.message);
     this.link = err.link;
     this.name = 'BuildError';
+    this.hideStackTrace = err.hideStackTrace;
   }
 
   link?: string;
+  hideStackTrace?: boolean;
 }
 
 function validateDistDir(
@@ -81,6 +87,7 @@ function validateDistDir(
           : ''
       }`,
       link,
+      hideStackTrace: true,
     });
   }
 
@@ -92,6 +99,7 @@ function validateDistDir(
           : ''
       }`,
       link,
+      hideStackTrace: true,
     });
   }
 
@@ -103,6 +111,7 @@ function validateDistDir(
           : ''
       }`,
       link,
+      hideStackTrace: true,
     });
   }
 }
