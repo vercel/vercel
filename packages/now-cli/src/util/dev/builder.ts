@@ -3,10 +3,18 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { promisify } from 'util';
-import { delimiter, dirname, join } from 'path';
+import { delimiter, dirname, extname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import {
+  Builder,
+  File,
+  Lambda,
+  FileBlob,
+  FileFsRef,
+  detectOutputDirectory,
+  detectApiDirectory,
+} from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import which from 'which';
@@ -279,19 +287,38 @@ export async function executeBuild(
 
   const { output } = result;
 
-  // Mimic fmeta-util and convert cleanUrls
-  if (nowConfig.cleanUrls) {
-    Object.entries(output)
-      .filter(([name, value]) => name.endsWith('.html'))
-      .forEach(([name, value]) => {
-        const cleanName = name.slice(0, -5);
-        delete output[name];
-        output[cleanName] = value;
-        if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
-          value.contentType = value.contentType || 'text/html; charset=utf-8';
+  const { featHandleMiss, cleanUrls } = nowConfig;
+  // Mimic fmeta-util and perform file renaming
+
+  const outputDir = detectOutputDirectory(nowConfig.builds || []);
+  const apiDir = detectApiDirectory(nowConfig.builds || []);
+  const outputMatch = outputDir + '/';
+  const apiMatch = apiDir + '/';
+  Object.entries(output).forEach(([path, value]) => {
+    if (featHandleMiss && value.type === 'Lambda') {
+      if (outputDir && path.startsWith(outputMatch)) {
+        // static output files are moved to the root directory
+        path = path.slice(outputMatch.length);
+      }
+      if (apiDir && path.startsWith(apiMatch)) {
+        // lambda function files are trimmed of their file extension
+        const ext = extname(path);
+        if (ext) {
+          path = path.slice(0, -ext.length);
         }
-      });
-  }
+      }
+    }
+    if (cleanUrls && path.endsWith('.html')) {
+      path = path.slice(0, -5);
+
+      if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
+        value.contentType = value.contentType || 'text/html; charset=utf-8';
+      }
+    }
+
+    delete output[path];
+    output[path] = value;
+  });
 
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.

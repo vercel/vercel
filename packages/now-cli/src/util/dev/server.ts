@@ -526,7 +526,13 @@ export default class DevServer {
 
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      const { projectSettings } = config;
+      config.featHandleMiss = !config.routes || config.routes.length === 0;
+      const {
+        projectSettings,
+        featHandleMiss,
+        cleanUrls,
+        trailingSlash,
+      } = config;
 
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
@@ -548,7 +554,13 @@ export default class DevServer {
           defaultRoutes,
           redirectRoutes,
           error: routesError,
-        } = await detectRoutes(files, builders);
+        } = await detectRoutes(
+          files,
+          builders,
+          featHandleMiss,
+          cleanUrls,
+          trailingSlash
+        );
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
