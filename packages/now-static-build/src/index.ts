@@ -47,11 +47,7 @@ async function checkForPort(
   }
 }
 
-function validateDistDir(
-  distDir: string,
-  isDev: boolean | undefined,
-  config: Config
-) {
+function validateDistDir(distDir: string, config: Config) {
   const distDirName = path.basename(distDir);
   const exists = () => existsSync(distDir);
   const isDirectory = () => statSync(distDir).isDirectory();
@@ -433,7 +429,7 @@ export async function build({
         }
       }
 
-      validateDistDir(distPath, meta.isDev, config);
+      validateDistDir(distPath, config);
 
       if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
@@ -460,7 +456,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-    validateDistDir(distPath, meta.isDev, config);
+    validateDistDir(distPath, config);
 
     const output = await glob('**', distPath, mountpoint);
 
