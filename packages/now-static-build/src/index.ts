@@ -98,7 +98,7 @@ function validateDistDir(
 
   if (isEmpty()) {
     const err = new NowBuildError({
-      code: 'no_output_dir',
+      code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
       message: `Build failed because distDir is empty: "${distDirName}". ${
         !config.zeroConfig
           ? '\nMake sure you configure the the correct distDir'
