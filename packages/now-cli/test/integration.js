@@ -2365,47 +2365,7 @@ test('should not prompt "project settings overwrite" for undetected projects', a
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('should prefill "project name" prompt with detected project name', async t => {
-  const directory = fixture('static-deployment');
-  const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
-
-  const now = execa(binaryPath, [
-    directory,
-    '--name',
-    projectName,
-    ...defaultArgs,
-  ]);
-
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
-  now.stdin.write('yes\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
-  now.stdin.write('\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Link to existing project?')
-  );
-  now.stdin.write('no\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes(`What’s your project’s name? (${projectName})`)
-  );
-  now.stdin.write(`\n`);
-
-  const output = await now;
-  t.is(output.exitCode, 0, formatOutput(output));
-});
-
-test.only('should prefill "project name" prompt with folder name', async t => {
+test('should prefill "project name" prompt with folder name', async t => {
   const projectName = `static-deployment-${
     Math.random()
       .toString(36)
@@ -2444,7 +2404,7 @@ test.only('should prefill "project name" prompt with folder name', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test.only('should prefill "project name" prompt with --name', async t => {
+test('should prefill "project name" prompt with --name', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random()
@@ -2484,7 +2444,7 @@ test.only('should prefill "project name" prompt with --name', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test.only('should prefill "project name" prompt with now.json `name`', async t => {
+test('should prefill "project name" prompt with now.json `name`', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random()
