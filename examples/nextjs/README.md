@@ -1,4 +1,4 @@
-![Next.js Logo](../packages/frameworks/logos/next.svg)
+![Next.js Logo](../../packages/frameworks/logos/next.svg)
 
 # Next.js Example
 

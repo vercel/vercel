@@ -896,10 +896,16 @@ async function sync({
     if (isTTY) {
       let inClipboard = '';
       const platformVersion = deployment.version || 1;
+      const displayUrl =
+        Array.isArray(deployment.alias) &&
+        deployment.alias.length > 0 &&
+        !deployment.aliasError
+          ? `https://${deployment.alias[0]}`
+          : url;
 
       if (clipboard) {
         try {
-          await copy(url);
+          await copy(displayUrl);
           inClipboard = chalk.gray(' [in clipboard]');
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
@@ -907,7 +913,7 @@ async function sync({
       }
 
       log(
-        chalk`{bold.cyan ${url}} {gray [v${platformVersion}]}${inClipboard}${dcs} ${deployStamp()}`
+        chalk`{bold.cyan ${displayUrl}} {gray [v${platformVersion}]}${inClipboard}${dcs} ${deployStamp()}`
       );
     }
 

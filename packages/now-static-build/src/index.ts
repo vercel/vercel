@@ -212,21 +212,24 @@ export async function build({
 
   const pkg = getPkg(entrypoint, workPath);
 
+  const devScript = pkg ? getCommand(pkg, 'dev', config) : null;
+  const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
+
   const framework = getFramework(config, pkg);
   const devCommand: string | undefined =
-    config.devCommand || (framework && framework.devCommand);
+    config.devCommand ||
+    (devScript ? undefined : framework && framework.devCommand);
   const buildCommand: string | undefined =
-    config.buildCommand || (framework && framework.buildCommand);
+    config.buildCommand ||
+    (buildScript ? undefined : framework && framework.buildCommand);
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
-    let minNodeRange: string | undefined = undefined;
 
     const routes: Route[] = [];
-    const devScript = pkg ? getCommand(pkg, 'dev', config) : null;
 
     if (config.zeroConfig) {
       if (existsSync(gemfilePath) && !meta.isDev) {
@@ -284,22 +287,11 @@ export async function build({
       debug(
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
-
-      if (framework.minNodeRange) {
-        minNodeRange = framework.minNodeRange;
-        debug(
-          `${framework.name} requires Node.js ${framework.minNodeRange}. Switching...`
-        );
-      } else {
-        debug(
-          `${framework.name} does not require a specific Node.js version. Continuing ...`
-        );
-      }
     }
 
     const nodeVersion = await getNodeVersion(
       entrypointDir,
-      minNodeRange,
+      undefined,
       config,
       meta
     );
@@ -394,7 +386,6 @@ export async function build({
         );
       }
 
-      const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
       debug(
         `Running "${buildCommand || buildScript}" script in "${entrypoint}"`
       );

@@ -1,5 +1,5 @@
 export interface FrameworkDetectionItem {
-  file: string;
+  path: string;
   matchContent?: string;
 }
 
