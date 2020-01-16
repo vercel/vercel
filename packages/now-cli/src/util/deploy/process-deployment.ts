@@ -211,7 +211,7 @@ export default async function processDeployment({
         buildSpinner();
       }
 
-      deploySpinner = wait('Finalizing', 0);
+      deploySpinner = wait('Completing', 0);
     }
 
     // Handle error events
