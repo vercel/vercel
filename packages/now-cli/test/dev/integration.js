@@ -406,6 +406,19 @@ test(
 );
 
 test(
+  '[now dev] handles hit after dest',
+  testFixtureStdio('handle-hit-after-dest', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+    const test = response.headers.get('test');
+    const override = response.headers.get('override');
+    t.is(test, '1', 'expected hit header to be added');
+    t.is(override, 'one', 'expected hit header to not override');
+    const body = await response.text();
+    t.regex(body, /Blog Post/gm);
+  })
+);
+
+test(
   '[now dev] handles hit after rewrite',
   testFixtureStdio('handle-hit-after-rewrite', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/post`);

@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/([^/]+)",
+      "headers": { "override": "one" },
+      "dest": "/blog/$1.html",
+      "check": true
+    },
+    { "handle": "hit" },
+    {
+      "src": "^/.*",
+      "headers": { "test": "1", "override": "two" },
+      "continue": true
+    }
+  ]
+}
