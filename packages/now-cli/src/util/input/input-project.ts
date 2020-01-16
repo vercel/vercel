@@ -70,7 +70,7 @@ export default async function inputProject(
       const projectName = answers.existingProjectName as string;
 
       if (!projectName) {
-        output.print(`${chalk.red('Error!')} Project name can not be empty\n`);
+        output.print(`${chalk.red('Error!')} Project name cannot be empty\n`);
         continue;
       }
 
