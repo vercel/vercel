@@ -57,17 +57,13 @@ function validateDistDir(
   const isDirectory = () => statSync(distDir).isDirectory();
   const isEmpty = () => readdirSync(distDir).length === 0;
 
-  const hash = isDev
-    ? '#local-development'
-    : '#configuring-the-build-output-directory';
-  const link = config.zeroConfig
-    ? 'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory'
-    : `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
+  const link =
+    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
   if (!exists()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
-      message: `No output directory named "${distDirName}" found. ${
+      message: `No Output Directory named "${distDirName}" found. ${
         !config.zeroConfig
           ? '\nMake sure you configure the the correct distDir'
           : ''
@@ -91,7 +87,7 @@ function validateDistDir(
   if (isEmpty()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
-      message: `Build failed because distDir is empty: "${distDirName}". ${
+      message: `Build failed because Output Directory is empty: "${distDirName}". ${
         !config.zeroConfig
           ? '\nMake sure you configure the the correct distDir'
           : ''
