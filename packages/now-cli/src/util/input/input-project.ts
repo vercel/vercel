@@ -69,6 +69,11 @@ export default async function inputProject(
       });
       const projectName = answers.existingProjectName as string;
 
+      if (!projectName) {
+        output.print(`${chalk.red('Error!')} Project name can not be empty\n`);
+        continue;
+      }
+
       const loader = wait('Verifying project name…', 1000);
       project = await getProjectByIdOrName(client, projectName, org.id);
       loader();
@@ -92,6 +97,11 @@ export default async function inputProject(
       default: !detectedProject ? detectedProjectName : undefined,
     });
     newProjectName = answers.newProjectName as string;
+
+    if (!newProjectName) {
+      output.print(`${chalk.red('Error!')} Project name can not be empty\n`);
+      continue;
+    }
 
     const spinner = wait('Verifying project name…', 1000);
     const existingProject = await getProjectByIdOrName(
