@@ -2316,6 +2316,9 @@ test('should show prompts to set up project', async t => {
   // Ensure the exit code is right
   t.is(output.exitCode, 0, formatOutput(output));
 
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(directory, '.gitignore'))).toString(), '.now');
+
   // Send a test request to the deployment
   const response = await fetch(new URL(output.stdout).href);
   const text = await response.text();
