@@ -12,6 +12,7 @@ import { Project } from '../../types';
 import { Org } from '../../types';
 import chalk from 'chalk';
 import { prependEmoji, emoji } from '../emoji';
+import wait from '../output/wait';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -49,10 +50,12 @@ export async function getLinkedProject(
 
     const link: ProjectFolderLink = JSON.parse(json);
 
+    const spinner = wait('Retrieving project…', 1000);
     const [org, project] = await Promise.all([
       getOrg(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
+    spinner();
 
     if (project instanceof ProjectNotFound || org === null) {
       return [null, null];
