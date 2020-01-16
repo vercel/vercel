@@ -90,7 +90,7 @@ function hasScript(script: string, pkg: PackageJson) {
   return typeof scripts[script] === 'string';
 }
 
-function getScript(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
+function getScriptName(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
   // The `dev` script can be `now dev`
   const nowCmd = `now-${cmd}`;
 
@@ -122,7 +122,7 @@ function getCommand(
   }
 
   if (pkg) {
-    const scriptName = getScript(pkg, name, config);
+    const scriptName = getScriptName(pkg, name, config);
 
     if (hasScript(scriptName, pkg)) {
       return null;
@@ -245,8 +245,8 @@ export async function build({
 
   const pkg = getPkg(entrypoint, workPath);
 
-  const devScript = pkg ? getScript(pkg, 'dev', config) : null;
-  const buildScript = pkg ? getScript(pkg, 'build', config) : null;
+  const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
+  const buildScript = pkg ? getScriptName(pkg, 'build', config) : null;
 
   const framework = getFramework(config, pkg);
 
