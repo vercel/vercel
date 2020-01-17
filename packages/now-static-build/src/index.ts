@@ -79,7 +79,7 @@ function validateDistDir(distDir: string, config: Config) {
   if (isEmpty()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
-      message: `Build failed because Output Directory "${distDirName}" is empty. ${legacyMsg}`,
+      message: `The Output Directory "${distDirName}" is empty. ${legacyMsg}`,
       link,
     });
   }
