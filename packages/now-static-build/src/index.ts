@@ -454,7 +454,7 @@ export async function build({
         }
       }
 
-      validateDistDir(distPath, config);
+      validateDistDir(distPath);
 
       if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
@@ -481,7 +481,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-    validateDistDir(distPath, config);
+    validateDistDir(distPath);
 
     const output = await glob('**', distPath, mountpoint);
 
