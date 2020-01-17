@@ -9,7 +9,7 @@ export function build({
   config,
 }: BuilderParams): BuildResult {
   let path = entrypoint;
-  const outputDir = config.outputDirectory;
+  const outputDir = config.zeroConfig ? config.outputDirectory : '';
   const outputMatch = outputDir + '/';
   if (outputDir && path.startsWith(outputMatch)) {
     // static output files are moved to the root directory
@@ -30,7 +30,7 @@ export function shouldServe({
   config = {},
 }: ShouldServeParams) {
   let outputPrefix = '';
-  const outputDir = config.outputDirectory;
+  const outputDir = config.zeroConfig ? config.outputDirectory : '';
   const outputMatch = outputDir + '/';
   if (outputDir && entrypoint.startsWith(outputMatch)) {
     // static output files are moved to the root directory

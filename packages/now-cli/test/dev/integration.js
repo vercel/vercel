@@ -432,7 +432,7 @@ test(
 );
 
 test(
-  '[now dev] should serve the public directory',
+  '[now dev] should serve the public directory and api functions',
   testFixtureStdio('public-and-api', async (t, port) => {
     const index = await fetchWithRetry(`http://localhost:${port}`);
     t.regex(await index.text(), /home page/gm);

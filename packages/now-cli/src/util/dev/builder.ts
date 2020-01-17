@@ -12,7 +12,6 @@ import {
   Lambda,
   FileBlob,
   FileFsRef,
-  detectOutputDirectory,
   detectApiDirectory,
 } from '@now/build-utils';
 import stripAnsi from 'strip-ansi';

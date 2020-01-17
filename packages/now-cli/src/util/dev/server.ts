@@ -728,11 +728,11 @@ export default class DevServer {
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
     const results: { [filePath: string]: FileFsRef } = {};
+    const apiDir = detectApiDirectory(nowConfig.builds || []);
+    const apiMatch = apiDir + '/';
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
       const { mode } = await fs.stat(fsPath);
-      const apiDir = 'api'; // TODO: use detectApiDirectory(builds || []) instead
-      const apiMatch = apiDir + '/';
       if (apiDir && path.startsWith(apiMatch)) {
         // lambda function files are trimmed of their file extension
         const ext = extname(path);
