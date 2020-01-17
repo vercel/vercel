@@ -13,7 +13,7 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import { getTransformedRoutes } from '@now/routing-utils';
+import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -1173,44 +1173,30 @@ export default class DevServer {
     }
 
     const handleMap = getRoutesTypes(routes);
-    const topRoutes = handleMap.get(null) || [];
-    const filesystemRoutes = handleMap.get('filesystem');
-    if (filesystemRoutes) {
-      topRoutes.push({ handle: 'filesystem' });
-      topRoutes.push(...filesystemRoutes);
-    }
     const missRoutes = handleMap.get('miss') || [];
     const hitRoutes = handleMap.get('hit') || [];
+    handleMap.delete('miss');
+    handleMap.delete('hit');
 
-    let routeResult = await devRouter(
-      req.url,
-      req.method,
-      topRoutes,
-      this,
-      undefined,
-      missRoutes,
-      hitRoutes,
-      'filesystem'
-    );
+    const phases = Array.from(handleMap.keys()).sort((a, b) => {
+      // sort phases with null first
+      return (a || '').localeCompare(b || '');
+    });
 
-    let match = await findBuildMatch(
-      this.buildMatches,
-      this.files,
-      routeResult.dest,
-      this
-    );
+    let routeResult: RouteResult = { found: false, dest: '', headers: {} };
+    let match: BuildMatch | null = null;
 
-    if (!match && missRoutes.length > 0) {
-      // Since there was no build match, enter the miss phase
+    for (const phase of phases) {
+      const phaseRoutes = handleMap.get(phase) || [];
       routeResult = await devRouter(
-        routeResult.dest || req.url,
+        req.url,
         req.method,
-        missRoutes,
+        phaseRoutes,
         this,
-        routeResult.headers,
-        [],
-        [],
-        'miss'
+        undefined,
+        missRoutes,
+        hitRoutes,
+        phase
       );
 
       match = await findBuildMatch(
@@ -1219,18 +1205,39 @@ export default class DevServer {
         routeResult.dest,
         this
       );
-    } else if (match && hitRoutes.length > 0) {
-      // Since there was a build match, enter the hit phase
-      routeResult = await devRouter(
-        routeResult.dest || req.url,
-        req.method,
-        hitRoutes,
-        this,
-        routeResult.headers,
-        [],
-        [],
-        'hit'
-      );
+
+      if (!match && missRoutes.length > 0) {
+        // Since there was no build match, enter the miss phase
+        routeResult = await devRouter(
+          routeResult.dest || req.url,
+          req.method,
+          missRoutes,
+          this,
+          routeResult.headers,
+          [],
+          [],
+          'miss'
+        );
+
+        match = await findBuildMatch(
+          this.buildMatches,
+          this.files,
+          routeResult.dest,
+          this
+        );
+      } else if (match && hitRoutes.length > 0) {
+        // Since there was a build match, enter the hit phase
+        routeResult = await devRouter(
+          routeResult.dest || req.url,
+          req.method,
+          hitRoutes,
+          this,
+          routeResult.headers,
+          [],
+          [],
+          'hit'
+        );
+      }
     }
 
     const { dest, status, headers, uri_args } = routeResult;

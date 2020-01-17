@@ -53,7 +53,7 @@ export async function devRouter(
   previousHeaders?: HttpHeadersConfig,
   missRoutes?: RouteConfig[],
   hitRoutes?: RouteConfig[],
-  phase?: HandleValue
+  phase?: HandleValue | null
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
@@ -64,46 +64,49 @@ export async function devRouter(
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
+
       if (isHandler(routeConfig)) {
-        if (routeConfig.handle === 'filesystem' && devServer) {
-          const found = await devServer.hasFilesystem(reqPathname);
-          if (found) {
-            if (hitRoutes && hitRoutes.length > 0) {
-              // Trigger a 'hit'
-              const hitResult = await devRouter(
-                reqUrl,
-                reqMethod,
-                hitRoutes,
-                devServer,
-                previousHeaders,
-                [],
-                [],
-                'hit'
-              );
-              if (hitResult.found) {
-                return hitResult;
-              }
-            } else {
-              break;
-            }
-          } else if (missRoutes && missRoutes.length > 0) {
-            // Trigger a 'miss'
-            const missResult = await devRouter(
+        // We don't expect any Handle, only Source routes
+        continue;
+      }
+
+      if (phase === 'filesystem' && devServer) {
+        const found = await devServer.hasFilesystem(reqPathname);
+        if (found) {
+          if (hitRoutes && hitRoutes.length > 0) {
+            // Trigger a 'hit'
+            const hitResult = await devRouter(
               reqUrl,
               reqMethod,
-              missRoutes,
+              hitRoutes,
               devServer,
               previousHeaders,
               [],
               [],
-              'miss'
+              'hit'
             );
-            if (missResult.found) {
-              return missResult;
+            if (hitResult.found) {
+              return hitResult;
             }
+          } else {
+            break;
+          }
+        } else if (missRoutes && missRoutes.length > 0) {
+          // Trigger a 'miss'
+          const missResult = await devRouter(
+            reqUrl,
+            reqMethod,
+            missRoutes,
+            devServer,
+            previousHeaders,
+            [],
+            [],
+            'miss'
+          );
+          if (missResult.found) {
+            return missResult;
           }
         }
-        continue;
       }
 
       let { src, headers, methods } = routeConfig;
