@@ -111,6 +111,10 @@ function getCommand(
   config: Config,
   framework: Framework | undefined
 ) {
+  if (!config.zeroConfig) {
+    return null;
+  }
+
   const propName = name === 'build' ? 'buildCommand' : 'devCommand';
 
   if (typeof config[propName] === 'string') {
