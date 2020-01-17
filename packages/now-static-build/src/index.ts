@@ -63,7 +63,7 @@ function validateDistDir(distDir: string, config: Config) {
   if (!exists()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
-      message: `No Output Directory named "${distDirName}" found. ${legacyMsg}`,
+      message: `No Output Directory named "${distDirName}" found after the Build completed. ${legacyMsg}`,
       link,
     });
   }
@@ -71,7 +71,7 @@ function validateDistDir(distDir: string, config: Config) {
   if (!isDirectory()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NOT_A_DIR',
-      message: `Build failed because Output Directory is not a directory: "${distDirName}". ${legacyMsg}`,
+      message: `Build failed because Output Directory "${distDirName}" is not a directory. ${legacyMsg}`,
       link,
     });
   }
@@ -79,7 +79,7 @@ function validateDistDir(distDir: string, config: Config) {
   if (isEmpty()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
-      message: `Build failed because Output Directory is empty: "${distDirName}". ${legacyMsg}`,
+      message: `Build failed because Output Directory "${distDirName}" is empty. ${legacyMsg}`,
       link,
     });
   }
