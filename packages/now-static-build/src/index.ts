@@ -47,7 +47,7 @@ async function checkForPort(
   }
 }
 
-function validateDistDir(distDir: string, config: Config) {
+function validateDistDir(distDir: string) {
   const distDirName = path.basename(distDir);
   const exists = () => existsSync(distDir);
   const isDirectory = () => statSync(distDir).isDirectory();
