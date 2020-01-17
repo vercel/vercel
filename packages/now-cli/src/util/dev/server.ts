@@ -22,6 +22,7 @@ import {
   PackageJson,
   detectBuilders,
   detectRoutes,
+  detectApiDirectory,
 } from '@now/build-utils';
 
 import { once } from '../once';
@@ -733,8 +734,17 @@ export default class DevServer {
     const files = await getFiles(this.cwd, nowConfig, opts);
     const results: { [filePath: string]: FileFsRef } = {};
     for (const fsPath of files) {
-      const path = relative(this.cwd, fsPath);
+      let path = relative(this.cwd, fsPath);
       const { mode } = await fs.stat(fsPath);
+      const apiDir = 'api'; // TODO: use detectApiDirectory(builds || []) instead
+      const apiMatch = apiDir + '/';
+      if (apiDir && path.startsWith(apiMatch)) {
+        // lambda function files are trimmed of their file extension
+        const ext = extname(path);
+        if (ext) {
+          path = path.slice(0, -ext.length);
+        }
+      }
       results[path] = new FileFsRef({ mode, fsPath });
     }
     this.files = results;

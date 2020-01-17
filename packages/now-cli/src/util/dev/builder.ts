@@ -287,27 +287,9 @@ export async function executeBuild(
 
   const { output } = result;
 
-  const { featHandleMiss, cleanUrls } = nowConfig;
+  const { cleanUrls } = nowConfig;
   // Mimic fmeta-util and perform file renaming
-
-  const outputDir = detectOutputDirectory(nowConfig.builds || []);
-  const apiDir = detectApiDirectory(nowConfig.builds || []);
-  const outputMatch = outputDir + '/';
-  const apiMatch = apiDir + '/';
   Object.entries(output).forEach(([path, value]) => {
-    if (featHandleMiss && value.type === 'Lambda') {
-      if (outputDir && path.startsWith(outputMatch)) {
-        // static output files are moved to the root directory
-        path = path.slice(outputMatch.length);
-      }
-      if (apiDir && path.startsWith(apiMatch)) {
-        // lambda function files are trimmed of their file extension
-        const ext = extname(path);
-        if (ext) {
-          path = path.slice(0, -ext.length);
-        }
-      }
-    }
     if (cleanUrls && path.endsWith('.html')) {
       path = path.slice(0, -5);
 
@@ -437,6 +419,8 @@ export async function getBuildMatches(
 
   const noMatches: Builder[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
+  const apiDir = detectApiDirectory(builds || []);
+  const apiMatch = apiDir + '/';
 
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
@@ -455,6 +439,14 @@ export async function getBuildMatches(
     // We need to escape brackets since `glob` will
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
+
+    if (apiDir && src.startsWith(apiMatch)) {
+      // lambda function files are trimmed of their file extension
+      const ext = extname(src);
+      if (ext) {
+        src = src.slice(0, -ext.length);
+      }
+    }
 
     const files = fileList
       .filter(name => name === src || minimatch(name, src))
