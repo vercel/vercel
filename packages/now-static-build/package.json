@@ -1,6 +1,6 @@
 {
   "name": "@now/static-build",
-  "version": "0.14.9",
+  "version": "0.14.10",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/static-builds",
