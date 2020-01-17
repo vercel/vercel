@@ -56,14 +56,10 @@ function validateDistDir(distDir: string, config: Config) {
   const link =
     'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
-  const legacyMsg = !config.zeroConfig
-    ? '\nMake sure you configure the the correct `distDir`.'
-    : '';
-
   if (!exists()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
-      message: `No Output Directory named "${distDirName}" found after the Build completed. ${legacyMsg}`,
+      message: `No Output Directory named "${distDirName}" found after the Build completed.`,
       link,
     });
   }
@@ -71,7 +67,7 @@ function validateDistDir(distDir: string, config: Config) {
   if (!isDirectory()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NOT_A_DIR',
-      message: `The path specified as Output Directory ("${distDirName}") is not actually a directory. ${legacyMsg}`,
+      message: `The path specified as Output Directory ("${distDirName}") is not actually a directory.`,
       link,
     });
   }
@@ -79,7 +75,7 @@ function validateDistDir(distDir: string, config: Config) {
   if (isEmpty()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
-      message: `The Output Directory "${distDirName}" is empty. ${legacyMsg}`,
+      message: `The Output Directory "${distDirName}" is empty.`,
       link,
     });
   }
