@@ -527,13 +527,8 @@ export default class DevServer {
 
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      config.featHandleMiss = !config.routes || config.routes.length === 0;
-      const {
-        projectSettings,
-        featHandleMiss,
-        cleanUrls,
-        trailingSlash,
-      } = config;
+      const featHandleMiss = true; // enable for zero config
+      const { projectSettings, cleanUrls, trailingSlash } = config;
 
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
