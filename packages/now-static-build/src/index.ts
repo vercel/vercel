@@ -71,7 +71,7 @@ function validateDistDir(distDir: string, config: Config) {
   if (!isDirectory()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NOT_A_DIR',
-      message: `Build failed because Output Directory "${distDirName}" is not a directory. ${legacyMsg}`,
+      message: `The path specified as Output Directory ("${distDirName}") is not actually a directory. ${legacyMsg}`,
       link,
     });
   }
