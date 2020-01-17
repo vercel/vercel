@@ -431,6 +431,22 @@ test(
   })
 );
 
+test(
+  '[now dev] should serve the public directory',
+  testFixtureStdio('public-and-api', async (t, port) => {
+    const index = await fetchWithRetry(`http://localhost:${port}`);
+    t.regex(await index.text(), /home page/gm);
+    const about = await fetchWithRetry(`http://localhost:${port}/about.html`);
+    t.regex(await about.text(), /about page/gm);
+    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
+    t.regex(await date.text(), /current date/gm);
+    const rand = await fetchWithRetry(`http://localhost:${port}/api/rand`);
+    t.regex(await rand.text(), /random number/gm);
+    const rand2 = await fetchWithRetry(`http://localhost:${port}/api/rand.js`);
+    t.regex(await rand2.text(), /random number/gm);
+  })
+);
+
 test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);

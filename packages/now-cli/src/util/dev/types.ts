@@ -8,6 +8,7 @@ import {
   Lambda,
   PackageJson,
   BuilderFunctions,
+  Config,
 } from '@now/build-utils';
 import { NowConfig } from 'now-client';
 import { NowRedirect, NowRewrite, NowHeader, Route } from '@now/routing-utils';
@@ -61,7 +62,7 @@ export interface CacheOutputs {
 export interface BuilderParamsBase {
   files: BuilderInputs;
   entrypoint: string;
-  config: object;
+  config: Config;
   meta?: {
     isDev?: boolean;
     requestPath?: string | null;
@@ -124,7 +125,7 @@ export interface BuildResultV4 {
 export interface ShouldServeParams {
   files: BuilderInputs;
   entrypoint: string;
-  config?: object;
+  config?: Config;
   requestPath: string;
   workPath: string;
 }
