@@ -2076,13 +2076,18 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.20.4.tgz#00f0a25a88cac3712af4ba66561d9e281c6f05c9"
   integrity sha512-fmq+F/QxPec+k/zvT7HiVpk7oiGFseS6brfT/AYqmCUp6QFRK7vZf2Ref46MImsg/g2W3g5X6SRvGRmOAvEfdA==
 
-"@zeit/node-file-trace@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.4.1.tgz#37cb1382fa0d31c2083b634201fdad7a01849dda"
-  integrity sha512-jrRdmyYzMZ9w00EoNM3dLgFD+AvERlM37QGtXn9wZ6WZMPfVa/VSd2HrdVaYUI5gg2cTcwtkJenz51UHUPfmOg==
+"@zeit/node-file-trace@0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.5.1.tgz#3badd7516fd91f78860e698edbb41107dfc841f4"
+  integrity sha512-BlZDokGcOIKu5R2Qs3bZGjXRptbKqBYQ7iBnSDjJhJqP4d4hbRPPBQQnrihLOVNsauX845I+CUgRY+OOpd2jFA==
   dependencies:
     acorn "^6.1.1"
-    acorn-stage3 "^2.0.0"
+    acorn-bigint "^0.3.1"
+    acorn-class-fields "^0.3.1"
+    acorn-dynamic-import "^4.0.0"
+    acorn-export-ns-from "^0.1.0"
+    acorn-import-meta "^1.0.0"
+    acorn-private-methods "^0.3.0"
     bindings "^1.4.0"
     estree-walker "^0.6.0"
     glob "^7.1.3"
@@ -2178,26 +2183,6 @@ acorn-private-methods@^0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/acorn-private-methods/-/acorn-private-methods-0.3.0.tgz#a5a9f8cd83d175bc138fa22592fababd0afda35d"
   integrity sha512-+gWTjSA+13lsv1mwCPosSrLzEyghYtWgrr/1Ck7i7Pu5iK7Ke0hOgw3IW1RUxhc4qS2QTQBQx2+qHYqsa4Qlqw==
-  dependencies:
-    acorn-private-class-elements "^0.1.0"
-
-acorn-stage3@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/acorn-stage3/-/acorn-stage3-2.0.0.tgz#cf9efacec9323bdef36a416c385c833fcf39a0c6"
-  integrity sha512-1Li6EwvFv/O0rZMDduZY2lOly9fyXanmIsyqe26NppIszWhEQlb7IbUrjFGWyRVjQg3H8k7rO0I/tbAr6dORoQ==
-  dependencies:
-    acorn-bigint "^0.3.1"
-    acorn-class-fields "^0.3.1"
-    acorn-dynamic-import "^4.0.0"
-    acorn-export-ns-from "^0.1.0"
-    acorn-import-meta "^1.0.0"
-    acorn-private-methods "^0.3.0"
-    acorn-static-class-features "^0.2.0"
-
-acorn-static-class-features@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/acorn-static-class-features/-/acorn-static-class-features-0.2.0.tgz#8a12b0b280b2e067e268fdbb14116a5b02affd71"
-  integrity sha512-46IooHSRsvgSi+t36Wx9iPfF9BKFKVDcAWELXVqvKHmZogSCk11iUCi2FiZmLeTaM0hlJ3EYDyYiVmHRUGPzWA==
   dependencies:
     acorn-private-class-elements "^0.1.0"
 
