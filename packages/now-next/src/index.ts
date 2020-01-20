@@ -623,6 +623,7 @@ export const build = async ({
     });
 
     const pageKeys = Object.keys(pages);
+    // > 1 because _error is a lambda but isn't used if a static 404 is available
     const hasLambdas = !staticPages['_errors/404'] || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
@@ -757,7 +758,10 @@ export const build = async ({
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
     const allLambdasLabel = `All serverless functions created in`;
-    console.time(allLambdasLabel);
+
+    if (hasLambdas) {
+      console.time(allLambdasLabel);
+    }
 
     await Promise.all(
       pageKeys.map(async page => {
