@@ -451,6 +451,17 @@ export const build = async ({
 
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
+
+        // 404
+        ...(output['/404']
+          ? [
+              {
+                src: path.join('/', entryDirectory, '.*'),
+                dest: path.join('/', entryDirectory, '404'),
+                status: 404,
+              },
+            ]
+          : []),
       ],
       watch: [],
       childProcesses: [],
@@ -612,6 +623,7 @@ export const build = async ({
     });
 
     const pageKeys = Object.keys(pages);
+    const hasLambdas = !staticPages['_errors/404'] || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
       const nextConfig = await getNextConfig(workPath, entryPath);
@@ -628,7 +640,7 @@ export const build = async ({
     }
 
     // Assume tracing to be safe, bail if we know we don't need it.
-    let requiresTracing = true;
+    let requiresTracing = hasLambdas;
     try {
       if (
         realNextVersion &&
@@ -754,6 +766,11 @@ export const build = async ({
           return;
         }
 
+        // Don't create _error lambda if we have a static 404 page
+        if (staticPages['_errors/404'] && page === '_error.js') {
+          return;
+        }
+
         const pathname = page.replace(/\.js$/, '');
 
         if (isDynamicRoute(pathname)) {
@@ -807,7 +824,10 @@ export const build = async ({
         }
       })
     );
-    console.timeEnd(allLambdasLabel);
+
+    if (hasLambdas) {
+      console.timeEnd(allLambdasLabel);
+    }
 
     let prerenderGroup = 1;
     const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
@@ -999,7 +1019,11 @@ export const build = async ({
         : [
             {
               src: path.join('/', entryDirectory, '.*'),
-              dest: path.join('/', entryDirectory, '_error'),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                staticPages['_errors/404'] ? '_errors/404' : '_error'
+              ),
               status: 404,
             },
           ]),
