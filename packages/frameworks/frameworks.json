@@ -580,7 +580,7 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "hugo"
+        "value": "hugo -D --gc"
       },
       "devCommand": {
         "value": "hugo server -D -w -p $PORT"
