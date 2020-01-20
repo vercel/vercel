@@ -2267,7 +2267,8 @@ test('assign a domain to a project', async t => {
   const project = 'static-deployment';
   const directory = fixture(project);
 
-  const deploymentOutput = await execute([directory]);
+  const deploymentOutput = await execute([directory, '--public', '--confirm']);
+
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
   const output = await execute(['domains', 'add', domain, project, '--force']);
@@ -2279,7 +2280,12 @@ test('list project domains', async t => {
   const project = 'static-deployment';
   const directory = fixture(project);
 
-  const deploymentOutput = await execute([directory, '--force']);
+  const deploymentOutput = await execute([
+    directory,
+    '--public',
+    '--confirm',
+    '--force',
+  ]);
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
   const addOutput = await execute([
