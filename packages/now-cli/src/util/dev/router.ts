@@ -115,7 +115,8 @@ export async function devRouter(
         if (routeConfig.check && devServer && phase !== 'hit') {
           const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(pathname);
-          if (!hasDestFile) {
+
+          if (!hasDestFile && !routeConfig.status) {
             if (missRoutes && missRoutes.length > 0) {
               // Trigger a 'miss'
               const missResult = await devRouter(

@@ -320,6 +320,23 @@ test(
 );
 
 test(
+  '[now dev] validate routes that use `check: true` and `status` code',
+  testFixtureStdio('routes-check-true-status', async (t, port) => {
+    const secret = await fetch(`http://localhost:${port}/secret`);
+    t.is(secret.status, 403);
+    t.regex(await secret.text(), /FORBIDDEN/gm);
+
+    const rewrite = await fetchWithRetry(`http://localhost:${port}/post`);
+    t.is(rewrite.status, 200);
+    t.regex(await rewrite.text(), /This is a post/gm);
+
+    const raw = await fetchWithRetry(`http://localhost:${port}/post.html`);
+    t.is(raw.status, 200);
+    t.regex(await raw.text(), /This is a post/gm);
+  })
+);
+
+test(
   '[now dev] handles miss after route',
   testFixtureStdio('handle-miss-after-route', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/post`);
@@ -1377,6 +1394,6 @@ test(
     validateResponseHeaders(t, response);
 
     const body = await response.text();
-    t.regex(body, /Hello, from Bash!/gm);
+    t.regex(body, /Hello, from PHP!/gm);
   })
 );

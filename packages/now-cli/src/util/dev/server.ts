@@ -13,7 +13,11 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
+import {
+  getTransformedRoutes,
+  HandleValue,
+  isHandler,
+} from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -49,7 +53,6 @@ import {
   validateNowConfigFunctions,
 } from './validate';
 
-import isURL from './is-url';
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
@@ -1178,12 +1181,6 @@ export default class DevServer {
     const hitRoutes = handleMap.get('hit') || [];
     handleMap.delete('miss');
     handleMap.delete('hit');
-    /*
-    const phases = Array.from(handleMap.keys()).sort((a, b) => {
-      // sort phases with null first
-      return (a || '').localeCompare(b || '');
-    });
-    */
     const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
     let routeResult: RouteResult | null = null;
@@ -1257,7 +1254,23 @@ export default class DevServer {
       const location = routeResult.headers['location'] || routeResult.dest;
 
       if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
+        // Equivalent to now-proxy exit_with_status() function
+        this.output.debug(`Route found with status code ${statusCode}`);
         await this.sendRedirect(req, res, nowRequestId, location, statusCode);
+        return;
+      }
+
+      if (
+        !match &&
+        statusCode &&
+        routeResult.matched_route &&
+        !isHandler(routeResult.matched_route) &&
+        routeResult.matched_route.check &&
+        routeResult.matched_route.status
+      ) {
+        // Equivalent to now-proxy exit_with_status() function
+        this.output.debug(`Route found with with status code ${statusCode}`);
+        await this.sendError(req, res, nowRequestId, '', statusCode);
         return;
       }
 
