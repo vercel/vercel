@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "apollo-server-micro": "^2.9.16"
+  }
+}
