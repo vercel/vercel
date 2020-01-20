@@ -188,6 +188,7 @@ test('[dev-router] `continue: true` with fallthrough', async t => {
   t.deepEqual(result, {
     found: false,
     dest: '/_next/static/chunks/0.js',
+    isDestUrl: false,
     uri_args: {},
     headers: {
       'cache-control': 'immutable,max-age=31536000',
