@@ -1,4 +1,4 @@
-![Gatsby Logo](../packages/frameworks/logos/gatsby.svg)
+![Gatsby Logo](../../packages/frameworks/logos/gatsby.svg)
 
 # Gatsby Example
 

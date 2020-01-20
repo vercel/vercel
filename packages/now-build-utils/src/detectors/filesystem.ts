@@ -24,22 +24,34 @@
  * methods in this class definition.
  */
 export abstract class DetectorFilesystem {
+  protected abstract _hasPath(name: string): Promise<boolean>;
   protected abstract _readFile(name: string): Promise<Buffer>;
-  protected abstract _exists(name: string): Promise<boolean>;
+  protected abstract _isFile(name: string): Promise<boolean>;
 
-  private existsCache: Map<string, Promise<boolean>>;
+  private pathCache: Map<string, Promise<boolean>>;
+  private fileCache: Map<string, Promise<boolean>>;
   private readFileCache: Map<string, Promise<Buffer>>;
 
   constructor() {
-    this.existsCache = new Map();
+    this.pathCache = new Map();
+    this.fileCache = new Map();
     this.readFileCache = new Map();
   }
 
-  public exists = async (name: string): Promise<boolean> => {
-    let p = this.existsCache.get(name);
+  public hasPath = async (path: string): Promise<boolean> => {
+    let p = this.pathCache.get(path);
     if (!p) {
-      p = this._exists(name);
-      this.existsCache.set(name, p);
+      p = this._hasPath(path);
+      this.pathCache.set(path, p);
+    }
+    return p;
+  };
+
+  public isFile = async (name: string): Promise<boolean> => {
+    let p = this.fileCache.get(name);
+    if (!p) {
+      p = this._isFile(name);
+      this.fileCache.set(name, p);
     }
     return p;
   };

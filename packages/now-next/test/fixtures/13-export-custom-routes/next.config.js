@@ -17,6 +17,7 @@ module.exports = {
         {
           source: '/second',
           destination: '/about',
+          permanent: false,
         },
       ];
     },

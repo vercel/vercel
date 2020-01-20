@@ -6,7 +6,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'public'),
     publicPath: '/public/',
-    filename: 'bundle.js',
+    filename: 'bundle.js'
   },
   devtool: 'inline',
   module: {
@@ -18,10 +18,10 @@ module.exports = {
           {
             loader: '@riotjs/webpack-loader',
             options: {
-              hot: true,
-            },
-          },
-        ],
+              hot: true
+            }
+          }
+        ]
       },
       {
         test: /\.js$/,
@@ -29,10 +29,10 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env'],
-          },
-        },
-      },
-    ],
-  },
+            presets: ['@babel/preset-env']
+          }
+        }
+      }
+    ]
+  }
 };

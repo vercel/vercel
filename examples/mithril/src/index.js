@@ -11,12 +11,12 @@ var Hello = {
         {
           onclick: function() {
             count++;
-          },
+          }
         },
         count + ' Clicks'
-      ),
+      )
     ]);
-  },
+  }
 };
 
 var Splash = {
@@ -24,14 +24,14 @@ var Splash = {
     return m(
       'a',
       {
-        href: '#!/hello',
+        href: '#!/hello'
       },
       'Enter!'
     );
-  },
+  }
 };
 
 m.route(root, '/splash', {
   '/splash': Splash,
-  '/hello': Hello,
+  '/hello': Hello
 });

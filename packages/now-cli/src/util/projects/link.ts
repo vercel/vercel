@@ -9,21 +9,16 @@ import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
 import { Project } from '../../types';
-import { Org } from '../../types';
+import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
+import { prependEmoji, emoji } from '../emoji';
+import wait from '../output/wait';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 export const NOW_FOLDER = '.now';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
-
-interface ProjectFolderLink {
-  projectId: string;
-  orgId: string;
-  orgSlug?: string;
-  projectName?: string;
-}
 
 async function getOrg(client: Client, orgId: string): Promise<Org | null> {
   if (orgId.startsWith('team_')) {
@@ -42,16 +37,34 @@ export async function getLinkedProject(
   path: string
 ): Promise<[Org | null, Project | null]> {
   try {
-    const json = await readFile(join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE), {
-      encoding: 'utf8',
-    });
+    let link: ProjectLink;
 
-    const link: ProjectFolderLink = JSON.parse(json);
+    const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+    if (NOW_ORG_ID && NOW_PROJECT_ID) {
+      link = {
+        orgId: NOW_ORG_ID,
+        projectId: NOW_PROJECT_ID,
+      };
+    } else {
+      const json = await readFile(
+        join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
+        { encoding: 'utf8' }
+      );
 
-    const [org, project] = await Promise.all([
-      getOrg(client, link.orgId),
-      getProjectByIdOrName(client, link.projectId, link.orgId),
-    ]);
+      link = JSON.parse(json);
+    }
+
+    const spinner = wait('Retrieving project…', 1000);
+    let org: Org | null;
+    let project: Project | ProjectNotFound | null;
+    try {
+      [org, project] = await Promise.all([
+        getOrg(client, link.orgId),
+        getProjectByIdOrName(client, link.projectId, link.orgId),
+      ]);
+    } finally {
+      spinner();
+    }
 
     if (project instanceof ProjectNotFound || org === null) {
       return [null, null];
@@ -78,7 +91,7 @@ export async function getLinkedProject(
 export async function linkFolderToProject(
   output: Output,
   path: string,
-  projectFolderLink: ProjectFolderLink,
+  projectLink: ProjectLink,
   projectName: string,
   orgSlug: string
 ) {
@@ -95,26 +108,33 @@ export async function linkFolderToProject(
 
   await writeFile(
     join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
-    JSON.stringify(projectFolderLink),
-    {
-      encoding: 'utf8',
-    }
+    JSON.stringify(projectLink),
+    { encoding: 'utf8' }
   );
 
-  // update .nowignore
+  // update .gitignore
+  let isGitIgnoreUpdated = false;
   try {
     const gitIgnorePath = join(path, '.gitignore');
-    const gitIgnore = (await readFile(gitIgnorePath)).toString();
-    if (gitIgnore.split('\n').indexOf('.now') < 0) {
-      await writeFile(gitIgnorePath, gitIgnore + '\n.now');
+
+    const gitIgnore = await readFile(gitIgnorePath)
+      .then(buf => buf.toString())
+      .catch(() => null);
+
+    if (!gitIgnore || !gitIgnore.split('\n').includes('.now')) {
+      await writeFile(gitIgnorePath, gitIgnore ? `${gitIgnore}\n.now` : '.now');
+      isGitIgnoreUpdated = true;
     }
   } catch (error) {
     // ignore errors since this is non-critical
   }
 
   output.print(
-    `☑️ Linked to ${chalk.bold(
-      `${orgSlug}/${projectName}`
-    )} (created .now and added it to .nowignore)\n`
+    prependEmoji(
+      `Linked to ${chalk.bold(`${orgSlug}/${projectName}`)} (created .now${
+        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
+      })`,
+      emoji('link')
+    ) + '\n'
   );
 }

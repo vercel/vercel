@@ -1,4 +1,4 @@
-![Polymer Logo](../packages/frameworks/logos/polymer.svg)
+![Polymer Logo](../../packages/frameworks/logos/polymer.svg)
 
 # Polymer Example
 

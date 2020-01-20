@@ -94,3 +94,13 @@ Sometimes you want to test changes to a Builder against an existing project, may
 4. Run `now *.tgz` to upload the tarball file and get a URL
 5. Edit any existing `now.json` project and replace `use` with the URL
 6. Run `now` or `now dev` to deploy with the experimental Builder
+
+## Add a New Framework
+
+1. Add the framework to the `@now/frameworks` package.
+   The file is located in `packages/frameworks/frameworks.json`.
+2. Add an example to the `examples/` directory.
+   The name of the directory should equal the slug of the framework in `@now/frameworks`.
+   The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a README for the example.
+3. Finally, `@now/static-build` must be adjusted.
+   The files `packages/now-static-build/src/frameworks.ts` has to be extended.

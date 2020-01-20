@@ -15,21 +15,36 @@ import { Org } from '../../types';
 import ua from '../ua';
 import processLegacyDeployment from './process-legacy-deployment';
 import { linkFolderToProject } from '../projects/link';
+import { prependEmoji, emoji } from '../emoji';
 
 function printInspectUrl(
   output: Output,
   deploymentUrl: string,
-  deployStamp: () => number,
-  orgName: string
+  deployStamp: () => string,
+  orgSlug: string
 ) {
-  const urlParts = deploymentUrl
-    .replace(/\..*/, '')
-    .replace('https://', '')
-    .split('-');
-  const deploymentShortId = urlParts.pop();
-  const projectName = urlParts.join('-');
-  const inspectUrl = `https://zeit.co/${orgName}/${projectName}/${deploymentShortId}`;
-  output.print(`🔍 Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}\n`);
+  const url = deploymentUrl.replace('https://', '');
+
+  // example urls:
+  // lucim-fyulaijvg.now.sh
+  // s-66p6vb23x.n8.io (custom domain suffix)
+  const [sub, ...p] = url.split('.');
+  const apex = p.join('.');
+
+  const q = sub.split('-');
+  const deploymentShortId = q.pop();
+  const projectName = q.join('-');
+
+  const inspectUrl = `https://zeit.co/${orgSlug}/${projectName}/${deploymentShortId}${
+    apex !== 'now.sh' ? `/${apex}` : ''
+  }`;
+
+  output.print(
+    prependEmoji(
+      `Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}`,
+      emoji('inspect')
+    ) + `\n`
+  );
 }
 
 export default async function processDeployment({
@@ -46,8 +61,8 @@ export default async function processDeployment({
   hashes: { [key: string]: any };
   paths: string[];
   requestBody: DeploymentOptions;
-  uploadStamp: () => number;
-  deployStamp: () => number;
+  uploadStamp: () => string;
+  deployStamp: () => string;
   isLegacy: boolean;
   quiet: boolean;
   nowConfig?: NowConfig;
@@ -196,7 +211,7 @@ export default async function processDeployment({
         buildSpinner();
       }
 
-      deploySpinner = wait('Finalizing', 0);
+      deploySpinner = wait('Completing', 0);
     }
 
     // Handle error events
@@ -226,7 +241,7 @@ export default async function processDeployment({
       throw error;
     }
 
-    // Handle ready event
+    // Handle alias-assigned event
     if (event.type === 'alias-assigned') {
       if (queuedSpinner) {
         queuedSpinner();
