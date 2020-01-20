@@ -453,7 +453,7 @@ export const build = async ({
         // TODO: do we want to do this?: ...dynamicRoutes,
 
         // 404
-        ...(output['/404']
+        ...(output['404']
           ? [
               {
                 src: path.join('/', entryDirectory, '.*'),
