@@ -73,24 +73,7 @@ export async function devRouter(
       if (phase === 'filesystem' && devServer) {
         const found = await devServer.hasFilesystem(reqPathname);
         if (found) {
-          if (hitRoutes && hitRoutes.length > 0) {
-            // Trigger a 'hit'
-            const hitResult = await devRouter(
-              reqUrl,
-              reqMethod,
-              hitRoutes,
-              devServer,
-              previousHeaders,
-              [],
-              [],
-              'hit'
-            );
-            if (hitResult.found) {
-              return hitResult;
-            }
-          } else {
-            break;
-          }
+          break;
         } else if (missRoutes && missRoutes.length > 0) {
           // Trigger a 'miss'
           const missResult = await devRouter(
@@ -188,6 +171,7 @@ export async function devRouter(
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx,
+            phase,
           };
           break;
         } else {
@@ -204,6 +188,7 @@ export async function devRouter(
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx,
+            phase,
           };
           break;
         }

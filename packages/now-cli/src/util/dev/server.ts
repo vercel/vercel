@@ -1177,16 +1177,20 @@ export default class DevServer {
     const hitRoutes = handleMap.get('hit') || [];
     handleMap.delete('miss');
     handleMap.delete('hit');
-
+    /*
     const phases = Array.from(handleMap.keys()).sort((a, b) => {
       // sort phases with null first
       return (a || '').localeCompare(b || '');
     });
+    */
+    const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
     let routeResult: RouteResult = { found: false, dest: '', headers: {} };
     let match: BuildMatch | null = null;
+    let statusCode: number | undefined;
 
     for (const phase of phases) {
+      statusCode = undefined;
       const phaseRoutes = handleMap.get(phase) || [];
       routeResult = await devRouter(
         req.url,
@@ -1238,9 +1242,28 @@ export default class DevServer {
           'hit'
         );
       }
+
+      statusCode = routeResult.status;
+
+      if (statusCode && (300 <= statusCode && statusCode <= 399)) {
+        res.statusCode = statusCode;
+        await this.sendRedirect(
+          req,
+          res,
+          nowRequestId,
+          res.getHeader('location') as string,
+          statusCode
+        );
+        return;
+      }
+
+      if (match) {
+        // end the phase
+        break;
+      }
     }
 
-    const { dest, status, headers, uri_args } = routeResult;
+    const { dest, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
@@ -1259,25 +1282,11 @@ export default class DevServer {
       return proxyPass(req, res, destUrl, this.output);
     }
 
-    if (status) {
-      res.statusCode = status;
-      if (300 <= status && status <= 399) {
-        await this.sendRedirect(
-          req,
-          res,
-          nowRequestId,
-          res.getHeader('location') as string,
-          status
-        );
-        return;
-      }
-    }
-
     const requestPath = dest.replace(/^\//, '');
 
     if (!match) {
       if (
-        status === 404 ||
+        statusCode === 404 ||
         !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
       ) {
         await this.send404(req, res, nowRequestId);
@@ -1423,7 +1432,7 @@ export default class DevServer {
           return;
         }
 
-        if (!status) {
+        if (!statusCode) {
           res.statusCode = result.statusCode;
         }
         this.setResponseHeaders(res, nowRequestId, result.headers);
