@@ -11,8 +11,9 @@ import {
   FileFsRef,
   streamToBuffer,
   Lambda,
-  Route,
+  isSymbolicLink,
 } from '@now/build-utils';
+import { Route, Source } from '@now/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -278,13 +279,13 @@ async function getRoutes(
     if (!isPublic) continue;
 
     const fileName = path.relative('public', relativePath);
-    const route = {
+    const route: Source = {
       src: `${prefix}${fileName}`,
       dest: `${url}/${fileName}`,
     };
 
     // Only add the route if a page is not already using it
-    if (!routes.some(r => r.src === route.src)) {
+    if (!routes.some(r => (r as Source).src === route.src)) {
       routes.push(route);
     }
   }
@@ -293,37 +294,37 @@ async function getRoutes(
 }
 
 export type Rewrite = {
-  source: string,
-  destination: string,
-}
+  source: string;
+  destination: string;
+};
 
 export type Redirect = Rewrite & {
-  statusCode?: number
-}
+  statusCode?: number;
+};
 
 type RoutesManifestRegex = {
-  regex: string,
-  regexKeys: string[]
-}
+  regex: string;
+  regexKeys: string[];
+};
 
 export type RoutesManifest = {
-  redirects: (Redirect & RoutesManifestRegex)[],
-  rewrites: (Rewrite & RoutesManifestRegex)[],
+  basePath: string | undefined;
+  redirects: (Redirect & RoutesManifestRegex)[];
+  rewrites: (Rewrite & RoutesManifestRegex)[];
   dynamicRoutes: {
-    page: string,
-    regex: string,
-  }[],
-  version: number
-}
+    page: string;
+    regex: string;
+  }[];
+  version: number;
+};
 
 export async function getRoutesManifest(
   entryPath: string,
-  nextVersion?: string,
-): Promise< RoutesManifest | undefined> {
-  const shouldHaveManifest = (
-    nextVersion && semver.gte(nextVersion, '9.1.4-canary.0')
-  )
-  if (!shouldHaveManifest) return
+  nextVersion?: string
+): Promise<RoutesManifest | undefined> {
+  const shouldHaveManifest =
+    nextVersion && semver.gte(nextVersion, '9.1.4-canary.0');
+  if (!shouldHaveManifest) return;
 
   const pathRoutesManifest = path.join(
     entryPath,
@@ -338,12 +339,13 @@ export async function getRoutesManifest(
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new Error(
       `A routes-manifest.json couldn't be found. This could be due to a failure during the build`
-    )
+    );
   }
 
-  const routesManifest: RoutesManifest = require(pathRoutesManifest)
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const routesManifest: RoutesManifest = require(pathRoutesManifest);
 
-  return routesManifest
+  return routesManifest;
 }
 
 export async function getDynamicRoutes(
@@ -359,7 +361,8 @@ export async function getDynamicRoutes(
 
   if (routesManifest) {
     switch (routesManifest.version) {
-      case 1: {
+      case 1:
+      case 2: {
         return routesManifest.dynamicRoutes.map(
           ({ page, regex }: { page: string; regex: string }) => {
             return {
@@ -455,11 +458,20 @@ function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
 export const ExperimentalTraceVersion = `9.0.4-canary.1`;
 
 export type PseudoLayer = {
-  [fileName: string]: {
-    crc32: number;
-    compBuffer: Buffer;
-    uncompressedSize: number;
-  };
+  [fileName: string]: PseudoFile | PseudoSymbolicLink;
+};
+
+export type PseudoFile = {
+  isSymlink: false;
+  crc32: number;
+  compBuffer: Buffer;
+  uncompressedSize: number;
+};
+
+export type PseudoSymbolicLink = {
+  isSymlink: true;
+  file: FileFsRef;
+  symlinkTarget: string;
 };
 
 const compressBuffer = (buf: Buffer): Promise<Buffer> => {
@@ -482,13 +494,22 @@ export async function createPseudoLayer(files: {
 
   for (const fileName of Object.keys(files)) {
     const file = files[fileName];
-    const origBuffer = await streamToBuffer(file.toStream());
-    const compBuffer = await compressBuffer(origBuffer);
-    pseudoLayer[fileName] = {
-      compBuffer,
-      crc32: crc32.unsigned(origBuffer),
-      uncompressedSize: origBuffer.byteLength,
-    };
+
+    if (isSymbolicLink(file.mode)) {
+      pseudoLayer[fileName] = {
+        file,
+        isSymlink: true,
+        symlinkTarget: await fs.readlink(file.fsPath),
+      } as PseudoSymbolicLink;
+    } else {
+      const origBuffer = await streamToBuffer(file.toStream());
+      const compBuffer = await compressBuffer(origBuffer);
+      pseudoLayer[fileName] = {
+        compBuffer,
+        crc32: crc32.unsigned(origBuffer),
+        uncompressedSize: origBuffer.byteLength,
+      } as PseudoFile;
+    }
   }
 
   return pseudoLayer;
@@ -521,10 +542,31 @@ export async function createLambdaFromPseudoLayers({
   const zipFile = new ZipFile();
   const addedFiles = new Set();
 
+  const names = Object.keys(files).sort();
+  const symlinkTargets = new Map<string, string>();
+
+  for (const name of names) {
+    const file = files[name];
+    if (file.mode && isSymbolicLink(file.mode) && file.type === 'FileFsRef') {
+      const symlinkTarget = await fs.readlink((file as FileFsRef).fsPath);
+      symlinkTargets.set(name, symlinkTarget);
+    }
+  }
+
   // apply pseudo layers (already compressed objects)
   for (const layer of layers) {
     for (const seedKey of Object.keys(layer)) {
-      const { compBuffer, crc32, uncompressedSize } = layer[seedKey];
+      const item = layer[seedKey];
+
+      if (item.isSymlink) {
+        const { symlinkTarget, file } = item;
+
+        zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), seedKey, {
+          mode: file.mode,
+        });
+        continue;
+      }
+      const { compBuffer, crc32, uncompressedSize } = item;
 
       // @ts-ignore: `addDeflatedBuffer` is a valid function, but missing on the type
       zipFile.addDeflatedBuffer(compBuffer, seedKey, {
@@ -540,8 +582,16 @@ export async function createLambdaFromPseudoLayers({
     // was already added in a pseudo layer
     if (addedFiles.has(fileName)) continue;
     const file = files[fileName];
-    const fileBuffer = await streamToBuffer(file.toStream());
-    zipFile.addBuffer(fileBuffer, fileName);
+    const symlinkTarget = symlinkTargets.get(fileName);
+
+    if (typeof symlinkTarget === 'string') {
+      zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), fileName, {
+        mode: file.mode,
+      });
+    } else {
+      const fileBuffer = await streamToBuffer(file.toStream());
+      zipFile.addBuffer(fileBuffer, fileName);
+    }
   }
   zipFile.end();
 
@@ -575,6 +625,73 @@ export type NextPrerenderedRoutes = {
     };
   };
 };
+
+export async function getExportIntent(
+  entryPath: string
+): Promise<false | { trailingSlash: boolean }> {
+  const pathExportMarker = path.join(entryPath, '.next', 'export-marker.json');
+  const hasExportMarker: boolean = await fs
+    .access(pathExportMarker, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasExportMarker) {
+    return false;
+  }
+
+  const manifest: {
+    version: 1;
+    exportTrailingSlash: boolean;
+    hasExportPathMap: boolean;
+  } = JSON.parse(await fs.readFile(pathExportMarker, 'utf8'));
+
+  switch (manifest.version) {
+    case 1: {
+      if (manifest.hasExportPathMap !== true) {
+        return false;
+      }
+
+      return { trailingSlash: manifest.exportTrailingSlash };
+    }
+
+    default: {
+      return false;
+    }
+  }
+}
+
+export async function getExportStatus(
+  entryPath: string
+): Promise<false | { success: boolean; outDirectory: string }> {
+  const pathExportDetail = path.join(entryPath, '.next', 'export-detail.json');
+  const hasExportDetail: boolean = await fs
+    .access(pathExportDetail, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasExportDetail) {
+    return false;
+  }
+
+  const manifest: {
+    version: 1;
+    success: boolean;
+    outDirectory: string;
+  } = JSON.parse(await fs.readFile(pathExportDetail, 'utf8'));
+
+  switch (manifest.version) {
+    case 1: {
+      return {
+        success: !!manifest.success,
+        outDirectory: manifest.outDirectory,
+      };
+    }
+
+    default: {
+      return false;
+    }
+  }
+}
 
 export async function getPrerenderManifest(
   entryPath: string

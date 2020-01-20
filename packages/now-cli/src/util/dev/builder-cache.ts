@@ -1,14 +1,13 @@
-import chalk from 'chalk';
 import execa from 'execa';
 import semver from 'semver';
 import pipe from 'promisepipe';
 import retry from 'async-retry';
 import npa from 'npm-package-arg';
+import pluralize from 'pluralize';
 import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
 import { join, resolve } from 'path';
-import { funCacheDir } from '@zeit/fun';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
@@ -17,7 +16,6 @@ import {
   readFile,
   readJSON,
   writeFile,
-  remove,
 } from 'fs-extra';
 import pkg from '../../../package.json';
 
@@ -158,6 +156,14 @@ export function getBuildUtils(packages: string[]): string {
   return `@now/build-utils@${version}`;
 }
 
+function parseVersionSafe(rawSpec: string) {
+  try {
+    return semver.parse(rawSpec);
+  } catch (e) {
+    return null;
+  }
+}
+
 export function filterPackage(
   builderSpec: string,
   distTag: string,
@@ -165,6 +171,17 @@ export function filterPackage(
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
+  const parsedVersion = parseVersionSafe(parsed.rawSpec);
+  // skip install of already installed Runtime
+  if (
+    parsed.name &&
+    parsed.type === 'version' &&
+    parsedVersion &&
+    buildersPkg.dependencies &&
+    parsedVersion.version == buildersPkg.dependencies[parsed.name]
+  ) {
+    return false;
+  }
   if (
     parsed.name &&
     parsed.type === 'tag' &&
@@ -225,12 +242,15 @@ export async function installBuilders(
   );
 
   if (packagesToInstall.length === 0) {
-    output.debug('No builders need to be installed');
+    output.debug('No Runtimes need to be installed');
     return;
   }
 
   const stopSpinner = wait(
-    `Installing builders: ${packagesToInstall.sort().join(', ')}`
+    `Installing ${pluralize(
+      'Runtime',
+      packagesToInstall.length
+    )}: ${packagesToInstall.sort().join(', ')}`
   );
 
   try {
@@ -260,7 +280,7 @@ export async function installBuilders(
   const buildersPkgAfter = await readJSON(buildersPkgPath);
   for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
     if (version !== buildersPkgBefore.dependencies[name]) {
-      output.debug(`Builder "${name}" updated to version \`${version}\``);
+      output.debug(`Runtime "${name}" updated to version \`${version}\``);
       updatedPackages.push(name);
     }
   }
@@ -277,6 +297,7 @@ export async function updateBuilders(
   if (!builderDir) {
     builderDir = await builderDirPromise;
   }
+
   const packages = Array.from(packagesSet);
   const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
@@ -307,7 +328,7 @@ export async function updateBuilders(
   const buildersPkgAfter = await readJSON(buildersPkgPath);
   for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
     if (version !== buildersPkgBefore.dependencies[name]) {
-      output.debug(`Builder "${name}" updated to version \`${version}\``);
+      output.debug(`Runtime "${name}" updated to version \`${version}\``);
       updatedPackages.push(name);
     }
   }

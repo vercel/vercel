@@ -1,12 +1,12 @@
 import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
-import fetch_ from 'node-fetch';
+import { RequestInit } from 'node-fetch';
+import { nodeFetch, zeitFetch } from './fetch';
 import { join, sep } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
-import { Options } from '../deploy';
-import { NowJsonOptions, DeploymentOptions } from '../types';
+import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
@@ -41,10 +41,10 @@ export function getApiDeploymentsUrl(
     return '/v10/now/deployments';
   }
 
-  return '/v11/now/deployments';
+  return '/v12/now/deployments';
 }
 
-export async function parseNowJSON(filePath?: string): Promise<NowJsonOptions> {
+export async function parseNowJSON(filePath?: string): Promise<NowConfig> {
   if (!filePath) {
     return {};
   }
@@ -86,7 +86,7 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
     '.wafpicke-*',
     '.lock-wscript',
     '.env',
-    '.env.build',
+    '.env.*',
     '.venv',
     'npm-debug.log',
     'config.gypi',
@@ -111,11 +111,20 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
   return { ig, ignores };
 }
 
+interface FetchOpts extends RequestInit {
+  apiUrl?: string;
+  method?: string;
+  teamId?: string;
+  headers?: { [key: string]: any };
+  userAgent?: string;
+}
+
 export const fetch = async (
   url: string,
   token: string,
-  opts: any = {},
-  debugEnabled?: boolean
+  opts: FetchOpts = {},
+  debugEnabled?: boolean,
+  useNodeFetch?: boolean
 ): Promise<any> => {
   semaphore.acquire();
   const debug = createDebug(debugEnabled);
@@ -133,16 +142,21 @@ export const fetch = async (
     delete opts.teamId;
   }
 
+  const userAgent = opts.userAgent || `now-client-v${pkgVersion}`;
+  delete opts.userAgent;
+
   opts.headers = {
     ...opts.headers,
     authorization: `Bearer ${token}`,
     accept: 'application/json',
-    'user-agent': `now-client-v${pkgVersion}`,
+    'user-agent': userAgent,
   };
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await fetch_(url, opts);
+  const res = useNodeFetch
+    ? await nodeFetch(url, opts)
+    : await zeitFetch(url, opts);
   debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
   semaphore.release();
 
@@ -160,7 +174,7 @@ const isWin = process.platform.includes('win');
 
 export const prepareFiles = (
   files: Map<string, DeploymentFile>,
-  options: Options
+  clientOptions: NowClientOptions
 ): PreparedFile[] => {
   const preparedFiles = [...files.keys()].reduce(
     (acc: PreparedFile[], sha: string): PreparedFile[] => {
@@ -171,10 +185,10 @@ export const prepareFiles = (
       for (const name of file.names) {
         let fileName: string;
 
-        if (options.isDirectory) {
+        if (clientOptions.isDirectory) {
           // Directory
-          fileName = options.path
-            ? name.substring(options.path.length + 1)
+          fileName = clientOptions.path
+            ? name.substring(clientOptions.path.length + 1)
             : name;
         } else {
           // Array of files or single file

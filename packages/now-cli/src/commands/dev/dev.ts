@@ -17,10 +17,6 @@ export default async function dev(
   args: string[],
   output: Output
 ) {
-  output.dim(
-    `Now CLI ${pkg.version} dev (beta) — https://zeit.co/feedback/dev`
-  );
-
   const [dir = '.'] = args;
   const cwd = path.resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');

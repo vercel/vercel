@@ -12,6 +12,7 @@ import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import formatTable from '../../util/format-table';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
+import getDomainPrice from '../../util/domains/get-domain-price';
 
 type Options = {
   '--debug': boolean;
@@ -63,7 +64,12 @@ export default async function inspect(
   }
 
   output.debug(`Fetching domain info`);
-  const domain = await getDomainByName(client, contextName, domainName);
+  const [domain, renewalPrice] = await Promise.all([
+    getDomainByName(client, contextName, domainName),
+    getDomainPrice(client, domainName, 'renewal')
+      .then(res => (res instanceof Error ? null : res.price))
+      .catch(() => null),
+  ]);
   if (domain instanceof DomainNotFound) {
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
@@ -130,6 +136,14 @@ export default async function inspect(
       domain.txtVerifiedAt
     )}\n`
   );
+
+  if (renewalPrice && domain.boughtAt) {
+    output.print(
+      `    ${chalk.cyan('Renewal Price')}\t\t$${renewalPrice} USD\n`
+    );
+  }
+  output.print(`    ${chalk.cyan('CDN Enabled')}\t\t\t${true}\n`);
+  output.print('\n');
 
   output.print(chalk.bold('  Nameservers\n\n'));
   output.print(

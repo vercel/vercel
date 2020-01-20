@@ -19,5 +19,5 @@ export default function error(
     metric.exception(messages.join('\n')).send();
   }
 
-  return `${chalk.red('> Error!')} ${messages.join('\n')}`;
+  return `${chalk.red('Error!')} ${messages.join('\n')}`;
 }

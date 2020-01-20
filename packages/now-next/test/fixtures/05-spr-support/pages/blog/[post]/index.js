@@ -1,12 +1,13 @@
 import React from 'react'
 
 // eslint-disable-next-line camelcase
-export async function unstable_getStaticParams () {
+export async function unstable_getStaticPaths () {
   return [
     '/blog/post-1',
-    { post: 'post-2' },
+    { params: { post: 'post-2' } },
   ]
 }
+
 
 // eslint-disable-next-line camelcase
 export async function unstable_getStaticProps ({ params }) {

@@ -10,26 +10,13 @@ interface ErrorResponse {
 interface Options {
   tag?: 'canary' | 'latest' | string;
   functions?: BuilderFunctions;
-}
-
-const src = 'package.json';
-const config: Config = { zeroConfig: true };
-
-const MISSING_BUILD_SCRIPT_ERROR: ErrorResponse = {
-  code: 'missing_build_script',
-  message:
-    'Your `package.json` file is missing a `build` property inside the `script` property.' +
-    '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-build-script',
-};
-
-// Static builders are special cased in `@now/static-build`
-function getBuilders({ tag }: Options = {}): Map<string, Builder> {
-  const withTag = tag ? `@${tag}` : '';
-  const config = { zeroConfig: true };
-
-  return new Map<string, Builder>([
-    ['next', { src, use: `@now/next${withTag}`, config }],
-  ]);
+  ignoreBuildScript?: boolean;
+  projectSettings?: {
+    framework?: string | null;
+    devCommand?: string | null;
+    buildCommand?: string | null;
+    outputDirectory?: string | null;
+  };
 }
 
 // Must be a function to ensure that the returned
@@ -47,11 +34,11 @@ function getApiBuilders({ tag }: Pick<Options, 'tag'> = {}): Builder[] {
   ];
 }
 
-function hasPublicDirectory(files: string[]) {
-  return files.some(name => name.startsWith('public/'));
+function hasDirectory(name: string, files: string[]) {
+  return files.some(file => file.startsWith(`${name}/`));
 }
 
-function hasBuildScript(pkg: PackageJson | undefined) {
+function hasBuildScript(pkg: PackageJson | undefined | null) {
   const { scripts = {} } = pkg || {};
   return Boolean(scripts && scripts['build']);
 }
@@ -91,39 +78,81 @@ function getApiFunctionBuilder(
   return use ? { use, src, config } : prevBuilder;
 }
 
-async function detectFrontBuilder(
-  pkg: PackageJson,
+function detectFrontBuilder(
+  pkg: PackageJson | null | undefined,
   builders: Builder[],
+  files: string[],
   options: Options
-): Promise<Builder> {
-  const { tag } = options;
+): Builder {
+  const { tag, projectSettings = {} } = options;
   const withTag = tag ? `@${tag}` : '';
-  for (const [dependency, builder] of getBuilders(options)) {
-    const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
+  let { framework } = projectSettings;
 
-    // Return the builder when a dependency matches
-    if (deps[dependency]) {
-      if (options.functions) {
-        Object.entries(options.functions).forEach(([key, func]) => {
-          // When the builder is not used yet we'll use it for the frontend
-          if (
-            builders.every(
-              b => !(b.config && b.config.functions && b.config.functions[key])
-            )
-          ) {
-            if (!builder.config) builder.config = {};
-            if (!builder.config.functions) builder.config.functions = {};
-            builder.config.functions[key] = { ...func };
-          }
-        });
-      }
+  const config: Config = {
+    zeroConfig: true,
+  };
 
-      return builder;
+  if (framework) {
+    config.framework = framework;
+  }
+
+  if (projectSettings.devCommand) {
+    config.devCommand = projectSettings.devCommand;
+  }
+
+  if (projectSettings.buildCommand) {
+    config.buildCommand = projectSettings.buildCommand;
+  }
+
+  if (projectSettings.outputDirectory) {
+    config.outputDirectory = projectSettings.outputDirectory;
+  }
+
+  if (pkg) {
+    const deps: PackageJson['dependencies'] = {
+      ...pkg.dependencies,
+      ...pkg.devDependencies,
+    };
+
+    if (deps['next']) {
+      framework = 'nextjs';
     }
   }
 
-  // By default we'll choose the `static-build` builder
-  return { src, use: `@now/static-build${withTag}`, config };
+  if (options.functions) {
+    Object.entries(options.functions).forEach(([key, func]) => {
+      // When the builder is not used yet we'll use it for the frontend
+      if (
+        builders.every(
+          b => !(b.config && b.config.functions && b.config.functions[key])
+        )
+      ) {
+        if (!config.functions) config.functions = {};
+        config.functions[key] = { ...func };
+      }
+    });
+  }
+
+  if (framework === 'nextjs') {
+    return { src: 'package.json', use: `@now/next${withTag}`, config };
+  }
+
+  // Entrypoints for other frameworks
+  const entrypoints = new Set([
+    'package.json',
+    'config.yaml',
+    'config.toml',
+    'config.json',
+    '_config.yml',
+    'config.yml',
+    'config.rb',
+  ]);
+
+  const source = pkg
+    ? 'package.json'
+    : files.find(file => entrypoints.has(file)) || 'package.json';
+
+  return { src: source, use: `@now/static-build${withTag}`, config };
 }
 
 // Files that match a specific pattern will get ignored
@@ -169,10 +198,7 @@ export function sortFiles(fileA: string, fileB: string) {
   return fileA.localeCompare(fileB);
 }
 
-async function detectApiBuilders(
-  files: string[],
-  options: Options
-): Promise<Builder[]> {
+function detectApiBuilders(files: string[], options: Options): Builder[] {
   const builds = files
     .sort(sortFiles)
     .filter(getIgnoreApiFilter(options))
@@ -188,10 +214,10 @@ async function detectApiBuilders(
 
 // When a package has files that conflict with `/api` routes
 // e.g. Next.js pages/api we'll check it here and return an error.
-async function checkConflictingFiles(
+function checkConflictingFiles(
   files: string[],
   builders: Builder[]
-): Promise<ErrorResponse | null> {
+): ErrorResponse | null {
   // For Next.js
   if (builders.some(b => b.use.startsWith('@now/next'))) {
     const hasApiPages = files.some(file => file.startsWith('pages/api/'));
@@ -211,38 +237,68 @@ async function checkConflictingFiles(
 
 // When e.g. Next.js receives a `functions` property it has to make sure,
 // that it can handle those files, otherwise there are unused functions.
-async function checkUnusedFunctionsOnFrontendBuilder(
+function checkUnusedFunctions(
   files: string[],
-  builder: Builder
-): Promise<ErrorResponse | null> {
-  const { config: { functions = undefined } = {} } = builder;
+  apiBuilders: Builder[],
+  frontendBuilder: Builder | null,
+  options: Options
+): ErrorResponse | null {
+  const { functions = null } = options;
+  const builderUse = frontendBuilder ? frontendBuilder.use : null;
+  const builderFunctions =
+    (frontendBuilder &&
+      frontendBuilder.config &&
+      frontendBuilder.config.functions) ||
+    {};
 
-  if (!functions) return null;
+  if (!functions) {
+    return null;
+  }
 
-  if (builder.use.startsWith('@now/next')) {
-    const matchingFiles = files.filter(file =>
-      Object.keys(functions).some(key => file === key || minimatch(file, key))
-    );
+  const unmatchedFunctions = new Set(Object.keys(functions));
 
-    for (const matchedFile of matchingFiles) {
-      if (
-        !matchedFile.startsWith('src/pages/') &&
-        !matchedFile.startsWith('pages/')
-      ) {
-        return {
-          code: 'unused_function',
-          message: `The function for ${matchedFile} can't be handled by any builder`,
-        };
+  apiBuilders.forEach(builder => {
+    const builderFns = (builder.config && builder.config.functions) || {};
+
+    Object.keys(builderFns).forEach(key => {
+      unmatchedFunctions.delete(key);
+    });
+  });
+
+  if (builderUse && builderUse.startsWith('@now/next')) {
+    const functionKeys = Object.keys(builderFunctions);
+
+    for (const file of files) {
+      for (const key of functionKeys) {
+        if (file === key || minimatch(file, key)) {
+          if (!file.startsWith('src/pages/') && !file.startsWith('pages/')) {
+            return {
+              code: 'unused_function',
+              message: `The function for ${key} can't be handled by any builder`,
+            };
+          } else {
+            unmatchedFunctions.delete(key);
+          }
+        }
       }
     }
+  }
+
+  if (unmatchedFunctions.size) {
+    const [unusedFunction] = Array.from(unmatchedFunctions);
+
+    return {
+      code: 'unused_function',
+      message:
+        `The function for ${unusedFunction} can't be handled by any builder. ` +
+        `Make sure it is inside the api/ directory.`,
+    };
   }
 
   return null;
 }
 
 function validateFunctions(files: string[], { functions = {} }: Options) {
-  const apiBuilders = getApiBuilders();
-
   for (const [path, func] of Object.entries(functions)) {
     if (path.length > 256) {
       return {
@@ -312,15 +368,6 @@ function validateFunctions(files: string[], { functions = {} }: Options) {
             'Function Runtimes must have a valid version, for example `now-php@1.0.0`.',
         };
       }
-
-      if (
-        apiBuilders.some(b => func.runtime && func.runtime.startsWith(b.use))
-      ) {
-        return {
-          code: 'invalid_function_runtime',
-          message: `The function Runtime ${func.runtime} is not a Community Runtime and must not be specified.`,
-        };
-      }
     }
 
     if (func.includeFiles !== undefined) {
@@ -370,57 +417,78 @@ export async function detectBuilders(
   }
 
   // Detect all builders for the `api` directory before anything else
-  const builders = await detectApiBuilders(files, options);
+  const builders = detectApiBuilders(files, options);
+  const { projectSettings = {} } = options;
+  const { outputDirectory, buildCommand, framework } = projectSettings;
 
-  if (pkg && hasBuildScript(pkg)) {
-    const frontendBuilder = await detectFrontBuilder(pkg, builders, options);
-    builders.push(frontendBuilder);
+  let frontendBuilder: Builder | null = null;
 
-    const conflictError = await checkConflictingFiles(files, builders);
-
-    if (conflictError) {
-      warnings.push(conflictError);
-    }
-
-    const unusedFunctionError = await checkUnusedFunctionsOnFrontendBuilder(
-      files,
-      frontendBuilder
-    );
-
-    if (unusedFunctionError) {
-      return {
-        builders: null,
-        errors: [unusedFunctionError],
-        warnings,
-      };
-    }
+  if (hasBuildScript(pkg) || buildCommand || framework) {
+    frontendBuilder = detectFrontBuilder(pkg, builders, files, options);
   } else {
-    if (pkg && builders.length === 0) {
+    if (!options.ignoreBuildScript && pkg && builders.length === 0) {
       // We only show this error when there are no api builders
       // since the dependencies of the pkg could be used for those
-      errors.push(MISSING_BUILD_SCRIPT_ERROR);
+      errors.push({
+        code: 'missing_build_script',
+        message:
+          'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
+          '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-build-script',
+      });
       return { errors, warnings, builders: null };
     }
 
     // We allow a `public` directory
     // when there are no build steps
-    if (hasPublicDirectory(files)) {
-      builders.push({
+    const outDir = outputDirectory || 'public';
+
+    if (hasDirectory(outDir, files)) {
+      frontendBuilder = {
         use: '@now/static',
-        src: 'public/**/*',
-        config,
-      });
+        src: `${outDir}/**/*`,
+        config: {
+          zeroConfig: true,
+          outputDirectory: outDir,
+        },
+      };
     } else if (
       builders.length > 0 &&
       files.some(f => !f.startsWith('api/') && f !== 'package.json')
     ) {
       // Everything besides the api directory
       // and package.json can be served as static files
-      builders.push({
+      frontendBuilder = {
         use: '@now/static',
         src: '!{api/**,package.json}',
-        config,
-      });
+        config: {
+          zeroConfig: true,
+        },
+      };
+    }
+  }
+
+  const unusedFunctionError = checkUnusedFunctions(
+    files,
+    builders,
+    frontendBuilder,
+    options
+  );
+
+  if (unusedFunctionError) {
+    return {
+      builders: null,
+      errors: [unusedFunctionError],
+      warnings,
+    };
+  }
+
+  if (frontendBuilder) {
+    builders.push(frontendBuilder);
+
+    const conflictError = checkConflictingFiles(files, builders);
+
+    if (conflictError) {
+      warnings.push(conflictError);
     }
   }
 
