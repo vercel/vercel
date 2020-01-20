@@ -1278,6 +1278,10 @@ export default class DevServer {
       res.setHeader(name, value);
     });
 
+    if (statusCode) {
+      res.statusCode = statusCode;
+    }
+
     const requestPath = dest.replace(/^\//, '');
 
     if (!match) {
