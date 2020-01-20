@@ -11,11 +11,12 @@ test('[dev-router] 301 redirection', async t => {
     found: true,
     dest: '/redirect',
     status: 301,
-    headers: { Location: 'https://zeit.co' },
+    headers: { location: 'https://zeit.co' },
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: false,
+    isDestUrl: false,
   });
 });
 
@@ -32,6 +33,7 @@ test('[dev-router] captured groups', async t => {
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
+    isDestUrl: false,
   });
 });
 
@@ -48,6 +50,7 @@ test('[dev-router] named groups', async t => {
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
+    isDestUrl: false,
   });
 });
 
@@ -69,6 +72,7 @@ test('[dev-router] optional named groups', async t => {
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
+    isDestUrl: false,
   });
 });
 
@@ -86,6 +90,7 @@ test('[dev-router] proxy_pass', async t => {
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: false,
+    isDestUrl: true,
   });
 });
 
@@ -105,6 +110,7 @@ test('[dev-router] methods', async t => {
     matched_route: routesConfig[1],
     matched_route_idx: 1,
     userDest: true,
+    isDestUrl: false,
   });
 
   result = await devRouter('/', 'POST', routesConfig);
@@ -117,6 +123,7 @@ test('[dev-router] methods', async t => {
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
+    isDestUrl: false,
   });
 });
 
@@ -133,6 +140,7 @@ test('[dev-router] match without prefix slash', async t => {
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
+    isDestUrl: false,
   });
 });
 
@@ -149,6 +157,7 @@ test('[dev-router] match with needed prefixed slash', async t => {
     found: true,
     dest: '/some/dest',
     userDest: true,
+    isDestUrl: false,
     status: undefined,
     headers: {},
     uri_args: {},
@@ -211,6 +220,7 @@ test('[dev-router] `continue: true` with match', async t => {
     dest: '/hi',
     status: undefined,
     userDest: true,
+    isDestUrl: false,
     uri_args: {},
     headers: {
       'cache-control': 'immutable,max-age=31536000',
@@ -231,6 +241,7 @@ test('[dev-router] match with catch-all with prefix slash', async t => {
     found: true,
     dest: '/www/',
     userDest: true,
+    isDestUrl: false,
     status: undefined,
     headers: {},
     uri_args: {},
@@ -247,6 +258,7 @@ test('[dev-router] match with catch-all with no prefix slash', async t => {
     found: true,
     dest: '/www/',
     userDest: true,
+    isDestUrl: false,
     status: undefined,
     headers: {},
     uri_args: {},
@@ -274,5 +286,6 @@ test('[dev-router] `continue: true` with `dest`', async t => {
     matched_route: routesConfig[1],
     matched_route_idx: 1,
     userDest: false,
+    isDestUrl: true,
   });
 });
