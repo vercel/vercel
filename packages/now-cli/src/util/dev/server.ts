@@ -1199,7 +1199,6 @@ export default class DevServer {
         this,
         undefined,
         missRoutes,
-        hitRoutes,
         phase
       );
 
@@ -1219,7 +1218,6 @@ export default class DevServer {
           this,
           routeResult.headers,
           [],
-          [],
           'miss'
         );
 
@@ -1237,7 +1235,6 @@ export default class DevServer {
           hitRoutes,
           this,
           routeResult.headers,
-          [],
           [],
           'hit'
         );

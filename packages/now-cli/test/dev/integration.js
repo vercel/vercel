@@ -395,6 +395,19 @@ test(
 );
 
 test(
+  '[now dev] does not display directory listing after `handle: miss` and 404',
+  testFixtureStdio('handle-miss-handle-filesystem-404', async (t, port) => {
+    t.is((await fetch(`http://localhost:${port}/pathA/dir`)).status, 404);
+    t.is((await fetch(`http://localhost:${port}/pathB/dir`)).status, 404);
+    t.is((await fetch(`http://localhost:${port}/pathC/dir`)).status, 200);
+
+    t.is((await fetch(`http://localhost:${port}/pathA/dir/one`)).status, 200);
+    t.is((await fetch(`http://localhost:${port}/pathB/dir/two`)).status, 200);
+    t.is((await fetch(`http://localhost:${port}/pathC/dir/three`)).status, 200);
+  })
+);
+
+test(
   '[now dev] handles hit after handle: filesystem',
   testFixtureStdio('handle-hit-after-fs', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/blog.html`);

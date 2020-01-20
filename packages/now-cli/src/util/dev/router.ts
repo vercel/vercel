@@ -52,7 +52,6 @@ export async function devRouter(
   devServer?: DevServer,
   previousHeaders?: HttpHeadersConfig,
   missRoutes?: RouteConfig[],
-  hitRoutes?: RouteConfig[],
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
@@ -68,28 +67,6 @@ export async function devRouter(
       if (isHandler(routeConfig)) {
         // We don't expect any Handle, only Source routes
         continue;
-      }
-
-      if (phase === 'filesystem' && devServer) {
-        const found = await devServer.hasFilesystem(reqPathname);
-        if (found) {
-          break;
-        } else if (missRoutes && missRoutes.length > 0) {
-          // Trigger a 'miss'
-          const missResult = await devRouter(
-            reqUrl,
-            reqMethod,
-            missRoutes,
-            devServer,
-            previousHeaders,
-            [],
-            [],
-            'miss'
-          );
-          if (missResult.found) {
-            return missResult;
-          }
-        }
       }
 
       let { src, headers, methods } = routeConfig;
@@ -147,7 +124,6 @@ export async function devRouter(
                 missRoutes,
                 devServer,
                 previousHeaders,
-                [],
                 [],
                 'miss'
               );
