@@ -82,6 +82,7 @@ import {
   ListenSpec,
   RouteConfig,
   RouteResult,
+  HttpHeadersConfig,
 } from './types';
 
 interface FSEvent {
@@ -1185,7 +1186,7 @@ export default class DevServer {
     */
     const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
-    let routeResult: RouteResult = { found: false, dest: '', headers: {} };
+    let routeResult: RouteResult | null = null;
     let match: BuildMatch | null = null;
     let statusCode: number | undefined;
 
@@ -1201,6 +1202,18 @@ export default class DevServer {
         missRoutes,
         phase
       );
+
+      if (routeResult.isDestUrl) {
+        // Mix the `routes` result dest query params into the req path
+        const destParsed = url.parse(routeResult.dest, true);
+        delete destParsed.search;
+        Object.assign(destParsed.query, routeResult.uri_args);
+        const destUrl = url.format(destParsed);
+
+        this.output.debug(`ProxyPass: ${destUrl}`);
+        this.setResponseHeaders(res, nowRequestId);
+        return proxyPass(req, res, destUrl, this.output);
+      }
 
       match = await findBuildMatch(
         this.buildMatches,
@@ -1241,16 +1254,10 @@ export default class DevServer {
       }
 
       statusCode = routeResult.status;
+      const location = routeResult.headers['location'] || routeResult.dest;
 
-      if (statusCode && (300 <= statusCode && statusCode <= 399)) {
-        res.statusCode = statusCode;
-        await this.sendRedirect(
-          req,
-          res,
-          nowRequestId,
-          res.getHeader('location') as string,
-          statusCode
-        );
+      if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
+        await this.sendRedirect(req, res, nowRequestId, location, statusCode);
         return;
       }
 
@@ -1260,24 +1267,16 @@ export default class DevServer {
       }
     }
 
+    if (!routeResult) {
+      throw new Error('Expected Route Result but none was found.');
+    }
+
     const { dest, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
       res.setHeader(name, value);
     });
-
-    if (isURL(dest)) {
-      // Mix the `routes` result dest query params into the req path
-      const destParsed = url.parse(dest, true);
-      delete destParsed.search;
-      Object.assign(destParsed.query, uri_args);
-      const destUrl = url.format(destParsed);
-
-      this.output.debug(`ProxyPass: ${destUrl}`);
-      this.setResponseHeaders(res, nowRequestId);
-      return proxyPass(req, res, destUrl, this.output);
-    }
 
     const requestPath = dest.replace(/^\//, '');
 

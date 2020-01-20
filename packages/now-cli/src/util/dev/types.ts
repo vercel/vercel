@@ -159,6 +159,8 @@ export interface RouteResult {
   userDest?: boolean;
   // phase of the routing
   phase?: HandleValue | null;
+  //url as destinatino should end routing
+  isDestUrl: boolean;
 }
 
 export interface InvokePayload {

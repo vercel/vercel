@@ -98,7 +98,7 @@ export async function devRouter(
               // don't override headers in the miss phase
             } else {
               const value = resolveRouteParameters(headers[key], match, keys);
-              combinedHeaders[key] = value;
+              combinedHeaders[key.toLowerCase()] = value;
             }
           }
         }
@@ -137,11 +137,13 @@ export async function devRouter(
           }
         }
 
-        if (isURL(destPath)) {
+        const isDestUrl = isURL(destPath);
+        if (isDestUrl) {
           found = {
             found: true,
             dest: destPath,
             userDest: false,
+            isDestUrl,
             status: routeConfig.status,
             headers: combinedHeaders,
             uri_args: query,
@@ -159,6 +161,7 @@ export async function devRouter(
             found: true,
             dest: pathname || '/',
             userDest: Boolean(routeConfig.dest),
+            isDestUrl,
             status: routeConfig.status,
             headers: combinedHeaders,
             uri_args: query,
@@ -176,6 +179,7 @@ export async function devRouter(
     found = {
       found: false,
       dest: reqPathname,
+      isDestUrl: false,
       uri_args: query,
       headers: combinedHeaders,
     };
