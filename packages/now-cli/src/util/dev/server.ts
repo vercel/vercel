@@ -1255,7 +1255,9 @@ export default class DevServer {
 
       if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
         // Equivalent to now-proxy exit_with_status() function
-        this.output.debug(`Route found with status code ${statusCode}`);
+        this.output.debug(
+          `Route found with redirect status code ${statusCode}`
+        );
         await this.sendRedirect(req, res, nowRequestId, location, statusCode);
         return;
       }

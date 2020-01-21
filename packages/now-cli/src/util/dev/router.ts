@@ -116,8 +116,10 @@ export async function devRouter(
           const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(pathname);
 
-          if (!hasDestFile && !routeConfig.status) {
-            if (missRoutes && missRoutes.length > 0) {
+          if (!hasDestFile) {
+            if (routeConfig.status && phase !== 'miss') {
+              // Equivalent to now-proxy exit_with_status() function
+            } else if (missRoutes && missRoutes.length > 0) {
               // Trigger a 'miss'
               const missResult = await devRouter(
                 destPath,
