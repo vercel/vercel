@@ -199,6 +199,7 @@ test('[dev-router] `continue: true` with fallthrough', async t => {
     dest: '/_next/static/chunks/0.js',
     isDestUrl: false,
     phase: undefined,
+    status: undefined,
     uri_args: {},
     headers: {
       'cache-control': 'immutable,max-age=31536000',
