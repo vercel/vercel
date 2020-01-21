@@ -57,6 +57,7 @@ export async function devRouter(
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
+  let status: number | undefined;
 
   // Try route match
   if (routes) {
@@ -104,12 +105,11 @@ export async function devRouter(
         }
 
         if (routeConfig.continue) {
-          if (phase === 'miss' && routeConfig.status === 404) {
-            // Don't continue on miss route so that 404 works
-          } else {
-            reqPathname = destPath;
-            continue;
+          if (routeConfig.status) {
+            status = routeConfig.status;
           }
+          reqPathname = destPath;
+          continue;
         }
 
         if (routeConfig.check && devServer && phase !== 'hit') {
@@ -134,6 +134,9 @@ export async function devRouter(
                 return missResult;
               }
             } else {
+              if (routeConfig.status && phase === 'miss') {
+                status = routeConfig.status;
+              }
               reqPathname = destPath;
               continue;
             }
@@ -147,11 +150,12 @@ export async function devRouter(
             dest: destPath,
             userDest: false,
             isDestUrl,
-            status: routeConfig.status,
+            status: routeConfig.status || status,
             headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx,
+            phase,
           };
           break;
         } else {
@@ -164,11 +168,12 @@ export async function devRouter(
             dest: pathname || '/',
             userDest: Boolean(routeConfig.dest),
             isDestUrl,
-            status: routeConfig.status,
+            status: routeConfig.status || status,
             headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx,
+            phase,
           };
           break;
         }
@@ -180,9 +185,11 @@ export async function devRouter(
     found = {
       found: false,
       dest: reqPathname,
+      status,
       isDestUrl: false,
       uri_args: query,
       headers: combinedHeaders,
+      phase,
     };
   }
 

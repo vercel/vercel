@@ -5,7 +5,7 @@
       "handle": "filesystem"
     },
     {
-      "src": "/([^/]+)",
+      "src": "/(.*)",
       "headers": { "override": "one" },
       "dest": "/blog/$1",
       "check": true
@@ -14,14 +14,14 @@
       "handle": "miss"
     },
     {
+      "src": "/.*",
+      "status": 404,
+      "continue": true
+    },
+    {
       "src": "/(.*)",
       "dest": "/src/$1",
       "check": true
-    },
-    {
-      "src": "/src/.+",
-      "status": 404,
-      "continue": true
     }
   ]
 }

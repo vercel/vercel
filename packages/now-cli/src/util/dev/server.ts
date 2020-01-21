@@ -1238,7 +1238,9 @@ export default class DevServer {
           this
         );
       } else if (match && hitRoutes.length > 0) {
-        // Since there was a build match, enter the hit phase
+        // Since there was a build match, enter the hit phase.
+        // The hit phase must not set status code.
+        const prevStatus = routeResult.status;
         routeResult = await devRouter(
           routeResult.dest || req.url,
           req.method,
@@ -1248,9 +1250,15 @@ export default class DevServer {
           [],
           'hit'
         );
+        routeResult.status = prevStatus;
       }
 
       statusCode = routeResult.status;
+
+      if (match && statusCode === 404 && routeResult.phase === 'miss') {
+        statusCode = undefined;
+      }
+
       const location = routeResult.headers['location'] || routeResult.dest;
 
       if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
@@ -1262,14 +1270,7 @@ export default class DevServer {
         return;
       }
 
-      if (
-        !match &&
-        statusCode &&
-        routeResult.matched_route &&
-        !isHandler(routeResult.matched_route) &&
-        routeResult.matched_route.check &&
-        routeResult.matched_route.status
-      ) {
+      if (!match && statusCode && routeResult.phase !== 'miss') {
         // Equivalent to now-proxy exit_with_status() function
         this.output.debug(`Route found with with status code ${statusCode}`);
         await this.sendError(req, res, nowRequestId, '', statusCode);
@@ -1301,7 +1302,7 @@ export default class DevServer {
 
     if (!match) {
       if (
-        statusCode === 404 ||
+        (statusCode === 404 && routeResult.phase === 'miss') ||
         !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
       ) {
         await this.send404(req, res, nowRequestId);
