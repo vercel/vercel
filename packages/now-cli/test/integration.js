@@ -575,14 +575,25 @@ test('list the payment methods', async t => {
 test('domains inspect', async t => {
   const domainName = `inspect-${contextName}.org`;
 
+  const directory = fixture('static-multiple-files');
+  const projectName = Math.random()
+    .toString()
+    .slice(2);
+  const deployment = await execute([
+    directory,
+    `--name=${projectName}`,
+    '--confirm',
+    '--public',
+  ]);
+
   const addRes = await execa(
     binaryPath,
-    [`domains`, `add`, domainName, ...defaultArgs],
+    [`domains`, `add`, domainName, projectName, ...defaultArgs],
     { reject: false }
   );
-  t.is(addRes.exitCode, 0);
+  t.is(addRes.exitCode, 0, formatOutput(addRes));
 
-  const { stderr, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['domains', 'inspect', domainName, ...defaultArgs],
     {
@@ -595,9 +606,9 @@ test('domains inspect', async t => {
     [`domains`, `rm`, domainName, ...defaultArgs],
     { reject: false, input: 'y' }
   );
-  t.is(rmRes.exitCode, 0);
+  t.is(rmRes.exitCode, 0, formatOutput(rmRes));
 
-  t.is(exitCode, 0);
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
   t.true(!stderr.includes(`Renewal Price`));
 });
 

@@ -70,7 +70,7 @@ export default async function inspect(
       .then(res => (res instanceof Error ? null : res.price))
       .catch(() => null),
   ]);
-  if (domain instanceof DomainNotFound) {
+  if (!domain || domain instanceof DomainNotFound) {
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
@@ -209,7 +209,12 @@ export default async function inspect(
       ]
     );
 
-    output.print(table.replace(/^(.*)/gm, `${' '.repeat(3)}$1`));
+    output.print(
+      table
+        .split('\n')
+        .map(line => `   ${line}`)
+        .join('\n')
+    );
 
     output.print('\n\n');
   }
