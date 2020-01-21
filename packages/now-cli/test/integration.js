@@ -2289,6 +2289,18 @@ test('assign a domain to a project', async t => {
 
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
+  // Ensure that the project exists
+  await retry(
+    async () => {
+      const response = await apiFetch(`/v2/projects/${project}`);
+
+      if (response.status !== 200) {
+        throw new Error(`Project "${project}" should exist.`);
+      }
+    },
+    { retries: 3 }
+  );
+
   const output = await execute(['domains', 'add', domain, project, '--force']);
   t.is(output.exitCode, 0, formatOutput(output));
 });
