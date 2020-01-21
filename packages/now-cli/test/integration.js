@@ -2275,10 +2275,17 @@ test('fail to add a domain without a project', async t => {
 
 test('assign a domain to a project', async t => {
   const domain = `project-domain.${contextName}.now.sh`;
-  const project = 'static-deployment';
-  const directory = fixture(project);
+  const project = `static-deployment-${Math.random()
+    .toString()
+    .slice(2)}`;
+  const directory = fixture('static-deployment');
 
-  const deploymentOutput = await execute([directory, '--public', '--confirm']);
+  const deploymentOutput = await execute([
+    directory,
+    `--name=${project}`,
+    '--public',
+    '--confirm',
+  ]);
 
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
@@ -2288,11 +2295,14 @@ test('assign a domain to a project', async t => {
 
 test('list project domains', async t => {
   const domain = `project-domain.${contextName}.now.sh`;
-  const project = 'static-deployment';
-  const directory = fixture(project);
+  const project = `static-deployment-${Math.random()
+    .toString()
+    .slice(2)}`;
+  const directory = fixture('static-deployment');
 
   const deploymentOutput = await execute([
     directory,
+    `--name=${project}`,
     '--public',
     '--confirm',
     '--force',
