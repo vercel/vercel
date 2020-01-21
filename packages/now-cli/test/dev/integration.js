@@ -1394,6 +1394,6 @@ test(
     validateResponseHeaders(t, response);
 
     const body = await response.text();
-    t.regex(body, /Hello, from PHP!/gm);
+    t.regex(body, /Hello, from Bash!/gm);
   })
 );
