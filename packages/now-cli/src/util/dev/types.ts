@@ -157,7 +157,7 @@ export interface RouteResult {
   matched_route_idx?: number;
   // "userDest": <boolean in case the destination was user defined>
   userDest?: boolean;
-  //url as destinatino should end routing
+  // url as destination should end routing
   isDestUrl: boolean;
 }
 
