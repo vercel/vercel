@@ -26,17 +26,17 @@ You can deploy your new Jekyll project with a single command from your terminal 
 $ now
 ```
 
-### Example Changes
+### Build Command
 
-This example adds a `package.json` file with the following:
+The default build command is `jekyll build`.
+
+If you wish to change the build command, add a `package.json` file with the following:
 
 ```json
 {
   "private": true,
   "scripts": {
-    "build": "jekyll build && mv _site public"
+    "build": "jekyll build"
   }
 }
 ```
-
-This instructs ZEIT Now to build the Jekyll website and move the output to the public directory.
