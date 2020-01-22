@@ -13,7 +13,11 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import { getTransformedRoutes } from '@now/routing-utils';
+import {
+  getTransformedRoutes,
+  HandleValue,
+  isHandler,
+} from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -22,6 +26,7 @@ import {
   PackageJson,
   detectBuilders,
   detectRoutes,
+  detectApiDirectory,
 } from '@now/build-utils';
 
 import { once } from '../once';
@@ -48,8 +53,7 @@ import {
   validateNowConfigFunctions,
 } from './validate';
 
-import isURL from './is-url';
-import devRouter from './router';
+import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
@@ -81,6 +85,7 @@ import {
   ListenSpec,
   RouteConfig,
   RouteResult,
+  HttpHeadersConfig,
 } from './types';
 
 interface FSEvent {
@@ -526,7 +531,8 @@ export default class DevServer {
 
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      const { projectSettings } = config;
+      const featHandleMiss = true; // enable for zero config
+      const { projectSettings, cleanUrls, trailingSlash } = config;
 
       const { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
@@ -548,7 +554,13 @@ export default class DevServer {
           defaultRoutes,
           redirectRoutes,
           error: routesError,
-        } = await detectRoutes(files, builders);
+        } = await detectRoutes(
+          files,
+          builders,
+          featHandleMiss,
+          cleanUrls,
+          trailingSlash
+        );
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
@@ -720,9 +732,18 @@ export default class DevServer {
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
     const results: { [filePath: string]: FileFsRef } = {};
+    const apiDir = detectApiDirectory(nowConfig.builds || []);
+    const apiMatch = apiDir + '/';
     for (const fsPath of files) {
-      const path = relative(this.cwd, fsPath);
+      let path = relative(this.cwd, fsPath);
       const { mode } = await fs.stat(fsPath);
+      if (apiDir && path.startsWith(apiMatch)) {
+        // lambda function files are trimmed of their file extension
+        const ext = extname(path);
+        if (ext) {
+          path = path.slice(0, -ext.length);
+        }
+      }
       results[path] = new FileFsRef({ mode, fsPath });
     }
     this.files = results;
@@ -1155,55 +1176,133 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
-    const { dest, status, headers, uri_args } = await devRouter(
-      req.url,
-      req.method,
-      routes,
-      this
-    );
+    const handleMap = getRoutesTypes(routes);
+    const missRoutes = handleMap.get('miss') || [];
+    const hitRoutes = handleMap.get('hit') || [];
+    handleMap.delete('miss');
+    handleMap.delete('hit');
+    const phases: (HandleValue | null)[] = [null, 'filesystem'];
+
+    let routeResult: RouteResult | null = null;
+    let match: BuildMatch | null = null;
+    let statusCode: number | undefined;
+
+    for (const phase of phases) {
+      statusCode = undefined;
+      const phaseRoutes = handleMap.get(phase) || [];
+      routeResult = await devRouter(
+        req.url,
+        req.method,
+        phaseRoutes,
+        this,
+        undefined,
+        missRoutes,
+        phase
+      );
+
+      if (routeResult.isDestUrl) {
+        // Mix the `routes` result dest query params into the req path
+        const destParsed = url.parse(routeResult.dest, true);
+        delete destParsed.search;
+        Object.assign(destParsed.query, routeResult.uri_args);
+        const destUrl = url.format(destParsed);
+
+        this.output.debug(`ProxyPass: ${destUrl}`);
+        this.setResponseHeaders(res, nowRequestId);
+        return proxyPass(req, res, destUrl, this.output);
+      }
+
+      match = await findBuildMatch(
+        this.buildMatches,
+        this.files,
+        routeResult.dest,
+        this
+      );
+
+      if (!match && missRoutes.length > 0) {
+        // Since there was no build match, enter the miss phase
+        routeResult = await devRouter(
+          routeResult.dest || req.url,
+          req.method,
+          missRoutes,
+          this,
+          routeResult.headers,
+          [],
+          'miss'
+        );
+
+        match = await findBuildMatch(
+          this.buildMatches,
+          this.files,
+          routeResult.dest,
+          this
+        );
+      } else if (match && hitRoutes.length > 0) {
+        // Since there was a build match, enter the hit phase.
+        // The hit phase must not set status code.
+        const prevStatus = routeResult.status;
+        routeResult = await devRouter(
+          routeResult.dest || req.url,
+          req.method,
+          hitRoutes,
+          this,
+          routeResult.headers,
+          [],
+          'hit'
+        );
+        routeResult.status = prevStatus;
+      }
+
+      statusCode = routeResult.status;
+
+      if (match && statusCode === 404 && routeResult.phase === 'miss') {
+        statusCode = undefined;
+      }
+
+      const location = routeResult.headers['location'] || routeResult.dest;
+
+      if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
+        // Equivalent to now-proxy exit_with_status() function
+        this.output.debug(
+          `Route found with redirect status code ${statusCode}`
+        );
+        await this.sendRedirect(req, res, nowRequestId, location, statusCode);
+        return;
+      }
+
+      if (!match && statusCode && routeResult.phase !== 'miss') {
+        // Equivalent to now-proxy exit_with_status() function
+        this.output.debug(`Route found with with status code ${statusCode}`);
+        await this.sendError(req, res, nowRequestId, '', statusCode);
+        return;
+      }
+
+      if (match) {
+        // end the phase
+        break;
+      }
+    }
+
+    if (!routeResult) {
+      throw new Error('Expected Route Result but none was found.');
+    }
+
+    const { dest, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
       res.setHeader(name, value);
     });
 
-    if (isURL(dest)) {
-      // Mix the `routes` result dest query params into the req path
-      const destParsed = url.parse(dest, true);
-      delete destParsed.search;
-      Object.assign(destParsed.query, uri_args);
-      const destUrl = url.format(destParsed);
-
-      this.output.debug(`ProxyPass: ${destUrl}`);
-      this.setResponseHeaders(res, nowRequestId);
-      return proxyPass(req, res, destUrl, this.output);
-    }
-
-    if (status) {
-      res.statusCode = status;
-      if (300 <= status && status <= 399) {
-        await this.sendRedirect(
-          req,
-          res,
-          nowRequestId,
-          res.getHeader('location') as string,
-          status
-        );
-        return;
-      }
+    if (statusCode) {
+      res.statusCode = statusCode;
     }
 
     const requestPath = dest.replace(/^\//, '');
-    const match = await findBuildMatch(
-      this.buildMatches,
-      this.files,
-      requestPath,
-      this
-    );
 
     if (!match) {
       if (
-        status === 404 ||
+        (statusCode === 404 && routeResult.phase === 'miss') ||
         !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
       ) {
         await this.send404(req, res, nowRequestId);
@@ -1349,7 +1448,7 @@ export default class DevServer {
           return;
         }
 
-        if (!status) {
+        if (!statusCode) {
           res.statusCode = result.statusCode;
         }
         this.setResponseHeaders(res, nowRequestId, result.headers);
@@ -1453,16 +1552,7 @@ export default class DevServer {
   }
 
   async hasFilesystem(dest: string): Promise<boolean> {
-    const requestPath = dest.replace(/^\//, '');
-    if (
-      await findBuildMatch(
-        this.buildMatches,
-        this.files,
-        requestPath,
-        this,
-        true
-      )
-    ) {
+    if (await findBuildMatch(this.buildMatches, this.files, dest, this, true)) {
       return true;
     }
     return false;
@@ -1552,6 +1642,7 @@ async function findBuildMatch(
   devServer: DevServer,
   isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
+  requestPath = requestPath.replace(/^\//, '');
   for (const match of matches.values()) {
     if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
       return match;
