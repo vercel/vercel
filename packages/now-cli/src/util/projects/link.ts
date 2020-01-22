@@ -20,11 +20,7 @@ const writeFile = promisify(fs.writeFile);
 export const NOW_FOLDER = '.now';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
 
-let cachedLink: ProjectLink | null | undefined;
-
 async function getLink(path?: string): Promise<ProjectLink | null> {
-  if (cachedLink || cachedLink === null) return cachedLink;
-
   try {
     const json = await readFile(
       join(path || process.cwd(), NOW_FOLDER, NOW_PROJECT_LINK_FILE),
@@ -33,12 +29,10 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
 
     const link: ProjectLink = JSON.parse(json);
 
-    cachedLink = link;
     return link;
   } catch (error) {
     // link file does not exists, project is not linked
     if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
-      cachedLink = null;
       return null;
     }
 
