@@ -53,7 +53,7 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
   }
 }
 
-async function getOrg(client: Client, orgId: string): Promise<Org | null> {
+async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
   if (orgId.startsWith('team_')) {
     const team = await getTeamById(client, orgId);
     if (!team) return null;
@@ -87,7 +87,7 @@ export async function getLinkedOrg(
 
   const spinner = wait('Retrieving scope…', 1000);
   try {
-    const org = await getOrg(client, orgId);
+    const org = await getOrgById(client, orgId);
     return org;
   } finally {
     spinner();
@@ -113,7 +113,7 @@ export async function getLinkedProject(
   let project: Project | ProjectNotFound | null;
   try {
     [org, project] = await Promise.all([
-      getOrg(client, link.orgId),
+      getOrgById(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
   } finally {
