@@ -521,6 +521,16 @@ const main = async argv_ => {
   // retrieve `org` from .now
   const org = await getLinkedOrg(client);
 
+  const { NOW_ORG_ID } = process.env;
+  if (NOW_ORG_ID && !org) {
+    output.print(
+      `${chalk.red('Error!')} Organization not found (${JSON.stringify({
+        NOW_ORG_ID,
+      })})\n`
+    );
+    return 1;
+  }
+
   const scope = org
     ? org.slug
     : argv['--scope'] || argv['--team'] || localConfig.scope;
