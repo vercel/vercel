@@ -102,6 +102,12 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
             src: route.src,
           });
         }
+        if (route.status) {
+          errors.push({
+            message: `You must not assign "status" after "handle: hit"`,
+            src: route.src,
+          });
+        }
       } else if (handleValue === 'miss') {
         if (route.dest && !route.check) {
           errors.push({
