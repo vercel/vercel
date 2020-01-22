@@ -510,7 +510,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error.code, 'invalid_routes');
     assert.deepEqual(
       error.errors[0].message,
-      'You must not assign "status" after "handle: hit"'
+      'You cannot assign "status" after "handle: hit"'
     );
   });
 
