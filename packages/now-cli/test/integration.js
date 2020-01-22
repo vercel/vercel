@@ -2066,6 +2066,9 @@ test('now hasOwnProperty not a valid subcommand', async t => {
 });
 
 test('create zero-config deployment', async t => {
+  const { stdout: whoami } = await execute(['whoami']);
+  console.log('whoami', whoami);
+
   const fixturePath = fixture('zero-config-next-js');
   const output = await execute([
     fixturePath,
@@ -2080,6 +2083,9 @@ test('create zero-config deployment', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 0, formatOutput(output));
+
+  const whoamiAPI = await apiFetch(`/www/user`);
+  console.log('whoamiAPI', await whoamiAPI.text());
 
   const { host } = new URL(output.stdout);
   const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
