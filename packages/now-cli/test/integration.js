@@ -21,8 +21,19 @@ function execa(file, args, options) {
   return _execa(file, args, options);
 }
 
+function fixture(name) {
+  const directory = path.join(__dirname, 'fixtures', 'integration', name);
+  const config = path.join(directory, 'project.json');
+
+  // We need to remove it, otherwise we can't re-use fixtures
+  if (fs.existsSync(config)) {
+    fs.unlinkSync(config);
+  }
+
+  return directory;
+}
+
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
 const session = Math.random()
   .toString(36)
