@@ -306,6 +306,14 @@ test('convertRewrites', () => {
       destination: '/api/user?identifier=:id&version=v2',
     },
     {
+      source: '/:file/:id',
+      destination: '/:file/get?identifier=:id',
+    },
+    {
+      source: '/qs-and-hash/:id/:hash',
+      destination: '/api/get?identifier=:id#:hash',
+    },
+    {
       source: '/fullurl',
       destination:
         'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
@@ -341,6 +349,16 @@ test('convertRewrites', () => {
     {
       src: '^\\/users(?:\\/([^\\/#\\?]+?))$',
       dest: '/api/user?identifier=$1&version=v2',
+      check: true,
+    },
+    {
+      src: '^(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      dest: '/$1/get?identifier=$2',
+      check: true,
+    },
+    {
+      src: '^\\/qs-and-hash(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      dest: '/api/get?identifier=$1#$2',
       check: true,
     },
     {
@@ -384,6 +402,8 @@ test('convertRewrites', () => {
     ['/firebase/one', '/firebase/two'],
     ['/projects/one/edit', '/projects/two/edit'],
     ['/users/four', '/users/five'],
+    ['/file1/yep', '/file2/nope'],
+    ['/qs-and-hash/test/first', '/qs-and-hash/test/second'],
     ['/fullurl'],
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
@@ -397,6 +417,8 @@ test('convertRewrites', () => {
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/delete', '/projects'],
     ['/users/edit/four', '/users/five/delete', '/users'],
+    ['/'],
+    ['/qs-and-hash', '/qs-and-hash/onlyone'],
     ['/full'],
     ['/random-catch/'],
     ['/another-catch/'],
