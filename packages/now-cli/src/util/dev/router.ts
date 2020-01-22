@@ -92,8 +92,7 @@ export async function devRouter(
           for (const key of Object.keys(headers)) {
             if (
               previousHeaders &&
-              // eslint-disable-next-line no-prototype-builtins
-              previousHeaders.hasOwnProperty(key) &&
+              Object.prototype.hasOwnProperty.call(previousHeaders, key) &&
               (phase === 'hit' || phase === 'miss')
             ) {
               // don't override headers in the miss phase
