@@ -182,32 +182,37 @@ const getDeploymentBuildsByUrl = async url => {
   return builds;
 };
 
+async function createUser() {
+  await retry(
+    async () => {
+      const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+      const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
+      const url = Buffer.from(str, 'base64').toString();
+      token = await fetchTokenWithRetry(url);
+
+      if (!fs.existsSync(location)) {
+        await createDirectory(location);
+      }
+
+      await writeFile(
+        path.join(location, `auth.json`),
+        JSON.stringify({ token })
+      );
+
+      const user = await fetchTokenInformation(token);
+
+      email = user.email;
+      contextName = user.email.split('@')[0];
+
+      console.log(`Using user ${email}`);
+    },
+    { retries: 3, factor: 1 }
+  );
+}
+
 test.before(async () => {
   try {
-    await retry(
-      async () => {
-        const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-        const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-        const url = Buffer.from(str, 'base64').toString();
-        token = await fetchTokenWithRetry(url);
-
-        if (!fs.existsSync(location)) {
-          await createDirectory(location);
-        }
-
-        await writeFile(
-          path.join(location, `auth.json`),
-          JSON.stringify({ token })
-        );
-
-        const user = await fetchTokenInformation(token);
-
-        email = user.email;
-        contextName = user.email.split('@')[0];
-      },
-      { retries: 3, factor: 1 }
-    );
-
+    await createUser();
     await prepareFixtures(contextName);
   } catch (err) {
     console.log('Failed `test.before`');
@@ -1931,6 +1936,10 @@ test('fail `now dev` dev script without now.json', async t => {
 });
 
 test('print correct link in legacy warning', async t => {
+  // Sign in again to make sure we don't hit any ratelimits
+  // for the following tests.
+  await createUser();
+
   const deploymentPath = fixture('v1-warning-link');
   const { exitCode, stderr, stdout } = await execute([
     deploymentPath,
