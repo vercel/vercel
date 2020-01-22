@@ -408,18 +408,39 @@ test('convertHeaders', () => {
         },
       ],
     },
+    {
+      source: '/blog/:path*',
+      headers: [
+        {
+          key: 'on-blog',
+          value: ':path*',
+        },
+        {
+          key: ':path*',
+          value: 'blog',
+        },
+      ],
+    },
   ]);
 
   const expected = [
     {
-      src: '(.*)+/(.*)\\.(eot|otf|ttf|ttc|woff|font\\.css)',
+      src: '^(.*)+(?:\\/(.*))\\.(eot|otf|ttf|ttc|woff|font\\.css)$',
       headers: { 'Access-Control-Allow-Origin': '*' },
       continue: true,
     },
     {
-      src: '404.html',
+      src: '^404\\.html$',
       headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
       continue: true,
+    },
+    {
+      continue: true,
+      headers: {
+        'on-blog': '$1',
+        $1: 'blog',
+      },
+      src: '^\\/blog(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
     },
   ];
 
@@ -428,11 +449,13 @@ test('convertHeaders', () => {
   const mustMatch = [
     ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
     ['404.html'],
+    ['/blog/first-post', '/blog/another/one'],
   ];
 
   const mustNotMatch = [
     ['hello/file.jpg', 'hello/font-css', 'dir/arial.font-css'],
     ['403.html', '500.html'],
+    ['/blogg', '/random'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
