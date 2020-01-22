@@ -408,6 +408,15 @@ test('convertHeaders', () => {
         },
       ],
     },
+    {
+      source: '/blog/:path*',
+      headers: [
+        {
+          key: 'on-blog',
+          value: 'yup',
+        },
+      ],
+    },
   ]);
 
   const expected = [
@@ -421,6 +430,13 @@ test('convertHeaders', () => {
       headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
       continue: true,
     },
+    {
+      continue: true,
+      headers: {
+        'on-blog': 'yup',
+      },
+      src: '^\\/blog(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -428,11 +444,13 @@ test('convertHeaders', () => {
   const mustMatch = [
     ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
     ['404.html'],
+    ['/blog/first-post', '/blog/another/one'],
   ];
 
   const mustNotMatch = [
     ['hello/file.jpg', 'hello/font-css', 'dir/arial.font-css'],
     ['403.html', '500.html'],
+    ['/blogg', '/random'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
