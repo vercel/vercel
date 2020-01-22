@@ -9,7 +9,7 @@ import _execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import fs, { writeFile, readFile, remove, copy } from 'fs-extra';
+import fs, { writeFile, readFile, remove, copy, ensureDir } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -119,6 +119,7 @@ const defaultArgs = [];
 let token;
 let email;
 let contextName;
+let userId;
 
 let tmpDir;
 
@@ -190,6 +191,7 @@ test.before(async () => {
 
         const user = await fetchTokenInformation(token);
 
+        userId = user.uid;
         email = user.email;
         contextName = user.email.split('@')[0];
       },
@@ -2520,6 +2522,46 @@ test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
   t.is(output.stdout.includes('Linked to'), false);
+});
+
+test('whoami with unknown `NOW_ORG_ID` should error', async t => {
+  const output = await execute(['whoami'], {
+    env: { NOW_ORG_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes('Organization not found'),
+    true,
+    formatOutput(output)
+  );
+});
+
+test('whoami with `NOW_ORG_ID`', async t => {
+  const output = await execute(['whoami', '--scope', 'asdf'], {
+    env: { NOW_ORG_ID: userId },
+  });
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes(contextName), true, formatOutput(output));
+});
+
+test('whoami with local .now scope', async t => {
+  const directory = fixture('static-deployment');
+
+  // create local .now
+  await ensureDir(path.join(directory, '.now'));
+  await fs.writeFile(
+    path.join(directory, '.now', 'project.json'),
+    JSON.stringify({ orgId: userId })
+  );
+
+  const output = await execute(['whoami'], {
+    cwd: directory,
+  });
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes(contextName), true, formatOutput(output));
 });
 
 test.after.always(async () => {
