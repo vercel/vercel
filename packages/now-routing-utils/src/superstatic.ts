@@ -130,32 +130,50 @@ export function sourceToRegex(
 
 function replaceSegments(segments: string[], destination: string): string {
   const parsedDestination = parseUrl(destination, true);
-  let { pathname, hash } = parsedDestination;
+  delete parsedDestination.href;
+  delete parsedDestination.path;
+  delete parsedDestination.search;
+  // eslint-disable-next-line prefer-const
+  let { pathname, hash, query, ...rest } = parsedDestination;
   pathname = pathname || '';
   hash = hash || '';
-
-  if ((pathname + hash).includes(':') && segments.length > 0) {
-    const pathnameCompiler = compile(pathname);
-    const hashCompiler = compile(hash);
+  if (segments.length > 0) {
     const indexes: { [k: string]: string } = {};
-
     segments.forEach((name, index) => {
       indexes[name] = toSegmentDest(index);
     });
-    pathname = pathnameCompiler(indexes);
-    hash = hash ? `${hashCompiler(indexes)}` : null;
+
+    if (destination.includes(':')) {
+      const pathnameCompiler = compile(pathname);
+      const hashCompiler = compile(hash);
+      pathname = pathnameCompiler(indexes);
+      hash = hash ? `${hashCompiler(indexes)}` : null;
+
+      for (const [key, strOrArray] of Object.entries(query)) {
+        let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
+        if (value) {
+          const queryCompiler = compile(value);
+          value = queryCompiler(indexes);
+        }
+        query[key] = value;
+      }
+    } else {
+      for (const [name, value] of Object.entries(indexes)) {
+        query[name] = value;
+      }
+    }
+
     destination = formatUrl({
-      ...parsedDestination,
+      ...rest,
       pathname,
+      query,
       hash,
     });
-  } else if (segments.length > 0) {
-    let prefix = '?';
-    segments.forEach((name, index) => {
-      destination += `${prefix}${name}=${toSegmentDest(index)}`;
-      prefix = '&';
-    });
+
+    // url.format() escapes the query string but we must preserve dollar signs
+    destination = destination.replace(/=%24/g, '=$');
   }
+
   return destination;
 }
 
