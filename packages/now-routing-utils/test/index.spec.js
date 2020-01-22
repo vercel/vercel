@@ -597,6 +597,26 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_redirects');
   });
 
+  test('should error when headers is invalid regex', () => {
+    const nowConfig = {
+      headers: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_headers');
+  });
+
+  test('should error when headers is invalid pattern', () => {
+    const nowConfig = {
+      headers: [
+        { source: '/:?', headers: [{ key: 'x-hello', value: 'world' }] },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_headers');
+  });
+
   test('should error when rewrites is invalid regex', () => {
     const nowConfig = {
       rewrites: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],

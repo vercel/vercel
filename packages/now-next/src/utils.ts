@@ -13,7 +13,7 @@ import {
   Lambda,
   isSymbolicLink,
 } from '@now/build-utils';
-import { Route, Source } from '@now/routing-utils';
+import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -293,13 +293,11 @@ async function getRoutes(
   return routes;
 }
 
-export type Rewrite = {
-  source: string;
-  destination: string;
-};
-
-export type Redirect = Rewrite & {
+// TODO: update to use type from @now/routing-utils after
+// adding permanent: true/false handling
+export type Redirect = NowRewrite & {
   statusCode?: number;
+  permanent?: boolean;
 };
 
 type RoutesManifestRegex = {
@@ -310,7 +308,8 @@ type RoutesManifestRegex = {
 export type RoutesManifest = {
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
-  rewrites: (Rewrite & RoutesManifestRegex)[];
+  rewrites: (NowRewrite & RoutesManifestRegex)[];
+  headers?: (NowHeader & RoutesManifestRegex)[];
   dynamicRoutes: {
     page: string;
     regex: string;

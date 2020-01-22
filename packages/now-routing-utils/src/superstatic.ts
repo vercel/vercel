@@ -71,11 +71,29 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
 export function convertHeaders(headers: NowHeader[]): Route[] {
   return headers.map(h => {
     const obj: { [key: string]: string } = {};
-    h.headers.forEach(kv => {
-      obj[kv.key] = kv.value;
+    const { src, segments } = sourceToRegex(h.source);
+    const hasSegments = segments.length > 0;
+    const indexes: { [k: string]: string } = {};
+
+    segments.forEach((name, index) => {
+      indexes[name] = toSegmentDest(index);
+    });
+
+    h.headers.forEach(({ key, value }) => {
+      if (hasSegments) {
+        if (key.includes(':')) {
+          const keyCompiler = compile(key);
+          key = keyCompiler(indexes);
+        }
+        if (value.includes(':')) {
+          const valueCompiler = compile(value);
+          value = valueCompiler(indexes);
+        }
+      }
+      obj[key] = value;
     });
     const route: Route = {
-      src: h.source,
+      src,
       headers: obj,
       continue: true,
     };
