@@ -233,6 +233,4 @@ export interface Org {
 export interface ProjectLink {
   projectId: string;
   orgId: string;
-  orgSlug?: string;
-  projectName?: string;
 }

@@ -32,49 +32,20 @@ async function getOrg(client: Client, orgId: string): Promise<Org | null> {
   return { type: 'user', id: orgId, slug: user.username };
 }
 
-export async function getLinkedProject(
-  client: Client,
-  path: string
-): Promise<[Org | null, Project | null]> {
+async function getLink(path?: string): Promise<ProjectLink | null> {
   try {
-    let link: ProjectLink;
+    const json = await readFile(
+      join(path || process.cwd(), NOW_FOLDER, NOW_PROJECT_LINK_FILE),
+      { encoding: 'utf8' }
+    );
 
-    const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
-    if (NOW_ORG_ID && NOW_PROJECT_ID) {
-      link = {
-        orgId: NOW_ORG_ID,
-        projectId: NOW_PROJECT_ID,
-      };
-    } else {
-      const json = await readFile(
-        join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
-        { encoding: 'utf8' }
-      );
+    const link: ProjectLink = JSON.parse(json);
 
-      link = JSON.parse(json);
-    }
-
-    const spinner = wait('Retrieving project…', 1000);
-    let org: Org | null;
-    let project: Project | ProjectNotFound | null;
-    try {
-      [org, project] = await Promise.all([
-        getOrg(client, link.orgId),
-        getProjectByIdOrName(client, link.projectId, link.orgId),
-      ]);
-    } finally {
-      spinner();
-    }
-
-    if (project instanceof ProjectNotFound || org === null) {
-      return [null, null];
-    }
-
-    return [org, project];
+    return link;
   } catch (error) {
     // link file does not exists, project is not linked
     if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
-      return [null, null];
+      return null;
     }
 
     // link file can't be read
@@ -86,6 +57,68 @@ export async function getLinkedProject(
 
     throw error;
   }
+}
+
+export async function getLinkedOrg(
+  client: Client,
+  path?: string
+): Promise<Org | null> {
+  let orgId: string | null = null;
+
+  if (process.env.NOW_ORG_ID) {
+    orgId = process.env.NOW_ORG_ID;
+  } else {
+    const link = await getLink(path);
+
+    if (link) {
+      orgId = link.orgId;
+    }
+  }
+
+  if (!orgId) {
+    return null;
+  }
+
+  const spinner = wait('Retrieving scope…', 1000);
+  try {
+    const org = await getOrg(client, orgId);
+    return org;
+  } finally {
+    spinner();
+  }
+}
+
+export async function getLinkedProject(
+  client: Client,
+  path?: string
+): Promise<[Org | null, Project | null]> {
+  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+  const link =
+    NOW_ORG_ID && NOW_PROJECT_ID
+      ? { orgId: NOW_ORG_ID, projectId: NOW_PROJECT_ID }
+      : await getLink(path);
+
+  if (!link) {
+    return [null, null];
+  }
+
+  const spinner = wait('Retrieving project…', 1000);
+  let org: Org | null;
+  let project: Project | ProjectNotFound | null;
+  try {
+    [org, project] = await Promise.all([
+      getOrg(client, link.orgId),
+      getProjectByIdOrName(client, link.projectId, link.orgId),
+    ]);
+  } finally {
+    spinner();
+  }
+
+  if (project instanceof ProjectNotFound || org === null) {
+    return [null, null];
+  }
+
+  return [org, project];
 }
 
 export async function linkFolderToProject(
