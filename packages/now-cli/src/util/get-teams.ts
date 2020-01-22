@@ -2,7 +2,7 @@ import Client from './client';
 import { APIError, InvalidToken } from './errors-ts';
 import { Team } from '../types';
 
-let teams: Team[];
+let teams: Team[] | undefined;
 
 export default async function getTeams(client: Client) {
   if (teams) return teams;

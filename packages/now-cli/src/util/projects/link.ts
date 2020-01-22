@@ -20,19 +20,11 @@ const writeFile = promisify(fs.writeFile);
 export const NOW_FOLDER = '.now';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
 
-async function getOrg(client: Client, orgId: string): Promise<Org | null> {
-  if (orgId.startsWith('team_')) {
-    const team = await getTeamById(client, orgId);
-    if (!team) return null;
-    return { type: 'team', id: team.id, slug: team.slug };
-  }
-
-  const user = await getUser(client);
-  if (user.uid !== orgId) return null;
-  return { type: 'user', id: orgId, slug: user.username };
-}
+let cachedLink: ProjectLink | null | undefined;
 
 async function getLink(path?: string): Promise<ProjectLink | null> {
+  if (cachedLink || cachedLink === null) return cachedLink;
+
   try {
     const json = await readFile(
       join(path || process.cwd(), NOW_FOLDER, NOW_PROJECT_LINK_FILE),
@@ -41,10 +33,12 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
 
     const link: ProjectLink = JSON.parse(json);
 
+    cachedLink = link;
     return link;
   } catch (error) {
     // link file does not exists, project is not linked
     if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
+      cachedLink = null;
       return null;
     }
 
@@ -57,6 +51,18 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
 
     throw error;
   }
+}
+
+async function getOrg(client: Client, orgId: string): Promise<Org | null> {
+  if (orgId.startsWith('team_')) {
+    const team = await getTeamById(client, orgId);
+    if (!team) return null;
+    return { type: 'team', id: team.id, slug: team.slug };
+  }
+
+  const user = await getUser(client);
+  if (user.uid !== orgId) return null;
+  return { type: 'user', id: orgId, slug: user.username };
 }
 
 export async function getLinkedOrg(
