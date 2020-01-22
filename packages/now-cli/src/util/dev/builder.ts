@@ -3,10 +3,17 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { promisify } from 'util';
-import { delimiter, dirname, join } from 'path';
+import { delimiter, dirname, extname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import {
+  Builder,
+  File,
+  Lambda,
+  FileBlob,
+  FileFsRef,
+  detectApiDirectory,
+} from '@now/build-utils';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
 import which from 'which';
@@ -279,19 +286,20 @@ export async function executeBuild(
 
   const { output } = result;
 
-  // Mimic fmeta-util and convert cleanUrls
-  if (nowConfig.cleanUrls) {
-    Object.entries(output)
-      .filter(([name, value]) => name.endsWith('.html'))
-      .forEach(([name, value]) => {
-        const cleanName = name.slice(0, -5);
-        delete output[name];
-        output[cleanName] = value;
-        if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
-          value.contentType = value.contentType || 'text/html; charset=utf-8';
-        }
-      });
-  }
+  const { cleanUrls } = nowConfig;
+  // Mimic fmeta-util and perform file renaming
+  Object.entries(output).forEach(([path, value]) => {
+    if (cleanUrls && path.endsWith('.html')) {
+      path = path.slice(0, -5);
+
+      if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
+        value.contentType = value.contentType || 'text/html; charset=utf-8';
+      }
+    }
+
+    delete output[path];
+    output[path] = value;
+  });
 
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
@@ -410,6 +418,8 @@ export async function getBuildMatches(
 
   const noMatches: Builder[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
+  const apiDir = detectApiDirectory(builds || []);
+  const apiMatch = apiDir + '/';
 
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
@@ -428,6 +438,14 @@ export async function getBuildMatches(
     // We need to escape brackets since `glob` will
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
+
+    if (apiDir && src.startsWith(apiMatch)) {
+      // lambda function files are trimmed of their file extension
+      const ext = extname(src);
+      if (ext) {
+        src = src.slice(0, -ext.length);
+      }
+    }
 
     const files = fileList
       .filter(name => name === src || minimatch(name, src))

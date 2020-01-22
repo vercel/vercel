@@ -7,7 +7,7 @@
       "fetchOptions": {
         "redirect": "manual"
       },
-      "status": 301,
+      "status": 308,
       "responseHeaders": {
         "location": "/redir2/"
       }

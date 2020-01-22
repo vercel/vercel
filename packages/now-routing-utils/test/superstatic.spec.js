@@ -177,6 +177,10 @@ test('convertRedirects', () => {
       destination: 'https://$1.firebase.com:8080/',
     },
     { source: '/catchme/:id*', destination: '/api/user' },
+    {
+      source: '/hello/:world*',
+      destination: '/something#:world*',
+    },
   ]);
 
   const expected = [
@@ -248,6 +252,13 @@ test('convertRedirects', () => {
       },
       src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
     },
+    {
+      headers: {
+        Location: '/something#$1',
+      },
+      src: '^\\/hello(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      status: 308,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -264,6 +275,7 @@ test('convertRedirects', () => {
     ['/firebase/admin', '/firebase/anotherAdmin'],
     ['/firebase/admin', '/firebase/anotherAdmin'],
     ['/catchme/id-1', '/catchme/id/2'],
+    ['/hello/world', '/hello/another/world'],
   ];
 
   const mustNotMatch = [
@@ -278,6 +290,7 @@ test('convertRedirects', () => {
     ['/firebase/user/1', '/firebase/another/1'],
     ['/firebase/user/1', '/firebase/another/1'],
     ['/catchm', '/random'],
+    ['/not-this-one', '/helloo'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

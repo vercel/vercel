@@ -32,7 +32,7 @@ export default async function issue(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -46,14 +46,14 @@ export default async function issue(
     '--debug': debugEnabled,
     '--crt': crtPath,
     '--key': keyPath,
-    '--ca': caPath
+    '--ca': caPath,
   } = opts;
 
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
 
@@ -87,35 +87,16 @@ export default async function issue(
     }
 
     // Create a custom certificate from the given file paths
-    try {
-      cert = await createCertFromFile(
-        client,
-        keyPath,
-        crtPath,
-        caPath,
-        contextName
-      );
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        output.error(`The specified file "${err.path}" doesn't exist.`);
-        return 1;
-      }
-      throw err;
-    }
+    cert = await createCertFromFile(
+      client,
+      keyPath,
+      crtPath,
+      caPath,
+      contextName
+    );
 
-    if (cert instanceof ERRORS.InvalidCert) {
-      output.error(
-        `The provided certificate is not valid and cannot be added.`
-      );
-      return 1;
-    }
-
-    if (cert instanceof ERRORS.DomainPermissionDenied) {
-      output.error(
-        `You do not have permissions over domain ${chalk.underline(
-          cert.meta.domain
-        )} under ${chalk.bold(cert.meta.context)}.`
-      );
+    if (cert instanceof Error) {
+      output.error(cert.message);
       return 1;
     }
 
@@ -155,7 +136,7 @@ export default async function issue(
     if (cert.meta.code === 'wildcard_not_allowed') {
       // Fallback to start cert order when receiving a wildcard_not_allowed error
       return runStartOrder(output, client, cns, contextName, addStamp, {
-        fallingBack: true
+        fallingBack: true,
       });
     }
   }
@@ -237,7 +218,7 @@ async function runStartOrder(
           ? `_acme-challenge.${parsedDomain.subdomain}`
           : `_acme-challenge`,
         'TXT',
-        challenge.value
+        challenge.value,
       ];
     })
   ).split('\n');
@@ -246,8 +227,6 @@ async function runStartOrder(
   process.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
-  output.print(
-    '  Read more: https://err.sh/now/solve-challenges-manually\n'
-  );
+  output.print('  Read more: https://err.sh/now/solve-challenges-manually\n');
   return 0;
 }

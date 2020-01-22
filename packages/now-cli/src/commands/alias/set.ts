@@ -13,7 +13,7 @@ import formatNSTable from '../../util/format-ns-table';
 import getDeploymentForAlias from '../../util/alias/get-deployment-for-alias';
 import getRulesFromFile from '../../util/alias/get-rules-from-file';
 import getScope from '../../util/get-scope';
-import getTargetsForAlias from '../../util/alias/get-targets-for-alias';
+import { getTargetsForAlias } from '../../util/alias/get-targets-for-alias';
 import humanizePath from '../../util/humanize-path';
 import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
@@ -21,6 +21,7 @@ import { isValidName } from '../../util/is-valid-name';
 import upsertPathAlias from '../../util/alias/upsert-path-alias';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
+import link from '../../util/output/link';
 
 type Options = {
   '--debug': boolean;
@@ -119,8 +120,17 @@ export default async function set(
     return 1;
   }
 
+  if (args.length === 0 && !rules) {
+    output.error(
+      `To ship to production, optionally configure your domains (${link(
+        'https://zeit.co/docs/v2/custom-domains/'
+      )}) and run ${cmd('now --prod')}.`
+    );
+    return 1;
+  }
+
   // Find the targets to perform the alias
-  const targets = await getTargetsForAlias(output, args, localConfig);
+  const targets = getTargetsForAlias(args, localConfig);
 
   if (targets instanceof ERRORS.NoAliasInConfig) {
     output.error(`Couldn't find an alias in config`);

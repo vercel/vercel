@@ -5,16 +5,17 @@ module.exports = {
         {
           source: '/redir1',
           destination: '/redir2',
-          statusCode: 301,
+          permanent: true,
         },
         {
           source: '/redir2',
           destination: '/hello',
-          statusCode: 307,
+          permanent: false,
         },
         {
           source: '/redir/:path',
           destination: '/:path',
+          permanent: false,
         },
       ];
     },

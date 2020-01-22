@@ -66,7 +66,12 @@ export default class Now extends EventEmitter {
       forceNew = false,
       target = null,
       deployStamp,
-    }
+      projectSettings,
+      skipAutoDetectionConfirmation,
+    },
+    org,
+    shouldLinkFolder,
+    isDetectingFramework
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn, debug } = this._output;
@@ -130,6 +135,7 @@ export default class Now extends EventEmitter {
       meta,
       regions,
       target: target || undefined,
+      projectSettings,
     };
 
     // Ignore specific items from Now.json
@@ -174,6 +180,11 @@ export default class Now extends EventEmitter {
       quiet,
       nowConfig,
       force: forceNew,
+      org,
+      projectName: name,
+      shouldLinkFolder,
+      isDetectingFramework,
+      skipAutoDetectionConfirmation,
     });
 
     // We report about files whose sizes are too big
@@ -642,7 +653,6 @@ function hasNpmStart(pkg) {
 
 function hasFile(base, files, name) {
   const relative = files.map(file => toRelative(file, base));
-  console.log(731, relative);
   return relative.indexOf(name) !== -1;
 }
 

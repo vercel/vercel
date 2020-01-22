@@ -4,10 +4,14 @@ import { ProjectNotFound } from '../errors-ts';
 
 export default async function getProjectByNameOrId(
   client: Client,
-  projectNameOrId: string
+  projectNameOrId: string,
+  accountId?: string
 ) {
   try {
-    const project = await client.fetch<Project>(`/projects/${encodeURIComponent(projectNameOrId)}`);
+    const project = await client.fetch<Project>(
+      `/projects/${encodeURIComponent(projectNameOrId)}`,
+      { accountId }
+    );
     return project;
   } catch (error) {
     if (error.status === 404) {

@@ -21,7 +21,17 @@ class VirtualFilesystem extends DetectorFilesystem {
     });
   }
 
-  async _exists(name: string): Promise<boolean> {
+  async _hasPath(path: string): Promise<boolean> {
+    for (const file of this.files.keys()) {
+      if (file.startsWith(path)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  async _isFile(name: string): Promise<boolean> {
     return this.files.has(name);
   }
 
@@ -89,6 +99,7 @@ describe('#detectFramework', () => {
   it('Detect Hugo #1', async () => {
     const fs = new VirtualFilesystem({
       'config.yaml': 'config',
+      'content/post.md': '# hello world',
     });
 
     expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
@@ -97,6 +108,7 @@ describe('#detectFramework', () => {
   it('Detect Hugo #2', async () => {
     const fs = new VirtualFilesystem({
       'config.json': 'config',
+      'content/post.md': '# hello world',
     });
 
     expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
@@ -105,6 +117,7 @@ describe('#detectFramework', () => {
   it('Detect Hugo #3', async () => {
     const fs = new VirtualFilesystem({
       'config.toml': 'config',
+      'content/post.md': '# hello world',
     });
 
     expect(await detectFramework({ fs, frameworkList })).toBe('hugo');

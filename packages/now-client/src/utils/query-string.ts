@@ -12,5 +12,9 @@ export function generateQueryString(clientOptions: NowClientOptions): string {
     options.set('forceNew', '1');
   }
 
+  if (clientOptions.skipAutoDetectionConfirmation) {
+    options.set('skipAutoDetectionConfirmation', '1');
+  }
+
   return Array.from(options.entries()).length ? `?${options.toString()}` : '';
 }
