@@ -115,7 +115,8 @@ export async function* upload(
               apiUrl,
               userAgent,
             },
-            clientOptions.debug
+            clientOptions.debug,
+            true
           );
 
           if (res.status === 200) {
@@ -168,8 +169,9 @@ export async function* upload(
         return result;
       },
       {
-        retries: 3,
-        factor: 2,
+        retries: 5,
+        factor: 6,
+        minTimeout: 10,
       }
     );
   });

@@ -47,6 +47,7 @@ export type User = {
     login: string;
     updatedAt: number;
   };
+  name?: string;
 };
 
 export type Team = {
@@ -221,4 +222,17 @@ export interface Project {
   accountId: string;
   updatedAt: number;
   createdAt: number;
+}
+
+export interface Org {
+  type: 'user' | 'team';
+  id: string;
+  slug: string;
+}
+
+export interface ProjectLink {
+  projectId: string;
+  orgId: string;
+  orgSlug?: string;
+  projectName?: string;
 }

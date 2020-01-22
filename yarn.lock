@@ -2023,29 +2023,29 @@
   dependencies:
     "@zeit/dns-cached-resolve" "2.1.0"
 
-"@zeit/fetch-retry@4.0.0":
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/@zeit/fetch-retry/-/fetch-retry-4.0.0.tgz#ad7fe06c4ceb3dcbd76c04db95b1b624ed6fcf3f"
-  integrity sha512-ALXnrCPpiVWha/L3Mm1klPhqmVTKmPQ2dmb5YIsSCrMBJugfhDb42kacVsvQ11vAFRE1LRaJ9Pmw16zEMvQnbw==
+"@zeit/fetch-retry@^4.1.0":
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/@zeit/fetch-retry/-/fetch-retry-4.1.0.tgz#a960e335b3ecf01f219e045a4b8819b6ef34b1f4"
+  integrity sha512-2/vtTzIs3/Bp5tNOmCpICCRooa+v0wL4e+3Afl4etyqZrjOmCMfKshWPSHTxLe20qfsn010qXy/hK6yqD4t0zg==
   dependencies:
-    async-retry "^1.1.3"
+    async-retry "^1.3.1"
     debug "^3.1.0"
 
-"@zeit/fetch@5.1.0":
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/@zeit/fetch/-/fetch-5.1.0.tgz#5a24c03ce690f63a81543a016e54aa59f8ca71a0"
-  integrity sha512-e+ZClpgyP8AlOcewSNrpJzXLjPLG+dXBnBg3vYXPYdYItj2dWaI1mRjiyBriH/U9Gt48wZJukz9Q3uhMYS4X6w==
+"@zeit/fetch@5.2.0":
+  version "5.2.0"
+  resolved "https://registry.yarnpkg.com/@zeit/fetch/-/fetch-5.2.0.tgz#7a8bfa31284e33a4e3fe7940351b0d48264d167d"
+  integrity sha512-S4TFaT210j/lgzHjaxN2SiaMxXGeoB4hghNlhlvSqwTFSDNIqyJIDKFZQy+r3NKJOQU+RB5yGKJt8LS1pPHUrw==
   dependencies:
     "@types/async-retry" "1.2.1"
     "@zeit/fetch-cached-dns" "1.2.0"
-    "@zeit/fetch-retry" "4.0.0"
+    "@zeit/fetch-retry" "^4.1.0"
     agentkeepalive "3.4.1"
     debug "3.1.0"
 
-"@zeit/fun@0.10.4":
-  version "0.10.4"
-  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.10.4.tgz#fedeb05dac825df50e811939a50a5eee10363d6d"
-  integrity sha512-BOn5FboMkmpVAWWBuiLa8kQ4zp07k1/D8oHyCnaCAy0i6IxNs3Woc9zPiW0E55qhl0MRzEjwtioOHfyXK/Sw2A==
+"@zeit/fun@0.11.0":
+  version "0.11.0"
+  resolved "https://registry.yarnpkg.com/@zeit/fun/-/fun-0.11.0.tgz#e226af0a2b63020a0e233dd37a2ceb2ac2e68fe3"
+  integrity sha512-w9IqoMV6SIKVmQbocKKvllgL27im7YQfTFV/0hjIgASfi8yQgPIj7mo76VFosRS0HQA5MEIzYz+oigdelOTIOQ==
   dependencies:
     async-listen "1.0.0"
     debug "4.1.1"
@@ -2076,13 +2076,18 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.20.4.tgz#00f0a25a88cac3712af4ba66561d9e281c6f05c9"
   integrity sha512-fmq+F/QxPec+k/zvT7HiVpk7oiGFseS6brfT/AYqmCUp6QFRK7vZf2Ref46MImsg/g2W3g5X6SRvGRmOAvEfdA==
 
-"@zeit/node-file-trace@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.4.1.tgz#37cb1382fa0d31c2083b634201fdad7a01849dda"
-  integrity sha512-jrRdmyYzMZ9w00EoNM3dLgFD+AvERlM37QGtXn9wZ6WZMPfVa/VSd2HrdVaYUI5gg2cTcwtkJenz51UHUPfmOg==
+"@zeit/node-file-trace@0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.5.1.tgz#3badd7516fd91f78860e698edbb41107dfc841f4"
+  integrity sha512-BlZDokGcOIKu5R2Qs3bZGjXRptbKqBYQ7iBnSDjJhJqP4d4hbRPPBQQnrihLOVNsauX845I+CUgRY+OOpd2jFA==
   dependencies:
     acorn "^6.1.1"
-    acorn-stage3 "^2.0.0"
+    acorn-bigint "^0.3.1"
+    acorn-class-fields "^0.3.1"
+    acorn-dynamic-import "^4.0.0"
+    acorn-export-ns-from "^0.1.0"
+    acorn-import-meta "^1.0.0"
+    acorn-private-methods "^0.3.0"
     bindings "^1.4.0"
     estree-walker "^0.6.0"
     glob "^7.1.3"
@@ -2178,26 +2183,6 @@ acorn-private-methods@^0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/acorn-private-methods/-/acorn-private-methods-0.3.0.tgz#a5a9f8cd83d175bc138fa22592fababd0afda35d"
   integrity sha512-+gWTjSA+13lsv1mwCPosSrLzEyghYtWgrr/1Ck7i7Pu5iK7Ke0hOgw3IW1RUxhc4qS2QTQBQx2+qHYqsa4Qlqw==
-  dependencies:
-    acorn-private-class-elements "^0.1.0"
-
-acorn-stage3@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/acorn-stage3/-/acorn-stage3-2.0.0.tgz#cf9efacec9323bdef36a416c385c833fcf39a0c6"
-  integrity sha512-1Li6EwvFv/O0rZMDduZY2lOly9fyXanmIsyqe26NppIszWhEQlb7IbUrjFGWyRVjQg3H8k7rO0I/tbAr6dORoQ==
-  dependencies:
-    acorn-bigint "^0.3.1"
-    acorn-class-fields "^0.3.1"
-    acorn-dynamic-import "^4.0.0"
-    acorn-export-ns-from "^0.1.0"
-    acorn-import-meta "^1.0.0"
-    acorn-private-methods "^0.3.0"
-    acorn-static-class-features "^0.2.0"
-
-acorn-static-class-features@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/acorn-static-class-features/-/acorn-static-class-features-0.2.0.tgz#8a12b0b280b2e067e268fdbb14116a5b02affd71"
-  integrity sha512-46IooHSRsvgSi+t36Wx9iPfF9BKFKVDcAWELXVqvKHmZogSCk11iUCi2FiZmLeTaM0hlJ3EYDyYiVmHRUGPzWA==
   dependencies:
     acorn-private-class-elements "^0.1.0"
 
@@ -2341,9 +2326,9 @@ ansi-styles@^4.0.0:
     color-convert "^2.0.1"
 
 ansi-styles@^4.1.0:
-  version "4.2.0"
-  resolved "https://registry.yarnpkg.com/ansi-styles/-/ansi-styles-4.2.0.tgz#5681f0dcf7ae5880a7841d8831c4724ed9cc0172"
-  integrity sha512-7kFQgnEaMdRtwf6uSfUnVr9gSGC7faurn+J/Mv90/W+iTtN0405/nLdopfMWwchyxhbGYl6TC4Sccn9TUkGAgg==
+  version "4.2.1"
+  resolved "https://registry.yarnpkg.com/ansi-styles/-/ansi-styles-4.2.1.tgz#90ae75c424d008d2624c5bf29ead3177ebfcf359"
+  integrity sha512-9VGjrMsG1vePxcSweQsN20KY/c4zN0h9fLjqAbwbPfahM3t+NL+M9HC8xeXG2I8pX5NoamTGNuomEUFI7fcUjA==
   dependencies:
     "@types/color-name" "^1.1.1"
     color-convert "^2.0.1"
@@ -2590,10 +2575,17 @@ async-retry@1.1.3:
   dependencies:
     retry "0.10.1"
 
-async-retry@1.2.3, async-retry@^1.1.3:
+async-retry@1.2.3:
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/async-retry/-/async-retry-1.2.3.tgz#a6521f338358d322b1a0012b79030c6f411d1ce0"
   integrity sha512-tfDb02Th6CE6pJUF2gjW5ZVjsgwlucVXOEQMvEX9JgSJMs9gAX+Nz3xRuJBKuUYjTSYORqvDBORdAQ3LU59g7Q==
+  dependencies:
+    retry "0.12.0"
+
+async-retry@^1.3.1:
+  version "1.3.1"
+  resolved "https://registry.yarnpkg.com/async-retry/-/async-retry-1.3.1.tgz#139f31f8ddce50c0870b0ba558a6079684aaed55"
+  integrity sha512-aiieFW/7h3hY0Bq5d+ktDBejxuwR78vRu9hDUdR8rNhSaQ29VzPL4AoIRG7D/c7tdenwOcKvgPM6tIxB3cB6HA==
   dependencies:
     retry "0.12.0"
 
@@ -7901,14 +7893,6 @@ node-fetch-npm@^2.0.2:
     json-parse-better-errors "^1.0.0"
     safe-buffer "^5.1.1"
 
-node-fetch@1.7.3:
-  version "1.7.3"
-  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-1.7.3.tgz#980f6f72d85211a5347c6b2bc18c5b84c3eb47ef"
-  integrity sha512-NhZ4CsKx7cYm2vSrBAr2PvFOe6sWDf0UYLRqA6svUYg7+/TSfVAu49jYC4BvQ4Sms9SZgdqGBgroqfDhJdTyKQ==
-  dependencies:
-    encoding "^0.1.11"
-    is-stream "^1.0.1"
-
 node-fetch@2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.2.0.tgz#4ee79bde909262f9775f731e3656d0db55ced5b5"
@@ -10411,9 +10395,9 @@ term-size@^1.2.0:
     execa "^0.7.0"
 
 term-size@^2.1.0:
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/term-size/-/term-size-2.1.0.tgz#3aec444c07a7cf936e157c1dc224b590c3c7eef2"
-  integrity sha512-I42EWhJ+2aeNQawGx1VtpO0DFI9YcfuvAMNIdKyf/6sRbHJ4P+ZQ/zIT87tE+ln1ymAGcCJds4dolfSAS0AcNg==
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/term-size/-/term-size-2.1.1.tgz#f81ec25854af91a480d2f9d0c77ffcb26594ed1a"
+  integrity sha512-UqvQSch04R+69g4RDhrslmGvGL3ucDRX/U+snYW0Mab4uCAyKSndUksaoqlJ81QKSpRnIsuOYQCbC2ZWx2896A==
 
 test-exclude@^5.1.0, test-exclude@^5.2.3:
   version "5.2.3"

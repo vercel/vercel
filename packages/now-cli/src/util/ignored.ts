@@ -15,7 +15,7 @@ export default `.hg
 .wafpicke-*
 .lock-wscript
 .env
-.env.build
+.env.*
 .venv
 npm-debug.log
 config.gypi
