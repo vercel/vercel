@@ -1,6 +1,6 @@
 {
   "name": "@now/routing-utils",
-  "version": "1.5.2-canary.0",
+  "version": "1.5.2-canary.1",
   "description": "ZEIT Now routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

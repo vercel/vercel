@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/([^/]+)",
+      "headers": { "override": "one" },
+      "dest": "/blog/$1",
+      "check": true
+    },
+    {
+      "handle": "miss"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/src/$1",
+      "check": true
+    },
+    {
+      "src": "/src/blog/([^/]+)",
+      "headers": { "test": "1", "override": "two" },
+      "dest": "/src/blog/$1.html",
+      "check": true
+    }
+  ]
+}
