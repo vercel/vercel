@@ -17,7 +17,7 @@ export default async function getUser(client: Client) {
     }
 
     user = res.user;
-    return res.user;
+    return user;
   } catch (error) {
     if (error instanceof APIError && error.status === 403) {
       throw new InvalidToken();
