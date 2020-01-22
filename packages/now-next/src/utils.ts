@@ -12,9 +12,8 @@ import {
   streamToBuffer,
   Lambda,
   isSymbolicLink,
-  NowRewrite,
 } from '@now/build-utils';
-import { Route, Source, NowHeader } from '@now/routing-utils';
+import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
 
 type stringMap = { [key: string]: string };
 
