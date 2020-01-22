@@ -578,7 +578,9 @@ test('list the payment methods', async t => {
 });
 
 test('domains inspect', async t => {
-  const domainName = `inspect-${contextName}.org`;
+  const domainName = `inspect-${contextName}-${Math.random()
+    .toString()
+    .slice(2, 8)}.org`;
 
   const directory = fixture('static-multiple-files');
   const projectName = Math.random()
@@ -591,12 +593,16 @@ test('domains inspect', async t => {
     '--public',
   ]);
 
-  const addRes = await execa(
-    binaryPath,
-    [`domains`, `add`, domainName, projectName, ...defaultArgs],
-    { reject: false }
-  );
-  t.is(addRes.exitCode, 0, formatOutput(addRes));
+  {
+    // Add a domain that can be inspected
+    const result = await execa(
+      binaryPath,
+      [`domains`, `add`, domainName, projectName, ...defaultArgs],
+      { reject: false }
+    );
+
+    t.is(result.exitCode, 0, formatOutput(result));
+  }
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -606,15 +612,19 @@ test('domains inspect', async t => {
     }
   );
 
-  const rmRes = await execa(
-    binaryPath,
-    [`domains`, `rm`, domainName, ...defaultArgs],
-    { reject: false, input: 'y' }
-  );
-  t.is(rmRes.exitCode, 0, formatOutput(rmRes));
-
-  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
   t.true(!stderr.includes(`Renewal Price`));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+
+  {
+    // Remove the domain again
+    const result = await execa(
+      binaryPath,
+      [`domains`, `rm`, domainName, ...defaultArgs],
+      { reject: false, input: 'y' }
+    );
+
+    t.is(result.exitCode, 0, formatOutput(result));
+  }
 });
 
 test('try to purchase a domain', async t => {
