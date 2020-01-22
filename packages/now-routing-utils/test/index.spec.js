@@ -619,12 +619,7 @@ describe('getTransformedRoutes', () => {
 
   test('should error when rewrites is invalid regex', () => {
     const nowConfig = {
-      rewrites: [
-        {
-          source: '^/(*.)\\.html$',
-          headers: [{ key: 'x-hello', value: 'world' }],
-        },
-      ],
+      rewrites: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
