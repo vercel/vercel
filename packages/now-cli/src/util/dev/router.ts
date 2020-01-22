@@ -96,7 +96,7 @@ export async function devRouter(
               Object.prototype.hasOwnProperty.call(previousHeaders, lowerKey) &&
               (phase === 'hit' || phase === 'miss')
             ) {
-              // don't override headers in the miss phase
+              // don't override headers in the hit or miss phase
             } else {
               const originalValue = headers[originalKey];
               const value = resolveRouteParameters(originalValue, match, keys);
