@@ -286,6 +286,33 @@ export function getTransformedRoutes({
   }
 
   if (typeof headers !== 'undefined') {
+    const code = 'invalid_headers';
+    const errorsRegex = headers
+      .map(r => checkRegexSyntax(r.source))
+      .filter(notEmpty);
+    if (errorsRegex.length > 0) {
+      return {
+        routes,
+        error: createNowError(
+          code,
+          'Headers `source` contains invalid regex. Read more: https://err.sh/now/invalid-route-source',
+          errorsRegex
+        ),
+      };
+    }
+    const errorsPattern = headers
+      .map(r => checkPatternSyntax(r.source))
+      .filter(notEmpty);
+    if (errorsPattern.length > 0) {
+      return {
+        routes,
+        error: createNowError(
+          code,
+          'Headers `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
+          errorsPattern
+        ),
+      };
+    }
     const normalized = normalizeRoutes(convertHeaders(headers));
     if (normalized.error) {
       normalized.error.code = 'invalid_headers';
