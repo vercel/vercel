@@ -89,16 +89,18 @@ export async function devRouter(
         }
 
         if (headers) {
-          for (const key of Object.keys(headers)) {
+          for (const originalKey of Object.keys(headers)) {
+            const lowerKey = originalKey.toLowerCase();
             if (
               previousHeaders &&
-              Object.prototype.hasOwnProperty.call(previousHeaders, key) &&
+              Object.prototype.hasOwnProperty.call(previousHeaders, lowerKey) &&
               (phase === 'hit' || phase === 'miss')
             ) {
               // don't override headers in the miss phase
             } else {
-              const value = resolveRouteParameters(headers[key], match, keys);
-              combinedHeaders[key.toLowerCase()] = value;
+              const originalValue = headers[originalKey];
+              const value = resolveRouteParameters(originalValue, match, keys);
+              combinedHeaders[lowerKey] = value;
             }
           }
         }
