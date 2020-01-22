@@ -2291,8 +2291,8 @@ test('assign a domain to a project', async t => {
   const output = await execute(['domains', 'add', domain, project, '--force']);
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const removeResponse = await execute(['projects', 'rm', project, '-y']);
-  expect(removeResponse.exitCode, 0, formatOutput(removeResponse));
+  const removeResponse = await execute(['rm', project, '-y']);
+  t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
 });
 
 test('list project domains', async t => {
@@ -2324,8 +2324,8 @@ test('list project domains', async t => {
   t.regex(output.stderr, new RegExp(domain), formatOutput(output));
   t.regex(output.stderr, new RegExp(project), formatOutput(output));
 
-  const removeResponse = await execute(['projects', 'rm', project, '-y']);
-  expect(removeResponse.exitCode, 0, formatOutput(removeResponse));
+  const removeResponse = await execute(['rm', project, '-y']);
+  t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
 });
 
 test('ensure `github` and `scope` are not sent to the API', async t => {
