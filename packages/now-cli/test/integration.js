@@ -151,15 +151,6 @@ const execute = (args, options) =>
   });
 
 const apiFetch = async (url, { headers, ...options } = {}) => {
-  console.log();
-  console.log('Used token to fetch API', token, url);
-  console.log(
-    'Token from .now/auth.json',
-    (await fs.readJSON(getConfigAuthPath())).token,
-    url
-  );
-  console.log();
-
   return fetch(`https://api.zeit.co${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -217,8 +208,6 @@ async function createUser() {
 
       email = user.email;
       contextName = user.email.split('@')[0];
-
-      console.log(`Using user ${email}`);
     },
     { retries: 3, factor: 1 }
   );
@@ -1960,10 +1949,6 @@ test('fail `now dev` dev script without now.json', async t => {
 });
 
 test('print correct link in legacy warning', async t => {
-  // Sign in again to make sure we don't hit any ratelimits
-  // for the following tests.
-  await createUser();
-
   const deploymentPath = fixture('v1-warning-link');
   const { exitCode, stderr, stdout } = await execute([
     deploymentPath,
@@ -2080,9 +2065,6 @@ test('now hasOwnProperty not a valid subcommand', async t => {
 });
 
 test('create zero-config deployment', async t => {
-  const { stdout: whoami } = await execute(['whoami']);
-  console.log('whoami', whoami);
-
   const fixturePath = fixture('zero-config-next-js');
   const output = await execute([
     fixturePath,
@@ -2097,9 +2079,6 @@ test('create zero-config deployment', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 0, formatOutput(output));
-
-  const whoamiAPI = await apiFetch(`/www/user`);
-  console.log('whoamiAPI', await whoamiAPI.text());
 
   const { host } = new URL(output.stdout);
   const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
