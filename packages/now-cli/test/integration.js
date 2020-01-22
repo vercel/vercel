@@ -150,7 +150,16 @@ const execute = (args, options) =>
     ...options,
   });
 
-const apiFetch = (url, { headers, ...options } = {}) => {
+const apiFetch = async (url, { headers, ...options } = {}) => {
+  console.log();
+  console.log('Used token to fetch API', token, url);
+  console.log(
+    'Token from .now/auth.json',
+    (await fs.readJSON(getConfigAuthPath())).token,
+    url
+  );
+  console.log();
+
   return fetch(`https://api.zeit.co${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -182,10 +191,18 @@ const getDeploymentBuildsByUrl = async url => {
   return builds;
 };
 
+function getConfigPath() {
+  return path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+}
+
+function getConfigAuthPath() {
+  return path.join(getConfigPath(), 'auth.json');
+}
+
 async function createUser() {
   await retry(
     async () => {
-      const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+      const location = getConfigPath();
       const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
       const url = Buffer.from(str, 'base64').toString();
       token = await fetchTokenWithRetry(url);
@@ -194,10 +211,7 @@ async function createUser() {
         await createDirectory(location);
       }
 
-      await writeFile(
-        path.join(location, `auth.json`),
-        JSON.stringify({ token })
-      );
+      await writeFile(getConfigAuthPath(), JSON.stringify({ token }));
 
       const user = await fetchTokenInformation(token);
 
