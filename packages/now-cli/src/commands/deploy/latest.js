@@ -360,7 +360,7 @@ export default async function main(
   });
 
   // retrieve `project` and `org` from .now
-  let [org, project] = await getLinkedProject(client, path);
+  let [org, project] = await getLinkedProject(output, client, path);
   let newProjectName = null;
 
   if (!org || !project) {
