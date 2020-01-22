@@ -2289,6 +2289,8 @@ test('assign a domain to a project', async t => {
 
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
+  console.log('Deployment: ', deploymentOutput.stdout);
+
   // Ensure that the project exists
   await retry(
     async () => {
