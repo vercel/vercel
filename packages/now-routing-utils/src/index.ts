@@ -96,6 +96,12 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
             src: route.src,
           });
         }
+        if (route.status) {
+          errors.push({
+            message: `You cannot assign "status" after "handle: hit"`,
+            src: route.src,
+          });
+        }
         if (!route.continue) {
           errors.push({
             message: `You must assign "continue: true" after "handle: hit"`,
