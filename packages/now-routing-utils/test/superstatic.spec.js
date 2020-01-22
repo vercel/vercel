@@ -413,7 +413,11 @@ test('convertHeaders', () => {
       headers: [
         {
           key: 'on-blog',
-          value: 'yup',
+          value: ':path*',
+        },
+        {
+          key: ':path*',
+          value: 'blog',
         },
       ],
     },
@@ -433,7 +437,8 @@ test('convertHeaders', () => {
     {
       continue: true,
       headers: {
-        'on-blog': 'yup',
+        'on-blog': '$1',
+        $1: 'blog',
       },
       src: '^\\/blog(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
     },
