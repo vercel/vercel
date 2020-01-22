@@ -18,7 +18,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
 } from '@now/build-utils';
-import { Route } from '@now/routing-utils';
+import { Route, Source } from '@now/routing-utils';
 import {
   convertRedirects,
   convertRewrites,
@@ -486,11 +486,7 @@ export const build = async ({
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
-  const dynamicDataRoutes: Array<{
-    src: string;
-    dest: string;
-    check: true;
-  }> = [];
+  const dynamicDataRoutes: Array<Source> = [];
 
   const appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
