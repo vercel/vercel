@@ -494,6 +494,26 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('fails if routes after `handle: hit` use `status', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/(.*)$',
+        status: 404,
+        continue: true,
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You cannot assign "status" after "handle: hit"'
+    );
+  });
+
   test('fails if routes after `handle: miss` do not use `check: true`', () => {
     const input = [
       {
