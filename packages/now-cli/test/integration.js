@@ -2275,53 +2275,42 @@ test('fail to add a domain without a project', async t => {
 
 test('assign a domain to a project', async t => {
   const domain = `project-domain.${contextName}.now.sh`;
-  const project = `static-deployment-${Math.random()
-    .toString()
-    .slice(2)}`;
   const directory = fixture('static-deployment');
 
-  const deploymentOutput = await execute([
-    directory,
-    `--name=${project}`,
-    '--public',
-    '--confirm',
-  ]);
-
+  const deploymentOutput = await execute([directory, '--public', '--confirm']);
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
-  console.log('Deployment: ', deploymentOutput.stdout);
+  const host = deploymentOutput.stdout.trim().replace('https://', '');
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
 
-  // Ensure that the project exists
-  await retry(
-    async () => {
-      const response = await apiFetch(`/v2/projects/${project}`);
+  t.is(typeof deployment.name, 'string', JSON.stringify(deployment, null, 2));
 
-      if (response.status !== 200) {
-        throw new Error(`Project "${project}" should exist.`);
-      }
-    },
-    { retries: 3 }
-  );
-
-  const output = await execute(['domains', 'add', domain, project, '--force']);
+  const output = await execute([
+    'domains',
+    'add',
+    domain,
+    deployment.name,
+    '--force',
+  ]);
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test('list project domains', async t => {
   const domain = `project-domain.${contextName}.now.sh`;
-  const project = `static-deployment-${Math.random()
-    .toString()
-    .slice(2)}`;
   const directory = fixture('static-deployment');
 
-  const deploymentOutput = await execute([
-    directory,
-    `--name=${project}`,
-    '--public',
-    '--confirm',
-    '--force',
-  ]);
+  const deploymentOutput = await execute([directory, '--public', '--confirm']);
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
+
+  const host = deploymentOutput.stdout.trim().replace('https://', '');
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
+
+  t.is(typeof deployment.name, 'string', JSON.stringify(deployment, null, 2));
+  const project = deployment.name;
 
   const addOutput = await execute([
     'domains',
