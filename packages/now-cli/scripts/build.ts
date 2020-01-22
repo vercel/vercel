@@ -50,21 +50,23 @@ async function createBuildersTarball() {
 async function main() {
   const isDev = process.argv[2] === '--dev';
 
-  // Create a tarball from all the `@now` scoped builders which will be bundled
-  // with Now CLI
-  await createBuildersTarball();
+  if (!isDev) {
+    // Create a tarball from all the `@now` scoped builders which will be bundled
+    // with Now CLI
+    await createBuildersTarball();
 
-  // `now dev` uses chokidar to watch the filesystem, but opts-out of the
-  // `fsevents` feature using `useFsEvents: false`, so delete the module here so
-  // that it is not compiled by ncc, which makes the npm package size larger
-  // than necessary.
-  await remove(join(dirRoot, '../../node_modules/fsevents'));
+    // `now dev` uses chokidar to watch the filesystem, but opts-out of the
+    // `fsevents` feature using `useFsEvents: false`, so delete the module here so
+    // that it is not compiled by ncc, which makes the npm package size larger
+    // than necessary.
+    await remove(join(dirRoot, '../../node_modules/fsevents'));
 
-  // Compile the `doT.js` template files for `now dev`
-  console.log();
-  await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
-    stdio: 'inherit',
-  });
+    // Compile the `doT.js` template files for `now dev`
+    console.log();
+    await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
+      stdio: 'inherit',
+    });
+  }
 
   // Do the initial `ncc` build
   console.log();
