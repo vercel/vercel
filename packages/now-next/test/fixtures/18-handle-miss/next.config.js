@@ -6,6 +6,10 @@ module.exports = {
     async rewrites() {
       return [
         {
+          source: '/blog/api',
+          destination: '/api/screenshot',
+        },
+        {
           source: '/blog/post-1',
           destination: '/blog/post-2',
         },

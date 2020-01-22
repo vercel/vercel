@@ -3,6 +3,10 @@
   "builds": [{ "src": "package.json", "use": "@now/next" }],
   "probes": [
     {
+      "path": "/blog/api",
+      "mustContain": "screenshot"
+    },
+    {
       "path": "/blog/post-1",
       "mustContain": "post-2"
     }
