@@ -331,8 +331,10 @@ export function detectOutputDirectory(builders: Builder[]): string | null {
 export function detectApiDirectory(builders: Builder[]): string | null {
   // TODO: We eventually want to save the api directory to
   // builder.config.apiDirectory so it is only detected once
-  const isZeroConfig = builders.some(b => b.config && b.config.zeroConfig);
-  return isZeroConfig ? 'api' : null;
+  const found = builders.some(
+    b => b.config && b.config.zeroConfig && b.src.startsWith('api/')
+  );
+  return found ? 'api' : null;
 }
 
 export async function detectRoutes(
