@@ -190,10 +190,7 @@ export default async function processDeployment({
       }
     }
 
-    if (
-      event.type === 'build-state-changed' &&
-      event.payload.readyState === 'BUILDING'
-    ) {
+    if (event.type === 'building' && event.payload.readyState === 'BUILDING') {
       if (queuedSpinner) {
         queuedSpinner();
       }
@@ -203,7 +200,7 @@ export default async function processDeployment({
       }
     }
 
-    if (event.type === 'all-builds-completed') {
+    if (event.type === 'ready') {
       if (queuedSpinner) {
         queuedSpinner();
       }

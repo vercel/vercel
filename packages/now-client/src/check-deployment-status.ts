@@ -9,12 +9,7 @@ import {
   isAliasError,
 } from './utils/ready-state';
 import { createDebug } from './utils';
-import {
-  Dictionary,
-  Deployment,
-  NowClientOptions,
-  DeploymentBuild,
-} from './types';
+import { Deployment, NowClientOptions, DeploymentBuild } from './types';
 
 interface DeploymentStatus {
   type: string;
@@ -31,8 +26,6 @@ export async function* checkDeploymentStatus(
   const debug = createDebug(clientOptions.debug);
 
   let deploymentState = deployment;
-  let allBuildsCompleted = false;
-  const buildsState: Dictionary<DeploymentBuild> = {};
 
   const apiDeployments = getApiDeploymentsUrl({
     version,
@@ -52,87 +45,58 @@ export async function* checkDeploymentStatus(
 
   // Build polling
   debug('Waiting for builds and the deployment to complete...');
-  let readyEventFired = false;
+  const finishedEvents = new Set();
+
   while (true) {
-    if (!allBuildsCompleted) {
-      const buildsData = await fetch(
-        `${apiDeployments}/${deployment.id}/builds${
-          teamId ? `?teamId=${teamId}` : ''
-        }`,
-        token,
-        { apiUrl, userAgent }
+    // Deployment polling
+    const deploymentData = await fetch(
+      `${apiDeployments}/${deployment.id || deployment.deploymentId}${
+        teamId ? `?teamId=${teamId}` : ''
+      }`,
+      token,
+      { apiUrl, userAgent }
+    );
+    const deploymentUpdate = await deploymentData.json();
+
+    if (deploymentUpdate.error) {
+      debug('Deployment status check has errorred');
+      return yield { type: 'error', payload: deploymentUpdate.error };
+    }
+
+    if (
+      deploymentUpdate.readyState === 'BUILDING' &&
+      !finishedEvents.has('building')
+    ) {
+      debug('Deployment state changed to BUILDING');
+      finishedEvents.add('building');
+      yield { type: 'building', payload: deploymentUpdate };
+    }
+
+    if (isReady(deploymentUpdate) && !finishedEvents.has('ready')) {
+      debug('Deployment state changed to READY 2');
+      finishedEvents.add('ready');
+      yield { type: 'ready', payload: deploymentUpdate };
+    }
+
+    if (isAliasAssigned(deploymentUpdate)) {
+      debug('Deployment alias assigned');
+      return yield { type: 'alias-assigned', payload: deploymentUpdate };
+    }
+
+    const aliasError = isAliasError(deploymentUpdate);
+
+    if (isFailed(deploymentUpdate) || aliasError) {
+      debug(
+        aliasError
+          ? 'Alias assignment error has occurred'
+          : 'Deployment has failed'
       );
-
-      const data = await buildsData.json();
-      const { builds = [] } = data;
-
-      for (const build of builds) {
-        const prevState = buildsState[build.id];
-
-        if (!prevState || prevState.readyState !== build.readyState) {
-          debug(
-            `Build state for '${build.entrypoint}' changed to ${build.readyState}`
-          );
-          yield { type: 'build-state-changed', payload: build };
-        }
-
-        if (build.readyState.includes('ERROR')) {
-          debug(`Build '${build.entrypoint}' has errorred`);
-          return yield { type: 'error', payload: build };
-        }
-
-        buildsState[build.id] = build;
-      }
-
-      const readyBuilds = builds.filter((b: DeploymentBuild) => isDone(b));
-
-      if (readyBuilds.length === builds.length) {
-        debug('All builds completed');
-        allBuildsCompleted = true;
-        yield { type: 'all-builds-completed', payload: readyBuilds };
-      }
-    } else {
-      // Deployment polling
-      const deploymentData = await fetch(
-        `${apiDeployments}/${deployment.id || deployment.deploymentId}${
-          teamId ? `?teamId=${teamId}` : ''
-        }`,
-        token,
-        { apiUrl, userAgent }
-      );
-      const deploymentUpdate = await deploymentData.json();
-
-      if (deploymentUpdate.error) {
-        debug('Deployment status check has errorred');
-        return yield { type: 'error', payload: deploymentUpdate.error };
-      }
-
-      if (isReady(deploymentUpdate) && !readyEventFired) {
-        debug('Deployment state changed to READY 2');
-        readyEventFired = true;
-        yield { type: 'ready', payload: deploymentUpdate };
-      }
-
-      if (isAliasAssigned(deploymentUpdate)) {
-        debug('Deployment alias assigned');
-        return yield { type: 'alias-assigned', payload: deploymentUpdate };
-      }
-
-      const aliasError = isAliasError(deploymentUpdate);
-
-      if (isFailed(deploymentUpdate) || aliasError) {
-        debug(
-          aliasError
-            ? 'Alias assignment error has occurred'
-            : 'Deployment has failed'
-        );
-        return yield {
-          type: 'error',
-          payload: aliasError
-            ? deploymentUpdate.aliasError
-            : deploymentUpdate.error || deploymentUpdate,
-        };
-      }
+      return yield {
+        type: 'error',
+        payload: aliasError
+          ? deploymentUpdate.aliasError
+          : deploymentUpdate.error || deploymentUpdate,
+      };
     }
 
     await sleep(ms('1.5s'));
