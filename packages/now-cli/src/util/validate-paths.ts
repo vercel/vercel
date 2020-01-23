@@ -43,7 +43,7 @@ export default async function validatePaths(
   if (isFile) {
     output.print(
       `${prependEmoji(
-        'Deploying files with ZEIT Now is deprecated.',
+        'Deploying files with ZEIT Now is deprecated',
         emoji('warning')
       )}\n`
     );
