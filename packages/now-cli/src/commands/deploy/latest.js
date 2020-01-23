@@ -225,7 +225,7 @@ export default async function main(
   const quiet = !isTTY;
 
   // check paths
-  const pathValidation = await validatePaths(output, paths, isFile);
+  const pathValidation = await validatePaths(output, paths);
 
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
@@ -460,7 +460,7 @@ export default async function main(
       [path],
       createArgs,
       org,
-      autoConfirm,
+      autoConfirm && !isFile,
       !!newProjectName
     );
 
