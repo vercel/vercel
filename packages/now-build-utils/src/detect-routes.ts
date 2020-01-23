@@ -1,4 +1,4 @@
-import { parse as parsePath } from 'path';
+import { parse as parsePath, extname } from 'path';
 import { Route, Source } from '@now/routing-utils';
 import { Builder } from './types';
 import { getIgnoreApiFilter, sortFiles } from './detect-builders';
@@ -337,6 +337,18 @@ export function detectApiDirectory(builders: Builder[]): string | null {
   return found ? 'api' : null;
 }
 
+export function detectApiExtensions(builders: Builder[]): Set<string> {
+  return new Set<string>(
+    builders
+      .filter(
+        b =>
+          b.config && b.config.zeroConfig && b.src && b.src.startsWith('api/')
+      )
+      .map(b => extname(b.src))
+      .filter(Boolean)
+  );
+}
+
 export async function detectRoutes(
   files: string[],
   builders: Builder[],
@@ -363,12 +375,7 @@ export async function detectRoutes(
     );
     if (featHandleMiss) {
       defaultRoutes.push({ handle: 'miss' });
-      const extSet = new Set(
-        builders
-          .filter(b => b.src && b.src.startsWith('api/'))
-          .map(b => parsePath(b.src).ext)
-          .filter(Boolean)
-      );
+      const extSet = detectApiExtensions(builders);
       if (extSet.size > 0) {
         const exts = Array.from(extSet)
           .map(ext => ext.slice(1))
