@@ -386,6 +386,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: master
       - build:
           requires:
             - install
