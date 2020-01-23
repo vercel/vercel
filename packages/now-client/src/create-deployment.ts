@@ -13,7 +13,7 @@ export { EVENTS } from './utils';
 export default function buildCreateDeployment(version: number) {
   return async function* createDeployment(
     clientOptions: NowClientOptions,
-    deploymentOptions: DeploymentOptions,
+    deploymentOptions: DeploymentOptions = {},
     nowConfig: NowConfig = {}
   ): AsyncIterableIterator<any> {
     const { path } = clientOptions;

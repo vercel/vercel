@@ -17,17 +17,16 @@ export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 export const EVENTS = new Set([
   // File events
   'hashes-calculated',
-  'file_count',
+  'file-count',
   'file-uploaded',
   'all-files-uploaded',
   // Deployment events
   'created',
+  'building',
   'ready',
   'alias-assigned',
   'warning',
   'error',
-  // Build events
-  'build-state-changed',
 ]);
 
 export function getApiDeploymentsUrl(
