@@ -214,7 +214,7 @@ async function createUser() {
         await createDirectory(location);
       }
 
-      await writeFile(getConfigAuthPath(), JSON.stringify({ token }));
+      await fs.writeJSON(getConfigAuthPath(), { token });
 
       const user = await fetchTokenInformation(token);
 
@@ -223,6 +223,8 @@ async function createUser() {
       session = Math.random()
         .toString(36)
         .slice(2);
+
+      console.log('new user', user);
     },
     { retries: 3, factor: 1 }
   );
@@ -2651,6 +2653,9 @@ test('change user', async t => {
 
   console.log('prev user', prevUser);
   console.log('next user', nextUser);
+
+  t.is(typeof prevUser, 'string', prevUser);
+  t.is(typeof nextUser, 'string', nextUser);
 
   t.true(
     prevUser !== nextUser,
