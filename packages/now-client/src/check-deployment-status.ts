@@ -73,7 +73,7 @@ export async function* checkDeploymentStatus(
     }
 
     if (isReady(deploymentUpdate) && !finishedEvents.has('ready')) {
-      debug('Deployment state changed to READY 2');
+      debug('Deployment state changed to READY');
       finishedEvents.add('ready');
       yield { type: 'ready', payload: deploymentUpdate };
     }
@@ -83,19 +83,21 @@ export async function* checkDeploymentStatus(
       return yield { type: 'alias-assigned', payload: deploymentUpdate };
     }
 
-    const aliasError = isAliasError(deploymentUpdate);
+    if (isAliasError(deploymentUpdate)) {
+      return yield { type: 'error', payload: deploymentUpdate.aliasError };
+    }
 
-    if (isFailed(deploymentUpdate) || aliasError) {
-      debug(
-        aliasError
-          ? 'Alias assignment error has occurred'
-          : 'Deployment has failed'
-      );
+    if (
+      deploymentUpdate.readyState === 'ERROR' &&
+      deploymentUpdate.errorCode === 'BUILD_FAILED'
+    ) {
+      return yield { type: 'error', payload: deploymentUpdate };
+    }
+
+    if (isFailed(deploymentUpdate)) {
       return yield {
         type: 'error',
-        payload: aliasError
-          ? deploymentUpdate.aliasError
-          : deploymentUpdate.error || deploymentUpdate,
+        payload: deploymentUpdate.error || deploymentUpdate,
       };
     }
 
