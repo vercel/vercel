@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "routes": [
+    { "handle": "miss" },
+    { "src": "/pathA(?:/.+)?", "status": 404, "continue": true },
+    { "src": "/pathB(?:/.+)?", "status": 404, "continue": true }
+  ]
+}

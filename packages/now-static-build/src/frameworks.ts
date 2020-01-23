@@ -384,7 +384,7 @@ const frameworkList: Framework[] = [
   {
     name: 'Hugo',
     slug: 'hugo',
-    buildCommand: 'hugo -D',
+    buildCommand: 'hugo -D --gc',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
       const config = await readConfigFile(
         ['config.json', 'config.yaml', 'config.toml'].map(fileName => {

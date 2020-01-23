@@ -1877,6 +1877,18 @@ describe('Test `detectApiDirectory`', () => {
     const result = detectApiDirectory(builders);
     expect(result).toBe('api');
   });
+
+  it('should be `null` with zero config but without api directory', async () => {
+    const builders = [
+      {
+        use: '@now/next',
+        src: 'package.json',
+        config: { zeroConfig: true },
+      },
+    ];
+    const result = detectApiDirectory(builders);
+    expect(result).toBe(null);
+  });
 });
 
 /**

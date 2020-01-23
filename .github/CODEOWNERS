@@ -2,6 +2,7 @@
 # https://help.github.com/en/articles/about-code-owners
 
 *                                        @tootallnate @leo
+/packages/frameworks                     @AndyBitz
 /packages/now-cli/src/commands/dev/      @tootallnate @leo @styfle @AndyBitz
 /packages/now-cli/src/util/dev/          @tootallnate @leo @styfle @AndyBitz
 /packages/now-cli/src/commands/domains/  @javivelasco @mglagola @anatrajkovska
@@ -10,13 +11,16 @@
 /packages/now-build-utils                @styfle @AndyBitz
 /packages/now-node                       @styfle @tootallnate @lucleray
 /packages/now-node-bridge                @styfle @tootallnate @lucleray
-/packages/now-next                       @Timer
+/packages/now-next                       @Timer @ijjk
 /packages/now-go                         @styfle @sophearak
 /packages/now-python                     @styfle @sophearak
 /packages/now-ruby                       @styfle @coetry @nathancahill
 /packages/now-static-build               @styfle @AndyBitz
-/packages/now-routing-utils              @dav-is
+/packages/now-routing-utils              @styfle @dav-is @ijjk
 
 /examples                                @msweeneydev @timothyis
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens
+/examples/hugo                           @msweeneydev @timothyis @styfle
+/examples/jekyll                         @msweeneydev @timothyis @sarupbanskota
+/examples/zola                           @msweeneydev @timothyis @styfle

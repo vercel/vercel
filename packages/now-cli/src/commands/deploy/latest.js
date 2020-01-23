@@ -232,6 +232,19 @@ export default async function main(
     return path;
   }
 
+  // check env variables options
+  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+  if ((NOW_ORG_ID && !NOW_PROJECT_ID) || (!NOW_ORG_ID && NOW_PROJECT_ID)) {
+    output.print(
+      `${chalk.red('Error!')} You specified ${
+        NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
+      } but you forgot to specify ${
+        NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
+      }. You need to specify both to deploy to a custom project.\n`
+    );
+    return 1;
+  }
+
   // build `meta`
   const meta = Object.assign(
     {},
@@ -347,7 +360,7 @@ export default async function main(
   });
 
   // retrieve `project` and `org` from .now
-  let [org, project] = await getLinkedProject(client, path);
+  let [org, project] = await getLinkedProject(output, client, path);
   let newProjectName = null;
 
   if (!org || !project) {

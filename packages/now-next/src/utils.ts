@@ -13,7 +13,7 @@ import {
   Lambda,
   isSymbolicLink,
 } from '@now/build-utils';
-import { Route, Source } from '@now/routing-utils';
+import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -259,7 +259,7 @@ async function getRoutes(
   routes.push(
     ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
       arr =>
-        arr.map((route: { src: string; dest: string }) => {
+        arr.map((route: Source) => {
           // convert to make entire RegExp match as one group
           route.src = route.src
             .replace('^', `^${prefix}(`)
@@ -293,13 +293,11 @@ async function getRoutes(
   return routes;
 }
 
-export type Rewrite = {
-  source: string;
-  destination: string;
-};
-
-export type Redirect = Rewrite & {
+// TODO: update to use type from @now/routing-utils after
+// adding permanent: true/false handling
+export type Redirect = NowRewrite & {
   statusCode?: number;
+  permanent?: boolean;
 };
 
 type RoutesManifestRegex = {
@@ -310,7 +308,8 @@ type RoutesManifestRegex = {
 export type RoutesManifest = {
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
-  rewrites: (Rewrite & RoutesManifestRegex)[];
+  rewrites: (NowRewrite & RoutesManifestRegex)[];
+  headers?: (NowHeader & RoutesManifestRegex)[];
   dynamicRoutes: {
     page: string;
     regex: string;
@@ -354,7 +353,7 @@ export async function getDynamicRoutes(
   dynamicPages: string[],
   isDev?: boolean,
   routesManifest?: RoutesManifest
-): Promise<{ src: string; dest: string }[]> {
+): Promise<Source[]> {
   if (!dynamicPages.length) {
     return [];
   }
@@ -368,6 +367,7 @@ export async function getDynamicRoutes(
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              check: true,
             };
           }
         );
@@ -424,7 +424,7 @@ export async function getDynamicRoutes(
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
-  const routes: { src: string; dest: string }[] = [];
+  const routes: Source[] = [];
   pageMatchers.forEach(pageMatcher => {
     // in `now dev` we don't need to prefix the destination
     const dest = !isDev
@@ -435,6 +435,7 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
+        check: true,
       });
     }
   });
