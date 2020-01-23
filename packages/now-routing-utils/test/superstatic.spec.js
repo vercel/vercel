@@ -301,6 +301,23 @@ test('convertRewrites', () => {
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/firebase/(.*)', destination: 'https://www.firebase.com' },
     { source: '/projects/:id/edit', destination: '/projects.html' },
+    {
+      source: '/users/:id',
+      destination: '/api/user?identifier=:id&version=v2',
+    },
+    {
+      source: '/:file/:id',
+      destination: '/:file/get?identifier=:id',
+    },
+    {
+      source: '/qs-and-hash/:id/:hash',
+      destination: '/api/get?identifier=:id#:hash',
+    },
+    {
+      source: '/fullurl',
+      destination:
+        'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
+    },
     { source: '/catchall/:hello*/', destination: '/catchall/:hello*' },
     {
       source: '/another-catch/:hello+/',
@@ -327,6 +344,27 @@ test('convertRewrites', () => {
     {
       src: '^\\/projects(?:\\/([^\\/#\\?]+?))\\/edit$',
       dest: '/projects.html?id=$1',
+      check: true,
+    },
+    {
+      src: '^\\/users(?:\\/([^\\/#\\?]+?))$',
+      dest: '/api/user?identifier=$1&version=v2',
+      check: true,
+    },
+    {
+      src: '^(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      dest: '/$1/get?identifier=$2',
+      check: true,
+    },
+    {
+      src: '^\\/qs-and-hash(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      dest: '/api/get?identifier=$1#$2',
+      check: true,
+    },
+    {
+      src: '^\\/fullurl$',
+      dest:
+        'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
       check: true,
     },
     {
@@ -363,6 +401,10 @@ test('convertRewrites', () => {
     ['/some/old/path'],
     ['/firebase/one', '/firebase/two'],
     ['/projects/one/edit', '/projects/two/edit'],
+    ['/users/four', '/users/five'],
+    ['/file1/yep', '/file2/nope'],
+    ['/qs-and-hash/test/first', '/qs-and-hash/test/second'],
+    ['/fullurl'],
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
     ['/firebase/admin', '/firebase/anotherAdmin'],
@@ -374,6 +416,10 @@ test('convertRewrites', () => {
     ['/nope'],
     ['/fire', '/firebasejumper/two'],
     ['/projects/edit', '/projects/two/delete', '/projects'],
+    ['/users/edit/four', '/users/five/delete', '/users'],
+    ['/'],
+    ['/qs-and-hash', '/qs-and-hash/onlyone'],
+    ['/full'],
     ['/random-catch/'],
     ['/another-catch/'],
     ['/firebase/user/1', '/firebase/another/1'],
@@ -408,18 +454,39 @@ test('convertHeaders', () => {
         },
       ],
     },
+    {
+      source: '/blog/:path*',
+      headers: [
+        {
+          key: 'on-blog',
+          value: ':path*',
+        },
+        {
+          key: ':path*',
+          value: 'blog',
+        },
+      ],
+    },
   ]);
 
   const expected = [
     {
-      src: '(.*)+/(.*)\\.(eot|otf|ttf|ttc|woff|font\\.css)',
+      src: '^(.*)+(?:\\/(.*))\\.(eot|otf|ttf|ttc|woff|font\\.css)$',
       headers: { 'Access-Control-Allow-Origin': '*' },
       continue: true,
     },
     {
-      src: '404.html',
+      src: '^404\\.html$',
       headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
       continue: true,
+    },
+    {
+      continue: true,
+      headers: {
+        'on-blog': '$1',
+        $1: 'blog',
+      },
+      src: '^\\/blog(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
     },
   ];
 
@@ -428,11 +495,13 @@ test('convertHeaders', () => {
   const mustMatch = [
     ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
     ['404.html'],
+    ['/blog/first-post', '/blog/another/one'],
   ];
 
   const mustNotMatch = [
     ['hello/file.jpg', 'hello/font-css', 'dir/arial.font-css'],
     ['403.html', '500.html'],
+    ['/blogg', '/random'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

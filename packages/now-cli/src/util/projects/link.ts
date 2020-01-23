@@ -33,6 +33,7 @@ async function getOrg(client: Client, orgId: string): Promise<Org | null> {
 }
 
 export async function getLinkedProject(
+  output: Output,
   client: Client,
   path: string
 ): Promise<[Org | null, Project | null]> {
@@ -67,6 +68,15 @@ export async function getLinkedProject(
     }
 
     if (project instanceof ProjectNotFound || org === null) {
+      if (!(NOW_ORG_ID && NOW_PROJECT_ID)) {
+        output.print(
+          prependEmoji(
+            'Your project was either removed from ZEIT Now or you’re not a member of it anymore.\n',
+            emoji('warning')
+          )
+        );
+      }
+
       return [null, null];
     }
 
