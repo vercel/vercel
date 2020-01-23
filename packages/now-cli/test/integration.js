@@ -33,11 +33,12 @@ function fixture(name) {
   return directory;
 }
 
+let session = Math.random()
+  .toString(36)
+  .slice(2);
+
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
-const session = Math.random()
-  .toString(36)
-  .split('.')[1];
 
 const isCanary = pkg.version.includes('canary');
 
@@ -219,6 +220,9 @@ async function createUser() {
 
       email = user.email;
       contextName = user.email.split('@')[0];
+      session = Math.random()
+        .toString(36)
+        .slice(2);
     },
     { retries: 3, factor: 1 }
   );
@@ -2616,7 +2620,7 @@ test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID` should fail', async 
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test.skip('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
+test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
 
   const output = await execute([directory], {
@@ -2633,7 +2637,28 @@ test.skip('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', a
   );
 });
 
-test.skip('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async t => {
+// Required to not hit rate limits etc.
+test('change user', async t => {
+  const { stdout: prevUser } = await execute(['whoami']);
+
+  // Delete the current token
+  const logoutOutput = await execute(['logout']);
+  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
+
+  await createUser();
+
+  const { stdout: nextUser } = await execute(['whoami']);
+
+  console.log('prev user', prevUser);
+  console.log('next user', nextUser);
+
+  t.true(
+    prevUser !== nextUser,
+    JSON.stringify({ prevUser, nextUser }, null, 2)
+  );
+});
+
+test('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async t => {
   const directory = fixture('static-deployment');
 
   const output = await execute([directory], {
@@ -2650,7 +2675,7 @@ test.skip('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', a
   );
 });
 
-test.skip('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
   const directory = fixture('static-deployment');
 
   // generate `.now`
@@ -2670,7 +2695,7 @@ test.skip('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
   t.is(output.stdout.includes('Linked to'), false);
 });
 
-test.skip('deploy shows notice when project in `.now` does not exists', async t => {
+test('deploy shows notice when project in `.now` does not exists', async t => {
   const directory = fixture('static-deployment');
 
   // overwrite .now with unexisting project
