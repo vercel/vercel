@@ -247,10 +247,6 @@ test('login', async t => {
 
   const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
 
-  console.log(loginOutput.stderr);
-  console.log(loginOutput.stdout);
-  console.log(loginOutput.exitCode);
-
   t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
   t.regex(
     loginOutput.stdout,
@@ -259,8 +255,7 @@ test('login', async t => {
   );
 
   // Save the new token
-  const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-  const auth = JSON.parse(await readFile(path.join(location, 'auth.json')));
+  const auth = await fs.readJSON(getConfigAuthPath());
 
   token = auth.token;
 
@@ -2648,6 +2643,12 @@ test('change user', async t => {
   t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
 
   await createUser();
+
+  const { exitCode } = await execute(['login', email]);
+
+  const auth = await fs.readJSON(getConfigAuthPath());
+
+  token = auth.token;
 
   const { stdout: nextUser } = await execute(['whoami']);
 
