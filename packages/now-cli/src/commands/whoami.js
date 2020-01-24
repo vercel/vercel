@@ -40,8 +40,8 @@ const main = async ctx => {
     boolean: ['help', 'debug', 'all'],
     alias: {
       help: 'h',
-      debug: 'd'
-    }
+      debug: 'd',
+    },
   });
 
   argv._ = argv._.slice(1);
@@ -51,8 +51,11 @@ const main = async ctx => {
     process.exit(0);
   }
 
-  const debug = argv['--debug'];
-  const { authConfig: { token }, apiUrl } = ctx;
+  const debug = argv['debug'];
+  const {
+    authConfig: { token },
+    apiUrl,
+  } = ctx;
   const output = createOutput({ debug });
   const client = new Client({ apiUrl, token, debug });
   let contextName = null;
