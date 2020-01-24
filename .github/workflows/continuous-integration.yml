@@ -19,12 +19,35 @@ jobs:
       - name: Build
         run: yarn run build
 
-  # Test1:
+  tests-unit:
+    name: Unit Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Unit Tests
+        run: yarn test-unit --clean false
+
+  # tests-now-cli:
+  #   needs: build
   #   runs-on: ${{ matrix.os }}
   #   strategy:
   #     matrix:
   #       os: [ubuntu-latest, macos-latest]
   #       node: [8, 10, 12]
   #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+  #     - name: Now CLI
+
+  # tests-now-dev:
+  #   needs: build
+
+  # tests-integration:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+
+  # coverage:
+  #   needs: [build, tests-unit, tests-now-cli, tests-now-dev, tests-integration]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Coverage
+  #       run: yarn workspace now run coverage
