@@ -319,6 +319,13 @@ export default class Now extends EventEmitter {
       });
     }
 
+    if (error.errorCode && error.errorCode === 'BUILD_FAILED') {
+      return new BuildError({
+        message: error.errorMessage,
+        meta: {},
+      });
+    }
+
     return new Error(error.message);
   }
 

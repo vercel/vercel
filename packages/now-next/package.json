@@ -1,6 +1,6 @@
 {
   "name": "@now/next",
-  "version": "2.3.11-canary.4",
+  "version": "2.3.11",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/next-js",
