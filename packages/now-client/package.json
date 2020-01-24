@@ -1,6 +1,6 @@
 {
   "name": "now-client",
-  "version": "7.0.0-canary.0",
+  "version": "7.0.0-canary.1",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://zeit.co",
