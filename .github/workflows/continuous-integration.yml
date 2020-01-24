@@ -26,6 +26,7 @@ jobs:
   test-now-dev:
     name: "`now dev` Tests"
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         node: [8, 10, 12]
