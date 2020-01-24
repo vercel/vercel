@@ -130,7 +130,7 @@ export default async function processDeployment({
       indications.push(event);
     }
 
-    if (event.type === 'file_count') {
+    if (event.type === 'file-count') {
       debug(
         `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
       );
