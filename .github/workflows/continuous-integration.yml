@@ -12,10 +12,9 @@ jobs:
         with:
           node-version: 10
       - run: node -v
-      - name: Install
-        run: yarn install
-      - name: Build
-        run: yarn run build
+      - run: yarn install
+      - run: yarn run build
+      - run: find . -name node_modules -exec rm -rf '{}' +
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v1
         with:
