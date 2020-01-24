@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: git fetch origin master
+      - run: git branch
+      - run: git log -n3
+      - run: git log -n3 master
       - uses: actions/setup-node@v1
         with:
           node-version: 10
