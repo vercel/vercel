@@ -15,14 +15,18 @@ export function loadDoc(
     signal: controller.signal,
   })
     .then(res => {
-      if (!res.ok) throw new Error();
+      if (!res.ok)
+        throw new Error(
+          `Failed to fetch document. Expected 200 but found ${res.status}.`
+        );
       return res.text();
     })
     .then(text => {
       md = text;
     })
-    .catch(() => {
+    .catch(error => {
       output.debug(`Could not load doc ${path}, skipping`);
+      output.debug(error);
     });
 
   return {
