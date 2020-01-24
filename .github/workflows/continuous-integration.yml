@@ -59,6 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: git fetch origin master
+      - run: yarn install && yarn run build
       - run: yarn test-integration-once --clean false
 
   coverage:
