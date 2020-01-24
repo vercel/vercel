@@ -1896,7 +1896,7 @@ describe('Test `detectApiDirectory`', () => {
 });
 
 describe('Test `detectApiExtensions`', () => {
-  it('should be `null` with no config', async () => {
+  it('should have correct extensions', async () => {
     const builders = [
       {
         use: '@now/node',
@@ -1928,8 +1928,24 @@ describe('Test `detectApiExtensions`', () => {
       },
       {
         use: 'now-bash',
-        src: 'api/index.sh',
+        src: 'api/**/*.sh',
         // No zero config so it should not be added
+      },
+      {
+        use: 'now-no-extension',
+        src: 'api/executable',
+        // No extension should not be added
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@now/next',
+        src: 'package.json',
+        // No api directory should not be added
+        config: {
+          zeroConfig: true,
+        },
       },
       {
         use: 'now-rust@1.0.1',
