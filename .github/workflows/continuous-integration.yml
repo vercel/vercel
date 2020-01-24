@@ -12,16 +12,28 @@ jobs:
       - run: yarn install && yarn run build
       - run: yarn run test-lint
       - run: yarn run test-unit --clean false
+      - uses: actions/upload-artifact@v1
+        with:
+          name: test-unit-output
+          path: packages/now-cli/.nyc_output
 
-  # test-now-cli:
-  #   needs: build
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-latest, macos-latest]
-  #       node: [8, 10, 12]
-  #   steps:
-  #     - name: Now CLI
+  test-now-cli:
+    name: Now CLI Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [8, 10, 12]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch origin master
+      - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
+      - run: yarn install && yarn run build
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - run: yarn test-integration --clean false
 
   test-now-dev:
     name: "`now dev` Tests"
@@ -34,9 +46,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: git fetch origin master
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 12
       - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
       - run: yarn install && yarn run build
       - uses: actions/setup-node@v1
@@ -44,14 +53,25 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: yarn test-integration-now-dev --clean false
 
-  # test-integration:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
+  test-integration:
+    name: Integration Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch origin master
+      - run: yarn test-integration-once --clean false
 
-  # coverage:
-  #   needs: [build, test-unit, test-now-cli, test-now-dev, test-integration]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Coverage
-  #       run: yarn workspace now run coverage
+  coverage:
+    name: Coverage
+    needs: [test-unit, test-now-cli, test-now-dev, test-integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch origin master
+      - uses: actions/download-artifact@v1
+        with:
+          name: test-unit-output
+          path: packages/now-cli/.nyc_output
+      - run: yarn install
+      - run: yarn workspace now run coverage
