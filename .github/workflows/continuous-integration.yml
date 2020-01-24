@@ -7,24 +7,22 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
           node-version: 10
-      - name: Node
-        run: node -v
+      - run: node -v
       - name: Install
         run: yarn install
       - name: Build
         run: yarn run build
-      - name: Save Build Artifact
-        run: actions/upload-artifact@v1
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v1
         with:
           name: build-output
           path: .
 
-  tests-unit:
+  test-unit:
     name: Unit Tests
     needs: build
     runs-on: ubuntu-latest
@@ -36,7 +34,9 @@ jobs:
       - name: Run Unit Tests
         run: yarn test-unit --clean false
 
-  # tests-now-cli:
+  # test-lint:
+
+  # test-now-cli:
   #   needs: build
   #   runs-on: ${{ matrix.os }}
   #   strategy:
@@ -46,16 +46,16 @@ jobs:
   #   steps:
   #     - name: Now CLI
 
-  # tests-now-dev:
+  # test-now-dev:
   #   needs: build
 
-  # tests-integration:
+  # test-integration:
   #   needs: build
   #   runs-on: ubuntu-latest
   #   steps:
 
   # coverage:
-  #   needs: [build, tests-unit, tests-now-cli, tests-now-dev, tests-integration]
+  #   needs: [build, test-unit, test-now-cli, test-now-dev, test-integration]
   #   runs-on: ubuntu-latest
   #   steps:
   #     - name: Coverage
