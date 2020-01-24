@@ -1,0 +1,25 @@
+name: Continuous Integration
+
+on: push
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        users: actions/checkout@v2
+      - name: Install
+        run: yarn run install
+      - name: Build
+        run: yarn run build
+
+  # Test1:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-latest, macos-latest]
+  #       node: [8, 10, 12]
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
