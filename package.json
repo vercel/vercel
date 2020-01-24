@@ -32,7 +32,7 @@
     "bootstrap": "lerna bootstrap",
     "publish-stable": "echo 'Run `yarn changelog` for instructions'",
     "publish-canary": "git pull && lerna version prerelease --preid canary --message 'Publish Canary' --exact",
-    "publish-from-github": "./.circleci/publish.sh",
+    "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "node utils/run.js build all",
     "test-lint": "node utils/run.js test-lint",
