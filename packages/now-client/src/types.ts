@@ -5,6 +5,20 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
+export type DeploymentEventType =
+  | 'hashes-calculated'
+  | 'file-count'
+  | 'file-uploaded'
+  | 'all-files-uploaded'
+  | 'created'
+  | 'building'
+  | 'ready'
+  | 'alias-assigned'
+  | 'warning'
+  | 'error'
+  | 'notice'
+  | 'tip';
+
 /**
  * Options for `now-client` or
  * properties that should not
