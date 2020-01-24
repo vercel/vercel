@@ -35,11 +35,11 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+      - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
       - run: yarn install && yarn run build
       - uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node }}
-      - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
       - run: yarn test-integration-now-dev --clean false
 
   # test-integration:
