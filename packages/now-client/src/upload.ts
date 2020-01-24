@@ -71,7 +71,7 @@ export async function* upload(
 
   const shas = missingFiles;
 
-  yield { type: 'file_count', payload: { total: files, missing: shas } };
+  yield { type: 'file-count', payload: { total: files, missing: shas } };
 
   const uploadList: { [key: string]: Promise<any> } = {};
   debug('Building an upload list...');
