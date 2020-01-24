@@ -438,14 +438,6 @@ export const build = async ({
         // User redirects
         ...redirects,
 
-        // Next.js pages, `static/` folder, reserved assets, and `public/`
-        // folder
-        { handle: 'filesystem' },
-
-        ...rewrites,
-        // Dynamic routes
-        // TODO: do we want to do this?: ...dynamicRoutes,
-
         // Before we handle static files we need to set proper caching headers
         {
           // This ensures we only match known emitted-by-Next.js files and not
@@ -463,6 +455,13 @@ export const build = async ({
         {
           src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
         },
+        // Next.js pages, `static/` folder, reserved assets, and `public/`
+        // folder
+        { handle: 'filesystem' },
+
+        ...rewrites,
+        // Dynamic routes
+        // TODO: do we want to do this?: ...dynamicRoutes,
 
         // 404
         ...(output['404']
