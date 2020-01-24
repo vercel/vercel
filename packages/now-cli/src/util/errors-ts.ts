@@ -1213,7 +1213,7 @@ export class BuildError extends NowError<'BUILD_ERROR', {}> {
     meta,
   }: {
     message: string;
-    meta: { entrypoint: string };
+    meta: { entrypoint?: string };
   }) {
     super({
       code: 'BUILD_ERROR',
