@@ -18,10 +18,11 @@ import {
   runNpmInstall,
   runPackageJsonScript,
 } from '@now/build-utils';
-import { Route } from '@now/routing-utils';
+import { Route, Source } from '@now/routing-utils';
 import {
   convertRedirects,
   convertRewrites,
+  convertHeaders,
 } from '@now/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
@@ -334,6 +335,7 @@ export const build = async ({
   await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
 
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const headers: Route[] = [];
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
@@ -345,6 +347,11 @@ export const build = async ({
       case 2: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
+
+        if (routesManifest.headers) {
+          headers.push(...convertHeaders(routesManifest.headers));
+        }
+
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
           nextBasePath = routesManifest.basePath;
 
@@ -425,8 +432,12 @@ export const build = async ({
         // Add top level rewrite for basePath if provided
         ...nextBasePathRoute,
 
-        // redirects take the highest priority
+        // User headers
+        ...headers,
+
+        // User redirects
         ...redirects,
+
         // Before we handle static files we need to set proper caching headers
         {
           // This ensures we only match known emitted-by-Next.js files and not
@@ -447,10 +458,21 @@ export const build = async ({
         // Next.js pages, `static/` folder, reserved assets, and `public/`
         // folder
         { handle: 'filesystem' },
-        ...rewrites,
 
+        ...rewrites,
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
+
+        // 404
+        ...(output['404']
+          ? [
+              {
+                src: path.join('/', entryDirectory, '.*'),
+                dest: path.join('/', entryDirectory, '404'),
+                status: 404,
+              },
+            ]
+          : []),
       ],
       watch: [],
       childProcesses: [],
@@ -475,7 +497,7 @@ export const build = async ({
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
-  const dynamicDataRoutes: Array<{ src: string; dest: string }> = [];
+  const dynamicDataRoutes: Array<Source> = [];
 
   const appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
@@ -612,6 +634,8 @@ export const build = async ({
     });
 
     const pageKeys = Object.keys(pages);
+    // > 1 because _error is a lambda but isn't used if a static 404 is available
+    const hasLambdas = !staticPages['_errors/404'] || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
       const nextConfig = await getNextConfig(workPath, entryPath);
@@ -628,7 +652,7 @@ export const build = async ({
     }
 
     // Assume tracing to be safe, bail if we know we don't need it.
-    let requiresTracing = true;
+    let requiresTracing = hasLambdas;
     try {
       if (
         realNextVersion &&
@@ -745,12 +769,20 @@ export const build = async ({
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
     const allLambdasLabel = `All serverless functions created in`;
-    console.time(allLambdasLabel);
+
+    if (hasLambdas) {
+      console.time(allLambdasLabel);
+    }
 
     await Promise.all(
       pageKeys.map(async page => {
         // These default pages don't have to be handled as they'd always 404
         if (['_app.js', '_document.js'].includes(page)) {
+          return;
+        }
+
+        // Don't create _error lambda if we have a static 404 page
+        if (staticPages['_errors/404'] && page === '_error.js') {
           return;
         }
 
@@ -807,7 +839,10 @@ export const build = async ({
         }
       })
     );
-    console.timeEnd(allLambdasLabel);
+
+    if (hasLambdas) {
+      console.timeEnd(allLambdasLabel);
+    }
 
     let prerenderGroup = 1;
     const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
@@ -965,11 +1000,24 @@ export const build = async ({
       ...staticFiles,
       ...staticDirectoryFiles,
     },
+    /*
+      Desired routes order
+      - Runtime headers
+      - User headers and redirects
+      - Runtime redirects
+      - Runtime routes
+      - Check filesystem, if nothing found continue
+      - User rewrites
+      - Builder rewrites
+    */
     routes: [
       // Add top level rewrite for basePath if provided
       ...nextBasePathRoute,
 
-      // redirects take the highest priority
+      // headers
+      ...headers,
+
+      // redirects
       ...redirects,
       // Before we handle static files we need to set proper caching headers
       {
@@ -989,6 +1037,7 @@ export const build = async ({
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+
       ...rewrites,
       // Dynamic routes
       ...dynamicRoutes,
@@ -999,7 +1048,11 @@ export const build = async ({
         : [
             {
               src: path.join('/', entryDirectory, '.*'),
-              dest: path.join('/', entryDirectory, '_error'),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                staticPages['_errors/404'] ? '_errors/404' : '_error'
+              ),
               status: 404,
             },
           ]),

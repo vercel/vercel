@@ -1,26 +1,26 @@
 {
-  "name": "ionic-react-conference-app",
+  "name": "ionic-react",
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "@capacitor/core": "1.3.0",
-    "@ionic/react": "^4.11.4",
-    "@ionic/react-router": "^4.11.4",
-    "@types/jest": "24.0.18",
-    "@types/node": "12.7.5",
-    "@types/react": "^16.9.2",
-    "@types/react-dom": "^16.9.0",
-    "@types/react-router": "^5.0.3",
-    "@types/react-router-dom": "^4.3.1",
-    "date-fns": "^2.6.0",
+    "@ionic/react": "^4.11.0",
+    "@ionic/react-router": "^4.11.0",
+    "@testing-library/jest-dom": "^4.2.4",
+    "@testing-library/react": "^9.4.0",
+    "@testing-library/user-event": "^8.0.3",
+    "@types/jest": "^24.0.25",
+    "@types/node": "^12.12.24",
+    "@types/react": "^16.9.17",
+    "@types/react-dom": "^16.9.4",
+    "@types/react-router": "^5.1.4",
+    "@types/react-router-dom": "^5.1.3",
     "ionicons": "^4.6.3",
-    "node-sass": "^4.13.0",
-    "react": "^16.9.0",
-    "react-dom": "^16.9.0",
-    "react-router": "^5.0.1",
-    "react-router-dom": "^5.0.1",
-    "react-scripts": "3.2.0",
-    "reselect": "^4.0.0"
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0",
+    "react-router": "^5.1.2",
+    "react-router-dom": "^5.1.2",
+    "react-scripts": "3.3.0",
+    "typescript": "3.7.4"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -28,17 +28,20 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "browserslist": [
-    ">0.2%",
-    "not dead",
-    "not ie <= 11",
-    "not op_mini all"
-  ],
-  "description": "An Ionic project",
-  "devDependencies": {
-    "@capacitor/cli": "1.3.0",
-    "@testing-library/react": "^9.3.1",
-    "@types/googlemaps": "^3.38.0",
-    "typescript": "3.6.3"
-  }
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "description": "An Ionic project"
 }

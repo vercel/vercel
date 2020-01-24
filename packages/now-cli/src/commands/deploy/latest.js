@@ -48,6 +48,7 @@ import getProjectName from '../../util/get-project-name';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
 import validatePaths from '../../util/validate-paths';
+import { prependEmoji, emoji } from '../../util/emoji';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -141,18 +142,22 @@ const printDeploymentStatus = async (
     }
 
     output.print(
-      `✅ ${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-        previewUrl
-      )} ${deployStamp()}\n`
+      prependEmoji(
+        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+          previewUrl
+        )} ${deployStamp()}`,
+        emoji('success')
+      ) + `\n`
     );
   }
 
   if (indications) {
-    const emojis = { notice: 'ℹ️ ', tip: '💡', warning: '⚠️' };
     for (let indication of indications) {
-      const emoji = emojis[indication.type];
       output.print(
-        `${emoji ? `${emoji} ` : ''}${chalk.grey(indication.payload)}\n`
+        prependEmoji(
+          `${chalk.dim(indication.payload)}`,
+          emoji(indication.type)
+        ) + `\n`
       );
     }
   }
@@ -225,6 +230,19 @@ export default async function main(
   const path = await validatePaths(output, paths);
   if (typeof path === 'number') {
     return path;
+  }
+
+  // check env variables options
+  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+  if ((NOW_ORG_ID && !NOW_PROJECT_ID) || (!NOW_ORG_ID && NOW_PROJECT_ID)) {
+    output.print(
+      `${chalk.red('Error!')} You specified ${
+        NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
+      } but you forgot to specify ${
+        NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
+      }. You need to specify both to deploy to a custom project.\n`
+    );
+    return 1;
   }
 
   // build `meta`
@@ -342,10 +360,21 @@ export default async function main(
   });
 
   // retrieve `project` and `org` from .now
-  let [org, project] = await getLinkedProject(client, path);
+  let [org, project] = await getLinkedProject(output, client, path);
   let newProjectName = null;
 
   if (!org || !project) {
+    const { NOW_PROJECT_ID, NOW_ORG_ID } = process.env;
+    if (NOW_PROJECT_ID && NOW_ORG_ID) {
+      output.print(
+        `${chalk.red('Error!')} Project not found (${JSON.stringify({
+          NOW_PROJECT_ID,
+          NOW_ORG_ID,
+        })})\n`
+      );
+      return 1;
+    }
+
     const shouldStartSetup =
       autoConfirm ||
       (await confirm(

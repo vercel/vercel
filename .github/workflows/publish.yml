@@ -4,25 +4,18 @@ on:
   push:
     branches:
     - master
-    - canary
     tags:
     - '!*'
 
 jobs:
-  Publish:
-
+  publish:
+    name: Publish
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [10.x]
-
     steps:
     - uses: actions/checkout@v1
-    - name: Checkout
-      uses: actions/setup-node@v1
+    - uses: actions/setup-node@v1
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 10
     - name: Install
       run: yarn install --check-files --frozen-lockfile
     - name: Build

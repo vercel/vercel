@@ -1,4 +1,4 @@
-![UmiJS Logo](../packages/frameworks/logos/umi.svg)
+![UmiJS Logo](../../packages/frameworks/logos/umi.svg)
 
 # UmiJS Example
 

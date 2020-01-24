@@ -26,6 +26,7 @@ import {
   debug,
   PackageJson,
   PrepareCacheOptions,
+  NowBuildError,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
 
@@ -46,43 +47,46 @@ async function checkForPort(
   }
 }
 
-function validateDistDir(
-  distDir: string,
-  isDev: boolean | undefined,
-  config: Config
-) {
+function validateDistDir(distDir: string) {
   const distDirName = path.basename(distDir);
   const exists = () => existsSync(distDir);
   const isDirectory = () => statSync(distDir).isDirectory();
   const isEmpty = () => readdirSync(distDir).length === 0;
 
-  const hash = isDev
-    ? '#local-development'
-    : '#configuring-the-build-output-directory';
-  const docsUrl = `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
-
-  const info = config.zeroConfig
-    ? '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory'
-    : `\nMake sure you configure the the correct distDir: ${docsUrl}`;
+  const link =
+    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
   if (!exists()) {
-    throw new Error(`No output directory named "${distDirName}" found.${info}`);
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
+      message: `No Output Directory named "${distDirName}" found after the Build completed.`,
+      link,
+    });
   }
 
   if (!isDirectory()) {
-    throw new Error(
-      `Build failed because distDir is not a directory: "${distDirName}".${info}`
-    );
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_NOT_A_DIR',
+      message: `The path specified as Output Directory ("${distDirName}") is not actually a directory.`,
+      link,
+    });
   }
 
   if (isEmpty()) {
-    throw new Error(
-      `Build failed because distDir is empty: "${distDirName}".${info}`
-    );
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
+      message: `The Output Directory "${distDirName}" is empty.`,
+      link,
+    });
   }
 }
 
-function getCommand(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
+function hasScript(script: string, pkg: PackageJson) {
+  const scripts = (pkg && pkg.scripts) || {};
+  return typeof scripts[script] === 'string';
+}
+
+function getScriptName(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
   // The `dev` script can be `now dev`
   const nowCmd = `now-${cmd}`;
 
@@ -90,17 +94,46 @@ function getCommand(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
     return nowCmd;
   }
 
-  const scripts = (pkg && pkg.scripts) || {};
-
-  if (scripts[nowCmd]) {
+  if (hasScript(nowCmd, pkg)) {
     return nowCmd;
   }
 
-  if (scripts[cmd]) {
+  if (hasScript(cmd, pkg)) {
     return cmd;
   }
 
   return zeroConfig ? cmd : nowCmd;
+}
+
+function getCommand(
+  name: 'build' | 'dev',
+  pkg: PackageJson | null,
+  config: Config,
+  framework: Framework | undefined
+) {
+  if (!config.zeroConfig) {
+    return null;
+  }
+
+  const propName = name === 'build' ? 'buildCommand' : 'devCommand';
+
+  if (typeof config[propName] === 'string') {
+    return config[propName];
+  }
+
+  if (pkg) {
+    const scriptName = getScriptName(pkg, name, config);
+
+    if (hasScript(scriptName, pkg)) {
+      return null;
+    }
+  }
+
+  if (framework) {
+    return framework[propName] || null;
+  }
+
+  return null;
 }
 
 export const version = 2;
@@ -212,21 +245,21 @@ export async function build({
 
   const pkg = getPkg(entrypoint, workPath);
 
+  const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
+  const buildScript = pkg ? getScriptName(pkg, 'build', config) : null;
+
   const framework = getFramework(config, pkg);
-  const devCommand: string | undefined =
-    config.devCommand || (framework && framework.devCommand);
-  const buildCommand: string | undefined =
-    config.buildCommand || (framework && framework.buildCommand);
+
+  const devCommand = getCommand('dev', pkg, config, framework);
+  const buildCommand = getCommand('build', pkg, config, framework);
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
-    let minNodeRange: string | undefined = undefined;
 
     const routes: Route[] = [];
-    const devScript = pkg ? getCommand(pkg, 'dev', config) : null;
 
     if (config.zeroConfig) {
       if (existsSync(gemfilePath) && !meta.isDev) {
@@ -284,22 +317,11 @@ export async function build({
       debug(
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
-
-      if (framework.minNodeRange) {
-        minNodeRange = framework.minNodeRange;
-        debug(
-          `${framework.name} requires Node.js ${framework.minNodeRange}. Switching...`
-        );
-      } else {
-        debug(
-          `${framework.name} does not require a specific Node.js version. Continuing ...`
-        );
-      }
     }
 
     const nodeVersion = await getNodeVersion(
       entrypointDir,
-      minNodeRange,
+      undefined,
       config,
       meta
     );
@@ -394,10 +416,11 @@ export async function build({
         );
       }
 
-      const buildScript = pkg ? getCommand(pkg, 'build', config) : null;
-      debug(
-        `Running "${buildCommand || buildScript}" script in "${entrypoint}"`
-      );
+      if (buildCommand) {
+        debug(`Executing "${buildCommand}"`);
+      } else {
+        debug(`Running "${buildScript}" in "${entrypoint}"`);
+      }
 
       const found =
         typeof buildCommand === 'string'
@@ -435,7 +458,7 @@ export async function build({
         }
       }
 
-      validateDistDir(distPath, meta.isDev, config);
+      validateDistDir(distPath);
 
       if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
@@ -462,7 +485,7 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-    validateDistDir(distPath, meta.isDev, config);
+    validateDistDir(distPath);
 
     const output = await glob('**', distPath, mountpoint);
 

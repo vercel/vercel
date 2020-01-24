@@ -9,7 +9,7 @@ import _execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import fs, { writeFile, readFile } from 'fs-extra';
+import fs, { writeFile, readFile, remove, copy, ensureDir } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -147,6 +147,20 @@ const apiFetch = (url, { headers, ...options } = {}) => {
     ...options,
   });
 };
+
+const waitForPrompt = (cp, assertion) =>
+  new Promise(resolve => {
+    const listener = chunk => {
+      if (assertion(chunk)) {
+        cp.stdout.off && cp.stdout.off('data', listener);
+        cp.stderr.off && cp.stderr.off('data', listener);
+        resolve();
+      }
+    };
+
+    cp.stdout.on('data', listener);
+    cp.stderr.on('data', listener);
+  });
 
 const getDeploymentBuildsByUrl = async url => {
   const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
@@ -351,55 +365,6 @@ test('output the version', async t => {
   t.is(version, pkg.version);
 });
 
-test('detect update command', async t => {
-  {
-    const { stderr } = await execute(['update']);
-    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
-  }
-
-  if (process.version.startsWith('v8.')) {
-    // Don't do further checks for node 8 here
-    // since `npm i -g <tarball>` seems to fail
-    return;
-  }
-
-  {
-    const pkg = require('../package.json');
-
-    const packResult = await execa('npm', ['pack']);
-    t.is(packResult.exitCode, 0);
-
-    const prefix = os.tmpdir();
-    const binPrefix = path.join(prefix, 'bin');
-
-    process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
-    process.env.PREFIX = prefix;
-    process.env.npm_config_prefix = prefix;
-    process.env.NPM_CONFIG_PREFIX = prefix;
-
-    // Install now to `binPrefix`
-    const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
-
-    const installResult = await execa('npm', ['i', '-g', pkgPath], {
-      env: process.env,
-    });
-    t.is(installResult.exitCode, 0);
-
-    const { stdout, stderr, exitCode } = await execa(
-      path.join(binPrefix, 'now'),
-      ['update'],
-      {
-        env: process.env,
-      }
-    );
-
-    console.log(stderr);
-    console.log(exitCode);
-    console.log(stdout);
-    t.regex(stderr, /npm i -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
-  }
-});
-
 test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
@@ -413,7 +378,7 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `> Error! Please sign up: https://zeit.co/signup`;
+  const goal = `Error! Please sign up: https://zeit.co/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
@@ -592,7 +557,7 @@ test('try to purchase a domain', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      `> Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`
+      `Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`
     )
   );
 });
@@ -619,7 +584,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
 
   t.true(
     stderr.includes(
-      `> Error! The domain "${session}-test.org" is not transferable.`
+      `Error! The domain "${session}-test.org" is not transferable.`
     )
   );
   t.is(exitCode, 1);
@@ -644,7 +609,7 @@ test('try to move an invalid domain', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  t.true(stderr.includes(`> Error! Domain not found under `));
+  t.true(stderr.includes(`Error! Domain not found under `));
   t.is(exitCode, 1);
 });
 
@@ -689,7 +654,7 @@ test('try to remove a non-existing payment method', async t => {
 test('set platform version using `-V` to invalid number', async t => {
   const directory = fixture('builds');
   const goal =
-    '> Error! The "--platform-version" option must be either `1` or `2`.';
+    'Error! The "--platform-version" option must be either `1` or `2`.';
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -713,7 +678,7 @@ test('set platform version using `-V` to invalid number', async t => {
 test('set platform version using `--platform-version` to invalid number', async t => {
   const directory = fixture('builds');
   const goal =
-    '> Error! The "--platform-version" option must be either `1` or `2`.';
+    'Error! The "--platform-version" option must be either `1` or `2`.';
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1130,7 +1095,7 @@ test('try to create a builds deployments with wrong config', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      '> Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
+      'Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
     )
   );
 });
@@ -1610,7 +1575,7 @@ test('use `--debug` CLI flag', async t => {
 });
 
 test('try to deploy non-existing path', async t => {
-  const goal = `> Error! The specified file or directory "${session}" does not exist.`;
+  const goal = `Error! The specified file or directory "${session}" does not exist.`;
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1630,7 +1595,7 @@ test('try to deploy non-existing path', async t => {
 
 test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
-  const goal = `> Error! The specified scope does not exist`;
+  const goal = `Error! The specified scope does not exist`;
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1746,7 +1711,7 @@ test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    '> Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
+    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
@@ -1767,7 +1732,7 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    '> Error! No example found for noce, run `now init` to see the list of available examples.';
+    'Error! No example found for noce, run `now init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'noce'], { cwd });
 
@@ -1783,7 +1748,7 @@ test('try to initialize example "example-404"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    '> Error! No example found for example-404, run `now init` to see the list of available examples.';
+    'Error! No example found for example-404, run `now init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'example-404'], {
     cwd,
@@ -2235,6 +2200,343 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
   const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('should show prompts to set up project', async t => {
+  const directory = fixture('project-link');
+  const projectName = `project-link-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.now'));
+
+  const now = execa(binaryPath, [directory, ...defaultArgs]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  now.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  now.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  now.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  now.stdin.write(`o\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  now.stdin.write(`yarn dev\n`);
+
+  await waitForPrompt(now, chunk => chunk.includes('Linked to'));
+
+  const output = await now;
+
+  // Ensure the exit code is right
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(directory, '.gitignore'))).toString(), '.now');
+
+  // Send a test request to the deployment
+  const response = await fetch(new URL(output.stdout).href);
+  const text = await response.text();
+  t.is(text.includes('<h1>custom hello</h1>'), true, text);
+});
+
+test('should not prompt "project settings overwrite" for undetected projects', async t => {
+  const directory = fixture('static-deployment');
+  const projectName = `static-deployment-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.now'));
+
+  const now = execa(binaryPath, [directory, ...defaultArgs]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  now.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(now, chunk => {
+    t.false(
+      chunk.includes('Want to override the settings?'),
+      'Should not ask to override'
+    );
+    return chunk.includes('Linked to');
+  });
+
+  const output = await now;
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('should prefill "project name" prompt with folder name', async t => {
+  const projectName = `static-deployment-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  const src = fixture('static-deployment');
+
+  // remove previously linked project if it exists
+  await remove(path.join(src, '.now'));
+
+  const directory = path.join(src, '../', projectName);
+  await copy(src, directory);
+
+  const now = execa(binaryPath, [directory, ...defaultArgs]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What’s your project’s name? (${projectName})`)
+  );
+  now.stdin.write(`\n`);
+
+  const output = await now;
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('should prefill "project name" prompt with --name', async t => {
+  const directory = fixture('static-deployment');
+  const projectName = `static-deployment-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.now'));
+
+  const now = execa(binaryPath, [
+    directory,
+    '--name',
+    projectName,
+    ...defaultArgs,
+  ]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What’s your project’s name? (${projectName})`)
+  );
+  now.stdin.write(`\n`);
+
+  const output = await now;
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('should prefill "project name" prompt with now.json `name`', async t => {
+  const directory = fixture('static-deployment');
+  const projectName = `static-deployment-${
+    Math.random()
+      .toString(36)
+      .split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.now'));
+  await fs.writeFile(
+    path.join(directory, 'now.json'),
+    JSON.stringify({
+      name: projectName,
+    })
+  );
+
+  const now = execa(binaryPath, [directory, ...defaultArgs]);
+
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  now.stdin.write('yes\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  now.stdin.write('no\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes(`What’s your project’s name? (${projectName})`)
+  );
+  now.stdin.write(`\n`);
+
+  const output = await now;
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID` should fail', async t => {
+  const directory = fixture('static-deployment');
+
+  const output = await execute([directory], {
+    env: {
+      NOW_ORG_ID: 'asdf',
+      NOW_PROJECT_ID: 'asdf',
+    },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
+  const directory = fixture('static-deployment');
+
+  const output = await execute([directory], {
+    env: { NOW_ORG_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes(
+      'You specified `NOW_ORG_ID` but you forgot to specify `NOW_PROJECT_ID`. You need to specify both to deploy to a custom project.'
+    ),
+    true,
+    formatOutput(output)
+  );
+});
+
+test('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async t => {
+  const directory = fixture('static-deployment');
+
+  const output = await execute([directory], {
+    env: { NOW_PROJECT_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes(
+      'You specified `NOW_PROJECT_ID` but you forgot to specify `NOW_ORG_ID`. You need to specify both to deploy to a custom project.'
+    ),
+    true,
+    formatOutput(output)
+  );
+});
+
+test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+  const directory = fixture('static-deployment');
+
+  // generate `.now`
+  await execute([directory, '--confirm']);
+
+  const link = require(path.join(directory, '.now/project.json'));
+  await remove(path.join(directory, '.now'));
+
+  const output = await execute([directory], {
+    env: {
+      NOW_ORG_ID: link.orgId,
+      NOW_PROJECT_ID: link.projectId,
+    },
+  });
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes('Linked to'), false);
+});
+
+test('deploy shows notice when project in `.now` does not exists', async t => {
+  const directory = fixture('static-deployment');
+
+  // overwrite .now with unexisting project
+  await ensureDir(path.join(directory, '.now'));
+  await writeFile(
+    path.join(directory, '.now/project.json'),
+    JSON.stringify({
+      orgId: 'asdf',
+      projectId: 'asdf',
+    })
+  );
+
+  const now = execute([directory]);
+
+  let detectedNotice = false;
+
+  // kill after first prompt
+  await waitForPrompt(now, chunk => {
+    detectedNotice =
+      detectedNotice ||
+      chunk.includes(
+        'Your project was either removed from ZEIT Now or you’re not a member of it anymore'
+      );
+
+    return /Set up and deploy [^?]+\?/.test(chunk);
+  });
+  now.stdin.write('no\n');
+
+  t.is(detectedNotice, true, 'did not detect notice');
 });
 
 test.after.always(async () => {

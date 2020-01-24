@@ -57,7 +57,7 @@ describe('create v2 deployment', () => {
         name: 'now-client-tests-v2',
       }
     )) {
-      if (event.type === 'file_count') {
+      if (event.type === 'file-count') {
         expect(event.payload.total).toEqual(0);
       }
 

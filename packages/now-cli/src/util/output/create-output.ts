@@ -52,9 +52,9 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function error(str: string, slug: string | null = null) {
-    log(chalk`{red.bold Error!} ${str}`, chalk.red);
+    print(`${chalk.red(`Error!`)} ${str}\n`);
     if (slug !== null) {
-      log(`More details: https://err.sh/now/${slug}`);
+      print(`More details: https://err.sh/now/${slug}\n`);
     }
   }
 

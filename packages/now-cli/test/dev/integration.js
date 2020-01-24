@@ -319,6 +319,168 @@ test(
   })
 );
 
+test(
+  '[now dev] validate routes that use `check: true` and `status` code',
+  testFixtureStdio('routes-check-true-status', async (t, port) => {
+    const secret = await fetch(`http://localhost:${port}/secret`);
+    t.is(secret.status, 403);
+    t.regex(await secret.text(), /FORBIDDEN/gm);
+
+    const rewrite = await fetchWithRetry(`http://localhost:${port}/post`);
+    t.is(rewrite.status, 200);
+    t.regex(await rewrite.text(), /This is a post/gm);
+
+    const raw = await fetchWithRetry(`http://localhost:${port}/post.html`);
+    t.is(raw.status, 200);
+    t.regex(await raw.text(), /This is a post/gm);
+  })
+);
+
+test(
+  '[now dev] handles miss after route',
+  testFixtureStdio('handle-miss-after-route', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+
+    const test = response.headers.get('test');
+    const override = response.headers.get('override');
+    t.is(test, '1', 'exected miss header to be added');
+    t.is(override, 'one', 'exected override header to not override');
+
+    const body = await response.text();
+    t.regex(body, /Blog/gm);
+  })
+);
+
+test(
+  '[now dev] handles miss after rewrite',
+  testFixtureStdio('handle-miss-after-rewrite', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+    const test = response.headers.get('test');
+    const override = response.headers.get('override');
+    t.is(test, '1', 'expected miss header to be added');
+    t.is(override, 'two', 'expected override header to not override');
+    t.is(response.status, 200);
+    const body = await response.text();
+    t.regex(body, /Blog Post Page/gm);
+
+    const response1 = await fetchWithRetry(
+      `http://localhost:${port}/blog/post`
+    );
+    const test1 = response.headers.get('test');
+    const override1 = response.headers.get('override');
+    t.is(test1, '1', 'expected miss header to be added');
+    t.is(override1, 'two', 'expected override header to be added');
+    t.is(response1.status, 200);
+    t.regex(await response1.text(), /Blog Post Page/gm);
+
+    const response2 = await fetchWithRetry(
+      `http://localhost:${port}/about.html`
+    );
+    const test2 = response2.headers.get('test');
+    const override2 = response2.headers.get('override');
+    t.is(test2, null, 'expected miss header to be not be added');
+    t.is(override2, null, 'expected override header to not be added');
+    t.is(response2.status, 200);
+    t.regex(await response2.text(), /About Page/gm);
+  })
+);
+
+test(
+  '[now dev] displays directory listing after miss',
+  testFixtureStdio('handle-miss-display-dir-list', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+    const body = await response.text();
+    t.regex(body, /one.html/gm);
+  })
+);
+
+test(
+  '[now dev] does not display directory listing after 404',
+  testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
+    const post = await fetch(`http://localhost:${port}/post`);
+    t.is(post.status, 404);
+
+    const file = await fetch(`http://localhost:${port}/post/one.html`);
+    t.is(file.status, 200);
+    t.regex(await file.text(), /First Post/gm);
+  })
+);
+
+test(
+  '[now dev] does not display directory listing after multiple 404',
+  testFixtureStdio('handle-miss-multiple-404', async (t, port) => {
+    t.is((await fetch(`http://localhost:${port}/pathA/dir`)).status, 404);
+    t.is((await fetch(`http://localhost:${port}/pathB/dir`)).status, 404);
+    t.is((await fetch(`http://localhost:${port}/pathC/dir`)).status, 200);
+  })
+);
+
+test(
+  '[now dev] does not display directory listing after `handle: miss` and 404',
+  testFixtureStdio('handle-miss-handle-filesystem-404', async (t, port) => {
+    t.is((await fetch(`http://localhost:${port}/pathA/dir`)).status, 404);
+    t.is((await fetch(`http://localhost:${port}/pathB/dir`)).status, 404);
+    t.is((await fetch(`http://localhost:${port}/pathC/dir`)).status, 200);
+
+    t.is((await fetch(`http://localhost:${port}/pathA/dir/one`)).status, 200);
+    t.is((await fetch(`http://localhost:${port}/pathB/dir/two`)).status, 200);
+    t.is((await fetch(`http://localhost:${port}/pathC/dir/three`)).status, 200);
+  })
+);
+
+test(
+  '[now dev] handles hit after handle: filesystem',
+  testFixtureStdio('handle-hit-after-fs', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/blog.html`);
+    const test = response.headers.get('test');
+    t.is(test, '1', 'expected hit header to be added');
+    const body = await response.text();
+    t.regex(body, /Blog Page/gm);
+  })
+);
+
+test(
+  '[now dev] handles hit after dest',
+  testFixtureStdio('handle-hit-after-dest', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+    const test = response.headers.get('test');
+    const override = response.headers.get('override');
+    t.is(test, '1', 'expected hit header to be added');
+    t.is(override, 'one', 'expected hit header to not override');
+    const body = await response.text();
+    t.regex(body, /Blog Post/gm);
+  })
+);
+
+test(
+  '[now dev] handles hit after rewrite',
+  testFixtureStdio('handle-hit-after-rewrite', async (t, port) => {
+    const response = await fetchWithRetry(`http://localhost:${port}/post`);
+    const test = response.headers.get('test');
+    const override = response.headers.get('override');
+    t.is(test, '1', 'expected hit header to be added');
+    t.is(override, 'one', 'expected hit header to not override');
+    const body = await response.text();
+    t.regex(body, /Blog Post/gm);
+  })
+);
+
+test(
+  '[now dev] should serve the public directory and api functions',
+  testFixtureStdio('public-and-api', async (t, port) => {
+    const index = await fetchWithRetry(`http://localhost:${port}`);
+    t.regex(await index.text(), /home page/gm);
+    const about = await fetchWithRetry(`http://localhost:${port}/about.html`);
+    t.regex(await about.text(), /about page/gm);
+    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
+    t.regex(await date.text(), /current date/gm);
+    const rand = await fetchWithRetry(`http://localhost:${port}/api/rand`);
+    t.regex(await rand.text(), /random number/gm);
+    const rand2 = await fetchWithRetry(`http://localhost:${port}/api/rand.js`);
+    t.regex(await rand2.text(), /random number/gm);
+  })
+);
+
 test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);

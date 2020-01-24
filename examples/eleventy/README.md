@@ -1,4 +1,4 @@
-![Eleventy Logo](../packages/frameworks/logos/eleventy.svg)
+![Eleventy Logo](../../packages/frameworks/logos/eleventy.svg)
 
 # Eleventy Example
 

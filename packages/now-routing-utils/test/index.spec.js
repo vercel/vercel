@@ -494,6 +494,26 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('fails if routes after `handle: hit` use `status', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/(.*)$',
+        status: 404,
+        continue: true,
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You cannot assign "status" after "handle: hit"'
+    );
+  });
+
   test('fails if routes after `handle: miss` do not use `check: true`', () => {
     const input = [
       {
@@ -575,6 +595,26 @@ describe('getTransformedRoutes', () => {
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
     assert.equal(actual.error.code, 'invalid_redirects');
+  });
+
+  test('should error when headers is invalid regex', () => {
+    const nowConfig = {
+      headers: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_headers');
+  });
+
+  test('should error when headers is invalid pattern', () => {
+    const nowConfig = {
+      headers: [
+        { source: '/:?', headers: [{ key: 'x-hello', value: 'world' }] },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_headers');
   });
 
   test('should error when rewrites is invalid regex', () => {
