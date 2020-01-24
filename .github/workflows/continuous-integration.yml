@@ -14,7 +14,9 @@ jobs:
       - run: node -v
       - run: yarn install
       - run: yarn run build
-      - run: find . -name node_modules -exec rm -rf '{}' +
+      - run: |
+          rm -Rf .git
+          find . -name node_modules -exec rm -rf '{}' +
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v1
         with:
@@ -26,12 +28,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - run: yarn install
       - name: Download Build Artifact
         uses: actions/download-artifact@v1
         with:
           name: build-output
-      - name: Run Unit Tests
-        run: yarn test-unit --clean false
+      - run: yarn test-unit --clean false
 
   # test-lint:
 
