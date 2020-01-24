@@ -446,19 +446,6 @@ export const build = async ({
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
 
-        // 404
-        ...(output['404']
-          ? [
-              {
-                src: path.join('/', entryDirectory, '.*'),
-                dest: path.join('/', entryDirectory, '404'),
-                status: 404,
-              },
-            ]
-          : []),
-
-        // Routes that are checked after filesystem match
-        { handle: 'hit' },
         // Before we handle static files we need to set proper caching headers
         {
           // This ensures we only match known emitted-by-Next.js files and not
@@ -473,6 +460,20 @@ export const build = async ({
           headers: { 'cache-control': 'public,max-age=31536000,immutable' },
           continue: true,
         },
+        {
+          src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
+        },
+
+        // 404
+        ...(output['404']
+          ? [
+              {
+                src: path.join('/', entryDirectory, '.*'),
+                dest: path.join('/', entryDirectory, '404'),
+                status: 404,
+              },
+            ]
+          : []),
       ],
       watch: [],
       childProcesses: [],
