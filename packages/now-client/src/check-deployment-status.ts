@@ -9,10 +9,15 @@ import {
   isAliasError,
 } from './utils/ready-state';
 import { createDebug } from './utils';
-import { Deployment, NowClientOptions, DeploymentBuild } from './types';
+import {
+  Deployment,
+  NowClientOptions,
+  DeploymentBuild,
+  DeploymentEventType,
+} from './types';
 
 interface DeploymentStatus {
-  type: string;
+  type: DeploymentEventType;
   payload: Deployment | DeploymentBuild[];
 }
 
