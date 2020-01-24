@@ -1,6 +1,10 @@
 import { Source, Route } from '@now/routing-utils';
 import { detectBuilders, detectRoutes } from '../src';
-import { detectOutputDirectory, detectApiDirectory } from '../';
+import {
+  detectOutputDirectory,
+  detectApiDirectory,
+  detectApiExtensions,
+} from '../';
 
 describe('Test `detectBuilders`', () => {
   it('package.json + no build', async () => {
@@ -1888,6 +1892,81 @@ describe('Test `detectApiDirectory`', () => {
     ];
     const result = detectApiDirectory(builders);
     expect(result).toBe(null);
+  });
+});
+
+describe('Test `detectApiExtensions`', () => {
+  it('should have correct extensions', async () => {
+    const builders = [
+      {
+        use: '@now/node',
+        src: 'api/**/*.js',
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@now/python',
+        src: 'api/**/*.py',
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@now/go',
+        src: 'api/**/*.go',
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@now/ruby',
+        src: 'api/**/*.rb',
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: 'now-bash',
+        src: 'api/**/*.sh',
+        // No zero config so it should not be added
+      },
+      {
+        use: 'now-no-extension',
+        src: 'api/executable',
+        // No extension should not be added
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@now/next',
+        src: 'package.json',
+        // No api directory should not be added
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: 'now-rust@1.0.1',
+        src: 'api/user.rs',
+        config: {
+          zeroConfig: true,
+          functions: {
+            'api/**/*.rs': {
+              runtime: 'now-rust@1.0.1',
+            },
+          },
+        },
+      },
+    ];
+    const result = detectApiExtensions(builders);
+    expect(result.size).toBe(5);
+    expect(result.has('.js')).toBe(true);
+    expect(result.has('.py')).toBe(true);
+    expect(result.has('.go')).toBe(true);
+    expect(result.has('.rb')).toBe(true);
+    expect(result.has('.rs')).toBe(true);
   });
 });
 
