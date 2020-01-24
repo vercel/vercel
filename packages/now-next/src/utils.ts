@@ -259,7 +259,7 @@ async function getRoutes(
   routes.push(
     ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
       arr =>
-        arr.map((route: Source) => {
+        arr.map((route: { src: string; dest: string }) => {
           // convert to make entire RegExp match as one group
           route.src = route.src
             .replace('^', `^${prefix}(`)
@@ -353,7 +353,7 @@ export async function getDynamicRoutes(
   dynamicPages: string[],
   isDev?: boolean,
   routesManifest?: RoutesManifest
-): Promise<Source[]> {
+): Promise<{ src: string; dest: string }[]> {
   if (!dynamicPages.length) {
     return [];
   }
@@ -367,7 +367,6 @@ export async function getDynamicRoutes(
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
-              check: true,
             };
           }
         );
@@ -424,7 +423,7 @@ export async function getDynamicRoutes(
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
-  const routes: Source[] = [];
+  const routes: { src: string; dest: string }[] = [];
   pageMatchers.forEach(pageMatcher => {
     // in `now dev` we don't need to prefix the destination
     const dest = !isDev
@@ -435,7 +434,6 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
-        check: true,
       });
     }
   });
