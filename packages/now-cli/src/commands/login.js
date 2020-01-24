@@ -24,7 +24,8 @@ import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
 import createOutput from '../util/output';
-import executeLogin from '../util/login/login.ts'
+import executeLogin from '../util/login/login.ts';
+import { loadDoc } from '../util/load-doc';
 
 const debug = debugFactory('now:sh:login');
 
@@ -57,7 +58,7 @@ const help = () => {
 const verify = async ({ apiUrl, email, verificationToken }) => {
   const query = {
     email,
-    token: verificationToken
+    token: verificationToken,
   };
 
   debug('GET /now/registration/verify');
@@ -68,7 +69,7 @@ const verify = async ({ apiUrl, email, verificationToken }) => {
     res = await fetch(
       `${apiUrl}/now/registration/verify?${stringifyQuery(query)}`,
       {
-        headers: { 'User-Agent': ua }
+        headers: { 'User-Agent': ua },
       }
     );
   } catch (err) {
@@ -189,6 +190,8 @@ const login = async ctx => {
     } while (!emailIsValid);
   }
 
+  const doc = loadDoc(output, '/cli/login-success.txt');
+
   let verificationToken;
   let securityCode;
 
@@ -200,7 +203,7 @@ const login = async ctx => {
     securityCode = data.securityCode;
   } catch (err) {
     stopSpinner();
-    console.log(error(err.message))
+    console.log(error(err.message));
     return 1;
   }
 
@@ -255,10 +258,9 @@ const login = async ctx => {
 
   output.debug(`Saved credentials in "${hp(getNowDir())}"`);
 
-  console.log(
-    `${chalk.cyan('> Congratulations!')} ` +
-    `You are now logged in. In order to deploy something, run ${cmd('now')}.`
-  );
+  console.log(`${chalk.cyan('Congratulations!')} ` + `You are now logged in`);
+
+  doc.print();
 
   return ctx;
 };
