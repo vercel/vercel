@@ -190,7 +190,7 @@ export default async function processDeployment({
       }
     }
 
-    if (event.type === 'building' && event.payload.readyState === 'BUILDING') {
+    if (event.type === 'building') {
       if (queuedSpinner) {
         queuedSpinner();
       }
