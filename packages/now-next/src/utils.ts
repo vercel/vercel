@@ -467,6 +467,7 @@ export type PseudoFile = {
   crc32: number;
   compBuffer: Buffer;
   uncompressedSize: number;
+  mode: number;
 };
 
 export type PseudoSymbolicLink = {
@@ -501,15 +502,17 @@ export async function createPseudoLayer(files: {
         file,
         isSymlink: true,
         symlinkTarget: await fs.readlink(file.fsPath),
-      } as PseudoSymbolicLink;
+      };
     } else {
       const origBuffer = await streamToBuffer(file.toStream());
       const compBuffer = await compressBuffer(origBuffer);
       pseudoLayer[fileName] = {
         compBuffer,
+        isSymlink: false,
         crc32: crc32.unsigned(origBuffer),
         uncompressedSize: origBuffer.byteLength,
-      } as PseudoFile;
+        mode: file.mode,
+      };
     }
   }
 
@@ -567,12 +570,14 @@ export async function createLambdaFromPseudoLayers({
         });
         continue;
       }
-      const { compBuffer, crc32, uncompressedSize } = item;
+
+      const { compBuffer, crc32, uncompressedSize, mode } = item;
 
       // @ts-ignore: `addDeflatedBuffer` is a valid function, but missing on the type
       zipFile.addDeflatedBuffer(compBuffer, seedKey, {
         crc32,
         uncompressedSize,
+        mode: mode,
       });
 
       addedFiles.add(seedKey);
