@@ -24,7 +24,7 @@ jobs:
   #     - name: Now CLI
 
   test-now-dev:
-    name: `now dev` Tests
+    name: "`now dev` Tests"
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
