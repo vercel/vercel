@@ -6,12 +6,7 @@ import { join, sep } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
-import {
-  NowClientOptions,
-  DeploymentOptions,
-  NowConfig,
-  DeploymentEventType,
-} from '../types';
+import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 const semaphore = new Sema(10);
@@ -19,7 +14,7 @@ const semaphore = new Sema(10);
 export const API_FILES = '/v2/now/files';
 export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
-export const EVENTS = new Set<DeploymentEventType>([
+const EVENTS_ARRAY = [
   // File events
   'hashes-calculated',
   'file-count',
@@ -34,7 +29,10 @@ export const EVENTS = new Set<DeploymentEventType>([
   'error',
   'notice',
   'tip',
-]);
+] as const;
+
+export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
+export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl(
   metadata?: Pick<DeploymentOptions, 'version' | 'builds' | 'functions'>

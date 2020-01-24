@@ -1,23 +1,11 @@
 import { Builder, BuilderFunctions } from '@now/build-utils';
 import { NowHeader, Route, NowRedirect, NowRewrite } from '@now/routing-utils';
 
+export { DeploymentEventType } from './utils';
+
 export interface Dictionary<T> {
   [key: string]: T;
 }
-
-export type DeploymentEventType =
-  | 'hashes-calculated'
-  | 'file-count'
-  | 'file-uploaded'
-  | 'all-files-uploaded'
-  | 'created'
-  | 'building'
-  | 'ready'
-  | 'alias-assigned'
-  | 'warning'
-  | 'error'
-  | 'notice'
-  | 'tip';
 
 /**
  * Options for `now-client` or
