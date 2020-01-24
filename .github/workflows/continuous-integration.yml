@@ -17,6 +17,15 @@ jobs:
           name: test-unit-output
           path: packages/now-cli/.nyc_output
 
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch origin master
+      - run: yarn install && yarn run build
+      - run: yarn test-integration-once --clean false
+
   test-now-cli:
     name: Now CLI Tests
     strategy:
@@ -52,15 +61,6 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: yarn test-integration-now-dev --clean false
-
-  test-integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: git fetch origin master
-      - run: yarn install && yarn run build
-      - run: yarn test-integration-once --clean false
 
   coverage:
     name: Coverage
