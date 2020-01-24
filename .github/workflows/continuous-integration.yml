@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: git pull origin master
+      - run: git fetch origin master
       - run: yarn install && yarn run build
       - run: yarn run test-lint
       - run: yarn run test-unit --clean false
