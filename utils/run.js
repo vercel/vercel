@@ -76,7 +76,7 @@ async function main() {
   }
 
   execSync(
-    `rm -rf public && mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' > public/index.html`
+    `rm -rf public && mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' > public/index.html && cp -r docs public/docs`
   );
 }
 

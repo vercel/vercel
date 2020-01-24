@@ -15,3 +15,7 @@
 !packages/
 !packages/frameworks
 !packages/frameworks/**
+
+# docs
+!docs/
+!docs/**

@@ -1,0 +1,12 @@
+
+{bold Deploying a Git Repository with ZEIT Now}
+
+ZEIT Now provides integrations for your GitHub, GitLab, and Bitbucket projects, allowing for automatic deployments on every branch push and merge to the default branch.
+
+To select a repository or project to use with the integration:
+• select the {cyan “New Project”} dropdown from the dashboard
+• choose either {cyan “Import From GitHub”} / {cyan “Import From GitLab”} / {cyan “Import From Bitbucket”} to import the project
+
+{bold Creating a Preview Deployment with Now CLI}
+
+Simply run {cyan now} in the directory you want to deploy.
