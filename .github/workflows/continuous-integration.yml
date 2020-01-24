@@ -23,8 +23,21 @@ jobs:
   #   steps:
   #     - name: Now CLI
 
-  # test-now-dev:
-  #   needs: build
+  test-now-dev:
+    name: `now dev` Tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [8, 10, 12]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - run: yarn install && yarn run build
+      - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
+      - run: yarn test-integration-now-dev --clean false
 
   # test-integration:
   #   needs: build
