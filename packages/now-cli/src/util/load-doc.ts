@@ -36,7 +36,7 @@ export function loadDoc(
         template.raw = [md];
         const str = chalk(template as TemplateStringsArray);
 
-        process.stderr.write(`${str.trim()}\n`);
+        process.stderr.write(`${str}\n`);
       } else if (fallback) {
         process.stderr.write(`${fallback}\n`);
       }
