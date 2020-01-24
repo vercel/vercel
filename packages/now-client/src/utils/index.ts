@@ -14,21 +14,25 @@ const semaphore = new Sema(10);
 export const API_FILES = '/v2/now/files';
 export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
-export const EVENTS = new Set([
+const EVENTS_ARRAY = [
   // File events
   'hashes-calculated',
-  'file_count',
+  'file-count',
   'file-uploaded',
   'all-files-uploaded',
   // Deployment events
   'created',
+  'building',
   'ready',
   'alias-assigned',
   'warning',
   'error',
-  // Build events
-  'build-state-changed',
-]);
+  'notice',
+  'tip',
+] as const;
+
+export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
+export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl(
   metadata?: Pick<DeploymentOptions, 'version' | 'builds' | 'functions'>
