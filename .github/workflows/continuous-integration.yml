@@ -18,12 +18,21 @@ jobs:
         run: yarn install
       - name: Build
         run: yarn run build
+      - name: Save Build Artifact
+        run: actions/upload-artifact@v1
+        with:
+          name: build-output
+          path: .
 
   tests-unit:
     name: Unit Tests
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: build-output
       - name: Run Unit Tests
         run: yarn test-unit --clean false
 
