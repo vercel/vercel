@@ -41,4 +41,12 @@ export const config = {
   },
 };
 
-export default apolloServer.createHandler({ path: '/api/graphql' });
+const handler = apolloServer.createHandler({ path: '/api/graphql' });
+
+export default async (req, res) => {
+  if (req.method === 'OPTIONS') {
+    return res.status(200).send();
+  } else {
+    return handler(req, res);
+  }
+};
