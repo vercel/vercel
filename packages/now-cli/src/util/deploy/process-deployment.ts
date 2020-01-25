@@ -130,7 +130,7 @@ export default async function processDeployment({
       indications.push(event);
     }
 
-    if (event.type === 'file_count') {
+    if (event.type === 'file-count') {
       debug(
         `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
       );
@@ -190,10 +190,7 @@ export default async function processDeployment({
       }
     }
 
-    if (
-      event.type === 'build-state-changed' &&
-      event.payload.readyState === 'BUILDING'
-    ) {
+    if (event.type === 'building') {
       if (queuedSpinner) {
         queuedSpinner();
       }
@@ -203,7 +200,7 @@ export default async function processDeployment({
       }
     }
 
-    if (event.type === 'all-builds-completed') {
+    if (event.type === 'ready') {
       if (queuedSpinner) {
         queuedSpinner();
       }
