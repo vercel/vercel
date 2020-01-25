@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: git fetch origin master
       - run: git checkout master
-        if: github.ref == 'tests/fix-github-actions-on-master'
+        if: github.ref == 'master'
       - uses: actions/setup-node@v1
         with:
           node-version: 10
