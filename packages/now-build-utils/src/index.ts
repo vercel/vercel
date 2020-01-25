@@ -66,6 +66,7 @@ export {
   detectRoutes,
   detectOutputDirectory,
   detectApiDirectory,
+  detectApiExtensions,
 } from './detect-routes';
 export { detectBuilders } from './detect-builders';
 export { detectFramework } from './detect-framework';
