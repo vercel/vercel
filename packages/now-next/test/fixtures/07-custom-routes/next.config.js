@@ -37,6 +37,45 @@ module.exports = {
           source: '/rewrite-2/:first/:second',
           destination: '/params',
         },
+        {
+          source: '/add-header',
+          destination: '/hello',
+        },
+        {
+          source: '/catchall-header/:path*',
+          destination: '/hello',
+        },
+      ];
+    },
+
+    async headers() {
+      return [
+        {
+          source: '/add-header',
+          headers: [
+            {
+              key: 'x-hello',
+              value: 'world',
+            },
+            {
+              key: 'x-another',
+              value: 'value',
+            },
+          ],
+        },
+        {
+          source: '/catchall-header/:path*',
+          headers: [
+            {
+              key: 'x-hello',
+              value: 'world',
+            },
+            {
+              key: 'x-another',
+              value: 'value',
+            },
+          ],
+        },
       ];
     },
   },
