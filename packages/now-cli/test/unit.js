@@ -22,6 +22,8 @@ import {
 import didYouMean from '../src/util/init/did-you-mean';
 import { isValidName } from '../src/util/is-valid-name';
 import preferV2Deployment from '../src/util/prefer-v2-deployment';
+import getUpdateCommand from '../src/util/get-update-command';
+import { isCanary } from '../src/util/is-canary';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
@@ -1043,4 +1045,9 @@ test('check valid name', async t => {
   t.is(isValidName('/ねこ'), true);
   t.is(isValidName('привет'), true);
   t.is(isValidName('привет#'), true);
+});
+
+test('detect update command', async t => {
+  const updateCommand = await getUpdateCommand();
+  t.is(updateCommand, `yarn add now@${isCanary() ? 'canary' : 'latest'}`);
 });
