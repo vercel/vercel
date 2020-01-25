@@ -9,7 +9,7 @@ import _execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import fs, { writeFile, readFile, remove, copy } from 'fs-extra';
+import fs, { writeFile, readFile, remove, copy, ensureDir } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -363,55 +363,6 @@ test('output the version', async t => {
   t.is(exitCode, 0);
   t.truthy(semVer.valid(version));
   t.is(version, pkg.version);
-});
-
-test('detect update command', async t => {
-  {
-    const { stderr } = await execute(['update']);
-    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
-  }
-
-  if (process.version.startsWith('v8.')) {
-    // Don't do further checks for node 8 here
-    // since `npm i -g <tarball>` seems to fail
-    return;
-  }
-
-  {
-    const pkg = require('../package.json');
-
-    const packResult = await execa('npm', ['pack']);
-    t.is(packResult.exitCode, 0);
-
-    const prefix = os.tmpdir();
-    const binPrefix = path.join(prefix, 'bin');
-
-    process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
-    process.env.PREFIX = prefix;
-    process.env.npm_config_prefix = prefix;
-    process.env.NPM_CONFIG_PREFIX = prefix;
-
-    // Install now to `binPrefix`
-    const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
-
-    const installResult = await execa('npm', ['i', '-g', pkgPath], {
-      env: process.env,
-    });
-    t.is(installResult.exitCode, 0);
-
-    const { stdout, stderr, exitCode } = await execa(
-      path.join(binPrefix, 'now'),
-      ['update'],
-      {
-        env: process.env,
-      }
-    );
-
-    console.log(stderr);
-    console.log(exitCode);
-    console.log(stdout);
-    t.regex(stderr, /npm i -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
-  }
 });
 
 test('login with unregistered user', async t => {
@@ -2488,7 +2439,7 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
 
   const output = await execute([directory], {
@@ -2500,6 +2451,40 @@ test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
+  const directory = fixture('static-deployment');
+
+  const output = await execute([directory], {
+    env: { NOW_ORG_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes(
+      'You specified `NOW_ORG_ID` but you forgot to specify `NOW_PROJECT_ID`. You need to specify both to deploy to a custom project.'
+    ),
+    true,
+    formatOutput(output)
+  );
+});
+
+test('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async t => {
+  const directory = fixture('static-deployment');
+
+  const output = await execute([directory], {
+    env: { NOW_PROJECT_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes(
+      'You specified `NOW_PROJECT_ID` but you forgot to specify `NOW_ORG_ID`. You need to specify both to deploy to a custom project.'
+    ),
+    true,
+    formatOutput(output)
+  );
 });
 
 test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
@@ -2520,6 +2505,38 @@ test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
   t.is(output.stdout.includes('Linked to'), false);
+});
+
+test('deploy shows notice when project in `.now` does not exists', async t => {
+  const directory = fixture('static-deployment');
+
+  // overwrite .now with unexisting project
+  await ensureDir(path.join(directory, '.now'));
+  await writeFile(
+    path.join(directory, '.now/project.json'),
+    JSON.stringify({
+      orgId: 'asdf',
+      projectId: 'asdf',
+    })
+  );
+
+  const now = execute([directory]);
+
+  let detectedNotice = false;
+
+  // kill after first prompt
+  await waitForPrompt(now, chunk => {
+    detectedNotice =
+      detectedNotice ||
+      chunk.includes(
+        'Your project was either removed from ZEIT Now or you’re not a member of it anymore'
+      );
+
+    return /Set up and deploy [^?]+\?/.test(chunk);
+  });
+  now.stdin.write('no\n');
+
+  t.is(detectedNotice, true, 'did not detect notice');
 });
 
 test.after.always(async () => {

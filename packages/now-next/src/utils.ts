@@ -13,7 +13,7 @@ import {
   Lambda,
   isSymbolicLink,
 } from '@now/build-utils';
-import { Route, Source } from '@now/routing-utils';
+import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -259,7 +259,7 @@ async function getRoutes(
   routes.push(
     ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
       arr =>
-        arr.map((route: { src: string; dest: string }) => {
+        arr.map((route: Source) => {
           // convert to make entire RegExp match as one group
           route.src = route.src
             .replace('^', `^${prefix}(`)
@@ -293,13 +293,11 @@ async function getRoutes(
   return routes;
 }
 
-export type Rewrite = {
-  source: string;
-  destination: string;
-};
-
-export type Redirect = Rewrite & {
+// TODO: update to use type from @now/routing-utils after
+// adding permanent: true/false handling
+export type Redirect = NowRewrite & {
   statusCode?: number;
+  permanent?: boolean;
 };
 
 type RoutesManifestRegex = {
@@ -310,7 +308,8 @@ type RoutesManifestRegex = {
 export type RoutesManifest = {
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
-  rewrites: (Rewrite & RoutesManifestRegex)[];
+  rewrites: (NowRewrite & RoutesManifestRegex)[];
+  headers?: (NowHeader & RoutesManifestRegex)[];
   dynamicRoutes: {
     page: string;
     regex: string;
@@ -354,7 +353,7 @@ export async function getDynamicRoutes(
   dynamicPages: string[],
   isDev?: boolean,
   routesManifest?: RoutesManifest
-): Promise<{ src: string; dest: string }[]> {
+): Promise<Source[]> {
   if (!dynamicPages.length) {
     return [];
   }
@@ -424,7 +423,7 @@ export async function getDynamicRoutes(
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
-  const routes: { src: string; dest: string }[] = [];
+  const routes: Source[] = [];
   pageMatchers.forEach(pageMatcher => {
     // in `now dev` we don't need to prefix the destination
     const dest = !isDev
@@ -466,6 +465,7 @@ export type PseudoFile = {
   crc32: number;
   compBuffer: Buffer;
   uncompressedSize: number;
+  mode: number;
 };
 
 export type PseudoSymbolicLink = {
@@ -500,15 +500,17 @@ export async function createPseudoLayer(files: {
         file,
         isSymlink: true,
         symlinkTarget: await fs.readlink(file.fsPath),
-      } as PseudoSymbolicLink;
+      };
     } else {
       const origBuffer = await streamToBuffer(file.toStream());
       const compBuffer = await compressBuffer(origBuffer);
       pseudoLayer[fileName] = {
         compBuffer,
+        isSymlink: false,
         crc32: crc32.unsigned(origBuffer),
         uncompressedSize: origBuffer.byteLength,
-      } as PseudoFile;
+        mode: file.mode,
+      };
     }
   }
 
@@ -566,12 +568,14 @@ export async function createLambdaFromPseudoLayers({
         });
         continue;
       }
-      const { compBuffer, crc32, uncompressedSize } = item;
+
+      const { compBuffer, crc32, uncompressedSize, mode } = item;
 
       // @ts-ignore: `addDeflatedBuffer` is a valid function, but missing on the type
       zipFile.addDeflatedBuffer(compBuffer, seedKey, {
         crc32,
         uncompressedSize,
+        mode: mode,
       });
 
       addedFiles.add(seedKey);
