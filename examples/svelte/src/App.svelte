@@ -20,7 +20,7 @@
   </h2>
   <p>
     <a
-      href="https://github.com/zeit/now/tree/master/examples/svelte-functions"
+      href="https://github.com/zeit/now/tree/master/examples/svelte"
       target="_blank"
       rel="noreferrer noopener">
       This project
