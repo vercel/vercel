@@ -83,11 +83,14 @@ export const build = async ({
   files,
   entrypoint,
   config,
+  meta = {},
 }: BuildOptions) => {
   await download(files, workPath);
 
-  const { gemHome, bundlerPath } = await installBundler();
-  process.env.GEM_HOME = gemHome;
+  const { gemHome, bundlerPath } = await installBundler(meta);
+  if (gemHome) {
+    process.env.GEM_HOME = gemHome;
+  }
 
   const fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
