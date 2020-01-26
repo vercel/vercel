@@ -716,7 +716,10 @@ test('[now dev] 01-node', async t => {
   await tester(t);
 });
 
+// Angular has `engines: { node: "10.x" }` in its `package.json`
 test('[now dev] 02-angular-node', async t => {
+  if (shouldSkip(t, '02-angular-node', '10.x')) return;
+
   const directory = fixture('02-angular-node');
   const { dev, port } = await testFixture(directory, { stdio: 'pipe' }, [
     '--debug',
