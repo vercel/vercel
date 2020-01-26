@@ -2,7 +2,7 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["esnext"],
+    "lib": ["ES2018"],
     "module": "CommonJS",
     "moduleResolution": "node",
     "outDir": "dist",

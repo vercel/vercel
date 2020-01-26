@@ -5,7 +5,7 @@
     "module": "CommonJS",
     "target": "ES2018",
     "esModuleInterop": true,
-    "lib": ["esnext"],
+    "lib": ["ES2018"],
     "resolveJsonModule": true,
     "sourceMap": true,
     "typeRoots": ["./@types", "./node_modules/@types"]
