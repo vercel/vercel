@@ -780,9 +780,9 @@ test('[now dev] 03-aurelia', async t => {
 // );
 
 test('[now dev] 05-gatsby', async t => {
-  const tester = testFixtureStdio('05-gatsby', async (t, port) => {
-    if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
+  if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
+  const tester = testFixtureStdio('05-gatsby', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
     validateResponseHeaders(t, response);
