@@ -62,7 +62,7 @@ const frameworkList: Framework[] = [
         return [];
       }
     },
-    cachePattern: '.cache/**',
+    cachePattern: '{.cache,public}/**',
   },
   {
     name: 'Hexo',

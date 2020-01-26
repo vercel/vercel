@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch origin master
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
       - uses: actions/setup-node@v1
         with:
           node-version: 10
@@ -31,7 +32,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch origin master
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
       - run: yarn install && yarn run build
       - run: yarn test-integration-once --clean false
 
@@ -45,7 +47,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch origin master
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
       - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
       - run: yarn install && yarn run build
       - uses: actions/setup-node@v1
@@ -63,7 +66,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch origin master
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
       - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
       - run: yarn install && yarn run build
       - uses: actions/setup-node@v1
@@ -77,7 +81,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch origin master
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
       - uses: actions/download-artifact@v1
         with:
           name: test-unit-output
