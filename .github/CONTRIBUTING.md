@@ -101,7 +101,7 @@ You can add support for a new framework by creating a Pull Request for this repo
 
 1. Add the framework to the `@now/frameworks` package.
    The file is located in `packages/frameworks/frameworks.json`. You can copy the structure of an existing one and adjust the required fields. Note that the `settings` property either contains a `value` or a `placeholder`. The `value` property is used when something is not configurable, the `placeholder` is used when something is configurable and can be changed with configuration. An example would be the output directory for Hugo, it's `public` by default but can be changed through its config file, so we use `placeholder` with an explanation of what can be used.
-2. Next add an example to the `examples/` directory.
+2. Add an example to the `examples/` directory.
    The name of the directory should equal the slug of the framework used in `@now/frameworks`.
    The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a README for the example.
 3. Finally, `@now/static-build` must be adjusted.
