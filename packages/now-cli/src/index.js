@@ -516,13 +516,13 @@ const main = async argv_ => {
   const {
     authConfig: { token },
   } = ctx;
-  const client = new Client({ apiUrl, token });
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
   // overwrite scope with `NOW_ORG_ID` if defined
   const { NOW_ORG_ID } = process.env;
   if (NOW_ORG_ID) {
+    const client = new Client({ apiUrl, token });
     const org = await getLinkedOrg(client);
 
     if (!org) {
@@ -539,6 +539,7 @@ const main = async argv_ => {
 
   // use local `.now` scope if not explicitly specified
   if (!scope) {
+    const client = new Client({ apiUrl, token });
     const org = await getLinkedOrg(client);
     scope = org ? org.slug : undefined;
   }
@@ -552,6 +553,7 @@ const main = async argv_ => {
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
     let user = null;
+    const client = new Client({ apiUrl, token });
 
     try {
       user = await getUser(client);
