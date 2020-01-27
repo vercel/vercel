@@ -157,8 +157,10 @@ function replaceSegments(segments: string[], destination: string): string {
         }
         query[key] = value;
       }
-    } else {
-      for (const [name, value] of Object.entries(indexes)) {
+    }
+
+    for (const [name, value] of Object.entries(indexes)) {
+      if (!(name in query)) {
         query[name] = value;
       }
     }
