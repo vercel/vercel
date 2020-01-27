@@ -1,6 +1,6 @@
 import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
-import { FetchOptions } from '@zeit/fetch';
+import { RequestInit } from 'node-fetch';
 import { nodeFetch, zeitFetch } from './fetch';
 import { join, sep } from 'path';
 import qs from 'querystring';
@@ -115,7 +115,7 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
   return { ig, ignores };
 }
 
-interface FetchOpts extends FetchOptions {
+interface FetchOpts extends RequestInit {
   apiUrl?: string;
   method?: string;
   teamId?: string;
