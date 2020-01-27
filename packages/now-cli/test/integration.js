@@ -119,7 +119,6 @@ const defaultArgs = [];
 let token;
 let email;
 let contextName;
-let userId;
 
 let tmpDir;
 
@@ -191,7 +190,6 @@ test.before(async () => {
 
         const user = await fetchTokenInformation(token);
 
-        userId = user.uid;
         email = user.email;
         contextName = user.email.split('@')[0];
       },
@@ -2604,8 +2602,10 @@ test('whoami with unknown `NOW_ORG_ID` should error', async t => {
 });
 
 test('whoami with `NOW_ORG_ID`', async t => {
+  const user = fetchTokenInformation(token);
+
   const output = await execute(['whoami', '--scope', 'asdf'], {
-    env: { NOW_ORG_ID: userId },
+    env: { NOW_ORG_ID: user.id },
   });
 
   t.is(output.exitCode, 0, formatOutput(output));
@@ -2614,12 +2614,13 @@ test('whoami with `NOW_ORG_ID`', async t => {
 
 test('whoami with local .now scope', async t => {
   const directory = fixture('static-deployment');
+  const user = fetchTokenInformation(token);
 
   // create local .now
   await ensureDir(path.join(directory, '.now'));
   await fs.writeFile(
     path.join(directory, '.now', 'project.json'),
-    JSON.stringify({ orgId: userId })
+    JSON.stringify({ orgId: user.id })
   );
 
   const output = await execute(['whoami'], {
