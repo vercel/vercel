@@ -319,8 +319,8 @@ test('convertRewrites', () => {
         'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
     },
     {
-      source: '/dont-override-qs/:type',
-      destination: '/final?type=preserve',
+      source: '/dont-override-qs/:name/:age',
+      destination: '/final?name=bob&age=',
     },
     { source: '/catchall/:hello*/', destination: '/catchall/:hello*' },
     {
@@ -372,8 +372,8 @@ test('convertRewrites', () => {
       check: true,
     },
     {
-      src: '^\\/dont-override-qs(?:\\/([^\\/#\\?]+?))$',
-      dest: '/final?type=preserve',
+      src: '^\\/dont-override-qs(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      dest: '/final?name=bob&age=',
       check: true,
     },
     {
@@ -414,7 +414,7 @@ test('convertRewrites', () => {
     ['/file1/yep', '/file2/nope'],
     ['/qs-and-hash/test/first', '/qs-and-hash/test/second'],
     ['/fullurl'],
-    ['/dont-override-qs/first', '/dont-override-qs/second'],
+    ['/dont-override-qs/bob/42', '/dont-override-qs/alice/29'],
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
     ['/firebase/admin', '/firebase/anotherAdmin'],
@@ -430,7 +430,7 @@ test('convertRewrites', () => {
     ['/'],
     ['/qs-and-hash', '/qs-and-hash/onlyone'],
     ['/full'],
-    ['/override-qs'],
+    ['/dont-override-qs', '/dont-override-qs/nope'],
     ['/random-catch/'],
     ['/another-catch/'],
     ['/firebase/user/1', '/firebase/another/1'],

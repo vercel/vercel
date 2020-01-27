@@ -160,7 +160,7 @@ function replaceSegments(segments: string[], destination: string): string {
     }
 
     for (const [name, value] of Object.entries(indexes)) {
-      if (!query[name]) {
+      if (!(name in query)) {
         query[name] = value;
       }
     }
