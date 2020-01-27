@@ -4,7 +4,6 @@ import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
-import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
