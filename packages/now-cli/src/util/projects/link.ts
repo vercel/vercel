@@ -125,17 +125,17 @@ export async function linkFolderToProject(
 
   await writeFile(
     join(path, NOW_FOLDER, NOW_FOLDER_README),
-    `> Why do I have a \`.now\` folder in my project?
-The \`.now\` folder is created when you link a directory to a ZEIT Now project.
+    `> Why do I have a folder named ".now" in my project?
+The ".now" folder is created when you link a directory to a ZEIT Now project.
 
-> What does the \`.now/project.json\` contains?
-The \`project.json\` file contains:
-- A reference to the ZEIT Now project that you linked (\`projectId\`)
-- A reference to the user or team your ZEIT Now project is located (\`orgId\`)
+> What does the "project.json" file contains?
+The "project.json" file contains:
+- A reference to the ZEIT Now project that you linked ("projectId")
+- A reference to the user or team your ZEIT Now project is located ("orgId")
 
-> Should I commit the \`.now\` folder?
-No, you should not share the \`.now\` folder with anyone.
-Upon creation, the \`.now\` folder will be automatically added to your \`.gitignore\`.`,
+> Should I commit the ".now" folder?
+No, you should not share the ".now" folder with anyone.
+Upon creation, it will be automatically added to your ".gitignore" file.`,
     { encoding: 'utf-8' }
   );
 
