@@ -2473,9 +2473,10 @@ test('deploy with unknown `NOW_PROJECT_ID` should fail', async t => {
 
 test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
+  const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
-    env: { NOW_ORG_ID: 'asdf' },
+    env: { NOW_ORG_ID: user.uid },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
