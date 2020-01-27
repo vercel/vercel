@@ -557,11 +557,7 @@ export default class DevServer {
 
       if (builders) {
         if (this.devCommand) {
-          builders = builders.filter(
-            builder =>
-              !builder.use.startsWith('@now/static-build') &&
-              !builder.use.startsWith('@now/next')
-          );
+          builders = builders.filter(filterFrontendBuilds);
         }
 
         const {
@@ -598,6 +594,10 @@ export default class DevServer {
         this.output.note(`Serving all files as static`);
       }
     } else if (Array.isArray(config.builds)) {
+      if (this.devCommand) {
+        config.builds = config.builds.filter(filterFrontendBuilds);
+      }
+
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
       config.builds.sort(sortBuilders);
@@ -1927,4 +1927,11 @@ async function checkForPort(
     }
     await sleep(100);
   }
+}
+
+function filterFrontendBuilds(build: Builder) {
+  return (
+    !build.use.startsWith('@now/static-build') &&
+    !build.use.startsWith('@now/next')
+  );
 }
