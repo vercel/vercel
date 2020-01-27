@@ -2456,12 +2456,13 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   await remove(path.join(directory, 'now.json'));
 });
 
-test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID` should fail', async t => {
+test('deploy with unknown `NOW_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
+  const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
     env: {
-      NOW_ORG_ID: 'asdf',
+      NOW_ORG_ID: user.uid,
       NOW_PROJECT_ID: 'asdf',
     },
   });
