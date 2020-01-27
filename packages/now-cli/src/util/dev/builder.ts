@@ -15,8 +15,6 @@ import {
   detectApiDirectory,
   detectApiExtensions,
 } from '@now/build-utils';
-import stripAnsi from 'strip-ansi';
-import chalk from 'chalk';
 import which from 'which';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
@@ -65,8 +63,7 @@ async function createBuildProcess(
   buildEnv: EnvConfig,
   workPath: string,
   output: Output,
-  yarnPath?: string,
-  debugEnabled: boolean = false
+  yarnPath?: string
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -157,8 +154,7 @@ export async function executeBuild(
       buildEnv,
       workPath,
       devServer.output,
-      yarnPath,
-      debug
+      yarnPath
     );
   }
 
