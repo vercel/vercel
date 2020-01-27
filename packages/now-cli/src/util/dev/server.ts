@@ -12,13 +12,12 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
-import { basename, dirname, extname, join } from 'path';
-import {
-  getTransformedRoutes,
-  HandleValue,
-  isHandler,
-} from '@now/routing-utils';
+import { basename, dirname, extname, join, delimiter } from 'path';
+import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
+import getPort from 'get-port';
+import { ChildProcess } from 'child_process';
+import isPortReachable from 'is-port-reachable';
 
 import {
   Builder,
@@ -28,6 +27,8 @@ import {
   detectRoutes,
   detectApiDirectory,
   detectApiExtensions,
+  execAsync,
+  spawnCommand,
 } from '@now/build-utils';
 
 import { once } from '../once';
@@ -128,6 +129,9 @@ export default class DevServer {
   private watchAggregationTimeout: number;
   private filter: (path: string) => boolean;
   private podId: string;
+  private devCommand?: string;
+  private devProcess?: ChildProcess;
+  private devProcessPort?: number;
 
   private getNowConfigPromise: Promise<NowConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
@@ -141,6 +145,7 @@ export default class DevServer {
     this.buildEnv = {};
     this.files = {};
     this.address = '';
+    this.devCommand = options.devCommand;
 
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
@@ -535,7 +540,7 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      const { builders, warnings, errors } = await detectBuilders(files, pkg, {
+      let { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
         ...(projectSettings ? { projectSettings } : {}),
@@ -551,6 +556,14 @@ export default class DevServer {
       }
 
       if (builders) {
+        if (this.devCommand) {
+          builders = builders.filter(
+            builder =>
+              !builder.use.startsWith('@now/static-build') &&
+              !builder.use.startsWith('@now/next')
+          );
+        }
+
         const {
           defaultRoutes,
           redirectRoutes,
@@ -581,7 +594,7 @@ export default class DevServer {
     }
 
     if (!config.builds || config.builds.length === 0) {
-      if (isInitialLoad) {
+      if (isInitialLoad && !this.devCommand) {
         this.output.note(`Serving all files as static`);
       }
     } else if (Array.isArray(config.builds)) {
@@ -816,6 +829,8 @@ export default class DevServer {
     // Wait for "ready" event of the watcher
     await once(this.watcher, 'ready');
 
+    const devCommandPromise = this.runDevCommand();
+
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
@@ -847,6 +862,8 @@ export default class DevServer {
       .replace('[::]', 'localhost')
       .replace('127.0.0.1', 'localhost');
 
+    await devCommandPromise;
+
     this.output.ready(`Available at ${link(this.address)}`);
     this.serverUrlPrinted = true;
   }
@@ -870,6 +887,15 @@ export default class DevServer {
     for (const match of this.buildMatches.values()) {
       ops.push(shutdownBuilder(match, this.output));
     }
+
+    ops.push(
+      new Promise(resolve => {
+        if (this.devProcess) {
+          this.devProcess.on('exit', () => resolve());
+          process.kill(this.devProcess.pid, exitCode);
+        }
+      })
+    );
 
     ops.push(close(this.server));
 
@@ -1305,6 +1331,18 @@ export default class DevServer {
         (statusCode === 404 && routeResult.phase === 'miss') ||
         !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
       ) {
+        // if the dev command is started, proxy to it
+        if (this.devProcessPort) {
+          this.output.debug('Proxy to dev command server');
+          return proxyPass(
+            req,
+            res,
+            `http://localhost:${this.devProcessPort}`,
+            this.output,
+            false
+          );
+        }
+
         await this.send404(req, res, nowRequestId);
       }
       return;
@@ -1358,6 +1396,18 @@ export default class DevServer {
     }
 
     if (!foundAsset) {
+      // if the dev command is started, proxy to it
+      if (this.devProcessPort) {
+        this.output.debug('Proxy to dev command server');
+        return proxyPass(
+          req,
+          res,
+          `http://localhost:${this.devProcessPort}`,
+          this.output,
+          false
+        );
+      }
+
       await this.send404(req, res, nowRequestId);
       return;
     }
@@ -1557,6 +1607,55 @@ export default class DevServer {
     }
     return false;
   }
+
+  async runDevCommand() {
+    if (!this.devCommand) return;
+
+    const cwd = this.cwd;
+
+    const { stdout: yarnBinStdout } = await execAsync('yarn', ['bin'], {
+      cwd,
+    });
+
+    const nodeBinPath = yarnBinStdout.trim();
+
+    this.output.log(
+      `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
+    );
+
+    const port = await getPort();
+
+    const env: EnvConfig = {
+      ...process.env,
+      ...this.buildEnv,
+      PATH: `${nodeBinPath}${delimiter}${process.env.PATH}`,
+      NOW_REGION: 'dev1',
+      PORT: `${port}`,
+    };
+
+    this.output.debug(
+      `Starting dev command with parameters : ${JSON.stringify({
+        cwd: this.cwd,
+        devCommand: this.devCommand,
+        port,
+      })}`
+    );
+
+    const p = spawnCommand(this.devCommand, {
+      stdio: 'inherit',
+      cwd,
+      env,
+    });
+
+    p.on('exit', () => {
+      this.devProcessPort = undefined;
+    });
+
+    await checkForPort(port, 1000 * 60 * 5);
+
+    this.devProcessPort = port;
+    this.devProcess = p;
+  }
 }
 
 /**
@@ -1566,13 +1665,14 @@ function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   dest: string,
-  output: Output
+  output: Output,
+  ignorePath: boolean = true
 ): void {
   const proxy = httpProxy.createProxyServer({
     changeOrigin: true,
     ws: true,
     xfwd: true,
-    ignorePath: true,
+    ignorePath,
     target: dest,
   });
 
@@ -1810,4 +1910,21 @@ function fileRemoved(
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   const { builder } = buildMatch.builderWithPkg;
   return typeof builder.shouldServe !== 'function';
+}
+
+async function sleep(n: number) {
+  return new Promise(resolve => setTimeout(resolve, n));
+}
+
+async function checkForPort(
+  port: number | undefined,
+  timeout: number
+): Promise<void> {
+  const start = Date.now();
+  while (!(await isPortReachable(port))) {
+    if (Date.now() - start > timeout) {
+      throw new Error(`Detecting port ${port} timed out after ${ms(timeout)}`);
+    }
+    await sleep(100);
+  }
 }
