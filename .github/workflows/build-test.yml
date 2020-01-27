@@ -1,0 +1,23 @@
+name: Build Test
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '!*'
+  pull_request:
+
+jobs:
+  publish:
+    name: Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 10
+      - name: Install
+        run: yarn install --check-files --frozen-lockfile
+      - name: Build
+        run: yarn build
