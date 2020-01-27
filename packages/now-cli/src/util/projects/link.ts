@@ -18,6 +18,7 @@ const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 export const NOW_FOLDER = '.now';
+export const NOW_FOLDER_README = 'README.txt';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
 
 async function getOrg(client: Client, orgId: string): Promise<Org | null> {
@@ -120,6 +121,22 @@ export async function linkFolderToProject(
     join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
     JSON.stringify(projectLink),
     { encoding: 'utf8' }
+  );
+
+  await writeFile(
+    join(path, NOW_FOLDER, NOW_FOLDER_README),
+    `> Why do I have a \`.now\` folder in my project?
+The \`.now\` folder is created when you link a directory to a ZEIT Now project.
+
+> What does the \`.now/project.json\` contains?
+The \`project.json\` file contains:
+- A reference to the ZEIT Now project that you linked (\`projectId\`)
+- A reference to the user or team your ZEIT Now project is located (\`orgId\`)
+
+> Should I commit the \`.now\` folder?
+No, you should not share the \`.now\` folder with anyone.
+Upon creation, the \`.now\` folder will be automatically added to your \`.gitignore\`.`,
+    { encoding: 'utf-8' }
   );
 
   // update .gitignore
