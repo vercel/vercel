@@ -8,7 +8,14 @@ import _execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import fs, { writeFile, readFile, remove, copy, ensureDir } from 'fs-extra';
+import fs, {
+  writeFile,
+  readFile,
+  remove,
+  copy,
+  ensureDir,
+  exists,
+} from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -1398,6 +1405,13 @@ test('deploying a file should not show prompts and display deprecation', async t
   // Ensure the exit code is right
   t.is(exitCode, 0, formatOutput(output));
   t.true(stderr.includes('Deploying files with ZEIT Now is deprecated'));
+
+  // Ensure `.now` was not created
+  t.is(
+    await exists(path.join(path.dirname(file), '.now')),
+    false,
+    '.now should not exists'
+  );
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
