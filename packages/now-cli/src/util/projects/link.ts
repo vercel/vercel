@@ -130,8 +130,8 @@ The ".now" folder is created when you link a directory to a ZEIT Now project.
 
 > What does the "project.json" file contains?
 The "project.json" file contains:
-- A reference to the ZEIT Now project that you linked ("projectId")
-- A reference to the user or team your ZEIT Now project is located ("orgId")
+- The ID of the ZEIT Now project that you linked ("projectId")
+- The ID of the user or team your ZEIT Now project is owned by ("orgId")
 
 > Should I commit the ".now" folder?
 No, you should not share the ".now" folder with anyone.
