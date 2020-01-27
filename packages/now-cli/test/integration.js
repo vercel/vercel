@@ -2570,10 +2570,10 @@ test('whoami with unknown `NOW_ORG_ID` should error', async t => {
 });
 
 test('whoami with `NOW_ORG_ID`', async t => {
-  const user = fetchTokenInformation(token);
+  const user = await fetchTokenInformation(token);
 
   const output = await execute(['whoami', '--scope', 'asdf'], {
-    env: { NOW_ORG_ID: user.id },
+    env: { NOW_ORG_ID: user.uid },
   });
 
   t.is(output.exitCode, 0, formatOutput(output));
@@ -2582,13 +2582,13 @@ test('whoami with `NOW_ORG_ID`', async t => {
 
 test('whoami with local .now scope', async t => {
   const directory = fixture('static-deployment');
-  const user = fetchTokenInformation(token);
+  const user = await fetchTokenInformation(token);
 
   // create local .now
   await ensureDir(path.join(directory, '.now'));
   await fs.writeFile(
     path.join(directory, '.now', 'project.json'),
-    JSON.stringify({ orgId: user.id })
+    JSON.stringify({ orgId: user.uid })
   );
 
   const output = await execute(['whoami'], {
@@ -2597,6 +2597,9 @@ test('whoami with local .now scope', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
   t.is(output.stdout.includes(contextName), true, formatOutput(output));
+
+  // clean up
+  await remove(path.join(directory, '.now'));
 });
 
 test.after.always(async () => {
