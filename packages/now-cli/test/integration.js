@@ -2451,6 +2451,9 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
+
+  // clean up
+  await remove(path.join(directory, 'now.json'));
 });
 
 test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID` should fail', async t => {
