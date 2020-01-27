@@ -1,4 +1,3 @@
-import ms from 'ms';
 import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
@@ -13,11 +12,7 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import {
-  getTransformedRoutes,
-  HandleValue,
-  isHandler,
-} from '@now/routing-utils';
+import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -59,11 +54,7 @@ import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import {
-  builderDirPromise,
-  installBuilders,
-  updateBuilders,
-} from './builder-cache';
+import { installBuilders, updateBuilders } from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -86,7 +77,6 @@ import {
   ListenSpec,
   RouteConfig,
   RouteResult,
-  HttpHeadersConfig,
 } from './types';
 
 interface FSEvent {

@@ -284,6 +284,7 @@ test.beforeEach(() => {
 
 test.afterEach(async () => {
   await Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Array.from(processList).map(([_procId, proc]) => {
       if (proc.killed === false) {
         console.log(
