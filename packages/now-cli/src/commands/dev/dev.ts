@@ -1,6 +1,5 @@
 import path from 'path';
 
-import pkg from '../../../package.json';
 import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
 import { Output } from '../../util/output';

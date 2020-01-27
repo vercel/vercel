@@ -2,7 +2,7 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["esnext"],
+    "lib": ["ES2018"],
     "module": "CommonJS",
     "moduleResolution": "node",
     "outDir": "dist",
@@ -11,8 +11,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
-    "target": "ES2015",
-    "downlevelIteration": true
+    "target": "ES2018"
   },
   "include": ["./src"]
 }

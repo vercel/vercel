@@ -1,5 +1,4 @@
 import ms from 'ms';
-import os from 'os';
 import path from 'path';
 import { URL } from 'url';
 import test from 'ava';
