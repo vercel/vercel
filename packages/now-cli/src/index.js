@@ -505,6 +505,9 @@ const main = async argv_ => {
     }
   }
 
+  let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
+  const targetCommand = commands.get(subcommand);
+
   if (argv['--team']) {
     output.warn(
       `The ${param('--team')} flag is deprecated. Please use ${param(
@@ -513,44 +516,40 @@ const main = async argv_ => {
     );
   }
 
-  const {
-    authConfig: { token },
-  } = ctx;
-  const client = new Client({ apiUrl, token });
-
-  let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
-
-  // overwrite scope with `NOW_ORG_ID` if defined
-  const { NOW_ORG_ID } = process.env;
-  if (NOW_ORG_ID) {
-    const org = await getLinkedOrg(client);
-
-    if (!org) {
-      output.print(
-        `${chalk.red('Error!')} Organization not found (${JSON.stringify({
-          NOW_ORG_ID,
-        })})\n`
-      );
-      return 1;
-    }
-
-    scope = org.slug;
-  }
-
-  // use local `.now` scope if not explicitly specified
-  if (!scope) {
-    const org = await getLinkedOrg(client);
-    scope = org ? org.slug : undefined;
-  }
-
-  const targetCommand = commands.get(subcommand);
-
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'dev' &&
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
+    const {
+      authConfig: { token },
+    } = ctx;
+    const client = new Client({ apiUrl, token });
+
+    // overwrite scope with `NOW_ORG_ID` if defined
+    const { NOW_ORG_ID } = process.env;
+    if (NOW_ORG_ID) {
+      const org = await getLinkedOrg(client);
+
+      if (!org) {
+        output.print(
+          `${chalk.red('Error!')} Organization not found (${JSON.stringify({
+            NOW_ORG_ID,
+          })})\n`
+        );
+        return 1;
+      }
+
+      scope = org.slug;
+    }
+
+    // use local `.now` scope if not explicitly specified
+    if (!scope) {
+      const org = await getLinkedOrg(client);
+      scope = org ? org.slug : undefined;
+    }
+
     let user = null;
 
     try {
