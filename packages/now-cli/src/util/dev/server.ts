@@ -1615,7 +1615,7 @@ export default class DevServer {
       cwd,
     });
 
-    const nodeBinPath = yarnBinStdout.trim();
+    const yarnBinPath = yarnBinStdout.trim();
 
     this.output.log(
       `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
@@ -1626,7 +1626,7 @@ export default class DevServer {
     const env: EnvConfig = {
       ...process.env,
       ...this.buildEnv,
-      PATH: `${nodeBinPath}${delimiter}${process.env.PATH}`,
+      PATH: `${yarnBinPath}${delimiter}${process.env.PATH}`,
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };
