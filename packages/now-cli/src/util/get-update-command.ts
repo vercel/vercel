@@ -1,8 +1,7 @@
 import { Stats } from 'fs';
-import {sep, dirname, join, resolve } from 'path';
+import { sep, dirname, join, resolve } from 'path';
 import { readJSON, lstat, readlink, readFile, realpath } from 'fs-extra';
-
-import { version } from '../../package.json';
+import { isCanary } from './is-canary';
 
 // `npm` tacks a bunch of extra properties on the `package.json` file,
 // so check for one of them to determine yarn vs. npm.
@@ -20,7 +19,7 @@ async function isYarn(): Promise<boolean> {
     }
   }
   const pkgPath = join(dirname(binPath), '..', 'package.json');
-  const pkg = await readJSON(pkgPath);
+  const pkg = await readJSON(pkgPath).catch(() => ({}));
   return !('_id' in pkg);
 }
 
@@ -28,7 +27,7 @@ async function getConfigPrefix() {
   const paths = [
     process.env.npm_config_userconfig || process.env.NPM_CONFIG_USERCONFIG,
     join(process.env.HOME || '/', '.npmrc'),
-    process.env.npm_config_globalconfig || process.env.NPM_CONFIG_GLOBALCONFIG
+    process.env.npm_config_globalconfig || process.env.NPM_CONFIG_GLOBALCONFIG,
   ].filter(Boolean);
 
   for (const configPath of paths) {
@@ -64,21 +63,22 @@ async function isGlobal() {
     }
 
     const isWindows = process.platform === 'win32';
-    const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/lib'
+    const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/lib';
 
     const installPath = await realpath(resolve(__dirname));
 
-    if (installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(sep))) {
+    if (
+      installPath.includes(['', 'yarn', 'global', 'node_modules', ''].join(sep))
+    ) {
       return true;
     }
 
-    const prefixPath = (
+    const prefixPath =
       process.env.PREFIX ||
       process.env.npm_config_prefix ||
       process.env.NPM_CONFIG_PREFIX ||
-      await getConfigPrefix() ||
-      defaultPath
-    );
+      (await getConfigPrefix()) ||
+      defaultPath;
 
     if (!prefixPath) {
       return true;
@@ -92,7 +92,7 @@ async function isGlobal() {
 }
 
 export default async function getUpdateCommand(): Promise<string> {
-  const tag = version.includes('canary') ? 'canary' : 'latest';
+  const tag = isCanary() ? 'canary' : 'latest';
 
   if (await isGlobal()) {
     return (await isYarn())
@@ -100,7 +100,5 @@ export default async function getUpdateCommand(): Promise<string> {
       : `npm i -g now@${tag}`;
   }
 
-  return (await isYarn())
-    ? `yarn add now@${tag}`
-    : `npm i now@${tag}`;
+  return (await isYarn()) ? `yarn add now@${tag}` : `npm i now@${tag}`;
 }

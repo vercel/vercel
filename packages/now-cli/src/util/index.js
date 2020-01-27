@@ -74,7 +74,7 @@ export default class Now extends EventEmitter {
     isDetectingFramework
   ) {
     const opts = { output: this._output, hasNowJson };
-    const { log, warn, debug } = this._output;
+    const { log, warn } = this._output;
     const isLegacy = type !== null;
 
     let files = [];
@@ -316,6 +316,13 @@ export default class Now extends EventEmitter {
         meta: {
           entrypoint: error.entrypoint,
         },
+      });
+    }
+
+    if (error.errorCode && error.errorCode === 'BUILD_FAILED') {
+      return new BuildError({
+        message: error.errorMessage,
+        meta: {},
       });
     }
 

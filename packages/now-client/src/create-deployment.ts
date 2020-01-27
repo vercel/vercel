@@ -6,16 +6,19 @@ import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { getNowIgnore, createDebug, parseNowJSON } from './utils';
 import { DeploymentError } from './errors';
-import { NowConfig, NowClientOptions, DeploymentOptions } from './types';
-
-export { EVENTS } from './utils';
+import {
+  NowConfig,
+  NowClientOptions,
+  DeploymentOptions,
+  DeploymentEventType,
+} from './types';
 
 export default function buildCreateDeployment(version: number) {
   return async function* createDeployment(
     clientOptions: NowClientOptions,
-    deploymentOptions: DeploymentOptions,
+    deploymentOptions: DeploymentOptions = {},
     nowConfig: NowConfig = {}
-  ): AsyncIterableIterator<any> {
+  ): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
     const { path } = clientOptions;
 
     const debug = createDebug(clientOptions.debug);

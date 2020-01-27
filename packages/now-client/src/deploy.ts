@@ -13,9 +13,8 @@ import {
   DeploymentOptions,
   NowConfig,
   NowClientOptions,
+  DeploymentEventType,
 } from './types';
-
-type DeploymentEventType = 'warning' | 'tip' | 'error' | 'notice' | 'created';
 
 async function* createDeployment(
   files: Map<string, DeploymentFile>,
