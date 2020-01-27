@@ -57,16 +57,30 @@ const main = async ctx => {
     apiUrl,
   } = ctx;
   const output = createOutput({ debug });
-  const client = new Client({
+
+  const clientOpts = {
     apiUrl,
     token,
     debug,
+  };
+
+  const client = new Client({ ...clientOpts });
+  const clientWithOrg = new Client({
+    ...clientOpts,
     currentTeam: ctx.config.currentTeam,
   });
+
   let contextName = null;
+  let orgContextName = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    const [scope, scopeWithTeam] = await Promise.all([
+      getScope(client),
+      getScope(clientWithOrg),
+    ]);
+
+    contextName = scope.contextName;
+    orgContextName = scopeWithTeam.contextName;
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
@@ -76,7 +90,7 @@ const main = async ctx => {
     throw err;
   }
 
-  await whoami(contextName);
+  await whoami(contextName, orgContextName);
 };
 
 export default async ctx => {
@@ -88,10 +102,14 @@ export default async ctx => {
   }
 };
 
-async function whoami(contextName) {
+async function whoami(contextName, orgContextName) {
   if (process.stdout.isTTY) {
     process.stdout.write('> ');
   }
 
-  console.log(contextName);
+  if (contextName === orgContextName) {
+    console.log(contextName);
+  } else {
+    console.log(`${contextName} (team: ${orgContextName})`);
+  }
 }
