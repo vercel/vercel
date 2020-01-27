@@ -1327,22 +1327,22 @@ export default class DevServer {
     const requestPath = dest.replace(/^\//, '');
 
     if (!match) {
+      // if the dev command is started, proxy to it
+      if (this.devProcessPort) {
+        this.output.debug('Proxy to dev command server');
+        return proxyPass(
+          req,
+          res,
+          `http://localhost:${this.devProcessPort}`,
+          this.output,
+          false
+        );
+      }
+
       if (
         (statusCode === 404 && routeResult.phase === 'miss') ||
         !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
       ) {
-        // if the dev command is started, proxy to it
-        if (this.devProcessPort) {
-          this.output.debug('Proxy to dev command server');
-          return proxyPass(
-            req,
-            res,
-            `http://localhost:${this.devProcessPort}`,
-            this.output,
-            false
-          );
-        }
-
         await this.send404(req, res, nowRequestId);
       }
       return;
