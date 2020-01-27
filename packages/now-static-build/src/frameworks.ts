@@ -379,7 +379,17 @@ const frameworkList: Framework[] = [
     slug: 'nuxtjs',
     dependency: 'nuxt',
     buildCommand: 'nuxt generate',
-    getOutputDirName: async () => 'dist',
+    getOutputDirName: async (dirPrefix: string) => {
+      if (await isDir(join(dirPrefix, 'dist'))) {
+        return 'dist';
+      }
+
+      if (await isDir(join(dirPrefix, 'public'))) {
+        return 'public';
+      }
+
+      return 'dist';
+    },
   },
   {
     name: 'Hugo',
