@@ -1,4 +1,4 @@
-import { resolve, basename, join } from 'path';
+import { resolve, basename } from 'path';
 import { eraseLines } from 'ansi-escapes';
 // @ts-ignore
 import { write as copy } from 'clipboardy';
@@ -70,7 +70,6 @@ import {
   InvalidRegionOrDCForScale,
 } from '../../util/errors';
 import { SchemaValidationFailed } from '../../util/errors';
-import readPackage from '../../util/read-package';
 
 interface Env {
   [name: string]: string | null | undefined;
@@ -212,43 +211,6 @@ const promptForEnvFields = async (list: string[]) => {
 
   return answers;
 };
-
-async function canUseZeroConfig(cwd: string): Promise<boolean> {
-  try {
-    const pkg = await readPackage(join(cwd, 'package.json'));
-
-    if (!pkg || pkg instanceof Error) {
-      return false;
-    }
-
-    const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
-
-    // We can only check for a few frontends,
-    // since can never be sure if APIs will work
-    // with zero-config
-    if (
-      deps.next ||
-      deps.nuxt ||
-      deps.gatsby ||
-      deps.hexo ||
-      deps.gridsome ||
-      deps.umi ||
-      deps.docusaurus ||
-      deps['@docusaurus/core'] ||
-      deps['preact-cli'] ||
-      deps['ember-cli'] ||
-      deps['@vue/cli-service'] ||
-      deps['@angular/cli'] ||
-      deps['polymer-cli'] ||
-      deps['sirv-cli'] ||
-      deps['react-scripts']
-    ) {
-      return true;
-    }
-  } catch (_) {}
-
-  return false;
-}
 
 export default async function main(
   ctx: any,

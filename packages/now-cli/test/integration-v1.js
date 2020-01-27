@@ -331,12 +331,6 @@ test('detect update command', async t => {
     t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
   }
 
-  if (process.version.startsWith('v8.')) {
-    // Don't do further checks for node 8 here
-    // since `npm i -g <tarball>` seems to fail
-    return;
-  }
-
   {
     const pkg = require('../package.json');
 

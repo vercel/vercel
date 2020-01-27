@@ -7,7 +7,6 @@ import {
   FileFsRef,
   Lambda,
   PackageJson,
-  BuilderFunctions,
   Config,
 } from '@now/build-utils';
 import { NowConfig } from 'now-client';
