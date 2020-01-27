@@ -74,7 +74,7 @@ export default class Now extends EventEmitter {
     isDetectingFramework
   ) {
     const opts = { output: this._output, hasNowJson };
-    const { log, warn, debug } = this._output;
+    const { log, warn } = this._output;
     const isLegacy = type !== null;
 
     let files = [];

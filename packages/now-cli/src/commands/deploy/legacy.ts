@@ -1,4 +1,4 @@
-import { resolve, basename, join } from 'path';
+import { resolve, basename } from 'path';
 import { eraseLines } from 'ansi-escapes';
 // @ts-ignore
 import { write as copy } from 'clipboardy';
@@ -70,7 +70,6 @@ import {
   InvalidRegionOrDCForScale,
 } from '../../util/errors';
 import { SchemaValidationFailed } from '../../util/errors';
-import readPackage from '../../util/read-package';
 
 interface Env {
   [name: string]: string | null | undefined;
