@@ -890,6 +890,10 @@ export default class DevServer {
 
     ops.push(
       new Promise(resolve => {
+        if (!this.devProcess) {
+          resolve();
+        }
+
         if (this.devProcess) {
           this.devProcess.on('exit', () => resolve());
           process.kill(this.devProcess.pid, exitCode);
