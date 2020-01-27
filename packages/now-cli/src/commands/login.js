@@ -251,11 +251,9 @@ const login = async ctx => {
 
   output.debug(`Saved credentials in "${hp(getNowDir())}"`);
 
-  output.print(
+  console.log(
     `${chalk.cyan('Congratulations!')} ` +
-      `You are now logged in. In order to deploy something, run ${cmd(
-        'now'
-      )}.\n`
+      `You are now logged in. In order to deploy something, run ${cmd('now')}.`
   );
 
   output.print(
