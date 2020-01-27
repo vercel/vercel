@@ -11,7 +11,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
-    "target": "ES2018"
+    "target": "ES2018",
+    "noEmitOnError": true
   },
   "include": ["./src"]
 }
