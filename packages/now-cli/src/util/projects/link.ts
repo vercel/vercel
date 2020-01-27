@@ -39,7 +39,7 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
     // link file can't be read
     if (error.name === 'SyntaxError') {
       throw new Error(
-        'Now project settings could not be retrieved. To link your project again, remove .now'
+        'Now project settings could not be retrieved. To link your project again, remove the `.now` directory.'
       );
     }
 
