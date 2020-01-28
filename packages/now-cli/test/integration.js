@@ -2384,7 +2384,7 @@ test('should prefill "project name" prompt with folder name', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test.only('should prefill "project name" prompt with --name', async t => {
+test('should prefill "project name" prompt with --name', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random()
@@ -2434,7 +2434,7 @@ test.only('should prefill "project name" prompt with --name', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test.only('should prefill "project name" prompt with now.json `name`', async t => {
+test('should prefill "project name" prompt with now.json `name`', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random()
