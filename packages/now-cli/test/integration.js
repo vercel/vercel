@@ -2069,6 +2069,47 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
   );
 });
 
+test('add DNS records', async t => {
+  const domainName = `add-${contextName}.org`;
+
+  const DNSRecordsArgs = {
+    // now dns add mydomain.com '@' A 127.0.0.1
+    A: ['dns', 'add', domainName, `'@'`, 'A', '127.0.0.1', ...defaultArgs],
+    // now dns add mydomain.com test.aaaa AAAA '::1'
+    AAAA: ['dns', 'add', domainName, 'test.aaaa', 'AAAA', `'::1'`, ...defaultArgs],
+    // now dns add mydomain.com test.alias ALIAS alias.zeit.co
+    ALIAS: ['dns', 'add', domainName, 'test.alias', 'ALIAS', 'alias.zeit.co', ...defaultArgs],
+    // now dns add mydomain.com test.cname CNAME alias.zeit.co
+    CNAME: ['dns', 'add', domainName, 'test.cname', 'CNAME', 'alias.zeit.co', ...defaultArgs],
+    // now dns add mydomain.com '@' TXT testtxtrecord
+    TXT: ['dns', 'add', domainName, `'@'`, 'TXT', 'testtxtrecord', ...defaultArgs],
+    // now dns add mydomain.com test.caa CAA '0 issue "zeit.co"'
+    CAA: ['dns', 'add', domainName, `'test.caa'`, 'CAA', `'0 issue "zeit.co"'`, ...defaultArgs],
+    // now dns add mydomain.com test.srv SRV 0 0 443 autodiscover.hostingprovider.com
+    SRV: ['dns', 'add', domainName, `test.srv`, 'SRV', '0', '0', '443', `zeit.party`, ...defaultArgs],
+  }
+
+  Object.keys(DNSRecordsArgs).map(type => {
+    const { stderr, exitCode } = await execa(
+      binaryPath,
+      DNSRecordsArgs[type],
+      {
+        reject: false,
+      }
+    );
+
+    t.is(exitCode, 0);
+    t.true(stderr.includes(`DNS record for domain`));
+  })
+
+  const rmRes = await execa(
+    binaryPath,
+    [`domains`, `rm`, domainName, ...defaultArgs],
+    { reject: false, input: 'y' }
+  );
+  t.is(rmRes.exitCode, 0);
+});
+
 test.after.always(async () => {
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
