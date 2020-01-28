@@ -13,9 +13,8 @@ import {
   FileBlob,
   FileFsRef,
   detectApiDirectory,
+  detectApiExtensions,
 } from '@now/build-utils';
-import stripAnsi from 'strip-ansi';
-import chalk from 'chalk';
 import which from 'which';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
@@ -64,8 +63,7 @@ async function createBuildProcess(
   buildEnv: EnvConfig,
   workPath: string,
   output: Output,
-  yarnPath?: string,
-  debugEnabled: boolean = false
+  yarnPath?: string
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -156,8 +154,7 @@ export async function executeBuild(
       buildEnv,
       workPath,
       devServer.output,
-      yarnPath,
-      debug
+      yarnPath
     );
   }
 
@@ -419,6 +416,7 @@ export async function getBuildMatches(
   const noMatches: Builder[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
   const apiDir = detectApiDirectory(builds || []);
+  const apiExtensions = detectApiExtensions(builds || []);
   const apiMatch = apiDir + '/';
 
   for (const buildConfig of builds) {
@@ -438,13 +436,10 @@ export async function getBuildMatches(
     // We need to escape brackets since `glob` will
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
-
-    if (apiDir && src.startsWith(apiMatch)) {
+    const ext = extname(src);
+    if (apiDir && src.startsWith(apiMatch) && apiExtensions.has(ext)) {
       // lambda function files are trimmed of their file extension
-      const ext = extname(src);
-      if (ext) {
-        src = src.slice(0, -ext.length);
-      }
+      src = src.slice(0, -ext.length);
     }
 
     const files = fileList

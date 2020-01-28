@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "17.0.0-canary.16",
+  "version": "17.0.0-canary.20",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -59,7 +59,7 @@
     ]
   },
   "engines": {
-    "node": ">= 8"
+    "node": ">= 10"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",

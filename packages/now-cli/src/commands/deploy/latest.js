@@ -201,7 +201,6 @@ export default async function main(
   output,
   stats,
   localConfig,
-  isFile,
   args
 ) {
   let argv = null;
@@ -224,13 +223,16 @@ export default async function main(
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
-  const autoConfirm = argv['--confirm'];
 
   // check paths
-  const path = await validatePaths(output, paths);
-  if (typeof path === 'number') {
-    return path;
+  const pathValidation = await validatePaths(output, paths);
+
+  if (!pathValidation.valid) {
+    return pathValidation.exitCode;
   }
+
+  const { isFile, path } = pathValidation;
+  const autoConfirm = argv['--confirm'] || isFile;
 
   // check env variables options
   const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
@@ -458,7 +460,7 @@ export default async function main(
       [path],
       createArgs,
       org,
-      autoConfirm,
+      autoConfirm && !isFile,
       !!newProjectName
     );
 

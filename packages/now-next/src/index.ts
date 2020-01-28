@@ -438,6 +438,23 @@ export const build = async ({
         // User redirects
         ...redirects,
 
+        // Before we handle static files we need to set proper caching headers
+        {
+          // This ensures we only match known emitted-by-Next.js files and not
+          // user-emitted files which may be missing a hash in their filename.
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          // Next.js assets contain a hash or entropy in their filenames, so they
+          // are guaranteed to be unique and cacheable indefinitely.
+          headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+          continue: true,
+        },
+        {
+          src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
+        },
         // Next.js pages, `static/` folder, reserved assets, and `public/`
         // folder
         { handle: 'filesystem' },
@@ -456,23 +473,6 @@ export const build = async ({
               },
             ]
           : []),
-
-        // Routes that are checked after filesystem match
-        { handle: 'hit' },
-        // Before we handle static files we need to set proper caching headers
-        {
-          // This ensures we only match known emitted-by-Next.js files and not
-          // user-emitted files which may be missing a hash in their filename.
-          src: path.join(
-            '/',
-            entryDirectory,
-            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
-          ),
-          // Next.js assets contain a hash or entropy in their filenames, so they
-          // are guaranteed to be unique and cacheable indefinitely.
-          headers: { 'cache-control': 'public,max-age=31536000,immutable' },
-          continue: true,
-        },
       ],
       watch: [],
       childProcesses: [],
@@ -936,7 +936,6 @@ export const build = async ({
         src: dataRouteRegex.replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
         // Location of lambda in builder output
         dest: path.posix.join(entryDirectory, dataRoute),
-        check: true,
       });
     });
   }
@@ -1020,33 +1019,6 @@ export const build = async ({
 
       // redirects
       ...redirects,
-      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
-      // folder
-      { handle: 'filesystem' },
-
-      ...rewrites,
-      // Custom Next.js 404 page (TODO: do we want to remove this?)
-      ...(isLegacy
-        ? []
-        : [
-            {
-              src: path.join('/', entryDirectory, '.*'),
-              dest: path.join(
-                '/',
-                entryDirectory,
-                staticPages['_errors/404'] ? '_errors/404' : '_error'
-              ),
-              status: 404,
-              check: true,
-            },
-          ]),
-      // Routes that are checked after each rewrite and no filesystem match
-      { handle: 'miss' },
-      // Dynamic routes
-      ...dynamicRoutes,
-      ...dynamicDataRoutes,
-      // Routes that are checked after filesystem match
-      { handle: 'hit' },
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
@@ -1061,6 +1033,29 @@ export const build = async ({
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
         continue: true,
       },
+      { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
+      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
+      // folder
+      { handle: 'filesystem' },
+
+      ...rewrites,
+      // Dynamic routes
+      ...dynamicRoutes,
+      ...dynamicDataRoutes,
+      // Custom Next.js 404 page (TODO: do we want to remove this?)
+      ...(isLegacy
+        ? []
+        : [
+            {
+              src: path.join('/', entryDirectory, '.*'),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                staticPages['_errors/404'] ? '_errors/404' : '_error'
+              ),
+              status: 404,
+            },
+          ]),
     ],
     watch: [],
     childProcesses: [],

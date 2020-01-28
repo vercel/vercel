@@ -1,4 +1,3 @@
-import ms from 'ms';
 import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
@@ -13,11 +12,7 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import {
-  getTransformedRoutes,
-  HandleValue,
-  isHandler,
-} from '@now/routing-utils';
+import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 
 import {
@@ -27,6 +22,7 @@ import {
   detectBuilders,
   detectRoutes,
   detectApiDirectory,
+  detectApiExtensions,
 } from '@now/build-utils';
 
 import { once } from '../once';
@@ -58,11 +54,7 @@ import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import {
-  builderDirPromise,
-  installBuilders,
-  updateBuilders,
-} from './builder-cache';
+import { installBuilders, updateBuilders } from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -85,7 +77,6 @@ import {
   ListenSpec,
   RouteConfig,
   RouteResult,
-  HttpHeadersConfig,
 } from './types';
 
 interface FSEvent {
@@ -733,16 +724,15 @@ export default class DevServer {
     const files = await getFiles(this.cwd, nowConfig, opts);
     const results: { [filePath: string]: FileFsRef } = {};
     const apiDir = detectApiDirectory(nowConfig.builds || []);
+    const apiExtensions = detectApiExtensions(nowConfig.builds || []);
     const apiMatch = apiDir + '/';
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
       const { mode } = await fs.stat(fsPath);
-      if (apiDir && path.startsWith(apiMatch)) {
+      const ext = extname(path);
+      if (apiDir && path.startsWith(apiMatch) && apiExtensions.has(ext)) {
         // lambda function files are trimmed of their file extension
-        const ext = extname(path);
-        if (ext) {
-          path = path.slice(0, -ext.length);
-        }
+        path = path.slice(0, -ext.length);
       }
       results[path] = new FileFsRef({ mode, fsPath });
     }

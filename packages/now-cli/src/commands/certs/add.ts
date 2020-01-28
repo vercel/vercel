@@ -11,8 +11,6 @@ import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 
-import { DomainPermissionDenied, InvalidCert } from '../../util/errors-ts';
-
 interface Options {
   '--overwrite'?: boolean;
   '--debug'?: boolean;
@@ -88,7 +86,7 @@ async function add(
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(now, keyPath, crtPath, caPath, contextName);
+    cert = await createCertFromFile(now, keyPath, crtPath, caPath);
   } else {
     output.warn(
       `${chalk.cyan(
