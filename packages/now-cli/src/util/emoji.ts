@@ -1,4 +1,12 @@
-export function emoji(label: string): string | undefined {
+export type EmojiLabel =
+  | 'notice'
+  | 'tip'
+  | 'warning'
+  | 'link'
+  | 'inspect'
+  | 'success';
+
+export function emoji(label: EmojiLabel): string | undefined {
   switch (label) {
     case 'notice':
       return '📝';

@@ -24,7 +24,7 @@
     "@types/jest": "24.0.16",
     "@types/ms": "0.7.30",
     "@types/node": "12.0.4",
-    "@types/node-fetch": "2.3.4",
+    "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@zeit/ncc": "0.18.5",
     "typescript": "3.5.1"
