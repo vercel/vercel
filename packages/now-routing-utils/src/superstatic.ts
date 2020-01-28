@@ -123,7 +123,11 @@ export function sourceToRegex(
   source: string
 ): { src: string; segments: string[] } {
   const keys: Key[] = [];
-  const r = pathToRegexp(source, keys, { strict: true, sensitive: true, delimiter: '/' });
+  const r = pathToRegexp(source, keys, {
+    strict: true,
+    sensitive: true,
+    delimiter: '/',
+  });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };
 }

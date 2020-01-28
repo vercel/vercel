@@ -210,23 +210,22 @@ test('convertRedirects', () => {
       status: 308,
     },
     {
-      src: '^\\/projects(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      src: '^\\/projects(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       headers: { Location: '/projects.html?id=$1&action=$2' },
       status: 308,
     },
     {
-      src: '^\\/old(?:\\/([^\\/#\\?]+?))\\/path$',
+      src: '^\\/old(?:\\/([^\\/]+?))\\/path$',
       headers: { Location: '/new/path/$1?segment=$1' },
       status: 308,
     },
     {
-      src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
       headers: { Location: '/catchall/$1/?hello=$1' },
       status: 308,
     },
     {
-      src:
-        '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))$',
+      src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))$',
       headers: { Location: '/another-catch/$1/?hello=$1' },
       status: 308,
     },
@@ -236,12 +235,12 @@ test('convertRedirects', () => {
       status: 308,
     },
     {
-      src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
       headers: { Location: '/api/user?id=$1' },
       status: 308,
     },
     {
-      src: '^\\/hello(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      src: '^\\/hello(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
       headers: { Location: '/something?world=$1#$1' },
       status: 308,
     },
@@ -342,22 +341,22 @@ test('convertRewrites', () => {
       check: true,
     },
     {
-      src: '^\\/projects(?:\\/([^\\/#\\?]+?))\\/edit$',
+      src: '^\\/projects(?:\\/([^\\/]+?))\\/edit$',
       dest: '/projects.html?id=$1',
       check: true,
     },
     {
-      src: '^\\/users(?:\\/([^\\/#\\?]+?))$',
+      src: '^\\/users(?:\\/([^\\/]+?))$',
       dest: '/api/user?identifier=$1&version=v2&id=$1',
       check: true,
     },
     {
-      src: '^(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       dest: '/$1/get?identifier=$2&file=$1&id=$2',
       check: true,
     },
     {
-      src: '^\\/qs-and-hash(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      src: '^\\/qs-and-hash(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       dest: '/api/get?identifier=$1&id=$1&hash=$2#$2',
       check: true,
     },
@@ -368,25 +367,24 @@ test('convertRewrites', () => {
       check: true,
     },
     {
-      src: '^\\/dont-override-qs(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      src: '^\\/dont-override-qs(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       dest: '/final?name=bob&age=',
       check: true,
     },
     {
-      src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?\\/$',
+      src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?\\/$',
       dest: '/catchall/$1?hello=$1',
       check: true,
     },
     {
-      src:
-        '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))\\/$',
+      src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/$',
       dest: '/another-catch/$1?hello=$1',
       check: true,
     },
     {
-      check: true,
+      src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
       dest: '/api/user?id=$1',
-      src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      check: true,
     },
   ];
 
@@ -478,12 +476,9 @@ test('convertHeaders', () => {
       continue: true,
     },
     {
+      src: '^\\/blog(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      headers: { 'on-blog': '$1', $1: 'blog' },
       continue: true,
-      headers: {
-        'on-blog': '$1',
-        $1: 'blog',
-      },
-      src: '^\\/blog(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
     },
   ];
 
