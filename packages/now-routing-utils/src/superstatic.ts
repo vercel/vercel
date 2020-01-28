@@ -143,7 +143,7 @@ function replaceSegments(segments: string[], destination: string): string {
       indexes[name] = toSegmentDest(index);
     });
 
-    if (destination.includes(':')) {
+    if (destination.includes(':') && segments.length > 0) {
       const pathnameCompiler = compile(pathname);
       const hashCompiler = compile(hash);
       pathname = pathnameCompiler(indexes);
