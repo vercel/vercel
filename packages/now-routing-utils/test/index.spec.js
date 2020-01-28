@@ -35,15 +35,6 @@ describe('normalizeRoutes', () => {
   });
 
   test('accepts valid routes', () => {
-    if (Number(process.versions.node.split('.')[0]) < 10) {
-      // Skip this test for any Node version less than Node 10
-      // which introduced ES2018 RegExp Named Capture Groups.
-      // TODO: When now dev integrates this package, we should
-      // look at including `pcre-to-regexp`.
-      console.log('WARNING: skipping test for Node 8');
-      assert.equal(1, 1);
-      return;
-    }
     const routes = [
       { src: '^/about$' },
       {
@@ -54,6 +45,19 @@ describe('normalizeRoutes', () => {
       },
       { handle: 'filesystem' },
       { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' },
+      { handle: 'hit' },
+      {
+        src: '^/hit-me$',
+        headers: { 'Cache-Control': 'max-age=20' },
+        continue: true,
+      },
+      { handle: 'miss' },
+      { src: '^/missed-me$', dest: '/api/missed-me', check: true },
+      {
+        src: '^/missed-me$',
+        headers: { 'Cache-Control': 'max-age=10' },
+        continue: true,
+      },
     ];
 
     assertValid(routes);
@@ -442,6 +446,102 @@ describe('normalizeRoutes', () => {
       ]
     );
   });
+
+  test('fails if routes after `handle: hit` use `dest`', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/user$',
+        dest: '^/api/user$',
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You cannot assign "dest" after "handle: hit"'
+    );
+  });
+
+  test('fails if routes after `handle: hit` do not use `continue: true`', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/user$',
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "continue: true" after "handle: hit"'
+    );
+  });
+
+  test('fails if routes after `handle: hit` use `status', () => {
+    const input = [
+      {
+        handle: 'hit',
+      },
+      {
+        src: '^/(.*)$',
+        status: 404,
+        continue: true,
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You cannot assign "status" after "handle: hit"'
+    );
+  });
+
+  test('fails if routes after `handle: miss` do not use `check: true`', () => {
+    const input = [
+      {
+        handle: 'miss',
+      },
+      {
+        src: '^/user$',
+        dest: '^/api/user$',
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "check: true" after "handle: miss"'
+    );
+  });
+
+  test('fails if routes after `handle: miss` do not use `continue: true`', () => {
+    const input = [
+      {
+        handle: 'miss',
+      },
+      {
+        src: '^/user$',
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+    ];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(
+      error.errors[0].message,
+      'You must assign "continue: true" after "handle: miss"'
+    );
+  });
 });
 
 describe('getTransformedRoutes', () => {
@@ -479,9 +579,47 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_redirects');
   });
 
+  test('should error when redirects is invalid pattern', () => {
+    const nowConfig = {
+      redirects: [{ source: '/:?', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_redirects');
+  });
+
+  test('should error when headers is invalid regex', () => {
+    const nowConfig = {
+      headers: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_headers');
+  });
+
+  test('should error when headers is invalid pattern', () => {
+    const nowConfig = {
+      headers: [
+        { source: '/:?', headers: [{ key: 'x-hello', value: 'world' }] },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_headers');
+  });
+
   test('should error when rewrites is invalid regex', () => {
     const nowConfig = {
       rewrites: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_rewrites');
+  });
+
+  test('should error when rewrites is invalid pattern', () => {
+    const nowConfig = {
+      rewrites: [{ source: '/:?', destination: '/file.html' }],
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
@@ -501,12 +639,12 @@ describe('getTransformedRoutes', () => {
       {
         src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
         headers: { Location: '/$1' },
-        status: 301,
+        status: 308,
       },
       {
         src: '^/(.*)\\.html/?$',
         headers: { Location: '/$1' },
-        status: 301,
+        status: 308,
       },
       {
         src: '^/help$',

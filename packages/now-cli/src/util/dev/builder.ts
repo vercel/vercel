@@ -3,12 +3,18 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { promisify } from 'util';
-import { delimiter, dirname, join } from 'path';
+import { delimiter, dirname, extname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
-import stripAnsi from 'strip-ansi';
-import chalk from 'chalk';
+import {
+  Builder,
+  File,
+  Lambda,
+  FileBlob,
+  FileFsRef,
+  detectApiDirectory,
+  detectApiExtensions,
+} from '@now/build-utils';
 import which from 'which';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
@@ -57,8 +63,7 @@ async function createBuildProcess(
   buildEnv: EnvConfig,
   workPath: string,
   output: Output,
-  yarnPath?: string,
-  debugEnabled: boolean = false
+  yarnPath?: string
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -82,12 +87,6 @@ async function createBuildProcess(
     ...buildEnv,
     NOW_REGION: 'dev1',
   };
-
-  // Builders won't show debug logs by default.
-  // The `NOW_BUILDER_DEBUG` env variable enables them.
-  if (debugEnabled) {
-    env.NOW_BUILDER_DEBUG = '1';
-  }
 
   const buildProcess = fork(modulePath, [], {
     cwd: workPath,
@@ -155,8 +154,7 @@ export async function executeBuild(
       buildEnv,
       workPath,
       devServer.output,
-      yarnPath,
-      debug
+      yarnPath
     );
   }
 
@@ -285,19 +283,20 @@ export async function executeBuild(
 
   const { output } = result;
 
-  // Mimic fmeta-util and convert cleanUrls
-  if (nowConfig.cleanUrls) {
-    Object.entries(output)
-      .filter(([name, value]) => name.endsWith('.html'))
-      .forEach(([name, value]) => {
-        const cleanName = name.slice(0, -5);
-        delete output[name];
-        output[cleanName] = value;
-        if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
-          value.contentType = value.contentType || 'text/html; charset=utf-8';
-        }
-      });
-  }
+  const { cleanUrls } = nowConfig;
+  // Mimic fmeta-util and perform file renaming
+  Object.entries(output).forEach(([path, value]) => {
+    if (cleanUrls && path.endsWith('.html')) {
+      path = path.slice(0, -5);
+
+      if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
+        value.contentType = value.contentType || 'text/html; charset=utf-8';
+      }
+    }
+
+    delete output[path];
+    output[path] = value;
+  });
 
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
@@ -416,6 +415,9 @@ export async function getBuildMatches(
 
   const noMatches: Builder[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
+  const apiDir = detectApiDirectory(builds || []);
+  const apiExtensions = detectApiExtensions(builds || []);
+  const apiMatch = apiDir + '/';
 
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
@@ -434,6 +436,11 @@ export async function getBuildMatches(
     // We need to escape brackets since `glob` will
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
+    const ext = extname(src);
+    if (apiDir && src.startsWith(apiMatch) && apiExtensions.has(ext)) {
+      // lambda function files are trimmed of their file extension
+      src = src.slice(0, -ext.length);
+    }
 
     const files = fileList
       .filter(name => name === src || minimatch(name, src))

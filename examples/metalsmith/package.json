@@ -1,0 +1,14 @@
+{
+  "name": "static-site-example",
+  "private": true,
+  "dependencies": {
+    "handlebars": "^4.0.5",
+    "metalsmith": "^2.1.0",
+    "metalsmith-layouts": "^1.4.1",
+    "metalsmith-markdown": "^0.2.1",
+    "metalsmith-permalinks": "^0.5.0"
+  },
+  "scripts": {
+    "build": "make build"
+  }
+}

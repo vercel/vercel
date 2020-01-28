@@ -2,13 +2,7 @@ import { NowConfig } from './util/dev/types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
-export interface Config extends NowConfig {
-  alias?: string[] | string;
-  aliases?: string[] | string;
-  name?: string;
-  type?: string;
-  scope?: string;
-}
+export type Config = NowConfig;
 
 export interface NowContext {
   argv: string[];
@@ -53,6 +47,7 @@ export type User = {
     login: string;
     updatedAt: number;
   };
+  name?: string;
 };
 
 export type Team = {
@@ -255,4 +250,17 @@ export interface Project {
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  devCommand?: string | null;
+  framework?: string | null;
+}
+
+export interface Org {
+  type: 'user' | 'team';
+  id: string;
+  slug: string;
+}
+
+export interface ProjectLink {
+  projectId: string;
+  orgId: string;
 }

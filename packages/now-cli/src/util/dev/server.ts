@@ -1,4 +1,3 @@
-import ms from 'ms';
 import url from 'url';
 import http from 'http';
 import fs from 'fs-extra';
@@ -12,9 +11,12 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
-import { basename, dirname, extname, join } from 'path';
-import { getTransformedRoutes } from '@now/routing-utils';
+import { basename, dirname, extname, join, delimiter } from 'path';
+import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
+import getPort from 'get-port';
+import { ChildProcess } from 'child_process';
+import isPortReachable from 'is-port-reachable';
 
 import {
   Builder,
@@ -22,6 +24,10 @@ import {
   PackageJson,
   detectBuilders,
   detectRoutes,
+  detectApiDirectory,
+  detectApiExtensions,
+  execAsync,
+  spawnCommand,
 } from '@now/build-utils';
 
 import { once } from '../once';
@@ -48,17 +54,12 @@ import {
   validateNowConfigFunctions,
 } from './validate';
 
-import isURL from './is-url';
-import devRouter from './router';
+import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import {
-  builderDirPromise,
-  installBuilders,
-  updateBuilders,
-} from './builder-cache';
+import { installBuilders, updateBuilders } from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -122,6 +123,9 @@ export default class DevServer {
   private watchAggregationTimeout: number;
   private filter: (path: string) => boolean;
   private podId: string;
+  private devCommand?: string;
+  private devProcess?: ChildProcess;
+  private devProcessPort?: number;
 
   private getNowConfigPromise: Promise<NowConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
@@ -135,6 +139,7 @@ export default class DevServer {
     this.buildEnv = {};
     this.files = {};
     this.address = '';
+    this.devCommand = options.devCommand;
 
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
@@ -526,9 +531,13 @@ export default class DevServer {
 
     // no builds -> zero config
     if (!config.builds || config.builds.length === 0) {
-      const { builders, warnings, errors } = await detectBuilders(files, pkg, {
+      const featHandleMiss = true; // enable for zero config
+      const { projectSettings, cleanUrls, trailingSlash } = config;
+
+      let { builders, warnings, errors } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
+        ...(projectSettings ? { projectSettings } : {}),
       });
 
       if (errors) {
@@ -541,9 +550,20 @@ export default class DevServer {
       }
 
       if (builders) {
-        const { defaultRoutes, error: routesError } = await detectRoutes(
+        if (this.devCommand) {
+          builders = builders.filter(filterFrontendBuilds);
+        }
+
+        const {
+          defaultRoutes,
+          redirectRoutes,
+          error: routesError,
+        } = await detectRoutes(
           files,
-          builders
+          builders,
+          featHandleMiss,
+          cleanUrls,
+          trailingSlash
         );
 
         config.builds = config.builds || [];
@@ -553,17 +573,25 @@ export default class DevServer {
           this.output.error(routesError.message);
           await this.exit();
         } else {
-          config.routes = config.routes || [];
-          config.routes.push(...(defaultRoutes as RouteConfig[]));
+          const routes: RouteConfig[] = [];
+          const { routes: nowConfigRoutes } = config;
+          routes.push(...(redirectRoutes || []));
+          routes.push(...(nowConfigRoutes || []));
+          routes.push(...(defaultRoutes || []));
+          config.routes = routes;
         }
       }
     }
 
     if (!config.builds || config.builds.length === 0) {
-      if (isInitialLoad) {
+      if (isInitialLoad && !this.devCommand) {
         this.output.note(`Serving all files as static`);
       }
     } else if (Array.isArray(config.builds)) {
+      if (this.devCommand) {
+        config.builds = config.builds.filter(filterFrontendBuilds);
+      }
+
       // `@now/static-build` needs to be the last builder
       // since it might catch all other requests
       config.builds.sort(sortBuilders);
@@ -712,9 +740,17 @@ export default class DevServer {
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
     const results: { [filePath: string]: FileFsRef } = {};
+    const apiDir = detectApiDirectory(nowConfig.builds || []);
+    const apiExtensions = detectApiExtensions(nowConfig.builds || []);
+    const apiMatch = apiDir + '/';
     for (const fsPath of files) {
-      const path = relative(this.cwd, fsPath);
+      let path = relative(this.cwd, fsPath);
       const { mode } = await fs.stat(fsPath);
+      const ext = extname(path);
+      if (apiDir && path.startsWith(apiMatch) && apiExtensions.has(ext)) {
+        // lambda function files are trimmed of their file extension
+        path = path.slice(0, -ext.length);
+      }
       results[path] = new FileFsRef({ mode, fsPath });
     }
     this.files = results;
@@ -787,6 +823,8 @@ export default class DevServer {
     // Wait for "ready" event of the watcher
     await once(this.watcher, 'ready');
 
+    const devCommandPromise = this.runDevCommand();
+
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
@@ -818,6 +856,8 @@ export default class DevServer {
       .replace('[::]', 'localhost')
       .replace('127.0.0.1', 'localhost');
 
+    await devCommandPromise;
+
     this.output.ready(`Available at ${link(this.address)}`);
     this.serverUrlPrinted = true;
   }
@@ -841,6 +881,18 @@ export default class DevServer {
     for (const match of this.buildMatches.values()) {
       ops.push(shutdownBuilder(match, this.output));
     }
+
+    ops.push(
+      new Promise(resolve => {
+        if (!this.devProcess) {
+          resolve();
+          return;
+        }
+
+        this.devProcess.on('exit', () => resolve());
+        process.kill(this.devProcess.pid, exitCode);
+      })
+    );
 
     ops.push(close(this.server));
 
@@ -867,13 +919,6 @@ export default class DevServer {
         throw err;
       }
     }
-  }
-
-  shouldRebuild(req: http.IncomingMessage): boolean {
-    return (
-      req.headers.pragma === 'no-cache' ||
-      req.headers['cache-control'] === 'no-cache'
-    );
   }
 
   async send404(
@@ -1037,8 +1082,8 @@ export default class DevServer {
     filesChanged?: string[],
     filesRemoved?: string[]
   ) {
-    // If the requested asset wasn't found in the match's outputs, or
-    // a hard-refresh was detected, then trigger a build
+    // If the requested asset wasn't found in the match's
+    // outputs then trigger a build
     const buildKey =
       requestPath === null ? match.src : `${match.src}-${requestPath}`;
     let buildPromise = this.inProgressBuilds.get(buildKey);
@@ -1046,14 +1091,6 @@ export default class DevServer {
       // A build for `buildKey` is already in progress, so don't trigger
       // another rebuild for this request - just wait on the existing one.
       let msg = `De-duping build "${buildKey}"`;
-      if (req) msg += ` for "${req.method} ${req.url}"`;
-      this.output.debug(msg);
-    } else if (Date.now() - match.buildTimestamp < ms('2s')) {
-      // If the built asset was created less than 2s ago, then don't trigger
-      // a rebuild. The purpose of this threshold is because once an HTML page
-      // is rebuilt, then the CSS/JS/etc. assets on the page are also refreshed
-      // with a `no-cache` header, so this avoids *two* rebuilds for that case.
-      let msg = `Skipping build for "${buildKey}" (not older than 2s)`;
       if (req) msg += ` for "${req.method} ${req.url}"`;
       this.output.debug(msg);
     } else {
@@ -1162,55 +1199,145 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
-    const { dest, status, headers, uri_args } = await devRouter(
-      req.url,
-      req.method,
-      routes,
-      this
-    );
+    const handleMap = getRoutesTypes(routes);
+    const missRoutes = handleMap.get('miss') || [];
+    const hitRoutes = handleMap.get('hit') || [];
+    handleMap.delete('miss');
+    handleMap.delete('hit');
+    const phases: (HandleValue | null)[] = [null, 'filesystem'];
+
+    let routeResult: RouteResult | null = null;
+    let match: BuildMatch | null = null;
+    let statusCode: number | undefined;
+
+    for (const phase of phases) {
+      statusCode = undefined;
+      const phaseRoutes = handleMap.get(phase) || [];
+      routeResult = await devRouter(
+        req.url,
+        req.method,
+        phaseRoutes,
+        this,
+        undefined,
+        missRoutes,
+        phase
+      );
+
+      if (routeResult.isDestUrl) {
+        // Mix the `routes` result dest query params into the req path
+        const destParsed = url.parse(routeResult.dest, true);
+        delete destParsed.search;
+        Object.assign(destParsed.query, routeResult.uri_args);
+        const destUrl = url.format(destParsed);
+
+        this.output.debug(`ProxyPass: ${destUrl}`);
+        this.setResponseHeaders(res, nowRequestId);
+        return proxyPass(req, res, destUrl, this.output);
+      }
+
+      match = await findBuildMatch(
+        this.buildMatches,
+        this.files,
+        routeResult.dest,
+        this
+      );
+
+      if (!match && missRoutes.length > 0) {
+        // Since there was no build match, enter the miss phase
+        routeResult = await devRouter(
+          routeResult.dest || req.url,
+          req.method,
+          missRoutes,
+          this,
+          routeResult.headers,
+          [],
+          'miss'
+        );
+
+        match = await findBuildMatch(
+          this.buildMatches,
+          this.files,
+          routeResult.dest,
+          this
+        );
+      } else if (match && hitRoutes.length > 0) {
+        // Since there was a build match, enter the hit phase.
+        // The hit phase must not set status code.
+        const prevStatus = routeResult.status;
+        routeResult = await devRouter(
+          routeResult.dest || req.url,
+          req.method,
+          hitRoutes,
+          this,
+          routeResult.headers,
+          [],
+          'hit'
+        );
+        routeResult.status = prevStatus;
+      }
+
+      statusCode = routeResult.status;
+
+      if (match && statusCode === 404 && routeResult.phase === 'miss') {
+        statusCode = undefined;
+      }
+
+      const location = routeResult.headers['location'] || routeResult.dest;
+
+      if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
+        // Equivalent to now-proxy exit_with_status() function
+        this.output.debug(
+          `Route found with redirect status code ${statusCode}`
+        );
+        await this.sendRedirect(req, res, nowRequestId, location, statusCode);
+        return;
+      }
+
+      if (!match && statusCode && routeResult.phase !== 'miss') {
+        // Equivalent to now-proxy exit_with_status() function
+        this.output.debug(`Route found with with status code ${statusCode}`);
+        await this.sendError(req, res, nowRequestId, '', statusCode);
+        return;
+      }
+
+      if (match) {
+        // end the phase
+        break;
+      }
+    }
+
+    if (!routeResult) {
+      throw new Error('Expected Route Result but none was found.');
+    }
+
+    const { dest, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
     Object.entries(headers).forEach(([name, value]) => {
       res.setHeader(name, value);
     });
 
-    if (isURL(dest)) {
-      // Mix the `routes` result dest query params into the req path
-      const destParsed = url.parse(dest, true);
-      delete destParsed.search;
-      Object.assign(destParsed.query, uri_args);
-      const destUrl = url.format(destParsed);
-
-      this.output.debug(`ProxyPass: ${destUrl}`);
-      this.setResponseHeaders(res, nowRequestId);
-      return proxyPass(req, res, destUrl, this.output);
-    }
-
-    if (status) {
-      res.statusCode = status;
-      if (300 <= status && status <= 399) {
-        await this.sendRedirect(
-          req,
-          res,
-          nowRequestId,
-          res.getHeader('location') as string,
-          status
-        );
-        return;
-      }
+    if (statusCode) {
+      res.statusCode = statusCode;
     }
 
     const requestPath = dest.replace(/^\//, '');
-    const match = await findBuildMatch(
-      this.buildMatches,
-      this.files,
-      requestPath,
-      this
-    );
 
     if (!match) {
+      // if the dev command is started, proxy to it
+      if (this.devProcessPort) {
+        this.output.debug('Proxy to dev command server');
+        return proxyPass(
+          req,
+          res,
+          `http://localhost:${this.devProcessPort}`,
+          this.output,
+          false
+        );
+      }
+
       if (
-        status === 404 ||
+        (statusCode === 404 && routeResult.phase === 'miss') ||
         !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
       ) {
         await this.send404(req, res, nowRequestId);
@@ -1258,14 +1385,26 @@ export default class DevServer {
     }
 
     let foundAsset = findAsset(match, requestPath, nowConfig);
-    if ((!foundAsset || this.shouldRebuild(req)) && callLevel === 0) {
+    if (!foundAsset && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
-      // Since the `asset` was re-built, resolve it again to get the new asset
+      // Since the `asset` was just built, resolve again to get the new asset
       foundAsset = findAsset(match, requestPath, nowConfig);
     }
 
     if (!foundAsset) {
+      // if the dev command is started, proxy to it
+      if (this.devProcessPort) {
+        this.output.debug('Proxy to dev command server');
+        return proxyPass(
+          req,
+          res,
+          `http://localhost:${this.devProcessPort}`,
+          this.output,
+          false
+        );
+      }
+
       await this.send404(req, res, nowRequestId);
       return;
     }
@@ -1356,7 +1495,7 @@ export default class DevServer {
           return;
         }
 
-        if (!status) {
+        if (!statusCode) {
           res.statusCode = result.statusCode;
         }
         this.setResponseHeaders(res, nowRequestId, result.headers);
@@ -1460,19 +1599,59 @@ export default class DevServer {
   }
 
   async hasFilesystem(dest: string): Promise<boolean> {
-    const requestPath = dest.replace(/^\//, '');
-    if (
-      await findBuildMatch(
-        this.buildMatches,
-        this.files,
-        requestPath,
-        this,
-        true
-      )
-    ) {
+    if (await findBuildMatch(this.buildMatches, this.files, dest, this, true)) {
       return true;
     }
     return false;
+  }
+
+  async runDevCommand() {
+    if (!this.devCommand) return;
+
+    const cwd = this.cwd;
+
+    const { stdout: yarnBinStdout } = await execAsync('yarn', ['bin'], {
+      cwd,
+    });
+
+    const yarnBinPath = yarnBinStdout.trim();
+
+    this.output.log(
+      `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
+    );
+
+    const port = await getPort();
+
+    const env: EnvConfig = {
+      ...process.env,
+      ...this.buildEnv,
+      PATH: `${yarnBinPath}${delimiter}${process.env.PATH}`,
+      NOW_REGION: 'dev1',
+      PORT: `${port}`,
+    };
+
+    this.output.debug(
+      `Starting dev command with parameters : ${JSON.stringify({
+        cwd: this.cwd,
+        devCommand: this.devCommand,
+        port,
+      })}`
+    );
+
+    const p = spawnCommand(this.devCommand, {
+      stdio: 'inherit',
+      cwd,
+      env,
+    });
+
+    p.on('exit', () => {
+      this.devProcessPort = undefined;
+    });
+
+    await checkForPort(port, 1000 * 60 * 5);
+
+    this.devProcessPort = port;
+    this.devProcess = p;
   }
 }
 
@@ -1483,13 +1662,14 @@ function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   dest: string,
-  output: Output
+  output: Output,
+  ignorePath: boolean = true
 ): void {
   const proxy = httpProxy.createProxyServer({
     changeOrigin: true,
     ws: true,
     xfwd: true,
-    ignorePath: true,
+    ignorePath,
     target: dest,
   });
 
@@ -1559,6 +1739,7 @@ async function findBuildMatch(
   devServer: DevServer,
   isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
+  requestPath = requestPath.replace(/^\//, '');
   for (const match of matches.values()) {
     if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
       return match;
@@ -1726,4 +1907,28 @@ function fileRemoved(
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   const { builder } = buildMatch.builderWithPkg;
   return typeof builder.shouldServe !== 'function';
+}
+
+async function sleep(n: number) {
+  return new Promise(resolve => setTimeout(resolve, n));
+}
+
+async function checkForPort(
+  port: number | undefined,
+  timeout: number
+): Promise<void> {
+  const start = Date.now();
+  while (!(await isPortReachable(port))) {
+    if (Date.now() - start > timeout) {
+      throw new Error(`Detecting port ${port} timed out after ${timeout}ms`);
+    }
+    await sleep(100);
+  }
+}
+
+function filterFrontendBuilds(build: Builder) {
+  return (
+    !build.use.startsWith('@now/static-build') &&
+    !build.use.startsWith('@now/next')
+  );
 }

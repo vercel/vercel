@@ -10,25 +10,15 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
-async function main(cwd: string) {
-  const next = require(resolveFrom(cwd, 'next'));
-  const app = next({ dev: true, dir: cwd });
+process.once('message', async ({ dir, runtimeEnv }) => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const next = require(resolveFrom(dir, 'next'));
+  const app = next({ dev: true, dir });
   const handler = app.getRequestHandler();
 
-  const openPort = await getPort({
-    port: [5000, 4000],
-  });
-
+  const [openPort] = await Promise.all([getPort(), app.prepare()]);
   const url = `http://localhost:${openPort}`;
 
-  // Prepare for incoming requests
-  await app.prepare();
-
-  // The runtime env vars are passed in to `argv[2]`
-  // as a base64-encoded JSON string
-  const runtimeEnv = JSON.parse(
-    Buffer.from(process.argv[2], 'base64').toString()
-  );
   syncEnvVars(process.env, process.env, runtimeEnv);
 
   createServer((req, res) => {
@@ -39,6 +29,4 @@ async function main(cwd: string) {
       process.send(url);
     }
   });
-}
-
-main(process.cwd());
+});

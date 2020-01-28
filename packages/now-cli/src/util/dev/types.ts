@@ -7,14 +7,18 @@ import {
   FileFsRef,
   Lambda,
   PackageJson,
-  BuilderFunctions,
+  Config,
 } from '@now/build-utils';
-import { NowRedirect, NowRewrite, NowHeader, Route } from '@now/routing-utils';
+import { NowConfig } from 'now-client';
+import { HandleValue, Route } from '@now/routing-utils';
 import { Output } from '../output';
+
+export { NowConfig };
 
 export interface DevServerOptions {
   output: Output;
   debug: boolean;
+  devCommand?: string;
 }
 
 export interface EnvConfig {
@@ -30,24 +34,6 @@ export interface BuildMatch extends BuildConfig {
 }
 
 export type RouteConfig = Route;
-
-export interface NowConfig {
-  name?: string;
-  version?: number;
-  env?: EnvConfig;
-  build?: {
-    env?: EnvConfig;
-  };
-  builds?: BuildConfig[];
-  routes?: RouteConfig[];
-  files?: string[];
-  cleanUrls?: boolean;
-  rewrites?: NowRewrite[];
-  redirects?: NowRedirect[];
-  headers?: NowHeader[];
-  trailingSlash?: boolean;
-  functions?: BuilderFunctions;
-}
 
 export interface HttpHandler {
   (req: http.IncomingMessage, res: http.ServerResponse): void;
@@ -76,7 +62,7 @@ export interface CacheOutputs {
 export interface BuilderParamsBase {
   files: BuilderInputs;
   entrypoint: string;
-  config: object;
+  config: Config;
   meta?: {
     isDev?: boolean;
     requestPath?: string | null;
@@ -139,7 +125,7 @@ export interface BuildResultV4 {
 export interface ShouldServeParams {
   files: BuilderInputs;
   entrypoint: string;
-  config?: object;
+  config?: Config;
   requestPath: string;
   workPath: string;
 }
@@ -171,6 +157,10 @@ export interface RouteResult {
   matched_route_idx?: number;
   // "userDest": <boolean in case the destination was user defined>
   userDest?: boolean;
+  // url as destination should end routing
+  isDestUrl: boolean;
+  // the phase that this route is defined in
+  phase?: HandleValue | null;
 }
 
 export interface InvokePayload {

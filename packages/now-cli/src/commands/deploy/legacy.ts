@@ -1,4 +1,4 @@
-import { resolve, basename, join } from 'path';
+import { resolve, basename } from 'path';
 import { eraseLines } from 'ansi-escapes';
 // @ts-ignore
 import { write as copy } from 'clipboardy';
@@ -70,8 +70,6 @@ import {
   InvalidRegionOrDCForScale,
 } from '../../util/errors';
 import { SchemaValidationFailed } from '../../util/errors';
-import handleCertError from '../../util/certs/handle-cert-error';
-import readPackage from '../../util/read-package';
 
 interface Env {
   [name: string]: string | null | undefined;
@@ -198,7 +196,7 @@ const promptForEnvFields = async (list: string[]) => {
     });
   }
 
-  require('../../util/input/patch-inquirer');
+  require('../../util/input/patch-inquirer-legacy');
 
   log('Please enter values for the following environment variables:');
   const answers = await inquirer.prompt(questions);
@@ -213,43 +211,6 @@ const promptForEnvFields = async (list: string[]) => {
 
   return answers;
 };
-
-async function canUseZeroConfig(cwd: string): Promise<boolean> {
-  try {
-    const pkg = await readPackage(join(cwd, 'package.json'));
-
-    if (!pkg || pkg instanceof Error) {
-      return false;
-    }
-
-    const deps = Object.assign({}, pkg.dependencies, pkg.devDependencies);
-
-    // We can only check for a few frontends,
-    // since can never be sure if APIs will work
-    // with zero-config
-    if (
-      deps.next ||
-      deps.nuxt ||
-      deps.gatsby ||
-      deps.hexo ||
-      deps.gridsome ||
-      deps.umi ||
-      deps.docusaurus ||
-      deps['@docusaurus/core'] ||
-      deps['preact-cli'] ||
-      deps['ember-cli'] ||
-      deps['@vue/cli-service'] ||
-      deps['@angular/cli'] ||
-      deps['polymer-cli'] ||
-      deps['sirv-cli'] ||
-      deps['react-scripts']
-    ) {
-      return true;
-    }
-  } catch (_) {}
-
-  return false;
-}
 
 export default async function main(
   ctx: any,
@@ -801,11 +762,6 @@ async function sync({
         createArgs
       );
 
-      const handledResult = handleCertError(output, deployment);
-      if (handledResult === 1) {
-        return handledResult;
-      }
-
       if (
         deployment instanceof DomainNotFound ||
         deployment instanceof NotDomainOwner ||
@@ -896,29 +852,31 @@ async function sync({
     const { url } = now;
     const dcs =
       deploymentType !== 'static' && deployment.scale
-        ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})`
+        ? chalk` ({bold ${Object.keys(deployment.scale).join(', ')})`
         : '';
 
     if (isTTY) {
+      let inClipboard = '';
+      const platformVersion = deployment.version || 1;
+      const displayUrl =
+        Array.isArray(deployment.alias) &&
+        deployment.alias.length > 0 &&
+        !deployment.aliasError
+          ? `https://${deployment.alias[0]}`
+          : url;
+
       if (clipboard) {
         try {
-          await copy(url);
-          log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray('[v1]')} ${chalk.gray(
-              '[in clipboard]'
-            )}${dcs} ${deployStamp()}`
-          );
+          await copy(displayUrl);
+          inClipboard = chalk.gray(' [in clipboard]');
         } catch (err) {
           debug(`Error copying to clipboard: ${err}`);
-          log(
-            `${chalk.bold(chalk.cyan(url))} ${chalk.gray(
-              '[v1]'
-            )} ${dcs} ${deployStamp()}`
-          );
         }
-      } else {
-        log(`${chalk.bold(chalk.cyan(url))}${dcs} ${deployStamp()}`);
       }
+
+      log(
+        chalk`{bold.cyan ${displayUrl}} {gray [v${platformVersion}]}${inClipboard}${dcs} ${deployStamp()}`
+      );
     }
 
     if (deploymentType === 'static') {
@@ -927,7 +885,7 @@ async function sync({
         noVerify = true;
       } else {
         if (!quiet) {
-          output.log(chalk`{cyan Deployment complete!}`);
+          log(chalk`{cyan Deployment complete!}`);
         }
         await exit(0);
         return;
@@ -941,7 +899,7 @@ async function sync({
       const eventsStream = await maybeGetEventsStream(now, deployment);
 
       if (!noVerify) {
-        output.log(
+        log(
           `Verifying instantiation in ${joinWords(
             Object.keys(deployment.scale).map(dc => chalk.bold(dc))
           )}`
@@ -960,13 +918,11 @@ async function sync({
             output.error(
               `Instance verification timed out (${ms(dcOrEvent.meta.timeout)})`
             );
-            output.log(
-              'Read more: https://err.sh/now-cli/verification-timeout'
-            );
+            log('Read more: https://err.sh/now-cli/verification-timeout');
             await exit(1);
           } else if (Array.isArray(dcOrEvent)) {
             const [dc, instances] = dcOrEvent;
-            output.log(
+            log(
               `${chalk.cyan(chars.tick)} Scaled ${plural(
                 'instance',
                 instances,
@@ -981,7 +937,7 @@ async function sync({
               `[${instanceIndex(dcOrEvent.payload.instanceId)}] `
             );
             formatLogOutput(dcOrEvent.payload.text, prefix).forEach(
-              (msg: string) => output.log(msg)
+              (msg: string) => log(msg)
             );
           }
         }

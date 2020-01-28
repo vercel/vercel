@@ -66,6 +66,7 @@ export const latestHelp = () => `
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --prod                         Create a production deployment
+    -c, --confirm                  Confirm default options and skip questions
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
@@ -109,6 +110,7 @@ export const latestArgs = {
   '--regions': String,
   '--target': String,
   '--prod': Boolean,
+  '--confirm': Boolean,
   '-n': '--name',
   '-f': '--force',
   '-p': '--public',
@@ -116,6 +118,7 @@ export const latestArgs = {
   '-b': '--build-env',
   '-C': '--no-clipboard',
   '-m': '--meta',
+  '-c': '--confirm',
 };
 
 export const legacyArgsMri = {

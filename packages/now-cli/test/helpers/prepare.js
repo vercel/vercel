@@ -122,11 +122,6 @@ module.exports = async session => {
     'single-dotfile': {
       '.testing': 'i am a dotfile',
     },
-    'config-alias-property': {
-      'now.json':
-        '{ "alias": "test.now.sh", "builds": [ { "src": "*.html", "use": "@now/static" } ] }',
-      'index.html': '<span>test alias</span',
-    },
     'config-scope-property-email': {
       'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }`,
       'index.html': '<span>test scope email</span',
@@ -204,7 +199,7 @@ fs.writeFileSync(
   'index.js',
   fs
     .readFileSync('index.js', 'utf8')
-    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG),
+    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
 );
       `,
       'index.js': `
@@ -314,6 +309,13 @@ CMD ["node", "index.js"]`,
           cloud: 'v1',
         },
         files: ['.gitignore', 'folder', 'index.js', 'test.html'],
+      }),
+    },
+    'redirects-v2': {
+      'now.json': JSON.stringify({
+        version: 2,
+        name: 'redirects-v2',
+        redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
     },
     'local-config-v2': {
@@ -447,7 +449,7 @@ CMD ["node", "index.js"]`,
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'now-php@0.0.7',
+            runtime: 'now-php@0.0.8',
           },
         },
       }),
@@ -460,6 +462,26 @@ CMD ["node", "index.js"]`,
             memory: 128,
             runtime: 'now-php@canary',
           },
+        },
+      }),
+    },
+    'github-and-scope-config': {
+      'index.txt': 'I Am a Website!',
+      'now.json': JSON.stringify({
+        scope: 'i-do-not-exist',
+        github: {
+          autoAlias: true,
+          autoJobCancelation: true,
+          enabled: true,
+          silent: true,
+        },
+      }),
+    },
+    'project-link': {
+      'pages/index.js': 'export default () => <div><h1>Now CLI test</h1></div>',
+      'package.json': JSON.stringify({
+        dependencies: {
+          gatsby: 'latest',
         },
       }),
     },

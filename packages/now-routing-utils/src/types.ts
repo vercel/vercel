@@ -1,3 +1,5 @@
+import { HandleValue } from './index';
+
 export type NowError = {
   code: string;
   message: string;
@@ -22,7 +24,7 @@ export type Source = {
 };
 
 export type Handler = {
-  handle: string;
+  handle: HandleValue;
 };
 
 export type Route = Source | Handler;

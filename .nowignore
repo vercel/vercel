@@ -1,0 +1,17 @@
+*
+
+# general
+!utils/
+!utils/run.js
+!.yarnrc
+!yarn.lock
+!package.json
+
+# api
+!api/
+!api/**
+
+# packages
+!packages/
+!packages/frameworks
+!packages/frameworks/**
