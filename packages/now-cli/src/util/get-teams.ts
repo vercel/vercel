@@ -2,13 +2,15 @@ import Client from './client';
 import { APIError, InvalidToken } from './errors-ts';
 import { Team } from '../types';
 
-type Response = {
-  teams: Team[];
-};
+let teams: Team[] | undefined;
 
 export default async function getTeams(client: Client) {
+  if (teams) return teams;
+
   try {
-    const { teams } = await client.fetch<Response>(`/teams`);
+    const res = await client.fetch<{ teams: Team[] }>('/teams');
+
+    teams = res.teams;
     return teams;
   } catch (error) {
     if (error instanceof APIError && error.status === 403) {
