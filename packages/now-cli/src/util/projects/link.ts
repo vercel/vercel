@@ -18,6 +18,7 @@ const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 export const NOW_FOLDER = '.now';
+export const NOW_FOLDER_README = 'README.txt';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
 
 async function getOrg(client: Client, orgId: string): Promise<Org | null> {
@@ -120,6 +121,12 @@ export async function linkFolderToProject(
     join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
     JSON.stringify(projectLink),
     { encoding: 'utf8' }
+  );
+
+  await writeFile(
+    join(path, NOW_FOLDER, NOW_FOLDER_README),
+    await readFile(join(__dirname, 'NOW_DIR_README.txt'), 'utf-8'),
+    { encoding: 'utf-8' }
   );
 
   // update .gitignore
