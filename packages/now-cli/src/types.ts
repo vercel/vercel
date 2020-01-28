@@ -222,6 +222,8 @@ export interface Project {
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  devCommand?: string | null;
+  framework?: string | null;
 }
 
 export interface Org {
