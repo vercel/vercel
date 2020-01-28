@@ -8,10 +8,8 @@ import chalk from 'chalk';
 import ua from '../util/ua.ts';
 import getArgs from '../util/get-args';
 import error from '../util/output/error';
-import aborted from '../util/output/aborted';
 import wait from '../util/output/wait';
 import highlight from '../util/output/highlight';
-import info from '../util/output/info';
 import ok from '../util/output/ok';
 import cmd from '../util/output/cmd.ts';
 import param from '../util/output/param.ts';
@@ -24,7 +22,8 @@ import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
 import createOutput from '../util/output';
-import executeLogin from '../util/login/login.ts'
+import executeLogin from '../util/login/login.ts';
+import { prependEmoji, emoji } from '../util/emoji';
 
 const debug = debugFactory('now:sh:login');
 
@@ -57,7 +56,7 @@ const help = () => {
 const verify = async ({ apiUrl, email, verificationToken }) => {
   const query = {
     email,
-    token: verificationToken
+    token: verificationToken,
   };
 
   debug('GET /now/registration/verify');
@@ -68,7 +67,7 @@ const verify = async ({ apiUrl, email, verificationToken }) => {
     res = await fetch(
       `${apiUrl}/now/registration/verify?${stringifyQuery(query)}`,
       {
-        headers: { 'User-Agent': ua }
+        headers: { 'User-Agent': ua },
       }
     );
   } catch (err) {
@@ -105,12 +104,12 @@ const readEmail = async () => {
   let email;
 
   try {
-    email = await promptEmail({ start: info('Enter your email: ') });
+    email = await promptEmail({ start: `Enter your email: ` });
   } catch (err) {
     console.log(); // \n
 
     if (err.message === 'User abort') {
-      throw new Error(aborted('No changes made.'));
+      throw new Error(`${chalk.red('Aborted!')} No changes made`);
     }
 
     if (err.message === 'stdin lacks setRawMode support') {
@@ -200,7 +199,7 @@ const login = async ctx => {
     securityCode = data.securityCode;
   } catch (err) {
     stopSpinner();
-    console.log(error(err.message))
+    console.log(error(err.message));
     return 1;
   }
 
@@ -209,15 +208,12 @@ const login = async ctx => {
   // Clear up `Sending email` success message
   process.stdout.write(eraseLines(possibleAddress ? 1 : 2));
 
-  console.log(
-    info(
-      `We sent an email to ${highlight(
-        email
-      )}. Please follow the steps provided`,
-      `  inside it and make sure the security code matches ${highlight(
-        securityCode
-      )}.`
-    )
+  output.print(
+    `We sent an email to ${highlight(
+      email
+    )}. Please follow the steps provided inside it and make sure the security code matches ${highlight(
+      securityCode
+    )}.\n`
   );
 
   stopSpinner = wait('Waiting for your confirmation');
@@ -256,8 +252,15 @@ const login = async ctx => {
   output.debug(`Saved credentials in "${hp(getNowDir())}"`);
 
   console.log(
-    `${chalk.cyan('> Congratulations!')} ` +
-    `You are now logged in. In order to deploy something, run ${cmd('now')}.`
+    `${chalk.cyan('Congratulations!')} ` +
+      `You are now logged in. In order to deploy something, run ${cmd('now')}.`
+  );
+
+  output.print(
+    `${prependEmoji(
+      `Connect your Git Repositories to deploy every branch push automatically (https://zeit.ink/1X).`,
+      emoji('tip')
+    )}\n`
   );
 
   return ctx;
