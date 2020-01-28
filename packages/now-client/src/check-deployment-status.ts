@@ -100,10 +100,11 @@ export async function* checkDeploymentStatus(
       return yield {
         type: 'error',
         payload: {
+          ...deploymentUpdate.aliasError,
           message:
-            deploymentUpdate.aliasError ||
+            deploymentUpdate.aliasError.message ||
             'An error occurred while assigning a domain to your deployment.',
-        } as any,
+        },
       };
     }
 
