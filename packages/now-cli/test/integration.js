@@ -2437,18 +2437,42 @@ test('add DNS records', async t => {
     SRV: ['dns', 'add', domainName, `test.srv`, 'SRV', '0', '0', '443', `zeit.party`, ...defaultArgs],
   }
 
-  Object.keys(DNSRecordsArgs).map(type => {
-    const { stderr, exitCode } = await execa(
-      binaryPath,
-      DNSRecordsArgs[type],
-      {
-        reject: false,
-      }
-    );
+  Object.keys(DNSRecordsArgs).map(async type => {
+    const { stdout, exitCode } = await execa(binaryPath, DNSRecordsArgs[type], {
+      reject: false,
+    });
 
     t.is(exitCode, 0);
-    t.true(stderr.includes(`DNS record for domain`));
+    t.true(stdout.includes(`DNS record for domain`));
   })
+  
+
+  const rmRes = await execa(
+    binaryPath,
+    [`domains`, `rm`, domainName, ...defaultArgs],
+    { reject: false, input: 'y' }
+  );
+  t.is(rmRes.exitCode, 0);
+});
+
+// now dns mydomain.com fail.mydomain.com <TYPE> 127.0.0.1
+test('prompt user when attempting to add DNS record with domain on name', async t => {
+  const domainName = `add-${contextName}.org`;
+
+  const DNSRecordsArgs = {
+    'example.com': ['dns', 'add', domainName, `${domainName}`, 'A', '127.0.0.1', ...defaultArgs],
+    'test.example.com': ['dns', 'add', domainName, `test.${domainName}`, 'A', '127.0.0.1', ...defaultArgs],
+  };
+
+  Object.keys(DNSRecordsArgs).map(async type => {
+    const { stdout, exitCode } = await execa(binaryPath, DNSRecordsArgs[type], {
+      reject: false,
+      input: 'n',
+    });
+
+    t.is(exitCode, 1);
+    t.true(stdout.includes(`Do you want to create this record on`));
+  });
 
   const rmRes = await execa(
     binaryPath,
