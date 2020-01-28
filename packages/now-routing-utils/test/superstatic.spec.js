@@ -206,19 +206,19 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/old(?:\\/([^\\/#\\?]+?))\\/path$',
-      headers: { Location: '/new/path/$1' },
+      headers: { Location: '/new/path/$1?segment=$1' },
       status: 308,
     },
     {
       headers: {
-        Location: '/catchall/$1/',
+        Location: '/catchall/$1/?hello=$1',
       },
       src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
       status: 308,
     },
     {
       headers: {
-        Location: '/another-catch/$1/',
+        Location: '/another-catch/$1/?hello=$1',
       },
       src:
         '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))$',
@@ -254,7 +254,7 @@ test('convertRedirects', () => {
     },
     {
       headers: {
-        Location: '/something#$1',
+        Location: '/something?world=$1#$1',
       },
       src: '^\\/hello(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
       status: 308,
@@ -318,6 +318,10 @@ test('convertRewrites', () => {
       destination:
         'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
     },
+    {
+      source: '/dont-override-qs/:name/:age',
+      destination: '/final?name=bob&age=',
+    },
     { source: '/catchall/:hello*/', destination: '/catchall/:hello*' },
     {
       source: '/another-catch/:hello+/',
@@ -348,17 +352,17 @@ test('convertRewrites', () => {
     },
     {
       src: '^\\/users(?:\\/([^\\/#\\?]+?))$',
-      dest: '/api/user?identifier=$1&version=v2',
+      dest: '/api/user?identifier=$1&version=v2&id=$1',
       check: true,
     },
     {
       src: '^(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
-      dest: '/$1/get?identifier=$2',
+      dest: '/$1/get?identifier=$2&file=$1&id=$2',
       check: true,
     },
     {
       src: '^\\/qs-and-hash(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
-      dest: '/api/get?identifier=$1#$2',
+      dest: '/api/get?identifier=$1&id=$1&hash=$2#$2',
       check: true,
     },
     {
@@ -368,14 +372,19 @@ test('convertRewrites', () => {
       check: true,
     },
     {
+      src: '^\\/dont-override-qs(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      dest: '/final?name=bob&age=',
+      check: true,
+    },
+    {
       src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?\\/$',
-      dest: '/catchall/$1',
+      dest: '/catchall/$1?hello=$1',
       check: true,
     },
     {
       src:
         '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))\\/$',
-      dest: '/another-catch/$1',
+      dest: '/another-catch/$1?hello=$1',
       check: true,
     },
     {
@@ -405,6 +414,7 @@ test('convertRewrites', () => {
     ['/file1/yep', '/file2/nope'],
     ['/qs-and-hash/test/first', '/qs-and-hash/test/second'],
     ['/fullurl'],
+    ['/dont-override-qs/bob/42', '/dont-override-qs/alice/29'],
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
     ['/firebase/admin', '/firebase/anotherAdmin'],
@@ -420,6 +430,7 @@ test('convertRewrites', () => {
     ['/'],
     ['/qs-and-hash', '/qs-and-hash/onlyone'],
     ['/full'],
+    ['/dont-override-qs', '/dont-override-qs/nope'],
     ['/random-catch/'],
     ['/another-catch/'],
     ['/firebase/user/1', '/firebase/another/1'],

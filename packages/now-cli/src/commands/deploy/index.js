@@ -187,7 +187,6 @@ export default async ctx => {
       output,
       stats,
       localConfig || {},
-      isFile,
       parts.latestArgs
     );
   }
