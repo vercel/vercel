@@ -150,9 +150,17 @@ test('convertRedirects', () => {
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/next(\\.js)?', destination: 'https://nextjs.org' },
     {
-      source: '/firebase/(.*)',
+      source: '/proxy/(.*)',
       destination: 'https://www.firebase.com',
       statusCode: 302,
+    },
+    {
+      source: '/proxy-regex/([a-zA-Z]{1,})',
+      destination: 'https://firebase.com/$1',
+    },
+    {
+      source: '/proxy-port/([a-zA-Z]{1,})',
+      destination: 'https://firebase.com:8080/$1',
     },
     {
       source: '/projects/:id/:action',
@@ -167,14 +175,6 @@ test('convertRedirects', () => {
     {
       source: '/feedback/((?!general).*)',
       destination: '/feedback/general',
-    },
-    {
-      source: '/firebase/([a-zA-Z]{1,})',
-      destination: 'https://$1.firebase.com/',
-    },
-    {
-      source: '/firebase/([a-zA-Z]{1,})',
-      destination: 'https://$1.firebase.com:8080/',
     },
     { source: '/catchme/:id*', destination: '/api/user' },
     {
@@ -195,68 +195,53 @@ test('convertRedirects', () => {
       status: 308,
     },
     {
-      src: '^\\/firebase(?:\\/(.*))$',
+      src: '^\\/proxy(?:\\/(.*))$',
       headers: { Location: 'https://www.firebase.com' },
       status: 302,
     },
     {
-      src: '^\\/projects(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      src: '^\\/proxy-regex(?:\\/([a-zA-Z]{1,}))$',
+      headers: { Location: 'https://firebase.com/$1' },
+      status: 308,
+    },
+    {
+      src: '^\\/proxy-port(?:\\/([a-zA-Z]{1,}))$',
+      headers: { Location: 'https://firebase.com:8080/$1' },
+      status: 308,
+    },
+    {
+      src: '^\\/projects(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       headers: { Location: '/projects.html?id=$1&action=$2' },
       status: 308,
     },
     {
-      src: '^\\/old(?:\\/([^\\/#\\?]+?))\\/path$',
+      src: '^\\/old(?:\\/([^\\/]+?))\\/path$',
       headers: { Location: '/new/path/$1?segment=$1' },
       status: 308,
     },
     {
-      headers: {
-        Location: '/catchall/$1/?hello=$1',
-      },
-      src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      headers: { Location: '/catchall/$1/?hello=$1' },
       status: 308,
     },
     {
-      headers: {
-        Location: '/another-catch/$1/?hello=$1',
-      },
-      src:
-        '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))$',
+      src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))$',
+      headers: { Location: '/another-catch/$1/?hello=$1' },
       status: 308,
     },
     {
-      headers: {
-        Location: '/feedback/general',
-      },
       src: '^\\/feedback(?:\\/((?!general).*))$',
+      headers: { Location: '/feedback/general' },
       status: 308,
     },
     {
+      src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      headers: { Location: '/api/user?id=$1' },
       status: 308,
-      headers: {
-        Location: 'https://$1.firebase.com/',
-      },
-      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
     },
     {
-      status: 308,
-      headers: {
-        Location: 'https://$1.firebase.com:8080/',
-      },
-      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
-    },
-    {
-      status: 308,
-      headers: {
-        Location: '/api/user?id=$1',
-      },
-      src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
-    },
-    {
-      headers: {
-        Location: '/something?world=$1#$1',
-      },
-      src: '^\\/hello(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      src: '^\\/hello(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      headers: { Location: '/something?world=$1#$1' },
       status: 308,
     },
   ];
@@ -266,14 +251,14 @@ test('convertRedirects', () => {
   const mustMatch = [
     ['/some/old/path'],
     ['/next', '/next.js'],
-    ['/firebase/one', '/firebase/2', '/firebase/-', '/firebase/dir/sub'],
+    ['/proxy/one', '/proxy/2', '/proxy/-', '/proxy/dir/sub'],
+    ['/proxy-regex/admin', '/proxy-regex/anotherAdmin'],
+    ['/proxy-port/admin', '/proxy-port/anotherAdmin'],
     ['/projects/one/edit', '/projects/two/edit'],
     ['/old/one/path', '/old/two/path'],
     ['/catchall/first', '/catchall/first/second'],
     ['/another-catch/first', '/another-catch/first/second'],
     ['/feedback/another'],
-    ['/firebase/admin', '/firebase/anotherAdmin'],
-    ['/firebase/admin', '/firebase/anotherAdmin'],
     ['/catchme/id-1', '/catchme/id/2'],
     ['/hello/world', '/hello/another/world'],
   ];
@@ -281,14 +266,14 @@ test('convertRedirects', () => {
   const mustNotMatch = [
     ['/nope'],
     ['/nextAjs', '/nextjs'],
-    ['/fire', '/firebasejumper/two'],
+    ['/prox', '/proxyed/two'],
+    ['/proxy-regex/user/1', '/proxy-regex/another/1'],
+    ['/proxy-port/user/1', '/proxy-port/another/1'],
     ['/projects/edit', '/projects/two/three/delete', '/projects'],
     ['/old/path', '/old/two/foo', '/old'],
     ['/random-catch'],
     ['/another-catch'],
     ['/feedback/general'],
-    ['/firebase/user/1', '/firebase/another/1'],
-    ['/firebase/user/1', '/firebase/another/1'],
     ['/catchm', '/random'],
     ['/not-this-one', '/helloo'],
   ];
@@ -299,7 +284,15 @@ test('convertRedirects', () => {
 test('convertRewrites', () => {
   const actual = convertRewrites([
     { source: '/some/old/path', destination: '/some/new/path' },
-    { source: '/firebase/(.*)', destination: 'https://www.firebase.com' },
+    { source: '/proxy/(.*)', destination: 'https://www.firebase.com' },
+    {
+      source: '/proxy-regex/([a-zA-Z]{1,})',
+      destination: 'https://firebase.com/$1',
+    },
+    {
+      source: '/proxy-port/([a-zA-Z]{1,})',
+      destination: 'https://firebase.com:8080/$1',
+    },
     { source: '/projects/:id/edit', destination: '/projects.html' },
     {
       source: '/users/:id',
@@ -327,41 +320,43 @@ test('convertRewrites', () => {
       source: '/another-catch/:hello+/',
       destination: '/another-catch/:hello+',
     },
-    {
-      source: '/firebase/([a-zA-Z]{1,})',
-      destination: 'https://$1.firebase.com/',
-    },
-    {
-      source: '/firebase/([a-zA-Z]{1,})',
-      destination: 'https://$1.firebase.com:8080/',
-    },
     { source: '/catchme/:id*', destination: '/api/user' },
   ]);
 
   const expected = [
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
     {
-      src: '^\\/firebase(?:\\/(.*))$',
+      src: '^\\/proxy(?:\\/(.*))$',
       dest: 'https://www.firebase.com',
       check: true,
     },
     {
-      src: '^\\/projects(?:\\/([^\\/#\\?]+?))\\/edit$',
+      src: '^\\/proxy-regex(?:\\/([a-zA-Z]{1,}))$',
+      dest: 'https://firebase.com/$1',
+      check: true,
+    },
+    {
+      src: '^\\/proxy-port(?:\\/([a-zA-Z]{1,}))$',
+      dest: 'https://firebase.com:8080/$1',
+      check: true,
+    },
+    {
+      src: '^\\/projects(?:\\/([^\\/]+?))\\/edit$',
       dest: '/projects.html?id=$1',
       check: true,
     },
     {
-      src: '^\\/users(?:\\/([^\\/#\\?]+?))$',
+      src: '^\\/users(?:\\/([^\\/]+?))$',
       dest: '/api/user?identifier=$1&version=v2&id=$1',
       check: true,
     },
     {
-      src: '^(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       dest: '/$1/get?identifier=$2&file=$1&id=$2',
       check: true,
     },
     {
-      src: '^\\/qs-and-hash(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      src: '^\\/qs-and-hash(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       dest: '/api/get?identifier=$1&id=$1&hash=$2#$2',
       check: true,
     },
@@ -372,35 +367,24 @@ test('convertRewrites', () => {
       check: true,
     },
     {
-      src: '^\\/dont-override-qs(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
+      src: '^\\/dont-override-qs(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       dest: '/final?name=bob&age=',
       check: true,
     },
     {
-      src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?\\/$',
+      src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?\\/$',
       dest: '/catchall/$1?hello=$1',
       check: true,
     },
     {
-      src:
-        '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))\\/$',
+      src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/$',
       dest: '/another-catch/$1?hello=$1',
       check: true,
     },
     {
-      check: true,
-      dest: 'https://$1.firebase.com/',
-      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
-    },
-    {
-      check: true,
-      dest: 'https://$1.firebase.com:8080/',
-      src: '^\\/firebase(?:\\/([a-zA-Z]{1,}))$',
-    },
-    {
-      check: true,
+      src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
       dest: '/api/user?id=$1',
-      src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      check: true,
     },
   ];
 
@@ -408,7 +392,9 @@ test('convertRewrites', () => {
 
   const mustMatch = [
     ['/some/old/path'],
-    ['/firebase/one', '/firebase/two'],
+    ['/proxy/one', '/proxy/two'],
+    ['/proxy-regex/admin', '/proxy-regex/anotherAdmin'],
+    ['/proxy-port/admin', '/proxy-port/anotherAdmin'],
     ['/projects/one/edit', '/projects/two/edit'],
     ['/users/four', '/users/five'],
     ['/file1/yep', '/file2/nope'],
@@ -417,14 +403,14 @@ test('convertRewrites', () => {
     ['/dont-override-qs/bob/42', '/dont-override-qs/alice/29'],
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
-    ['/firebase/admin', '/firebase/anotherAdmin'],
-    ['/firebase/admin', '/firebase/anotherAdmin'],
     ['/catchme/id-1', '/catchme/id/2'],
   ];
 
   const mustNotMatch = [
     ['/nope'],
-    ['/fire', '/firebasejumper/two'],
+    ['/prox', '/proxyed/two'],
+    ['/proxy-regex/user/1', '/proxy-regex/another/1'],
+    ['/proxy-port/user/1', '/proxy-port/another/1'],
     ['/projects/edit', '/projects/two/delete', '/projects'],
     ['/users/edit/four', '/users/five/delete', '/users'],
     ['/'],
@@ -433,8 +419,6 @@ test('convertRewrites', () => {
     ['/dont-override-qs', '/dont-override-qs/nope'],
     ['/random-catch/'],
     ['/another-catch/'],
-    ['/firebase/user/1', '/firebase/another/1'],
-    ['/firebase/user/1', '/firebase/another/1'],
     ['/catchm', '/random'],
   ];
 
@@ -492,12 +476,9 @@ test('convertHeaders', () => {
       continue: true,
     },
     {
+      src: '^\\/blog(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      headers: { 'on-blog': '$1', $1: 'blog' },
       continue: true,
-      headers: {
-        'on-blog': '$1',
-        $1: 'blog',
-      },
-      src: '^\\/blog(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
     },
   ];
 
