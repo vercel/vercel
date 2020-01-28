@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
+    "noEmitOnError": true,
     "moduleResolution": "node",
     "module": "CommonJS",
     "target": "ES2018",
