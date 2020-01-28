@@ -65,7 +65,15 @@ export async function* checkDeploymentStatus(
 
     if (deploymentUpdate.error) {
       debug('Deployment status check has errorred');
-      return yield { type: 'error', payload: deploymentUpdate.error };
+      return yield {
+        type: 'error',
+        payload: {
+          ...deploymentUpdate.error,
+          message:
+            deploymentUpdate.error.message ||
+            'A deployment error has occurred. Please check the build logs for detalis.',
+        },
+      };
     }
 
     if (
@@ -89,14 +97,29 @@ export async function* checkDeploymentStatus(
     }
 
     if (isAliasError(deploymentUpdate)) {
-      return yield { type: 'error', payload: deploymentUpdate.aliasError };
+      return yield {
+        type: 'error',
+        payload: {
+          message:
+            deploymentUpdate.aliasError ||
+            'An error occurred while assigning a domain to your deployment.',
+        } as any,
+      };
     }
 
     if (
       deploymentUpdate.readyState === 'ERROR' &&
       deploymentUpdate.errorCode === 'BUILD_FAILED'
     ) {
-      return yield { type: 'error', payload: deploymentUpdate };
+      return yield {
+        type: 'error',
+        payload: {
+          ...deploymentUpdate,
+          message:
+            deploymentUpdate.message ||
+            'A deployment error has occurred. Please check the build logs for detalis.',
+        },
+      };
     }
 
     if (isFailed(deploymentUpdate)) {
