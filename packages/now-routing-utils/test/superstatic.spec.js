@@ -441,6 +441,48 @@ test('convertRewrites', () => {
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
 
+test('convertRewrites with `trailingSlash: true`', () => {
+  const trailingSlash = true;
+  const actual = convertRewrites(
+    [
+      { source: '/zero-or-more/:id*', destination: '/zero' },
+      { source: '/one-or-more/:id+', destination: '/one' },
+    ],
+    trailingSlash
+  );
+
+  const expected = [
+    {
+      src:
+        '^\\/zero-or-more(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
+      dest: '/zero?id=$1',
+      check: true,
+    },
+    {
+      src:
+        '^\\/one-or-more(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))[\\/#\\?]?$',
+      dest: '/one?id=$1',
+      check: true,
+    },
+  ];
+
+  deepEqual(actual, expected);
+
+  const mustMatch = [
+    [
+      '/zero-or-more',
+      '/zero-or-more/',
+      '/zero-or-more/first',
+      '/zero-or-more/double/two',
+    ],
+    ['/one-or-more/first', '/one-or-more/double/two'],
+  ];
+
+  const mustNotMatch = [['/zero-or'], ['/one-or-more', '/one-or-more/']];
+
+  assertRegexMatches(actual, mustMatch, mustNotMatch);
+});
+
 test('convertHeaders', () => {
   const actual = convertHeaders([
     {

@@ -149,9 +149,12 @@ function checkRegexSyntax(src: string): NowErrorNested | null {
   return null;
 }
 
-function checkPatternSyntax(src: string): NowErrorNested | null {
+function checkPatternSyntax(
+  src: string,
+  trailingSlash: boolean | undefined
+): NowErrorNested | null {
   try {
-    sourceToRegex(src);
+    sourceToRegex(src, trailingSlash);
   } catch (err) {
     return {
       message: `Invalid pattern: "${src}"`,
@@ -264,7 +267,7 @@ export function getTransformedRoutes({
       };
     }
     const errorsPattern = redirects
-      .map(r => checkPatternSyntax(r.source))
+      .map(r => checkPatternSyntax(r.source, trailingSlash))
       .filter(notEmpty);
     if (errorsPattern.length > 0) {
       return {
@@ -276,7 +279,9 @@ export function getTransformedRoutes({
         ),
       };
     }
-    const normalized = normalizeRoutes(convertRedirects(redirects));
+    const normalized = normalizeRoutes(
+      convertRedirects(redirects, trailingSlash)
+    );
     if (normalized.error) {
       normalized.error.code = code;
       return { routes, error: normalized.error };
@@ -301,7 +306,7 @@ export function getTransformedRoutes({
       };
     }
     const errorsPattern = headers
-      .map(r => checkPatternSyntax(r.source))
+      .map(r => checkPatternSyntax(r.source, trailingSlash))
       .filter(notEmpty);
     if (errorsPattern.length > 0) {
       return {
@@ -313,7 +318,7 @@ export function getTransformedRoutes({
         ),
       };
     }
-    const normalized = normalizeRoutes(convertHeaders(headers));
+    const normalized = normalizeRoutes(convertHeaders(headers, trailingSlash));
     if (normalized.error) {
       normalized.error.code = 'invalid_headers';
       return { routes, error: normalized.error };
@@ -338,7 +343,7 @@ export function getTransformedRoutes({
       };
     }
     const errorsPattern = rewrites
-      .map(r => checkPatternSyntax(r.source))
+      .map(r => checkPatternSyntax(r.source, trailingSlash))
       .filter(notEmpty);
     if (errorsPattern.length > 0) {
       return {
@@ -350,7 +355,9 @@ export function getTransformedRoutes({
         ),
       };
     }
-    const normalized = normalizeRoutes(convertRewrites(rewrites));
+    const normalized = normalizeRoutes(
+      convertRewrites(rewrites, trailingSlash)
+    );
     if (normalized.error) {
       normalized.error.code = code;
       return { routes, error: normalized.error };
