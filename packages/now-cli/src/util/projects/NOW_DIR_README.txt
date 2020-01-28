@@ -1,7 +1,7 @@
 > Why do I have a folder named ".now" in my project?
 The ".now" folder is created when you link a directory to a ZEIT Now project.
 
-> What does the "project.json" file contains?
+> What does the "project.json" file contain?
 The "project.json" file contains:
 - The ID of the ZEIT Now project that you linked ("projectId")
 - The ID of the user or team your ZEIT Now project is owned by ("orgId")
