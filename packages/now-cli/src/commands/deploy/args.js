@@ -38,7 +38,6 @@ export const latestHelp = () => `
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     -V, --platform-version         Set the platform version to deploy to
-    -n, --name                     Set the project name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
 )}   Path to the local ${'`now.json`'} file
