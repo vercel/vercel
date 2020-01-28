@@ -440,7 +440,10 @@ export default async function main(
 
   const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
 
-  if ((await validateRootDirectory(output, sourcePath)) === false) {
+  if (
+    rootDirectory &&
+    (await validateRootDirectory(output, sourcePath)) === false
+  ) {
     return 1;
   }
 
