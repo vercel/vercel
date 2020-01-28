@@ -1314,35 +1314,6 @@ test('deploying more than 1 path should fail', async t => {
   t.true(stderr.trim().endsWith(`Can't deploy more than one path.`));
 });
 
-test('deploy a static directory', async t => {
-  const directory = fixture('static-single-file');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--confirm'],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
 test('use build-env', async t => {
   const directory = fixture('build-env');
 
@@ -1945,8 +1916,8 @@ test('now secret rm', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('deploy with a custom API URL', async t => {
-  const directory = fixture('static-single-file');
+test('deploy with --api flag v2', async t => {
+  const directory = fixture('builds');
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
