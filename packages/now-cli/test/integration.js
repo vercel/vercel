@@ -2384,7 +2384,7 @@ test('should prefill "project name" prompt with folder name', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('should prefill "project name" prompt with --name', async t => {
+test.only('should prefill "project name" prompt with --name', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random()
@@ -2402,8 +2402,18 @@ test('should prefill "project name" prompt with --name', async t => {
     ...defaultArgs,
   ]);
 
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  let isDeprecated = false;
+
+  await waitForPrompt(now, chunk => {
+    if (chunk.includes('The "--name" flag is deprecated')) {
+      isDeprecated = true;
+    }
+
+    return /Set up and deploy [^?]+\?/.test(chunk);
+  });
   now.stdin.write('yes\n');
+
+  t.is(isDeprecated, true);
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
@@ -2424,7 +2434,7 @@ test('should prefill "project name" prompt with --name', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('should prefill "project name" prompt with now.json `name`', async t => {
+test.only('should prefill "project name" prompt with now.json `name`', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random()
@@ -2443,8 +2453,18 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   const now = execa(binaryPath, [directory, ...defaultArgs]);
 
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  let isDeprecated = false;
+
+  await waitForPrompt(now, chunk => {
+    if (chunk.includes('The `name` property in now.json is deprecated')) {
+      isDeprecated = true;
+    }
+
+    return /Set up and deploy [^?]+\?/.test(chunk);
+  });
   now.stdin.write('yes\n');
+
+  t.is(isDeprecated, true);
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
