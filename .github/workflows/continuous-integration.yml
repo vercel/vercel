@@ -11,6 +11,7 @@ on:
 jobs:
   test-unit:
     name: Unit Tests
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -29,6 +30,7 @@ jobs:
 
   test-integration:
     name: Integration Tests
+    timeout-minutes: 120
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -39,6 +41,7 @@ jobs:
 
   test-now-cli:
     name: Now CLI Tests
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +61,7 @@ jobs:
 
   test-now-dev:
     name: "`now dev` Tests"
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -77,6 +81,7 @@ jobs:
 
   coverage:
     name: Coverage
+    timeout-minutes: 10
     needs: [test-unit, test-now-cli, test-now-dev, test-integration]
     runs-on: ubuntu-latest
     steps:
