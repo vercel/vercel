@@ -1,5 +1,6 @@
 import ms from 'ms';
 import bytes from 'bytes';
+import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
@@ -47,8 +48,11 @@ import {
 import getProjectName from '../../util/get-project-name';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
-import validatePaths from '../../util/validate-paths';
 import { prependEmoji, emoji } from '../../util/emoji';
+import { inputRootDirectory } from '../../util/input/input-root-directory';
+import validatePaths, {
+  validateRootDirectory,
+} from '../../util/validate-paths';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -430,6 +434,16 @@ export default async function main(
     }
   }
 
+  const rootDirectory =
+    (project ? project.rootDirectory : await inputRootDirectory(autoConfirm)) ||
+    null;
+
+  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+
+  if ((await validateRootDirectory(output, sourcePath)) === false) {
+    return 1;
+  }
+
   const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   let deployStamp = stamp();
@@ -457,7 +471,7 @@ export default async function main(
       output,
       now,
       contextName,
-      [path],
+      [sourcePath],
       createArgs,
       org,
       autoConfirm && !isFile,
@@ -469,6 +483,10 @@ export default async function main(
       deployment.code === 'missing_project_settings'
     ) {
       let { projectSettings, framework } = deployment;
+
+      if (rootDirectory) {
+        projectSettings.rootDirectory = rootDirectory;
+      }
 
       const settings = await editProjectSettings(
         output,
@@ -485,7 +503,7 @@ export default async function main(
         output,
         now,
         contextName,
-        [path],
+        [sourcePath],
         createArgs,
         org,
         !!newProjectName,
