@@ -2468,12 +2468,13 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   await remove(path.join(directory, 'now.json'));
 });
 
-test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID` should fail', async t => {
+test('deploy with unknown `NOW_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
+  const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
     env: {
-      NOW_ORG_ID: 'asdf',
+      NOW_ORG_ID: user.uid,
       NOW_PROJECT_ID: 'asdf',
     },
   });
@@ -2484,9 +2485,10 @@ test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID` should fail', async 
 
 test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
+  const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
-    env: { NOW_ORG_ID: 'asdf' },
+    env: { NOW_ORG_ID: user.uid },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
@@ -2566,6 +2568,52 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
   now.stdin.write('no\n');
 
   t.is(detectedNotice, true, 'did not detect notice');
+});
+
+test('whoami with unknown `NOW_ORG_ID` should error', async t => {
+  const output = await execute(['whoami'], {
+    env: { NOW_ORG_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes('Organization not found'),
+    true,
+    formatOutput(output)
+  );
+});
+
+test('whoami with `NOW_ORG_ID`', async t => {
+  const user = await fetchTokenInformation(token);
+
+  const output = await execute(['whoami', '--scope', 'asdf'], {
+    env: { NOW_ORG_ID: user.uid },
+  });
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes(contextName), true, formatOutput(output));
+});
+
+test('whoami with local .now scope', async t => {
+  const directory = fixture('static-deployment');
+  const user = await fetchTokenInformation(token);
+
+  // create local .now
+  await ensureDir(path.join(directory, '.now'));
+  await fs.writeFile(
+    path.join(directory, '.now', 'project.json'),
+    JSON.stringify({ orgId: user.uid })
+  );
+
+  const output = await execute(['whoami'], {
+    cwd: directory,
+  });
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes(contextName), true, formatOutput(output));
+
+  // clean up
+  await remove(path.join(directory, '.now'));
 });
 
 test.after.always(async () => {
