@@ -269,6 +269,17 @@ export default async function main(
     );
   }
 
+  if (localConfig && localConfig.name) {
+    output.print(
+      `${prependEmoji(
+        `The ${code('name')} property in ${highlight(
+          'now.json'
+        )} is deprecated (https://zeit.ink/5F)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
   // build `env`
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
