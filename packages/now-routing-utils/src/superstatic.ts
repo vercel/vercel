@@ -45,11 +45,10 @@ export function convertCleanUrls(
 
 export function convertRedirects(
   redirects: NowRedirect[],
-  trailingSlash: boolean | undefined,
   defaultStatus = 308
 ): Route[] {
   return redirects.map(r => {
-    const { src, segments } = sourceToRegex(r.source, trailingSlash);
+    const { src, segments } = sourceToRegex(r.source);
     const loc = replaceSegments(segments, r.destination);
     const route: Route = {
       src,
@@ -60,25 +59,19 @@ export function convertRedirects(
   });
 }
 
-export function convertRewrites(
-  rewrites: NowRewrite[],
-  trailingSlash: boolean | undefined
-): Route[] {
+export function convertRewrites(rewrites: NowRewrite[]): Route[] {
   return rewrites.map(r => {
-    const { src, segments } = sourceToRegex(r.source, trailingSlash);
+    const { src, segments } = sourceToRegex(r.source);
     const dest = replaceSegments(segments, r.destination);
     const route: Route = { src, dest, check: true };
     return route;
   });
 }
 
-export function convertHeaders(
-  headers: NowHeader[],
-  trailingSlash: boolean | undefined
-): Route[] {
+export function convertHeaders(headers: NowHeader[]): Route[] {
   return headers.map(h => {
     const obj: { [key: string]: string } = {};
-    const { src, segments } = sourceToRegex(h.source, trailingSlash);
+    const { src, segments } = sourceToRegex(h.source);
     const hasSegments = segments.length > 0;
     const indexes: { [k: string]: string } = {};
 
@@ -127,14 +120,10 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
 }
 
 export function sourceToRegex(
-  source: string,
-  trailingSlash: boolean | undefined
+  source: string
 ): { src: string; segments: string[] } {
   const keys: Key[] = [];
-  const r = pathToRegexp(source, keys, {
-    strict: !trailingSlash,
-    sensitive: true,
-  });
+  const r = pathToRegexp(source, keys, { strict: true });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };
 }
