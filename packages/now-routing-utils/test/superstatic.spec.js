@@ -200,18 +200,14 @@ test('convertRedirects', () => {
       status: 302,
     },
     {
-      status: 308,
-      headers: {
-        Location: 'https://firebase.com/$1',
-      },
       src: '^\\/proxy-regex(?:\\/([a-zA-Z]{1,}))$',
+      headers: { Location: 'https://firebase.com/$1' },
+      status: 308,
     },
     {
-      status: 308,
-      headers: {
-        Location: 'https://firebase.com:8080/$1',
-      },
       src: '^\\/proxy-port(?:\\/([a-zA-Z]{1,}))$',
+      headers: { Location: 'https://firebase.com:8080/$1' },
+      status: 308,
     },
     {
       src: '^\\/projects(?:\\/([^\\/#\\?]+?))(?:\\/([^\\/#\\?]+?))$',
@@ -224,39 +220,29 @@ test('convertRedirects', () => {
       status: 308,
     },
     {
-      headers: {
-        Location: '/catchall/$1/?hello=$1',
-      },
       src: '^\\/catchall(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      headers: { Location: '/catchall/$1/?hello=$1' },
       status: 308,
     },
     {
-      headers: {
-        Location: '/another-catch/$1/?hello=$1',
-      },
       src:
         '^\\/another-catch(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))$',
+      headers: { Location: '/another-catch/$1/?hello=$1' },
       status: 308,
     },
     {
-      headers: {
-        Location: '/feedback/general',
-      },
       src: '^\\/feedback(?:\\/((?!general).*))$',
+      headers: { Location: '/feedback/general' },
       status: 308,
     },
     {
-      status: 308,
-      headers: {
-        Location: '/api/user?id=$1',
-      },
       src: '^\\/catchme(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      headers: { Location: '/api/user?id=$1' },
+      status: 308,
     },
     {
-      headers: {
-        Location: '/something?world=$1#$1',
-      },
       src: '^\\/hello(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?$',
+      headers: { Location: '/something?world=$1#$1' },
       status: 308,
     },
   ];
@@ -346,14 +332,14 @@ test('convertRewrites', () => {
       check: true,
     },
     {
-      check: true,
-      dest: 'https://firebase.com/$1',
       src: '^\\/proxy-regex(?:\\/([a-zA-Z]{1,}))$',
+      dest: 'https://firebase.com/$1',
+      check: true,
     },
     {
-      check: true,
-      dest: 'https://firebase.com:8080/$1',
       src: '^\\/proxy-port(?:\\/([a-zA-Z]{1,}))$',
+      dest: 'https://firebase.com:8080/$1',
+      check: true,
     },
     {
       src: '^\\/projects(?:\\/([^\\/#\\?]+?))\\/edit$',
