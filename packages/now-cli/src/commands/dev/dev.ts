@@ -25,8 +25,6 @@ export default async function dev(
   const listen = parseListen(opts['--listen'] || '3000');
   const debug = opts['--debug'] || false;
 
-  // let devCommand = 'hexo server --port $PORT';
-
   const client = new Client({
     apiUrl: ctx.apiUrl,
     token: ctx.authConfig.token,
