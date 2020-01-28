@@ -8,7 +8,14 @@ import _execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import fs, { writeFile, readFile, remove, copy, ensureDir } from 'fs-extra';
+import fs, {
+  writeFile,
+  readFile,
+  remove,
+  copy,
+  ensureDir,
+  exists,
+} from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -1386,28 +1393,36 @@ test('deploy multiple static files with custom scope', async t => {
   t.is(content.files.length, 3);
 });
 
-test('deploying a file should fail', async t => {
+test('deploying a file should not show prompts and display deprecation', async t => {
   const file = fixture('static-single-file/first.png');
 
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [file, '--public', '--name', session, ...defaultArgs, '--confirm'],
-    {
-      reject: false,
-    }
-  );
+  const output = await execute([file], {
+    reject: false,
+  });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
+  const { stdout, stderr, exitCode } = output;
 
   // Ensure the exit code is right
-  t.is(exitCode, 1);
-  t.true(
-    stderr
-      .trim()
-      .endsWith('The path you are trying to deploy is not a directory.')
+  t.is(exitCode, 0, formatOutput(output));
+  t.true(stderr.includes('Deploying files with ZEIT Now is deprecated'));
+
+  // Ensure `.now` was not created
+  t.is(
+    await exists(path.join(path.dirname(file), '.now')),
+    false,
+    '.now should not exists'
   );
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], 'files');
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'image/png');
+  t.deepEqual(await readFile(file), await response.buffer());
 });
 
 test('deploying more than 1 path should fail', async t => {
@@ -2436,6 +2451,9 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
+
+  // clean up
+  await remove(path.join(directory, 'now.json'));
 });
 
 test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID` should fail', async t => {
