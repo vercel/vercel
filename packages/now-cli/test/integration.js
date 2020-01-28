@@ -209,6 +209,18 @@ test.before(async () => {
   }
 });
 
+test.after.always(async () => {
+  // Make sure the token gets revoked
+  await execa(binaryPath, ['logout', ...defaultArgs]);
+
+  if (!tmpDir) {
+    return;
+  }
+
+  // Remove config directory entirely
+  tmpDir.removeCallback();
+});
+
 test('login', async t => {
   // Delete the current token
   const logoutOutput = await execute(['logout']);
@@ -2556,14 +2568,34 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
   t.is(detectedNotice, true, 'did not detect notice');
 });
 
-test.after.always(async () => {
-  // Make sure the token gets revoked
-  await execa(binaryPath, ['logout', ...defaultArgs]);
+test('use `rootDirectory` from project when deploying', async t => {
+  const directory = fixture('project-root-directory');
 
-  if (!tmpDir) {
-    return;
-  }
+  const firstResult = await execute([directory, '--confirm', '--public']);
+  t.is(firstResult.exitCode, 0, formatOutput(firstResult));
 
-  // Remove config directory entirely
-  tmpDir.removeCallback();
+  const { host: firstHost } = new URL(firstResult.stdout);
+  const response = await apiFetch(`/v12/now/deployments/get?host=${firstHost}`);
+  t.is(response.status).toBe(200);
+  const { projectId } = await response.json();
+  t.is(typeof projectId, 'string', projectId);
+
+  const projectResponse = await apiFetch(`/v2/projects/${projectId}`, {
+    method: 'PATCH',
+    body: {
+      rootDirectory: 'src',
+    },
+  });
+  t.is(projectResponse.status, 200);
+
+  const secondResult = await execute([directory, '--public']);
+  t.is(secondResult.exitCode, 0, formatOutput(secondResult));
+
+  const pageResponse = await fetch(secondResult.stdout);
+  t.is(pageResponse.status, 200);
+  t.regex(await pageResponse.text(), /I am a website/gm);
+
+  await apiFetch(`/v2/projects/${projectId}`, {
+    method: 'DELETE',
+  });
 });
