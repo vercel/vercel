@@ -2419,12 +2419,20 @@ test('whoami with local .now scope', async t => {
 
 test('add DNS records', async t => {
   const domainName = `add-${contextName}.org`;
+  
+  const addRes = await execa(
+    binaryPath,
+    [`domains`, `add`, domainName, ...defaultArgs],
+    { reject: false }
+  );
+
+  t.is(addRes.exitCode, 0, `Couldn't add ${domainName}:\n ${addRes.stderr}`);
 
   const DNSRecordsArgs = {
     // now dns add mydomain.com '@' A 127.0.0.1
     A: ['dns', 'add', domainName, `'@'`, 'A', '127.0.0.1', ...defaultArgs],
     // now dns add mydomain.com test.aaaa AAAA '::1'
-    AAAA: ['dns', 'add', domainName, 'test.aaaa', 'AAAA', `'::1'`, ...defaultArgs],
+    AAAA: ['dns', 'add', domainName, 'test.aaaa', 'AAAA', `::1`, ...defaultArgs], // X
     // now dns add mydomain.com test.alias ALIAS alias.zeit.co
     ALIAS: ['dns', 'add', domainName, 'test.alias', 'ALIAS', 'alias.zeit.co', ...defaultArgs],
     // now dns add mydomain.com test.cname CNAME alias.zeit.co
@@ -2432,17 +2440,17 @@ test('add DNS records', async t => {
     // now dns add mydomain.com '@' TXT testtxtrecord
     TXT: ['dns', 'add', domainName, `'@'`, 'TXT', 'testtxtrecord', ...defaultArgs],
     // now dns add mydomain.com test.caa CAA '0 issue "zeit.co"'
-    CAA: ['dns', 'add', domainName, `'test.caa'`, 'CAA', `'0 issue "zeit.co"'`, ...defaultArgs],
+    CAA: ['dns', 'add', domainName, `test.caa`, 'CAA', `'0 issue letsencrypt.org'`, ...defaultArgs], // X
     // now dns add mydomain.com test.srv SRV 0 0 443 autodiscover.hostingprovider.com
     SRV: ['dns', 'add', domainName, `test.srv`, 'SRV', '0', '0', '443', `zeit.party`, ...defaultArgs],
   }
 
   Object.keys(DNSRecordsArgs).map(async type => {
-    const { stdout, exitCode } = await execa(binaryPath, DNSRecordsArgs[type], {
+    const { stdout, stderr, exitCode } = await execa(binaryPath, DNSRecordsArgs[type], {
       reject: false,
     });
-
-    t.is(exitCode, 0);
+    
+    t.is(exitCode, 0, `Received:\n${stderr}\n${stdout}`);
     t.true(stdout.includes(`DNS record for domain`));
   })
   
@@ -2452,12 +2460,21 @@ test('add DNS records', async t => {
     [`domains`, `rm`, domainName, ...defaultArgs],
     { reject: false, input: 'y' }
   );
-  t.is(rmRes.exitCode, 0);
+
+  t.is(rmRes.exitCode, 0, `Couldn't remove ${domainName}:\n ${rmRes.stderr}`);
 });
 
 // now dns mydomain.com fail.mydomain.com <TYPE> 127.0.0.1
 test('prompt user when attempting to add DNS record with domain on name', async t => {
   const domainName = `add-${contextName}.org`;
+
+  const addRes = await execa(
+    binaryPath,
+    [`domains`, `add`, domainName, ...defaultArgs],
+    { reject: false }
+  );
+
+  t.is(addRes.exitCode, 0, `Couldn't add ${domainName}:\n ${addRes.stderr}`);
 
   const DNSRecordsArgs = {
     'example.com': ['dns', 'add', domainName, `${domainName}`, 'A', '127.0.0.1', ...defaultArgs],
@@ -2465,12 +2482,20 @@ test('prompt user when attempting to add DNS record with domain on name', async 
   };
 
   Object.keys(DNSRecordsArgs).map(async type => {
-    const { stdout, exitCode } = await execa(binaryPath, DNSRecordsArgs[type], {
-      reject: false,
-      input: 'n',
-    });
+    const { stdout, stderr, exitCode } = await execa(
+      binaryPath,
+      DNSRecordsArgs[type],
+      {
+        reject: false,
+        input: 'n',
+      }
+    );
 
-    t.is(exitCode, 1);
+    console.log(stderr);
+    console.log(stdout);
+    console.log(exitCode);
+
+    t.is(exitCode, 1, `Received:\n${stderr}\n${stdout}`);
     t.true(stdout.includes(`Do you want to create this record on`));
   });
 
@@ -2479,7 +2504,8 @@ test('prompt user when attempting to add DNS record with domain on name', async 
     [`domains`, `rm`, domainName, ...defaultArgs],
     { reject: false, input: 'y' }
   );
-  t.is(rmRes.exitCode, 0);
+
+  t.is(rmRes.exitCode, 0, `Couldn't remove ${domainName}:\n ${rmRes.stderr}`);
 });
 
 test.after.always(async () => {
