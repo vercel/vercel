@@ -2284,6 +2284,18 @@ test('should show prompts to set up project', async t => {
   // Ensure .gitignore is created
   t.is((await readFile(path.join(directory, '.gitignore'))).toString(), '.now');
 
+  // Ensure .now/project.json and .now/README.txt are created
+  t.is(
+    await exists(path.join(directory, '.now', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(directory, '.now', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+
   // Send a test request to the deployment
   const response = await fetch(new URL(output.stdout).href);
   const text = await response.text();
