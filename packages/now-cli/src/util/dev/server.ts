@@ -886,12 +886,11 @@ export default class DevServer {
       new Promise(resolve => {
         if (!this.devProcess) {
           resolve();
+          return;
         }
 
-        if (this.devProcess) {
-          this.devProcess.on('exit', () => resolve());
-          process.kill(this.devProcess.pid, exitCode);
-        }
+        this.devProcess.on('exit', () => resolve());
+        process.kill(this.devProcess.pid, exitCode);
       })
     );
 
