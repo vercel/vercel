@@ -96,7 +96,6 @@ export const latestHelp = () => `
 `;
 
 export const latestArgs = {
-  '--name': String,
   '--force': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
@@ -107,10 +106,8 @@ export const latestArgs = {
   // This is not an array in favor of matching
   // the config property name.
   '--regions': String,
-  '--target': String,
   '--prod': Boolean,
   '--confirm': Boolean,
-  '-n': '--name',
   '-f': '--force',
   '-p': '--public',
   '-e': '--env',
@@ -118,6 +115,11 @@ export const latestArgs = {
   '-C': '--no-clipboard',
   '-m': '--meta',
   '-c': '--confirm',
+
+  // deprecated
+  '--name': String,
+  '-n': '--name',
+  '--target': String,
 };
 
 export const legacyArgsMri = {
