@@ -17,8 +17,8 @@
     "prepublishOnly": "./build.sh"
   },
   "dependencies": {
-    "@now/frameworks": "^0.0.7",
-    "@now/routing-utils": "^1.5.2-canary.2"
+    "@now/frameworks": "0.0.7-canary.0",
+    "@now/routing-utils": "1.5.2-canary.3"
   },
   "devDependencies": {
     "@iarna/toml": "2.2.3",
