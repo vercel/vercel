@@ -90,7 +90,8 @@ const printDeploymentStatus = async (
   },
   deployStamp,
   isClipboardEnabled,
-  quiet
+  quiet,
+  isFile
 ) => {
   const isProdDeployment = target === 'production';
 
@@ -113,7 +114,7 @@ const printDeploymentStatus = async (
     // print preview/production url
     let previewUrl;
     let isWildcard;
-    if (Array.isArray(aliasList) && aliasList.length > 0) {
+    if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
       // search for a non now.sh/non wildcard domain
       // but fallback to the first alias in the list
       const mainAlias =
@@ -594,7 +595,8 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    quiet
+    quiet,
+    isFile
   );
 }
 
