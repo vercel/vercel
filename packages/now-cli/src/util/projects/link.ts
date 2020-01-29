@@ -62,12 +62,18 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
 
 export async function getLinkedOrg(
   client: Client,
+  output: Output,
   path?: string
-): Promise<Org | null> {
-  let orgId: string | null = null;
+): Promise<
+  | { status: 'linked'; org: Org }
+  | { status: 'not_linked'; org: null }
+  | { status: 'error'; exitCode: number }
+> {
+  const { NOW_ORG_ID } = process.env;
 
-  if (process.env.NOW_ORG_ID) {
-    orgId = process.env.NOW_ORG_ID;
+  let orgId: string | null = null;
+  if (NOW_ORG_ID) {
+    orgId = NOW_ORG_ID;
   } else {
     const link = await getLink(path);
 
@@ -77,13 +83,27 @@ export async function getLinkedOrg(
   }
 
   if (!orgId) {
-    return null;
+    return { status: 'not_linked', org: null };
   }
 
   const spinner = wait('Retrieving scope…', 1000);
   try {
     const org = await getOrgById(client, orgId);
-    return org;
+
+    if (!org && NOW_ORG_ID) {
+      output.print(
+        `${chalk.red('Error!')} Organization not found (${JSON.stringify({
+          NOW_ORG_ID,
+        })})\n`
+      );
+      return { status: 'error', exitCode: 1 };
+    }
+
+    if (!org) {
+      return { status: 'not_linked', org: null };
+    }
+
+    return { status: 'linked', org };
   } finally {
     spinner();
   }
@@ -93,15 +113,32 @@ export async function getLinkedProject(
   output: Output,
   client: Client,
   path?: string
-): Promise<[Org | null, Project | null]> {
+): Promise<
+  | { status: 'linked'; org: Org; project: Project }
+  | { status: 'not_linked'; org: null; project: null }
+  | { status: 'error'; exitCode: number }
+> {
   const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+  const shouldUseEnv = Boolean(NOW_ORG_ID && NOW_PROJECT_ID);
+
+  if ((NOW_ORG_ID || NOW_PROJECT_ID) && !shouldUseEnv) {
+    output.print(
+      `${chalk.red('Error!')} You specified ${
+        NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
+      } but you forgot to specify ${
+        NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
+      }. You need to specify both to deploy to a custom project.\n`
+    );
+    return { status: 'error', exitCode: 1 };
+  }
+
   const link =
     NOW_ORG_ID && NOW_PROJECT_ID
       ? { orgId: NOW_ORG_ID, projectId: NOW_PROJECT_ID }
       : await getLink(path);
 
   if (!link) {
-    return [null, null];
+    return { status: 'not_linked', org: null, project: null };
   }
 
   const spinner = wait('Retrieving project…', 1000);
@@ -116,8 +153,16 @@ export async function getLinkedProject(
     spinner();
   }
 
-  if (project instanceof ProjectNotFound || org === null) {
-    if (!(NOW_ORG_ID && NOW_PROJECT_ID)) {
+  if (!org || !project || project instanceof ProjectNotFound) {
+    if (shouldUseEnv) {
+      output.print(
+        `${chalk.red('Error!')} Project not found (${JSON.stringify({
+          NOW_PROJECT_ID,
+          NOW_ORG_ID,
+        })})\n`
+      );
+      return { status: 'error', exitCode: 1 };
+    } else {
       output.print(
         prependEmoji(
           'Your project was either removed from ZEIT Now or you’re not a member of it anymore.\n',
@@ -126,10 +171,10 @@ export async function getLinkedProject(
       );
     }
 
-    return [null, null];
+    return { status: 'not_linked', org: null, project: null };
   }
 
-  return [org, project];
+  return { status: 'linked', org, project };
 }
 
 export async function linkFolderToProject(
@@ -139,6 +184,22 @@ export async function linkFolderToProject(
   projectName: string,
   orgSlug: string
 ) {
+  // if NOW_ORG_ID or NOW_PROJECT_ID are used, we skip linking
+  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+  if (NOW_ORG_ID || NOW_PROJECT_ID) {
+    return;
+  }
+
+  // if the project is already linked, we skip linking
+  const link = await getLink(path);
+  if (
+    link &&
+    link.orgId === projectLink.orgId &&
+    link.projectId === projectLink.projectId
+  ) {
+    return;
+  }
+
   try {
     await ensureDir(join(path, NOW_FOLDER));
   } catch (error) {

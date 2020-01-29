@@ -90,7 +90,8 @@ const printDeploymentStatus = async (
   },
   deployStamp,
   isClipboardEnabled,
-  quiet
+  quiet,
+  isFile
 ) => {
   const isProdDeployment = target === 'production';
 
@@ -113,7 +114,7 @@ const printDeploymentStatus = async (
     // print preview/production url
     let previewUrl;
     let isWildcard;
-    if (Array.isArray(aliasList) && aliasList.length > 0) {
+    if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
       // search for a non now.sh/non wildcard domain
       // but fallback to the first alias in the list
       const mainAlias =
@@ -234,19 +235,6 @@ export default async function main(
   const { isFile, path } = pathValidation;
   const autoConfirm = argv['--confirm'] || isFile;
 
-  // check env variables options
-  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
-  if ((NOW_ORG_ID && !NOW_PROJECT_ID) || (!NOW_ORG_ID && NOW_PROJECT_ID)) {
-    output.print(
-      `${chalk.red('Error!')} You specified ${
-        NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
-      } but you forgot to specify ${
-        NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
-      }. You need to specify both to deploy to a custom project.\n`
-    );
-    return 1;
-  }
-
   // build `meta`
   const meta = Object.assign(
     {},
@@ -362,21 +350,16 @@ export default async function main(
   });
 
   // retrieve `project` and `org` from .now
-  let [org, project] = await getLinkedProject(output, client, path);
+  const link = await getLinkedProject(output, client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
   let newProjectName = null;
 
-  if (!org || !project) {
-    const { NOW_PROJECT_ID, NOW_ORG_ID } = process.env;
-    if (NOW_PROJECT_ID && NOW_ORG_ID) {
-      output.print(
-        `${chalk.red('Error!')} Project not found (${JSON.stringify({
-          NOW_PROJECT_ID,
-          NOW_ORG_ID,
-        })})\n`
-      );
-      return 1;
-    }
-
+  if (status === 'not_linked') {
     const shouldStartSetup =
       autoConfirm ||
       (await confirm(
@@ -427,6 +410,7 @@ export default async function main(
         project.name,
         org.slug
       );
+      status = 'linked';
     }
   }
 
@@ -460,8 +444,7 @@ export default async function main(
       [path],
       createArgs,
       org,
-      autoConfirm && !isFile,
-      !!newProjectName
+      !project && !isFile
     );
 
     if (
@@ -488,7 +471,6 @@ export default async function main(
         [path],
         createArgs,
         org,
-        !!newProjectName,
         false
       );
     }
@@ -613,7 +595,8 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    quiet
+    quiet,
+    isFile
   );
 }
 
