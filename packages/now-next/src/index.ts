@@ -354,7 +354,7 @@ export const build = async ({
           headers.push(...convertHeaders(routesManifest.headers));
         }
 
-        if (routesManifest.page404) {
+        if (routesManifest.pages404) {
           hasPages404 = true;
         }
 
