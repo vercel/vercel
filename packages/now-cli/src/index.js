@@ -519,29 +519,17 @@ const main = async argv_ => {
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
-  // overwrite scope with `NOW_ORG_ID` if defined
-  const { NOW_ORG_ID } = process.env;
-  if (NOW_ORG_ID) {
+  if (process.env.NOW_ORG_ID || !scope) {
     const client = new Client({ apiUrl, token });
-    const org = await getLinkedOrg(client);
+    const link = await getLinkedOrg(client, output);
 
-    if (!org) {
-      output.print(
-        `${chalk.red('Error!')} Organization not found (${JSON.stringify({
-          NOW_ORG_ID,
-        })})\n`
-      );
-      return 1;
+    if (link.status === 'error') {
+      return link.exitCode;
     }
 
-    scope = org.slug;
-  }
-
-  // use local `.now` scope if not explicitly specified
-  if (!scope) {
-    const client = new Client({ apiUrl, token });
-    const org = await getLinkedOrg(client);
-    scope = org ? org.slug : undefined;
+    if (link.status === 'linked') {
+      scope = link.org.slug;
+    }
   }
 
   const targetCommand = commands.get(subcommand);
