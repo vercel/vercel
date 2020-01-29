@@ -5,5 +5,5 @@
       "runtime": "@now/ruby@1.0.1"
     }
   },
-  "probes": [{ "path": "/", "mustContain": "gem:RANDOMNESS_PLACEHOLDER" }]
+  "probes": [{ "path": "/api", "mustContain": "gem:RANDOMNESS_PLACEHOLDER" }]
 }
