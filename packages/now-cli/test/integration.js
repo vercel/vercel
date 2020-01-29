@@ -2530,7 +2530,7 @@ test('prompt user when attempting to add DNS record with domain on name', async 
   };
 
   Object.keys(DNSRecordsArgs).map(async format => {
-    const { stdout, stderr, exitCode } = await execa(
+    const { stderr, exitCode } = await execa(
       binaryPath,
       DNSRecordsArgs[format],
       {
