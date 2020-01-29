@@ -118,7 +118,7 @@ export async function* checkDeploymentStatus(
           ...deploymentUpdate,
           message:
             deploymentUpdate.message ||
-            'A deployment error has occurred. Please check the build logs for detalis.',
+            'A deployment error has occurred. Please check the build logs for details.',
         },
       };
     }
