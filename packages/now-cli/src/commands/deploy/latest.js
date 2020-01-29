@@ -444,7 +444,7 @@ export default async function main(
       createArgs,
       org,
       status === 'not_linked',
-      !project
+      !project && !isFile
     );
 
     if (

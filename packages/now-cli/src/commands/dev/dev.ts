@@ -50,7 +50,7 @@ export default async function dev(
         'Error!'
       )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
         'now'
-      )} to link it.`
+      )} to link it.\n`
     );
     return 1;
   }
