@@ -27,12 +27,11 @@ function execa(file, args, options) {
   return _execa(file, args, options);
 }
 
+const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
-const session = Math.random()
-  .toString(36)
-  .split('.')[1];
+let session = 'temp-session';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -176,32 +175,37 @@ const getDeploymentBuildsByUrl = async url => {
   return builds;
 };
 
+const createUser = async () => {
+  await retry(
+    async () => {
+      const location = getConfigPath();
+      const url = Buffer.from(str, 'base64').toString();
+      token = await fetchTokenWithRetry(url);
+
+      if (!fs.existsSync(location)) {
+        await createDirectory(location);
+      }
+
+      await fs.writeJSON(getConfigAuthPath(), { token });
+
+      const user = await fetchTokenInformation(token);
+
+      email = user.email;
+      contextName = user.email.split('@')[0];
+      session = Math.random()
+        .toString(36)
+        .split('.')[1];
+    },
+    { retries: 3, factor: 1 }
+  );
+};
+
+const getConfigPath = () => path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+const getConfigAuthPath = () => path.join(getConfigPath(), 'auth.json');
+
 test.before(async () => {
   try {
-    await retry(
-      async () => {
-        const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-        const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-        const url = Buffer.from(str, 'base64').toString();
-        token = await fetchTokenWithRetry(url);
-
-        if (!fs.existsSync(location)) {
-          await createDirectory(location);
-        }
-
-        await writeFile(
-          path.join(location, `auth.json`),
-          JSON.stringify({ token })
-        );
-
-        const user = await fetchTokenInformation(token);
-
-        email = user.email;
-        contextName = user.email.split('@')[0];
-      },
-      { retries: 3, factor: 1 }
-    );
-
+    await createUser();
     await prepareFixtures(contextName);
   } catch (err) {
     console.log('Failed `test.before`');
@@ -228,8 +232,7 @@ test('login', async t => {
   );
 
   // Save the new token
-  const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-  const auth = JSON.parse(await readFile(path.join(location, 'auth.json')));
+  const auth = await fs.readJSON(getConfigAuthPath());
 
   token = auth.token;
 
@@ -2015,6 +2018,32 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
   const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('change user', async t => {
+  const { stdout: prevUser } = await execute(['whoami']);
+
+  // Delete the current token
+  const logoutOutput = await execute(['logout']);
+  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
+
+  await createUser();
+
+  const loginOutput = await execute(['login', email]);
+  t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
+
+  const auth = await fs.readJSON(getConfigAuthPath());
+
+  token = auth.token;
+
+  const { stdout: nextUser } = await execute(['whoami']);
+
+  console.log('prev user', prevUser);
+  console.log('next user', nextUser);
+
+  t.is(typeof prevUser, 'string', prevUser);
+  t.is(typeof nextUser, 'string', nextUser);
+  t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
 });
 
 test('should show prompts to set up project', async t => {
