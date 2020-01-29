@@ -443,7 +443,6 @@ export default async function main(
       [path],
       createArgs,
       org,
-      status === 'not_linked',
       !project && !isFile
     );
 
@@ -471,7 +470,6 @@ export default async function main(
         [path],
         createArgs,
         org,
-        status === 'not_linked',
         false
       );
     }

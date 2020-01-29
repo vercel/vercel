@@ -70,7 +70,6 @@ export default class Now extends EventEmitter {
       skipAutoDetectionConfirmation,
     },
     org,
-    shouldLinkFolder,
     isSettingUpProject
   ) {
     const opts = { output: this._output, hasNowJson };
@@ -182,7 +181,6 @@ export default class Now extends EventEmitter {
       force: forceNew,
       org,
       projectName: name,
-      shouldLinkFolder,
       isSettingUpProject,
       skipAutoDetectionConfirmation,
     });

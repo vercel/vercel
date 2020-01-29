@@ -184,6 +184,22 @@ export async function linkFolderToProject(
   projectName: string,
   orgSlug: string
 ) {
+  // if NOW_ORG_ID or NOW_PROJECT_ID are used, we skip linking
+  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+  if (NOW_ORG_ID || NOW_PROJECT_ID) {
+    return;
+  }
+
+  // if the project is already linked, we skip linking
+  const link = await getLink(path);
+  if (
+    link &&
+    link.orgId === projectLink.orgId &&
+    link.projectId === projectLink.projectId
+  ) {
+    return;
+  }
+
   try {
     await ensureDir(join(path, NOW_FOLDER));
   } catch (error) {

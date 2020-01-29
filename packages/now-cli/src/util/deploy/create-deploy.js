@@ -11,17 +11,10 @@ export default async function createDeploy(
   paths,
   createArgs,
   org,
-  shouldLinkFolder,
   isSettingUpProject
 ) {
   try {
-    return await now.create(
-      paths,
-      createArgs,
-      org,
-      shouldLinkFolder,
-      isSettingUpProject
-    );
+    return await now.create(paths, createArgs, org, isSettingUpProject);
   } catch (error) {
     if (error.code === 'rate_limited') {
       throw new ERRORS_TS.DeploymentsRateLimited(error.message);
@@ -104,7 +97,6 @@ export default async function createDeploy(
         paths,
         createArgs,
         org,
-        shouldLinkFolder,
         isSettingUpProject
       );
     }

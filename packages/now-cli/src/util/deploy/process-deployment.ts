@@ -51,7 +51,6 @@ export default async function processDeployment({
   isLegacy,
   org,
   projectName,
-  shouldLinkFolder,
   isSettingUpProject,
   skipAutoDetectionConfirmation,
   ...args
@@ -69,7 +68,6 @@ export default async function processDeployment({
   force?: boolean;
   org: Org;
   projectName: string;
-  shouldLinkFolder: boolean;
   isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
 }) {
@@ -167,18 +165,16 @@ export default async function processDeployment({
 
       now._host = event.payload.url;
 
-      if (shouldLinkFolder) {
-        await linkFolderToProject(
-          output,
-          paths[0],
-          {
-            orgId: org.id,
-            projectId: event.payload.projectId,
-          },
-          projectName,
-          org.slug
-        );
-      }
+      await linkFolderToProject(
+        output,
+        paths[0],
+        {
+          orgId: org.id,
+          projectId: event.payload.projectId,
+        },
+        projectName,
+        org.slug
+      );
 
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
