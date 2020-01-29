@@ -121,7 +121,7 @@ export async function getLinkedProject(
   const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
   const shouldUseEnv = Boolean(NOW_ORG_ID && NOW_PROJECT_ID);
 
-  if ((NOW_ORG_ID || NOW_ORG_ID) && !shouldUseEnv) {
+  if ((NOW_ORG_ID || NOW_PROJECT_ID) && !shouldUseEnv) {
     output.print(
       `${chalk.red('Error!')} You specified ${
         NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
