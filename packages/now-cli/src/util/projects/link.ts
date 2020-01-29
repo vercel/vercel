@@ -62,12 +62,18 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
 
 export async function getLinkedOrg(
   client: Client,
+  output: Output,
   path?: string
-): Promise<Org | null> {
-  let orgId: string | null = null;
+): Promise<
+  | { status: 'linked'; org: Org }
+  | { status: 'not_linked'; org: null }
+  | { status: 'error'; exitCode: number }
+> {
+  const { NOW_ORG_ID } = process.env;
 
-  if (process.env.NOW_ORG_ID) {
-    orgId = process.env.NOW_ORG_ID;
+  let orgId: string | null = null;
+  if (NOW_ORG_ID) {
+    orgId = NOW_ORG_ID;
   } else {
     const link = await getLink(path);
 
@@ -77,13 +83,27 @@ export async function getLinkedOrg(
   }
 
   if (!orgId) {
-    return null;
+    return { status: 'not_linked', org: null };
   }
 
   const spinner = wait('Retrieving scope…', 1000);
   try {
     const org = await getOrgById(client, orgId);
-    return org;
+
+    if (!org && NOW_ORG_ID) {
+      output.print(
+        `${chalk.red('Error!')} Organization not found (${JSON.stringify({
+          NOW_ORG_ID,
+        })})\n`
+      );
+      return { status: 'error', exitCode: 1 };
+    }
+
+    if (!org) {
+      return { status: 'not_linked', org: null };
+    }
+
+    return { status: 'linked', org };
   } finally {
     spinner();
   }
@@ -99,8 +119,9 @@ export async function getLinkedProject(
   | { status: 'error'; exitCode: number }
 > {
   const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+  const shouldUseEnv = Boolean(NOW_ORG_ID && NOW_PROJECT_ID);
 
-  if ((NOW_ORG_ID && !NOW_PROJECT_ID) || (!NOW_ORG_ID && NOW_PROJECT_ID)) {
+  if ((NOW_ORG_ID || NOW_ORG_ID) && !shouldUseEnv) {
     output.print(
       `${chalk.red('Error!')} You specified ${
         NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
@@ -117,16 +138,6 @@ export async function getLinkedProject(
       : await getLink(path);
 
   if (!link) {
-    if (NOW_PROJECT_ID && NOW_ORG_ID) {
-      output.print(
-        `${chalk.red('Error!')} Project not found (${JSON.stringify({
-          NOW_PROJECT_ID,
-          NOW_ORG_ID,
-        })})\n`
-      );
-      return { status: 'error', exitCode: 1 };
-    }
-
     return { status: 'not_linked', org: null, project: null };
   }
 
@@ -143,7 +154,15 @@ export async function getLinkedProject(
   }
 
   if (!org || !project || project instanceof ProjectNotFound) {
-    if (!(NOW_ORG_ID && NOW_PROJECT_ID)) {
+    if (shouldUseEnv) {
+      output.print(
+        `${chalk.red('Error!')} Project not found (${JSON.stringify({
+          NOW_PROJECT_ID,
+          NOW_ORG_ID,
+        })})\n`
+      );
+      return { status: 'error', exitCode: 1 };
+    } else {
       output.print(
         prependEmoji(
           'Your project was either removed from ZEIT Now or you’re not a member of it anymore.\n',
