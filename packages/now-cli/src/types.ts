@@ -224,6 +224,7 @@ export interface Project {
   createdAt: number;
   devCommand?: string | null;
   framework?: string | null;
+  rootDirectory?: string | null;
 }
 
 export interface Org {
