@@ -109,6 +109,7 @@ function validateResponseHeaders(t, res) {
 async function exec(directory, args = []) {
   return execa(binaryPath, ['dev', directory, ...args], {
     reject: false,
+    env: { __NOW_SKIP_DEV_COMMAND: 1 },
   });
 }
 
@@ -161,6 +162,7 @@ async function testFixture(directory, opts = {}, args = []) {
       detached: true,
       stdio: 'pipe',
       ...opts,
+      env: { ...opts.env, __NOW_SKIP_DEV_COMMAND: 1 },
     }
   );
 
