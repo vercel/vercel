@@ -23,7 +23,7 @@ export default async function editProjectSettings(
   framework: Framework | null
 ) {
   // create new settings object filled with "null" values
-  const settings: Partial<ProjectSettings> = {};
+  const settings: Partial<ProjectSettings> = { ...projectSettings };
 
   for (let field of fields) {
     settings[field.value] =
