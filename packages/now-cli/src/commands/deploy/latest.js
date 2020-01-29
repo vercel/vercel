@@ -247,6 +247,27 @@ export default async function main(
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
   }
 
+  // deprecate --name
+  if (argv['--name']) {
+    output.print(
+      `${prependEmoji(
+        `The ${param('--name')} flag is deprecated (https://zeit.ink/1B)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
+  if (localConfig && localConfig.name) {
+    output.print(
+      `${prependEmoji(
+        `The ${code('name')} property in ${highlight(
+          'now.json'
+        )} is deprecated (https://zeit.ink/5F)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
   // build `env`
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
