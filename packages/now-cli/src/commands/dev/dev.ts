@@ -44,7 +44,7 @@ export default async function dev(
     return link.exitCode;
   }
 
-  if (link.status === 'not_linked') {
+  if (link.status === 'not_linked' && !process.env.__NOW_SKIP_DEV_COMMAND) {
     output.print(
       `${chalk.red(
         'Error!'

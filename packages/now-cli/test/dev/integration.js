@@ -223,7 +223,9 @@ function testFixtureStdio(directory, fn) {
       let stderr = '';
       let printedOutput = false;
 
-      dev = execa(binaryPath, ['dev', dir, '-l', port]);
+      dev = execa(binaryPath, ['dev', dir, '-l', port], {
+        env: { __NOW_SKIP_DEV_COMMAND: 1 },
+      });
 
       dev.stdout.on('data', data => {
         stdoutList.push(data);
