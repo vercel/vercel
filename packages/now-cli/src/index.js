@@ -527,7 +527,7 @@ const main = async argv_ => {
       return link.exitCode;
     }
 
-    if (process.status === 'linked') {
+    if (link.status === 'linked') {
       scope = link.org.slug;
     }
   }
