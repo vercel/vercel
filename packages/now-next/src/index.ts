@@ -340,6 +340,8 @@ export const build = async ({
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
   let nextBasePath: string | undefined;
+  // whether they have enabled pages/404.js as the custom 404 page
+  let hasPages404 = false;
 
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -350,6 +352,10 @@ export const build = async ({
 
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
+        }
+
+        if (routesManifest.page404) {
+          hasPages404 = true;
         }
 
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
@@ -624,6 +630,10 @@ export const build = async ({
       }
 
       const staticRoute = path.join(entryDirectory, pathname);
+
+      // don't add the 404 route itself as we will use _errors/404 instead
+      if (hasPages404 && staticRoute === '/404') return;
+
       staticPages[staticRoute] = staticPageFiles[page];
       staticPages[staticRoute].contentType = htmlContentType;
 
@@ -781,8 +791,12 @@ export const build = async ({
           return;
         }
 
-        // Don't create _error lambda if we have a static 404 page
-        if (staticPages['_errors/404'] && page === '_error.js') {
+        // Don't create _error lambda if we have a static 404 page or
+        // pages404 is enabled and 404.js is present
+        if (
+          page === '_error.js' &&
+          (staticPages['_errors/404'] || (hasPages404 && pages['404.js']))
+        ) {
           return;
         }
 
@@ -811,10 +825,14 @@ export const build = async ({
           config,
         });
 
+        // rename 404 lambda to __404 so it's visitable at /404
+        const outputName =
+          hasPages404 && page === '404.js'
+            ? '__404'
+            : path.join(entryDirectory, pathname);
+
         if (requiresTracing) {
-          lambdas[
-            path.join(entryDirectory, pathname)
-          ] = await createLambdaFromPseudoLayers({
+          lambdas[outputName] = await createLambdaFromPseudoLayers({
             files: {
               ...launcherFiles,
               [requiresTracing ? pageFileName : 'page.js']: pages[page],
@@ -825,7 +843,7 @@ export const build = async ({
             ...lambdaOptions,
           });
         } else {
-          lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+          lambdas[outputName] = await createLambda({
             files: {
               ...launcherFiles,
               ...assets,
@@ -1051,7 +1069,13 @@ export const build = async ({
               dest: path.join(
                 '/',
                 entryDirectory,
-                staticPages['_errors/404'] ? '_errors/404' : '_error'
+                staticPages['_errors/404']
+                  ? '_errors/404'
+                  : // if _errors/404 is not present but we have pages/404.js
+                  // it is a lambda due to _app getInitialProps
+                  hasPages404
+                  ? '__404'
+                  : '_error'
               ),
               status: 404,
             },
