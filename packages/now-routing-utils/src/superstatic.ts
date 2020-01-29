@@ -123,7 +123,11 @@ export function sourceToRegex(
   source: string
 ): { src: string; segments: string[] } {
   const keys: Key[] = [];
-  const r = pathToRegexp(source, keys, { strict: true });
+  const r = pathToRegexp(source, keys, {
+    strict: true,
+    sensitive: true,
+    delimiter: '/',
+  });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };
 }
@@ -143,7 +147,7 @@ function replaceSegments(segments: string[], destination: string): string {
       indexes[name] = toSegmentDest(index);
     });
 
-    if (destination.includes(':')) {
+    if (destination.includes(':') && segments.length > 0) {
       const pathnameCompiler = compile(pathname);
       const hashCompiler = compile(hash);
       pathname = pathnameCompiler(indexes);

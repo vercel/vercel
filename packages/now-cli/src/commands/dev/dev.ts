@@ -1,4 +1,5 @@
 import path from 'path';
+import chalk from 'chalk';
 
 import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
@@ -8,6 +9,7 @@ import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
+import cmd from '../../util/output/cmd';
 
 type Options = {
   '--debug'?: boolean;
@@ -33,13 +35,30 @@ export default async function dev(
   });
 
   // retrieve dev command
-  const [[, project], frameworks] = await Promise.all([
+  const [link, frameworks] = await Promise.all([
     getLinkedProject(output, client, cwd),
     getFrameworks(),
   ]);
 
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  if (link.status === 'not_linked' && !process.env.__NOW_SKIP_DEV_COMMAND) {
+    output.print(
+      `${chalk.red(
+        'Error!'
+      )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
+        'now'
+      )} to link it.\n`
+    );
+    return 1;
+  }
+
   let devCommand: undefined | string;
-  if (project) {
+  if (link.status === 'linked') {
+    const { project } = link;
+
     if (project.devCommand) {
       devCommand = project.devCommand;
     } else if (project.framework) {
