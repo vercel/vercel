@@ -144,7 +144,7 @@ async function run({ output, token, contextName, currentTeam }) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${plural('secret', list.length, true)} found under ${chalk.bold(
+      `${plural('secret', list.length, true)} found under ${chalk.bold(
         contextName
       )} ${chalk.gray(`[${elapsed}]`)}`
     );
@@ -195,16 +195,22 @@ async function run({ output, token, contextName, currentTeam }) {
         return exit(0);
       }
     } else {
-      console.error(error(`No secret found by name "${args[0]}"`));
+      console.error(
+        error(
+          `No secret found by name "${args[0]}" under ${chalk.bold(
+            contextName
+          )}`
+        )
+      );
       return exit(1);
     }
 
     const secret = await secrets.rm(args[0]);
     const elapsed = ms(new Date() - start);
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+      `${chalk.cyan('Success!')} Secret ${chalk.bold(
         secret.name
-      )} removed ${chalk.gray(`[${elapsed}]`)}`
+      )} under ${chalk.bold(contextName)} removed ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
@@ -223,9 +229,11 @@ async function run({ output, token, contextName, currentTeam }) {
     const secret = await secrets.rename(args[0], args[1]);
     const elapsed = ms(new Date() - start);
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+      `${chalk.cyan('Success!')} Secret ${chalk.bold(
         secret.oldName
-      )} renamed to ${chalk.bold(args[1])} ${chalk.gray(`[${elapsed}]`)}`
+      )} renamed to ${chalk.bold(args[1])} under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
@@ -243,7 +251,7 @@ async function run({ output, token, contextName, currentTeam }) {
       if (args.length > 2) {
         const example = chalk.cyan(`$ now secret add -- "${args[0]}"`);
         console.log(
-          `> If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
+          `If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
         );
       }
 
@@ -259,9 +267,9 @@ async function run({ output, token, contextName, currentTeam }) {
     }
 
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+      `${chalk.cyan('Success!')} Secret ${chalk.bold(
         name.toLowerCase()
-      )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
+      )} added under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
@@ -286,13 +294,11 @@ function readConfirmation(secret) {
       hsep: ' '.repeat(6),
     });
 
-    process.stdout.write(
-      '> The following secret will be removed permanently\n'
-    );
+    process.stdout.write('The following secret will be removed permanently\n');
     process.stdout.write(`  ${tbl}\n`);
 
     process.stdout.write(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('Are you sure?')} ${chalk.gray('[y/N] ')}`
     );
 
     process.stdin
