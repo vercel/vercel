@@ -52,7 +52,7 @@ export default async function processDeployment({
   org,
   projectName,
   shouldLinkFolder,
-  isDetectingFramework,
+  isSettingUpProject,
   skipAutoDetectionConfirmation,
   ...args
 }: {
@@ -70,7 +70,7 @@ export default async function processDeployment({
   org: Org;
   projectName: string;
   shouldLinkFolder: boolean;
-  isDetectingFramework: boolean;
+  isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
 }) {
   if (isLegacy) return processLegacyDeployment(args);
@@ -107,7 +107,7 @@ export default async function processDeployment({
   let deploySpinner = null;
 
   let deployingSpinner = wait(
-    isDetectingFramework
+    isSettingUpProject
       ? `Setting up project`
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
     0

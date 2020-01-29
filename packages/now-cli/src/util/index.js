@@ -71,7 +71,7 @@ export default class Now extends EventEmitter {
     },
     org,
     shouldLinkFolder,
-    isDetectingFramework
+    isSettingUpProject
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn } = this._output;
@@ -183,7 +183,7 @@ export default class Now extends EventEmitter {
       org,
       projectName: name,
       shouldLinkFolder,
-      isDetectingFramework,
+      isSettingUpProject,
       skipAutoDetectionConfirmation,
     });
 

@@ -93,15 +93,41 @@ export async function getLinkedProject(
   output: Output,
   client: Client,
   path?: string
-): Promise<[Org | null, Project | null]> {
+): Promise<
+  | { status: 'linked'; org: Org; project: Project }
+  | { status: 'not_linked'; org: null; project: null }
+  | { status: 'error'; exitCode: number }
+> {
   const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
+
+  if ((NOW_ORG_ID && !NOW_PROJECT_ID) || (!NOW_ORG_ID && NOW_PROJECT_ID)) {
+    output.print(
+      `${chalk.red('Error!')} You specified ${
+        NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
+      } but you forgot to specify ${
+        NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
+      }. You need to specify both to deploy to a custom project.\n`
+    );
+    return { status: 'error', exitCode: 1 };
+  }
+
   const link =
     NOW_ORG_ID && NOW_PROJECT_ID
       ? { orgId: NOW_ORG_ID, projectId: NOW_PROJECT_ID }
       : await getLink(path);
 
   if (!link) {
-    return [null, null];
+    if (NOW_PROJECT_ID && NOW_ORG_ID) {
+      output.print(
+        `${chalk.red('Error!')} Project not found (${JSON.stringify({
+          NOW_PROJECT_ID,
+          NOW_ORG_ID,
+        })})\n`
+      );
+      return { status: 'error', exitCode: 1 };
+    }
+
+    return { status: 'not_linked', org: null, project: null };
   }
 
   const spinner = wait('Retrieving project…', 1000);
@@ -116,7 +142,7 @@ export async function getLinkedProject(
     spinner();
   }
 
-  if (project instanceof ProjectNotFound || org === null) {
+  if (!org || !project || project instanceof ProjectNotFound) {
     if (!(NOW_ORG_ID && NOW_PROJECT_ID)) {
       output.print(
         prependEmoji(
@@ -126,10 +152,10 @@ export async function getLinkedProject(
       );
     }
 
-    return [null, null];
+    return { status: 'not_linked', org: null, project: null };
   }
 
-  return [org, project];
+  return { status: 'linked', org, project };
 }
 
 export async function linkFolderToProject(

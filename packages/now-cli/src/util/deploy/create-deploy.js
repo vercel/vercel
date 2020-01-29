@@ -12,7 +12,7 @@ export default async function createDeploy(
   createArgs,
   org,
   shouldLinkFolder,
-  isDetectingFramework
+  isSettingUpProject
 ) {
   try {
     return await now.create(
@@ -20,7 +20,7 @@ export default async function createDeploy(
       createArgs,
       org,
       shouldLinkFolder,
-      isDetectingFramework
+      isSettingUpProject
     );
   } catch (error) {
     if (error.code === 'rate_limited') {
@@ -105,7 +105,7 @@ export default async function createDeploy(
         createArgs,
         org,
         shouldLinkFolder,
-        isDetectingFramework
+        isSettingUpProject
       );
     }
 
