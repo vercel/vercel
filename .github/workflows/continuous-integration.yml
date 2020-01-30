@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - run: node ./utils/cancel.js
 
   test-unit:
