@@ -12,14 +12,18 @@ const stat = promisify(lstatRaw);
 /**
  * A helper function to validate the `rootDirectory` input.
  */
-export async function validateRootDirectory(output: Output, path: string) {
+export async function validateRootDirectory(
+  output: Output,
+  cwd: string,
+  path: string
+) {
   const pathStat = await stat(path).catch(() => null);
 
   if (!pathStat) {
     output.print(
-      `${chalk.red('Error!')} Could not find ${chalk.cyan(
+      `${chalk.red('Error!')} The provided path ${chalk.cyan(
         `“${toHumanPath(path)}”`
-      )}\n`
+      )} does not exist\n`
     );
     return false;
   }
@@ -28,7 +32,16 @@ export async function validateRootDirectory(output: Output, path: string) {
     output.print(
       `${chalk.red('Error!')} The provided path ${chalk.cyan(
         `“${toHumanPath(path)}”`
-      )} is a file, but expected a directory\n`
+      )} is a file, but expected a directory.\n`
+    );
+    return false;
+  }
+
+  if (!path.startsWith(cwd)) {
+    output.print(
+      `${chalk.red('Error!')} The provided path ${chalk.cyan(
+        `“${toHumanPath(path)}”`
+      )} is outside of the project.\n`
     );
     return false;
   }

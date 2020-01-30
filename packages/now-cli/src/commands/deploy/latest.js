@@ -383,6 +383,7 @@ export default async function main(
 
   let { org, project, status } = link;
   let newProjectName = null;
+  let rootDirectory = project ? project.rootDirectory : null;
 
   if (status === 'not_linked') {
     const shouldStartSetup =
@@ -437,19 +438,21 @@ export default async function main(
       );
       status = 'linked';
     }
-  }
 
-  const rootDirectory =
-    (project
-      ? project.rootDirectory
-      : await inputRootDirectory(path, output, autoConfirm)) || null;
+    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+  }
 
   const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
 
   if (
     rootDirectory &&
-    (await validateRootDirectory(output, sourcePath)) === false
+    (await validateRootDirectory(output, path, sourcePath)) === false
   ) {
+    output.print(
+      `${chalk.red(
+        'Error!'
+      )} Please change the projects settings on the dashboard.\n`
+    );
     return 1;
   }
 
@@ -483,7 +486,8 @@ export default async function main(
       [sourcePath],
       createArgs,
       org,
-      !project && !isFile
+      !project && !isFile,
+      path
     );
 
     if (
@@ -514,7 +518,8 @@ export default async function main(
         [sourcePath],
         createArgs,
         org,
-        false
+        false,
+        path
       );
     }
 

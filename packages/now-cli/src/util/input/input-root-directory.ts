@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { Output } from '../output';
-import toHumanPath from '../humanize-path';
+import { validateRootDirectory } from '../validate-paths';
 
 export async function inputRootDirectory(
   cwd: string,
@@ -38,32 +38,9 @@ export async function inputRootDirectory(
     }
 
     const fullPath = path.join(cwd, normal);
-    const fullPathStat = await fs.stat(fullPath).catch(() => null);
 
-    if (!fullPathStat) {
-      output.print(
-        `${chalk.red('Error!')} The provided path ${chalk.cyan(
-          `“${toHumanPath(fullPath)}”`
-        )} does not exist, please choose a different one\n`
-      );
-      continue;
-    }
-
-    if (!fullPathStat.isDirectory()) {
-      output.print(
-        `${chalk.red('Error!')} The provided path ${chalk.cyan(
-          `“${toHumanPath(fullPath)}”`
-        )} is a file, but expected a directory\n`
-      );
-      continue;
-    }
-
-    if (!fullPath.startsWith(cwd)) {
-      output.print(
-        `${chalk.red('Error!')} The provided path ${chalk.cyan(
-          `“${toHumanPath(fullPath)}”`
-        )} is outside of the project, please choose a different one\n`
-      );
+    if ((await validateRootDirectory(output, cwd, fullPath)) === false) {
+      output.print(`${chalk.red('Error!')} Please select a different one.\n`);
       continue;
     }
 
