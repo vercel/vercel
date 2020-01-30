@@ -90,7 +90,8 @@ const printDeploymentStatus = async (
   },
   deployStamp,
   isClipboardEnabled,
-  quiet
+  quiet,
+  isFile
 ) => {
   const isProdDeployment = target === 'production';
 
@@ -113,7 +114,7 @@ const printDeploymentStatus = async (
     // print preview/production url
     let previewUrl;
     let isWildcard;
-    if (Array.isArray(aliasList) && aliasList.length > 0) {
+    if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
       // search for a non now.sh/non wildcard domain
       // but fallback to the first alias in the list
       const mainAlias =
@@ -201,7 +202,6 @@ export default async function main(
   output,
   stats,
   localConfig,
-  isFile,
   args
 ) {
   let argv = null;
@@ -224,26 +224,16 @@ export default async function main(
   // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
-  const autoConfirm = argv['--confirm'];
 
   // check paths
-  const path = await validatePaths(output, paths);
-  if (typeof path === 'number') {
-    return path;
+  const pathValidation = await validatePaths(output, paths);
+
+  if (!pathValidation.valid) {
+    return pathValidation.exitCode;
   }
 
-  // check env variables options
-  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
-  if ((NOW_ORG_ID && !NOW_PROJECT_ID) || (!NOW_ORG_ID && NOW_PROJECT_ID)) {
-    output.print(
-      `${chalk.red('Error!')} You specified ${
-        NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
-      } but you forgot to specify ${
-        NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
-      }. You need to specify both to deploy to a custom project.\n`
-    );
-    return 1;
-  }
+  const { isFile, path } = pathValidation;
+  const autoConfirm = argv['--confirm'] || isFile;
 
   // build `meta`
   const meta = Object.assign(
@@ -255,6 +245,27 @@ export default async function main(
   // --no-scale
   if (argv['--no-scale']) {
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
+  }
+
+  // deprecate --name
+  if (argv['--name']) {
+    output.print(
+      `${prependEmoji(
+        `The ${param('--name')} flag is deprecated (https://zeit.ink/1B)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
+  if (localConfig && localConfig.name) {
+    output.print(
+      `${prependEmoji(
+        `The ${code('name')} property in ${highlight(
+          'now.json'
+        )} is deprecated (https://zeit.ink/5F)`,
+        emoji('warning')
+      )}\n`
+    );
   }
 
   // build `env`
@@ -360,21 +371,16 @@ export default async function main(
   });
 
   // retrieve `project` and `org` from .now
-  let [org, project] = await getLinkedProject(output, client, path);
+  const link = await getLinkedProject(output, client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
   let newProjectName = null;
 
-  if (!org || !project) {
-    const { NOW_PROJECT_ID, NOW_ORG_ID } = process.env;
-    if (NOW_PROJECT_ID && NOW_ORG_ID) {
-      output.print(
-        `${chalk.red('Error!')} Project not found (${JSON.stringify({
-          NOW_PROJECT_ID,
-          NOW_ORG_ID,
-        })})\n`
-      );
-      return 1;
-    }
-
+  if (status === 'not_linked') {
     const shouldStartSetup =
       autoConfirm ||
       (await confirm(
@@ -425,6 +431,7 @@ export default async function main(
         project.name,
         org.slug
       );
+      status = 'linked';
     }
   }
 
@@ -458,8 +465,7 @@ export default async function main(
       [path],
       createArgs,
       org,
-      autoConfirm,
-      !!newProjectName
+      !project && !isFile
     );
 
     if (
@@ -486,7 +492,6 @@ export default async function main(
         [path],
         createArgs,
         org,
-        !!newProjectName,
         false
       );
     }
@@ -611,7 +616,8 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    quiet
+    quiet,
+    isFile
   );
 }
 

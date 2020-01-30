@@ -70,11 +70,10 @@ export default class Now extends EventEmitter {
       skipAutoDetectionConfirmation,
     },
     org,
-    shouldLinkFolder,
-    isDetectingFramework
+    isSettingUpProject
   ) {
     const opts = { output: this._output, hasNowJson };
-    const { log, warn, debug } = this._output;
+    const { log, warn } = this._output;
     const isLegacy = type !== null;
 
     let files = [];
@@ -182,8 +181,7 @@ export default class Now extends EventEmitter {
       force: forceNew,
       org,
       projectName: name,
-      shouldLinkFolder,
-      isDetectingFramework,
+      isSettingUpProject,
       skipAutoDetectionConfirmation,
     });
 

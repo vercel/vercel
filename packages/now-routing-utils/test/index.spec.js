@@ -35,15 +35,6 @@ describe('normalizeRoutes', () => {
   });
 
   test('accepts valid routes', () => {
-    if (Number(process.versions.node.split('.')[0]) < 10) {
-      // Skip this test for any Node version less than Node 10
-      // which introduced ES2018 RegExp Named Capture Groups.
-      // TODO: When now dev integrates this package, we should
-      // look at including `pcre-to-regexp`.
-      console.log('WARNING: skipping test for Node 8');
-      assert.equal(1, 1);
-      return;
-    }
     const routes = [
       { src: '^/about$' },
       {

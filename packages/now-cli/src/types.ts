@@ -233,6 +233,8 @@ export interface Project {
   updatedAt: number;
   createdAt: number;
   alias?: ProjectAliasTarget[];
+  devCommand?: string | null;
+  framework?: string | null;
 }
 
 export interface Org {
@@ -244,6 +246,4 @@ export interface Org {
 export interface ProjectLink {
   projectId: string;
   orgId: string;
-  orgSlug?: string;
-  projectName?: string;
 }

@@ -87,13 +87,7 @@ export default async function issue(
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(
-      client,
-      keyPath,
-      crtPath,
-      caPath,
-      contextName
-    );
+    cert = await createCertFromFile(client, keyPath, crtPath, caPath);
 
     if (cert instanceof Error) {
       output.error(cert.message);
