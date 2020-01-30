@@ -1086,7 +1086,9 @@ export default class DevServer {
     // If the requested asset wasn't found in the match's
     // outputs then trigger a build
     const buildKey =
-      requestPath === null ? match.src : `${match.src}-${requestPath}`;
+      requestPath === null
+        ? match.entrypoint
+        : `${match.entrypoint}-${requestPath}`;
     let buildPromise = this.inProgressBuilds.get(buildKey);
     if (buildPromise) {
       // A build for `buildKey` is already in progress, so don't trigger

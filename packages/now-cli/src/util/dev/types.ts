@@ -26,6 +26,7 @@ export interface EnvConfig {
 }
 
 export interface BuildMatch extends BuildConfig {
+  entrypoint: string;
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
