@@ -501,6 +501,14 @@ export default async function main(
       return 1;
     }
 
+    if (deployment instanceof Error) {
+      output.error(
+        `${deployment.message ||
+          'An unexpected error occurred while deploying your project'} (http://zeit.ink/P4)`
+      );
+      return 1;
+    }
+
     const deploymentResponse = await getDeploymentByIdOrHost(
       now,
       contextName,
