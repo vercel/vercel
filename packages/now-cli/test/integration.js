@@ -2058,7 +2058,7 @@ test('change user', async t => {
   t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
 });
 
-test('should show prompts to set up project', async t => {
+test.only('should show prompts to set up project', async t => {
   const directory = fixture('project-link');
   const projectName = `project-link-${
     Math.random()
@@ -2088,6 +2088,11 @@ test('should show prompts to set up project', async t => {
     chunk.includes('What’s your project’s name?')
   );
   now.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Want to override the settings?')
