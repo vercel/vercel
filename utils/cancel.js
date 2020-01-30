@@ -21,11 +21,20 @@ fetch(url, opts)
   .then(data => {
     console.log(`Found ${data.total_count} records.`);
     data.workflow_runs
-      .filter(o => o.head_branch === ref && o.status === 'in_progress')
+      .filter(
+        o =>
+          o.head_branch === ref &&
+          o.head_sha !== sha &&
+          o.status === 'in_progress'
+      )
       .forEach(o => {
-        console.log('Found in progress');
+        console.log('Cancelling another check in progress...');
         console.log(o);
         // TODO: send POST to `o.cancel_url` but we need to exclude the current run
+        fetch(o.cancel_url, { ...opts, method: 'POST' })
+          .then(res => res.json())
+          .catch(e => console.error(e));
       });
     console.log('Done.');
-  });
+  })
+  .catch(e => console.error(e));
