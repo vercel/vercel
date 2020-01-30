@@ -11,6 +11,10 @@ export interface ProjectSettings {
   devCommand: string | null;
 }
 
+export interface ProjectSettingsWithFramework extends ProjectSettings {
+  framework: string | null;
+}
+
 const fields: { name: string; value: keyof ProjectSettings }[] = [
   { name: 'Build Command', value: 'buildCommand' },
   { name: 'Output Directory', value: 'outputDirectory' },
@@ -23,20 +27,26 @@ export default async function editProjectSettings(
   framework: Framework | null
 ) {
   // create new settings object, missing values will be filled with `null`
-  const settings: Partial<ProjectSettings> = { ...projectSettings };
+  const settings: Partial<ProjectSettingsWithFramework> = {
+    ...projectSettings,
+  };
 
   for (let field of fields) {
     settings[field.value] =
       (projectSettings && projectSettings[field.value]) || null;
   }
 
+  // skip editing project settings if no framework is detected
   if (!framework) {
+    settings.framework = null;
     return settings;
   }
 
   output.print(
     `Auto-detected project settings (${chalk.bold(framework.name)}):\n`
   );
+
+  settings.framework = framework.slug;
 
   for (let field of fields) {
     const defaults = framework.settings[field.value];
