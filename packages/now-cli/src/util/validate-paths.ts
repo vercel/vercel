@@ -26,7 +26,7 @@ export async function validateRootDirectory(output: Output, path: string) {
 
   if (!pathStat.isDirectory()) {
     output.print(
-      `${chalk.red('Error!')} To provided path ${chalk.cyan(
+      `${chalk.red('Error!')} The provided path ${chalk.cyan(
         `“${toHumanPath(path)}”`
       )} is a file, but expected a directory\n`
     );
