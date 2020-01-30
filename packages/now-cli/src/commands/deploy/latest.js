@@ -673,6 +673,11 @@ function handleCreateDeployError(output, error) {
       return 1;
     }
 
+    if (dataPath === '.name') {
+      output.error(message);
+      return 1;
+    }
+
     if (keyword === 'type') {
       const prop = dataPath.substr(1, dataPath.length);
 
