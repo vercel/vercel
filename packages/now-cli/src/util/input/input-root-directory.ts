@@ -33,7 +33,7 @@ export async function inputRootDirectory(
 
     const normal = path.normalize(rootDirectory);
 
-    if (normal === '.') {
+    if (normal === '.' || normal === './') {
       return null;
     }
 
