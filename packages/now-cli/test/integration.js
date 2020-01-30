@@ -2464,17 +2464,18 @@ test('use `rootDirectory` from project when deploying', async t => {
   t.is(firstResult.exitCode, 0, formatOutput(firstResult));
 
   const { host: firstHost } = new URL(firstResult.stdout);
-  const response = await apiFetch(`/v12/now/deployments/get?host=${firstHost}`);
-  t.is(response.status).toBe(200);
+  const response = await apiFetch(`/v12/now/deployments/get?url=${firstHost}`);
+  t.is(response.status, 200);
   const { projectId } = await response.json();
   t.is(typeof projectId, 'string', projectId);
 
   const projectResponse = await apiFetch(`/v2/projects/${projectId}`, {
     method: 'PATCH',
-    body: {
+    body: JSON.stringify({
       rootDirectory: 'src',
-    },
+    }),
   });
+  console.log('response', await projectResponse.text());
   t.is(projectResponse.status, 200);
 
   const secondResult = await execute([directory, '--public']);
