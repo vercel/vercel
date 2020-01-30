@@ -11,7 +11,7 @@ export interface ProjectSettings {
   devCommand: string | null;
 }
 
-export type ProjectSettingsWithFramework = ProjectSettings & {
+export interface ProjectSettingsWithFramework extends ProjectSettings {
   framework: string | null;
 };
 
