@@ -16,7 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: node ./utils/cancel.js
+      - run: echo ${{ github.ref }}
+      - uses: actions/setup-node@v1
+      - run: cd ./utils && npm init -y && npm i node-fetch && node cancel.js
 
   test-unit:
     name: Unit Tests
