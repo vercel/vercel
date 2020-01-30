@@ -1400,7 +1400,7 @@ test(
     validateResponseHeaders(t, extensionless);
     validateResponseHeaders(t, extension);
 
-    t.regex(extensionless.text(), /Hello, from Bash!/gm);
-    t.regex(extension.text(), /Hello, from Bash!/gm);
+    t.regex(await extensionless.text(), /Hello, from Bash!/gm);
+    t.regex(await extension.text(), /Hello, from Bash!/gm);
   })
 );
