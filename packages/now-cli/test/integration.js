@@ -2180,6 +2180,11 @@ test('should not prompt "project settings overwrite" for undetected projects', a
   );
   now.stdin.write(`${projectName}\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
   await waitForPrompt(now, chunk => {
     t.false(
       chunk.includes('Want to override the settings?'),
@@ -2277,6 +2282,11 @@ test('should prefill "project name" prompt with --name', async t => {
   );
   now.stdin.write(`\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
 });
@@ -2327,6 +2337,11 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
     chunk.includes(`What’s your project’s name? (${projectName})`)
   );
   now.stdin.write(`\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
