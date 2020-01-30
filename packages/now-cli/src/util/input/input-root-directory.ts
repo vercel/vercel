@@ -15,11 +15,15 @@ export async function inputRootDirectory(autoConfirm: boolean) {
     },
   });
 
-  if (!rootDirectory || rootDirectory === '.' || rootDirectory === './') {
+  if (!rootDirectory) {
     return null;
   }
 
   const normal = path.normalize(rootDirectory);
+
+  if (normal === '.' || normal === './') {
+    return null;
+  }
 
   return normal === '.' ? null : normal;
 }
