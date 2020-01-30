@@ -1,5 +1,4 @@
 import path from 'path';
-import chalk from 'chalk';
 import inquirer from 'inquirer';
 
 export async function inputRootDirectory(autoConfirm: boolean) {
