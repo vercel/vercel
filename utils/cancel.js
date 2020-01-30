@@ -36,7 +36,9 @@ fetch(url, opts)
         status,
       });
       fetch(cancel_url, { ...opts, method: 'POST' })
+        .then(res => console.log(res.status))
         .then(res => res.json())
+        .then(json => console.log(json))
         .catch(e => console.error(e));
     });
     console.log('Done.');
