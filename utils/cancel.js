@@ -39,7 +39,7 @@ fetch(url, opts)
       fetch(cancel_url, {
         ...opts,
         method: 'POST',
-        Authorization: `token ${token}`,
+        Authorization: `Bearer ${token}`,
       })
         .then(res => console.log(res.status))
         .catch(e => console.error(e));
