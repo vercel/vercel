@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - master
+    - ci-cancel-previous # temporary
     tags:
     - '!*'
   pull_request:
