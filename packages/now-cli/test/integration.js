@@ -2058,7 +2058,7 @@ test('change user', async t => {
   t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
 });
 
-test.only('should show prompts to set up project', async t => {
+test('should show prompts to set up project', async t => {
   const directory = fixture('project-link');
   const projectName = `project-link-${
     Math.random()
