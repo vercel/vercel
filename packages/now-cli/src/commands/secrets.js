@@ -11,6 +11,7 @@ import logo from '../util/output/logo';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import createOutput from '../util/output';
+import confirm from '../util/input/confirm';
 
 const help = () => {
   console.log(`
@@ -189,9 +190,10 @@ async function run({ output, token, contextName, currentTeam }) {
     const theSecret = list.find(secret => secret.name === args[0]);
 
     if (theSecret) {
-      const yes = argv.yes || (await readConfirmation(theSecret));
+      const yes =
+        argv.yes || (await readConfirmation(output, theSecret, contextName));
       if (!yes) {
-        console.error(error('User abort'));
+        output.print(`Aborted. Secret not deleted.\n`);
         return exit(0);
       }
     } else {
@@ -286,33 +288,19 @@ process.on('uncaughtException', err => {
   exit(1);
 });
 
-function readConfirmation(secret) {
-  return new Promise(resolve => {
-    const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
-    const tbl = table([[chalk.bold(secret.name), time]], {
-      align: ['r', 'l'],
-      hsep: ' '.repeat(6),
-    });
-
-    process.stdout.write(`The following secret will be removed permanently from ${chalk.bold(
-        contextName
-      )}\n`);
-    process.stdout.write(`  ${tbl}\n`);
-
-    process.stdout.write(
-      `${chalk.bold.red('Are you sure?')} ${chalk.gray('[y/N] ')}`
-    );
-
-    process.stdin
-      .on('data', d => {
-        process.stdin.pause();
-        resolve(
-          d
-            .toString()
-            .trim()
-            .toLowerCase() === 'y'
-        );
-      })
-      .resume();
+async function readConfirmation(output, secret, contextName) {
+  const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
+  const tbl = table([[chalk.bold(secret.name), time]], {
+    align: ['r', 'l'],
+    hsep: ' '.repeat(6),
   });
+
+  output.print(
+    `The following secret will be removed permanently from ${chalk.bold(
+      contextName
+    )}\n`
+  );
+  output.print(`  ${tbl}\n`);
+
+  return confirm(`${chalk.bold.red('Are you sure?')}`, false);
 }
