@@ -7,6 +7,7 @@ const name = process.env.GITHUB_WORKFLOW; // 'CI';
 const workflow = 'continuous-integration.yml';
 
 console.log(process.env);
+console.log({ ref, sha, run, name });
 
 const url = `https://api.github.com/repos/zeit/now/actions/workflows/${workflow}/runs`;
 const opts = {
