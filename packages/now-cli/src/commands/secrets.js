@@ -294,7 +294,9 @@ function readConfirmation(secret) {
       hsep: ' '.repeat(6),
     });
 
-    process.stdout.write('The following secret will be removed permanently\n');
+    process.stdout.write(`The following secret will be removed permanently from ${chalk.bold(
+        contextName
+      )}\n`);
     process.stdout.write(`  ${tbl}\n`);
 
     process.stdout.write(
