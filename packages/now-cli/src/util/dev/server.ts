@@ -749,16 +749,17 @@ export default class DevServer {
       const ext = extname(path);
       if (apiDir && path.startsWith(apiMatch) && apiExtensions.has(ext)) {
         // lambda function files are trimmed of their file extension
-        path = path.slice(0, -ext.length);
+        const newPath = path.slice(0, -ext.length);
+        results[newPath] = new FileFsRef({ mode, fsPath });
       }
       results[path] = new FileFsRef({ mode, fsPath });
     }
     this.files = results;
 
-    const builders: Set<string> = new Set(
+    const builders = new Set<string>(
       (nowConfig.builds || [])
         .filter((b: Builder) => b.use)
-        .map((b: Builder) => b.use as string)
+        .map((b: Builder) => b.use)
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
