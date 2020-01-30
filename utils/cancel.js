@@ -8,15 +8,23 @@ const workflow = 'continuous-integration.yml';
 
 console.log(process.env);
 
-fetch(
-  `https://api.github.com/repos/zeit/now/actions/workflows/${workflow}/runs`
-)
+const url = `https://api.github.com/repos/zeit/now/actions/workflows/${workflow}/runs`;
+const opts = {
+  headers: {
+    Accept: 'application/vnd.github.v3+json',
+  },
+};
+
+fetch(url, opts)
   .then(res => res.json())
   .then(data => {
+    console.log(`Found ${data.total_count} records.`);
     data.workflow_runs
       .filter(o => o.head_branch === ref && o.status === 'in_progress')
       .forEach(o => {
+        console.log('Found in progress');
         console.log(o);
         // TODO: send POST to `o.cancel_url` but we need to exclude the current run
       });
+    console.log('Done.');
   });
