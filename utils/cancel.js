@@ -4,6 +4,7 @@ const ref = process.env.GITHUB_REF.slice(11); // 'refs/heads/ci-cancel-previous'
 const sha = process.env.GITHUB_SHA; // 'a5d18518ea755ddc4212f47ec3448f59e0e7e3a5',
 const run = process.env.GITHUB_RUN_ID; // '33175268',
 const name = process.env.GITHUB_WORKFLOW; // 'CI';
+const token = process.env.GITHUB_TOKEN;
 const workflow = 'continuous-integration.yml';
 
 console.log({ ref, sha, run, name, workflow });
@@ -35,10 +36,12 @@ fetch(url, opts)
         head_sha,
         status,
       });
-      fetch(cancel_url, { ...opts, method: 'POST' })
+      fetch(cancel_url, {
+        ...opts,
+        method: 'POST',
+        Authorization: `token ${token}`,
+      })
         .then(res => console.log(res.status))
-        .then(res => res.json())
-        .then(json => console.log(json))
         .catch(e => console.error(e));
     });
     console.log('Done.');
