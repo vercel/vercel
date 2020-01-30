@@ -50,9 +50,7 @@ import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
 import { prependEmoji, emoji } from '../../util/emoji';
 import { inputRootDirectory } from '../../util/input/input-root-directory';
-import validatePaths, {
-  validateRootDirectory,
-} from '../../util/validate-paths';
+import validatePaths from '../../util/validate-paths';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -440,18 +438,11 @@ export default async function main(
   }
 
   const rootDirectory =
-    (project ? project.rootDirectory : await inputRootDirectory(autoConfirm)) ||
-    null;
+    (project
+      ? project.rootDirectory
+      : await inputRootDirectory(path, output, autoConfirm)) || null;
 
   const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
-
-  if (
-    rootDirectory &&
-    (await validateRootDirectory(output, sourcePath)) === false
-  ) {
-    return 1;
-  }
-
   const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   let deployStamp = stamp();
