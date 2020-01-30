@@ -1,6 +1,6 @@
+import path from 'path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { normalize } from 'path';
 
 export async function inputRootDirectory(autoConfirm: boolean) {
   if (autoConfirm) {
@@ -12,17 +12,15 @@ export async function inputRootDirectory(autoConfirm: boolean) {
     name: 'rootDirectory',
     message: `In which directory is your code located?`,
     transformer: (input: string) => {
-      const message = input ? input : '[.] ';
-
-      return message;
+      return input ? input : '[.] ';
     },
   });
 
-  if (!rootDirectory) {
+  if (!rootDirectory || rootDirectory === '.' || rootDirectory === './') {
     return null;
   }
 
-  const path = normalize(rootDirectory);
+  const normal = path.normalize(rootDirectory);
 
-  return path === '.' ? null : path;
+  return normal === '.' ? null : normal;
 }
