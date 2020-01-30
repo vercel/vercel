@@ -2,13 +2,24 @@ import execa from 'execa';
 import { debug, Meta } from '@now/build-utils';
 const pipPath = 'pip3';
 
+const makeDependencyCheckCode = (dependency: string) => `
+from importlib import util
+dep = '${dependency}'.replace('-', '_')
+spec = util.find_spec(dep)
+print(spec.origin)
+`;
+
 async function isInstalled(dependency: string, cwd: string) {
   try {
-    await execa('python3', ['-c', `"import ${dependency}"`], {
-      stdio: 'pipe',
-      cwd,
-    });
-    return true;
+    const { stdout } = await execa(
+      'python3',
+      ['-c', makeDependencyCheckCode(dependency)],
+      {
+        stdio: 'pipe',
+        cwd,
+      }
+    );
+    return stdout.startsWith(cwd);
   } catch (err) {
     return false;
   }
@@ -92,8 +103,10 @@ export async function installRequirement({
   meta,
   args = [],
 }: InstallRequirementArg) {
-  if (meta.isDev || !(await isInstalled(dependency, workPath))) {
-    debug(`Skipping ${dependency} dependency installation, already installed`);
+  if (meta.isDev && (await isInstalled(dependency, workPath))) {
+    debug(
+      `Skipping ${dependency} dependency installation, already installed in ${workPath}`
+    );
     return;
   }
   await pipInstall(workPath, [dependency, ...args]);
