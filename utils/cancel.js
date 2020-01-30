@@ -6,8 +6,7 @@ const run = process.env.GITHUB_RUN_ID; // '33175268',
 const name = process.env.GITHUB_WORKFLOW; // 'CI';
 const workflow = 'continuous-integration.yml';
 
-console.log(process.env);
-console.log({ ref, sha, run, name });
+console.log({ ref, sha, run, name, workflow });
 
 const url = `https://api.github.com/repos/zeit/now/actions/workflows/${workflow}/runs`;
 const opts = {
@@ -19,22 +18,27 @@ const opts = {
 fetch(url, opts)
   .then(res => res.json())
   .then(data => {
-    console.log(`Found ${data.total_count} records.`);
-    data.workflow_runs
-      .filter(
-        o =>
-          o.head_branch === ref &&
-          o.head_sha !== sha &&
-          o.status === 'in_progress'
-      )
-      .forEach(o => {
-        console.log('Cancelling another check in progress...');
-        console.log(o);
-        // TODO: send POST to `o.cancel_url` but we need to exclude the current run
-        fetch(o.cancel_url, { ...opts, method: 'POST' })
-          .then(res => res.json())
-          .catch(e => console.error(e));
+    console.log(`Found ${data.total_count} checks total.`);
+    const inProgress = data.workflow_runs.filter(
+      o =>
+        o.head_branch === ref &&
+        o.head_sha !== sha &&
+        o.status === 'in_progress'
+    );
+    console.log(`Found ${inProgress} checks in progress.`);
+    inProgress.forEach(o => {
+      const { id, cancel_url, head_branch, head_sha, status } = o;
+      console.log('Cancelling another check: ', {
+        id,
+        cancel_url,
+        head_branch,
+        head_sha,
+        status,
       });
+      fetch(cancel_url, { ...opts, method: 'POST' })
+        .then(res => res.json())
+        .catch(e => console.error(e));
+    });
     console.log('Done.');
   })
   .catch(e => console.error(e));
