@@ -2232,6 +2232,11 @@ test('should prefill "project name" prompt with folder name', async t => {
   );
   now.stdin.write(`\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
 });
