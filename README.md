@@ -1,6 +1,6 @@
 ![now](https://assets.zeit.co/image/upload/v1542240976/repositories/now-cli/now-cli-repo-banner-v3.png)
 
-[![Build Status](https://badgen.net/circleci/github/zeit/now/master)](https://circleci.com/gh/zeit/workflows/now/tree/master)
+[![CI Status](https://badgen.net/github/checks/zeit/now?label=CI)](https://github.com/zeit/now/actions?workflow=CI)
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
 
 ## Usage
