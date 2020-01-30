@@ -1367,6 +1367,24 @@ test('[now dev] 25-nextjs-src-dir', async t => {
 });
 
 test(
+  '[now dev] Use `@now/python` with Flask requirements.txt',
+  testFixtureStdio('python-flask', async (t, port) => {
+    const name = 'Alice';
+    const year = new Date().getFullYear();
+    const user = await fetchWithRetry(
+      `http://localhost:${port}/api/user?name=${name}`
+    );
+    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
+
+    validateResponseHeaders(t, user);
+    validateResponseHeaders(t, date);
+
+    t.regex(await user.text(), new RegExp(`Hello ${name}`));
+    t.regex(await date.text(), new RegExp(`Current date is ${year}`));
+  })
+);
+
+test(
   '[now dev] Use runtime from the functions property',
   testFixtureStdio('custom-runtime', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/api/user`);
