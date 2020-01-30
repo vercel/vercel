@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 
-const ref = process.env.GITHUB_REF; // 'refs/heads/ci-cancel-previous',
+const ref = process.env.GITHUB_REF.slice(11); // 'refs/heads/ci-cancel-previous',
 const sha = process.env.GITHUB_SHA; // 'a5d18518ea755ddc4212f47ec3448f59e0e7e3a5',
 const run = process.env.GITHUB_RUN_ID; // '33175268',
 const name = process.env.GITHUB_WORKFLOW; // 'CI';
