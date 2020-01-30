@@ -2453,36 +2453,6 @@ test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async 
   );
 });
 
-// Required to not hit rate limits etc.
-test('change user', async t => {
-  const { stdout: prevUser } = await execute(['whoami']);
-
-  // Delete the current token
-  const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
-
-  await createUser();
-
-  const { exitCode } = await execute(['login', email]);
-
-  const auth = await fs.readJSON(getConfigAuthPath());
-
-  token = auth.token;
-
-  const { stdout: nextUser } = await execute(['whoami']);
-
-  console.log('prev user', prevUser);
-  console.log('next user', nextUser);
-
-  t.is(typeof prevUser, 'string', prevUser);
-  t.is(typeof nextUser, 'string', nextUser);
-
-  t.true(
-    prevUser !== nextUser,
-    JSON.stringify({ prevUser, nextUser }, null, 2)
-  );
-});
-
 test('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async t => {
   const directory = fixture('static-deployment');
 
