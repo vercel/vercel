@@ -667,6 +667,7 @@ function handleCreateDeployError(output, error) {
 
     if (dataPath === '.name') {
       output.error(message);
+      return 1;
     }
 
     if (keyword === 'type') {
