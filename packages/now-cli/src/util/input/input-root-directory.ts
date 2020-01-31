@@ -1,5 +1,4 @@
 import path from 'path';
-import fs from 'fs-extra';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { Output } from '../output';
