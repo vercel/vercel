@@ -9,11 +9,6 @@ const token = process.env.GITHUB_WORKFLOW_TOKEN; // access token with `public_re
 const workflow = 'continuous-integration.yml';
 console.log({ ref, sha, run, name, event, workflow });
 
-if (event !== 'push') {
-  console.log(`Skipping event ${event}`);
-  return;
-}
-
 const url = `https://api.github.com/repos/zeit/now/actions/workflows/${workflow}/runs`;
 const opts = {
   headers: {
