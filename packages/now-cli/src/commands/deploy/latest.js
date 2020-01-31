@@ -451,13 +451,13 @@ export default async function main(
 
   if (
     rootDirectory &&
-    (await validateRootDirectory(output, path, sourcePath)) === false
+    (await validateRootDirectory(
+      output,
+      path,
+      sourcePath,
+      'Please change the projects settings on the dashboard.'
+    )) === false
   ) {
-    output.print(
-      `${chalk.red(
-        'Error!'
-      )} Please change the projects settings on the dashboard.\n`
-    );
     return 1;
   }
 
