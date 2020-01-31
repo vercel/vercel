@@ -451,13 +451,13 @@ export default async function main(
 
   if (
     rootDirectory &&
-    (await validateRootDirectory(output, path, sourcePath)) === false
+    (await validateRootDirectory(
+      output,
+      path,
+      sourcePath,
+      project ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings` : ''
+    )) === false
   ) {
-    output.print(
-      `${chalk.red(
-        'Error!'
-      )} Please change the projects settings on the dashboard.\n`
-    );
     return 1;
   }
 
