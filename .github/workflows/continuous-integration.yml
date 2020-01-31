@@ -9,22 +9,9 @@ on:
   pull_request:
 
 jobs:
-  cancel:
-    name: Cancel Previous Runs
-    timeout-minutes: 5
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: echo ${{ github.ref }}
-      - uses: actions/setup-node@v1
-      - run: cd ./utils && npm init -y && npm i node-fetch && node cancel.js
-        env:
-          GITHUB_WORKFLOW_TOKEN: ${{ secrets.GITHUB_WORKFLOW_TOKEN }}
-
   test-unit:
     name: Unit Tests
     timeout-minutes: 15
-    needs: [cancel]
     strategy:
       fail-fast: false
       matrix:
@@ -49,7 +36,6 @@ jobs:
   test-integration:
     name: Integration Tests
     timeout-minutes: 120
-    needs: [cancel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -61,7 +47,6 @@ jobs:
   test-now-cli:
     name: Now CLI Tests
     timeout-minutes: 30
-    needs: [cancel]
     strategy:
       fail-fast: false
       matrix:
@@ -102,7 +87,7 @@ jobs:
   coverage:
     name: Coverage
     timeout-minutes: 10
-    needs: [cancel, test-unit, test-now-cli, test-now-dev, test-integration]
+    needs: [test-unit, test-now-cli, test-now-dev, test-integration]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
