@@ -19,7 +19,7 @@ jobs:
       - run: echo ${{ github.ref }}
       - uses: actions/setup-node@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_WORKFLOW_TOKEN: ${{ secrets.GITHUB_WORKFLOW_TOKEN }}
       - run: cd ./utils && npm init -y && npm i node-fetch && node cancel.js
 
   test-unit:
