@@ -6,7 +6,6 @@ const run = process.env.GITHUB_RUN_ID; // '33175268',
 const name = process.env.GITHUB_WORKFLOW; // 'CI';
 const token = process.env.GITHUB_WORKFLOW_TOKEN;
 const workflow = 'continuous-integration.yml';
-console.log('token type ' + typeof token);
 console.log({ ref, sha, run, name, workflow });
 
 const url = `https://api.github.com/repos/zeit/now/actions/workflows/${workflow}/runs`;
