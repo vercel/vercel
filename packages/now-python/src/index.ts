@@ -15,6 +15,16 @@ import {
 } from '@now/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 
+type SecondArgument<T> = T extends (
+  arg1: any,
+  arg2: infer U,
+  ...args: any[]
+) => any
+  ? U
+  : any;
+
+type GlobOptions = SecondArgument<typeof glob>;
+
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
   try {
@@ -174,8 +184,16 @@ export const build = async ({
   // Use the system-installed version of `python3` when running via `now dev`
   const runtime = meta.isDev ? 'python3' : 'python3.6';
 
+  const globOptions: GlobOptions = {
+    cwd: workPath,
+    ignore:
+      config && typeof config.excludeFiles === 'string'
+        ? config.excludeFiles
+        : 'node_modules/**',
+  };
+
   const lambda = await createLambda({
-    files: await glob('**', workPath),
+    files: await glob('**', globOptions),
     handler: `${nowHandlerPyFilename}.now_handler`,
     runtime,
     environment: {},
