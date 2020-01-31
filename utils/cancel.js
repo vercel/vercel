@@ -24,7 +24,7 @@ fetch(url, opts)
       o =>
         o.head_branch === ref &&
         o.head_sha !== sha &&
-        o.status === 'in_progress'
+        ['queued', 'in_progress'].includes(o.status)
     );
     console.log(`Found ${others.length} checks in progress.`);
     others.forEach(o => {
