@@ -70,7 +70,8 @@ export default class Now extends EventEmitter {
       skipAutoDetectionConfirmation,
     },
     org,
-    isSettingUpProject
+    isSettingUpProject,
+    cwd
   ) {
     const opts = { output: this._output, hasNowJson };
     const { log, warn } = this._output;
@@ -183,6 +184,7 @@ export default class Now extends EventEmitter {
       projectName: name,
       isSettingUpProject,
       skipAutoDetectionConfirmation,
+      cwd,
     });
 
     // We report about files whose sizes are too big

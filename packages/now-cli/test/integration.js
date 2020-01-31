@@ -213,6 +213,18 @@ test.before(async () => {
   }
 });
 
+test.after.always(async () => {
+  // Make sure the token gets revoked
+  await execa(binaryPath, ['logout', ...defaultArgs]);
+
+  if (!tmpDir) {
+    return;
+  }
+
+  // Remove config directory entirely
+  tmpDir.removeCallback();
+});
+
 test('login', async t => {
   // Delete the current token
   const logoutOutput = await execute(['logout']);
@@ -2078,6 +2090,11 @@ test('should show prompts to set up project', async t => {
   now.stdin.write(`${projectName}\n`);
 
   await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
     chunk.includes('Want to override the settings?')
   );
   now.stdin.write('yes\n');
@@ -2163,6 +2180,11 @@ test('should not prompt "project settings overwrite" for undetected projects', a
   );
   now.stdin.write(`${projectName}\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
   await waitForPrompt(now, chunk => {
     t.false(
       chunk.includes('Want to override the settings?'),
@@ -2209,6 +2231,11 @@ test('should prefill "project name" prompt with folder name', async t => {
     chunk.includes(`What’s your project’s name? (${projectName})`)
   );
   now.stdin.write(`\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
@@ -2260,6 +2287,11 @@ test('should prefill "project name" prompt with --name', async t => {
   );
   now.stdin.write(`\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
 });
@@ -2310,6 +2342,11 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
     chunk.includes(`What’s your project’s name? (${projectName})`)
   );
   now.stdin.write(`\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
@@ -2420,6 +2457,39 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
   t.is(detectedNotice, true, 'did not detect notice');
 });
 
+test('use `rootDirectory` from project when deploying', async t => {
+  const directory = fixture('project-root-directory');
+
+  const firstResult = await execute([directory, '--confirm', '--public']);
+  t.is(firstResult.exitCode, 0, formatOutput(firstResult));
+
+  const { host: firstHost } = new URL(firstResult.stdout);
+  const response = await apiFetch(`/v12/now/deployments/get?url=${firstHost}`);
+  t.is(response.status, 200);
+  const { projectId } = await response.json();
+  t.is(typeof projectId, 'string', projectId);
+
+  const projectResponse = await apiFetch(`/v2/projects/${projectId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      rootDirectory: 'src',
+    }),
+  });
+  console.log('response', await projectResponse.text());
+  t.is(projectResponse.status, 200);
+
+  const secondResult = await execute([directory, '--public']);
+  t.is(secondResult.exitCode, 0, formatOutput(secondResult));
+
+  const pageResponse = await fetch(secondResult.stdout);
+  t.is(pageResponse.status, 200);
+  t.regex(await pageResponse.text(), /I am a website/gm);
+
+  await apiFetch(`/v2/projects/${projectId}`, {
+    method: 'DELETE',
+  });
+});
+
 test('whoami with unknown `NOW_ORG_ID` should error', async t => {
   const output = await execute(['whoami'], {
     env: { NOW_ORG_ID: 'asdf' },
@@ -2464,16 +2534,4 @@ test('whoami with local .now scope', async t => {
 
   // clean up
   await remove(path.join(directory, '.now'));
-});
-
-test.after.always(async () => {
-  // Make sure the token gets revoked
-  await execa(binaryPath, ['logout', ...defaultArgs]);
-
-  if (!tmpDir) {
-    return;
-  }
-
-  // Remove config directory entirely
-  tmpDir.removeCallback();
 });
