@@ -11,6 +11,7 @@ import logo from '../util/output/logo';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import createOutput from '../util/output';
+import confirm from '../util/input/confirm';
 
 const help = () => {
   console.log(`
@@ -144,7 +145,7 @@ async function run({ output, token, contextName, currentTeam }) {
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${plural('secret', list.length, true)} found under ${chalk.bold(
+      `${plural('secret', list.length, true)} found under ${chalk.bold(
         contextName
       )} ${chalk.gray(`[${elapsed}]`)}`
     );
@@ -189,22 +190,29 @@ async function run({ output, token, contextName, currentTeam }) {
     const theSecret = list.find(secret => secret.name === args[0]);
 
     if (theSecret) {
-      const yes = argv.yes || (await readConfirmation(theSecret));
+      const yes =
+        argv.yes || (await readConfirmation(output, theSecret, contextName));
       if (!yes) {
-        console.error(error('User abort'));
+        output.print(`Aborted. Secret not deleted.\n`);
         return exit(0);
       }
     } else {
-      console.error(error(`No secret found by name "${args[0]}"`));
+      console.error(
+        error(
+          `No secret found by name "${args[0]}" under ${chalk.bold(
+            contextName
+          )}`
+        )
+      );
       return exit(1);
     }
 
     const secret = await secrets.rm(args[0]);
     const elapsed = ms(new Date() - start);
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+      `${chalk.cyan('Success!')} Secret ${chalk.bold(
         secret.name
-      )} removed ${chalk.gray(`[${elapsed}]`)}`
+      )} under ${chalk.bold(contextName)} removed ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
@@ -223,9 +231,11 @@ async function run({ output, token, contextName, currentTeam }) {
     const secret = await secrets.rename(args[0], args[1]);
     const elapsed = ms(new Date() - start);
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+      `${chalk.cyan('Success!')} Secret ${chalk.bold(
         secret.oldName
-      )} renamed to ${chalk.bold(args[1])} ${chalk.gray(`[${elapsed}]`)}`
+      )} renamed to ${chalk.bold(args[1])} under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
@@ -243,7 +253,7 @@ async function run({ output, token, contextName, currentTeam }) {
       if (args.length > 2) {
         const example = chalk.cyan(`$ now secret add -- "${args[0]}"`);
         console.log(
-          `> If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
+          `If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
         );
       }
 
@@ -259,9 +269,9 @@ async function run({ output, token, contextName, currentTeam }) {
     }
 
     console.log(
-      `${chalk.cyan('> Success!')} Secret ${chalk.bold(
+      `${chalk.cyan('Success!')} Secret ${chalk.bold(
         name.toLowerCase()
-      )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
+      )} added under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
@@ -278,33 +288,19 @@ process.on('uncaughtException', err => {
   exit(1);
 });
 
-function readConfirmation(secret) {
-  return new Promise(resolve => {
-    const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
-    const tbl = table([[chalk.bold(secret.name), time]], {
-      align: ['r', 'l'],
-      hsep: ' '.repeat(6),
-    });
-
-    process.stdout.write(
-      '> The following secret will be removed permanently\n'
-    );
-    process.stdout.write(`  ${tbl}\n`);
-
-    process.stdout.write(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    );
-
-    process.stdin
-      .on('data', d => {
-        process.stdin.pause();
-        resolve(
-          d
-            .toString()
-            .trim()
-            .toLowerCase() === 'y'
-        );
-      })
-      .resume();
+async function readConfirmation(output, secret, contextName) {
+  const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
+  const tbl = table([[chalk.bold(secret.name), time]], {
+    align: ['r', 'l'],
+    hsep: ' '.repeat(6),
   });
+
+  output.print(
+    `The following secret will be removed permanently from ${chalk.bold(
+      contextName
+    )}\n`
+  );
+  output.print(`  ${tbl}\n`);
+
+  return confirm(`${chalk.bold.red('Are you sure?')}`, false);
 }

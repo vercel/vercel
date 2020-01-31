@@ -235,6 +235,7 @@ export interface Project {
   alias?: ProjectAliasTarget[];
   devCommand?: string | null;
   framework?: string | null;
+  rootDirectory?: string | null;
 }
 
 export interface Org {
