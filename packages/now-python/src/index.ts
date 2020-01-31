@@ -8,6 +8,7 @@ import {
   getWriteableDirectory,
   download,
   glob,
+  GlobOptions,
   createLambda,
   shouldServe,
   BuildOptions,
@@ -174,8 +175,16 @@ export const build = async ({
   // Use the system-installed version of `python3` when running via `now dev`
   const runtime = meta.isDev ? 'python3' : 'python3.6';
 
+  const globOptions: GlobOptions = {
+    cwd: workPath,
+    ignore:
+      config && typeof config.excludeFiles === 'string'
+        ? config.excludeFiles
+        : 'node_modules/**',
+  };
+
   const lambda = await createLambda({
-    files: await glob('**', workPath),
+    files: await glob('**', globOptions),
     handler: `${nowHandlerPyFilename}.now_handler`,
     runtime,
     environment: {},
