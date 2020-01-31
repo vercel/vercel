@@ -1,7 +1,9 @@
 name: Cancel
 
 on:
-- push
+  push:
+    branches:
+    - '!master' # cancel all branches except master
 
 jobs:
   cancel:
