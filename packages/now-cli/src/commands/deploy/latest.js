@@ -455,7 +455,7 @@ export default async function main(
       output,
       path,
       sourcePath,
-      'Please change the projects settings on the dashboard.'
+      project ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings` : ''
     )) === false
   ) {
     return 1;
