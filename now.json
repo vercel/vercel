@@ -10,6 +10,10 @@
     "GITHUB_ACCESS_TOKEN": "@now-api-examples-github-token",
     "SENTRY_DSN": "@sentry-product-dsn"
   },
+  "github": {
+    "silent": true,
+    "autoJobCancelation": true
+  },
   "headers": [
     {
       "source": "/api/frameworks",
