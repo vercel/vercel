@@ -8,22 +8,13 @@ import {
   getWriteableDirectory,
   download,
   glob,
+  GlobOptions,
   createLambda,
   shouldServe,
   BuildOptions,
   debug,
 } from '@now/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
-
-type SecondArgument<T> = T extends (
-  arg1: any,
-  arg2: infer U,
-  ...args: any[]
-) => any
-  ? U
-  : any;
-
-type GlobOptions = SecondArgument<typeof glob>;
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');

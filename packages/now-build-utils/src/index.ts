@@ -5,7 +5,7 @@ import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
 import { Prerender } from './prerender';
 import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
-import glob from './fs/glob';
+import glob, { GlobOptions } from './fs/glob';
 import rename from './fs/rename';
 import {
   execAsync,
@@ -40,6 +40,7 @@ export {
   DownloadedFiles,
   getWriteableDirectory,
   glob,
+  GlobOptions,
   rename,
   execAsync,
   spawnAsync,
