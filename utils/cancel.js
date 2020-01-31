@@ -24,7 +24,10 @@ fetch(url, opts)
     console.log(`Found ${data.total_count} checks total.`);
     const others = data.workflow_runs.filter(
       o =>
-        o.head_branch === ref && o.head_sha !== sha && statusSet.has(o.status)
+        o.head_branch === ref &&
+        o.head_branch !== 'master' &&
+        o.head_sha !== sha &&
+        statusSet.has(o.status)
     );
     console.log(`Found ${others.length} checks in progress.`);
     others.forEach(o => {
