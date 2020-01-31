@@ -2,6 +2,14 @@ const { execSync, spawn } = require('child_process');
 const { join, relative } = require('path');
 const { readdirSync } = require('fs');
 
+if (
+  process.env.GITHUB_REPOSITORY &&
+  process.env.GITHUB_REPOSITORY !== 'zeit/now'
+) {
+  console.log('Detected fork, skipping tests');
+  return;
+}
+
 process.chdir(join(__dirname, '..'));
 
 async function main() {
