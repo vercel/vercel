@@ -4,7 +4,7 @@ const ref = process.env.GITHUB_REF.slice(11); // 'refs/heads/ci-cancel-previous'
 const sha = process.env.GITHUB_SHA; // 'a5d18518ea755ddc4212f47ec3448f59e0e7e3a5',
 const run = process.env.GITHUB_RUN_ID; // '33175268',
 const name = process.env.GITHUB_WORKFLOW; // 'CI';
-const token = process.env.GITHUB_WORKFLOW_TOKEN;
+const token = process.env.GITHUB_WORKFLOW_TOKEN; // access token with `public_repo` scope added to repo secrets
 const workflow = 'continuous-integration.yml';
 console.log({ ref, sha, run, name, workflow });
 
@@ -16,6 +16,8 @@ const opts = {
   },
 };
 
+const statusSet = new Set(['queued', 'in_progress']);
+
 fetch(url, opts)
   .then(res => res.json())
   .then(data => {
@@ -23,8 +25,9 @@ fetch(url, opts)
     const others = data.workflow_runs.filter(
       o =>
         o.head_branch === ref &&
+        o.head_branch !== 'master' &&
         o.head_sha !== sha &&
-        ['queued', 'in_progress'].includes(o.status)
+        statusSet.has(o.status)
     );
     console.log(`Found ${others.length} checks in progress.`);
     others.forEach(o => {
