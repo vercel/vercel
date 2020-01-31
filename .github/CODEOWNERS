@@ -2,6 +2,7 @@
 # https://help.github.com/en/articles/about-code-owners
 
 *                                        @tootallnate @leo
+/.github/workflows                       @AndyBitz @styfle
 /packages/frameworks                     @AndyBitz
 /packages/now-cli/src/commands/dev/      @tootallnate @leo @styfle @AndyBitz
 /packages/now-cli/src/util/dev/          @tootallnate @leo @styfle @AndyBitz

@@ -15,8 +15,6 @@ import {
   detectApiDirectory,
   detectApiExtensions,
 } from '@now/build-utils';
-import stripAnsi from 'strip-ansi';
-import chalk from 'chalk';
 import which from 'which';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
@@ -65,8 +63,7 @@ async function createBuildProcess(
   buildEnv: EnvConfig,
   workPath: string,
   output: Output,
-  yarnPath?: string,
-  debugEnabled: boolean = false
+  yarnPath?: string
 ): Promise<ChildProcess> {
   if (!nodeBinPromise) {
     nodeBinPromise = getNodeBin();
@@ -131,7 +128,7 @@ export async function executeBuild(
   const {
     builderWithPkg: { runInProcess, builder, package: pkg },
   } = match;
-  const { src: entrypoint } = match;
+  const { entrypoint } = match;
   const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
 
   const startTime = Date.now();
@@ -157,8 +154,7 @@ export async function executeBuild(
       buildEnv,
       workPath,
       devServer.output,
-      yarnPath,
-      debug
+      yarnPath
     );
   }
 
@@ -286,8 +282,11 @@ export async function executeBuild(
   }
 
   const { output } = result;
+  const { cleanUrls, builds = [] } = nowConfig;
+  const apiDir = detectApiDirectory(builds);
+  const apiExtensions = detectApiExtensions(builds);
+  const apiMatch = apiDir + '/';
 
-  const { cleanUrls } = nowConfig;
   // Mimic fmeta-util and perform file renaming
   Object.entries(output).forEach(([path, value]) => {
     if (cleanUrls && path.endsWith('.html')) {
@@ -296,6 +295,12 @@ export async function executeBuild(
       if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
         value.contentType = value.contentType || 'text/html; charset=utf-8';
       }
+    }
+
+    const ext = extname(path);
+    if (apiDir && path.startsWith(apiMatch) && apiExtensions.has(ext)) {
+      // lambda function files are trimmed of their file extension
+      path = path.slice(0, -ext.length);
     }
 
     delete output[path];
@@ -440,10 +445,13 @@ export async function getBuildMatches(
     // We need to escape brackets since `glob` will
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
+    const mapToEntrypoint = new Map<string, string>();
     const ext = extname(src);
     if (apiDir && src.startsWith(apiMatch) && apiExtensions.has(ext)) {
       // lambda function files are trimmed of their file extension
-      src = src.slice(0, -ext.length);
+      const newSrc = src.slice(0, -ext.length);
+      mapToEntrypoint.set(newSrc, src);
+      src = newSrc;
     }
 
     const files = fileList
@@ -460,6 +468,7 @@ export async function getBuildMatches(
       matches.push({
         ...buildConfig,
         src,
+        entrypoint: mapToEntrypoint.get(src) || src,
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),

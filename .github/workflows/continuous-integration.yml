@@ -11,32 +11,7 @@ on:
 jobs:
   test-unit:
     name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: git fetch origin master
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 10
-      - run: yarn install && yarn run build
-      - run: yarn run test-lint
-      - run: yarn run test-unit --clean false
-      - uses: actions/upload-artifact@v1
-        with:
-          name: test-unit-output
-          path: packages/now-cli/.nyc_output
-
-  test-integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: git fetch origin master
-      - run: yarn install && yarn run build
-      - run: yarn test-integration-once --clean false
-
-  test-now-cli:
-    name: Now CLI Tests
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -45,7 +20,43 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch origin master
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
+      - uses: actions/setup-node@v1
+      - run: yarn install && yarn run build
+      - run: yarn run test-lint
+      - run: yarn run test-unit --clean false
+      - name: Upload Artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run once
+        uses: actions/upload-artifact@v1
+        with:
+          name: test-unit-output
+          path: packages/now-cli/.nyc_output
+
+  test-integration:
+    name: Integration Tests
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
+      - run: yarn install && yarn run build
+      - run: yarn test-integration-once --clean false
+
+  test-now-cli:
+    name: Now CLI Tests
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node: [10, 12]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
       - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
       - run: yarn install && yarn run build
       - uses: actions/setup-node@v1
@@ -55,6 +66,7 @@ jobs:
 
   test-now-dev:
     name: "`now dev` Tests"
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -63,7 +75,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch origin master
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
       - run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
       - run: yarn install && yarn run build
       - uses: actions/setup-node@v1
@@ -73,11 +86,13 @@ jobs:
 
   coverage:
     name: Coverage
+    timeout-minutes: 10
     needs: [test-unit, test-now-cli, test-now-dev, test-integration]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch origin master
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
       - uses: actions/download-artifact@v1
         with:
           name: test-unit-output

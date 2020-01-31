@@ -2,12 +2,17 @@ import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
 import { Output } from '../output';
-import { Framework, SettingValue } from '@now/frameworks';
+import { Framework } from '@now/frameworks';
+import { isSettingValue } from '../is-setting-value';
 
 export interface ProjectSettings {
   buildCommand: string | null;
   outputDirectory: string | null;
   devCommand: string | null;
+}
+
+export interface ProjectSettingsWithFramework extends ProjectSettings {
+  framework: string | null;
 }
 
 const fields: { name: string; value: keyof ProjectSettings }[] = [
@@ -16,30 +21,32 @@ const fields: { name: string; value: keyof ProjectSettings }[] = [
   { name: 'Development Command', value: 'devCommand' },
 ];
 
-function isSettingValue(setting: any): setting is SettingValue {
-  return setting && typeof setting.value === 'string';
-}
-
 export default async function editProjectSettings(
   output: Output,
   projectSettings: ProjectSettings | null,
   framework: Framework | null
 ) {
-  // create new settings object filled with "null" values
-  const settings: Partial<ProjectSettings> = {};
+  // create new settings object, missing values will be filled with `null`
+  const settings: Partial<ProjectSettingsWithFramework> = {
+    ...projectSettings,
+  };
 
   for (let field of fields) {
     settings[field.value] =
       (projectSettings && projectSettings[field.value]) || null;
   }
 
+  // skip editing project settings if no framework is detected
   if (!framework) {
+    settings.framework = null;
     return settings;
   }
 
   output.print(
     `Auto-detected project settings (${chalk.bold(framework.name)}):\n`
   );
+
+  settings.framework = framework.slug;
 
   for (let field of fields) {
     const defaults = framework.settings[field.value];

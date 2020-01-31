@@ -109,15 +109,12 @@ function validateResponseHeaders(t, res) {
 async function exec(directory, args = []) {
   return execa(binaryPath, ['dev', directory, ...args], {
     reject: false,
+    env: { __NOW_SKIP_DEV_COMMAND: 1 },
   });
 }
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    if (process.platform === 'darwin' && satisfies(process.version, '8.x')) {
-      await execa('yarn', ['cache', 'clean']);
-    }
-
     return execa('yarn', ['install'], { cwd: fixturePath });
   }
 }
@@ -165,6 +162,7 @@ async function testFixture(directory, opts = {}, args = []) {
       detached: true,
       stdio: 'pipe',
       ...opts,
+      env: { ...opts.env, __NOW_SKIP_DEV_COMMAND: 1 },
     }
   );
 
@@ -227,7 +225,9 @@ function testFixtureStdio(directory, fn) {
       let stderr = '';
       let printedOutput = false;
 
-      dev = execa(binaryPath, ['dev', dir, '-l', port]);
+      dev = execa(binaryPath, ['dev', dir, '-l', port], {
+        env: { __NOW_SKIP_DEV_COMMAND: 1 },
+      });
 
       dev.stdout.on('data', data => {
         stdoutList.push(data);
@@ -288,6 +288,7 @@ test.beforeEach(() => {
 
 test.afterEach(async () => {
   await Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Array.from(processList).map(([_procId, proc]) => {
       if (proc.killed === false) {
         console.log(
@@ -759,8 +760,6 @@ test('[now dev] 02-angular-node', async t => {
 });
 
 test('[now dev] 03-aurelia', async t => {
-  if (shouldSkip(t, '03-aurelia', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
-
   const tester = testFixtureStdio('03-aurelia', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -801,8 +800,6 @@ test('[now dev] 05-gatsby', async t => {
 });
 
 test('[now dev] 06-gridsome', async t => {
-  if (shouldSkip(t, '06-gridsome', '>= 6.9.0 <7.0.0 || >= 8.9.0')) return;
-
   const tester = testFixtureStdio('06-gridsome', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -949,8 +946,6 @@ test('[now dev] 14-svelte-node', async t => {
 // });
 
 test('[now dev] 16-vue-node', async t => {
-  if (shouldSkip(t, '16-vue-node', '^8.12.0 || >=9.7.0')) return;
-
   const directory = fixture('16-vue-node');
   const { dev, port } = await testFixture(directory);
 
@@ -970,8 +965,6 @@ test('[now dev] 16-vue-node', async t => {
 });
 
 test('[now dev] 17-vuepress-node', async t => {
-  if (shouldSkip(t, '17-vuepress-node', '^8.12.0 || >=9.7.0')) return;
-
   const directory = fixture('17-vuepress-node');
   const { dev, port } = await testFixture(directory);
 
@@ -1045,8 +1038,6 @@ test('[now dev] double slashes redirect', async t => {
 });
 
 test('[now dev] 18-marko', async t => {
-  if (shouldSkip(t, '18-marko', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
-
   const tester = testFixtureStdio('18-marko', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -1084,8 +1075,6 @@ test(
 );
 
 test('[now dev] 21-charge', async t => {
-  if (shouldSkip(t, '21-charge', '>= 8.10.0')) return;
-
   const tester = testFixtureStdio('21-charge', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -1111,8 +1100,6 @@ test(
 );
 
 test('[now dev] 23-docusaurus', async t => {
-  if (shouldSkip(t, '23-docusaurus', '>= 8.10')) return;
-
   const tester = testFixtureStdio('23-docusaurus', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -1245,15 +1232,6 @@ test('[now dev] no build matches warning', async t => {
 });
 
 test('[now dev] do not recursivly check the path', async t => {
-  if (
-    shouldSkip(
-      t,
-      'do not recursivly check the path',
-      '^8.10.0 || ^10.13.0 || >=11.10.1'
-    )
-  )
-    return;
-
   const directory = fixture('handle-filesystem-missing');
   const { dev, port } = await testFixture(directory);
 
@@ -1370,8 +1348,6 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
 });
 
 test('[now dev] 25-nextjs-src-dir', async t => {
-  if (shouldSkip(t, '25-nextjs-src-dir', '>= 8.9.0')) return;
-
   const directory = fixture('25-nextjs-src-dir');
   const { dev, port } = await testFixture(directory);
 
@@ -1391,13 +1367,40 @@ test('[now dev] 25-nextjs-src-dir', async t => {
 });
 
 test(
+  '[now dev] Use `@now/python` with Flask requirements.txt',
+  testFixtureStdio('python-flask', async (t, port) => {
+    const name = 'Alice';
+    const year = new Date().getFullYear();
+    const user = await fetchWithRetry(
+      `http://localhost:${port}/api/user?name=${name}`
+    );
+    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
+    const ext = await fetchWithRetry(`http://localhost:${port}/api/date.py`);
+
+    validateResponseHeaders(t, user);
+    validateResponseHeaders(t, date);
+    validateResponseHeaders(t, ext);
+
+    t.regex(await user.text(), new RegExp(`Hello ${name}`));
+    t.regex(await date.text(), new RegExp(`Current date is ${year}`));
+    t.regex(await ext.text(), new RegExp(`Current date is ${year}`));
+  })
+);
+
+test(
   '[now dev] Use runtime from the functions property',
   testFixtureStdio('custom-runtime', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/api/user`);
+    const extensionless = await fetchWithRetry(
+      `http://localhost:${port}/api/user`
+    );
+    const extension = await fetchWithRetry(
+      `http://localhost:${port}/api/user.sh`
+    );
 
-    validateResponseHeaders(t, response);
+    validateResponseHeaders(t, extensionless);
+    validateResponseHeaders(t, extension);
 
-    const body = await response.text();
-    t.regex(body, /Hello, from Bash!/gm);
+    t.regex(await extensionless.text(), /Hello, from Bash!/gm);
+    t.regex(await extension.text(), /Hello, from Bash!/gm);
   })
 );

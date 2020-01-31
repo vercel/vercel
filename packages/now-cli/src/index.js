@@ -48,6 +48,7 @@ import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
+import { getLinkedOrg } from './util/projects/link';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -504,9 +505,6 @@ const main = async argv_ => {
     }
   }
 
-  const scope = argv['--scope'] || argv['--team'] || localConfig.scope;
-  const targetCommand = commands.get(subcommand);
-
   if (argv['--team']) {
     output.warn(
       `The ${param('--team')} flag is deprecated. Please use ${param(
@@ -515,18 +513,35 @@ const main = async argv_ => {
     );
   }
 
+  const {
+    authConfig: { token },
+  } = ctx;
+
+  let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
+
+  if (process.env.NOW_ORG_ID || !scope) {
+    const client = new Client({ apiUrl, token });
+    const link = await getLinkedOrg(client, output);
+
+    if (link.status === 'error') {
+      return link.exitCode;
+    }
+
+    if (link.status === 'linked') {
+      scope = link.org.slug;
+    }
+  }
+
+  const targetCommand = commands.get(subcommand);
+
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'dev' &&
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
-    const {
-      authConfig: { token },
-    } = ctx;
-    const client = new Client({ apiUrl, token });
-
     let user = null;
+    const client = new Client({ apiUrl, token });
 
     try {
       user = await getUser(client);

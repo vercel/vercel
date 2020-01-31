@@ -50,9 +50,9 @@ function printInspectUrl(
 export default async function processDeployment({
   isLegacy,
   org,
+  cwd,
   projectName,
-  shouldLinkFolder,
-  isDetectingFramework,
+  isSettingUpProject,
   skipAutoDetectionConfirmation,
   ...args
 }: {
@@ -69,9 +69,9 @@ export default async function processDeployment({
   force?: boolean;
   org: Org;
   projectName: string;
-  shouldLinkFolder: boolean;
-  isDetectingFramework: boolean;
+  isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
+  cwd?: string;
 }) {
   if (isLegacy) return processLegacyDeployment(args);
 
@@ -107,7 +107,7 @@ export default async function processDeployment({
   let deploySpinner = null;
 
   let deployingSpinner = wait(
-    isDetectingFramework
+    isSettingUpProject
       ? `Setting up project`
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
     0
@@ -167,18 +167,16 @@ export default async function processDeployment({
 
       now._host = event.payload.url;
 
-      if (shouldLinkFolder) {
-        await linkFolderToProject(
-          output,
-          paths[0],
-          {
-            orgId: org.id,
-            projectId: event.payload.projectId,
-          },
-          projectName,
-          org.slug
-        );
-      }
+      await linkFolderToProject(
+        output,
+        cwd || paths[0],
+        {
+          orgId: org.id,
+          projectId: event.payload.projectId,
+        },
+        projectName,
+        org.slug
+      );
 
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 

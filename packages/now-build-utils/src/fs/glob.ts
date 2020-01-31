@@ -5,7 +5,7 @@ import { promisify } from 'util';
 import { lstat, Stats } from 'fs-extra';
 import FileFsRef from '../file-fs-ref';
 
-type GlobOptions = vanillaGlob_.IOptions;
+export type GlobOptions = vanillaGlob_.IOptions;
 
 interface FsFiles {
   [filePath: string]: FileFsRef;
