@@ -13,7 +13,7 @@ export interface ProjectSettings {
 
 export interface ProjectSettingsWithFramework extends ProjectSettings {
   framework: string | null;
-};
+}
 
 const fields: { name: string; value: keyof ProjectSettings }[] = [
   { name: 'Build Command', value: 'buildCommand' },
@@ -25,8 +25,11 @@ export default async function editProjectSettings(
   output: Output,
   projectSettings: ProjectSettings | null,
   framework: Framework | null
-): Promise<ProjectSettingsWithFramework | {}> {
-  const settings: Partial<ProjectSettingsWithFramework> = {};
+) {
+  // create new settings object, missing values will be filled with `null`
+  const settings: Partial<ProjectSettingsWithFramework> = {
+    ...projectSettings,
+  };
 
   for (let field of fields) {
     settings[field.value] =
