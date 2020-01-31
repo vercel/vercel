@@ -4,9 +4,15 @@ const ref = process.env.GITHUB_REF.slice(11); // 'refs/heads/ci-cancel-previous'
 const sha = process.env.GITHUB_SHA; // 'a5d18518ea755ddc4212f47ec3448f59e0e7e3a5',
 const run = process.env.GITHUB_RUN_ID; // '33175268',
 const name = process.env.GITHUB_WORKFLOW; // 'CI';
+const event = process.env.GITHUB_EVENT_NAME; // 'push'
 const token = process.env.GITHUB_WORKFLOW_TOKEN; // access token with `public_repo` scope added to repo secrets
 const workflow = 'continuous-integration.yml';
-console.log({ ref, sha, run, name, workflow });
+console.log({ ref, sha, run, name, event, workflow });
+
+if (event !== 'push') {
+  console.log(`Skipping event ${event}`);
+  return;
+}
 
 const url = `https://api.github.com/repos/zeit/now/actions/workflows/${workflow}/runs`;
 const opts = {
