@@ -9,6 +9,46 @@ import toHumanPath from './humanize-path';
 
 const stat = promisify(lstatRaw);
 
+/**
+ * A helper function to validate the `rootDirectory` input.
+ */
+export async function validateRootDirectory(
+  output: Output,
+  cwd: string,
+  path: string
+) {
+  const pathStat = await stat(path).catch(() => null);
+
+  if (!pathStat) {
+    output.print(
+      `${chalk.red('Error!')} The provided path ${chalk.cyan(
+        `“${toHumanPath(path)}”`
+      )} does not exist\n`
+    );
+    return false;
+  }
+
+  if (!pathStat.isDirectory()) {
+    output.print(
+      `${chalk.red('Error!')} The provided path ${chalk.cyan(
+        `“${toHumanPath(path)}”`
+      )} is a file, but expected a directory.\n`
+    );
+    return false;
+  }
+
+  if (!path.startsWith(cwd)) {
+    output.print(
+      `${chalk.red('Error!')} The provided path ${chalk.cyan(
+        `“${toHumanPath(path)}”`
+      )} is outside of the project.\n`
+    );
+    return false;
+  }
+
+  return true;
+}
+
 export default async function validatePaths(
   output: Output,
   paths: string[]
@@ -25,10 +65,7 @@ export default async function validatePaths(
   const path = paths[0];
 
   // can only deploy a directory
-  let pathStat;
-  try {
-    pathStat = await stat(path);
-  } catch (error) {}
+  const pathStat = await stat(path).catch(() => null);
 
   if (!pathStat) {
     output.print(

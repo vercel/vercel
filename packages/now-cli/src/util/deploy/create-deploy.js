@@ -11,10 +11,11 @@ export default async function createDeploy(
   paths,
   createArgs,
   org,
-  isSettingUpProject
+  isSettingUpProject,
+  cwd
 ) {
   try {
-    return await now.create(paths, createArgs, org, isSettingUpProject);
+    return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
   } catch (error) {
     if (error.code === 'rate_limited') {
       throw new ERRORS_TS.DeploymentsRateLimited(error.message);

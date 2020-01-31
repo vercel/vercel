@@ -1,5 +1,6 @@
 import ms from 'ms';
 import bytes from 'bytes';
+import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
@@ -47,8 +48,11 @@ import {
 import getProjectName from '../../util/get-project-name';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
-import validatePaths from '../../util/validate-paths';
 import { prependEmoji, emoji } from '../../util/emoji';
+import { inputRootDirectory } from '../../util/input/input-root-directory';
+import validatePaths, {
+  validateRootDirectory,
+} from '../../util/validate-paths';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -131,10 +135,13 @@ const printDeploymentStatus = async (
     }
 
     // copy to clipboard
+    let isCopiedToClipboard = false;
     if (isClipboardEnabled && !isWildcard) {
-      await copy(previewUrl).catch(error =>
-        output.debug(`Error copying to clipboard: ${error}`)
-      );
+      await copy(previewUrl)
+        .then(() => {
+          isCopiedToClipboard = true;
+        })
+        .catch(error => output.debug(`Error copying to clipboard: ${error}`));
     }
 
     // write to stdout
@@ -146,7 +153,9 @@ const printDeploymentStatus = async (
       prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
-        )} ${deployStamp()}`,
+        )}${
+          isCopiedToClipboard ? chalk.gray(` [copied to clipboard]`) : ''
+        } ${deployStamp()}`,
         emoji('success')
       ) + `\n`
     );
@@ -379,6 +388,7 @@ export default async function main(
 
   let { org, project, status } = link;
   let newProjectName = null;
+  let rootDirectory = project ? project.rootDirectory : null;
 
   if (status === 'not_linked') {
     const shouldStartSetup =
@@ -433,6 +443,22 @@ export default async function main(
       );
       status = 'linked';
     }
+
+    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+  }
+
+  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+
+  if (
+    rootDirectory &&
+    (await validateRootDirectory(output, path, sourcePath)) === false
+  ) {
+    output.print(
+      `${chalk.red(
+        'Error!'
+      )} Please change the projects settings on the dashboard.\n`
+    );
+    return 1;
   }
 
   const currentTeam = org.type === 'team' ? org.id : undefined;
@@ -462,10 +488,11 @@ export default async function main(
       output,
       now,
       contextName,
-      [path],
+      [sourcePath],
       createArgs,
       org,
-      !project && !isFile
+      !project && !isFile,
+      path
     );
 
     if (
@@ -473,6 +500,10 @@ export default async function main(
       deployment.code === 'missing_project_settings'
     ) {
       let { projectSettings, framework } = deployment;
+
+      if (rootDirectory) {
+        projectSettings.rootDirectory = rootDirectory;
+      }
 
       const settings = await editProjectSettings(
         output,
@@ -489,10 +520,11 @@ export default async function main(
         output,
         now,
         contextName,
-        [path],
+        [sourcePath],
         createArgs,
         org,
-        false
+        false,
+        path
       );
     }
 

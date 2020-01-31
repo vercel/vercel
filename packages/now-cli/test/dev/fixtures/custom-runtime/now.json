@@ -1,7 +1,7 @@
 {
   "functions": {
-    "api/user": {
-      "runtime": "now-bash@1.0.3"
+    "api/user.sh": {
+      "runtime": "now-bash@3.0.0"
     }
   }
 }
