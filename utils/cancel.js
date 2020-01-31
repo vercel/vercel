@@ -37,7 +37,6 @@ fetch(url, opts)
         status,
       });
       fetch(cancel_url, {
-        ...opts,
         method: 'POST',
         Authorization: `Bearer ${token}`,
       })
