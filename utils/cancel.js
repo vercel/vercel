@@ -20,14 +20,14 @@ fetch(url, opts)
   .then(res => res.json())
   .then(data => {
     console.log(`Found ${data.total_count} checks total.`);
-    const inProgress = data.workflow_runs.filter(
+    const others = data.workflow_runs.filter(
       o =>
         o.head_branch === ref &&
         o.head_sha !== sha &&
         o.status === 'in_progress'
     );
-    console.log(`Found ${inProgress.length} checks in progress.`);
-    inProgress.forEach(o => {
+    console.log(`Found ${others.length} checks in progress.`);
+    others.forEach(o => {
       const { id, cancel_url, head_branch, head_sha, status } = o;
       console.log('Cancelling another check: ', {
         id,
@@ -41,7 +41,7 @@ fetch(url, opts)
         method: 'POST',
         Authorization: `Bearer ${token}`,
       })
-        .then(res => console.log(res.status))
+        .then(res => console.log(`Status ${res.status}`))
         .catch(e => console.error(e));
     });
     console.log('Done.');
