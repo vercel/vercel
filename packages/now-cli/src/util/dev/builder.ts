@@ -6,15 +6,7 @@ import { promisify } from 'util';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import {
-  Builder,
-  File,
-  Lambda,
-  FileBlob,
-  FileFsRef,
-  detectApiDirectory,
-  detectApiExtensions,
-} from '@now/build-utils';
+import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import which from 'which';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
