@@ -1,0 +1,17 @@
+name: Cancel
+
+on:
+- push
+
+jobs:
+  cancel:
+    name: Cancel Previous Runs
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo ${{ github.ref }}
+      - uses: actions/setup-node@v1
+      - run: cd ./utils && npm init -y && npm i node-fetch && node cancel.js
+        env:
+          GITHUB_WORKFLOW_TOKEN: ${{ secrets.GITHUB_WORKFLOW_TOKEN }}
