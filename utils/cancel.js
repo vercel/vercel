@@ -13,6 +13,7 @@ const url = `https://api.github.com/repos/zeit/now/actions/workflows/${workflow}
 const opts = {
   headers: {
     Accept: 'application/vnd.github.v3+json',
+    Authorization: `Bearer ${token}`,
   },
 };
 
@@ -36,9 +37,10 @@ fetch(url, opts)
         head_sha,
         status,
       });
+
       fetch(cancel_url, {
+        ...opts,
         method: 'POST',
-        Authorization: `Bearer ${token}`,
       })
         .then(res => console.log(`Status ${res.status}`))
         .catch(e => console.error(e));
