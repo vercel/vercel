@@ -3,7 +3,7 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { promisify } from 'util';
-import { delimiter, dirname, extname, join } from 'path';
+import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
 import {
@@ -282,10 +282,7 @@ export async function executeBuild(
   }
 
   const { output } = result;
-  const { cleanUrls, builds = [] } = nowConfig;
-  const apiDir = detectApiDirectory(builds);
-  const apiExtensions = detectApiExtensions(builds);
-  const apiMatch = apiDir + '/';
+  const { cleanUrls } = nowConfig;
 
   // Mimic fmeta-util and perform file renaming
   Object.entries(output).forEach(([path, value]) => {
