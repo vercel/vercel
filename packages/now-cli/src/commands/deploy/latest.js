@@ -135,10 +135,13 @@ const printDeploymentStatus = async (
     }
 
     // copy to clipboard
+    let isCopiedToClipboard = false;
     if (isClipboardEnabled && !isWildcard) {
-      await copy(previewUrl).catch(error =>
-        output.debug(`Error copying to clipboard: ${error}`)
-      );
+      await copy(previewUrl)
+        .then(() => {
+          isCopiedToClipboard = true;
+        })
+        .catch(error => output.debug(`Error copying to clipboard: ${error}`));
     }
 
     // write to stdout
@@ -150,7 +153,9 @@ const printDeploymentStatus = async (
       prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
-        )} ${deployStamp()}`,
+        )}${
+          isCopiedToClipboard ? chalk.gray(` [copied to clipboard]`) : ''
+        } ${deployStamp()}`,
         emoji('success')
       ) + `\n`
     );
