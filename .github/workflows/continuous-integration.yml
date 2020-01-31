@@ -18,9 +18,9 @@ jobs:
       - uses: actions/checkout@v2
       - run: echo ${{ github.ref }}
       - uses: actions/setup-node@v1
+      - run: cd ./utils && npm init -y && npm i node-fetch && node cancel.js
         env:
           GITHUB_WORKFLOW_TOKEN: ${{ secrets.GITHUB_WORKFLOW_TOKEN }}
-      - run: cd ./utils && npm init -y && npm i node-fetch && node cancel.js
 
   test-unit:
     name: Unit Tests
