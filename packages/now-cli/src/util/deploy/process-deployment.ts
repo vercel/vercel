@@ -50,6 +50,7 @@ function printInspectUrl(
 export default async function processDeployment({
   isLegacy,
   org,
+  cwd,
   projectName,
   isSettingUpProject,
   skipAutoDetectionConfirmation,
@@ -70,6 +71,7 @@ export default async function processDeployment({
   projectName: string;
   isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
+  cwd?: string;
 }) {
   if (isLegacy) return processLegacyDeployment(args);
 
@@ -167,7 +169,7 @@ export default async function processDeployment({
 
       await linkFolderToProject(
         output,
-        paths[0],
+        cwd || paths[0],
         {
           orgId: org.id,
           projectId: event.payload.projectId,

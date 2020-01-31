@@ -485,6 +485,9 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
+    'project-root-directory': {
+      'src/index.html': '<h1>I am a website.</h1>',
+    },
   };
 
   for (const typeName of Object.keys(spec)) {
