@@ -229,7 +229,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
   if (res.status === 404) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_BINARY_NOT_FOUND',
-      message: `${framework} version ${version} was not found.`,
+      message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
       link: 'https://zeit.co/docs/v2/build-step#framework-versioning',
     });
   }
