@@ -32,6 +32,7 @@ const testsThatFailToBuild = new Set([
   '05-empty-dist-dir',
   '06-missing-script',
   '07-nonzero-sh',
+  '36-hugo-version-not-found',
 ]);
 
 // eslint-disable-next-line no-restricted-syntax
