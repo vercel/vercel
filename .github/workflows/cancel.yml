@@ -1,17 +1,17 @@
 name: Cancel
-
 on:
-- push
-
+  push:
+    branches:    
+    - '*'
+    - '!master'
 jobs:
   cancel:
-    name: Cancel Previous Runs
-    timeout-minutes: 5
+    name: 'Cancel Previous Runs'
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v2
-      - run: echo ${{ github.ref }}
-      - uses: actions/setup-node@v1
-      - run: cd ./utils && npm init -y && npm i node-fetch && node cancel.js
-        env:
-          GITHUB_WORKFLOW_TOKEN: ${{ secrets.GITHUB_WORKFLOW_TOKEN }}
+      - uses: styfle/cancel-workflow-action@master
+        with:
+          workflow_id: 435869
+          access_token: ${{ secrets.GITHUB_WORKFLOW_TOKEN }}
+
