@@ -6,7 +6,6 @@ import {
   DeploymentOptions,
   NowClientOptions,
 } from 'now-client';
-import wait from '../output/wait';
 import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';
@@ -106,7 +105,7 @@ export default async function processDeployment({
   let buildSpinner = null;
   let deploySpinner = null;
 
-  let deployingSpinner = wait(
+  let deployingSpinner = output.spinner(
     isSettingUpProject
       ? `Setting up project`
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
@@ -183,8 +182,8 @@ export default async function processDeployment({
       if (queuedSpinner === null) {
         queuedSpinner =
           event.payload.readyState === 'QUEUED'
-            ? wait('Queued', 0)
-            : wait('Building', 0);
+            ? output.spinner('Queued', 0)
+            : output.spinner('Building', 0);
       }
     }
 
@@ -194,7 +193,7 @@ export default async function processDeployment({
       }
 
       if (buildSpinner === null) {
-        buildSpinner = wait('Building', 0);
+        buildSpinner = output.spinner('Building', 0);
       }
     }
 
@@ -206,7 +205,7 @@ export default async function processDeployment({
         buildSpinner();
       }
 
-      deploySpinner = wait('Completing', 0);
+      deploySpinner = output.spinner('Completing', 0);
     }
 
     // Handle error events

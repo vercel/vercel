@@ -404,6 +404,7 @@ export default async function main(
     }
 
     org = await selectOrg(
+      output,
       'Which scope do you want to deploy to?',
       client,
       ctx.config.currentTeam,
@@ -455,7 +456,9 @@ export default async function main(
       output,
       path,
       sourcePath,
-      project ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings` : ''
+      project
+        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        : ''
     )) === false
   ) {
     return 1;

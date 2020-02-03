@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import { format } from 'util';
 import { Console } from 'console';
+import wait from './wait';
 
 export type Output = ReturnType<typeof createOutput>;
 
@@ -76,6 +77,15 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
+  function spinner(message: string, timeout: number = 300) {
+    if (debugEnabled) {
+      debug(`Spinner invoked (${message})`);
+      return () => debug(`Spinner ended (${message})`);
+    }
+
+    return wait(message, timeout);
+  }
+
   // This is pretty hacky, but since we control the version of Node.js
   // being used because of `pkg` it's safe to do in this case.
   const c = {
@@ -109,5 +119,6 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     dim,
     time,
     note,
+    spinner,
   };
 }
