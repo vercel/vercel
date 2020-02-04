@@ -427,8 +427,10 @@ export default async function main(
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
+      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
     } else {
       project = projectOrNewProjectName;
+      rootDirectory = project.rootDirectory;
 
       // we can already link the project
       await linkFolderToProject(
@@ -443,8 +445,6 @@ export default async function main(
       );
       status = 'linked';
     }
-
-    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
   }
 
   const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
@@ -455,7 +455,9 @@ export default async function main(
       output,
       path,
       sourcePath,
-      project ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings` : ''
+      project
+        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        : ''
     )) === false
   ) {
     return 1;
