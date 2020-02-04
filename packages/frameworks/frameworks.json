@@ -812,6 +812,7 @@
   {
     "name": "Other",
     "slug": null,
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/other.svg",
     "settings": {
       "buildCommand": {
         "value": "`build` or `now-build` from `package.json` if it exists"

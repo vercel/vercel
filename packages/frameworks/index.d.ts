@@ -14,7 +14,7 @@ export type Setting = SettingValue | SettingPlaceholder;
 export interface Framework {
   name: string;
   slug: string | null;
-  logo?: string;
+  logo: string;
   demo?: string;
   tagline?: string;
   website?: string;
