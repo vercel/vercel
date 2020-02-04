@@ -151,6 +151,27 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(2);
   });
 
+  it('api go with test files', async () => {
+    const files = [
+      'api/index.go',
+      'api/index_test.go',
+      'api/test.go',
+      'api/testing_another.go',
+      'api/readme.md',
+      'api/config/staging.go',
+      'api/config/staging_test.go',
+      'api/config/production.go',
+      'api/config/production_test.go',
+      'api/src/controllers/health.go',
+      'api/src/controllers/user.module.go',
+      'api/src/controllers/user.module_test.go',
+    ];
+
+    const { builders } = await detectBuilders(files);
+    expect(builders!.length).toBe(7);
+    expect(builders!.some(b => b.src.endsWith('_test.go'))).toBe(false);
+  });
+
   it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
