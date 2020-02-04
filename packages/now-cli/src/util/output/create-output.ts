@@ -80,7 +80,12 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   function spinner(message: string, timeout: number = 300) {
     if (debugEnabled) {
       debug(`Spinner invoked (${message})`);
-      return () => debug(`Spinner ended (${message})`);
+      let isEnded = false;
+      return () => {
+        if (isEnded) return;
+        isEnded = true;
+        debug(`Spinner ended (${message})`);
+      };
     }
 
     return wait(message, timeout);
