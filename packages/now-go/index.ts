@@ -1,4 +1,4 @@
-import { join, sep, dirname, basename } from 'path';
+import { join, sep, dirname, basename, normalize } from 'path';
 import { readFile, writeFile, pathExists, move } from 'fs-extra';
 import { homedir } from 'os';
 import execa from 'execa';
@@ -14,7 +14,8 @@ import {
   debug,
 } from '@now/build-utils';
 
-import { createGo, getAnalyzedEntrypoint } from './go-helpers';
+import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
+const handlerFileName = `handler${OUT_EXTENSION}`;
 
 interface Analyzed {
   found?: boolean;
@@ -321,7 +322,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     }
 
     debug('Running `go build`...');
-    const destPath = join(outDir, 'handler');
+    const destPath = join(outDir, handlerFileName);
 
     try {
       const src = [join(baseGoModPath, mainModGoFileName)];
@@ -385,12 +386,12 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     }
 
     debug('Running `go build`...');
-    const destPath = join(outDir, 'handler');
+    const destPath = join(outDir, handlerFileName);
     try {
       const src = [
         join(entrypointDirname, mainGoFileName),
         downloadedFiles[entrypoint].fsPath,
-      ];
+      ].map(file => normalize(file));
       await go.build(src, destPath);
     } catch (err) {
       console.log('failed to `go build`');
@@ -400,7 +401,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
 
   const lambda = await createLambda({
     files: { ...(await glob('**', outDir)), ...includedFiles },
-    handler: 'handler',
+    handler: handlerFileName,
     runtime: 'go1.x',
     environment: {},
   });
