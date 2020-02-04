@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import wait from '../output/wait';
 import joinWords from '../output/join-words';
 import * as Errors from '../errors-ts';
 import { Output } from '../output';
@@ -17,7 +16,7 @@ export default async function patchDeploymentScale(
   scaleArgs: ScaleArgs,
   url: string
 ) {
-  const cancelWait = wait(
+  const cancelWait = output.spinner(
     `Setting scale rules for ${joinWords(
       Object.keys(scaleArgs).map(dc => `${chalk.bold(dc)}`)
     )}`
@@ -28,7 +27,7 @@ export default async function patchDeploymentScale(
       `/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`,
       {
         method: 'PATCH',
-        body: scaleArgs
+        body: scaleArgs,
       }
     );
     cancelWait();
