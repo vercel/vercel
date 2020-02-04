@@ -2149,54 +2149,6 @@ test('should show prompts to set up project', async t => {
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
 });
 
-test('should not prompt "project settings overwrite" for undetected projects', async t => {
-  const directory = fixture('static-deployment');
-  const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
-
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
-
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
-  now.stdin.write('yes\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
-  now.stdin.write('\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Link to existing project?')
-  );
-  now.stdin.write('no\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
-  now.stdin.write(`${projectName}\n`);
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
-  now.stdin.write('\n');
-
-  await waitForPrompt(now, chunk => {
-    t.false(
-      chunk.includes('Want to override the settings?'),
-      'Should not ask to override'
-    );
-    return chunk.includes('Linked to');
-  });
-
-  const output = await now;
-  t.is(output.exitCode, 0, formatOutput(output));
-});
-
 test('should prefill "project name" prompt with folder name', async t => {
   const projectName = `static-deployment-${
     Math.random()
