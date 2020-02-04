@@ -27,20 +27,20 @@ export default async function({ teams, config, apiUrl, token }) {
 
   if (accountIsCurrent) {
     currentTeam = {
-      slug: user.username || user.email
+      slug: user.username || user.email,
     };
   }
 
   const teamList = list.map(({ slug, name }) => ({
     name,
     value: slug,
-    current: slug === currentTeam.slug ? chars.tick : ''
+    current: slug === currentTeam.slug ? chars.tick : '',
   }));
 
   teamList.unshift({
     name: user.email,
     value: user.username || user.email,
-    current: (accountIsCurrent && chars.tick) || ''
+    current: (accountIsCurrent && chars.tick) || '',
   });
 
   // Let's bring the current team to the beginning of the list

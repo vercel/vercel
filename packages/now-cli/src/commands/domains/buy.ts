@@ -13,7 +13,6 @@ import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
-import wait from '../../util/output/wait';
 
 type Options = {
   '--debug': boolean;
@@ -27,7 +26,7 @@ export default async function buy(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -100,7 +99,7 @@ export default async function buy(
 
   let buyResult;
   const purchaseStamp = stamp();
-  const stopPurchaseSpinner = wait('Purchasing');
+  const stopPurchaseSpinner = output.spinner('Purchasing');
 
   try {
     buyResult = await purchaseDomain(client, domainName, price);
