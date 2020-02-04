@@ -12,7 +12,8 @@ const platformMap = new Map([['win32', 'windows']]);
 
 // Location where the `go` binary will be installed after `postinstall`
 const GO_DIR = join(__dirname, 'go');
-const GO_BIN = join(GO_DIR, 'bin/go');
+const GO_BIN = join(GO_DIR, 'bin', 'go');
+const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 
 const getPlatform = (p: string) => platformMap.get(p) || p;
 const getArch = (a: string) => archMap.get(a) || a;
@@ -23,16 +24,17 @@ const getGoUrl = (version: string, platform: string, arch: string) => {
   return `https://dl.google.com/go/go${version}.${goPlatform}-${goArch}.${ext}`;
 };
 
+export const OUT_EXTENSION = process.platform === 'win32' ? '.exe' : '';
+
 export async function getAnalyzedEntrypoint(filePath: string, modulePath = '') {
   debug('Analyzing entrypoint %o', filePath);
-  const bin = join(__dirname, 'analyze');
+  const bin = join(__dirname, `analyze${OUT_EXTENSION}`);
 
   const isAnalyzeExist = await pathExists(bin);
   if (!isAnalyzeExist) {
     const src = join(__dirname, 'util', 'analyze.go');
-    const dest = join(__dirname, 'analyze');
     const go = await downloadGo();
-    await go.build(src, dest);
+    await go.build(src, bin);
   }
 
   const args = [`-modpath=${modulePath}`, filePath];
@@ -49,7 +51,7 @@ function createGoPathTree(goPath: string, platform: string, arch: string) {
   debug('Creating GOPATH directory structure for %o (%s)', goPath, tuple);
   return Promise.all([
     mkdirp(join(goPath, 'bin')),
-    mkdirp(join(goPath, 'pkg', tuple))
+    mkdirp(join(goPath, 'pkg', tuple)),
   ]);
 }
 
@@ -92,7 +94,7 @@ class GoWrapper {
 
     const flags = process.env.GO_BUILD_FLAGS
       ? stringArgv(process.env.GO_BUILD_FLAGS)
-      : ['-ldflags', '-s -w'];
+      : GO_FLAGS;
 
     return this.execute('build', ...flags, '-o', dest, ...sources);
   }
@@ -110,7 +112,7 @@ export async function createGo(
     ...process.env,
     PATH: path,
     GOPATH: goPath,
-    ...opts.env
+    ...opts.env,
   };
   if (goMod) {
     env.GO111MODULE = 'on';

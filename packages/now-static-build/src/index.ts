@@ -1,5 +1,6 @@
 import ms from 'ms';
 import path from 'path';
+import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import { ChildProcess, SpawnOptions } from 'child_process';
@@ -223,6 +224,20 @@ function getFramework(
   return framework;
 }
 
+async function fetchBinary(url: string, framework: string, version: string) {
+  const res = await fetch(url);
+  if (res.status === 404) {
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_BINARY_NOT_FOUND',
+      message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
+      link: 'https://zeit.co/docs/v2/build-step#framework-versioning',
+    });
+  }
+  await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
+    shell: true,
+  });
+}
+
 export async function build({
   files,
   entrypoint,
@@ -284,25 +299,19 @@ export async function build({
         const isOldVersion = major === 0 && minor < 43;
         const prefix = isOldVersion ? `hugo_` : `hugo_extended_`;
         const url = `https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${prefix}${HUGO_VERSION}_Linux-64bit.tar.gz`;
-        await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
-          shell: true,
-        });
+        await fetchBinary(url, 'Hugo', HUGO_VERSION);
       }
 
       if (ZOLA_VERSION && !meta.isDev) {
         console.log('Installing Zola version ' + ZOLA_VERSION);
         const url = `https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
-        await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
-          shell: true,
-        });
+        await fetchBinary(url, 'Zola', ZOLA_VERSION);
       }
 
       if (GUTENBERG_VERSION && !meta.isDev) {
         console.log('Installing Gutenberg version ' + GUTENBERG_VERSION);
         const url = `https://github.com/getzola/zola/releases/download/v${GUTENBERG_VERSION}/gutenberg-v${GUTENBERG_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
-        await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
-          shell: true,
-        });
+        await fetchBinary(url, 'Gutenberg', GUTENBERG_VERSION);
       }
 
       // `public` is the default for zero config

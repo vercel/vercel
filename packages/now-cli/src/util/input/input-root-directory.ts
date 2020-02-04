@@ -1,5 +1,4 @@
 import path from 'path';
-import fs from 'fs-extra';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { Output } from '../output';
@@ -39,8 +38,14 @@ export async function inputRootDirectory(
 
     const fullPath = path.join(cwd, normal);
 
-    if ((await validateRootDirectory(output, cwd, fullPath)) === false) {
-      output.print(`${chalk.red('Error!')} Please select a different one.\n`);
+    if (
+      (await validateRootDirectory(
+        output,
+        cwd,
+        fullPath,
+        'Please choose a different one.'
+      )) === false
+    ) {
       continue;
     }
 
