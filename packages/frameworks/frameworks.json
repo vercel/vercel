@@ -813,6 +813,7 @@
     "name": "Other",
     "slug": null,
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/other.svg",
+    "description": "No framework or a unoptimized framework.",
     "settings": {
       "buildCommand": {
         "placeholder": "`build` or `now-build` from `package.json` if it exists"
