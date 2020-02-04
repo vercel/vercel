@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { Output } from '../output';
 import { Project, Org } from '../../types';
+import slugify from '@sindresorhus/slugify';
 
 export default async function inputProject(
   output: Output,
@@ -18,6 +19,8 @@ export default async function inputProject(
     return detectedProjectName;
   }
 
+  const slugifiedName = slugify(detectedProjectName);
+
   // attempt to auto-detect a project to link
   let detectedProject = null;
   const existingProjectSpinner = output.spinner(
@@ -25,12 +28,17 @@ export default async function inputProject(
     1000
   );
   try {
-    const project = await getProjectByIdOrName(
-      client,
-      detectedProjectName,
-      org.id
-    );
-    detectedProject = project instanceof ProjectNotFound ? null : project;
+    const [project, slugifiedProject] = await Promise.all([
+      getProjectByIdOrName(client, detectedProjectName, org.id),
+      slugifiedName !== detectedProjectName
+        ? getProjectByIdOrName(client, slugifiedName, org.id)
+        : null,
+    ]);
+    detectedProject = !(project instanceof ProjectNotFound)
+      ? project
+      : !(slugifiedProject instanceof ProjectNotFound)
+      ? slugifiedProject
+      : null;
   } catch (error) {}
   existingProjectSpinner();
 
@@ -44,7 +52,7 @@ export default async function inputProject(
     if (
       await confirm(
         `Found project ${chalk.cyan(
-          `“${org.slug}/${detectedProjectName}”`
+          `“${org.slug}/${detectedProject.name}”`
         )}. Link to it?`,
         true
       )
@@ -99,7 +107,7 @@ export default async function inputProject(
       type: 'input',
       name: 'newProjectName',
       message: `What’s your project’s name?`,
-      default: !detectedProject ? detectedProjectName : undefined,
+      default: !detectedProject ? slugifiedName : undefined,
     });
     newProjectName = answers.newProjectName as string;
 

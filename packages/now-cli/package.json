@@ -63,6 +63,7 @@
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
+    "@sindresorhus/slugify": "0.10.0",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",
     "@types/async-retry": "1.2.1",
