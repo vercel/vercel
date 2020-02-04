@@ -6,7 +6,6 @@ import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { Output } from '../output';
 import { Project, Org } from '../../types';
-import wait from '../output/wait';
 import slugify from '@sindresorhus/slugify';
 
 export default async function inputProject(
@@ -24,7 +23,10 @@ export default async function inputProject(
 
   // attempt to auto-detect a project to link
   let detectedProject = null;
-  const existingProjectSpinner = wait('Searching for existing projects…', 1000);
+  const existingProjectSpinner = output.spinner(
+    'Searching for existing projects…',
+    1000
+  );
   try {
     const [project, slugifiedProject] = await Promise.all([
       getProjectByIdOrName(client, detectedProjectName, org.id),
@@ -82,7 +84,7 @@ export default async function inputProject(
         continue;
       }
 
-      const spinner = wait('Verifying project name…', 1000);
+      const spinner = output.spinner('Verifying project name…', 1000);
       try {
         project = await getProjectByIdOrName(client, projectName, org.id);
       } finally {
@@ -114,7 +116,7 @@ export default async function inputProject(
       continue;
     }
 
-    const spinner = wait('Verifying project name…', 1000);
+    const spinner = output.spinner('Verifying project name…', 1000);
     let existingProject: Project | ProjectNotFound;
     try {
       existingProject = await getProjectByIdOrName(

@@ -404,6 +404,7 @@ export default async function main(
     }
 
     org = await selectOrg(
+      output,
       'Which scope do you want to deploy to?',
       client,
       ctx.config.currentTeam,

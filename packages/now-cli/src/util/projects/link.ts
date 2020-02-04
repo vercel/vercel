@@ -12,7 +12,6 @@ import { Project } from '../../types';
 import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
 import { prependEmoji, emoji } from '../emoji';
-import wait from '../output/wait';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -86,7 +85,7 @@ export async function getLinkedOrg(
     return { status: 'not_linked', org: null };
   }
 
-  const spinner = wait('Retrieving scope…', 1000);
+  const spinner = output.spinner('Retrieving scope…', 1000);
   try {
     const org = await getOrgById(client, orgId);
 
@@ -141,7 +140,7 @@ export async function getLinkedProject(
     return { status: 'not_linked', org: null, project: null };
   }
 
-  const spinner = wait('Retrieving project…', 1000);
+  const spinner = output.spinner('Retrieving project…', 1000);
   let org: Org | null;
   let project: Project | ProjectNotFound | null;
   try {

@@ -8,7 +8,6 @@ import chalk from 'chalk';
 import ua from '../util/ua.ts';
 import getArgs from '../util/get-args';
 import error from '../util/output/error';
-import wait from '../util/output/wait';
 import highlight from '../util/output/highlight';
 import ok from '../util/output/ok';
 import cmd from '../util/output/cmd.ts';
@@ -191,7 +190,7 @@ const login = async ctx => {
   let verificationToken;
   let securityCode;
 
-  stopSpinner = wait('Sending you an email');
+  stopSpinner = output.spinner('Sending you an email');
 
   try {
     const data = await executeLogin(apiUrl, email);
@@ -216,7 +215,7 @@ const login = async ctx => {
     )}.\n`
   );
 
-  stopSpinner = wait('Waiting for your confirmation');
+  stopSpinner = output.spinner('Waiting for your confirmation');
 
   let token;
 
