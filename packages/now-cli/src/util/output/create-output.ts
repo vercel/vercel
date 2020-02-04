@@ -77,9 +77,9 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
-  function spinner(message: string, timeout: number = 300) {
+  function spinner(message: string, delay: number = 300) {
     if (debugEnabled) {
-      debug(`Spinner invoked (${message})`);
+      debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       let isEnded = false;
       return () => {
         if (isEnded) return;
@@ -88,7 +88,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       };
     }
 
-    return wait(message, timeout);
+    return wait(message, delay);
   }
 
   // This is pretty hacky, but since we control the version of Node.js
