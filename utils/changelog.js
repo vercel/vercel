@@ -13,7 +13,7 @@ async function main() {
   // git log --pretty=format:"- %s [%an]" `git show-ref -s 'now@16.7.3'`...HEAD | grep -v '\- Publish '
 
   if (!tag_name) {
-    throw new Error('Unable to find last publish commit');
+    throw new Error('Unable to find last GitHub Release tag.');
   }
 
   const log =
@@ -24,7 +24,7 @@ async function main() {
       .filter(line => !line.startsWith('- Publish '))
       .join('\n') || 'NO CHANGES DETECTED';
 
-  console.log(`Changes since the last Stable release (${tag_name}):`);
+  console.log(`Changes since the last stable release (${tag_name}):`);
   console.log(`\n${log}\n`);
 
   const pkgs =
@@ -49,7 +49,7 @@ async function main() {
 
   console.log('To publish a stable release, execute the following:');
   console.log(
-    `\ngit pull && npx lerna version --message 'Publish Stable' --exact --force-publish=${pkgs}\n`
+    `\nnpx lerna version --message 'Publish Stable' --exact --force-publish=${pkgs}\n`
   );
 }
 
