@@ -17,6 +17,7 @@ import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
+import which from 'which';
 
 import {
   Builder,
@@ -1651,7 +1652,6 @@ export default class DevServer {
     const env: EnvConfig = {
       ...process.env,
       ...this.buildEnv,
-      PATH: `${yarnBinPath}${delimiter}${process.env.PATH}`,
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };
@@ -1664,11 +1664,22 @@ export default class DevServer {
       })}`
     );
 
-    const p = spawnCommand(this.devCommand, {
-      stdio: 'inherit',
-      cwd,
-      env,
-    });
+    const isNpxAvailable = await which('npx')
+      .then(() => true)
+      .catch(() => false);
+
+    if (!isNpxAvailable) {
+      env.PATH = `${yarnBinPath}${delimiter}${env.PATH}`;
+    }
+
+    const p = spawnCommand(
+      isNpxAvailable ? `npx ${this.devCommand}` : this.devCommand,
+      {
+        stdio: 'inherit',
+        cwd,
+        env,
+      }
+    );
 
     p.on('exit', () => {
       this.devProcessPort = undefined;
