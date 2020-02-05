@@ -1,6 +1,6 @@
 {
   "name": "@now/python",
-  "version": "1.1.2-canary.0",
+  "version": "1.1.2",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://zeit.co/docs/runtimes#official-runtimes/python",
