@@ -1656,7 +1656,7 @@ export default class DevServer {
     };
 
     const devCommand = this.devCommand
-      .replace(/$PORT/g, `${port}`)
+      .replace(/\$PORT/g, `${port}`)
       .replace(/%PORT%/g, `${port}`);
 
     this.output.debug(
