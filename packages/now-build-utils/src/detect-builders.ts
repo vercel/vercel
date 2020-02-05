@@ -445,8 +445,8 @@ export async function detectBuilders(
     // when there are no build steps
     const outDir = outputDirectory || 'public';
 
-    // If `outputDirectory` is an empty string we'll default
-    // to the root directory if possible.
+    // If `outputDirectory` is an empty string,
+    // we'll default to the root directory.
     if (hasDirectory(outDir, files) && outputDirectory !== '') {
       frontendBuilder = {
         use: '@now/static',
