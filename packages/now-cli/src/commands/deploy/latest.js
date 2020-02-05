@@ -428,8 +428,10 @@ export default async function main(
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
+      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
     } else {
       project = projectOrNewProjectName;
+      rootDirectory = project.rootDirectory;
 
       // we can already link the project
       await linkFolderToProject(
@@ -444,8 +446,6 @@ export default async function main(
       );
       status = 'linked';
     }
-
-    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
   }
 
   const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
