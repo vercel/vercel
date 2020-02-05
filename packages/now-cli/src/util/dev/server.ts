@@ -1656,10 +1656,14 @@ export default class DevServer {
       PORT: `${port}`,
     };
 
+    const devCommand = this.devCommand
+      .replace('$PORT', `${port}`)
+      .replace('%PORT%', `${port}`);
+
     this.output.debug(
       `Starting dev command with parameters : ${JSON.stringify({
         cwd: this.cwd,
-        devCommand: this.devCommand,
+        devCommand,
         port,
       })}`
     );
@@ -1672,13 +1676,12 @@ export default class DevServer {
       env.PATH = `${yarnBinPath}${delimiter}${env.PATH}`;
     }
 
+    this.output.debug('Spawning dev command');
+    this.output.debug(`PATH is ${env.PATH}`);
+
     const p = spawnCommand(
-      isNpxAvailable ? `npx --no-install ${this.devCommand}` : this.devCommand,
-      {
-        stdio: 'inherit',
-        cwd,
-        env,
-      }
+      isNpxAvailable ? `npx --no-install ${devCommand}` : devCommand,
+      { stdio: 'inherit', cwd, env }
     );
 
     p.on('exit', () => {
