@@ -797,6 +797,22 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0]!.use).toBe('@now/static');
     expect(builders![0]!.src).toBe('out/**/*');
   });
+
+  it('do not require build script when `buildCommand` is an empty string', async () => {
+    const files = ['index.html', 'about.html', 'package.json'];
+    const projectSettings = { buildCommand: '', outputDirectory: '' };
+    const pkg = {
+      scripts: {
+        build: 'false',
+      },
+    };
+
+    const { builders, errors } = await detectBuilders(files, pkg, {
+      projectSettings,
+    });
+    expect(builders).toBe(null);
+    expect(errors).toBe(null);
+  });
 });
 
 it('Test `detectRoutes`', async () => {

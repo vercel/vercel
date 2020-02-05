@@ -429,7 +429,12 @@ export async function detectBuilders(
   if (!ignoreBuild && (hasBuildScript(pkg) || buildCommand || framework)) {
     frontendBuilder = detectFrontBuilder(pkg, builders, files, options);
   } else {
-    if (!options.ignoreBuildScript && pkg && builders.length === 0) {
+    if (
+      !ignoreBuild &&
+      !options.ignoreBuildScript &&
+      pkg &&
+      builders.length === 0
+    ) {
       // We only show this error when there are no api builders
       // since the dependencies of the pkg could be used for those
       errors.push({
