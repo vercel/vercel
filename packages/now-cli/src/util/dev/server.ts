@@ -1673,7 +1673,7 @@ export default class DevServer {
     }
 
     const p = spawnCommand(
-      isNpxAvailable ? `npx ${this.devCommand}` : this.devCommand,
+      isNpxAvailable ? `npx --no-install ${this.devCommand}` : this.devCommand,
       {
         stdio: 'inherit',
         cwd,
