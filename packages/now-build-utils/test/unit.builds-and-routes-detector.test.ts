@@ -766,6 +766,37 @@ describe('Test `detectBuilders`', () => {
       },
     ]);
   });
+
+  it('All static if `buildCommand` is an empty string', async () => {
+    const files = ['index.html'];
+    const projectSettings = { buildCommand: '' };
+    const { builders, errors } = await detectBuilders(files, null, {
+      projectSettings,
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBe(null);
+  });
+
+  it('All static if `outputDirectory` is an empty string', async () => {
+    const files = ['index.html'];
+    const projectSettings = { outputDirectory: '' };
+    const { builders, errors } = await detectBuilders(files, null, {
+      projectSettings,
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBe(null);
+  });
+
+  it('All static if `buildCommand` is an empty string with an `outputDirectory`', async () => {
+    const files = ['out/index.html'];
+    const projectSettings = { buildCommand: '', outputDirectory: 'out' };
+    const { builders, errors } = await detectBuilders(files, null, {
+      projectSettings,
+    });
+    expect(errors).toBe(null);
+    expect(builders![0]!.use).toBe('@now/static');
+    expect(builders![0]!.src).toBe('out/**/*');
+  });
 });
 
 it('Test `detectRoutes`', async () => {
