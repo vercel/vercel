@@ -1653,7 +1653,6 @@ export default class DevServer {
       ...process.env,
       ...this.buildEnv,
       NOW_REGION: 'dev1',
-      PORT: `${port}`,
     };
 
     const devCommand = this.devCommand
