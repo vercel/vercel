@@ -17,6 +17,7 @@ import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
+import which from 'which';
 
 import {
   Builder,
@@ -1651,24 +1652,36 @@ export default class DevServer {
     const env: EnvConfig = {
       ...process.env,
       ...this.buildEnv,
-      PATH: `${yarnBinPath}${delimiter}${process.env.PATH}`,
       NOW_REGION: 'dev1',
-      PORT: `${port}`,
     };
+
+    const devCommand = this.devCommand
+      .replace(/\$PORT/g, `${port}`)
+      .replace(/%PORT%/g, `${port}`);
 
     this.output.debug(
       `Starting dev command with parameters : ${JSON.stringify({
         cwd: this.cwd,
-        devCommand: this.devCommand,
+        devCommand,
         port,
       })}`
     );
 
-    const p = spawnCommand(this.devCommand, {
-      stdio: 'inherit',
-      cwd,
-      env,
-    });
+    const isNpxAvailable = await which('npx')
+      .then(() => true)
+      .catch(() => false);
+
+    if (!isNpxAvailable) {
+      env.PATH = `${yarnBinPath}${delimiter}${env.PATH}`;
+    }
+
+    this.output.debug('Spawning dev command');
+    this.output.debug(`PATH is ${env.PATH}`);
+
+    const p = spawnCommand(
+      isNpxAvailable ? `npx --no-install ${devCommand}` : devCommand,
+      { stdio: 'inherit', cwd, env }
+    );
 
     p.on('exit', () => {
       this.devProcessPort = undefined;
