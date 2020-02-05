@@ -659,8 +659,8 @@ test(
     await testPath(200, '/sub/index.html', 'Sub Index Page');
     await testPath(200, '/sub/another.html', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/index.html/', { Location: '/index.html' });
-    await testPath(308, '/style.css/', { Location: '/style.css' });
+    await testPath(308, '/about.html/', '', { Location: '/about.html' });
+    await testPath(308, '/style.css/', '', { Location: '/style.css' });
     await testPath(308, '/sub', '', { Location: '/sub/' });
   })
 );
