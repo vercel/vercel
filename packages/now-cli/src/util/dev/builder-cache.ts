@@ -20,7 +20,6 @@ import {
 import pkg from '../../../package.json';
 
 import { NoBuilderCacheError } from '../errors-ts';
-import wait from '../output/wait';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
 
@@ -246,7 +245,7 @@ export async function installBuilders(
     return;
   }
 
-  const stopSpinner = wait(
+  const stopSpinner = output.spinner(
     `Installing ${pluralize(
       'Runtime',
       packagesToInstall.length

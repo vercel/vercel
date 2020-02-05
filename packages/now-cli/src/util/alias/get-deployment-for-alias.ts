@@ -3,7 +3,6 @@ import chalk from 'chalk';
 import getAppLastDeployment from '../deploy/get-app-last-deployment';
 import getAppName from '../deploy/get-app-name';
 import fetchDeploymentByIdOrHost from '../deploy/get-deployment-by-id-or-host';
-import wait from '../output/wait';
 import Client from '../client';
 import { Output } from '../output';
 import { User, Config } from '../../types';
@@ -17,7 +16,7 @@ export default async function getDeploymentForAlias(
   contextName: string,
   localConfig: Config
 ) {
-  const cancelWait = wait(
+  const cancelWait = output.spinner(
     `Fetching deployment to alias in ${chalk.bold(contextName)}`
   );
 

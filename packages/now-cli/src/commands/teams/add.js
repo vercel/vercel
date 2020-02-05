@@ -57,7 +57,7 @@ export default async function({ apiUrl, token, teams, config }) {
         validateKeypress: validateSlugKeypress,
         initialValue: slug,
         valid: team,
-        forceLowerCase: true
+        forceLowerCase: true,
       });
     } catch (err) {
       if (err.message === 'USER_ABORT') {
@@ -95,7 +95,7 @@ export default async function({ apiUrl, token, teams, config }) {
   try {
     name = await textInput({
       label: `- ${teamNamePrefix}`,
-      validateKeypress: validateNameKeypress
+      validateKeypress: validateNameKeypress,
     });
   } catch (err) {
     if (err.message === 'USER_ABORT') {
@@ -153,7 +153,7 @@ export default async function({ apiUrl, token, teams, config }) {
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${cmd(
       'now teams invite'
-    )}`
+    )}`,
   });
 
   gracefulExit();
