@@ -109,6 +109,11 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
       headers: { Location: '/$1/' },
       status,
     });
+    routes.push({
+      src: '^/((?:[^/]+/)*[^/]+\\.\\w+)/$',
+      headers: { Location: '/$1' },
+      status,
+    });
   } else {
     routes.push({
       src: '^/(.*)\\/$',

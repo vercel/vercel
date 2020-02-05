@@ -507,19 +507,35 @@ test('convertTrailingSlash enabled', () => {
       headers: { Location: '/$1/' },
       status: 308,
     },
+    {
+      src: '^/((?:[^/]+/)*[^/]+\\.\\w+)/$',
+      headers: { Location: '/$1' },
+      status: 308,
+    },
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = [['/dir', '/dir/foo', '/dir/foo/bar']];
+  const mustMatch = [
+    ['/dir', '/dir/foo', '/dir/foo/bar'],
+    ['/foo.html/', '/dir/foo.html/', '/dir/foo/bar.css/', '/dir/about.map.js/'],
+  ];
 
   const mustNotMatch = [
     [
       '/',
       '/index.html',
       '/asset/style.css',
+      '/asset/about.map.js',
       '/dir/',
       '/dir/foo/',
       '/next.php?page=/',
+    ],
+    [
+      '/',
+      '/foo.html',
+      '/dir/foo.html',
+      '/dir/foo/bar.css',
+      '/dir/about.map.js',
     ],
   ];
 
