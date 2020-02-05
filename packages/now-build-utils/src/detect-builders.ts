@@ -423,7 +423,10 @@ export async function detectBuilders(
 
   let frontendBuilder: Builder | null = null;
 
-  if (hasBuildScript(pkg) || buildCommand || framework) {
+  // Everything will be static if either is an empty string
+  const ignoreBuild = buildCommand === '' || outputDirectory === '';
+
+  if (!ignoreBuild && (hasBuildScript(pkg) || buildCommand || framework)) {
     frontendBuilder = detectFrontBuilder(pkg, builders, files, options);
   } else {
     if (!options.ignoreBuildScript && pkg && builders.length === 0) {
@@ -442,7 +445,9 @@ export async function detectBuilders(
     // when there are no build steps
     const outDir = outputDirectory || 'public';
 
-    if (hasDirectory(outDir, files)) {
+    // If `outputDirectory` is an empty string,
+    // we'll default to the root directory.
+    if (hasDirectory(outDir, files) && outputDirectory !== '') {
       frontendBuilder = {
         use: '@now/static',
         src: `${outDir}/**/*`,
