@@ -848,17 +848,18 @@ export const build = async ({
     const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
-      const htmlFallback =
+      const lazyHtmlFallback =
         isLazy && !prerenderManifest.lazyRoutes[routeKey].fallback;
 
-      const htmlFsRef = htmlFallback
-        ? null
-        : new FileFsRef({
-            fsPath: path.join(
-              pagesDir,
-              `${htmlFallback || routeFileNoExt}.html`
-            ),
-          });
+      const htmlFsRef =
+        !isLazy || lazyHtmlFallback
+          ? null
+          : new FileFsRef({
+              fsPath: path.join(
+                pagesDir,
+                `${lazyHtmlFallback || routeFileNoExt}.html`
+              ),
+            });
       const jsonFsRef = isLazy
         ? null
         : new FileFsRef({
