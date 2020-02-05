@@ -38,12 +38,12 @@ async function main() {
           .map(line => line.split('/')[1])
           .map(pkgName => {
             try {
-              const pkg = require(`../packages/${pkgName}/package.json`);
-              return pkg.name;
+              return require(`../packages/${pkgName}/package.json`).name;
             } catch {
-              // Failed to read package.json
+              // Failed to read package.json (perhaps the pkg was deleted)
             }
           })
+          .filter(s => Boolean(s))
       )
     ).join(',') || 'now';
 
