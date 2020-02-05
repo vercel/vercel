@@ -15,7 +15,7 @@
 
 "@zeit/best@0.4.3":
   version "0.4.3"
-  resolved "http://registry.npmjs.org/@zeit/best/-/best-0.4.3.tgz#eaebdfa8b24121a97b1753501ea8c9330d549b30"
+  resolved "https://registry.npmjs.org/@zeit/best/-/best-0.4.3.tgz#eaebdfa8b24121a97b1753501ea8c9330d549b30"
   dependencies:
     arg "1.0.0"
     chalk "2.3.1"
@@ -144,7 +144,7 @@ call-me-maybe@^1.0.1:
 
 chalk@2.3.1:
   version "2.3.1"
-  resolved "http://registry.npmjs.org/chalk/-/chalk-2.3.1.tgz#523fe2678aec7b04e8041909292fe8b17059b796"
+  resolved "https://registry.npmjs.org/chalk/-/chalk-2.3.1.tgz#523fe2678aec7b04e8041909292fe8b17059b796"
   dependencies:
     ansi-styles "^3.2.0"
     escape-string-regexp "^1.0.5"
@@ -585,8 +585,8 @@ minimatch@^3.0.4:
     brace-expansion "^1.1.7"
 
 mixin-deep@^1.2.0:
-  version "1.3.1"
-  resolved "https://registry.yarnpkg.com/mixin-deep/-/mixin-deep-1.3.1.tgz#a49e7268dce1a0d9698e45326c5626df3543d0fe"
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/mixin-deep/-/mixin-deep-1.3.2.tgz#1120b43dc359a785dce65b55b82e257ccf479566"
   dependencies:
     for-in "^1.0.2"
     is-extendable "^1.0.1"
@@ -704,7 +704,7 @@ rmfr@2.0.0:
 
 safe-regex@^1.1.0:
   version "1.1.0"
-  resolved "http://registry.npmjs.org/safe-regex/-/safe-regex-1.1.0.tgz#40a3669f3b077d1e943d44629e157dd48023bf2e"
+  resolved "https://registry.npmjs.org/safe-regex/-/safe-regex-1.1.0.tgz#40a3669f3b077d1e943d44629e157dd48023bf2e"
   dependencies:
     ret "~0.1.10"
 
