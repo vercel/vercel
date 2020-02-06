@@ -503,16 +503,41 @@ test('convertTrailingSlash enabled', () => {
   const actual = convertTrailingSlash(true);
   const expected = [
     {
-      src: '^/(.*[^\\/])$',
+      src: '^/((?:[^/]+/)*[^/\\.]+)$',
       headers: { Location: '/$1/' },
+      status: 308,
+    },
+    {
+      src: '^/((?:[^/]+/)*[^/]+\\.\\w+)/$',
+      headers: { Location: '/$1' },
       status: 308,
     },
   ];
   deepEqual(actual, expected);
 
-  const mustMatch = [['/index.html', '/dir', '/dir/index.html', '/foo/bar']];
+  const mustMatch = [
+    ['/dir', '/dir/foo', '/dir/foo/bar'],
+    ['/foo.html/', '/dir/foo.html/', '/dir/foo/bar.css/', '/dir/about.map.js/'],
+  ];
 
-  const mustNotMatch = [['/', '/dir/', '/dir/foo/', '/next.php?page=/']];
+  const mustNotMatch = [
+    [
+      '/',
+      '/index.html',
+      '/asset/style.css',
+      '/asset/about.map.js',
+      '/dir/',
+      '/dir/foo/',
+      '/next.php?page=/',
+    ],
+    [
+      '/',
+      '/foo.html',
+      '/dir/foo.html',
+      '/dir/foo/bar.css',
+      '/dir/about.map.js',
+    ],
+  ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
