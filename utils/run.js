@@ -83,9 +83,11 @@ async function main() {
     await runScript(pkgName, script);
   }
 
-  execSync(
-    `rm -rf public && mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' > public/index.html`
-  );
+  if (process.env.NOW_GITHUB_DEPLOYMENT) {
+    execSync(
+      `rm -rf public && mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' > public/index.html`
+    );
+  }
 }
 
 function runScript(pkgName, script) {
