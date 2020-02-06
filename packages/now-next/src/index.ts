@@ -849,10 +849,10 @@ export const build = async ({
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
       const lazyHtmlFallback =
-        isLazy && !prerenderManifest.lazyRoutes[routeKey].fallback;
+        isLazy && prerenderManifest.lazyRoutes[routeKey].fallback;
 
       const htmlFsRef =
-        !isLazy || lazyHtmlFallback
+        isLazy && !lazyHtmlFallback
           ? null
           : new FileFsRef({
               fsPath: path.join(
