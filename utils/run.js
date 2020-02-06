@@ -103,6 +103,7 @@ function runScript(pkgName, script) {
         cwd,
         stdio: 'inherit',
         env: process.env,
+        shell: true,
       });
       child.on('error', reject);
       child.on('close', (code, signal) => {
