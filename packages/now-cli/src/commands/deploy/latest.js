@@ -94,7 +94,6 @@ const printDeploymentStatus = async (
   },
   deployStamp,
   isClipboardEnabled,
-  quiet,
   isFile
 ) => {
   const isProdDeployment = target === 'production';
@@ -142,11 +141,6 @@ const printDeploymentStatus = async (
           isCopiedToClipboard = true;
         })
         .catch(error => output.debug(`Error copying to clipboard: ${error}`));
-    }
-
-    // write to stdout
-    if (quiet) {
-      process.stdout.write(`https://${deploymentUrl}`);
     }
 
     output.print(
@@ -659,7 +653,6 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    quiet,
     isFile
   );
 }
