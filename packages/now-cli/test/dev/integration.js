@@ -638,7 +638,7 @@ test(
       await testPath(200, '/about/', 'About Page');
       await testPath(200, '/sub/', 'Sub Index Page');
       await testPath(200, '/sub/another/', 'Sub Another Page');
-      await testPath(200, '/style.css/', 'body { color: green }');
+      await testPath(200, '/style.css', 'body { color: green }');
       await testPath(308, '/index.html', '', { Location: '/' });
       await testPath(308, '/about.html', '', { Location: '/about/' });
       await testPath(308, '/sub/index.html', '', { Location: '/sub/' });
@@ -653,17 +653,15 @@ test(
   '[now dev] test trailingSlash true serve correct content',
   testFixtureStdio('test-trailing-slash', async (t, port, testPath) => {
     await testPath(200, '/', 'Index Page');
-    await testPath(200, '/index.html/', 'Index Page');
-    await testPath(200, '/about.html/', 'About Page');
+    await testPath(200, '/index.html', 'Index Page');
+    await testPath(200, '/about.html', 'About Page');
     await testPath(200, '/sub/', 'Sub Index Page');
-    await testPath(200, '/sub/index.html/', 'Sub Index Page');
-    await testPath(200, '/sub/another.html/', 'Sub Another Page');
-    await testPath(200, '/style.css/', 'body { color: green }');
-    await testPath(308, '/about.html', '', { Location: '/about.html/' });
+    await testPath(200, '/sub/index.html', 'Sub Index Page');
+    await testPath(200, '/sub/another.html', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(308, '/about.html/', '', { Location: '/about.html' });
+    await testPath(308, '/style.css/', '', { Location: '/style.css' });
     await testPath(308, '/sub', '', { Location: '/sub/' });
-    await testPath(308, '/sub/another.html', '', {
-      Location: '/sub/another.html/',
-    });
   })
 );
 
