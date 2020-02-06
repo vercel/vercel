@@ -808,5 +808,22 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/foundation.svg",
     "tagline": "Foundation is the most advanced responsive front-end framework in the world.",
     "description": "A Foundation app, created with the Foundation CLI."
+  },
+  {
+    "name": "Other",
+    "slug": null,
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/other.svg",
+    "description": "No framework or a unoptimized framework.",
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`build` or `now-build` from `package.json` if it exists"
+      },
+      "devCommand": {
+        "placeholder": "None"
+      },
+      "outputDirectory": {
+        "placeholder": "`public` if it exists, or `.`"
+      }
+    }
   }
 ]

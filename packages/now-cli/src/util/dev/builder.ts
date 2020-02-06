@@ -3,18 +3,10 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { promisify } from 'util';
-import { delimiter, dirname, extname, join } from 'path';
+import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import {
-  Builder,
-  File,
-  Lambda,
-  FileBlob,
-  FileFsRef,
-  detectApiDirectory,
-  detectApiExtensions,
-} from '@now/build-utils';
+import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import which from 'which';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
@@ -282,10 +274,7 @@ export async function executeBuild(
   }
 
   const { output } = result;
-  const { cleanUrls, builds = [] } = nowConfig;
-  const apiDir = detectApiDirectory(builds);
-  const apiExtensions = detectApiExtensions(builds);
-  const apiMatch = apiDir + '/';
+  const { cleanUrls } = nowConfig;
 
   // Mimic fmeta-util and perform file renaming
   Object.entries(output).forEach(([path, value]) => {
@@ -297,10 +286,9 @@ export async function executeBuild(
       }
     }
 
-    const ext = extname(path);
-    if (apiDir && path.startsWith(apiMatch) && apiExtensions.has(ext)) {
-      // lambda function files are trimmed of their file extension
-      path = path.slice(0, -ext.length);
+    const extensionless = devServer.getExtensionlessFile(path);
+    if (extensionless) {
+      path = extensionless;
     }
 
     delete output[path];
@@ -412,6 +400,7 @@ export async function getBuildMatches(
   cwd: string,
   yarnDir: string,
   output: Output,
+  devServer: DevServer,
   fileList: string[]
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
@@ -424,9 +413,6 @@ export async function getBuildMatches(
 
   const noMatches: Builder[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
-  const apiDir = detectApiDirectory(builds || []);
-  const apiExtensions = detectApiExtensions(builds || []);
-  const apiMatch = apiDir + '/';
 
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
@@ -445,13 +431,13 @@ export async function getBuildMatches(
     // We need to escape brackets since `glob` will
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
+
+    // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();
-    const ext = extname(src);
-    if (apiDir && src.startsWith(apiMatch) && apiExtensions.has(ext)) {
-      // lambda function files are trimmed of their file extension
-      const newSrc = src.slice(0, -ext.length);
-      mapToEntrypoint.set(newSrc, src);
-      src = newSrc;
+    const extensionless = devServer.getExtensionlessFile(src);
+    if (extensionless) {
+      mapToEntrypoint.set(extensionless, src);
+      src = extensionless;
     }
 
     const files = fileList

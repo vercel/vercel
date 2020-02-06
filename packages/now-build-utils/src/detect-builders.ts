@@ -28,7 +28,7 @@ function getApiBuilders({ tag }: Pick<Options, 'tag'> = {}): Builder[] {
   return [
     { src: 'api/**/*.js', use: `@now/node${withTag}`, config },
     { src: 'api/**/*.ts', use: `@now/node${withTag}`, config },
-    { src: 'api/**/*.go', use: `@now/go${withTag}`, config },
+    { src: 'api/**/!(*_test).go', use: `@now/go${withTag}`, config },
     { src: 'api/**/*.py', use: `@now/python${withTag}`, config },
     { src: 'api/**/*.rb', use: `@now/ruby${withTag}`, config },
   ];
@@ -423,10 +423,18 @@ export async function detectBuilders(
 
   let frontendBuilder: Builder | null = null;
 
-  if (hasBuildScript(pkg) || buildCommand || framework) {
+  // Everything will be static if either is an empty string
+  const ignoreBuild = buildCommand === '' || outputDirectory === '';
+
+  if (!ignoreBuild && (hasBuildScript(pkg) || buildCommand || framework)) {
     frontendBuilder = detectFrontBuilder(pkg, builders, files, options);
   } else {
-    if (!options.ignoreBuildScript && pkg && builders.length === 0) {
+    if (
+      !ignoreBuild &&
+      !options.ignoreBuildScript &&
+      pkg &&
+      builders.length === 0
+    ) {
       // We only show this error when there are no api builders
       // since the dependencies of the pkg could be used for those
       errors.push({
@@ -442,7 +450,9 @@ export async function detectBuilders(
     // when there are no build steps
     const outDir = outputDirectory || 'public';
 
-    if (hasDirectory(outDir, files)) {
+    // If `outputDirectory` is an empty string,
+    // we'll default to the root directory.
+    if (hasDirectory(outDir, files) && outputDirectory !== '') {
       frontendBuilder = {
         use: '@now/static',
         src: `${outDir}/**/*`,

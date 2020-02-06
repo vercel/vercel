@@ -4,7 +4,6 @@ import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import joinWords from '../output/join-words';
-import wait from '../output/wait';
 
 type ScaleArgs = {
   min: number;
@@ -18,7 +17,7 @@ export default async function setScale(
   scaleArgs: ScaleArgs | DeploymentScale,
   url: string
 ) {
-  const cancelWait = wait(
+  const cancelWait = output.spinner(
     `Setting scale rules for ${joinWords(
       Object.keys(scaleArgs).map(dc => `${chalk.bold(dc)}`)
     )}`
@@ -29,7 +28,7 @@ export default async function setScale(
       `/v3/now/deployments/${encodeURIComponent(deploymentId)}/instances`,
       {
         method: 'PUT',
-        body: scaleArgs
+        body: scaleArgs,
       }
     );
     cancelWait();

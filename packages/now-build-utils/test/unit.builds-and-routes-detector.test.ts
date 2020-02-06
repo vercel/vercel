@@ -151,6 +151,27 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(2);
   });
 
+  it('api go with test files', async () => {
+    const files = [
+      'api/index.go',
+      'api/index_test.go',
+      'api/test.go',
+      'api/testing_another.go',
+      'api/readme.md',
+      'api/config/staging.go',
+      'api/config/staging_test.go',
+      'api/config/production.go',
+      'api/config/production_test.go',
+      'api/src/controllers/health.go',
+      'api/src/controllers/user.module.go',
+      'api/src/controllers/user.module_test.go',
+    ];
+
+    const { builders } = await detectBuilders(files);
+    expect(builders!.length).toBe(7);
+    expect(builders!.some(b => b.src.endsWith('_test.go'))).toBe(false);
+  });
+
   it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
@@ -744,6 +765,53 @@ describe('Test `detectBuilders`', () => {
           "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
       },
     ]);
+  });
+
+  it('All static if `buildCommand` is an empty string', async () => {
+    const files = ['index.html'];
+    const projectSettings = { buildCommand: '' };
+    const { builders, errors } = await detectBuilders(files, null, {
+      projectSettings,
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBe(null);
+  });
+
+  it('All static if `outputDirectory` is an empty string', async () => {
+    const files = ['index.html'];
+    const projectSettings = { outputDirectory: '' };
+    const { builders, errors } = await detectBuilders(files, null, {
+      projectSettings,
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBe(null);
+  });
+
+  it('All static if `buildCommand` is an empty string with an `outputDirectory`', async () => {
+    const files = ['out/index.html'];
+    const projectSettings = { buildCommand: '', outputDirectory: 'out' };
+    const { builders, errors } = await detectBuilders(files, null, {
+      projectSettings,
+    });
+    expect(errors).toBe(null);
+    expect(builders![0]!.use).toBe('@now/static');
+    expect(builders![0]!.src).toBe('out/**/*');
+  });
+
+  it('do not require build script when `buildCommand` is an empty string', async () => {
+    const files = ['index.html', 'about.html', 'package.json'];
+    const projectSettings = { buildCommand: '', outputDirectory: '' };
+    const pkg = {
+      scripts: {
+        build: 'false',
+      },
+    };
+
+    const { builders, errors } = await detectBuilders(files, pkg, {
+      projectSettings,
+    });
+    expect(builders).toBe(null);
+    expect(errors).toBe(null);
   });
 });
 

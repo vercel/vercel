@@ -94,7 +94,6 @@ const printDeploymentStatus = async (
   },
   deployStamp,
   isClipboardEnabled,
-  quiet,
   isFile
 ) => {
   const isProdDeployment = target === 'production';
@@ -142,11 +141,6 @@ const printDeploymentStatus = async (
           isCopiedToClipboard = true;
         })
         .catch(error => output.debug(`Error copying to clipboard: ${error}`));
-    }
-
-    // write to stdout
-    if (quiet) {
-      process.stdout.write(`https://${deploymentUrl}`);
     }
 
     output.print(
@@ -404,6 +398,7 @@ export default async function main(
     }
 
     org = await selectOrg(
+      output,
       'Which scope do you want to deploy to?',
       client,
       ctx.config.currentTeam,
@@ -427,8 +422,10 @@ export default async function main(
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
+      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
     } else {
       project = projectOrNewProjectName;
+      rootDirectory = project.rootDirectory;
 
       // we can already link the project
       await linkFolderToProject(
@@ -443,8 +440,6 @@ export default async function main(
       );
       status = 'linked';
     }
-
-    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
   }
 
   const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
@@ -455,7 +450,9 @@ export default async function main(
       output,
       path,
       sourcePath,
-      project ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings` : ''
+      project
+        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        : ''
     )) === false
   ) {
     return 1;
@@ -656,7 +653,6 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    quiet,
     isFile
   );
 }
