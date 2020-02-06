@@ -1637,14 +1637,6 @@ export default class DevServer {
 
     const cwd = this.cwd;
 
-    const yarnPath = join(this.yarnPath, 'yarn');
-
-    const { stdout: yarnBinStdout } = await execAsync(yarnPath, ['bin'], {
-      cwd,
-    });
-
-    const yarnBinPath = yarnBinStdout.trim();
-
     this.output.log(
       `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
     );
@@ -1674,6 +1666,14 @@ export default class DevServer {
       .catch(() => false);
 
     if (!isNpxAvailable) {
+      const yarnPath = join(this.yarnPath, 'yarn');
+
+      const { stdout: yarnBinStdout } = await execAsync(yarnPath, ['bin'], {
+        cwd,
+      });
+
+      const yarnBinPath = yarnBinStdout.trim();
+
       env.PATH = `${yarnBinPath}${delimiter}${env.PATH}`;
     }
 
