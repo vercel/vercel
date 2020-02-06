@@ -115,7 +115,7 @@ describe('build meta dev', () => {
       { src: '/nested/page', dest: 'http://localhost:5000/nested/page' },
       { src: '/api/test', dest: 'http://localhost:5000/api/test' },
       {
-        src: '^/(nested\\/([^\\/]+?)(?:\\/)?)$',
+        src: '^/(nested\\/([^/]+?)(?:\\/)?)$',
         dest: 'http://localhost:5000/$1',
       },
       { src: '/data.txt', dest: 'http://localhost:5000/data.txt' },
