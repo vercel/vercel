@@ -99,7 +99,11 @@ function runScript(pkgName, script) {
     }
     if (pkgJson && pkgJson.scripts && pkgJson.scripts[script]) {
       console.log(`\n[${pkgName}] Running yarn ${script}`);
-      const child = spawn('yarn', [script], { cwd, stdio: 'inherit' });
+      const child = spawn('yarn', [script], {
+        cwd,
+        stdio: 'inherit',
+        env: process.env,
+      });
       child.on('error', reject);
       child.on('close', (code, signal) => {
         if (code === 0) {
