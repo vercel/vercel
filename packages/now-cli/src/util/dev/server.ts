@@ -1637,7 +1637,9 @@ export default class DevServer {
 
     const cwd = this.cwd;
 
-    const { stdout: yarnBinStdout } = await execAsync('yarn', ['bin'], {
+    const yarnPath = join(this.yarnPath, 'yarn');
+
+    const { stdout: yarnBinStdout } = await execAsync(yarnPath, ['bin'], {
       cwd,
     });
 
