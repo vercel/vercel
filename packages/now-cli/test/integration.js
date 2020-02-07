@@ -2452,9 +2452,14 @@ test('use `rootDirectory` from project when deploying', async t => {
   const secondResult = await execute([directory, '--public']);
   t.is(secondResult.exitCode, 0, formatOutput(secondResult));
 
-  const pageResponse = await fetch(secondResult.stdout);
-  t.is(pageResponse.status, 200);
-  t.regex(await pageResponse.text(), /I am a website/gm);
+  const pageResponse1 = await fetch(secondResult.stdout);
+  t.is(pageResponse1.status, 200);
+  t.regex(await pageResponse1.text(), /I am a website/gm);
+
+  // Ensures that the `now.json` file has been applied
+  const pageResponse2 = await fetch(`${secondResult.stdout}/i-do-exist`);
+  t.is(pageResponse2.status, 200);
+  t.regex(await pageResponse2.text(), /I am a website/gm);
 
   await apiFetch(`/v2/projects/${projectId}`, {
     method: 'DELETE',

@@ -358,8 +358,19 @@ export default async function main(
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);
       localConfig = rootDirectoryConfig;
+    } else if (localConfig) {
+      output.print(
+        `${prependEmoji(
+          `The ${highlight(
+            'now.json'
+          )} file should be inside of the provided root directory.`,
+          emoji('warning')
+        )}\n`
+      );
     }
   }
+
+  localConfig = localConfig || {};
 
   if (localConfig.name) {
     output.print(
