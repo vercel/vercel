@@ -37,7 +37,8 @@ const getNpmFiles = async dir => {
     strict: false,
   });
 
-  return getNpmFiles_(dir, pkg, nowConfig, { hasNowJson, output });
+  const files = getNpmFiles_(dir, pkg, nowConfig, { hasNowJson, output });
+  return normalizeWindowsPaths(files);
 };
 
 const getDockerFiles = async dir => {
@@ -46,7 +47,8 @@ const getDockerFiles = async dir => {
     strict: false,
   });
 
-  return getDockerFiles_(dir, nowConfig, { hasNowJson, output });
+  const files = getDockerFiles_(dir, nowConfig, { hasNowJson, output });
+  return normalizeWindowsPaths(files);
 };
 
 const getStaticFiles = async (dir, isBuilds = false) => {
@@ -56,7 +58,19 @@ const getStaticFiles = async (dir, isBuilds = false) => {
     strict: false,
   });
 
-  return getStaticFiles_(dir, nowConfig, { hasNowJson, output, isBuilds });
+  const files = getStaticFiles_(dir, nowConfig, {
+    hasNowJson,
+    output,
+    isBuilds,
+  });
+  return normalizeWindowsPaths(files);
+};
+
+const normalizeWindowsPaths = files => {
+  if (process.platform === 'win32') {
+    return files.map(f => f.replace(new RegExp(/\\/g), '/'));
+  }
+  return files;
 };
 
 test('`files`', async t => {
