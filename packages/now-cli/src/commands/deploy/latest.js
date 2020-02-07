@@ -356,7 +356,7 @@ export default async function main(
   // When there is no `now.json` file we'll try
   // to get it from the root directory.
   if (!hasLocalConfig && rootDirectory) {
-    localConfig = readLocalConfig(sourcePath);
+    localConfig = readLocalConfig(sourcePath) || localConfig;
   }
 
   if (localConfig && localConfig.name) {
