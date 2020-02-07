@@ -217,9 +217,6 @@ export default async function main(
     return 1;
   }
 
-  const hasLocalConfig = Boolean(localConfig);
-  localConfig = localConfig || {};
-
   const {
     apiUrl,
     authConfig: { token },
@@ -302,7 +299,7 @@ export default async function main(
     // user input.
     const detectedProjectName = getProjectName({
       argv,
-      nowConfig: localConfig,
+      nowConfig: localConfig || {},
       isFile,
       paths,
     });
@@ -355,11 +352,14 @@ export default async function main(
 
   // When there is no `now.json` file we'll try
   // to get it from the root directory.
-  if (!hasLocalConfig && rootDirectory) {
-    localConfig = readLocalConfig(sourcePath) || localConfig;
+  if (!localConfig && rootDirectory) {
+    localConfig = readLocalConfig(sourcePath) || {};
+    debug(`Read local config from root directory (${rootDirectory})`);
+  } else if (!localConfig) {
+    localConfig = {};
   }
 
-  if (localConfig && localConfig.name) {
+  if (localConfig.name) {
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
