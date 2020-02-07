@@ -37,7 +37,7 @@ const getNpmFiles = async dir => {
     strict: false,
   });
 
-  const files = getNpmFiles_(dir, pkg, nowConfig, { hasNowJson, output });
+  const files = await getNpmFiles_(dir, pkg, nowConfig, { hasNowJson, output });
   return normalizeWindowsPaths(files);
 };
 
@@ -47,7 +47,7 @@ const getDockerFiles = async dir => {
     strict: false,
   });
 
-  const files = getDockerFiles_(dir, nowConfig, { hasNowJson, output });
+  const files = await getDockerFiles_(dir, nowConfig, { hasNowJson, output });
   return normalizeWindowsPaths(files);
 };
 
@@ -58,7 +58,7 @@ const getStaticFiles = async (dir, isBuilds = false) => {
     strict: false,
   });
 
-  const files = getStaticFiles_(dir, nowConfig, {
+  const files = await getStaticFiles_(dir, nowConfig, {
     hasNowJson,
     output,
     isBuilds,
