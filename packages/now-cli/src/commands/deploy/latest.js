@@ -53,6 +53,7 @@ import { inputRootDirectory } from '../../util/input/input-root-directory';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
+import { readLocalConfig } from '../../util/config/files';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -216,6 +217,9 @@ export default async function main(
     return 1;
   }
 
+  const hasLocalConfig = Boolean(localConfig);
+  localConfig = localConfig || {};
+
   const {
     apiUrl,
     authConfig: { token },
@@ -238,13 +242,6 @@ export default async function main(
   const { isFile, path } = pathValidation;
   const autoConfirm = argv['--confirm'] || isFile;
 
-  // build `meta`
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(argv['--meta'])
-  );
-
   // --no-scale
   if (argv['--no-scale']) {
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
@@ -258,6 +255,108 @@ export default async function main(
         emoji('warning')
       )}\n`
     );
+  }
+
+  const client = new Client({
+    apiUrl: ctx.apiUrl,
+    token: ctx.authConfig.token,
+    debug: debugEnabled,
+  });
+
+  // retrieve `project` and `org` from .now
+  const link = await getLinkedProject(output, client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
+  let newProjectName = null;
+  let rootDirectory = project ? project.rootDirectory : null;
+
+  if (status === 'not_linked') {
+    const shouldStartSetup =
+      autoConfirm ||
+      (await confirm(
+        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        true
+      ));
+
+    if (!shouldStartSetup) {
+      output.print(`Aborted. Project not set up.\n`);
+      return 0;
+    }
+
+    org = await selectOrg(
+      output,
+      'Which scope do you want to deploy to?',
+      client,
+      ctx.config.currentTeam,
+      autoConfirm
+    );
+
+    // We use `localConfig` here to read the name
+    // even though the `now.json` file can change
+    // afterwards, this is fine since the property
+    // will be deprecated and can be replaced with
+    // user input.
+    const detectedProjectName = getProjectName({
+      argv,
+      nowConfig: localConfig,
+      isFile,
+      paths,
+    });
+
+    const projectOrNewProjectName = await inputProject(
+      output,
+      client,
+      org,
+      detectedProjectName,
+      autoConfirm
+    );
+
+    if (typeof projectOrNewProjectName === 'string') {
+      newProjectName = projectOrNewProjectName;
+      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+    } else {
+      project = projectOrNewProjectName;
+      rootDirectory = project.rootDirectory;
+
+      // we can already link the project
+      await linkFolderToProject(
+        output,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug
+      );
+      status = 'linked';
+    }
+  }
+
+  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+
+  if (
+    rootDirectory &&
+    (await validateRootDirectory(
+      output,
+      path,
+      sourcePath,
+      project
+        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        : ''
+    )) === false
+  ) {
+    return 1;
+  }
+
+  // When there is no `now.json` file we'll try
+  // to get it from the root directory.
+  if (!hasLocalConfig && rootDirectory) {
+    localConfig = readLocalConfig(sourcePath);
   }
 
   if (localConfig && localConfig.name) {
@@ -309,6 +408,13 @@ export default async function main(
       return 1;
     }
   }
+
+  // build `meta`
+  const meta = Object.assign(
+    {},
+    parseMeta(localConfig.meta),
+    parseMeta(argv['--meta'])
+  );
 
   // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
@@ -365,97 +471,6 @@ export default async function main(
   } else if (argv['--prod']) {
     output.debug('Setting target to production');
     target = 'production';
-  }
-
-  const client = new Client({
-    apiUrl: ctx.apiUrl,
-    token: ctx.authConfig.token,
-    debug: debugEnabled,
-  });
-
-  // retrieve `project` and `org` from .now
-  const link = await getLinkedProject(output, client, path);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  }
-
-  let { org, project, status } = link;
-  let newProjectName = null;
-  let rootDirectory = project ? project.rootDirectory : null;
-
-  if (status === 'not_linked') {
-    const shouldStartSetup =
-      autoConfirm ||
-      (await confirm(
-        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-        true
-      ));
-
-    if (!shouldStartSetup) {
-      output.print(`Aborted. Project not set up.\n`);
-      return 0;
-    }
-
-    org = await selectOrg(
-      output,
-      'Which scope do you want to deploy to?',
-      client,
-      ctx.config.currentTeam,
-      autoConfirm
-    );
-
-    const detectedProjectName = getProjectName({
-      argv,
-      nowConfig: localConfig,
-      isFile,
-      paths,
-    });
-
-    const projectOrNewProjectName = await inputProject(
-      output,
-      client,
-      org,
-      detectedProjectName,
-      autoConfirm
-    );
-
-    if (typeof projectOrNewProjectName === 'string') {
-      newProjectName = projectOrNewProjectName;
-      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
-    } else {
-      project = projectOrNewProjectName;
-      rootDirectory = project.rootDirectory;
-
-      // we can already link the project
-      await linkFolderToProject(
-        output,
-        path,
-        {
-          projectId: project.id,
-          orgId: org.id,
-        },
-        project.name,
-        org.slug
-      );
-      status = 'linked';
-    }
-  }
-
-  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
-
-  if (
-    rootDirectory &&
-    (await validateRootDirectory(
-      output,
-      path,
-      sourcePath,
-      project
-        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
-        : ''
-    )) === false
-  ) {
-    return 1;
   }
 
   const currentTeam = org.type === 'team' ? org.id : undefined;
