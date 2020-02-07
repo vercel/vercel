@@ -291,7 +291,7 @@ test('extensionless main', async t => {
 
 test('hashes', async t => {
   if (process.platform === 'win32') {
-    console.log('Skipping "hashes" test on windows');
+    console.log('Skipping "hashes" test on Windows');
     t.is(true, true);
     return;
   }
@@ -564,6 +564,11 @@ test('support `package.json:now.type` to bypass multiple manifests error', async
 });
 
 test('friendly error for malformed JSON', async t => {
+  if (process.platform === 'win32') {
+    console.log('Skipping "friendly error for malformed JSON" test on Windows');
+    t.is(true, true);
+    return;
+  }
   const err = await t.throwsAsync(() =>
     readMetadata(fixture('json-syntax-error'), {
       quiet: true,
