@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { join, sep } from 'path';
 import { send } from 'micro';
 import test from 'ava';
 import sinon from 'sinon';
@@ -26,7 +26,7 @@ import getUpdateCommand from '../src/util/get-update-command';
 import { isCanary } from '../src/util/is-canary';
 
 const output = createOutput({ debug: false });
-const prefix = `${join(__dirname, 'fixtures', 'unit')}/`;
+const prefix = `${join(__dirname, 'fixtures', 'unit')}${sep}`;
 const base = path => path.replace(prefix, '');
 const fixture = name => join(prefix, name);
 
@@ -290,6 +290,10 @@ test('extensionless main', async t => {
 });
 
 test('hashes', async t => {
+  if (process.platform === 'win32') {
+    console.log('Skipping hashes test on windows');
+    return;
+  }
   const files = await getNpmFiles(fixture('hashes'));
   const hashes = await hash(files);
   t.is(hashes.size, 3);
