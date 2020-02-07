@@ -13,7 +13,7 @@ import parseListen from '../src/util/dev/parse-listen';
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath });
+    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
   }
 }
 
@@ -399,13 +399,15 @@ test('[DevServer] parseListen()', t => {
   t.deepEqual(parseListen('3000'), [3000]);
   t.deepEqual(parseListen('0.0.0.0'), [3000, '0.0.0.0']);
   t.deepEqual(parseListen('127.0.0.1:3005'), [3005, '127.0.0.1']);
-  t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
-  t.deepEqual(parseListen('unix:/home/user/server.sock'), [
-    '/home/user/server.sock',
-  ]);
-  t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
-    '\\\\.\\pipe\\PipeName',
-  ]);
+  if (process.platform !== 'win32') {
+    t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
+    t.deepEqual(parseListen('unix:/home/user/server.sock'), [
+      '/home/user/server.sock',
+    ]);
+    t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
+      '\\\\.\\pipe\\PipeName',
+    ]);
+  }
 
   let err;
   try {
