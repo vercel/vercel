@@ -350,8 +350,8 @@ export default async function main(
     return 1;
   }
 
-  // We'll use the `now.json` file from the root directory
-  // instead, if there is any.
+  // If Root Directory is used we'll try to read the config
+  // from there instead and use it if it exists.
   if (rootDirectory) {
     const rootDirectoryConfig = readLocalConfig(sourcePath);
 
