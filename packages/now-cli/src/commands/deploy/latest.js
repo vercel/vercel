@@ -350,13 +350,15 @@ export default async function main(
     return 1;
   }
 
-  // When there is no `now.json` file we'll try
-  // to get it from the root directory.
-  if (!localConfig && rootDirectory) {
-    localConfig = readLocalConfig(sourcePath) || {};
-    debug(`Read local config from root directory (${rootDirectory})`);
-  } else if (!localConfig) {
-    localConfig = {};
+  // We'll use the `now.json` file from the root directory
+  // instead, if there is any.
+  if (rootDirectory) {
+    const rootDirectoryConfig = readLocalConfig(sourcePath);
+
+    if (rootDirectoryConfig) {
+      debug(`Read local config from root directory (${rootDirectory})`);
+      localConfig = rootDirectoryConfig;
+    }
   }
 
   if (localConfig.name) {
