@@ -1659,7 +1659,11 @@ export default class DevServer {
       })}`
     );
 
-    let command = devCommand;
+    // This is necesary so that the dev command in the Project
+    // will work cross-platform (especially Windows).
+    let command = devCommand
+      .replace(/\$PORT/g, `${port}`)
+      .replace(/%PORT%/g, `${port}`);
 
     const isNpxAvailable = await which('npx')
       .then(() => true)
