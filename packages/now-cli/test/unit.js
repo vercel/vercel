@@ -291,7 +291,8 @@ test('extensionless main', async t => {
 
 test('hashes', async t => {
   if (process.platform === 'win32') {
-    console.log('Skipping hashes test on windows');
+    console.log('Skipping "hashes" test on windows');
+    t.is(true, true);
     return;
   }
   const files = await getNpmFiles(fixture('hashes'));
