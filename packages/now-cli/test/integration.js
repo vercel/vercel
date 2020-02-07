@@ -2279,16 +2279,18 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   let isDeprecated = false;
 
-  await waitForPrompt(now, chunk => {
-    if (chunk.includes('The `name` property in now.json is deprecated')) {
+  now.stderr.on('data', data => {
+    if (
+      data.toString().includes('The `name` property in now.json is deprecated')
+    ) {
       isDeprecated = true;
     }
+  });
 
+  await waitForPrompt(now, chunk => {
     return /Set up and deploy [^?]+\?/.test(chunk);
   });
   now.stdin.write('yes\n');
-
-  t.is(isDeprecated, true);
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
@@ -2317,6 +2319,8 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
+
+  t.is(isDeprecated, true);
 
   // clean up
   await remove(path.join(directory, 'now.json'));
