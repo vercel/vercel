@@ -1632,12 +1632,14 @@ export default class DevServer {
   }
 
   async runDevCommand() {
-    if (!this.devCommand) return;
+    const { devCommand, cwd } = this;
 
-    const cwd = this.cwd;
+    if (!devCommand) {
+      return;
+    }
 
     this.output.log(
-      `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
+      `Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`
     );
 
     const port = await getPort();
@@ -1646,15 +1648,12 @@ export default class DevServer {
       ...process.env,
       ...this.buildEnv,
       NOW_REGION: 'dev1',
+      PORT: `${port}`,
     };
-
-    const devCommand = this.devCommand
-      .replace(/\$PORT/g, `${port}`)
-      .replace(/%PORT%/g, `${port}`);
 
     this.output.debug(
       `Starting dev command with parameters : ${JSON.stringify({
-        cwd: this.cwd,
+        cwd,
         devCommand,
         port,
       })}`
