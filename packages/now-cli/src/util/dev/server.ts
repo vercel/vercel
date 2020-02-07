@@ -1651,33 +1651,33 @@ export default class DevServer {
       PORT: `${port}`,
     };
 
-    this.output.debug(
-      `Starting dev command with parameters : ${JSON.stringify({
-        cwd,
-        devCommand,
-        port,
-      })}`
-    );
-
     // This is necesary so that the dev command in the Project
     // will work cross-platform (especially Windows).
     let command = devCommand
       .replace(/\$PORT/g, `${port}`)
       .replace(/%PORT%/g, `${port}`);
 
+    this.output.debug(
+      `Starting dev command with parameters : ${JSON.stringify({
+        cwd,
+        command,
+        port,
+      })}`
+    );
+
     const isNpxAvailable = await which('npx')
       .then(() => true)
       .catch(() => false);
 
     if (isNpxAvailable) {
-      command = `npx --no-install ${devCommand}`;
+      command = `npx --no-install ${command}`;
     } else {
       const isYarnAvailable = await which('yarn')
         .then(() => true)
         .catch(() => false);
 
       if (isYarnAvailable) {
-        command = `yarn run --silent ${devCommand}`;
+        command = `yarn run --silent ${command}`;
       }
     }
 
