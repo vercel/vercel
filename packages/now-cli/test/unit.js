@@ -68,7 +68,10 @@ const getStaticFiles = async (dir, isBuilds = false) => {
 
 const normalizeWindowsPaths = files => {
   if (process.platform === 'win32') {
-    return files.map(f => f.replace(new RegExp(/\\/g), '/'));
+    const prefix = 'D:/a/now/now/packages/now-cli/test/fixtures/unit/';
+    return files.map(f =>
+      f.replace(new RegExp(/\\/g), '/').slice(prefix.length)
+    );
   }
   return files;
 };
