@@ -123,7 +123,7 @@ export async function createGo(
 
 export async function downloadGo(
   dir = GO_DIR,
-  version = '1.12',
+  version = '1.13.7',
   platform = process.platform,
   arch = process.arch
 ) {
