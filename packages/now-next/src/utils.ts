@@ -315,6 +315,12 @@ export type RoutesManifest = {
     regex: string;
   }[];
   version: number;
+  serverPropsRoutes?: {
+    [page: string]: {
+      page: string;
+      dataRouteRegex: string;
+    };
+  };
 };
 
 export async function getRoutesManifest(

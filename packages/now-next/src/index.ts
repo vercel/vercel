@@ -334,11 +334,16 @@ export const build = async ({
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
 
+  const appMountPrefixNoTrailingSlash = path.posix
+    .join('/', entryDirectory)
+    .replace(/\/+$/, '');
+
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
+  const serverPropsRoutes: Route[] = [];
   let nextBasePath: string | undefined;
 
   if (routesManifest) {
@@ -350,6 +355,21 @@ export const build = async ({
 
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
+        }
+
+        if (routesManifest.serverPropsRoutes) {
+          const sspRoutes = routesManifest.serverPropsRoutes;
+
+          // build the /_next/data routes for getServerProps
+          Object.keys(sspRoutes).forEach(page => {
+            serverPropsRoutes.push({
+              src: sspRoutes[page].dataRouteRegex.replace(
+                /^\^/,
+                `^${appMountPrefixNoTrailingSlash}`
+              ),
+              dest: path.join('/', entryDirectory, page),
+            });
+          });
         }
 
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
@@ -498,10 +518,6 @@ export const build = async ({
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
   const dynamicDataRoutes: Array<Source> = [];
-
-  const appMountPrefixNoTrailingSlash = path.posix
-    .join('/', entryDirectory)
-    .replace(/\/+$/, '');
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
@@ -1034,6 +1050,10 @@ export const build = async ({
         continue: true,
       },
       { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
+
+      // /_next/data routes for getServerProps pages
+      ...serverPropsRoutes,
+
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
