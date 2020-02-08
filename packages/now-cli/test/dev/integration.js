@@ -770,17 +770,17 @@ test('[now dev] 03-aurelia', async t => {
   await tester(t);
 });
 
-// test(
-//   '[now dev] 04-create-react-app-node',
-//   testFixtureStdio('create-react-app', async(t, port) => {
-//     const response = await fetch(`http://localhost:${port}`);
+test(
+  '[now dev] 04-create-react-app',
+  testFixtureStdio('04-create-react-app', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
-//     validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
 
-//     const body = await response.text();
-//     t.regex(body, /React App/gm);
-//   })
-// );
+    const body = await response.text();
+    t.regex(body, /React App/gm);
+  })
+);
 
 test('[now dev] 05-gatsby', async t => {
   if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;

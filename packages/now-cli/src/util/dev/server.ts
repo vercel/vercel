@@ -1632,12 +1632,14 @@ export default class DevServer {
   }
 
   async runDevCommand() {
-    if (!this.devCommand) return;
+    const { devCommand, cwd } = this;
 
-    const cwd = this.cwd;
+    if (!devCommand) {
+      return;
+    }
 
     this.output.log(
-      `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
+      `Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`
     );
 
     const port = await getPort();
@@ -1646,35 +1648,36 @@ export default class DevServer {
       ...process.env,
       ...this.buildEnv,
       NOW_REGION: 'dev1',
+      PORT: `${port}`,
     };
 
-    const devCommand = this.devCommand
+    // This is necesary so that the dev command in the Project
+    // will work cross-platform (especially Windows).
+    let command = devCommand
       .replace(/\$PORT/g, `${port}`)
       .replace(/%PORT%/g, `${port}`);
 
     this.output.debug(
       `Starting dev command with parameters : ${JSON.stringify({
-        cwd: this.cwd,
-        devCommand,
+        cwd,
+        command,
         port,
       })}`
     );
-
-    let command = devCommand;
 
     const isNpxAvailable = await which('npx')
       .then(() => true)
       .catch(() => false);
 
     if (isNpxAvailable) {
-      command = `npx --no-install ${devCommand}`;
+      command = `npx --no-install ${command}`;
     } else {
       const isYarnAvailable = await which('yarn')
         .then(() => true)
         .catch(() => false);
 
       if (isYarnAvailable) {
-        command = `yarn run --silent ${devCommand}`;
+        command = `yarn run --silent ${command}`;
       }
     }
 
