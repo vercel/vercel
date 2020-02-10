@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import psl from 'psl';
 
 import { NowContext } from '../../types';
-import wait from '../../util/output/wait';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
@@ -13,6 +12,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getDomain } from '../../util/domains/get-domain';
+import { getLinkedProject } from '../../util/projects/link';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 
@@ -49,7 +49,18 @@ export default async function add(
     throw err;
   }
 
-  if (args.length !== 2) {
+  const project = await getLinkedProject(output, client).then(result => {
+    if (result.status === 'linked') {
+      return result.project;
+    }
+
+    return null;
+  });
+
+  if (project && args.length !== 1) {
+    output.error(`${cmd('now domains add <domain>')} expects one arguments.`);
+    return 1;
+  } else if (!project && args.length !== 2) {
     output.error(
       `${cmd('now domains add <domain> <project>')} expects two arguments.`
     );
@@ -57,7 +68,7 @@ export default async function add(
   }
 
   const domainName = String(args[0]);
-  const projectName = String(args[1]);
+  const projectName = project ? project.name : String(args[1]);
 
   const parsedDomain = psl.parse(domainName);
 
@@ -66,7 +77,7 @@ export default async function add(
     return 1;
   }
 
-  const { domain, subdomain } = parsedDomain;
+  const { domain } = parsedDomain;
 
   if (!domain) {
     output.error(`The provided domain '${param(domainName)}' is not valid.`);
