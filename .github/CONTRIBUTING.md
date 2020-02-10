@@ -103,4 +103,4 @@ You can add support for a new Framework by creating a Pull Request for this repo
 2. Add an example to the `examples/` directory: The name of the directory should equal the slug of the framework used in `@now/frameworks`.
    The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a README for the example.
 3. Update the `@now/static-build` package: The file `packages/now-static-build/src/frameworks.ts` has to be extended. You can add default routes that will always be applied to projects that use this framework or specify some paths that will be cached to speed up the build process.
-4. After your Pull Requeest has been merged and released, other users can select the example on the ZEIT Now dashboard and deploy it.
+4. After your Pull Request has been merged and released, other users can select the example on the ZEIT Now dashboard and deploy it.
