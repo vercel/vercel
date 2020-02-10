@@ -17,7 +17,12 @@ async function runNpmInstall(fixturePath) {
   }
 }
 
-const skipOnWindows = new Set(['now-dev-default-builds-and-routes']);
+const skipOnWindows = new Set([
+  'now-dev-default-builds-and-routes',
+  'now-dev-static-routes',
+  'now-dev-static-build-routing',
+  'now-dev-directory-listing',
+]);
 
 function testFixture(name, fn) {
   return async t => {
@@ -189,13 +194,6 @@ test('[DevServer] Does not install builders if there are no builds', async t => 
 });
 
 test('[DevServer] Installs canary build-utils if one more more builders is canary', t => {
-  if (process.platform === 'win32') {
-    console.log(
-      'Skipping "canary build-utils" test on windows since it hangs.'
-    );
-    t.is(true, true);
-    return;
-  }
   t.is(
     getBuildUtils(['@now/static', '@now/node@canary']),
     '@now/build-utils@canary'
@@ -226,13 +224,6 @@ test('[DevServer] Installs canary build-utils if one more more builders is canar
 test(
   '[DevServer] Test default builds and routes',
   testFixture('now-dev-default-builds-and-routes', async (t, server) => {
-    if (process.platform === 'win32') {
-      console.log(
-        'Skipping "default builds and routes" test on windows since it hangs.'
-      );
-      t.is(true, true);
-      return;
-    }
     let podId;
 
     {
