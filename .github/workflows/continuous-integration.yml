@@ -23,7 +23,6 @@ jobs:
       - run: git fetch origin master --depth=10
       - run: git fetch origin ${{ github.ref }} --depth=10
       - uses: actions/setup-node@v1
-      - run: which yarn
       - run: yarn install
       - run: yarn run build
       - run: yarn run test-lint
