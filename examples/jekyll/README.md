@@ -25,18 +25,3 @@ You can deploy your new Jekyll project with a single command from your terminal 
 ```shell
 $ now
 ```
-
-### Build Command
-
-The default build command is `jekyll build`.
-
-If you wish to change the build command, add a `package.json` file with the following:
-
-```json
-{
-  "private": true,
-  "scripts": {
-    "build": "jekyll build"
-  }
-}
-```
