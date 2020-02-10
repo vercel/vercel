@@ -5,7 +5,7 @@ import execa from 'execa';
 import fs from 'fs-extra';
 import fetch from 'node-fetch';
 import listen from 'async-listen';
-import { request, createServer } from 'http';
+import { createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
 import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
@@ -84,14 +84,6 @@ function validateResponseHeaders(t, res, podId = null) {
   }
 }
 
-function get(url) {
-  return new Promise((resolve, reject) => {
-    request(url, resolve)
-      .on('error', reject)
-      .end();
-  });
-}
-
 test(
   '[DevServer] Maintains query when invoking lambda',
   testFixture('now-dev-query-invoke', async (t, server) => {
@@ -154,10 +146,10 @@ test(
 test(
   '[DevServer] Allow `cache-control` to be overwritten',
   testFixture('now-dev-headers', async (t, server) => {
-    const res = await get(
+    const res = await fetch(
       `${server.address}/?name=cache-control&value=immutable`
     );
-    t.is(res.headers['cache-control'], 'immutable');
+    t.is(res.headers.get('cache-control'), 'immutable');
   })
 );
 
