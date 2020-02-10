@@ -12,6 +12,8 @@ import {
   shouldServe,
   Files,
   debug,
+  DownloadedFiles,
+  FileFsRef,
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
@@ -36,17 +38,31 @@ async function initPrivateGit(credentials: string) {
   await writeFile(join(homedir(), '.git-credentials'), credentials);
 }
 
-function getRenamedEntrypoint(entrypoint: string, files: Files) {
+async function getRenamedEntrypoint(
+  entrypoint: string,
+  files: DownloadedFiles
+) {
   const filename = basename(entrypoint);
   if (filename.startsWith('[')) {
-    console.log(`Renaming entrypoint from ${entrypoint}`);
     // Rename file since Go does not support files that begin
     // with square brackets, but we need for Path Segment support.
+    console.log(`Renaming entrypoint from ${entrypoint}`);
+    const newEntrypoint = entrypoint.replace('/[', '/__now_rename[');
+    console.log(`Renamed entrypoint to ${newEntrypoint}`);
     const file = files[entrypoint];
+    console.log('fsPath before: ' + file.fsPath);
+    const newFsPath = file.fsPath.replace('/[', '/__now_rename[');
+    console.log('fsPath after: ' + newFsPath);
+
+    await move(file.fsPath, newFsPath, { overwrite: true });
     delete files[entrypoint];
-    entrypoint = entrypoint.replace('/[', '/__now_rename[');
-    files[entrypoint] = file;
-    console.log(`Renamed entrypoint to ${entrypoint}`);
+    files[newEntrypoint] = await FileFsRef.fromFsPath({
+      mode: file.mode,
+      contentType: file.contentType,
+      fsPath: newFsPath,
+    });
+
+    entrypoint = newEntrypoint;
   }
 
   return entrypoint;
@@ -78,10 +94,6 @@ Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
 
-  entrypoint = getRenamedEntrypoint(entrypoint, files);
-
-  const entrypointArr = entrypoint.split(sep);
-
   // eslint-disable-next-line prefer-const
   let [goPath, outDir] = await Promise.all([
     getWriteableDirectory(),
@@ -89,12 +101,10 @@ Learn more: https://github.com/golang/go/wiki/Modules
   ]);
 
   const srcPath = join(goPath, 'src', 'lambda');
-  let downloadedFiles;
-  if (meta.isDev) {
-    downloadedFiles = await download(files, workPath, meta);
-  } else {
-    downloadedFiles = await download(files, srcPath);
-  }
+  const downloadPath = meta.isDev ? workPath : srcPath;
+  let downloadedFiles = await download(files, downloadPath, meta);
+  entrypoint = await getRenamedEntrypoint(entrypoint, downloadedFiles);
+  const entrypointArr = entrypoint.split(sep);
 
   debug(`Parsing AST for "${entrypoint}"`);
   let analyzed: string;
@@ -175,9 +185,9 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
 
   if (config && config.includeFiles) {
     for (const pattern of config.includeFiles) {
-      const files = await glob(pattern, input);
+      const fsFiles = await glob(pattern, input);
       for (const assetName of Object.keys(files)) {
-        includedFiles[assetName] = files[assetName];
+        includedFiles[assetName] = fsFiles[assetName];
       }
     }
   }
