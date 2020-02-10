@@ -80,9 +80,6 @@ async function createBuildProcess(
     NOW_REGION: 'dev1',
   };
 
-  output.debug('modulePath: ' + modulePath);
-  output.debug('workPath: ' + workPath);
-  output.debug('execPath: ' + execPath);
   const buildProcess = fork(modulePath, [], {
     cwd: workPath,
     env,
