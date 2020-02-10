@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "builds": [{ "src": "api/[hello].go", "use": "@now/go" }],
+  "probes": [
+    { "path": "/api/[hello].go", "mustContain": "hello:RANDOMNESS_PLACEHOLDER" }
+  ]
+}

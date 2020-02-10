@@ -23,15 +23,6 @@ interface Analyzed {
   functionName: string;
   watch: string[];
 }
-interface BuildParamsMeta {
-  isDev: boolean | undefined;
-}
-interface BuildParamsType extends BuildOptions {
-  files: Files;
-  entrypoint: string;
-  workPath: string;
-  meta: BuildParamsMeta;
-}
 
 // Initialize private git repo for Go Modules
 async function initPrivateGit(credentials: string) {
@@ -45,6 +36,22 @@ async function initPrivateGit(credentials: string) {
   await writeFile(join(homedir(), '.git-credentials'), credentials);
 }
 
+function getRenamedEntrypoint(entrypoint: string, files: Files) {
+  const filename = basename(entrypoint);
+  if (filename.startsWith('[')) {
+    console.log(`Renaming entrypoint from ${entrypoint}`);
+    // Rename file since Go does not support files that begin
+    // with square brackets, but we need for Path Segment support.
+    const file = files[entrypoint];
+    delete files[entrypoint];
+    entrypoint = entrypoint.replace('/[', '/__now_rename[');
+    files[entrypoint] = file;
+    console.log(`Renamed entrypoint to ${entrypoint}`);
+  }
+
+  return entrypoint;
+}
+
 export const version = 3;
 
 export async function build({
@@ -52,8 +59,8 @@ export async function build({
   entrypoint,
   config,
   workPath,
-  meta = {} as BuildParamsMeta,
-}: BuildParamsType) {
+  meta = {},
+}: BuildOptions) {
   if (process.env.GIT_CREDENTIALS && !meta.isDev) {
     debug('Initialize Git credentials...');
     await initPrivateGit(process.env.GIT_CREDENTIALS);
@@ -70,6 +77,8 @@ We highly recommend you leverage Go Modules in your project.
 Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
+
+  entrypoint = getRenamedEntrypoint(entrypoint, files);
 
   const entrypointArr = entrypoint.split(sep);
 
