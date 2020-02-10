@@ -11,12 +11,13 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
-import { basename, dirname, extname, join, delimiter } from 'path';
+import { basename, dirname, extname, join } from 'path';
 import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
+import which from 'which';
 
 import {
   Builder,
@@ -26,7 +27,6 @@ import {
   detectRoutes,
   detectApiDirectory,
   detectApiExtensions,
-  execAsync,
   spawnCommand,
 } from '@now/build-utils';
 
@@ -1632,18 +1632,14 @@ export default class DevServer {
   }
 
   async runDevCommand() {
-    if (!this.devCommand) return;
+    const { devCommand, cwd } = this;
 
-    const cwd = this.cwd;
-
-    const { stdout: yarnBinStdout } = await execAsync('yarn', ['bin'], {
-      cwd,
-    });
-
-    const yarnBinPath = yarnBinStdout.trim();
+    if (!devCommand) {
+      return;
+    }
 
     this.output.log(
-      `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
+      `Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`
     );
 
     const port = await getPort();
@@ -1651,24 +1647,43 @@ export default class DevServer {
     const env: EnvConfig = {
       ...process.env,
       ...this.buildEnv,
-      PATH: `${yarnBinPath}${delimiter}${process.env.PATH}`,
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };
 
+    // This is necesary so that the dev command in the Project
+    // will work cross-platform (especially Windows).
+    let command = devCommand
+      .replace(/\$PORT/g, `${port}`)
+      .replace(/%PORT%/g, `${port}`);
+
     this.output.debug(
       `Starting dev command with parameters : ${JSON.stringify({
-        cwd: this.cwd,
-        devCommand: this.devCommand,
+        cwd,
+        command,
         port,
       })}`
     );
 
-    const p = spawnCommand(this.devCommand, {
-      stdio: 'inherit',
-      cwd,
-      env,
-    });
+    const isNpxAvailable = await which('npx')
+      .then(() => true)
+      .catch(() => false);
+
+    if (isNpxAvailable) {
+      command = `npx --no-install ${command}`;
+    } else {
+      const isYarnAvailable = await which('yarn')
+        .then(() => true)
+        .catch(() => false);
+
+      if (isYarnAvailable) {
+        command = `yarn run --silent ${command}`;
+      }
+    }
+
+    this.output.debug(`Spawning dev command: ${command}`);
+
+    const p = spawnCommand(command, { stdio: 'inherit', cwd, env });
 
     p.on('exit', () => {
       this.devProcessPort = undefined;

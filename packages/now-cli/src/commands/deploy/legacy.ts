@@ -852,7 +852,7 @@ async function sync({
     const { url } = now;
     const dcs =
       deploymentType !== 'static' && deployment.scale
-        ? chalk` ({bold ${Object.keys(deployment.scale).join(', ')})`
+        ? ` (${ chalk.bold(Object.keys(deployment.scale).join(', ')) })`
         : '';
 
     if (isTTY) {

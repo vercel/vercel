@@ -83,6 +83,7 @@ export default async function processDeployment({
     deployStamp,
     force,
     nowConfig,
+    quiet,
   } = args;
 
   const { debug } = output;
@@ -178,6 +179,10 @@ export default async function processDeployment({
       );
 
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
+
+      if (quiet) {
+        process.stdout.write(`https://${event.payload.url}`);
+      }
 
       if (queuedSpinner === null) {
         queuedSpinner =
