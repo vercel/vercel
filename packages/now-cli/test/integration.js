@@ -560,12 +560,8 @@ test('domains inspect', async t => {
   const projectName = Math.random()
     .toString()
     .slice(2);
-  const deployment = await execute([
-    directory,
-    `--name=${projectName}`,
-    '--confirm',
-    '--public',
-  ]);
+
+  await execute([directory, `--name=${projectName}`, '--confirm', '--public']);
 
   {
     // Add a domain that can be inspected

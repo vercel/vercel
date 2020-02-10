@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import Client from '../client';
 import wait from '../output/wait';
 import { Project } from '../../types';

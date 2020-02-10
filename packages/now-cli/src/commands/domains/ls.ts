@@ -7,7 +7,6 @@ import Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
 import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
