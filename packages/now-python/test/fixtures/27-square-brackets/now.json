@@ -2,6 +2,6 @@
   "version": 2,
   "builds": [{ "src": "api/[hello].py", "use": "@now/python" }],
   "probes": [
-    { "path": "/[hello].py", "mustContain": "hello:RANDOMNESS_PLACEHOLDER" }
+    { "path": "/api/[hello].py", "mustContain": "hello:RANDOMNESS_PLACEHOLDER" }
   ]
 }
