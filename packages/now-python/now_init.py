@@ -5,7 +5,7 @@ import json
 import inspect
 from importlib import util
 
-
+# Import relative path https://stackoverflow.com/a/67692/266535
 __now_spec = util.spec_from_file_location("__NOW_HANDLER_MODULE_NAME", "./__NOW_HANDLER_ENTRYPOINT")
 __now_module = util.module_from_spec(__now_spec)
 __now_spec.loader.exec_module(__now_module)
@@ -28,7 +28,7 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
     base = __now_module.handler if ('handler' in __now_variables) else  __now_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
-        print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
+        print('See the docs https://zeit.co/docs/runtimes#advanced-usage/advanced-python-usage')
         exit(1)
 
     print('using HTTP Handler')
@@ -279,6 +279,6 @@ elif 'app' in __now_variables:
             return response
 
 else:
-    print('Missing variable `handler` or `app` in file __now_module.py')
-    print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
+    print('Missing variable `handler` or `app` in file "__NOW_HANDLER_ENTRYPOINT".')
+    print('See the docs https://zeit.co/docs/runtimes#advanced-usage/advanced-python-usage')
     exit(1)
