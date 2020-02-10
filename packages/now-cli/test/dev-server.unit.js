@@ -22,6 +22,9 @@ const skipOnWindows = new Set([
   'now-dev-static-routes',
   'now-dev-static-build-routing',
   'now-dev-directory-listing',
+  'now-dev-api-with-public',
+  'now-dev-api-with-static',
+  'now-dev-custom-404',
 ]);
 
 function testFixture(name, fn) {
