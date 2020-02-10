@@ -7,7 +7,6 @@ import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
 import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
-import which from 'which';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 import _treeKill from 'tree-kill';
@@ -47,7 +46,8 @@ const treeKill = promisify(_treeKill);
 let nodeBinPromise: Promise<string>;
 
 async function getNodeBin(): Promise<string> {
-  return which.sync('node', { nothrow: true }) || process.execPath;
+  //return which.sync('node', { nothrow: true }) || process.execPath;
+  return process.execPath;
 }
 
 async function createBuildProcess(
