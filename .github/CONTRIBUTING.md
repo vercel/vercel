@@ -97,13 +97,9 @@ Sometimes you want to test changes to a Builder against an existing project, may
 
 ## Add a New Framework
 
-You can add support for a new framework by creating a Pull Request for this repository by following the steps below.
+You can add support for a new Framework by creating a Pull Request for this repository and following the steps below:
 
-1. Add the framework to the `@now/frameworks` package.
-   The file is located in `packages/frameworks/frameworks.json`. You can copy the structure of an existing one and adjust the required fields. Note that the `settings` property either contains a `value` or a `placeholder`. The `value` property is used when something is not configurable, the `placeholder` is used when something is configurable and can be changed with configuration. An example would be the output directory for Hugo, it's `public` by default but can be changed through its config file, so we use `placeholder` with an explanation of what can be used.
-2. Add an example to the `examples/` directory.
-   The name of the directory should equal the slug of the framework used in `@now/frameworks`.
-   The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a README for the example.
-3. Update the `@now/static-build` package
-   The files `packages/now-static-build/src/frameworks.ts` has to be extended. You can add default routes that will always be applied to projects that use this framework or specify some paths that will be cached to speed up the build process.
-4. After your PR has been merged and released other users can use `now init` to get the example and deploy it to ZEIT Now.
+1. Add the Framework to the `@now/frameworks` package: The file is located in `packages/frameworks/frameworks.json`. You can copy the structure of an existing one and adjust the required fields. Note that the `settings` property either contains a `value` or a `placeholder`. The `value` property is used when something is not configurable, the `placeholder` is used when something is configurable and can be changed with configuration. An example would be the Output Directory for Hugo, it's `public` by default but can be changed through its config file, so we use `placeholder` with an explanation of what can be used.
+2. Add an example to the `examples/` directory: The name of the directory should equal the slug of the framework used in `@now/frameworks`. The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a `README.md` file for the example.
+3. Update the `@now/static-build` package: The file `packages/now-static-build/src/frameworks.ts` has to be extended. You can add default routes that will always be applied to projects that use this Framework or specify some paths that will be cached to speed up the build process.
+4. After your Pull Request has been merged and released, other users can select the example on the ZEIT Now dashboard and deploy it.
