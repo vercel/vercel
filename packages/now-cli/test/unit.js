@@ -70,7 +70,7 @@ const normalizeWindowsPaths = files => {
   if (process.platform === 'win32') {
     const prefix = 'D:/a/now/now/packages/now-cli/test/fixtures/unit/';
     return files.map(f =>
-      f.replace(new RegExp(/\\/g), '/').slice(prefix.length)
+      f.replace(/\\/g, '/').slice(prefix.length)
     );
   }
   return files;
