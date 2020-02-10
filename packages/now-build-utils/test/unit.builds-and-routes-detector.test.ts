@@ -499,7 +499,7 @@ describe('Test `detectBuilders`', () => {
     });
 
     expect(errors!.length).toBe(1);
-    expect(errors![0].code).toBe('invalid_function_source');
+    expect(errors![0].code).toBe('unused_function');
   });
 
   it('do not allow empty functions', async () => {
