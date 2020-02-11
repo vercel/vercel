@@ -47,11 +47,11 @@ async function getRenamedEntrypoint(
     // Rename file since Go does not support files that begin
     // with square brackets, but we need for Path Segment support.
     console.log(`Renaming entrypoint from ${entrypoint}`);
-    const newEntrypoint = entrypoint.replace('/[', '/__now_rename[');
+    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[');
     console.log(`Renamed entrypoint to ${newEntrypoint}`);
     const file = files[entrypoint];
     console.log('fsPath before: ' + file.fsPath);
-    const newFsPath = file.fsPath.replace('/[', '/__now_rename[');
+    const newFsPath = file.fsPath.replace('/[', '/now-bracket[');
     console.log('fsPath after: ' + newFsPath);
 
     await move(file.fsPath, newFsPath, { overwrite: true });
