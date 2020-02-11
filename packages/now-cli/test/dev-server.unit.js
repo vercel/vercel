@@ -414,8 +414,8 @@ test('[DevServer] parseListen()', t => {
   t.deepEqual(parseListen('3000'), [3000]);
   t.deepEqual(parseListen('0.0.0.0'), [3000, '0.0.0.0']);
   t.deepEqual(parseListen('127.0.0.1:3005'), [3005, '127.0.0.1']);
+  t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
   if (process.platform !== 'win32') {
-    t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
     t.deepEqual(parseListen('unix:/home/user/server.sock'), [
       '/home/user/server.sock',
     ]);
