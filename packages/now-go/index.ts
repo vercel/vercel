@@ -172,10 +172,13 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   const includedFiles: Files = {};
 
   if (config && config.includeFiles) {
-    for (const pattern of config.includeFiles) {
+    const patterns = Array.isArray(config.includeFiles)
+      ? config.includeFiles
+      : [config.includeFiles];
+    for (const pattern of patterns) {
       const fsFiles = await glob(pattern, input);
-      for (const assetName of Object.keys(files)) {
-        includedFiles[assetName] = fsFiles[assetName];
+      for (const [assetName, asset] of Object.entries(fsFiles)) {
+        includedFiles[assetName] = asset;
       }
     }
   }
