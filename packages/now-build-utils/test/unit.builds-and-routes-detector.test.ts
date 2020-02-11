@@ -1,5 +1,5 @@
 import { Source, Route } from '@now/routing-utils';
-import { detectBuilders, detectRoutes } from '../src';
+import { detectBuilders } from '../src';
 import {
   detectOutputDirectory,
   detectApiDirectory,
