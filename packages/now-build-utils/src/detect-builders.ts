@@ -114,6 +114,8 @@ export async function detectBuilders(
     if (key) usedFunctions.add(key);
   };
 
+  const absolutePathCache = new Map<string, string>();
+
   const { projectSettings = {} } = options;
   const { buildCommand, outputDirectory, framework } = projectSettings;
 
@@ -138,7 +140,8 @@ export async function detectBuilders(
       const { routeError, defaultRoute, dynamicRoute } = getApiRoute(
         fileName,
         apiSortedFiles,
-        options
+        options,
+        absolutePathCache
       );
 
       if (routeError) {
@@ -597,7 +600,8 @@ function checkUnusedFunctions(
 function getApiRoute(
   fileName: string,
   sortedFiles: string[],
-  options: Options
+  options: Options,
+  absolutePathCache: Map<string, string>
 ): {
   defaultRoute: Source | null;
   dynamicRoute: Source | null;
@@ -619,9 +623,11 @@ function getApiRoute(
     };
   }
 
-  const occurrences = pathOccurrences(fileName, sortedFiles).filter(
-    name => name !== fileName
-  );
+  const occurrences = pathOccurrences(
+    fileName,
+    sortedFiles,
+    absolutePathCache
+  ).filter(name => name !== fileName);
 
   if (occurrences.length > 0) {
     const messagePaths = concatArrayOfText(
@@ -688,23 +694,37 @@ function getSegmentName(segment: string): string | null {
   return null;
 }
 
+function getAbsolutePath(unresolvedPath: string) {
+  const { dir, name } = parsePath(unresolvedPath);
+  const parts = joinPath(dir, name).split('/');
+  return parts.map(part => part.replace(/\[.*\]/, '1')).join('/');
+}
+
 // Counts how often a path occurs when all placeholders
 // got resolved, so we can check if they have conflicts
-function pathOccurrences(fileName: string, files: string[]): string[] {
-  const getAbsolutePath = (unresolvedPath: string): string => {
-    const { dir, name } = parsePath(unresolvedPath);
-    const parts = joinPath(dir, name).split('/');
-    return parts.map(part => part.replace(/\[.*\]/, '1')).join('/');
-  };
+function pathOccurrences(
+  fileName: string,
+  files: string[],
+  absolutePathCache: Map<string, string>
+): string[] {
+  let currentAbsolutePath = absolutePathCache.get(fileName);
 
-  const currentAbsolutePath = getAbsolutePath(fileName);
+  if (!currentAbsolutePath) {
+    currentAbsolutePath = getAbsolutePath(fileName);
+    absolutePathCache.set(fileName, currentAbsolutePath);
+  }
 
   const prev: string[] = [];
 
   // Do not call expensive functions like `minimatch` in here
   // because we iterate over every file.
   for (const file of files) {
-    const absolutePath = getAbsolutePath(file);
+    let absolutePath = absolutePathCache.get(file);
+
+    if (!absolutePath) {
+      absolutePath = getAbsolutePath(file);
+      absolutePathCache.set(file, absolutePath);
+    }
 
     if (absolutePath === currentAbsolutePath) {
       prev.push(file);
