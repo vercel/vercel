@@ -623,11 +623,7 @@ function getApiRoute(
     };
   }
 
-  const occurrences = pathOccurrences(
-    fileName,
-    sortedFiles,
-    absolutePathCache
-  ).filter(name => name !== fileName);
+  const occurrences = pathOccurrences(fileName, sortedFiles, absolutePathCache);
 
   if (occurrences.length > 0) {
     const messagePaths = concatArrayOfText(
@@ -719,6 +715,10 @@ function pathOccurrences(
   // Do not call expensive functions like `minimatch` in here
   // because we iterate over every file.
   for (const file of files) {
+    if (file === fileName) {
+      continue;
+    }
+
     let absolutePath = absolutePathCache.get(file);
 
     if (!absolutePath) {
