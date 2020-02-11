@@ -648,13 +648,13 @@ describe('Test `detectBuilders`', () => {
 
     const files = ['dist/index.html', 'dist/style.css'];
 
-    const { builders } = await detectBuilders(files, null, { projectSettings });
+    const { builders, defaultRoutes } = await detectBuilders(files, null, {
+      projectSettings,
+    });
 
     expect(builders!.length).toBe(1);
     expect(builders![0].src).toBe('dist/**/*');
     expect(builders![0].use).toBe('@now/static');
-
-    const { defaultRoutes } = await detectRoutes(files, builders!);
 
     expect(defaultRoutes!.length).toBe(1);
     expect((defaultRoutes![0] as any).src).toBe('/(.*)');
@@ -668,13 +668,13 @@ describe('Test `detectBuilders`', () => {
 
     const files = ['api/user.ts', 'output/index.html', 'output/style.css'];
 
-    const { builders } = await detectBuilders(files, null, { projectSettings });
+    const { builders, defaultRoutes } = await detectBuilders(files, null, {
+      projectSettings,
+    });
 
     expect(builders!.length).toBe(2);
     expect(builders![1].src).toBe('output/**/*');
     expect(builders![1].use).toBe('@now/static');
-
-    const { defaultRoutes } = await detectRoutes(files, builders!);
 
     expect(defaultRoutes!.length).toBe(3);
     expect((defaultRoutes![1] as any).status).toBe(404);
@@ -1500,9 +1500,12 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
 });
 
 it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingSlash=true`', async () => {
-  const featHandleMiss = true;
-  const cleanUrls = true;
-  const trailingSlash = true;
+  const options = {
+    featHandleMiss: true,
+    cleanUrls: true,
+    trailingSlash: true,
+  };
+
   const testHeaders = (redirectRoutes: Route[] | null) => {
     if (!redirectRoutes || redirectRoutes.length === 0) {
       throw new Error('Expected one redirect but found none');
@@ -1514,13 +1517,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
-    const { builders } = await detectBuilders(files);
-    const { defaultRoutes, redirectRoutes } = await detectRoutes(
+    const { defaultRoutes, redirectRoutes } = await detectBuilders(
       files,
-      builders!,
-      featHandleMiss,
-      cleanUrls,
-      trailingSlash
+      null,
+      options
     );
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
@@ -1565,13 +1565,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   {
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
-    const { builders } = await detectBuilders(files);
-    const { defaultRoutes, redirectRoutes } = await detectRoutes(
+    const { defaultRoutes, redirectRoutes } = await detectBuilders(
       files,
-      builders!,
-      featHandleMiss,
-      cleanUrls,
-      trailingSlash
+      null,
+      options
     );
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
@@ -1601,13 +1598,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       'api/[endpoint]/[id].js',
     ];
 
-    const { builders } = await detectBuilders(files);
-    const { defaultRoutes, redirectRoutes } = await detectRoutes(
+    const { defaultRoutes, redirectRoutes } = await detectBuilders(
       files,
-      builders!,
-      featHandleMiss,
-      cleanUrls,
-      trailingSlash
+      null,
+      options
     );
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
@@ -1643,13 +1637,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
 
     const files = ['public/index.html', 'api/[endpoint].js'];
 
-    const { builders } = await detectBuilders(files, pkg);
-    const { defaultRoutes, redirectRoutes } = await detectRoutes(
+    const { defaultRoutes, redirectRoutes } = await detectBuilders(
       files,
-      builders!,
-      featHandleMiss,
-      cleanUrls,
-      trailingSlash
+      pkg,
+      options
     );
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
@@ -1670,13 +1661,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   {
     const files = ['api/date/index.js', 'api/date.js'];
 
-    const { builders } = await detectBuilders(files);
-    const { defaultRoutes, redirectRoutes } = await detectRoutes(
+    const { defaultRoutes, redirectRoutes } = await detectBuilders(
       files,
-      builders!,
-      featHandleMiss,
-      cleanUrls,
-      trailingSlash
+      null,
+      options
     );
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
@@ -1692,13 +1680,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   {
     const files = ['api/date.js', 'api/[date]/index.js'];
 
-    const { builders } = await detectBuilders(files);
-    const { defaultRoutes, redirectRoutes } = await detectRoutes(
+    const { defaultRoutes, redirectRoutes } = await detectBuilders(
       files,
-      builders!,
-      featHandleMiss,
-      cleanUrls,
-      trailingSlash
+      null,
+      options
     );
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
@@ -1725,13 +1710,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       'api/food.ts',
       'api/ts/gold.ts',
     ];
-    const { builders } = await detectBuilders(files);
-    const { defaultRoutes, redirectRoutes } = await detectRoutes(
+    const { defaultRoutes, redirectRoutes } = await detectBuilders(
       files,
-      builders!,
-      featHandleMiss,
-      cleanUrls,
-      trailingSlash
+      null,
+      options
     );
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
@@ -1745,13 +1727,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
     const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
     const files = ['api/user.php'];
 
-    const { builders } = await detectBuilders(files, null, { functions });
-    const { defaultRoutes, redirectRoutes } = await detectRoutes(
+    const { defaultRoutes, redirectRoutes } = await detectBuilders(
       files,
-      builders!,
-      featHandleMiss,
-      cleanUrls,
-      trailingSlash
+      null,
+      { functions, ...options }
     );
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([
