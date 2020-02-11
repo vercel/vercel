@@ -129,6 +129,8 @@ export async function detectBuilders(
   let hasNoneApiFiles = false;
   let hasNextApiFiles = false;
 
+  let fallbackEntrypoint: string | null = null;
+
   const preDefaultRoutes: Source[] = [];
   const preDynamicRoutes: Source[] = [];
 
@@ -188,6 +190,10 @@ export async function detectBuilders(
     ) {
       hasNextApiFiles = true;
     }
+
+    if (!fallbackEntrypoint && buildCommand && !fileName.includes('/')) {
+      fallbackEntrypoint = fileName;
+    }
   }
 
   if (
@@ -195,7 +201,13 @@ export async function detectBuilders(
     (hasBuildScript(pkg) || buildCommand || framework)
   ) {
     // Framework or Build
-    frontendBuilder = detectFrontBuilder(pkg, files, usedFunctions, options);
+    frontendBuilder = detectFrontBuilder(
+      pkg,
+      files,
+      usedFunctions,
+      fallbackEntrypoint,
+      options
+    );
   } else {
     if (
       pkg &&
@@ -390,6 +402,7 @@ function detectFrontBuilder(
   pkg: PackageJson | null | undefined,
   files: string[],
   usedFunctions: Set<string>,
+  fallbackEntrypoint: string | null,
   options: Options
 ): Builder {
   const { tag, projectSettings = {} } = options;
@@ -455,9 +468,15 @@ function detectFrontBuilder(
 
   const source = pkg
     ? 'package.json'
-    : files.find(file => entrypoints.has(file)) || 'package.json';
+    : files.find(file => entrypoints.has(file)) ||
+      fallbackEntrypoint ||
+      'package.json';
 
-  return { src: source, use: `@now/static-build${withTag}`, config };
+  return {
+    src: source || 'package.json',
+    use: `@now/static-build${withTag}`,
+    config,
+  };
 }
 
 function getMissingBuildScriptError() {
