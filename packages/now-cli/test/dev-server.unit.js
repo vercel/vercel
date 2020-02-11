@@ -5,7 +5,7 @@ import execa from 'execa';
 import fs from 'fs-extra';
 import fetch from 'node-fetch';
 import listen from 'async-listen';
-import { request, createServer } from 'http';
+import { createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
 import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
@@ -13,12 +13,28 @@ import parseListen from '../src/util/dev/parse-listen';
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath });
+    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
   }
 }
 
+const skipOnWindows = new Set([
+  'now-dev-default-builds-and-routes',
+  'now-dev-static-routes',
+  'now-dev-static-build-routing',
+  'now-dev-directory-listing',
+  'now-dev-api-with-public',
+  'now-dev-api-with-static',
+  'now-dev-custom-404',
+]);
+
 function testFixture(name, fn) {
   return async t => {
+    if (process.platform === 'win32' && skipOnWindows.has(name)) {
+      console.log(`Skipping test "${name}" on Windows.`);
+      t.is(true, true);
+      return;
+    }
+
     let server;
 
     const fixturePath = path.join(__dirname, 'fixtures', 'unit', name);
@@ -66,14 +82,6 @@ function validateResponseHeaders(t, res, podId = null) {
   if (podId) {
     t.truthy(res.headers.get('x-now-id').startsWith(`dev1:${podId}`));
   }
-}
-
-function get(url) {
-  return new Promise((resolve, reject) => {
-    request(url, resolve)
-      .on('error', reject)
-      .end();
-  });
 }
 
 test(
@@ -138,16 +146,23 @@ test(
 test(
   '[DevServer] Allow `cache-control` to be overwritten',
   testFixture('now-dev-headers', async (t, server) => {
-    const res = await get(
+    const res = await fetch(
       `${server.address}/?name=cache-control&value=immutable`
     );
-    t.is(res.headers['cache-control'], 'immutable');
+    t.is(res.headers.get('cache-control'), 'immutable');
   })
 );
 
 test(
   '[DevServer] Sends `etag` header for static files',
   testFixture('now-dev-headers', async (t, server) => {
+    if (process.platform === 'win32') {
+      console.log(
+        'Skipping "etag" test on windows since it yields a different result.'
+      );
+      t.is(true, true);
+      return;
+    }
     const res = await fetch(`${server.address}/foo.txt`);
     t.is(res.headers.get('etag'), '"d263af8ab880c0b97eb6c5c125b5d44f9e5addd9"');
     t.is(await res.text(), 'hi\n');
@@ -400,12 +415,14 @@ test('[DevServer] parseListen()', t => {
   t.deepEqual(parseListen('0.0.0.0'), [3000, '0.0.0.0']);
   t.deepEqual(parseListen('127.0.0.1:3005'), [3005, '127.0.0.1']);
   t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
-  t.deepEqual(parseListen('unix:/home/user/server.sock'), [
-    '/home/user/server.sock',
-  ]);
-  t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
-    '\\\\.\\pipe\\PipeName',
-  ]);
+  if (process.platform !== 'win32') {
+    t.deepEqual(parseListen('unix:/home/user/server.sock'), [
+      '/home/user/server.sock',
+    ]);
+    t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
+      '\\\\.\\pipe\\PipeName',
+    ]);
+  }
 
   let err;
   try {
