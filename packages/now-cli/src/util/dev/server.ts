@@ -24,7 +24,6 @@ import {
   FileFsRef,
   PackageJson,
   detectBuilders,
-  detectRoutes,
   detectApiDirectory,
   detectApiExtensions,
   spawnCommand,
@@ -548,10 +547,19 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      let { builders, warnings, errors } = await detectBuilders(files, pkg, {
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+      } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
         ...(projectSettings ? { projectSettings } : {}),
+        featHandleMiss,
+        cleanUrls,
+        trailingSlash,
       });
 
       if (errors) {
@@ -568,32 +576,15 @@ export default class DevServer {
           builders = builders.filter(filterFrontendBuilds);
         }
 
-        const {
-          defaultRoutes,
-          redirectRoutes,
-          error: routesError,
-        } = await detectRoutes(
-          files,
-          builders,
-          featHandleMiss,
-          cleanUrls,
-          trailingSlash
-        );
-
         config.builds = config.builds || [];
         config.builds.push(...builders);
 
-        if (routesError) {
-          this.output.error(routesError.message);
-          await this.exit();
-        } else {
-          const routes: RouteConfig[] = [];
-          const { routes: nowConfigRoutes } = config;
-          routes.push(...(redirectRoutes || []));
-          routes.push(...(nowConfigRoutes || []));
-          routes.push(...(defaultRoutes || []));
-          config.routes = routes;
-        }
+        const routes: RouteConfig[] = [];
+        const { routes: nowConfigRoutes } = config;
+        routes.push(...(redirectRoutes || []));
+        routes.push(...(nowConfigRoutes || []));
+        routes.push(...(defaultRoutes || []));
+        config.routes = routes;
       }
     }
 
