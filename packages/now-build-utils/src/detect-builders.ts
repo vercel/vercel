@@ -51,10 +51,7 @@ export function detectApiDirectory(builders: Builder[]): string | null {
   return found ? 'api' : null;
 }
 
-/**
- * TODO
- * Replace this function with `config.outputDirectory`
- */
+// TODO: Replace this function with `config.outputDirectory`
 function getPublicBuilder(builders: Builder[]): Builder | null {
   const builder = builders.find(
     builder =>
@@ -702,8 +699,11 @@ function pathOccurrences(fileName: string, files: string[]): string[] {
 
   const currentAbsolutePath = getAbsolutePath(fileName);
 
-  // TODO - We still iterate over each file inside of here
-  return files.reduce((prev: string[], file: string): string[] => {
+  const prev: string[] = [];
+
+  // Do not call expensive functions like `minimatch` in here
+  // because we iterate over every file.
+  for (const file of files) {
     const absolutePath = getAbsolutePath(file);
 
     if (absolutePath === currentAbsolutePath) {
@@ -711,9 +711,9 @@ function pathOccurrences(fileName: string, files: string[]): string[] {
     } else if (partiallyMatches(fileName, file)) {
       prev.push(file);
     }
+  }
 
-    return prev;
-  }, []);
+  return prev;
 }
 
 function joinPath(...segments: string[]) {
