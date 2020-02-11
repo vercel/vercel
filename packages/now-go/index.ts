@@ -12,8 +12,6 @@ import {
   shouldServe,
   Files,
   debug,
-  DownloadedFiles,
-  FileFsRef,
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
@@ -38,30 +36,20 @@ async function initPrivateGit(credentials: string) {
   await writeFile(join(homedir(), '.git-credentials'), credentials);
 }
 
-async function getRenamedEntrypoint(
-  entrypoint: string,
-  files: DownloadedFiles
-) {
+/**
+ * Since `go build` does not support files that begin with a square bracket,
+ * we must rename to something temporary to support Path Segments.
+ * The output file is not renamed because v3 builders can't rename outputs
+ * which works great for this feature.
+ */
+async function getRenamedEntrypoint(entrypoint: string, files: Files) {
   const filename = basename(entrypoint);
   if (filename.startsWith('[')) {
-    // Rename file since Go does not support files that begin
-    // with square brackets, but we need for Path Segment support.
-    console.log(`Renaming entrypoint from ${entrypoint}`);
     const newEntrypoint = entrypoint.replace('/[', '/now-bracket[');
-    console.log(`Renamed entrypoint to ${newEntrypoint}`);
     const file = files[entrypoint];
-    console.log('fsPath before: ' + file.fsPath);
-    const newFsPath = file.fsPath.replace('/[', '/now-bracket[');
-    console.log('fsPath after: ' + newFsPath);
-
-    await move(file.fsPath, newFsPath, { overwrite: true });
     delete files[entrypoint];
-    files[newEntrypoint] = await FileFsRef.fromFsPath({
-      mode: file.mode,
-      contentType: file.contentType,
-      fsPath: newFsPath,
-    });
-
+    files[newEntrypoint] = file;
+    debug(`Renamed entrypoint from ${entrypoint} to ${newEntrypoint}`);
     entrypoint = newEntrypoint;
   }
 
@@ -93,6 +81,8 @@ We highly recommend you leverage Go Modules in your project.
 Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
+  entrypoint = await getRenamedEntrypoint(entrypoint, files);
+  const entrypointArr = entrypoint.split(sep);
 
   // eslint-disable-next-line prefer-const
   let [goPath, outDir] = await Promise.all([
@@ -103,8 +93,6 @@ Learn more: https://github.com/golang/go/wiki/Modules
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadPath = meta.isDev ? workPath : srcPath;
   let downloadedFiles = await download(files, downloadPath, meta);
-  entrypoint = await getRenamedEntrypoint(entrypoint, downloadedFiles);
-  const entrypointArr = entrypoint.split(sep);
 
   debug(`Parsing AST for "${entrypoint}"`);
   let analyzed: string;
