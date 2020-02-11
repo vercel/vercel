@@ -104,7 +104,6 @@ function runScript(pkgName, script) {
       const child = spawn('yarn', [script], {
         cwd,
         stdio: 'inherit',
-        env: process.env,
         shell: true,
       });
       child.on('error', reject);
