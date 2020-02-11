@@ -109,13 +109,14 @@ function validateResponseHeaders(t, res) {
 async function exec(directory, args = []) {
   return execa(binaryPath, ['dev', directory, ...args], {
     reject: false,
+    shell: true,
     env: { __NOW_SKIP_DEV_COMMAND: 1 },
   });
 }
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath });
+    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
   }
 }
 
@@ -123,6 +124,7 @@ async function getPackedBuilderPath(builderDirName) {
   const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
   const output = await execa('npm', ['pack'], {
     cwd: packagePath,
+    shell: true,
   });
 
   if (output.exitCode !== 0 || output.stdout.trim() === '') {
@@ -160,6 +162,7 @@ async function testFixture(directory, opts = {}, args = []) {
     {
       reject: false,
       detached: true,
+      shell: true,
       stdio: 'pipe',
       ...opts,
       env: { ...opts.env, __NOW_SKIP_DEV_COMMAND: 1 },
@@ -226,6 +229,7 @@ function testFixtureStdio(directory, fn) {
       let printedOutput = false;
 
       dev = execa(binaryPath, ['dev', dir, '-l', port], {
+        shell: true,
         env: { __NOW_SKIP_DEV_COMMAND: 1 },
       });
 
