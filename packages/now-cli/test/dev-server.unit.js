@@ -156,13 +156,6 @@ test(
 test(
   '[DevServer] Sends `etag` header for static files',
   testFixture('now-dev-headers', async (t, server) => {
-    if (process.platform === 'win32') {
-      console.log(
-        'Skipping "etag" test on windows since it yields a different result.'
-      );
-      t.is(true, true);
-      return;
-    }
     const res = await fetch(`${server.address}/foo.txt`);
     t.is(res.headers.get('etag'), '"d263af8ab880c0b97eb6c5c125b5d44f9e5addd9"');
     t.is(await res.text(), 'hi\n');
