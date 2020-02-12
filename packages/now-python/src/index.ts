@@ -155,13 +155,10 @@ export const build = async ({
   // will be used on `from $here import handler`
   // for example, `from api.users import handler`
   debug('Entrypoint is', entrypoint);
-  const userHandlerFilePath = entrypoint
-    .replace(/\//g, '.')
-    .replace(/\.py$/, '');
-  const nowHandlerPyContents = originalNowHandlerPyContents.replace(
-    /__NOW_HANDLER_FILENAME/g,
-    userHandlerFilePath
-  );
+  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  const nowHandlerPyContents = originalNowHandlerPyContents
+    .replace(/__NOW_HANDLER_MODULE_NAME/g, moduleName)
+    .replace(/__NOW_HANDLER_ENTRYPOINT/g, entrypoint);
 
   // in order to allow the user to have `server.py`, we need our `server.py` to be called
   // somethig else

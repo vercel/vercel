@@ -2279,16 +2279,18 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   let isDeprecated = false;
 
-  await waitForPrompt(now, chunk => {
-    if (chunk.includes('The `name` property in now.json is deprecated')) {
+  now.stderr.on('data', data => {
+    if (
+      data.toString().includes('The `name` property in now.json is deprecated')
+    ) {
       isDeprecated = true;
     }
+  });
 
+  await waitForPrompt(now, chunk => {
     return /Set up and deploy [^?]+\?/.test(chunk);
   });
   now.stdin.write('yes\n');
-
-  t.is(isDeprecated, true);
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
@@ -2317,6 +2319,8 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
+
+  t.is(isDeprecated, true);
 
   // clean up
   await remove(path.join(directory, 'now.json'));
@@ -2448,9 +2452,14 @@ test('use `rootDirectory` from project when deploying', async t => {
   const secondResult = await execute([directory, '--public']);
   t.is(secondResult.exitCode, 0, formatOutput(secondResult));
 
-  const pageResponse = await fetch(secondResult.stdout);
-  t.is(pageResponse.status, 200);
-  t.regex(await pageResponse.text(), /I am a website/gm);
+  const pageResponse1 = await fetch(secondResult.stdout);
+  t.is(pageResponse1.status, 200);
+  t.regex(await pageResponse1.text(), /I am a website/gm);
+
+  // Ensures that the `now.json` file has been applied
+  const pageResponse2 = await fetch(`${secondResult.stdout}/i-do-exist`);
+  t.is(pageResponse2.status, 200);
+  t.regex(await pageResponse2.text(), /I am a website/gm);
 
   await apiFetch(`/v2/projects/${projectId}`, {
     method: 'DELETE',
