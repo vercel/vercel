@@ -72,9 +72,7 @@
     {
       "path": "/blog/post-3",
       "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
+      "mustContain": "loading..."
     },
     { "delay": 2000 },
     {
@@ -83,6 +81,11 @@
       "responseHeaders": {
         "x-now-cache": "/HIT|STALE/"
       }
+    },
+    {
+      "path": "/blog/post-3",
+      "status": 200,
+      "mustContain": "post-3"
     },
     {
       "path": "/blog/post-1/comment-1",
@@ -101,9 +104,7 @@
     {
       "path": "/blog/post-3/comment-3",
       "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
+      "mustContain": "loading..."
     },
     {
       "path": "/_next/data/testing-build-id/lambda.json",
@@ -159,6 +160,19 @@
       "responseHeaders": {
         "x-now-cache": "PRERENDER"
       }
+    },
+    {
+      "path": "/blog/post-123/comment-321",
+      "status": 200,
+      "mustContain": "loading..."
+    },
+    {
+      "delay": 2000
+    },
+    {
+      "path": "/blog/post-123/comment-321",
+      "status": 200,
+      "mustContain": "comment-321"
     }
   ]
 }

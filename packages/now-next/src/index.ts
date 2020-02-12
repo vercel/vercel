@@ -612,17 +612,12 @@ export const build = async ({
 
       // Prerendered routes emit a `.html` file but should not be treated as a
       // static page.
-      // Lazily prerendered routes have a fallback `.html` file so we need to
-      // skip for them here also
+      // Lazily prerendered routes have a fallback `.html` file on newer
+      // Next.js versions so we need to also not treat it as a static page here.
       if (
-        Object.prototype.hasOwnProperty.call(
-          prerenderManifest.routes,
-          routeName
-        ) ||
-        Object.prototype.hasOwnProperty.call(
-          prerenderManifest.lazyRoutes,
-          routeName
-        )
+        prerenderManifest.routes[routeName] ||
+        (prerenderManifest.lazyRoutes[routeName] &&
+          prerenderManifest.lazyRoutes[routeName].fallback)
       ) {
         return;
       }
