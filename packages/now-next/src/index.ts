@@ -612,8 +612,8 @@ export const build = async ({
 
       // Prerendered routes emit a `.html` file but should not be treated as a
       // static page.
-      // Lazily prerendered routes do not have a `.html` file so we don't need
-      // to check/skip it here.
+      // Lazily prerendered routes have a fallback `.html` file so we need to
+      // skip for them here also
       if (
         Object.prototype.hasOwnProperty.call(
           prerenderManifest.routes,
