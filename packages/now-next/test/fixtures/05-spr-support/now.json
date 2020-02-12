@@ -159,6 +159,19 @@
       "responseHeaders": {
         "x-now-cache": "PRERENDER"
       }
+    },
+    {
+      "path": "/blog/post-123",
+      "status": 200,
+      "mustContain": "loading..."
+    },
+    {
+      "delay": 2000
+    },
+    {
+      "path": "/blog/post-123",
+      "status": 200,
+      "mustContain": "post-123"
     }
   ]
 }
