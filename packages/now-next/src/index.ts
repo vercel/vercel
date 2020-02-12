@@ -618,6 +618,10 @@ export const build = async ({
         Object.prototype.hasOwnProperty.call(
           prerenderManifest.routes,
           routeName
+        ) ||
+        Object.prototype.hasOwnProperty.call(
+          prerenderManifest.lazyRoutes,
+          routeName
         )
       ) {
         return;
@@ -857,7 +861,7 @@ export const build = async ({
           : new FileFsRef({
               fsPath: path.join(
                 pagesDir,
-                `${lazyHtmlFallback || routeFileNoExt}.html`
+                `${lazyHtmlFallback || routeFileNoExt + '.html'}`
               ),
             });
       const jsonFsRef = isLazy

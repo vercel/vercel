@@ -72,9 +72,7 @@
     {
       "path": "/blog/post-3",
       "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
+      "mustContain": "loading..."
     },
     { "delay": 2000 },
     {
@@ -101,9 +99,7 @@
     {
       "path": "/blog/post-3/comment-3",
       "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
+      "mustContain": "loading..."
     },
     {
       "path": "/_next/data/testing-build-id/lambda.json",
