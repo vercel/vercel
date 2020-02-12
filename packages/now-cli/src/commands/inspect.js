@@ -9,7 +9,6 @@ import createOutput from '../util/output';
 import Now from '../util';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
-import wait from '../util/output/wait';
 import { handleError } from '../util/error';
 import strlen from '../util/strlen.ts';
 import Client from '../util/client.ts';
@@ -79,13 +78,16 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
 
@@ -104,7 +106,7 @@ export default async function main(ctx) {
 
   // resolve the deployment, since we might have been given an alias
   const depFetchStart = Date.now();
-  const cancelWait = wait(
+  const cancelWait = output.spinner(
     `Fetching deployment "${id}" in ${chalk.bold(contextName)}`
   );
 
@@ -140,7 +142,7 @@ export default async function main(ctx) {
     limits,
     version,
     routes,
-    readyState
+    readyState,
   } = deployment;
 
   const isBuilds = version === 2;
@@ -159,7 +161,7 @@ export default async function main(ctx) {
             )}/events?types=event`
           )
         ),
-    isBuilds ? now.fetch(buildsUrl) : { builds: [] }
+    isBuilds ? now.fetch(buildsUrl) : { builds: [] },
   ]);
 
   cancelWait();
@@ -174,7 +176,9 @@ export default async function main(ctx) {
   print(`    ${chalk.cyan('version')}\t${version}\n`);
   print(`    ${chalk.cyan('id')}\t\t${finalId}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
-  print(`    ${chalk.cyan('readyState')}\t${stateString(state || readyState)}\n`);
+  print(
+    `    ${chalk.cyan('readyState')}\t${stateString(state || readyState)}\n`
+  );
   if (!isBuilds) {
     print(`    ${chalk.cyan('type')}\t${type}\n`);
   }
@@ -255,7 +259,7 @@ export default async function main(ctx) {
       `${table(t, {
         align: ['l', 'c', 'c', 'c'],
         hsep: ' '.repeat(8),
-        stringLength: strlen
+        stringLength: strlen,
       }).replace(/^(.*)/gm, '    $1')}\n`
     );
     print('\n');
@@ -269,9 +273,9 @@ export default async function main(ctx) {
     events.forEach(data => {
       if (!data.event) return; // keepalive
       print(
-        `    ${chalk.gray(
-          new Date(data.created).toISOString()
-        )} ${data.event} ${getEventMetadata(data)}\n`
+        `    ${chalk.gray(new Date(data.created).toISOString())} ${
+          data.event
+        } ${getEventMetadata(data)}\n`
       );
     });
     print('\n');

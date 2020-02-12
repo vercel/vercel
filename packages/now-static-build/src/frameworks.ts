@@ -62,7 +62,7 @@ const frameworkList: Framework[] = [
         return [];
       }
     },
-    cachePattern: '.cache/**',
+    cachePattern: '{.cache,public}/**',
   },
   {
     name: 'Hexo',
@@ -365,6 +365,21 @@ const frameworkList: Framework[] = [
     buildCommand: 'stencil build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
+      { 
+        src: '/assets/(.*)',
+        headers: { 'cache-control': 'max-age=2592000' },
+        continue: true,
+      },
+      {
+        src: '/build/p-.*',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '/sw.js',
+        headers: { 'cache-control': 'no-cache' },
+        continue: true,
+      },
       {
         handle: 'filesystem',
       },

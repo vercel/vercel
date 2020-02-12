@@ -1,4 +1,4 @@
-import { join, sep, dirname, basename } from 'path';
+import { join, sep, dirname, basename, normalize } from 'path';
 import { readFile, writeFile, pathExists, move } from 'fs-extra';
 import { homedir } from 'os';
 import execa from 'execa';
@@ -14,22 +14,14 @@ import {
   debug,
 } from '@now/build-utils';
 
-import { createGo, getAnalyzedEntrypoint } from './go-helpers';
+import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
+const handlerFileName = `handler${OUT_EXTENSION}`;
 
 interface Analyzed {
   found?: boolean;
   packageName: string;
   functionName: string;
   watch: string[];
-}
-interface BuildParamsMeta {
-  isDev: boolean | undefined;
-}
-interface BuildParamsType extends BuildOptions {
-  files: Files;
-  entrypoint: string;
-  workPath: string;
-  meta: BuildParamsMeta;
 }
 
 // Initialize private git repo for Go Modules
@@ -44,6 +36,26 @@ async function initPrivateGit(credentials: string) {
   await writeFile(join(homedir(), '.git-credentials'), credentials);
 }
 
+/**
+ * Since `go build` does not support files that begin with a square bracket,
+ * we must rename to something temporary to support Path Segments.
+ * The output file is not renamed because v3 builders can't rename outputs
+ * which works great for this feature.
+ */
+async function getRenamedEntrypoint(entrypoint: string, files: Files) {
+  const filename = basename(entrypoint);
+  if (filename.startsWith('[')) {
+    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[');
+    const file = files[entrypoint];
+    delete files[entrypoint];
+    files[newEntrypoint] = file;
+    debug(`Renamed entrypoint from ${entrypoint} to ${newEntrypoint}`);
+    entrypoint = newEntrypoint;
+  }
+
+  return entrypoint;
+}
+
 export const version = 3;
 
 export async function build({
@@ -51,8 +63,8 @@ export async function build({
   entrypoint,
   config,
   workPath,
-  meta = {} as BuildParamsMeta,
-}: BuildParamsType) {
+  meta = {},
+}: BuildOptions) {
   if (process.env.GIT_CREDENTIALS && !meta.isDev) {
     debug('Initialize Git credentials...');
     await initPrivateGit(process.env.GIT_CREDENTIALS);
@@ -69,7 +81,7 @@ We highly recommend you leverage Go Modules in your project.
 Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
-
+  entrypoint = await getRenamedEntrypoint(entrypoint, files);
   const entrypointArr = entrypoint.split(sep);
 
   // eslint-disable-next-line prefer-const
@@ -79,12 +91,8 @@ Learn more: https://github.com/golang/go/wiki/Modules
   ]);
 
   const srcPath = join(goPath, 'src', 'lambda');
-  let downloadedFiles;
-  if (meta.isDev) {
-    downloadedFiles = await download(files, workPath, meta);
-  } else {
-    downloadedFiles = await download(files, srcPath);
-  }
+  const downloadPath = meta.isDev ? workPath : srcPath;
+  let downloadedFiles = await download(files, downloadPath, meta);
 
   debug(`Parsing AST for "${entrypoint}"`);
   let analyzed: string;
@@ -164,10 +172,13 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   const includedFiles: Files = {};
 
   if (config && config.includeFiles) {
-    for (const pattern of config.includeFiles) {
-      const files = await glob(pattern, input);
-      for (const assetName of Object.keys(files)) {
-        includedFiles[assetName] = files[assetName];
+    const patterns = Array.isArray(config.includeFiles)
+      ? config.includeFiles
+      : [config.includeFiles];
+    for (const pattern of patterns) {
+      const fsFiles = await glob(pattern, input);
+      for (const [assetName, asset] of Object.entries(fsFiles)) {
+        includedFiles[assetName] = asset;
       }
     }
   }
@@ -321,7 +332,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     }
 
     debug('Running `go build`...');
-    const destPath = join(outDir, 'handler');
+    const destPath = join(outDir, handlerFileName);
 
     try {
       const src = [join(baseGoModPath, mainModGoFileName)];
@@ -385,12 +396,12 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     }
 
     debug('Running `go build`...');
-    const destPath = join(outDir, 'handler');
+    const destPath = join(outDir, handlerFileName);
     try {
       const src = [
         join(entrypointDirname, mainGoFileName),
         downloadedFiles[entrypoint].fsPath,
-      ];
+      ].map(file => normalize(file));
       await go.build(src, destPath);
     } catch (err) {
       console.log('failed to `go build`');
@@ -400,7 +411,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
 
   const lambda = await createLambda({
     files: { ...(await glob('**', outDir)), ...includedFiles },
-    handler: 'handler',
+    handler: handlerFileName,
     runtime: 'go1.x',
     environment: {},
   });

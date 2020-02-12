@@ -186,8 +186,7 @@ export default async ctx => {
       contextName,
       output,
       stats,
-      localConfig || {},
-      isFile,
+      localConfig,
       parts.latestArgs
     );
   }

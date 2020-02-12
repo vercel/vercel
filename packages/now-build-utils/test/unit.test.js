@@ -11,6 +11,10 @@ const {
 } = require('../dist');
 
 it('should re-create symlinks properly', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
   const files = await glob('**', path.join(__dirname, 'symlinks'));
   assert.equal(Object.keys(files).length, 2);
 
@@ -29,6 +33,10 @@ it('should re-create symlinks properly', async () => {
 });
 
 it('should create zip files with symlinks properly', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
   const files = await glob('**', path.join(__dirname, 'symlinks'));
   assert.equal(Object.keys(files).length, 2);
 

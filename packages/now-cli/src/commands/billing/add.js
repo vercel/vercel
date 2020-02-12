@@ -21,7 +21,7 @@ export default async function({ creditCards, clear = false, contextName }) {
     name: {
       label: rightPad('Full Name', 12),
       placeholder: 'John Appleseed',
-      validateValue: data => data.trim().length > 0
+      validateValue: data => data.trim().length > 0,
     },
 
     cardNumber: {
@@ -36,7 +36,7 @@ export default async function({ creditCards, clear = false, contextName }) {
           return false;
         }
         return ccValidator.isValidCardNumber(data, type);
-      }
+      },
     },
 
     ccv: {
@@ -46,7 +46,7 @@ export default async function({ creditCards, clear = false, contextName }) {
       validateValue: data => {
         const brand = state.cardNumber.brand.toLowerCase();
         return ccValidator.doesCvvMatchType(data, brand);
-      }
+      },
     },
 
     expDate: {
@@ -54,8 +54,8 @@ export default async function({ creditCards, clear = false, contextName }) {
       mask: 'expDate',
       placeholder: 'mm / yyyy',
       middleware: expDateMiddleware,
-      validateValue: data => !ccValidator.isExpired(...data.split(' / '))
-    }
+      validateValue: data => !ccValidator.isExpired(...data.split(' / ')),
+    },
   };
 
   async function render() {
@@ -80,7 +80,7 @@ export default async function({ creditCards, clear = false, contextName }) {
             mask: piece.mask,
             validateKeypress: piece.validateKeypress,
             validateValue: piece.validateValue,
-            autoComplete: piece.autoComplete
+            autoComplete: piece.autoComplete,
           });
 
           piece.value = result;
@@ -135,7 +135,7 @@ export default async function({ creditCards, clear = false, contextName }) {
         name: state.name.value,
         cardNumber: state.cardNumber.value,
         ccv: state.ccv.value,
-        expDate: state.expDate.value
+        expDate: state.expDate.value,
       });
 
       stopSpinner();
@@ -156,9 +156,9 @@ export default async function({ creditCards, clear = false, contextName }) {
       stopSpinner();
       const linesToClear = state.error ? 15 : 14;
       process.stdout.write(ansiEscapes.eraseLines(linesToClear));
-      state.error = `${chalk.red(
-        '> Error!'
-      )} ${err.message} Please make sure the info is correct`;
+      state.error = `${chalk.red('> Error!')} ${
+        err.message
+      } Please make sure the info is correct`;
       await render();
     }
   }

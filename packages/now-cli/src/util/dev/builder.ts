@@ -3,21 +3,10 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { promisify } from 'util';
-import { delimiter, dirname, extname, join } from 'path';
+import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import {
-  Builder,
-  File,
-  Lambda,
-  FileBlob,
-  FileFsRef,
-  detectApiDirectory,
-  detectApiExtensions,
-} from '@now/build-utils';
-import stripAnsi from 'strip-ansi';
-import chalk from 'chalk';
-import which from 'which';
+import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 import _treeKill from 'tree-kill';
@@ -54,27 +43,15 @@ interface BuildMessageResult extends BuildMessage {
 
 const treeKill = promisify(_treeKill);
 
-let nodeBinPromise: Promise<string>;
-
-async function getNodeBin(): Promise<string> {
-  return which.sync('node', { nothrow: true }) || process.execPath;
-}
-
 async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
   workPath: string,
   output: Output,
-  yarnPath?: string,
-  debugEnabled: boolean = false
+  yarnPath?: string
 ): Promise<ChildProcess> {
-  if (!nodeBinPromise) {
-    nodeBinPromise = getNodeBin();
-  }
-  const [execPath, modulePath] = await Promise.all([
-    nodeBinPromise,
-    builderModulePathPromise,
-  ]);
+  const { execPath } = process;
+  const modulePath = await builderModulePathPromise;
 
   // Ensure that `node` is in the builder's `PATH`
   let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
@@ -131,7 +108,7 @@ export async function executeBuild(
   const {
     builderWithPkg: { runInProcess, builder, package: pkg },
   } = match;
-  const { src: entrypoint } = match;
+  const { entrypoint } = match;
   const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
 
   const startTime = Date.now();
@@ -157,8 +134,7 @@ export async function executeBuild(
       buildEnv,
       workPath,
       devServer.output,
-      yarnPath,
-      debug
+      yarnPath
     );
   }
 
@@ -286,8 +262,8 @@ export async function executeBuild(
   }
 
   const { output } = result;
-
   const { cleanUrls } = nowConfig;
+
   // Mimic fmeta-util and perform file renaming
   Object.entries(output).forEach(([path, value]) => {
     if (cleanUrls && path.endsWith('.html')) {
@@ -296,6 +272,11 @@ export async function executeBuild(
       if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
         value.contentType = value.contentType || 'text/html; charset=utf-8';
       }
+    }
+
+    const extensionless = devServer.getExtensionlessFile(path);
+    if (extensionless) {
+      path = extensionless;
     }
 
     delete output[path];
@@ -407,6 +388,7 @@ export async function getBuildMatches(
   cwd: string,
   yarnDir: string,
   output: Output,
+  devServer: DevServer,
   fileList: string[]
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
@@ -419,9 +401,6 @@ export async function getBuildMatches(
 
   const noMatches: Builder[] = [];
   const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
-  const apiDir = detectApiDirectory(builds || []);
-  const apiExtensions = detectApiExtensions(builds || []);
-  const apiMatch = apiDir + '/';
 
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
@@ -440,10 +419,13 @@ export async function getBuildMatches(
     // We need to escape brackets since `glob` will
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
-    const ext = extname(src);
-    if (apiDir && src.startsWith(apiMatch) && apiExtensions.has(ext)) {
-      // lambda function files are trimmed of their file extension
-      src = src.slice(0, -ext.length);
+
+    // lambda function files are trimmed of their file extension
+    const mapToEntrypoint = new Map<string, string>();
+    const extensionless = devServer.getExtensionlessFile(src);
+    if (extensionless) {
+      mapToEntrypoint.set(extensionless, src);
+      src = extensionless;
     }
 
     const files = fileList
@@ -460,6 +442,7 @@ export async function getBuildMatches(
       matches.push({
         ...buildConfig,
         src,
+        entrypoint: mapToEntrypoint.get(src) || src,
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),

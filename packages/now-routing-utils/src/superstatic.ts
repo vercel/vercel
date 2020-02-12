@@ -105,8 +105,13 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   const routes: Route[] = [];
   if (enable) {
     routes.push({
-      src: '^/(.*[^\\/])$',
+      src: '^/((?:[^/]+/)*[^/\\.]+)$',
       headers: { Location: '/$1/' },
+      status,
+    });
+    routes.push({
+      src: '^/((?:[^/]+/)*[^/]+\\.\\w+)/$',
+      headers: { Location: '/$1' },
       status,
     });
   } else {
@@ -123,7 +128,11 @@ export function sourceToRegex(
   source: string
 ): { src: string; segments: string[] } {
   const keys: Key[] = [];
-  const r = pathToRegexp(source, keys, { strict: true });
+  const r = pathToRegexp(source, keys, {
+    strict: true,
+    sensitive: true,
+    delimiter: '/',
+  });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };
 }
@@ -143,7 +152,7 @@ function replaceSegments(segments: string[], destination: string): string {
       indexes[name] = toSegmentDest(index);
     });
 
-    if (destination.includes(':')) {
+    if (destination.includes(':') && segments.length > 0) {
       const pathnameCompiler = compile(pathname);
       const hashCompiler = compile(hash);
       pathname = pathnameCompiler(indexes);
@@ -157,8 +166,10 @@ function replaceSegments(segments: string[], destination: string): string {
         }
         query[key] = value;
       }
-    } else {
-      for (const [name, value] of Object.entries(indexes)) {
+    }
+
+    for (const [name, value] of Object.entries(indexes)) {
+      if (!(name in query)) {
         query[name] = value;
       }
     }

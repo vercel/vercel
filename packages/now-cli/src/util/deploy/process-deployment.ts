@@ -6,7 +6,6 @@ import {
   DeploymentOptions,
   NowClientOptions,
 } from 'now-client';
-import wait from '../output/wait';
 import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';
@@ -50,9 +49,9 @@ function printInspectUrl(
 export default async function processDeployment({
   isLegacy,
   org,
+  cwd,
   projectName,
-  shouldLinkFolder,
-  isDetectingFramework,
+  isSettingUpProject,
   skipAutoDetectionConfirmation,
   ...args
 }: {
@@ -69,9 +68,9 @@ export default async function processDeployment({
   force?: boolean;
   org: Org;
   projectName: string;
-  shouldLinkFolder: boolean;
-  isDetectingFramework: boolean;
+  isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
+  cwd?: string;
 }) {
   if (isLegacy) return processLegacyDeployment(args);
 
@@ -84,6 +83,7 @@ export default async function processDeployment({
     deployStamp,
     force,
     nowConfig,
+    quiet,
   } = args;
 
   const { debug } = output;
@@ -106,8 +106,8 @@ export default async function processDeployment({
   let buildSpinner = null;
   let deploySpinner = null;
 
-  let deployingSpinner = wait(
-    isDetectingFramework
+  let deployingSpinner = output.spinner(
+    isSettingUpProject
       ? `Setting up project`
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
     0
@@ -167,26 +167,28 @@ export default async function processDeployment({
 
       now._host = event.payload.url;
 
-      if (shouldLinkFolder) {
-        await linkFolderToProject(
-          output,
-          paths[0],
-          {
-            orgId: org.id,
-            projectId: event.payload.projectId,
-          },
-          projectName,
-          org.slug
-        );
-      }
+      await linkFolderToProject(
+        output,
+        cwd || paths[0],
+        {
+          orgId: org.id,
+          projectId: event.payload.projectId,
+        },
+        projectName,
+        org.slug
+      );
 
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
+
+      if (quiet) {
+        process.stdout.write(`https://${event.payload.url}`);
+      }
 
       if (queuedSpinner === null) {
         queuedSpinner =
           event.payload.readyState === 'QUEUED'
-            ? wait('Queued', 0)
-            : wait('Building', 0);
+            ? output.spinner('Queued', 0)
+            : output.spinner('Building', 0);
       }
     }
 
@@ -196,7 +198,7 @@ export default async function processDeployment({
       }
 
       if (buildSpinner === null) {
-        buildSpinner = wait('Building', 0);
+        buildSpinner = output.spinner('Building', 0);
       }
     }
 
@@ -208,7 +210,7 @@ export default async function processDeployment({
         buildSpinner();
       }
 
-      deploySpinner = wait('Completing', 0);
+      deploySpinner = output.spinner('Completing', 0);
     }
 
     // Handle error events

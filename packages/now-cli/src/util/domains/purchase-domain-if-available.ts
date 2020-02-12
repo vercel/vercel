@@ -9,7 +9,6 @@ import getDomainStatus from './get-domain-status';
 import promptBool from '../input/prompt-bool';
 import purchaseDomain from './purchase-domain';
 import stamp from '../output/stamp';
-import wait from '../output/wait';
 import * as ERRORS from '../errors-ts';
 
 const isTTY = process.stdout.isTTY;
@@ -20,7 +19,7 @@ export default async function purchaseDomainIfAvailable(
   domain: string,
   contextName: string
 ) {
-  const cancelWait = wait(`Checking status of ${chalk.bold(domain)}`);
+  const cancelWait = output.spinner(`Checking status of ${chalk.bold(domain)}`);
   const buyDomainStamp = stamp();
   const { available } = await getDomainStatus(client, domain);
 

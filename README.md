@@ -1,6 +1,6 @@
-![now](https://assets.zeit.co/image/upload/v1542240976/repositories/now-cli/now-cli-repo-banner-v3.png)
+![now](https://assets.zeit.co/image/upload/v1581518533/repositories/now-cli/v4.png)
 
-[![Build Status](https://badgen.net/circleci/github/zeit/now/master)](https://circleci.com/gh/zeit/workflows/now/tree/master)
+[![CI Status](https://badgen.net/github/checks/zeit/now?label=CI)](https://github.com/zeit/now/actions?workflow=CI)
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
 
 ## Usage
@@ -16,7 +16,6 @@ To quickly start a new project, run the following commands:
 ```
 now init        # Pick an example project to clone
 cd <PROJECT>    # Change directory to the newly created project
-now dev         # Run locally during development
 now             # Deploy to the cloud
 ```
 

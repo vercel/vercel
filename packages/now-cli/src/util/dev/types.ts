@@ -7,7 +7,6 @@ import {
   FileFsRef,
   Lambda,
   PackageJson,
-  BuilderFunctions,
   Config,
 } from '@now/build-utils';
 import { NowConfig } from 'now-client';
@@ -19,6 +18,7 @@ export { NowConfig };
 export interface DevServerOptions {
   output: Output;
   debug: boolean;
+  devCommand?: string;
 }
 
 export interface EnvConfig {
@@ -26,6 +26,7 @@ export interface EnvConfig {
 }
 
 export interface BuildMatch extends BuildConfig {
+  entrypoint: string;
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
