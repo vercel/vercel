@@ -119,6 +119,11 @@
     },
     { "delay": 2000 },
     {
+      "path": "/blog/post-3/comment-3",
+      "status": 200,
+      "mustContain": "comment-3"
+    },
+    {
       "path": "/_next/data/testing-build-id/forever.json",
       "status": 200,
       "responseHeaders": {
@@ -160,19 +165,6 @@
       "responseHeaders": {
         "x-now-cache": "PRERENDER"
       }
-    },
-    {
-      "path": "/blog/post-123/comment-321",
-      "status": 200,
-      "mustContain": "loading..."
-    },
-    {
-      "delay": 2000
-    },
-    {
-      "path": "/blog/post-123/comment-321",
-      "status": 200,
-      "mustContain": "comment-321"
     }
   ]
 }
