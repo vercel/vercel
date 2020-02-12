@@ -194,7 +194,7 @@ export const build = async ({
 }> => {
   validateEntrypoint(entrypoint);
 
-  const entryDirectory = path.dirname(entrypoint);
+  let entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const dotNextStatic = path.join(entryPath, '.next/static');
 
@@ -338,8 +338,6 @@ export const build = async ({
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
-  const nextBasePathRoute: Route[] = [];
-  let nextBasePath: string | undefined;
 
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -353,7 +351,7 @@ export const build = async ({
         }
 
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
-          nextBasePath = routesManifest.basePath;
+          const nextBasePath = routesManifest.basePath;
 
           if (!nextBasePath.startsWith('/')) {
             throw new Error(
@@ -366,11 +364,7 @@ export const build = async ({
             );
           }
 
-          nextBasePathRoute.push({
-            src: `^${nextBasePath}(?:$|/(.*))$`,
-            dest: `/$1`,
-            continue: true,
-          });
+          entryDirectory = path.join(entryDirectory, nextBasePath);
         }
         break;
       }
@@ -428,9 +422,6 @@ export const build = async ({
       output,
       routes: [
         // TODO: low priority: handle trailingSlash
-
-        // Add top level rewrite for basePath if provided
-        ...nextBasePathRoute,
 
         // User headers
         ...headers,
@@ -1011,9 +1002,6 @@ export const build = async ({
       - Builder rewrites
     */
     routes: [
-      // Add top level rewrite for basePath if provided
-      ...nextBasePathRoute,
-
       // headers
       ...headers,
 
