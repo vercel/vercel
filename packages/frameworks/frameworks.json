@@ -17,7 +17,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`next build` or `build` from `package.json`"
+        "placeholder": "`build` from `package.json` or `next build`"
       },
       "devCommand": {
         "value": "next dev --port $PORT"
