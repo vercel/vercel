@@ -1,9 +1,8 @@
 {
-  "redirects": [
+  "rewrites": [
     {
       "source": "/",
-      "destination": "https://zeit.co/new",
-      "statusCode": 307
+      "destination": "/api/frameworks"
     }
   ],
   "env": {
