@@ -90,19 +90,19 @@ Learn more: https://github.com/golang/go/wiki/Modules
     getWriteableDirectory(),
   ]);
 
+  const forceMove = Boolean(meta.isDev);
   const srcPath = join(goPath, 'src', 'lambda');
-  const downloadPath = meta.isDev ? workPath : srcPath;
+  let downloadPath = meta.isDev ? workPath : srcPath;
   let downloadedFiles = await download(files, downloadPath, meta);
 
   debug(`Parsing AST for "${entrypoint}"`);
   let analyzed: string;
   try {
     let goModAbsPathDir = '';
-    for (const file of Object.keys(downloadedFiles)) {
-      if (file === 'go.mod') {
-        goModAbsPathDir = dirname(downloadedFiles[file].fsPath);
-        debug(`Found go.mod file in "${goModAbsPathDir}"`);
-      }
+    const fileName = 'go.mod';
+    if (fileName in downloadedFiles) {
+      goModAbsPathDir = dirname(downloadedFiles[fileName].fsPath);
+      debug(`Found ${fileName} file in "${goModAbsPathDir}"`);
     }
     analyzed = await getAnalyzedEntrypoint(
       downloadedFiles[entrypoint].fsPath,
@@ -147,6 +147,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     await download(downloadedFiles, destNow);
 
     downloadedFiles = await glob('**', destNow);
+    downloadPath = destNow;
   }
 
   // find `go.mod` in downloadedFiles
@@ -155,6 +156,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   let goModPath = '';
   let isGoModInRootDir = false;
   for (const file of Object.keys(downloadedFiles)) {
+    debug('Downloaded file is ' + file);
     const { fsPath } = downloadedFiles[file];
     const fileDirname = dirname(fsPath);
     if (file === 'go.mod') {
@@ -182,13 +184,13 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         break;
       }
 
-      // TODO: test windows here
-      if (config.zeroConfig && file === 'api/go.mod') {
+      if (!isGoModInRootDir && config.zeroConfig && file === 'api/go.mod') {
+        // We didn't find `/go.mod` but we found `/api/go.mod` so move it to the root
         isGoModExist = true;
         isGoModInRootDir = true;
         goModPath = join(fileDirname, '..');
         debug(
-          `Moving api/go.mod to go.mod: ${JSON.stringify({
+          `Moving api/go.mod to root: ${JSON.stringify({
             isGoModExist,
             isGoModInRootDir,
             goModPath,
@@ -199,7 +201,8 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         pathParts.pop(); // Remove api
         pathParts.push('go.mod');
         const newFsPath = pathParts.join(sep);
-        await move(fsPath, newFsPath);
+        debug(`Moving api/go.mod to root: ${fsPath} to ${newFsPath}`);
+        await move(fsPath, newFsPath, { overwrite: forceMove });
         break;
       }
     }
@@ -284,13 +287,9 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       .replace('__NOW_HANDLER_PACKAGE_NAME', goPackageName)
       .replace('__NOW_HANDLER_FUNC_NAME', goFuncName);
 
-    if (meta.isDev && isGoModExist && isGoModInRootDir) {
-      const mainDir = dirname(downloadedFiles['go.mod'].fsPath);
-      await writeFile(join(mainDir, mainModGoFileName), mainModGoContents);
-      debug('[dev] Write main file to ' + mainDir);
-    } else if (isGoModExist && isGoModInRootDir) {
-      debug('[mod-root] Write main file to ' + srcPath);
-      await writeFile(join(srcPath, mainModGoFileName), mainModGoContents);
+    if (isGoModExist && isGoModInRootDir) {
+      debug('[mod-root] Write main file to ' + downloadPath);
+      await writeFile(join(downloadPath, mainModGoFileName), mainModGoContents);
     } else if (isGoModExist && !isGoModInRootDir) {
       debug('[mod-other] Write main file to ' + goModPath);
       await writeFile(join(goModPath, mainModGoFileName), mainModGoContents);
@@ -306,11 +305,6 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     try {
       // default path
       let finalDestination = join(entrypointDirname, packageName, entrypoint);
-      let forceMove = false;
-
-      if (meta.isDev) {
-        forceMove = true;
-      }
 
       // if `entrypoint` include folder, only use filename
       if (entrypointArr.length > 1) {
@@ -321,10 +315,10 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         );
       }
 
-      if (
-        dirname(downloadedFiles[entrypoint].fsPath) === goModPath ||
-        !isGoModExist
-      ) {
+      const { fsPath } = downloadedFiles[entrypoint];
+
+      if (!isGoModExist && entrypointDirname === goModPath) {
+        debug(`Moving entrypoint from ${fsPath} to ${finalDestination}`);
         await move(downloadedFiles[entrypoint].fsPath, finalDestination, {
           overwrite: forceMove,
         });
@@ -335,17 +329,15 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     }
 
     let baseGoModPath = '';
-    if (meta.isDev && isGoModExist && isGoModInRootDir) {
-      baseGoModPath = dirname(downloadedFiles['go.mod'].fsPath);
-    } else if (isGoModExist && isGoModInRootDir) {
-      baseGoModPath = srcPath;
+    if (isGoModExist && isGoModInRootDir) {
+      baseGoModPath = downloadPath;
     } else if (isGoModExist && !isGoModInRootDir) {
       baseGoModPath = goModPath;
     } else {
       baseGoModPath = entrypointDirname;
     }
 
-    debug(JSON.stringify({ srcPath, goModPath, baseGoModPath }));
+    debug(JSON.stringify({ downloadPath, goModPath, baseGoModPath }));
 
     if (meta.isDev) {
       const isGoModBk = await pathExists(join(baseGoModPath, 'go.mod.bk'));
@@ -353,12 +345,12 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         await move(
           join(baseGoModPath, 'go.mod.bk'),
           join(baseGoModPath, 'go.mod'),
-          { overwrite: true }
+          { overwrite: forceMove }
         );
         await move(
           join(baseGoModPath, 'go.sum.bk'),
           join(baseGoModPath, 'go.sum'),
-          { overwrite: true }
+          { overwrite: forceMove }
         );
       }
     }
@@ -388,12 +380,12 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       await move(
         join(baseGoModPath, 'go.mod'),
         join(baseGoModPath, 'go.mod.bk'),
-        { overwrite: true }
+        { overwrite: forceMove }
       );
       await move(
         join(baseGoModPath, 'go.sum'),
         join(baseGoModPath, 'go.sum.bk'),
-        { overwrite: true }
+        { overwrite: forceMove }
       );
     }
   } else {
