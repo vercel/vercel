@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/v1/**/*.go",
+      "use": "@now/go",
+      "config": { "zeroConfig": true }
+    }
+  ],
+  "build": {
+    "env": {
+      "NOW_BUILDER_DEBUG": "1"
+    }
+  },
+  "probes": [
+    { "path": "/api/v1/routes/someroute.go", "mustContain": "Hello World Bar" }
+  ]
+}

@@ -101,6 +101,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
     for (const file of Object.keys(downloadedFiles)) {
       if (file === 'go.mod') {
         goModAbsPathDir = dirname(downloadedFiles[file].fsPath);
+        debug(`Found go.mod file in "${goModAbsPathDir}"`);
       }
     }
     analyzed = await getAnalyzedEntrypoint(
@@ -154,15 +155,51 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   let goModPath = '';
   let isGoModInRootDir = false;
   for (const file of Object.keys(downloadedFiles)) {
-    const fileDirname = dirname(downloadedFiles[file].fsPath);
+    const { fsPath } = downloadedFiles[file];
+    const fileDirname = dirname(fsPath);
     if (file === 'go.mod') {
       isGoModExist = true;
       isGoModInRootDir = true;
       goModPath = fileDirname;
-    } else if (file.endsWith('go.mod') && !file.endsWith('vendor')) {
+      debug(
+        `Found downloaded files go.mod file: ${JSON.stringify({
+          isGoModExist,
+          isGoModInRootDir,
+          goModPath,
+        })}`
+      );
+    } else if (file.endsWith('go.mod')) {
+      debug(`Found file that ends with "go.mod": ${file}`);
+
       if (entrypointDirname === fileDirname) {
         isGoModExist = true;
         goModPath = fileDirname;
+        debug(
+          `Found downloaded file dirname equals entrypoint dirname: ${JSON.stringify(
+            { isGoModExist, isGoModInRootDir, goModPath }
+          )}`
+        );
+        break;
+      }
+
+      // TODO: test windows here
+      if (config.zeroConfig && file === 'api/go.mod') {
+        isGoModExist = true;
+        isGoModInRootDir = true;
+        goModPath = join(fileDirname, '..');
+        debug(
+          `Moving api/go.mod to go.mod: ${JSON.stringify({
+            isGoModExist,
+            isGoModInRootDir,
+            goModPath,
+          })}`
+        );
+        const pathParts = fsPath.split(sep);
+        pathParts.pop(); // Remove go.mod
+        pathParts.pop(); // Remove api
+        pathParts.push('go.mod');
+        const newFsPath = pathParts.join(sep);
+        await move(fsPath, newFsPath);
         break;
       }
     }
@@ -231,7 +268,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     if (isGoModExist) {
       const goModContents = await readFile(join(goModPath, 'go.mod'), 'utf8');
       const usrModName = goModContents.split('\n')[0].split(' ')[1];
-
+      debug(JSON.stringify({ usrModName, entrypointArr }));
       if (entrypointArr.length > 1 && isGoModInRootDir) {
         const cleanPackagePath = [...entrypointArr];
         cleanPackagePath.pop();
@@ -241,22 +278,24 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       }
     }
 
+    debug(JSON.stringify({ goPackageName, goFuncName }));
+
     const mainModGoContents = modMainGoContents
       .replace('__NOW_HANDLER_PACKAGE_NAME', goPackageName)
       .replace('__NOW_HANDLER_FUNC_NAME', goFuncName);
 
     if (meta.isDev && isGoModExist && isGoModInRootDir) {
-      await writeFile(
-        join(dirname(downloadedFiles['go.mod'].fsPath), mainModGoFileName),
-        mainModGoContents
-      );
+      const mainDir = dirname(downloadedFiles['go.mod'].fsPath);
+      await writeFile(join(mainDir, mainModGoFileName), mainModGoContents);
+      debug('[dev] Write main file to ' + mainDir);
     } else if (isGoModExist && isGoModInRootDir) {
+      debug('[mod-root] Write main file to ' + srcPath);
       await writeFile(join(srcPath, mainModGoFileName), mainModGoContents);
     } else if (isGoModExist && !isGoModInRootDir) {
-      // using `go.mod` path to write main__mod__.go
+      debug('[mod-other] Write main file to ' + goModPath);
       await writeFile(join(goModPath, mainModGoFileName), mainModGoContents);
     } else {
-      // using `entrypointDirname` to write main__mod__.go
+      debug('[entrypoint] Write main file to ' + entrypointDirname);
       await writeFile(
         join(entrypointDirname, mainModGoFileName),
         mainModGoContents
@@ -305,6 +344,8 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     } else {
       baseGoModPath = entrypointDirname;
     }
+
+    debug(JSON.stringify({ srcPath, goModPath, baseGoModPath }));
 
     if (meta.isDev) {
       const isGoModBk = await pathExists(join(baseGoModPath, 'go.mod.bk'));
