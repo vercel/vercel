@@ -182,6 +182,12 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         const newFsPath = pathParts.join(sep);
         debug(`Moving api/go.mod to root: ${fsPath} to ${newFsPath}`);
         await move(fsPath, newFsPath, { overwrite: forceMove });
+        const oldSumPath = join(dirname(fsPath), 'go.sum');
+        const newSumPath = join(dirname(newFsPath), 'go.sum');
+        if (await pathExists(oldSumPath)) {
+          debug(`Moving api/go.sum to root: ${oldSumPath} to ${newSumPath}`);
+          await move(oldSumPath, newSumPath, { overwrite: forceMove });
+        }
         break;
       }
     }
