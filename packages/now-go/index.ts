@@ -315,10 +315,10 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         );
       }
 
-      const { fsPath } = downloadedFiles[entrypoint];
-
-      if (!isGoModExist && entrypointDirname === goModPath) {
-        debug(`Moving entrypoint from ${fsPath} to ${finalDestination}`);
+      if (
+        dirname(downloadedFiles[entrypoint].fsPath) === goModPath ||
+        !isGoModExist
+      ) {
         await move(downloadedFiles[entrypoint].fsPath, finalDestination, {
           overwrite: forceMove,
         });
