@@ -156,31 +156,17 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   let goModPath = '';
   let isGoModInRootDir = false;
   for (const file of Object.keys(downloadedFiles)) {
-    debug('Downloaded file is ' + file);
     const { fsPath } = downloadedFiles[file];
     const fileDirname = dirname(fsPath);
     if (file === 'go.mod') {
       isGoModExist = true;
       isGoModInRootDir = true;
       goModPath = fileDirname;
-      debug(
-        `Found downloaded files go.mod file: ${JSON.stringify({
-          isGoModExist,
-          isGoModInRootDir,
-          goModPath,
-        })}`
-      );
     } else if (file.endsWith('go.mod')) {
-      debug(`Found file that ends with "go.mod": ${file}`);
-
       if (entrypointDirname === fileDirname) {
         isGoModExist = true;
         goModPath = fileDirname;
-        debug(
-          `Found downloaded file dirname equals entrypoint dirname: ${JSON.stringify(
-            { isGoModExist, isGoModInRootDir, goModPath }
-          )}`
-        );
+        debug(`Found file dirname equals entrypoint dirname: ${fileDirname}`);
         break;
       }
 
@@ -189,13 +175,6 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         isGoModExist = true;
         isGoModInRootDir = true;
         goModPath = join(fileDirname, '..');
-        debug(
-          `Moving api/go.mod to root: ${JSON.stringify({
-            isGoModExist,
-            isGoModInRootDir,
-            goModPath,
-          })}`
-        );
         const pathParts = fsPath.split(sep);
         pathParts.pop(); // Remove go.mod
         pathParts.pop(); // Remove api
@@ -271,7 +250,6 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     if (isGoModExist) {
       const goModContents = await readFile(join(goModPath, 'go.mod'), 'utf8');
       const usrModName = goModContents.split('\n')[0].split(' ')[1];
-      debug(JSON.stringify({ usrModName, entrypointArr }));
       if (entrypointArr.length > 1 && isGoModInRootDir) {
         const cleanPackagePath = [...entrypointArr];
         cleanPackagePath.pop();
@@ -280,8 +258,6 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         goPackageName = `${usrModName}/${packageName}`;
       }
     }
-
-    debug(JSON.stringify({ goPackageName, goFuncName }));
 
     const mainModGoContents = modMainGoContents
       .replace('__NOW_HANDLER_PACKAGE_NAME', goPackageName)
@@ -336,8 +312,6 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     } else {
       baseGoModPath = entrypointDirname;
     }
-
-    debug(JSON.stringify({ downloadPath, goModPath, baseGoModPath }));
 
     if (meta.isDev) {
       const isGoModBk = await pathExists(join(baseGoModPath, 'go.mod.bk'));
