@@ -53,6 +53,19 @@ async function testDeployment(
   }
 
   const nowJson = JSON.parse(bodies['now.json']);
+
+  if (process.env.NOW_BUILDER_DEBUG) {
+    if (!nowJson.build) {
+      nowJson.build = {};
+    }
+    if (!nowJson.build.env) {
+      nowJson.build.env = {};
+    }
+    nowJson.build.env = {
+      NOW_BUILDER_DEBUG: process.env.NOW_BUILDER_DEBUG,
+    };
+  }
+
   for (const build of nowJson.builds) {
     if (builderUrl) {
       if (builderUrl === '@canary') {
