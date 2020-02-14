@@ -7,12 +7,10 @@
       "config": { "zeroConfig": true }
     }
   ],
-  "build": {
-    "env": {
-      "NOW_BUILDER_DEBUG": "1"
-    }
-  },
   "probes": [
-    { "path": "/api/v1/routes/someroute.go", "mustContain": "Hello World Bar" }
+    {
+      "path": "/api/v1/routes/someroute.go",
+      "mustContain": "Hello Dependency:RANDOMNESS_PLACEHOLDER"
+    }
   ]
 }

@@ -1,3 +1,3 @@
 package somepackage
 
-const Foo = "Bar"
+const Foo = "Dependency:RANDOMNESS_PLACEHOLDER"

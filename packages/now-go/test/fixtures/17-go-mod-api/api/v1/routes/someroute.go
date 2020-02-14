@@ -8,5 +8,5 @@ import (
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World %v", somepackage.Foo)
+	fmt.Fprintf(w, "Hello %v", somepackage.Foo)
 }
