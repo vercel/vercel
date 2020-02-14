@@ -623,6 +623,7 @@ export type NextPrerenderedRoutes = {
 
   lazyRoutes: {
     [route: string]: {
+      fallback?: string;
       routeRegex: string;
       dataRoute: string;
       dataRouteRegex: string;
@@ -726,6 +727,7 @@ export async function getPrerenderManifest(
     };
     dynamicRoutes: {
       [key: string]: {
+        fallback?: string;
         routeRegex: string;
         dataRoute: string;
         dataRouteRegex: string;
@@ -759,11 +761,17 @@ export async function getPrerenderManifest(
       lazyRoutes.forEach(lazyRoute => {
         const {
           routeRegex,
+          fallback,
           dataRoute,
           dataRouteRegex,
         } = manifest.dynamicRoutes[lazyRoute];
 
-        ret.lazyRoutes[lazyRoute] = { routeRegex, dataRoute, dataRouteRegex };
+        ret.lazyRoutes[lazyRoute] = {
+          routeRegex,
+          fallback,
+          dataRoute,
+          dataRouteRegex,
+        };
       });
 
       return ret;
