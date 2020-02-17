@@ -163,6 +163,21 @@ async function testDeployment(
           );
         }
       });
+    } else if (probe.notResponseHeaders) {
+      Object.keys(probe.notResponseHeaders).forEach(header => {
+        const headerValue = resp.headers.get(header);
+        const expected = probe.notResponseHeaders[header];
+
+        if (headerValue === expected) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([k, v]) => `  ${k}=${v}`)
+            .join('\n');
+
+          throw new Error(
+            `Page ${probeUrl} invalid page header ${header}.\n\n Did not expect: ${header}=${expected}.\nBut got ${headers}`
+          );
+        }
+      });
     } else if (!probe.status) {
       assert(false, 'probe must have a test condition');
     }
