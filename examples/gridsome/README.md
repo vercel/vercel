@@ -1,4 +1,4 @@
-![Gridsome Logo](../../packages/frameworks/logos/gridsome.svg)
+![Gridsome Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/gridsome.svg)
 
 # Gridsome Example
 

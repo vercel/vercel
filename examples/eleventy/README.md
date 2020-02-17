@@ -1,4 +1,4 @@
-![Eleventy Logo](../../packages/frameworks/logos/eleventy.svg)
+![Eleventy Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/eleventy.svg)
 
 # Eleventy Example
 

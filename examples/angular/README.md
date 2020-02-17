@@ -1,4 +1,4 @@
-![Angular Logo](../../packages/frameworks/logos/angular.svg)
+![Angular Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/angular.svg)
 
 # Angular Example
 
