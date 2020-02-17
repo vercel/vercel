@@ -1,4 +1,4 @@
-![UmiJS Logo](../../packages/frameworks/logos/umi.svg)
+![UmiJS Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/umi.svg)
 
 # UmiJS Example
 

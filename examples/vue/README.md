@@ -1,4 +1,4 @@
-![Vue.js Logo](../../packages/frameworks/logos/vue.svg)
+![Vue.js Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/vue.svg)
 
 # Vue.js Example
 

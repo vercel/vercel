@@ -1,4 +1,4 @@
-![Preact Logo](../../packages/frameworks/logos/preact.svg)
+![Preact Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/preact.svg)
 
 # Preact Example
 

@@ -1,4 +1,4 @@
-![Docusaurus Logo](../../packages/frameworks/logos/docusaurus.svg)
+![Docusaurus Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/docusaurus.svg)
 
 # Docusaurus Example
 
