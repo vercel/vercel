@@ -459,6 +459,20 @@ export const build = async ({
         // folder
         { handle: 'filesystem' },
 
+        // This needs to come directly after handle: filesystem to make sure to
+        // 404 and clear the cache header for _next requests
+        {
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          headers: {
+            'cache-control': '',
+          },
+          status: 404,
+        },
+
         ...rewrites,
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
@@ -1042,6 +1056,20 @@ export const build = async ({
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+
+      // This needs to come directly after handle: filesystem to make sure to
+      // 404 and clear the cache header for _next requests
+      {
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
+        headers: {
+          'cache-control': '',
+        },
+        status: 404,
+      },
 
       ...rewrites,
       // Dynamic routes
