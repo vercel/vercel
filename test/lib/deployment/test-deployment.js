@@ -61,9 +61,7 @@ async function testDeployment(
     if (!nowJson.build.env) {
       nowJson.build.env = {};
     }
-    nowJson.build.env = {
-      NOW_BUILDER_DEBUG: process.env.NOW_BUILDER_DEBUG,
-    };
+    nowJson.build.env.NOW_BUILDER_DEBUG = process.env.NOW_BUILDER_DEBUG;
   }
 
   for (const build of nowJson.builds) {
