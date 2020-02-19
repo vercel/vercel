@@ -518,6 +518,7 @@ export const build = async ({
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
   const dynamicDataRoutes: Array<Source> = [];
+  let static404Page: string | undefined;
 
   const appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
@@ -644,9 +645,6 @@ export const build = async ({
 
       const staticRoute = path.join(entryDirectory, pathname);
 
-      // don't add the 404 route itself as we will use _errors/404 instead
-      if (hasPages404 && staticRoute === '/404') return;
-
       staticPages[staticRoute] = staticPageFiles[page];
       staticPages[staticRoute].contentType = htmlContentType;
 
@@ -656,9 +654,18 @@ export const build = async ({
       }
     });
 
-    const pageKeys = Object.keys(pages);
+    // this can be either 404.html in latest versions
+    // or _errors/404.html versions while this was experimental
+    static404Page =
+      staticPages['404'] && hasPages404
+        ? '404'
+        : staticPages['_errors/404']
+        ? '_errors/404'
+        : undefined;
+
     // > 1 because _error is a lambda but isn't used if a static 404 is available
-    const hasLambdas = !staticPages['_errors/404'] || pageKeys.length > 1;
+    const pageKeys = Object.keys(pages);
+    const hasLambdas = !static404Page || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
       const nextConfig = await getNextConfig(workPath, entryPath);
@@ -808,7 +815,8 @@ export const build = async ({
         // pages404 is enabled and 404.js is present
         if (
           page === '_error.js' &&
-          (staticPages['_errors/404'] || (hasPages404 && pages['404.js']))
+          ((static404Page && staticPages[static404Page]) ||
+            (hasPages404 && pages['404.js']))
         ) {
           return;
         }
@@ -1102,9 +1110,9 @@ export const build = async ({
               dest: path.join(
                 '/',
                 entryDirectory,
-                staticPages['_errors/404']
-                  ? '_errors/404'
-                  : // if _errors/404 is not present but we have pages/404.js
+                static404Page
+                  ? static404Page
+                  : // if static 404 is not present but we have pages/404.js
                   // it is a lambda due to _app getInitialProps
                   hasPages404
                   ? '__404'
