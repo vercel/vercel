@@ -306,6 +306,7 @@ type RoutesManifestRegex = {
 };
 
 export type RoutesManifest = {
+  pages404: boolean;
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
   rewrites: (NowRewrite & RoutesManifestRegex)[];
