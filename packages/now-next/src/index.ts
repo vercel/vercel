@@ -340,6 +340,8 @@ export const build = async ({
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
   let nextBasePath: string | undefined;
+  // whether they have enabled pages/404.js as the custom 404 page
+  let hasPages404 = false;
 
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -350,6 +352,10 @@ export const build = async ({
 
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
+        }
+
+        if (routesManifest.pages404) {
+          hasPages404 = true;
         }
 
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
@@ -512,6 +518,7 @@ export const build = async ({
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
   const dynamicDataRoutes: Array<Source> = [];
+  let static404Page: string | undefined;
 
   const appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
@@ -637,6 +644,7 @@ export const build = async ({
       }
 
       const staticRoute = path.join(entryDirectory, pathname);
+
       staticPages[staticRoute] = staticPageFiles[page];
       staticPages[staticRoute].contentType = htmlContentType;
 
@@ -646,9 +654,18 @@ export const build = async ({
       }
     });
 
-    const pageKeys = Object.keys(pages);
+    // this can be either 404.html in latest versions
+    // or _errors/404.html versions while this was experimental
+    static404Page =
+      staticPages['404'] && hasPages404
+        ? '404'
+        : staticPages['_errors/404']
+        ? '_errors/404'
+        : undefined;
+
     // > 1 because _error is a lambda but isn't used if a static 404 is available
-    const hasLambdas = !staticPages['_errors/404'] || pageKeys.length > 1;
+    const pageKeys = Object.keys(pages);
+    const hasLambdas = !static404Page || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
       const nextConfig = await getNextConfig(workPath, entryPath);
@@ -794,8 +811,13 @@ export const build = async ({
           return;
         }
 
-        // Don't create _error lambda if we have a static 404 page
-        if (staticPages['_errors/404'] && page === '_error.js') {
+        // Don't create _error lambda if we have a static 404 page or
+        // pages404 is enabled and 404.js is present
+        if (
+          page === '_error.js' &&
+          ((static404Page && staticPages[static404Page]) ||
+            (hasPages404 && pages['404.js']))
+        ) {
           return;
         }
 
@@ -824,10 +846,10 @@ export const build = async ({
           config,
         });
 
+        const outputName = path.join(entryDirectory, pathname);
+
         if (requiresTracing) {
-          lambdas[
-            path.join(entryDirectory, pathname)
-          ] = await createLambdaFromPseudoLayers({
+          lambdas[outputName] = await createLambdaFromPseudoLayers({
             files: {
               ...launcherFiles,
               [requiresTracing ? pageFileName : 'page.js']: pages[page],
@@ -838,7 +860,7 @@ export const build = async ({
             ...lambdaOptions,
           });
         } else {
-          lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+          lambdas[outputName] = await createLambda({
             files: {
               ...launcherFiles,
               ...assets,
@@ -1084,7 +1106,13 @@ export const build = async ({
               dest: path.join(
                 '/',
                 entryDirectory,
-                staticPages['_errors/404'] ? '_errors/404' : '_error'
+                static404Page
+                  ? static404Page
+                  : // if static 404 is not present but we have pages/404.js
+                  // it is a lambda due to _app getInitialProps
+                  hasPages404 && lambdas['404']
+                  ? '404'
+                  : '_error'
               ),
               status: 404,
             },
