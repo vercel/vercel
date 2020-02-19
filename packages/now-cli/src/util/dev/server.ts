@@ -11,22 +11,21 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
-import { basename, dirname, extname, join, delimiter } from 'path';
+import { basename, dirname, extname, join } from 'path';
 import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
+import which from 'which';
 
 import {
   Builder,
   FileFsRef,
   PackageJson,
   detectBuilders,
-  detectRoutes,
   detectApiDirectory,
   detectApiExtensions,
-  execAsync,
   spawnCommand,
 } from '@now/build-utils';
 
@@ -112,6 +111,8 @@ export default class DevServer {
   public address: string;
 
   private cachedNowConfig: NowConfig | null;
+  private apiDir: string | null;
+  private apiExtensions: Set<string>;
   private server: http.Server;
   private stopping: boolean;
   private serverUrlPrinted: boolean;
@@ -145,6 +146,8 @@ export default class DevServer {
     this.yarnPath = '/';
 
     this.cachedNowConfig = null;
+    this.apiDir = null;
+    this.apiExtensions = new Set<string>();
     this.server = http.createServer(this.devServerHandler);
     this.server.timeout = 0; // Disable timeout
     this.serverUrlPrinted = false;
@@ -291,6 +294,10 @@ export default class DevServer {
     const name = relative(this.cwd, fsPath);
     try {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
+      const extensionless = this.getExtensionlessFile(name);
+      if (extensionless) {
+        this.files[extensionless] = await FileFsRef.fromFsPath({ fsPath });
+      }
       fileChanged(name, changed, removed);
       this.output.debug(`File created: ${name}`);
     } catch (err) {
@@ -311,6 +318,11 @@ export default class DevServer {
     const name = relative(this.cwd, fsPath);
     this.output.debug(`File deleted: ${name}`);
     fileRemoved(name, this.files, changed, removed);
+    const extensionless = this.getExtensionlessFile(name);
+    if (extensionless) {
+      this.output.debug(`File deleted: ${extensionless}`);
+      fileRemoved(extensionless, this.files, changed, removed);
+    }
   }
 
   async handleFileModified(
@@ -343,6 +355,7 @@ export default class DevServer {
       this.cwd,
       this.yarnPath,
       this.output,
+      this,
       fileList
     );
     const sources = matches.map(m => m.src);
@@ -534,10 +547,19 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      let { builders, warnings, errors } = await detectBuilders(files, pkg, {
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+      } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
         ...(projectSettings ? { projectSettings } : {}),
+        featHandleMiss,
+        cleanUrls,
+        trailingSlash,
       });
 
       if (errors) {
@@ -554,32 +576,15 @@ export default class DevServer {
           builders = builders.filter(filterFrontendBuilds);
         }
 
-        const {
-          defaultRoutes,
-          redirectRoutes,
-          error: routesError,
-        } = await detectRoutes(
-          files,
-          builders,
-          featHandleMiss,
-          cleanUrls,
-          trailingSlash
-        );
-
         config.builds = config.builds || [];
         config.builds.push(...builders);
 
-        if (routesError) {
-          this.output.error(routesError.message);
-          await this.exit();
-        } else {
-          const routes: RouteConfig[] = [];
-          const { routes: nowConfigRoutes } = config;
-          routes.push(...(redirectRoutes || []));
-          routes.push(...(nowConfigRoutes || []));
-          routes.push(...(defaultRoutes || []));
-          config.routes = routes;
-        }
+        const routes: RouteConfig[] = [];
+        const { routes: nowConfigRoutes } = config;
+        routes.push(...(redirectRoutes || []));
+        routes.push(...(nowConfigRoutes || []));
+        routes.push(...(defaultRoutes || []));
+        config.routes = routes;
       }
     }
 
@@ -600,6 +605,8 @@ export default class DevServer {
     await this.validateNowConfig(config);
 
     this.cachedNowConfig = config;
+    this.apiDir = detectApiDirectory(config.builds || []);
+    this.apiExtensions = detectApiExtensions(config.builds || []);
     return config;
   }
 
@@ -739,26 +746,21 @@ export default class DevServer {
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
-    const results: { [filePath: string]: FileFsRef } = {};
-    const apiDir = detectApiDirectory(nowConfig.builds || []);
-    const apiExtensions = detectApiExtensions(nowConfig.builds || []);
-    const apiMatch = apiDir + '/';
+    this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
       const { mode } = await fs.stat(fsPath);
-      const ext = extname(path);
-      if (apiDir && path.startsWith(apiMatch) && apiExtensions.has(ext)) {
-        // lambda function files are trimmed of their file extension
-        path = path.slice(0, -ext.length);
+      this.files[path] = new FileFsRef({ mode, fsPath });
+      const extensionless = this.getExtensionlessFile(path);
+      if (extensionless) {
+        this.files[extensionless] = new FileFsRef({ mode, fsPath });
       }
-      results[path] = new FileFsRef({ mode, fsPath });
     }
-    this.files = results;
 
-    const builders: Set<string> = new Set(
+    const builders = new Set<string>(
       (nowConfig.builds || [])
         .filter((b: Builder) => b.use)
-        .map((b: Builder) => b.use as string)
+        .map((b: Builder) => b.use)
     );
 
     await installBuilders(builders, this.yarnPath, this.output);
@@ -1085,7 +1087,9 @@ export default class DevServer {
     // If the requested asset wasn't found in the match's
     // outputs then trigger a build
     const buildKey =
-      requestPath === null ? match.src : `${match.src}-${requestPath}`;
+      requestPath === null
+        ? match.entrypoint
+        : `${match.entrypoint}-${requestPath}`;
     let buildPromise = this.inProgressBuilds.get(buildKey);
     if (buildPromise) {
       // A build for `buildKey` is already in progress, so don't trigger
@@ -1126,6 +1130,19 @@ export default class DevServer {
       this.inProgressBuilds.delete(buildKey);
     }
   }
+
+  getExtensionlessFile = (path: string) => {
+    const ext = extname(path);
+    if (
+      this.apiDir &&
+      path.startsWith(this.apiDir + '/') &&
+      this.apiExtensions.has(ext)
+    ) {
+      // lambda function files are trimmed of their file extension
+      return path.slice(0, -ext.length);
+    }
+    return null;
+  };
 
   /**
    * DevServer HTTP handler
@@ -1606,18 +1623,14 @@ export default class DevServer {
   }
 
   async runDevCommand() {
-    if (!this.devCommand) return;
+    const { devCommand, cwd } = this;
 
-    const cwd = this.cwd;
-
-    const { stdout: yarnBinStdout } = await execAsync('yarn', ['bin'], {
-      cwd,
-    });
-
-    const yarnBinPath = yarnBinStdout.trim();
+    if (!devCommand) {
+      return;
+    }
 
     this.output.log(
-      `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
+      `Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`
     );
 
     const port = await getPort();
@@ -1625,24 +1638,43 @@ export default class DevServer {
     const env: EnvConfig = {
       ...process.env,
       ...this.buildEnv,
-      PATH: `${yarnBinPath}${delimiter}${process.env.PATH}`,
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };
 
+    // This is necesary so that the dev command in the Project
+    // will work cross-platform (especially Windows).
+    let command = devCommand
+      .replace(/\$PORT/g, `${port}`)
+      .replace(/%PORT%/g, `${port}`);
+
     this.output.debug(
       `Starting dev command with parameters : ${JSON.stringify({
-        cwd: this.cwd,
-        devCommand: this.devCommand,
+        cwd,
+        command,
         port,
       })}`
     );
 
-    const p = spawnCommand(this.devCommand, {
-      stdio: 'inherit',
-      cwd,
-      env,
-    });
+    const isNpxAvailable = await which('npx')
+      .then(() => true)
+      .catch(() => false);
+
+    if (isNpxAvailable) {
+      command = `npx --no-install ${command}`;
+    } else {
+      const isYarnAvailable = await which('yarn')
+        .then(() => true)
+        .catch(() => false);
+
+      if (isYarnAvailable) {
+        command = `yarn run --silent ${command}`;
+      }
+    }
+
+    this.output.debug(`Spawning dev command: ${command}`);
+
+    const p = spawnCommand(command, { stdio: 'inherit', cwd, env });
 
     p.on('exit', () => {
       this.devProcessPort = undefined;

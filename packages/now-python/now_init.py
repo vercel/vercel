@@ -3,9 +3,13 @@ from http.server import BaseHTTPRequestHandler
 import base64
 import json
 import inspect
+from importlib import util
 
-import __NOW_HANDLER_FILENAME
-__now_variables = dir(__NOW_HANDLER_FILENAME)
+# Import relative path https://stackoverflow.com/a/67692/266535
+__now_spec = util.spec_from_file_location("__NOW_HANDLER_MODULE_NAME", "./__NOW_HANDLER_ENTRYPOINT")
+__now_module = util.module_from_spec(__now_spec)
+__now_spec.loader.exec_module(__now_module)
+__now_variables = dir(__now_module)
 
 
 def format_headers(headers, decode=False):
@@ -21,10 +25,10 @@ def format_headers(headers, decode=False):
 
 
 if 'handler' in __now_variables or 'Handler' in __now_variables:
-    base = __NOW_HANDLER_FILENAME.handler if ('handler' in __now_variables) else  __NOW_HANDLER_FILENAME.Handler
+    base = __now_module.handler if ('handler' in __now_variables) else  __now_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
-        print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
+        print('See the docs https://zeit.co/docs/runtimes#advanced-usage/advanced-python-usage')
         exit(1)
 
     print('using HTTP Handler')
@@ -74,8 +78,8 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
 
 elif 'app' in __now_variables:
     if (
-        not inspect.iscoroutinefunction(__NOW_HANDLER_FILENAME.app) and
-        not inspect.iscoroutinefunction(__NOW_HANDLER_FILENAME.app.__call__)
+        not inspect.iscoroutinefunction(__now_module.app) and
+        not inspect.iscoroutinefunction(__now_module.app.__call__)
     ):
         print('using Web Server Gateway Interface (WSGI)')
         import sys
@@ -136,7 +140,7 @@ elif 'app' in __now_variables:
                 if key not in ('HTTP_CONTENT_TYPE', 'HTTP_CONTENT_LENGTH'):
                     environ[key] = value
 
-            response = Response.from_app(__NOW_HANDLER_FILENAME.app, environ)
+            response = Response.from_app(__now_module.app, environ)
 
             return_dict = {
                 'statusCode': response.status_code,
@@ -271,10 +275,10 @@ elif 'app' in __now_variables:
             }
 
             asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(__NOW_HANDLER_FILENAME.app, body)
+            response = asgi_cycle(__now_module.app, body)
             return response
 
 else:
-    print('Missing variable `handler` or `app` in file __NOW_HANDLER_FILENAME.py')
-    print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
+    print('Missing variable `handler` or `app` in file "__NOW_HANDLER_ENTRYPOINT".')
+    print('See the docs https://zeit.co/docs/runtimes#advanced-usage/advanced-python-usage')
     exit(1)

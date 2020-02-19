@@ -109,13 +109,14 @@ function validateResponseHeaders(t, res) {
 async function exec(directory, args = []) {
   return execa(binaryPath, ['dev', directory, ...args], {
     reject: false,
+    shell: true,
     env: { __NOW_SKIP_DEV_COMMAND: 1 },
   });
 }
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath });
+    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
   }
 }
 
@@ -123,6 +124,7 @@ async function getPackedBuilderPath(builderDirName) {
   const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
   const output = await execa('npm', ['pack'], {
     cwd: packagePath,
+    shell: true,
   });
 
   if (output.exitCode !== 0 || output.stdout.trim() === '') {
@@ -160,6 +162,7 @@ async function testFixture(directory, opts = {}, args = []) {
     {
       reject: false,
       detached: true,
+      shell: true,
       stdio: 'pipe',
       ...opts,
       env: { ...opts.env, __NOW_SKIP_DEV_COMMAND: 1 },
@@ -226,6 +229,7 @@ function testFixtureStdio(directory, fn) {
       let printedOutput = false;
 
       dev = execa(binaryPath, ['dev', dir, '-l', port], {
+        shell: true,
         env: { __NOW_SKIP_DEV_COMMAND: 1 },
       });
 
@@ -638,7 +642,7 @@ test(
       await testPath(200, '/about/', 'About Page');
       await testPath(200, '/sub/', 'Sub Index Page');
       await testPath(200, '/sub/another/', 'Sub Another Page');
-      await testPath(200, '/style.css/', 'body { color: green }');
+      await testPath(200, '/style.css', 'body { color: green }');
       await testPath(308, '/index.html', '', { Location: '/' });
       await testPath(308, '/about.html', '', { Location: '/about/' });
       await testPath(308, '/sub/index.html', '', { Location: '/sub/' });
@@ -653,17 +657,15 @@ test(
   '[now dev] test trailingSlash true serve correct content',
   testFixtureStdio('test-trailing-slash', async (t, port, testPath) => {
     await testPath(200, '/', 'Index Page');
-    await testPath(200, '/index.html/', 'Index Page');
-    await testPath(200, '/about.html/', 'About Page');
+    await testPath(200, '/index.html', 'Index Page');
+    await testPath(200, '/about.html', 'About Page');
     await testPath(200, '/sub/', 'Sub Index Page');
-    await testPath(200, '/sub/index.html/', 'Sub Index Page');
-    await testPath(200, '/sub/another.html/', 'Sub Another Page');
-    await testPath(200, '/style.css/', 'body { color: green }');
-    await testPath(308, '/about.html', '', { Location: '/about.html/' });
+    await testPath(200, '/sub/index.html', 'Sub Index Page');
+    await testPath(200, '/sub/another.html', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(308, '/about.html/', '', { Location: '/about.html' });
+    await testPath(308, '/style.css/', '', { Location: '/style.css' });
     await testPath(308, '/sub', '', { Location: '/sub/' });
-    await testPath(308, '/sub/another.html', '', {
-      Location: '/sub/another.html/',
-    });
   })
 );
 
@@ -772,17 +774,17 @@ test('[now dev] 03-aurelia', async t => {
   await tester(t);
 });
 
-// test(
-//   '[now dev] 04-create-react-app-node',
-//   testFixtureStdio('create-react-app', async(t, port) => {
-//     const response = await fetch(`http://localhost:${port}`);
+test(
+  '[now dev] 04-create-react-app',
+  testFixtureStdio('04-create-react-app', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
-//     validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
 
-//     const body = await response.text();
-//     t.regex(body, /React App/gm);
-//   })
-// );
+    const body = await response.text();
+    t.regex(body, /React App/gm);
+  })
+);
 
 test('[now dev] 05-gatsby', async t => {
   if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
@@ -1367,13 +1369,40 @@ test('[now dev] 25-nextjs-src-dir', async t => {
 });
 
 test(
+  '[now dev] Use `@now/python` with Flask requirements.txt',
+  testFixtureStdio('python-flask', async (t, port) => {
+    const name = 'Alice';
+    const year = new Date().getFullYear();
+    const user = await fetchWithRetry(
+      `http://localhost:${port}/api/user?name=${name}`
+    );
+    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
+    const ext = await fetchWithRetry(`http://localhost:${port}/api/date.py`);
+
+    validateResponseHeaders(t, user);
+    validateResponseHeaders(t, date);
+    validateResponseHeaders(t, ext);
+
+    t.regex(await user.text(), new RegExp(`Hello ${name}`));
+    t.regex(await date.text(), new RegExp(`Current date is ${year}`));
+    t.regex(await ext.text(), new RegExp(`Current date is ${year}`));
+  })
+);
+
+test(
   '[now dev] Use runtime from the functions property',
   testFixtureStdio('custom-runtime', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/api/user`);
+    const extensionless = await fetchWithRetry(
+      `http://localhost:${port}/api/user`
+    );
+    const extension = await fetchWithRetry(
+      `http://localhost:${port}/api/user.sh`
+    );
 
-    validateResponseHeaders(t, response);
+    validateResponseHeaders(t, extensionless);
+    validateResponseHeaders(t, extension);
 
-    const body = await response.text();
-    t.regex(body, /Hello, from Bash!/gm);
+    t.regex(await extensionless.text(), /Hello, from Bash!/gm);
+    t.regex(await extension.text(), /Hello, from Bash!/gm);
   })
 );

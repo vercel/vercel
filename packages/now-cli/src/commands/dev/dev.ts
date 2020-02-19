@@ -23,7 +23,7 @@ export default async function dev(
   output: Output
 ) {
   const [dir = '.'] = args;
-  const cwd = path.resolve(dir);
+  let cwd = path.resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
   const debug = opts['--debug'] || false;
 
@@ -71,6 +71,10 @@ export default async function dev(
           devCommand = defaults.value;
         }
       }
+    }
+
+    if (project.rootDirectory) {
+      cwd = path.join(cwd, project.rootDirectory);
     }
   }
 

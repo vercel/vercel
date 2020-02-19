@@ -31,6 +31,7 @@ export interface Config {
     | undefined;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
+  excludeFiles?: string | string[];
   bundle?: boolean;
   ldsflags?: string;
   helpers?: boolean;

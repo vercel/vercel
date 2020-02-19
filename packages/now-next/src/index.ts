@@ -465,6 +465,20 @@ export const build = async ({
         // folder
         { handle: 'filesystem' },
 
+        // This needs to come directly after handle: filesystem to make sure to
+        // 404 and clear the cache header for _next requests
+        {
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          headers: {
+            'cache-control': '',
+          },
+          status: 404,
+        },
+
         ...rewrites,
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
@@ -618,13 +632,12 @@ export const build = async ({
 
       // Prerendered routes emit a `.html` file but should not be treated as a
       // static page.
-      // Lazily prerendered routes do not have a `.html` file so we don't need
-      // to check/skip it here.
+      // Lazily prerendered routes have a fallback `.html` file on newer
+      // Next.js versions so we need to also not treat it as a static page here.
       if (
-        Object.prototype.hasOwnProperty.call(
-          prerenderManifest.routes,
-          routeName
-        )
+        prerenderManifest.routes[routeName] ||
+        (prerenderManifest.lazyRoutes[routeName] &&
+          prerenderManifest.lazyRoutes[routeName].fallback)
       ) {
         return;
       }
@@ -866,12 +879,18 @@ export const build = async ({
     const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
+      const lazyHtmlFallback =
+        isLazy && prerenderManifest.lazyRoutes[routeKey].fallback;
 
-      const htmlFsRef = isLazy
-        ? null
-        : new FileFsRef({
-            fsPath: path.join(pagesDir, `${routeFileNoExt}.html`),
-          });
+      const htmlFsRef =
+        isLazy && !lazyHtmlFallback
+          ? null
+          : new FileFsRef({
+              fsPath: path.join(
+                pagesDir,
+                `${lazyHtmlFallback || routeFileNoExt + '.html'}`
+              ),
+            });
       const jsonFsRef = isLazy
         ? null
         : new FileFsRef({
@@ -1055,6 +1074,20 @@ export const build = async ({
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+
+      // This needs to come directly after handle: filesystem to make sure to
+      // 404 and clear the cache header for _next requests
+      {
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
+        headers: {
+          'cache-control': '',
+        },
+        status: 404,
+      },
 
       ...rewrites,
       // Dynamic routes

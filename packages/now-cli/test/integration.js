@@ -213,6 +213,18 @@ test.before(async () => {
   }
 });
 
+test.after.always(async () => {
+  // Make sure the token gets revoked
+  await execa(binaryPath, ['logout', ...defaultArgs]);
+
+  if (!tmpDir) {
+    return;
+  }
+
+  // Remove config directory entirely
+  tmpDir.removeCallback();
+});
+
 test('login', async t => {
   // Delete the current token
   const logoutOutput = await execute(['logout']);
@@ -2078,6 +2090,11 @@ test('should show prompts to set up project', async t => {
   now.stdin.write(`${projectName}\n`);
 
   await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
     chunk.includes('Want to override the settings?')
   );
   now.stdin.write('yes\n');
@@ -2132,49 +2149,6 @@ test('should show prompts to set up project', async t => {
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
 });
 
-test('should not prompt "project settings overwrite" for undetected projects', async t => {
-  const directory = fixture('static-deployment');
-  const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
-
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
-
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
-  now.stdin.write('yes\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
-  now.stdin.write('\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Link to existing project?')
-  );
-  now.stdin.write('no\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
-  now.stdin.write(`${projectName}\n`);
-
-  await waitForPrompt(now, chunk => {
-    t.false(
-      chunk.includes('Want to override the settings?'),
-      'Should not ask to override'
-    );
-    return chunk.includes('Linked to');
-  });
-
-  const output = await now;
-  t.is(output.exitCode, 0, formatOutput(output));
-});
-
 test('should prefill "project name" prompt with folder name', async t => {
   const projectName = `static-deployment-${
     Math.random()
@@ -2209,6 +2183,16 @@ test('should prefill "project name" prompt with folder name', async t => {
     chunk.includes(`What’s your project’s name? (${projectName})`)
   );
   now.stdin.write(`\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  now.stdin.write('no\n');
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
@@ -2260,6 +2244,16 @@ test('should prefill "project name" prompt with --name', async t => {
   );
   now.stdin.write(`\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  now.stdin.write('no\n');
+
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
 });
@@ -2285,16 +2279,18 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   let isDeprecated = false;
 
-  await waitForPrompt(now, chunk => {
-    if (chunk.includes('The `name` property in now.json is deprecated')) {
+  now.stderr.on('data', data => {
+    if (
+      data.toString().includes('The `name` property in now.json is deprecated')
+    ) {
       isDeprecated = true;
     }
+  });
 
+  await waitForPrompt(now, chunk => {
     return /Set up and deploy [^?]+\?/.test(chunk);
   });
   now.stdin.write('yes\n');
-
-  t.is(isDeprecated, true);
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
@@ -2311,8 +2307,20 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   );
   now.stdin.write(`\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  now.stdin.write('no\n');
+
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
+
+  t.is(isDeprecated, true);
 
   // clean up
   await remove(path.join(directory, 'now.json'));
@@ -2420,6 +2428,44 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
   t.is(detectedNotice, true, 'did not detect notice');
 });
 
+test('use `rootDirectory` from project when deploying', async t => {
+  const directory = fixture('project-root-directory');
+
+  const firstResult = await execute([directory, '--confirm', '--public']);
+  t.is(firstResult.exitCode, 0, formatOutput(firstResult));
+
+  const { host: firstHost } = new URL(firstResult.stdout);
+  const response = await apiFetch(`/v12/now/deployments/get?url=${firstHost}`);
+  t.is(response.status, 200);
+  const { projectId } = await response.json();
+  t.is(typeof projectId, 'string', projectId);
+
+  const projectResponse = await apiFetch(`/v2/projects/${projectId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      rootDirectory: 'src',
+    }),
+  });
+  console.log('response', await projectResponse.text());
+  t.is(projectResponse.status, 200);
+
+  const secondResult = await execute([directory, '--public']);
+  t.is(secondResult.exitCode, 0, formatOutput(secondResult));
+
+  const pageResponse1 = await fetch(secondResult.stdout);
+  t.is(pageResponse1.status, 200);
+  t.regex(await pageResponse1.text(), /I am a website/gm);
+
+  // Ensures that the `now.json` file has been applied
+  const pageResponse2 = await fetch(`${secondResult.stdout}/i-do-exist`);
+  t.is(pageResponse2.status, 200);
+  t.regex(await pageResponse2.text(), /I am a website/gm);
+
+  await apiFetch(`/v2/projects/${projectId}`, {
+    method: 'DELETE',
+  });
+});
+
 test('whoami with unknown `NOW_ORG_ID` should error', async t => {
   const output = await execute(['whoami'], {
     env: { NOW_ORG_ID: 'asdf' },
@@ -2464,16 +2510,4 @@ test('whoami with local .now scope', async t => {
 
   // clean up
   await remove(path.join(directory, '.now'));
-});
-
-test.after.always(async () => {
-  // Make sure the token gets revoked
-  await execa(binaryPath, ['logout', ...defaultArgs]);
-
-  if (!tmpDir) {
-    return;
-  }
-
-  // Remove config directory entirely
-  tmpDir.removeCallback();
 });

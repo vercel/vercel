@@ -53,6 +53,17 @@ async function testDeployment(
   }
 
   const nowJson = JSON.parse(bodies['now.json']);
+
+  if (process.env.NOW_BUILDER_DEBUG) {
+    if (!nowJson.build) {
+      nowJson.build = {};
+    }
+    if (!nowJson.build.env) {
+      nowJson.build.env = {};
+    }
+    nowJson.build.env.NOW_BUILDER_DEBUG = process.env.NOW_BUILDER_DEBUG;
+  }
+
   for (const build of nowJson.builds) {
     if (builderUrl) {
       if (builderUrl === '@canary') {
@@ -147,6 +158,21 @@ async function testDeployment(
 
           throw new Error(
             `Page ${probeUrl} does not have header ${header}.\n\nExpected: ${expected}.\nActual: ${headers}`
+          );
+        }
+      });
+    } else if (probe.notResponseHeaders) {
+      Object.keys(probe.notResponseHeaders).forEach(header => {
+        const headerValue = resp.headers.get(header);
+        const expected = probe.notResponseHeaders[header];
+
+        if (headerValue === expected) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([k, v]) => `  ${k}=${v}`)
+            .join('\n');
+
+          throw new Error(
+            `Page ${probeUrl} invalid page header ${header}.\n\n Did not expect: ${header}=${expected}.\nBut got ${headers}`
           );
         }
       });

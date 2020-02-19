@@ -6,7 +6,6 @@ import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
 import { maybeURL, normalizeURL, parseInstanceURL } from '../util/url';
 import printEvents from '../util/events';
-import wait from '../util/output/wait';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 
@@ -165,7 +164,7 @@ export default async function main(ctx) {
   const id = deploymentIdOrURL;
 
   const depFetchStart = Date.now();
-  const cancelWait = wait(
+  const cancelWait = output.spinner(
     `Fetching deployment "${id}" in ${chalk.bold(contextName)}`
   );
 
@@ -287,12 +286,12 @@ function printLogShort(log) {
     data = JSON.stringify(obj, null, 2);
   } else {
     data = (log.text || '')
-          .replace(/\n$/, '')
-          .replace(/^\n/, '')
-          // eslint-disable-next-line no-control-regex
-          .replace(/\x1b\[1000D/g, '')
-          .replace(/\x1b\[0K/g, '')
-          .replace(/\x1b\[1A/g, '');
+      .replace(/\n$/, '')
+      .replace(/^\n/, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b\[1000D/g, '')
+      .replace(/\x1b\[0K/g, '')
+      .replace(/\x1b\[1A/g, '');
     if (/warning/i.test(data)) {
       data = chalk.yellow(data);
     } else if (log.type === 'stderr') {

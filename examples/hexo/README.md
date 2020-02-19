@@ -1,4 +1,4 @@
-![Hexo Logo](../../packages/frameworks/logos/hexo.svg)
+![Hexo Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/hexo.svg)
 
 # Hexo Example
 

@@ -9,7 +9,6 @@ import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import promptBool from '../../util/input/prompt-bool';
 import toHumanPath from '../../util/humanize-path';
-import wait from '../../util/output/wait';
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
 import success from '../../util/output/success';
@@ -24,10 +23,10 @@ type Options = {
 };
 
 type Example = {
-  name: string,
-  visible: boolean,
-  suggestions: string[]
-}
+  name: string;
+  visible: boolean;
+  suggestions: string[];
+};
 
 const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
@@ -40,7 +39,7 @@ export default async function init(
   const [name, dir] = args;
   const force = opts['-f'] || opts['--force'];
 
-  const examples = await fetchExampleList();
+  const examples = await fetchExampleList(output);
 
   if (!examples) {
     throw new Error(`Could not fetch example list.`);
@@ -56,22 +55,22 @@ export default async function init(
       return 0;
     }
 
-    return extractExample(chosen, dir, force);
+    return extractExample(output, chosen, dir, force);
   }
 
   if (exampleList.includes(name)) {
-    return extractExample(name, dir, force);
+    return extractExample(output, name, dir, force);
   }
 
   const oldExample = examples.find(x => !x.visible && x.name === name);
   if (oldExample) {
-    return extractExample(name, dir, force, 'v1');
+    return extractExample(output, name, dir, force, 'v1');
   }
 
   const found = await guess(exampleList, name);
 
   if (typeof found === 'string') {
-    return extractExample(found, dir, force);
+    return extractExample(output, found, dir, force);
   }
 
   console.log(info('No changes made.'));
@@ -81,8 +80,8 @@ export default async function init(
 /**
  * Fetch example list json
  */
-async function fetchExampleList() {
-  const stopSpinner = wait('Fetching examples');
+async function fetchExampleList(output: Output) {
+  const stopSpinner = output.spinner('Fetching examples');
   const url = `${EXAMPLE_API}/v2/list.json`;
 
   try {
@@ -93,7 +92,7 @@ async function fetchExampleList() {
       throw new Error(`Failed fetching list.json (${resp.statusText}).`);
     }
 
-    return await resp.json() as Example[];
+    return (await resp.json()) as Example[];
   } catch (e) {
     stopSpinner();
   }
@@ -106,22 +105,28 @@ async function chooseFromDropdown(message: string, exampleList: string[]) {
   const choices = exampleList.map(name => ({
     name,
     value: name,
-    short: name
+    short: name,
   }));
 
   return listInput({
     message,
     separator: false,
-    choices
+    choices,
   });
 }
 
 /**
  * Extract example to directory
  */
-async function extractExample(name: string, dir: string, force?: boolean, ver: string = 'v2') {
+async function extractExample(
+  output: Output,
+  name: string,
+  dir: string,
+  force?: boolean,
+  ver: string = 'v2'
+) {
   const folder = prepareFolder(process.cwd(), dir || name, force);
-  const stopSpinner = wait(`Fetching ${name}`);
+  const stopSpinner = output.spinner(`Fetching ${name}`);
 
   const url = `${EXAMPLE_API}/${ver}/download/${name}.tar.gz`;
 

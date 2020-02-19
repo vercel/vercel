@@ -1,5 +1,6 @@
 import ms from 'ms';
 import bytes from 'bytes';
+import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
@@ -47,8 +48,12 @@ import {
 import getProjectName from '../../util/get-project-name';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
-import validatePaths from '../../util/validate-paths';
 import { prependEmoji, emoji } from '../../util/emoji';
+import { inputRootDirectory } from '../../util/input/input-root-directory';
+import validatePaths, {
+  validateRootDirectory,
+} from '../../util/validate-paths';
+import { readLocalConfig } from '../../util/config/files';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -90,7 +95,6 @@ const printDeploymentStatus = async (
   },
   deployStamp,
   isClipboardEnabled,
-  quiet,
   isFile
 ) => {
   const isProdDeployment = target === 'production';
@@ -131,22 +135,22 @@ const printDeploymentStatus = async (
     }
 
     // copy to clipboard
+    let isCopiedToClipboard = false;
     if (isClipboardEnabled && !isWildcard) {
-      await copy(previewUrl).catch(error =>
-        output.debug(`Error copying to clipboard: ${error}`)
-      );
-    }
-
-    // write to stdout
-    if (quiet) {
-      process.stdout.write(`https://${deploymentUrl}`);
+      await copy(previewUrl)
+        .then(() => {
+          isCopiedToClipboard = true;
+        })
+        .catch(error => output.debug(`Error copying to clipboard: ${error}`));
     }
 
     output.print(
       prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
-        )} ${deployStamp()}`,
+        )}${
+          isCopiedToClipboard ? chalk.gray(` [copied to clipboard]`) : ''
+        } ${deployStamp()}`,
         emoji('success')
       ) + `\n`
     );
@@ -235,13 +239,6 @@ export default async function main(
   const { isFile, path } = pathValidation;
   const autoConfirm = argv['--confirm'] || isFile;
 
-  // build `meta`
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(argv['--meta'])
-  );
-
   // --no-scale
   if (argv['--no-scale']) {
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
@@ -257,7 +254,125 @@ export default async function main(
     );
   }
 
-  if (localConfig && localConfig.name) {
+  const client = new Client({
+    apiUrl: ctx.apiUrl,
+    token: ctx.authConfig.token,
+    debug: debugEnabled,
+  });
+
+  // retrieve `project` and `org` from .now
+  const link = await getLinkedProject(output, client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
+  let newProjectName = null;
+  let rootDirectory = project ? project.rootDirectory : null;
+
+  if (status === 'not_linked') {
+    const shouldStartSetup =
+      autoConfirm ||
+      (await confirm(
+        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        true
+      ));
+
+    if (!shouldStartSetup) {
+      output.print(`Aborted. Project not set up.\n`);
+      return 0;
+    }
+
+    org = await selectOrg(
+      output,
+      'Which scope do you want to deploy to?',
+      client,
+      ctx.config.currentTeam,
+      autoConfirm
+    );
+
+    // We use `localConfig` here to read the name
+    // even though the `now.json` file can change
+    // afterwards, this is fine since the property
+    // will be deprecated and can be replaced with
+    // user input.
+    const detectedProjectName = getProjectName({
+      argv,
+      nowConfig: localConfig || {},
+      isFile,
+      paths,
+    });
+
+    const projectOrNewProjectName = await inputProject(
+      output,
+      client,
+      org,
+      detectedProjectName,
+      autoConfirm
+    );
+
+    if (typeof projectOrNewProjectName === 'string') {
+      newProjectName = projectOrNewProjectName;
+      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+    } else {
+      project = projectOrNewProjectName;
+      rootDirectory = project.rootDirectory;
+
+      // we can already link the project
+      await linkFolderToProject(
+        output,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug
+      );
+      status = 'linked';
+    }
+  }
+
+  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+
+  if (
+    rootDirectory &&
+    (await validateRootDirectory(
+      output,
+      path,
+      sourcePath,
+      project
+        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        : ''
+    )) === false
+  ) {
+    return 1;
+  }
+
+  // If Root Directory is used we'll try to read the config
+  // from there instead and use it if it exists.
+  if (rootDirectory) {
+    const rootDirectoryConfig = readLocalConfig(sourcePath);
+
+    if (rootDirectoryConfig) {
+      debug(`Read local config from root directory (${rootDirectory})`);
+      localConfig = rootDirectoryConfig;
+    } else if (localConfig) {
+      output.print(
+        `${prependEmoji(
+          `The ${highlight(
+            'now.json'
+          )} file should be inside of the provided root directory.`,
+          emoji('warning')
+        )}\n`
+      );
+    }
+  }
+
+  localConfig = localConfig || {};
+
+  if (localConfig.name) {
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
@@ -306,6 +421,13 @@ export default async function main(
       return 1;
     }
   }
+
+  // build `meta`
+  const meta = Object.assign(
+    {},
+    parseMeta(localConfig.meta),
+    parseMeta(argv['--meta'])
+  );
 
   // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
@@ -364,77 +486,6 @@ export default async function main(
     target = 'production';
   }
 
-  const client = new Client({
-    apiUrl: ctx.apiUrl,
-    token: ctx.authConfig.token,
-    debug: debugEnabled,
-  });
-
-  // retrieve `project` and `org` from .now
-  const link = await getLinkedProject(output, client, path);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  }
-
-  let { org, project, status } = link;
-  let newProjectName = null;
-
-  if (status === 'not_linked') {
-    const shouldStartSetup =
-      autoConfirm ||
-      (await confirm(
-        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-        true
-      ));
-
-    if (!shouldStartSetup) {
-      output.print(`Aborted. Project not set up.\n`);
-      return 0;
-    }
-
-    org = await selectOrg(
-      'Which scope do you want to deploy to?',
-      client,
-      ctx.config.currentTeam,
-      autoConfirm
-    );
-
-    const detectedProjectName = getProjectName({
-      argv,
-      nowConfig: localConfig,
-      isFile,
-      paths,
-    });
-
-    const projectOrNewProjectName = await inputProject(
-      output,
-      client,
-      org,
-      detectedProjectName,
-      autoConfirm
-    );
-
-    if (typeof projectOrNewProjectName === 'string') {
-      newProjectName = projectOrNewProjectName;
-    } else {
-      project = projectOrNewProjectName;
-
-      // we can already link the project
-      await linkFolderToProject(
-        output,
-        path,
-        {
-          projectId: project.id,
-          orgId: org.id,
-        },
-        project.name,
-        org.slug
-      );
-      status = 'linked';
-    }
-  }
-
   const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   let deployStamp = stamp();
@@ -462,10 +513,11 @@ export default async function main(
       output,
       now,
       contextName,
-      [path],
+      [sourcePath],
       createArgs,
       org,
-      !project && !isFile
+      !project && !isFile,
+      path
     );
 
     if (
@@ -473,6 +525,10 @@ export default async function main(
       deployment.code === 'missing_project_settings'
     ) {
       let { projectSettings, framework } = deployment;
+
+      if (rootDirectory) {
+        projectSettings.rootDirectory = rootDirectory;
+      }
 
       const settings = await editProjectSettings(
         output,
@@ -489,15 +545,24 @@ export default async function main(
         output,
         now,
         contextName,
-        [path],
+        [sourcePath],
         createArgs,
         org,
-        false
+        false,
+        path
       );
     }
 
     if (deployment instanceof NotDomainOwner) {
       output.error(deployment);
+      return 1;
+    }
+
+    if (deployment instanceof Error) {
+      output.error(
+        `${deployment.message ||
+          'An unexpected error occurred while deploying your project'} (http://zeit.ink/P4)`
+      );
       return 1;
     }
 
@@ -616,7 +681,6 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    quiet,
     isFile
   );
 }
@@ -662,6 +726,11 @@ function handleCreateDeployError(output, error) {
         );
       }
 
+      return 1;
+    }
+
+    if (dataPath === '.name') {
+      output.error(message);
       return 1;
     }
 
