@@ -49,7 +49,7 @@ export function convertRedirects(
 ): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const loc = replaceSegments(segments, r.destination);
+    const loc = replaceSegments(segments, r.destination, true);
     const route: Route = {
       src,
       headers: { Location: loc },
@@ -137,7 +137,11 @@ export function sourceToRegex(
   return { src: r.source, segments };
 }
 
-function replaceSegments(segments: string[], destination: string): string {
+function replaceSegments(
+  segments: string[],
+  destination: string,
+  isRedirect?: boolean
+): string {
   const parsedDestination = parseUrl(destination, true);
   delete parsedDestination.href;
   delete parsedDestination.path;
@@ -169,6 +173,16 @@ function replaceSegments(segments: string[], destination: string): string {
     }
 
     for (const [name, value] of Object.entries(indexes)) {
+      if (
+        isRedirect &&
+        new RegExp(`\\${value}(?!\\d)`).test(pathname + (hash || ''))
+      ) {
+        // Don't add segment to query if used in destination
+        // and it's a redirect so that we don't pollute the query
+        // with unwanted values
+        continue;
+      }
+
       if (!(name in query)) {
         query[name] = value;
       }
