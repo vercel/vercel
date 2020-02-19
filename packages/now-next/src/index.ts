@@ -846,11 +846,7 @@ export const build = async ({
           config,
         });
 
-        // rename 404 lambda to __404 so it's visitable at /404
-        const outputName =
-          hasPages404 && page === '404.js'
-            ? '__404'
-            : path.join(entryDirectory, pathname);
+        const outputName = path.join(entryDirectory, pathname);
 
         if (requiresTracing) {
           lambdas[outputName] = await createLambdaFromPseudoLayers({
@@ -1115,7 +1111,7 @@ export const build = async ({
                   : // if static 404 is not present but we have pages/404.js
                   // it is a lambda due to _app getInitialProps
                   hasPages404
-                  ? '__404'
+                  ? '404'
                   : '_error'
               ),
               status: 404,
