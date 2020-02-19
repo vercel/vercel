@@ -1110,7 +1110,7 @@ export const build = async ({
                   ? static404Page
                   : // if static 404 is not present but we have pages/404.js
                   // it is a lambda due to _app getInitialProps
-                  hasPages404
+                  hasPages404 && lambdas['404']
                   ? '404'
                   : '_error'
               ),
