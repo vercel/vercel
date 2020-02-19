@@ -216,17 +216,17 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/old(?:\\/([^\\/]+?))\\/path$',
-      headers: { Location: '/new/path/$1?segment=$1' },
+      headers: { Location: '/new/path/$1' },
       status: 308,
     },
     {
       src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
-      headers: { Location: '/catchall/$1/?hello=$1' },
+      headers: { Location: '/catchall/$1/' },
       status: 308,
     },
     {
       src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))$',
-      headers: { Location: '/another-catch/$1/?hello=$1' },
+      headers: { Location: '/another-catch/$1/' },
       status: 308,
     },
     {
@@ -241,7 +241,7 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/hello(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
-      headers: { Location: '/something?world=$1#$1' },
+      headers: { Location: '/something#$1' },
       status: 308,
     },
   ];
