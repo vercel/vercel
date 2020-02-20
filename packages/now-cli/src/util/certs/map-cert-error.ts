@@ -1,4 +1,4 @@
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 
 export default function mapCertError(error: any, cns?: string[]) {
   const errorCode: string = error.code;
@@ -15,7 +15,7 @@ export default function mapCertError(error: any, cns?: string[]) {
       message: error.message,
       external: error.external,
       helpUrl: error.helpUrl,
-      type: error.statusCode === 449 ? 'http-01' : 'dns-01'
+      type: error.statusCode === 449 ? 'http-01' : 'dns-01',
     });
   }
 
@@ -41,7 +41,7 @@ export default function mapCertError(error: any, cns?: string[]) {
       cns: cns || error.cns || [],
       code: errorCode,
       message: error.message,
-      helpUrl: error.helpUrl
+      helpUrl: error.helpUrl,
     });
   }
 

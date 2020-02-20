@@ -1,17 +1,16 @@
 import { resolve, join } from 'path';
-import ignore from 'ignore';
-import dockerignore from '@zeit/dockerignore';
 import _glob, { IOptions } from 'glob';
 import fs from 'fs-extra';
-import IGNORED from './ignored';
 import uniqueStrings from './unique-strings';
-import getLocalConfigPath from './config/local-path';
 import { Output } from './output/create-output';
-import { NowConfig } from './dev/types';
+import { NowConfig, getNowIgnore } from 'now-client';
 
 type NullableString = string | null;
 
-const flatten = (arr: NullableString[] | NullableString[][], res: NullableString[] = []) => {
+const flatten = (
+  arr: NullableString[] | NullableString[][],
+  res: NullableString[] = []
+) => {
   for (let cur of arr) {
     if (Array.isArray(cur)) {
       flatten(cur, res);
@@ -20,7 +19,7 @@ const flatten = (arr: NullableString[] | NullableString[][], res: NullableString
     }
   }
   return res;
-}
+};
 
 const glob = async function(pattern: string, options: IOptions) {
   return new Promise<string[]>((resolve, reject) => {
@@ -47,7 +46,12 @@ interface WalkSyncOptions {
  *  - `output` {Object} "output" helper object
  * @returns {Array}
  */
-const walkSync = async (dir: string, path: string, filelist: string[] = [], opts: WalkSyncOptions) => {
+const walkSync = async (
+  dir: string,
+  path: string,
+  filelist: string[] = [],
+  opts: WalkSyncOptions
+) => {
   const { debug } = opts.output;
   const dirc = await fs.readdir(asAbsolute(dir, path));
   for (let file of dirc) {
@@ -76,7 +80,11 @@ interface FilesInWhitelistOptions {
  *  - `output` {Object} "output" helper object
  * @returns {Array} the expanded list of whitelisted files.
  */
-const getFilesInWhitelist = async function(whitelist: string[], path: string, opts: FilesInWhitelistOptions) {
+const getFilesInWhitelist = async function(
+  whitelist: string[],
+  path: string,
+  opts: FilesInWhitelistOptions
+) {
   const { debug } = opts.output;
   const files: string[] = [];
 
@@ -100,29 +108,6 @@ const getFilesInWhitelist = async function(whitelist: string[], path: string, op
 };
 
 /**
- * Remove leading `./` from the beginning of ignores
- * because ignore doesn't like them :|
- */
-
-const clearRelative = function(str: string) {
-  return str.replace(/(\n|^)\.\//g, '$1');
-};
-
-/**
- * Returns the contents of a file if it exists.
- *
- * @return {String} results or `''`
- */
-
-const maybeRead = async function<T>(path: string, default_: T) {
-  try {
-    return await fs.readFile(path, 'utf8');
-  } catch (err) {
-    return default_;
-  }
-};
-
-/**
  * Transform relative paths into absolutes,
  * and maintains absolutes as such.
  *
@@ -137,13 +122,6 @@ const asAbsolute = function(path: string, parent: string) {
 
   return resolve(parent, path);
 };
-
-export async function createIgnore(ignoreFilePath: string) {
-  const ignoreFile = await maybeRead(ignoreFilePath, '');
-  const ig = ignore()
-    .add(`${IGNORED}\n${clearRelative(ignoreFile)}`);
-  return ig;
-}
 
 interface StaticFilesOptions {
   output: Output;
@@ -183,7 +161,7 @@ export async function staticFiles(
 
     // Compile list of ignored patterns and files
     const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
-    const ig = await createIgnore(resolve(path, ignoreName));
+    const { ig } = await getNowIgnore(resolve(path, ignoreName));
     const filter = ig.createFilter();
 
     const prefixLength = path.length + 1;
@@ -213,188 +191,10 @@ export async function staticFiles(
       `Locating files ${path}`,
       explode(search, {
         accepts,
-        output
+        output,
       })
     );
   }
-
-  // Get files
-  return uniqueStrings(files);
-}
-
-interface NpmOptions {
-  hasNowJson: boolean;
-  output: Output;
-}
-
-/**
- * Returns a list of files in the given
- * directory that are subject to be
- * synchronized for npm.
- *
- * @param {String} full path to directory
- * @param {String} contents of `package.json` to avoid lookup
- * @param {Object} options:
- *  - `limit` {Number|null} byte limit
- *  - `output` {Object} "output" helper object
- * @return {Array} comprehensive list of paths to sync
- */
-export async function npm(
-  path: string,
-  pkg: { files?: string[], now?: { files?: string[] } } = {},
-  nowConfig: NowConfig = {},
-  { hasNowJson = false, output }: NpmOptions
-) {
-  const { debug, time } = output;
-  const whitelist = nowConfig.files || pkg.files || (pkg.now && pkg.now.files);
-  let files: string[] = [];
-
-  if (whitelist) {
-    files = await getFilesInWhitelist(whitelist, path, { output });
-  } else {
-    // The package.json `files` whitelist still
-    // honors ignores: https://docs.npmjs.com/files/package.json#files
-    const search_ = ['.'];
-    // Convert all filenames into absolute paths
-    const search = Array.prototype.concat.apply(
-      [],
-      await Promise.all(
-        search_.map(file =>
-          glob(file, { cwd: path, absolute: true, dot: true })
-        )
-      )
-    );
-
-    // Compile list of ignored patterns and files
-    const npmIgnore = await maybeRead(resolve(path, '.npmignore'), null);
-
-    const filter = ignore()
-      .add(
-        `${IGNORED}\n${clearRelative(
-          npmIgnore === null
-            ? await maybeRead(resolve(path, '.gitignore'), '')
-            : npmIgnore
-        )}`
-      )
-      .createFilter();
-
-    const prefixLength = path.length + 1;
-
-    const accepts = (file: string) => {
-      const relativePath = file.substr(prefixLength);
-
-      if (relativePath === '') {
-        return true;
-      }
-
-      const accepted = filter(relativePath);
-      if (!accepted) {
-        debug(`Ignoring ${file}`);
-      }
-      return accepted;
-    };
-
-    // Locate files
-    files = await time(
-      `Locating files ${path}`,
-      explode(search, {
-        accepts,
-        output
-      })
-    );
-  }
-
-  // Always include manifest as npm does not allow ignoring it
-  // source: https://docs.npmjs.com/files/package.json#files
-  files.push(asAbsolute('package.json', path));
-
-  if (hasNowJson) {
-    files.push(asAbsolute(getLocalConfigPath(path), path));
-  }
-
-  // Get files
-  return uniqueStrings(files);
-}
-
-interface DockerOptions {
-  hasNowJson: boolean;
-  output: Output;
-}
-
-/**
- * Returns a list of files in the given
- * directory that are subject to be
- * sent to docker as build context.
- *
- * @param {String} full path to directory
- * @param {String} contents of `Dockerfile`
- * @param {Object} options:
- *  - `limit` {Number|null} byte limit
- *  - `output` {Object} "output" helper object
- * @return {Array} comprehensive list of paths to sync
- */
-
-export async function docker(
-  path: string,
-  nowConfig: NowConfig = {},
-  { hasNowJson = false, output }: DockerOptions
-) {
-  const { debug, time } = output;
-  let files: string[] = [];
-
-  if (nowConfig.files) {
-    files = await getFilesInWhitelist(nowConfig.files, path, { output });
-  } else {
-    // Base search path
-    // the now.json `files` whitelist still
-    // honors ignores: https://docs.npmjs.com/files/package.json#files
-    const search_ = ['.'];
-
-    // Convert all filenames into absolute paths
-    const search = search_.map(file => asAbsolute(file, path));
-
-    // Compile list of ignored patterns and files
-    const dockerIgnore = await maybeRead(resolve(path, '.dockerignore'), null);
-
-    const ignoredFiles = clearRelative(
-      dockerIgnore === null
-        ? await maybeRead(resolve(path, '.gitignore'), '')
-        : dockerIgnore
-    );
-    const ignoreInit = (dockerIgnore === null ? ignore : dockerignore) as any as typeof ignore;
-    const filter = ignoreInit()
-      .add(`${IGNORED}\n${ignoredFiles}`)
-      .createFilter();
-
-    const prefixLength = path.length + 1;
-    const accepts = function(file: string) {
-      const relativePath = file.substr(prefixLength);
-
-      if (relativePath === '') {
-        return true;
-      }
-
-      const accepted = filter(relativePath);
-      if (!accepted) {
-        debug(`Ignoring ${file}`);
-      }
-      return accepted;
-    };
-
-    // Locate files
-    files = await time(
-      `Locating files ${path}`,
-      explode(search, { accepts, output })
-    );
-  }
-
-  if (hasNowJson) {
-    files.push(asAbsolute(getLocalConfigPath(path), path));
-  }
-
-  // Always include manifest as npm does not allow ignoring it
-  // source: https://docs.npmjs.com/files/package.json#files
-  files.push(asAbsolute('Dockerfile', path));
 
   // Get files
   return uniqueStrings(files);
@@ -415,7 +215,7 @@ export async function getAllProjectFiles(cwd: string, { debug }: Output) {
   const list = await glob('**', { cwd: current, absolute: true, nodir: true });
 
   // We need to replace \ with / for windows
-  return list.map((file) => file.replace(current.replace(/\\/g, '/'), ''));
+  return list.map(file => file.replace(current.replace(/\\/g, '/'), ''));
 }
 
 interface ExplodeOptions {
@@ -436,7 +236,10 @@ interface ExplodeOptions {
  *  - `output` {Object} "output" helper object
  * @return {Array} of {String}s of full paths
  */
-async function explode(paths: string[], { accepts, output }: ExplodeOptions): Promise<string[]> {
+async function explode(
+  paths: string[],
+  { accepts, output }: ExplodeOptions
+): Promise<string[]> {
   const { debug } = output;
   const list = async (file: string): Promise<string | null> => {
     let path = file;
@@ -465,7 +268,7 @@ async function explode(paths: string[], { accepts, output }: ExplodeOptions): Pr
       const all = await fs.readdir(file);
       /* eslint-disable no-use-before-define */
       const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
-      return recursive as any as Promise<string | null>;
+      return (recursive as any) as Promise<string | null>;
       /* eslint-enable no-use-before-define */
     }
     if (!s.isFile()) {

@@ -1,6 +1,6 @@
 import { Deployment } from '../../types';
 import { Output } from '../output';
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
 

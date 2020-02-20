@@ -1,5 +1,5 @@
 import { stringify } from 'querystring';
-import { UnsupportedTLD } from '../errors-ts';
+import { UnsupportedTLD } from '../errors';
 import Client from '../client';
 
 type Response = {

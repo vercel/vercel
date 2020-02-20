@@ -1,6 +1,6 @@
 import mri from 'mri';
 import chalk from 'chalk';
-import Now from '../util';
+import Now from '../util/now';
 import createOutput from '../util/output';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';

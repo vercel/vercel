@@ -1,15 +1,32 @@
+import { Response } from 'node-fetch';
 import errorOutput from './output/error';
 
 export { default as handleError } from './handle-error';
 export const error = errorOutput;
 
+class ResponseError extends Error {
+  [key: string]: any;
+
+  public status: number;
+  public message: string;
+  public retryAfter?: number;
+  public serverMessage: string;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.serverMessage = message;
+    this.message = `${message}${status ? ` (${status})` : ''}`;
+  }
+}
+
 export async function responseError(
-  res,
-  fallbackMessage = null,
-  parsedBody = {}
+  res: Response,
+  fallbackMessage: string | null = null,
+  parsedBody: any = {}
 ) {
-  let message;
-  let bodyError;
+  let message: string | null = null;
+  let bodyError: { [key: string]: any } = {};
 
   if (res.status >= 400 && res.status < 500) {
     let body;
@@ -25,19 +42,16 @@ export async function responseError(
     message = bodyError.message;
   }
 
-  if (message == null) {
+  if (!message) {
     message = fallbackMessage === null ? 'Response Error' : fallbackMessage;
   }
 
-  const err = new Error(`${message} (${res.status})`);
-
-  err.status = res.status;
-  err.serverMessage = message;
+  const err = new ResponseError(message, res.status);
 
   // Copy every field that was added manually to the error
   if (bodyError) {
     for (const field of Object.keys(bodyError)) {
-      if (field !== 'message') {
+      if (field !== 'message' && field !== 'stack') {
         err[field] = bodyError[field];
       }
     }
@@ -52,27 +66,4 @@ export async function responseError(
   }
 
   return err;
-}
-
-export async function responseErrorMessage(res, fallbackMessage = null) {
-  let message;
-
-  if (res.status >= 400 && res.status < 500) {
-    let body;
-
-    try {
-      body = await res.json();
-    } catch (err) {
-      body = {};
-    }
-
-    // Some APIs wrongly return `err` instead of `error`
-    message = (body.error || body.err || {}).message;
-  }
-
-  if (message == null) {
-    message = fallbackMessage === null ? 'Response Error' : fallbackMessage;
-  }
-
-  return `${message} (${res.status})`;
 }

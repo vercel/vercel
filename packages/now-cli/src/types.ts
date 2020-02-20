@@ -4,6 +4,10 @@ export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
 export type Config = NowConfig;
 
+export interface Dictionary<T> {
+  [key: string]: T;
+}
+
 export interface NowContext {
   argv: string[];
   apiUrl: string;

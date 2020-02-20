@@ -2,7 +2,7 @@ import chalk from 'chalk';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
@@ -29,7 +29,7 @@ export default async function transferIn(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -66,7 +66,7 @@ export default async function transferIn(
   const availableStamp = stamp();
   const [domainPrice, { transferable, transferPolicy }] = await Promise.all([
     getDomainPrice(client, domainName, 'renewal'),
-    checkTransfer(client, domainName)
+    checkTransfer(client, domainName),
   ]);
 
   if (domainPrice instanceof ERRORS.UnsupportedTLD) {

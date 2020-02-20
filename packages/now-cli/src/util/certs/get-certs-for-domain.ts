@@ -1,7 +1,7 @@
 import { stringify } from 'querystring';
 import { Cert } from '../../types';
 import { Output } from '../output';
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import Client from '../client';
 
 type Response = {

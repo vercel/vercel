@@ -3,14 +3,13 @@ import ms from 'ms';
 import plural from 'pluralize';
 import psl from 'psl';
 import table from 'text-table';
-// @ts-ignore
-import Now from '../../util';
+import Now from '../../util/now';
 import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
-import { CertNotFound } from '../../util/errors-ts';
+import { CertNotFound } from '../../util/errors';
 import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
 import { NowContext, Cert } from '../../types';
@@ -26,7 +25,10 @@ async function ls(
   args: string[],
   output: Output
 ): Promise<number> {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -77,7 +79,11 @@ async function ls(
 
   if (certs.length >= 100) {
     const { uid: lastCert } = certificates[certificates.length - 1];
-    output.note(`There may be more certificates that can be retrieved with ${cmd(`now ${process.argv.slice(2).join(' ')} --after=${lastCert}`)}.\n`);
+    output.note(
+      `There may be more certificates that can be retrieved with ${cmd(
+        `now ${process.argv.slice(2).join(' ')} --after=${lastCert}`
+      )}.\n`
+    );
   }
 
   if (certs.length > 0) {
@@ -93,7 +99,7 @@ function formatCertsTable(certsList: Cert[]) {
     {
       align: ['l', 'l', 'r', 'c', 'r'],
       hsep: ' '.repeat(2),
-      stringLength: strlen
+      stringLength: strlen,
     }
   ).replace(/^(.*)/gm, '  $1')}\n`;
 }
@@ -104,21 +110,23 @@ function formatCertsTableHead(): string[] {
     chalk.dim('cns'),
     chalk.dim('expiration'),
     chalk.dim('renew'),
-    chalk.dim('age')
+    chalk.dim('age'),
   ];
 }
 
 function formatCertsTableBody(certsList: Cert[]) {
   const now = new Date();
-  return certsList.reduce<string[][]>((result, cert) => result.concat(formatCert(now, cert)), []);
+  return certsList.reduce<string[][]>(
+    (result, cert) => result.concat(formatCert(now, cert)),
+    []
+  );
 }
 
 function formatCert(time: Date, cert: Cert) {
-  return cert.cns.map(
-    (cn, idx) =>
-      idx === 0
-        ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
-        : formatCertNonFirstCn(cn, cert.cns.length > 1)
+  return cert.cns.map((cn, idx) =>
+    idx === 0
+      ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
+      : formatCertNonFirstCn(cn, cert.cns.length > 1)
   );
 }
 
@@ -130,13 +138,18 @@ function formatCertCn(cn: string, multiple: boolean) {
   return multiple ? `${chalk.gray('-')} ${chalk.bold(cn)}` : chalk.bold(cn);
 }
 
-function formatCertFirstCn(time: Date, cert: Cert, cn: string, multiple: boolean): string[] {
+function formatCertFirstCn(
+  time: Date,
+  cert: Cert,
+  cn: string,
+  multiple: boolean
+): string[] {
   return [
     cert.uid,
     formatCertCn(cn, multiple),
     formatExpirationDate(new Date(cert.expiration)),
     cert.autoRenew ? 'yes' : 'no',
-    chalk.gray(ms(time.getTime() - new Date(cert.created).getTime()))
+    chalk.gray(ms(time.getTime() - new Date(cert.created).getTime())),
   ];
 }
 
