@@ -41,7 +41,8 @@ async function initPrivateGit(credentials: string) {
  * Since `go build` does not support files that begin with a square bracket,
  * we must rename to something temporary to support Path Segments.
  * The output file is not renamed because v3 builders can't rename outputs
- * which works great for this feature.
+ * which works great for this feature. We also need to add a suffix during `now dev`
+ * since the entrypoint is already stripped of its suffix before build() is called.
  */
 async function getRenamedEntrypoint(
   entrypoint: string,
@@ -50,7 +51,6 @@ async function getRenamedEntrypoint(
 ) {
   const filename = basename(entrypoint);
   if (filename.startsWith('[')) {
-    // Suffix is necessary since `now dev` renames source files, we must reference the original
     const suffix = meta.isDev && !entrypoint.endsWith('.go') ? '.go' : '';
     const newEntrypoint = entrypoint.replace('/[', '/now-bracket[') + suffix;
     const file = files[entrypoint];
