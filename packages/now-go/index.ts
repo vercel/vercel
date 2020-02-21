@@ -132,7 +132,7 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
 
   if (meta.isDev) {
-    // Create cache so Go rebuilds fast with `now dev
+    // Create cache so Go rebuilds fast with `now dev`
     goPath = join(
       workPath,
       '.now',
