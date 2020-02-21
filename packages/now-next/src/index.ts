@@ -948,12 +948,14 @@ export const build = async ({
           lambda,
           fallback: htmlFsRef,
           group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
         });
         prerenders[outputPathData] = new Prerender({
           expiration: initialRevalidate,
           lambda,
           fallback: jsonFsRef,
           group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
         });
 
         ++prerenderGroup;
