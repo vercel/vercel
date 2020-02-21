@@ -126,26 +126,16 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
 
   if (meta.isDev) {
-    let base = null;
-
-    if (config && config.zeroConfig) {
-      base = workPath;
-    } else {
-      base = dirname(downloadedFiles['now.json'].fsPath);
-    }
-
-    const destNow = join(
-      base,
+    // Create cache so Go rebuilds fast with `now dev
+    goPath = join(
+      workPath,
       '.now',
       'cache',
-      basename(entrypoint, '.go'),
-      'src',
-      'lambda'
+      'now-go',
+      basename(entrypoint, '.go')
     );
-    // this will ensure Go rebuilt fast
-    goPath = join(base, '.now', 'cache', basename(entrypoint, '.go'));
+    const destNow = join(goPath, 'src', 'lambda');
     await download(downloadedFiles, destNow);
-
     downloadedFiles = await glob('**', destNow);
     downloadPath = destNow;
   }
