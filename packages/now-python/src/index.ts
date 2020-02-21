@@ -35,21 +35,17 @@ export async function downloadFilesInWorkPath({
   entrypoint,
   workPath,
   files,
-  meta,
-  config,
+  meta = {},
 }: BuildOptions) {
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
-  if (meta && meta.isDev) {
-    let base = null;
-
-    if (config && config.zeroConfig) {
-      base = workPath;
-    } else {
-      base = dirname(downloadedFiles['now.json'].fsPath);
-    }
-
-    const destNow = join(base, '.now', 'cache', basename(entrypoint, '.py'));
+  if (meta.isDev) {
+    const destNow = join(
+      workPath,
+      '.now',
+      'cache',
+      basename(entrypoint, '.py')
+    );
     await download(downloadedFiles, destNow);
     downloadedFiles = await glob('**', destNow);
     workPath = destNow;
