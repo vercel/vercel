@@ -12,6 +12,7 @@ import {
   shouldServe,
   Files,
   debug,
+  Meta,
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
@@ -42,10 +43,15 @@ async function initPrivateGit(credentials: string) {
  * The output file is not renamed because v3 builders can't rename outputs
  * which works great for this feature.
  */
-async function getRenamedEntrypoint(entrypoint: string, files: Files) {
+async function getRenamedEntrypoint(
+  entrypoint: string,
+  files: Files,
+  meta: Meta
+) {
   const filename = basename(entrypoint);
   if (filename.startsWith('[')) {
-    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[');
+    const suffix = meta.isDev && !entrypoint.endsWith('.go') ? '.go' : '';
+    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[') + suffix;
     const file = files[entrypoint];
     delete files[entrypoint];
     files[newEntrypoint] = file;
@@ -81,7 +87,7 @@ We highly recommend you leverage Go Modules in your project.
 Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
-  entrypoint = await getRenamedEntrypoint(entrypoint, files);
+  entrypoint = await getRenamedEntrypoint(entrypoint, files, meta);
   const entrypointArr = entrypoint.split(sep);
 
   // eslint-disable-next-line prefer-const
