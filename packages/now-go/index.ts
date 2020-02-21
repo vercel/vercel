@@ -50,6 +50,7 @@ async function getRenamedEntrypoint(
 ) {
   const filename = basename(entrypoint);
   if (filename.startsWith('[')) {
+    // Suffix is necessary since `now dev` renames source files, we must reference the original
     const suffix = meta.isDev && !entrypoint.endsWith('.go') ? '.go' : '';
     const newEntrypoint = entrypoint.replace('/[', '/now-bracket[') + suffix;
     const file = files[entrypoint];
