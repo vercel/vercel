@@ -147,14 +147,15 @@ export const build = async ({
 
   const originalPyPath = join(__dirname, '..', 'now_init.py');
   const originalNowHandlerPyContents = await readFile(originalPyPath, 'utf8');
-
-  // will be used on `from $here import handler`
-  // for example, `from api.users import handler`
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  // Since `now dev` renames source files, we must reference the original
+  const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
+  const entrypointWithSuffix = `${entrypoint}${suffix}`;
+  debug('Entrypoint with suffix is', entrypointWithSuffix);
   const nowHandlerPyContents = originalNowHandlerPyContents
     .replace(/__NOW_HANDLER_MODULE_NAME/g, moduleName)
-    .replace(/__NOW_HANDLER_ENTRYPOINT/g, entrypoint);
+    .replace(/__NOW_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
 
   // in order to allow the user to have `server.py`, we need our `server.py` to be called
   // somethig else
