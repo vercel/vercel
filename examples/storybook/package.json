@@ -9,7 +9,7 @@
     "react-dom": "^16.10.2"
   },
   "scripts": {
-    "build": "build-storybook -c .storybook -o public",
+    "build": "build-storybook -c .storybook -o build",
     "storybook": "start-storybook",
     "dev": "start-storybook --port $PORT"
   }
