@@ -29,6 +29,7 @@ const EVENTS_ARRAY = [
   'error',
   'notice',
   'tip',
+  'canceled',
 ] as const;
 
 export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];

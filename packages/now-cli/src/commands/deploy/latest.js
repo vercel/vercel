@@ -566,6 +566,11 @@ export default async function main(
       return 1;
     }
 
+    if (deployment.readyState === 'CANCELED') {
+      output.log('The deployment has been canceled');
+      return 1;
+    }
+
     const deploymentResponse = await getDeploymentByIdOrHost(
       now,
       contextName,
