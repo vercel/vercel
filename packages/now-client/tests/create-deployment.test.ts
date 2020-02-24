@@ -87,6 +87,7 @@ describe('create v2 deployment', () => {
   });
 
   it('will create a v2 deployment with correct file permissions', async () => {
+    let error = null;
     for await (const event of createDeployment(
       {
         token,
@@ -104,8 +105,15 @@ describe('create v2 deployment', () => {
       if (event.type === 'ready') {
         deployment = event.payload;
         break;
+      } else if (event.type === 'error') {
+        error = event.payload;
+        console.error(error.message);
+        break;
       }
     }
+
+    expect(error).toBe(null);
+    expect(deployment.readyState).toEqual('READY');
 
     const url = `https://${deployment.url}/api/index.js`;
     console.log('testing url ' + url);
@@ -116,6 +124,7 @@ describe('create v2 deployment', () => {
   });
 
   it('will create a v2 deployment and ignore files specified in .nowignore', async () => {
+    let error = null;
     for await (const event of createDeployment(
       {
         token,
@@ -132,10 +141,16 @@ describe('create v2 deployment', () => {
     )) {
       if (event.type === 'ready') {
         deployment = event.payload;
-        expect(deployment.readyState).toEqual('READY');
+        break;
+      } else if (event.type === 'error') {
+        error = event.payload;
+        console.error(error.message);
         break;
       }
     }
+
+    expect(error).toBe(null);
+    expect(deployment.readyState).toEqual('READY');
 
     const index = await fetch_(`https://${deployment.url}`);
     expect(index.status).toBe(200);
