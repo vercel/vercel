@@ -92,6 +92,7 @@ describe('create v2 deployment', () => {
       {
         token,
         path: path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
+        skipAutoDetectionConfirmation: true,
       },
       {
         name: 'now-client-tests-v2',
@@ -129,6 +130,7 @@ describe('create v2 deployment', () => {
       {
         token,
         path: path.resolve(__dirname, 'fixtures', 'nowignore'),
+        skipAutoDetectionConfirmation: true,
       },
       {
         name: 'now-client-tests-v2',
