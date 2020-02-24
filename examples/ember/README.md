@@ -1,4 +1,4 @@
-![Ember Logo](../../packages/frameworks/logos/ember.svg)
+![Ember Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/ember.svg)
 
 # Ember Example
 

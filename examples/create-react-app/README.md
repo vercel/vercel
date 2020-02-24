@@ -1,4 +1,4 @@
-![React Logo](../../packages/frameworks/logos/react.svg)
+![React Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/react.svg)
 
 # React Example
 

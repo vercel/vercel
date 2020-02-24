@@ -12,6 +12,7 @@ import {
   shouldServe,
   Files,
   debug,
+  Meta,
 } from '@now/build-utils';
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
@@ -22,15 +23,6 @@ interface Analyzed {
   packageName: string;
   functionName: string;
   watch: string[];
-}
-interface BuildParamsMeta {
-  isDev: boolean | undefined;
-}
-interface BuildParamsType extends BuildOptions {
-  files: Files;
-  entrypoint: string;
-  workPath: string;
-  meta: BuildParamsMeta;
 }
 
 // Initialize private git repo for Go Modules
@@ -45,6 +37,32 @@ async function initPrivateGit(credentials: string) {
   await writeFile(join(homedir(), '.git-credentials'), credentials);
 }
 
+/**
+ * Since `go build` does not support files that begin with a square bracket,
+ * we must rename to something temporary to support Path Segments.
+ * The output file is not renamed because v3 builders can't rename outputs
+ * which works great for this feature. We also need to add a suffix during `now dev`
+ * since the entrypoint is already stripped of its suffix before build() is called.
+ */
+async function getRenamedEntrypoint(
+  entrypoint: string,
+  files: Files,
+  meta: Meta
+) {
+  const filename = basename(entrypoint);
+  if (filename.startsWith('[')) {
+    const suffix = meta.isDev && !entrypoint.endsWith('.go') ? '.go' : '';
+    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[') + suffix;
+    const file = files[entrypoint];
+    delete files[entrypoint];
+    files[newEntrypoint] = file;
+    debug(`Renamed entrypoint from ${entrypoint} to ${newEntrypoint}`);
+    entrypoint = newEntrypoint;
+  }
+
+  return entrypoint;
+}
+
 export const version = 3;
 
 export async function build({
@@ -52,8 +70,8 @@ export async function build({
   entrypoint,
   config,
   workPath,
-  meta = {} as BuildParamsMeta,
-}: BuildParamsType) {
+  meta = {},
+}: BuildOptions) {
   if (process.env.GIT_CREDENTIALS && !meta.isDev) {
     debug('Initialize Git credentials...');
     await initPrivateGit(process.env.GIT_CREDENTIALS);
@@ -70,7 +88,7 @@ We highly recommend you leverage Go Modules in your project.
 Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
-
+  entrypoint = await getRenamedEntrypoint(entrypoint, files, meta);
   const entrypointArr = entrypoint.split(sep);
 
   // eslint-disable-next-line prefer-const
@@ -79,22 +97,19 @@ Learn more: https://github.com/golang/go/wiki/Modules
     getWriteableDirectory(),
   ]);
 
+  const forceMove = Boolean(meta.isDev);
   const srcPath = join(goPath, 'src', 'lambda');
-  let downloadedFiles;
-  if (meta.isDev) {
-    downloadedFiles = await download(files, workPath, meta);
-  } else {
-    downloadedFiles = await download(files, srcPath);
-  }
+  let downloadPath = meta.isDev ? workPath : srcPath;
+  let downloadedFiles = await download(files, downloadPath, meta);
 
   debug(`Parsing AST for "${entrypoint}"`);
   let analyzed: string;
   try {
     let goModAbsPathDir = '';
-    for (const file of Object.keys(downloadedFiles)) {
-      if (file === 'go.mod') {
-        goModAbsPathDir = dirname(downloadedFiles[file].fsPath);
-      }
+    const fileName = 'go.mod';
+    if (fileName in downloadedFiles) {
+      goModAbsPathDir = dirname(downloadedFiles[fileName].fsPath);
+      debug(`Found ${fileName} file in "${goModAbsPathDir}"`);
     }
     analyzed = await getAnalyzedEntrypoint(
       downloadedFiles[entrypoint].fsPath,
@@ -118,27 +133,18 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
 
   if (meta.isDev) {
-    let base = null;
-
-    if (config && config.zeroConfig) {
-      base = workPath;
-    } else {
-      base = dirname(downloadedFiles['now.json'].fsPath);
-    }
-
-    const destNow = join(
-      base,
+    // Create cache so Go rebuilds fast with `now dev`
+    goPath = join(
+      workPath,
       '.now',
       'cache',
-      basename(entrypoint, '.go'),
-      'src',
-      'lambda'
+      'now-go',
+      basename(entrypoint, '.go')
     );
-    // this will ensure Go rebuilt fast
-    goPath = join(base, '.now', 'cache', basename(entrypoint, '.go'));
+    const destNow = join(goPath, 'src', 'lambda');
     await download(downloadedFiles, destNow);
-
     downloadedFiles = await glob('**', destNow);
+    downloadPath = destNow;
   }
 
   // find `go.mod` in downloadedFiles
@@ -147,15 +153,38 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   let goModPath = '';
   let isGoModInRootDir = false;
   for (const file of Object.keys(downloadedFiles)) {
-    const fileDirname = dirname(downloadedFiles[file].fsPath);
+    const { fsPath } = downloadedFiles[file];
+    const fileDirname = dirname(fsPath);
     if (file === 'go.mod') {
       isGoModExist = true;
       isGoModInRootDir = true;
       goModPath = fileDirname;
-    } else if (file.endsWith('go.mod') && !file.endsWith('vendor')) {
+    } else if (file.endsWith('go.mod')) {
       if (entrypointDirname === fileDirname) {
         isGoModExist = true;
         goModPath = fileDirname;
+        debug(`Found file dirname equals entrypoint dirname: ${fileDirname}`);
+        break;
+      }
+
+      if (!isGoModInRootDir && config.zeroConfig && file === 'api/go.mod') {
+        // We didn't find `/go.mod` but we found `/api/go.mod` so move it to the root
+        isGoModExist = true;
+        isGoModInRootDir = true;
+        goModPath = join(fileDirname, '..');
+        const pathParts = fsPath.split(sep);
+        pathParts.pop(); // Remove go.mod
+        pathParts.pop(); // Remove api
+        pathParts.push('go.mod');
+        const newFsPath = pathParts.join(sep);
+        debug(`Moving api/go.mod to root: ${fsPath} to ${newFsPath}`);
+        await move(fsPath, newFsPath, { overwrite: forceMove });
+        const oldSumPath = join(dirname(fsPath), 'go.sum');
+        const newSumPath = join(dirname(newFsPath), 'go.sum');
+        if (await pathExists(oldSumPath)) {
+          debug(`Moving api/go.sum to root: ${oldSumPath} to ${newSumPath}`);
+          await move(oldSumPath, newSumPath, { overwrite: forceMove });
+        }
         break;
       }
     }
@@ -165,10 +194,13 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
   const includedFiles: Files = {};
 
   if (config && config.includeFiles) {
-    for (const pattern of config.includeFiles) {
-      const files = await glob(pattern, input);
-      for (const assetName of Object.keys(files)) {
-        includedFiles[assetName] = files[assetName];
+    const patterns = Array.isArray(config.includeFiles)
+      ? config.includeFiles
+      : [config.includeFiles];
+    for (const pattern of patterns) {
+      const fsFiles = await glob(pattern, input);
+      for (const [assetName, asset] of Object.entries(fsFiles)) {
+        includedFiles[assetName] = asset;
       }
     }
   }
@@ -221,7 +253,6 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     if (isGoModExist) {
       const goModContents = await readFile(join(goModPath, 'go.mod'), 'utf8');
       const usrModName = goModContents.split('\n')[0].split(' ')[1];
-
       if (entrypointArr.length > 1 && isGoModInRootDir) {
         const cleanPackagePath = [...entrypointArr];
         cleanPackagePath.pop();
@@ -235,18 +266,14 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       .replace('__NOW_HANDLER_PACKAGE_NAME', goPackageName)
       .replace('__NOW_HANDLER_FUNC_NAME', goFuncName);
 
-    if (meta.isDev && isGoModExist && isGoModInRootDir) {
-      await writeFile(
-        join(dirname(downloadedFiles['go.mod'].fsPath), mainModGoFileName),
-        mainModGoContents
-      );
-    } else if (isGoModExist && isGoModInRootDir) {
-      await writeFile(join(srcPath, mainModGoFileName), mainModGoContents);
+    if (isGoModExist && isGoModInRootDir) {
+      debug('[mod-root] Write main file to ' + downloadPath);
+      await writeFile(join(downloadPath, mainModGoFileName), mainModGoContents);
     } else if (isGoModExist && !isGoModInRootDir) {
-      // using `go.mod` path to write main__mod__.go
+      debug('[mod-other] Write main file to ' + goModPath);
       await writeFile(join(goModPath, mainModGoFileName), mainModGoContents);
     } else {
-      // using `entrypointDirname` to write main__mod__.go
+      debug('[entrypoint] Write main file to ' + entrypointDirname);
       await writeFile(
         join(entrypointDirname, mainModGoFileName),
         mainModGoContents
@@ -257,11 +284,6 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     try {
       // default path
       let finalDestination = join(entrypointDirname, packageName, entrypoint);
-      let forceMove = false;
-
-      if (meta.isDev) {
-        forceMove = true;
-      }
 
       // if `entrypoint` include folder, only use filename
       if (entrypointArr.length > 1) {
@@ -286,10 +308,8 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
     }
 
     let baseGoModPath = '';
-    if (meta.isDev && isGoModExist && isGoModInRootDir) {
-      baseGoModPath = dirname(downloadedFiles['go.mod'].fsPath);
-    } else if (isGoModExist && isGoModInRootDir) {
-      baseGoModPath = srcPath;
+    if (isGoModExist && isGoModInRootDir) {
+      baseGoModPath = downloadPath;
     } else if (isGoModExist && !isGoModInRootDir) {
       baseGoModPath = goModPath;
     } else {
@@ -302,12 +322,12 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
         await move(
           join(baseGoModPath, 'go.mod.bk'),
           join(baseGoModPath, 'go.mod'),
-          { overwrite: true }
+          { overwrite: forceMove }
         );
         await move(
           join(baseGoModPath, 'go.sum.bk'),
           join(baseGoModPath, 'go.sum'),
-          { overwrite: true }
+          { overwrite: forceMove }
         );
       }
     }
@@ -337,12 +357,12 @@ Learn more: https://zeit.co/docs/v2/advanced/builders/#go
       await move(
         join(baseGoModPath, 'go.mod'),
         join(baseGoModPath, 'go.mod.bk'),
-        { overwrite: true }
+        { overwrite: forceMove }
       );
       await move(
         join(baseGoModPath, 'go.sum'),
         join(baseGoModPath, 'go.sum.bk'),
-        { overwrite: true }
+        { overwrite: forceMove }
       );
     }
   } else {

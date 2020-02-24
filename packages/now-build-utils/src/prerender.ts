@@ -8,6 +8,7 @@ interface PrerenderOptions {
   lambda: Lambda;
   fallback: FileBlob | FileFsRef | FileRef | null;
   group?: number;
+  bypassToken?: string | null /* optional to be non-breaking change */;
 }
 
 export class Prerender {
@@ -16,8 +17,15 @@ export class Prerender {
   public lambda: Lambda;
   public fallback: FileBlob | FileFsRef | FileRef | null;
   public group?: number;
+  public bypassToken: string | null;
 
-  constructor({ expiration, lambda, fallback, group }: PrerenderOptions) {
+  constructor({
+    expiration,
+    lambda,
+    fallback,
+    group,
+    bypassToken,
+  }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.lambda = lambda;
@@ -31,6 +39,22 @@ export class Prerender {
       );
     }
     this.group = group;
+
+    if (bypassToken == null) {
+      this.bypassToken = null;
+    } else if (typeof bypassToken === 'string') {
+      if (bypassToken.length < 32) {
+        // Enforce 128 bits of entropy for safety reasons (UUIDv4 size)
+        throw new Error(
+          'The `bypassToken` argument for `Prerender` must be 32 characters or more.'
+        );
+      }
+      this.bypassToken = bypassToken;
+    } else {
+      throw new Error(
+        'The `bypassToken` argument for `Prerender` must be a `string`.'
+      );
+    }
 
     if (typeof fallback === 'undefined') {
       throw new Error(
