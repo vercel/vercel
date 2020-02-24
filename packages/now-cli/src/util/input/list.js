@@ -2,8 +2,6 @@ import inquirer from 'inquirer';
 import stripAnsi from 'strip-ansi';
 import eraseLines from '../output/erase-lines';
 
-import './patch-inquirer';
-
 function getLength(string) {
   let biggestLength = 0;
   string.split('\n').map(str => {
@@ -23,14 +21,16 @@ export default async function({
     {
       name: 'something\ndescription\ndetails\netc',
       value: 'something unique',
-      short: 'generally the first line of `name`'
-    }
+      short: 'generally the first line of `name`',
+    },
   ],
   pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
   separator = true, // Puts a blank separator between each choice
   abort = 'end', // Wether the `abort` option will be at the `start` or the `end`,
-  eraseFinalAnswer = false // If true, the line with the final answee that inquirer prints will be erased before returning
+  eraseFinalAnswer = false, // If true, the line with the final answee that inquirer prints will be erased before returning
 }) {
+  require('./patch-inquirer-legacy');
+
   let biggestLength = 0;
 
   choices = choices.map(choice => {
@@ -54,7 +54,7 @@ export default async function({
   const abortSeparator = new inquirer.Separator('─'.repeat(biggestLength));
   const _abort = {
     name: 'Abort',
-    value: undefined
+    value: undefined,
   };
 
   if (abort === 'start') {
@@ -73,7 +73,7 @@ export default async function({
     type: 'list',
     message,
     choices,
-    pageSize
+    pageSize,
   });
   if (eraseFinalAnswer === true) {
     process.stdout.write(eraseLines(2));

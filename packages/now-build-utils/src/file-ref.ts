@@ -8,6 +8,7 @@ import { File } from './types';
 interface FileRefOptions {
   mode?: number;
   digest: string;
+  contentType?: string;
   mutable?: boolean;
 }
 
@@ -26,14 +27,21 @@ export default class FileRef implements File {
   public type: 'FileRef';
   public mode: number;
   public digest: string;
+  public contentType: string | undefined;
   private mutable: boolean;
 
-  constructor({ mode = 0o100644, digest, mutable = false }: FileRefOptions) {
+  constructor({
+    mode = 0o100644,
+    digest,
+    contentType,
+    mutable = false,
+  }: FileRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof digest === 'string');
     this.type = 'FileRef';
     this.mode = mode;
     this.digest = digest;
+    this.contentType = contentType;
     this.mutable = mutable;
   }
 

@@ -784,6 +784,19 @@ export class CantFindConfig extends NowError<
   }
 }
 
+export class WorkingDirectoryDoesNotExist extends NowError<
+  'CWD_DOES_NOT_EXIST',
+  {}
+> {
+  constructor() {
+    super({
+      code: 'CWD_DOES_NOT_EXIST',
+      meta: {},
+      message: 'The current working directory does not exist.',
+    });
+  }
+}
+
 export class FileNotFound extends NowError<'FILE_NOT_FOUND', { file: string }> {
   constructor(file: string) {
     super({
@@ -1073,19 +1086,6 @@ export class NoBuilderCacheError extends NowError<'NO_BUILDER_CACHE', {}> {
   }
 }
 
-export class BuilderCacheCleanError extends NowError<
-  'BUILDER_CACHE_CLEAN_FAILED',
-  { path: string }
-> {
-  constructor(path: string, message: string) {
-    super({
-      code: 'BUILDER_CACHE_CLEAN_FAILED',
-      message: `Error cleaning builder cache: ${message}`,
-      meta: { path },
-    });
-  }
-}
-
 export class LambdaSizeExceededError extends NowError<
   'MAX_LAMBDA_SIZE_EXCEEDED',
   { size: number; maxLambdaSize: number }
@@ -1097,7 +1097,7 @@ export class LambdaSizeExceededError extends NowError<
         size
       ).toLowerCase()}) exceeds the maximum size limit (${bytes(
         maxLambdaSize
-      ).toLowerCase()}). Learn more: https://zeit.co/docs/v2/deployments/concepts/lambdas/#maximum-bundle-size`,
+      ).toLowerCase()}).`,
       meta: { size, maxLambdaSize },
     });
   }
@@ -1213,7 +1213,7 @@ export class BuildError extends NowError<'BUILD_ERROR', {}> {
     meta,
   }: {
     message: string;
-    meta: { entrypoint: string };
+    meta: { entrypoint?: string };
   }) {
     super({
       code: 'BUILD_ERROR',

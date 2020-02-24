@@ -1,9 +1,9 @@
 import test from 'ava';
-import devRouter from '../src/util/dev/router';
+import { devRouter } from '../src/util/dev/router';
 
 test('[dev-router] 301 redirection', async t => {
   const routesConfig = [
-    { src: '/redirect', status: 301, headers: { Location: 'https://zeit.co' } }
+    { src: '/redirect', status: 301, headers: { Location: 'https://zeit.co' } },
   ];
   const result = await devRouter('/redirect', 'GET', routesConfig);
 
@@ -11,11 +11,13 @@ test('[dev-router] 301 redirection', async t => {
     found: true,
     dest: '/redirect',
     status: 301,
-    headers: { Location: 'https://zeit.co' },
+    headers: { location: 'https://zeit.co' },
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
-    userDest: false
+    userDest: false,
+    isDestUrl: false,
+    phase: undefined,
   });
 });
 
@@ -31,7 +33,9 @@ test('[dev-router] captured groups', async t => {
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
-    userDest: true
+    userDest: true,
+    isDestUrl: false,
+    phase: undefined,
   });
 });
 
@@ -47,7 +51,9 @@ test('[dev-router] named groups', async t => {
     uri_args: { id: '123' },
     matched_route: routesConfig[0],
     matched_route_idx: 0,
-    userDest: true
+    userDest: true,
+    isDestUrl: false,
+    phase: undefined,
   });
 });
 
@@ -55,8 +61,8 @@ test('[dev-router] optional named groups', async t => {
   const routesConfig = [
     {
       src: '/api/hello(/(?<name>[^/]+))?',
-      dest: '/api/functions/hello/index.js?name=$name'
-    }
+      dest: '/api/functions/hello/index.js?name=$name',
+    },
   ];
   const result = await devRouter('/api/hello', 'GET', routesConfig);
 
@@ -68,7 +74,9 @@ test('[dev-router] optional named groups', async t => {
     uri_args: { name: '' },
     matched_route: routesConfig[0],
     matched_route_idx: 0,
-    userDest: true
+    userDest: true,
+    isDestUrl: false,
+    phase: undefined,
   });
 });
 
@@ -85,14 +93,16 @@ test('[dev-router] proxy_pass', async t => {
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
-    userDest: false
+    userDest: false,
+    isDestUrl: true,
+    phase: undefined,
   });
 });
 
 test('[dev-router] methods', async t => {
   const routesConfig = [
     { src: '/.*', methods: ['POST'], dest: '/post' },
-    { src: '/.*', methods: ['GET'], dest: '/get' }
+    { src: '/.*', methods: ['GET'], dest: '/get' },
   ];
 
   let result = await devRouter('/', 'GET', routesConfig);
@@ -104,7 +114,9 @@ test('[dev-router] methods', async t => {
     uri_args: {},
     matched_route: routesConfig[1],
     matched_route_idx: 1,
-    userDest: true
+    userDest: true,
+    isDestUrl: false,
+    phase: undefined,
   });
 
   result = await devRouter('/', 'POST', routesConfig);
@@ -116,7 +128,9 @@ test('[dev-router] methods', async t => {
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
-    userDest: true
+    userDest: true,
+    isDestUrl: false,
+    phase: undefined,
   });
 });
 
@@ -132,7 +146,9 @@ test('[dev-router] match without prefix slash', async t => {
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
-    userDest: true
+    userDest: true,
+    isDestUrl: false,
+    phase: undefined,
   });
 });
 
@@ -140,8 +156,8 @@ test('[dev-router] match with needed prefixed slash', async t => {
   const routesConfig = [
     {
       src: '^\\/([^\\/]+?)\\/comments(?:\\/)?$',
-      dest: '/some/dest'
-    }
+      dest: '/some/dest',
+    },
   ];
   const result = await devRouter('/post-1/comments', 'GET', routesConfig);
 
@@ -149,14 +165,16 @@ test('[dev-router] match with needed prefixed slash', async t => {
     found: true,
     dest: '/some/dest',
     userDest: true,
+    isDestUrl: false,
+    phase: undefined,
     status: undefined,
     headers: {},
     uri_args: {},
     matched_route: {
       src: '^\\/([^\\/]+?)\\/comments(?:\\/)?$',
-      dest: '/some/dest'
+      dest: '/some/dest',
     },
-    matched_route_idx: 0
+    matched_route_idx: 0,
   });
 });
 
@@ -166,9 +184,9 @@ test('[dev-router] `continue: true` with fallthrough', async t => {
       src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
       continue: true,
       headers: {
-        'cache-control': 'immutable,max-age=31536000'
-      }
-    }
+        'cache-control': 'immutable,max-age=31536000',
+      },
+    },
   ];
   const result = await devRouter(
     '/_next/static/chunks/0.js',
@@ -179,10 +197,13 @@ test('[dev-router] `continue: true` with fallthrough', async t => {
   t.deepEqual(result, {
     found: false,
     dest: '/_next/static/chunks/0.js',
+    isDestUrl: false,
+    phase: undefined,
+    status: undefined,
     uri_args: {},
     headers: {
-      'cache-control': 'immutable,max-age=31536000'
-    }
+      'cache-control': 'immutable,max-age=31536000',
+    },
   });
 });
 
@@ -192,13 +213,13 @@ test('[dev-router] `continue: true` with match', async t => {
       src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
       continue: true,
       headers: {
-        'cache-control': 'immutable,max-age=31536000'
-      }
+        'cache-control': 'immutable,max-age=31536000',
+      },
     },
     {
       src: '/(.*)',
-      dest: '/hi'
-    }
+      dest: '/hi',
+    },
   ];
   const result = await devRouter(
     '/_next/static/chunks/0.js',
@@ -211,15 +232,17 @@ test('[dev-router] `continue: true` with match', async t => {
     dest: '/hi',
     status: undefined,
     userDest: true,
+    isDestUrl: false,
+    phase: undefined,
     uri_args: {},
     headers: {
-      'cache-control': 'immutable,max-age=31536000'
+      'cache-control': 'immutable,max-age=31536000',
     },
     matched_route: {
       src: '/(.*)',
-      dest: '/hi'
+      dest: '/hi',
     },
-    matched_route_idx: 1
+    matched_route_idx: 1,
   });
 });
 
@@ -231,11 +254,13 @@ test('[dev-router] match with catch-all with prefix slash', async t => {
     found: true,
     dest: '/www/',
     userDest: true,
+    isDestUrl: false,
+    phase: undefined,
     status: undefined,
     headers: {},
     uri_args: {},
     matched_route: { src: '/(.*)', dest: '/www/$1' },
-    matched_route_idx: 0
+    matched_route_idx: 0,
   });
 });
 
@@ -247,18 +272,23 @@ test('[dev-router] match with catch-all with no prefix slash', async t => {
     found: true,
     dest: '/www/',
     userDest: true,
+    isDestUrl: false,
+    phase: undefined,
     status: undefined,
     headers: {},
     uri_args: {},
     matched_route: { src: '(.*)', dest: '/www$1' },
-    matched_route_idx: 0
+    matched_route_idx: 0,
   });
 });
 
 test('[dev-router] `continue: true` with `dest`', async t => {
   const routesConfig = [
     { src: '/(.*)', dest: '/www/$1', continue: true },
-    { src: '^/www/(a\\/([^\\/]+?)(?:\\/)?)$', dest: 'http://localhost:5000/$1' }
+    {
+      src: '^/www/(a\\/([^\\/]+?)(?:\\/)?)$',
+      dest: 'http://localhost:5000/$1',
+    },
   ];
   const result = await devRouter('/a/foo', 'GET', routesConfig);
 
@@ -270,6 +300,8 @@ test('[dev-router] `continue: true` with `dest`', async t => {
     uri_args: {},
     matched_route: routesConfig[1],
     matched_route_idx: 1,
-    userDest: false
+    userDest: false,
+    isDestUrl: true,
+    phase: undefined,
   });
 });

@@ -1,5 +1,6 @@
 import ms from 'ms';
 import bytes from 'bytes';
+import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
@@ -15,7 +16,6 @@ import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
-import getProjectName from '../../util/get-project-name';
 import {
   BuildsRateLimited,
   DeploymentNotFound,
@@ -38,9 +38,22 @@ import {
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
-import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
-import shouldDeployDir from '../../util/deploy/should-deploy-dir';
+import confirm from '../../util/input/confirm';
+import editProjectSettings from '../../util/input/edit-project-settings';
+import {
+  getLinkedProject,
+  linkFolderToProject,
+} from '../../util/projects/link';
+import getProjectName from '../../util/get-project-name';
+import selectOrg from '../../util/input/select-org';
+import inputProject from '../../util/input/input-project';
+import { prependEmoji, emoji } from '../../util/emoji';
+import { inputRootDirectory } from '../../util/input/input-root-directory';
+import validatePaths, {
+  validateRootDirectory,
+} from '../../util/validate-paths';
+import { readLocalConfig } from '../../util/config/files';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -70,88 +83,89 @@ const addProcessEnv = async (log, env) => {
   }
 };
 
-const deploymentErrorMsg = `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`;
-const prepareAlias = input =>
-  isWildcardAlias(input) ? input : `https://${input}`;
-
 const printDeploymentStatus = async (
   output,
-  { readyState, alias: aliasList, aliasError },
+  {
+    readyState,
+    alias: aliasList,
+    aliasError,
+    target,
+    indications,
+    url: deploymentUrl,
+  },
   deployStamp,
-  clipboardEnabled,
-  localConfig,
-  builds
+  isClipboardEnabled,
+  isFile
 ) => {
-  if (readyState === 'READY') {
-    if (aliasError && aliasError.message) {
-      output.warn(`Failed to assign aliases: ${aliasError.message}`);
-    }
+  const isProdDeployment = target === 'production';
 
-    if (Array.isArray(aliasList) && aliasList.length > 0) {
-      if (aliasList.length === 1) {
-        if (clipboardEnabled) {
-          const firstAlias = aliasList[0];
-          const preparedAlias = prepareAlias(firstAlias);
-          try {
-            await copy(`https://${firstAlias}`);
-            output.ready(
-              `Deployed to ${chalk.bold(
-                chalk.cyan(preparedAlias)
-              )} ${chalk.gray('[in clipboard]')} ${deployStamp()}`
-            );
-          } catch (err) {
-            output.debug(`Error copying to clipboard: ${err}`);
-            output.ready(
-              `Deployed to ${chalk.bold(
-                chalk.cyan(preparedAlias)
-              )} ${deployStamp()}`
-            );
-          }
-        }
-      } else {
-        output.ready(`Deployment complete ${deployStamp()}`);
-
-        // If `alias` is defined in the config, we need to
-        // copy the first one to the clipboard.
-        const matching = (localConfig.alias || [])[0];
-
-        for (const alias of aliasList) {
-          const index = aliasList.indexOf(alias);
-          const isLast = index === aliasList.length - 1;
-          const shouldCopy = matching ? alias === matching : isLast;
-
-          if (shouldCopy && clipboardEnabled) {
-            try {
-              await copy(`https://${alias}`);
-              output.print(
-                `- ${chalk.bold(chalk.cyan(prepareAlias(alias)))} ${chalk.gray(
-                  '[in clipboard]'
-                )}\n`
-              );
-
-              continue;
-            } catch (err) {
-              output.debug(`Error copying to clipboard: ${err}`);
-            }
-          }
-
-          output.print(`- ${chalk.bold(chalk.cyan(prepareAlias(alias)))}\n`);
-        }
-      }
-    } else {
-      output.ready(`Deployment complete ${deployStamp()}`);
-    }
-
-    return 0;
-  }
-
-  if (!builds) {
-    output.error(deploymentErrorMsg);
+  if (readyState !== 'READY') {
+    output.error(
+      `${chalk.red(
+        'Error!'
+      )} Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+    );
     return 1;
   }
 
-  output.error(deploymentErrorMsg);
-  return 1;
+  if (aliasError) {
+    output.warn(
+      `Failed to assign aliases${
+        aliasError.message ? `: ${aliasError.message}` : ''
+      }`
+    );
+  } else {
+    // print preview/production url
+    let previewUrl;
+    let isWildcard;
+    if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
+      // search for a non now.sh/non wildcard domain
+      // but fallback to the first alias in the list
+      const mainAlias =
+        aliasList.find(
+          alias => !alias.endsWith('.now.sh') && !isWildcardAlias(alias)
+        ) || aliasList[0];
+
+      isWildcard = isWildcardAlias(mainAlias);
+      previewUrl = isWildcard ? mainAlias : `https://${mainAlias}`;
+    } else {
+      // fallback to deployment url
+      isWildcard = false;
+      previewUrl = `https://${deploymentUrl}`;
+    }
+
+    // copy to clipboard
+    let isCopiedToClipboard = false;
+    if (isClipboardEnabled && !isWildcard) {
+      await copy(previewUrl)
+        .then(() => {
+          isCopiedToClipboard = true;
+        })
+        .catch(error => output.debug(`Error copying to clipboard: ${error}`));
+    }
+
+    output.print(
+      prependEmoji(
+        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+          previewUrl
+        )}${
+          isCopiedToClipboard ? chalk.gray(` [copied to clipboard]`) : ''
+        } ${deployStamp()}`,
+        emoji('success')
+      ) + `\n`
+    );
+  }
+
+  if (indications) {
+    for (let indication of indications) {
+      output.print(
+        prependEmoji(
+          `${chalk.dim(indication.payload)}`,
+          emoji(indication.type)
+        ) + `\n`
+      );
+    }
+  }
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
@@ -192,7 +206,6 @@ export default async function main(
   output,
   stats,
   localConfig,
-  isFile,
   args
 ) {
   let argv = null;
@@ -204,14 +217,9 @@ export default async function main(
     return 1;
   }
 
-  if (!(await shouldDeployDir(argv._[0], output))) {
-    return 0;
-  }
-
   const {
     apiUrl,
     authConfig: { token },
-    config: { currentTeam },
   } = ctx;
   const { log, debug, error, warn } = output;
   const paths = Object.keys(stats);
@@ -221,34 +229,161 @@ export default async function main(
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
 
-  const list = paths
-    .map((path, index) => {
-      let suffix = '';
+  // check paths
+  const pathValidation = await validatePaths(output, paths);
 
-      if (paths.length > 1 && index !== paths.length - 1) {
-        suffix = index < paths.length - 2 ? ', ' : ' and ';
-      }
+  if (!pathValidation.valid) {
+    return pathValidation.exitCode;
+  }
 
-      return chalk.bold(toHumanPath(path)) + suffix;
-    })
-    .join('');
+  const { isFile, path } = pathValidation;
+  const autoConfirm = argv['--confirm'] || isFile;
 
-  log(`Deploying ${list} under ${chalk.bold(contextName)}`);
-
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(argv['--meta'])
-  );
-
-  let deployStamp = stamp();
-  let deployment = null;
-
+  // --no-scale
   if (argv['--no-scale']) {
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
   }
 
+  // deprecate --name
+  if (argv['--name']) {
+    output.print(
+      `${prependEmoji(
+        `The ${param('--name')} flag is deprecated (https://zeit.ink/1B)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
+  const client = new Client({
+    apiUrl: ctx.apiUrl,
+    token: ctx.authConfig.token,
+    debug: debugEnabled,
+  });
+
+  // retrieve `project` and `org` from .now
+  const link = await getLinkedProject(output, client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
+  let newProjectName = null;
+  let rootDirectory = project ? project.rootDirectory : null;
+
+  if (status === 'not_linked') {
+    const shouldStartSetup =
+      autoConfirm ||
+      (await confirm(
+        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        true
+      ));
+
+    if (!shouldStartSetup) {
+      output.print(`Aborted. Project not set up.\n`);
+      return 0;
+    }
+
+    org = await selectOrg(
+      output,
+      'Which scope do you want to deploy to?',
+      client,
+      ctx.config.currentTeam,
+      autoConfirm
+    );
+
+    // We use `localConfig` here to read the name
+    // even though the `now.json` file can change
+    // afterwards, this is fine since the property
+    // will be deprecated and can be replaced with
+    // user input.
+    const detectedProjectName = getProjectName({
+      argv,
+      nowConfig: localConfig || {},
+      isFile,
+      paths,
+    });
+
+    const projectOrNewProjectName = await inputProject(
+      output,
+      client,
+      org,
+      detectedProjectName,
+      autoConfirm
+    );
+
+    if (typeof projectOrNewProjectName === 'string') {
+      newProjectName = projectOrNewProjectName;
+      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+    } else {
+      project = projectOrNewProjectName;
+      rootDirectory = project.rootDirectory;
+
+      // we can already link the project
+      await linkFolderToProject(
+        output,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug
+      );
+      status = 'linked';
+    }
+  }
+
+  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+
+  if (
+    rootDirectory &&
+    (await validateRootDirectory(
+      output,
+      path,
+      sourcePath,
+      project
+        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        : ''
+    )) === false
+  ) {
+    return 1;
+  }
+
+  // If Root Directory is used we'll try to read the config
+  // from there instead and use it if it exists.
+  if (rootDirectory) {
+    const rootDirectoryConfig = readLocalConfig(sourcePath);
+
+    if (rootDirectoryConfig) {
+      debug(`Read local config from root directory (${rootDirectory})`);
+      localConfig = rootDirectoryConfig;
+    } else if (localConfig) {
+      output.print(
+        `${prependEmoji(
+          `The ${highlight(
+            'now.json'
+          )} file should be inside of the provided root directory.`,
+          emoji('warning')
+        )}\n`
+      );
+    }
+  }
+
+  localConfig = localConfig || {};
+
+  if (localConfig.name) {
+    output.print(
+      `${prependEmoji(
+        `The ${code('name')} property in ${highlight(
+          'now.json'
+        )} is deprecated (https://zeit.ink/5F)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
+  // build `env`
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
 
@@ -287,6 +422,13 @@ export default async function main(
     }
   }
 
+  // build `meta`
+  const meta = Object.assign(
+    {},
+    parseMeta(localConfig.meta),
+    parseMeta(argv['--meta'])
+  );
+
   // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
@@ -294,15 +436,11 @@ export default async function main(
     parseEnv(argv['--env'])
   );
 
-  // Enable debug mode for builders
-  const buildDebugEnv = debugEnabled ? { NOW_BUILDER_DEBUG: '1' } : {};
-
   // Merge build env out of  `build.env` from now.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
-    parseEnv(argv['--build-env']),
-    buildDebugEnv
+    parseEnv(argv['--build-env'])
   );
 
   // If there's any undefined values, then inherit them from this process
@@ -314,24 +452,48 @@ export default async function main(
     return 1;
   }
 
+  // build `regions`
   const regionFlag = (argv['--regions'] || '')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
-  try {
-    // $FlowFixMe
-    const project = getProjectName({
-      argv,
-      nowConfig: localConfig,
-      isFile,
-      paths,
-    });
-    log(`Using project ${chalk.bold(project)}`);
+  // build `target`
+  let target;
+  if (argv['--target']) {
+    const deprecatedTarget = argv['--target'];
 
+    if (!['staging', 'production'].includes(deprecatedTarget)) {
+      error(
+        `The specified ${param('--target')} ${code(
+          deprecatedTarget
+        )} is not valid`
+      );
+      return 1;
+    }
+
+    if (deprecatedTarget === 'production') {
+      warn(
+        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
+      );
+    }
+
+    output.debug(`Setting target to ${deprecatedTarget}`);
+    target = deprecatedTarget;
+  } else if (argv['--prod']) {
+    output.debug('Setting target to production');
+    target = 'production';
+  }
+
+  const currentTeam = org.type === 'team' ? org.id : undefined;
+  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  let deployStamp = stamp();
+  let deployment = null;
+
+  try {
     const createArgs = {
-      name: project,
+      name: project ? project.name : newProjectName,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -343,57 +505,73 @@ export default async function main(
       regions,
       meta,
       deployStamp,
+      target,
+      skipAutoDetectionConfirmation: autoConfirm,
     };
-
-    if (argv['--target']) {
-      const deprecatedTarget = argv['--target'];
-
-      if (!['staging', 'production'].includes(deprecatedTarget)) {
-        error(
-          `The specified ${param('--target')} ${code(
-            deprecatedTarget
-          )} is not valid`
-        );
-        return 1;
-      }
-
-      if (deprecatedTarget === 'production') {
-        warn(
-          'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
-        );
-      }
-
-      output.debug(`Setting target to ${deprecatedTarget}`);
-      createArgs.target = deprecatedTarget;
-    } else if (argv['--prod']) {
-      output.debug('Setting target to production');
-      createArgs.target = 'production';
-    }
-
-    deployStamp = stamp();
 
     deployment = await createDeploy(
       output,
       now,
       contextName,
-      paths,
+      [sourcePath],
       createArgs,
-      ctx
+      org,
+      !project && !isFile,
+      path
     );
+
+    if (
+      deployment instanceof Error &&
+      deployment.code === 'missing_project_settings'
+    ) {
+      let { projectSettings, framework } = deployment;
+
+      if (rootDirectory) {
+        projectSettings.rootDirectory = rootDirectory;
+      }
+
+      const settings = await editProjectSettings(
+        output,
+        projectSettings,
+        framework
+      );
+
+      // deploy again, but send projectSettings this time
+      createArgs.projectSettings = settings;
+
+      deployStamp = stamp();
+      createArgs.deployStamp = deployStamp;
+      deployment = await createDeploy(
+        output,
+        now,
+        contextName,
+        [sourcePath],
+        createArgs,
+        org,
+        false,
+        path
+      );
+    }
 
     if (deployment instanceof NotDomainOwner) {
       output.error(deployment);
       return 1;
     }
 
-    const deploymentResponse = handleCertError(
-      output,
-      await getDeploymentByIdOrHost(now, contextName, deployment.id, 'v9')
-    );
-
-    if (deploymentResponse === 1) {
-      return deploymentResponse;
+    if (deployment instanceof Error) {
+      output.error(
+        `${deployment.message ||
+          'An unexpected error occurred while deploying your project'} (http://zeit.ink/P4)`
+      );
+      return 1;
     }
+
+    const deploymentResponse = await getDeploymentByIdOrHost(
+      now,
+      contextName,
+      deployment.id,
+      'v10'
+    );
 
     if (
       deploymentResponse instanceof DeploymentNotFound ||
@@ -401,10 +579,6 @@ export default async function main(
       deploymentResponse instanceof InvalidDeploymentId
     ) {
       output.error(deploymentResponse.message);
-      return 1;
-    }
-
-    if (handleCertError(output, deployment) === 1) {
       return 1;
     }
 
@@ -430,7 +604,7 @@ export default async function main(
         new Client({
           apiUrl: ctx.apiUrl,
           token: ctx.authConfig.token,
-          currentTeam: ctx.config.currentTeam,
+          currentTeam: org.id,
           debug: debugEnabled,
         }),
         err.meta.domain,
@@ -507,7 +681,7 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    localConfig
+    isFile
   );
 }
 
@@ -552,6 +726,11 @@ function handleCreateDeployError(output, error) {
         );
       }
 
+      return 1;
+    }
+
+    if (dataPath === '.name') {
+      output.error(message);
       return 1;
     }
 

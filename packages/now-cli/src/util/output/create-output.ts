@@ -1,6 +1,8 @@
 import chalk from 'chalk';
+import boxen from 'boxen';
 import { format } from 'util';
 import { Console } from 'console';
+import wait from './wait';
 
 export type Output = ReturnType<typeof createOutput>;
 
@@ -18,10 +20,32 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function warn(str: string, slug: string | null = null) {
-    log(chalk`{yellow.bold WARN!} ${str}`);
-    if (slug !== null) {
-      log(`More details: https://err.sh/now/${slug}`);
+    const prevTerm = process.env.TERM;
+
+    if (!prevTerm) {
+      // workaround for https://github.com/sindresorhus/term-size/issues/13
+      process.env.TERM = 'xterm';
     }
+
+    print(
+      boxen(
+        chalk.bold.yellow('WARN! ') +
+          str +
+          (slug ? `\nMore details: https://err.sh/now/${slug}` : ''),
+        {
+          padding: {
+            top: 0,
+            bottom: 0,
+            left: 1,
+            right: 1,
+          },
+          borderColor: 'yellow',
+        }
+      )
+    );
+    print('\n');
+
+    process.env.TERM = prevTerm;
   }
 
   function note(str: string) {
@@ -29,9 +53,9 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function error(str: string, slug: string | null = null) {
-    log(chalk`{red.bold Error!} ${str}`, chalk.red);
+    print(`${chalk.red(`Error!`)} ${str}\n`);
     if (slug !== null) {
-      log(`More details: https://err.sh/now/${slug}`);
+      print(`More details: https://err.sh/now/${slug}\n`);
     }
   }
 
@@ -53,13 +77,27 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
+  function spinner(message: string, delay: number = 300) {
+    if (debugEnabled) {
+      debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
+      let isEnded = false;
+      return () => {
+        if (isEnded) return;
+        isEnded = true;
+        debug(`Spinner ended (${message})`);
+      };
+    }
+
+    return wait(message, delay);
+  }
+
   // This is pretty hacky, but since we control the version of Node.js
   // being used because of `pkg` it's safe to do in this case.
   const c = {
     _times: new Map(),
     log(a: string, ...args: string[]) {
       debug(format(a, ...args));
-    }
+    },
   };
 
   async function time(label: string, fn: Promise<any> | (() => Promise<any>)) {
@@ -85,6 +123,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     debug,
     dim,
     time,
-    note
+    note,
+    spinner,
   };
 }

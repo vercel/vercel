@@ -6,7 +6,6 @@ import table from 'text-table';
 import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
 import createOutput from '../util/output';
-import wait from '../util/output/wait';
 import logo from '../util/output/logo';
 import cmd from '../util/output/cmd.ts';
 import elapsed from '../util/output/elapsed.ts';
@@ -72,8 +71,8 @@ export default async function main(ctx) {
       help: 'h',
       debug: 'd',
       yes: 'y',
-      safe: 's'
-    }
+      safe: 's',
+    },
   });
 
   argv._ = argv._.slice(1);
@@ -86,34 +85,36 @@ export default async function main(ctx) {
   const output = createOutput({ debug: debugEnabled });
   const { success, error, log } = output;
 
+  if (argv.help || ids[0] === 'help') {
+    help();
+    return 2;
+  }
+
   if (ids.length < 1) {
     error(`${cmd('now rm')} expects at least one argument`);
     help();
     return 1;
   }
 
-  if (argv.help || ids[0] === 'help') {
-    help();
-    return 2;
-  }
-
   const invalidName = ids.find(name => !isValidName(name));
 
   if (invalidName) {
-    error(`The provided argument "${invalidName}" is not a valid deployment or project`);
+    error(
+      `The provided argument "${invalidName}" is not a valid deployment or project`
+    );
     return 1;
   }
 
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
 
@@ -130,7 +131,7 @@ export default async function main(ctx) {
     throw err;
   }
 
-  const cancelWait = wait(
+  const cancelWait = output.spinner(
     `Fetching deployment(s) ${ids
       .map(id => `"${id}"`)
       .join(' ')} in ${chalk.bold(contextName)}`
@@ -158,7 +159,7 @@ export default async function main(ctx) {
       ),
       Promise.all(
         ids.map(async idOrName => getProjectByIdOrName(client, idOrName))
-      )
+      ),
     ]);
 
     deployments = deploymentList.filter(searchFilter);
@@ -171,7 +172,7 @@ export default async function main(ctx) {
         projects.map(project => {
           return getDeploymentsByProjectId(client, project.id, {
             max: 201,
-            continue: true
+            continue: true,
           });
         })
       );
@@ -247,7 +248,7 @@ export default async function main(ctx) {
 
   await Promise.all([
     ...deployments.map(depl => now.remove(depl.uid, { hard })),
-    ...projects.map(project => removeProject(client, project.id))
+    ...projects.map(project => removeProject(client, project.id)),
   ]);
 
   success(

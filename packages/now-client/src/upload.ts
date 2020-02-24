@@ -4,8 +4,9 @@ import retry from 'async-retry';
 import { Sema } from 'async-sema';
 import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
-import { DeploymentError } from '.';
-import deploy, { Options } from './deploy';
+import { DeploymentError } from './errors';
+import { deploy } from './deploy';
+import { NowConfig, NowClientOptions, DeploymentOptions } from './types';
 
 const isClientNetworkError = (err: Error | DeploymentError) => {
   if (err.message) {
@@ -24,12 +25,14 @@ const isClientNetworkError = (err: Error | DeploymentError) => {
   return false;
 };
 
-export default async function* upload(
+export async function* upload(
   files: Map<string, DeploymentFile>,
-  options: Options,
+  nowConfig: NowConfig,
+  clientOptions: NowClientOptions,
+  deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<any> {
-  const { token, teamId, debug: isDebug } = options;
-  const debug = createDebug(isDebug);
+  const { token, teamId, apiUrl, userAgent } = clientOptions;
+  const debug = createDebug(clientOptions.debug);
 
   if (!files && !token && !teamId) {
     debug(`Neither 'files', 'token' nor 'teamId are present. Exiting`);
@@ -40,7 +43,12 @@ export default async function* upload(
 
   debug('Determining necessary files for upload...');
 
-  for await (const event of deploy(files, options)) {
+  for await (const event of deploy(
+    files,
+    nowConfig,
+    clientOptions,
+    deploymentOptions
+  )) {
     if (event.type === 'error') {
       if (event.payload.code === 'missing_files') {
         missingFiles = event.payload.missing;
@@ -51,7 +59,7 @@ export default async function* upload(
       }
     } else {
       // If the deployment has succeeded here, don't continue
-      if (event.type === 'ready') {
+      if (event.type === 'alias-assigned') {
         debug('Deployment succeeded on file check');
 
         return yield event;
@@ -63,7 +71,7 @@ export default async function* upload(
 
   const shas = missingFiles;
 
-  yield { type: 'file_count', payload: { total: files, missing: shas } };
+  yield { type: 'file-count', payload: { total: files, missing: shas } };
 
   const uploadList: { [key: string]: Promise<any> } = {};
   debug('Building an upload list...');
@@ -98,13 +106,17 @@ export default async function* upload(
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
+                'Content-Length': data.length,
                 'x-now-digest': sha,
-                'x-now-length': data.length,
+                'x-now-size': data.length,
               },
               body: stream,
               teamId,
+              apiUrl,
+              userAgent,
             },
-            isDebug
+            clientOptions.debug,
+            true
           );
 
           if (res.status === 200) {
@@ -157,8 +169,9 @@ export default async function* upload(
         return result;
       },
       {
-        retries: 3,
-        factor: 2,
+        retries: 5,
+        factor: 6,
+        minTimeout: 10,
       }
     );
   });
@@ -183,8 +196,13 @@ export default async function* upload(
 
   try {
     debug('Starting deployment creation');
-    for await (const event of deploy(files, options)) {
-      if (event.type === 'ready') {
+    for await (const event of deploy(
+      files,
+      nowConfig,
+      clientOptions,
+      deploymentOptions
+    )) {
+      if (event.type === 'alias-assigned') {
         debug('Deployment is ready');
         return yield event;
       }

@@ -9,10 +9,13 @@ export default async function createDeploy(
   now,
   contextName,
   paths,
-  createArgs
+  createArgs,
+  org,
+  isSettingUpProject,
+  cwd
 ) {
   try {
-    return await now.create(paths, createArgs);
+    return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
   } catch (error) {
     if (error.code === 'rate_limited') {
       throw new ERRORS_TS.DeploymentsRateLimited(error.message);
@@ -88,7 +91,15 @@ export default async function createDeploy(
       if (result instanceof NowError) {
         return result;
       }
-      return createDeploy(output, now, contextName, paths, createArgs);
+      return createDeploy(
+        output,
+        now,
+        contextName,
+        paths,
+        createArgs,
+        org,
+        isSettingUpProject
+      );
     }
 
     if (error.code === 'not_found') {

@@ -8,44 +8,13 @@ import {
   getWriteableDirectory,
   download,
   glob,
+  GlobOptions,
   createLambda,
   shouldServe,
   BuildOptions,
   debug,
 } from '@now/build-utils';
-
-async function pipInstall(pipPath: string, workDir: string, ...args: string[]) {
-  const target = '.';
-  debug(
-    `Running "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
-      ' '
-    )}"...`
-  );
-  try {
-    await execa(
-      pipPath,
-      [
-        'install',
-        '--disable-pip-version-check',
-        '--target',
-        target,
-        '--upgrade',
-        ...args,
-      ],
-      {
-        cwd: workDir,
-        stdio: 'pipe',
-      }
-    );
-  } catch (err) {
-    console.log(
-      `Failed to run "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
-        ' '
-      )}"...`
-    );
-    throw err;
-  }
-}
+import { installRequirement, installRequirementsFile } from './install';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
@@ -60,6 +29,30 @@ async function pipenvConvert(cmd: string, srcDir: string) {
   }
 }
 
+export const version = 3;
+
+export async function downloadFilesInWorkPath({
+  entrypoint,
+  workPath,
+  files,
+  meta = {},
+}: BuildOptions) {
+  debug('Downloading user files...');
+  let downloadedFiles = await download(files, workPath, meta);
+  if (meta.isDev) {
+    const destNow = join(
+      workPath,
+      '.now',
+      'cache',
+      basename(entrypoint, '.py')
+    );
+    await download(downloadedFiles, destNow);
+    downloadedFiles = await glob('**', destNow);
+    workPath = destNow;
+  }
+  return workPath;
+}
+
 export const build = async ({
   workPath,
   files: originalFiles,
@@ -67,25 +60,13 @@ export const build = async ({
   meta = {},
   config,
 }: BuildOptions) => {
-  debug('Downloading user files...');
-  let downloadedFiles = await download(originalFiles, workPath, meta);
-
-  if (meta.isDev) {
-    let base = null;
-
-    if (config && config.zeroConfig) {
-      base = workPath;
-    } else {
-      base = dirname(downloadedFiles['now.json'].fsPath);
-    }
-
-    const destNow = join(base, '.now', 'cache', basename(entrypoint, '.py'));
-    await download(downloadedFiles, destNow);
-    downloadedFiles = await glob('**', destNow);
-    workPath = destNow;
-  }
-
-  const pipPath = 'pip3';
+  workPath = await downloadFilesInWorkPath({
+    workPath,
+    files: originalFiles,
+    entrypoint,
+    meta,
+    config,
+  });
 
   try {
     // See: https://stackoverflow.com/a/44728772/376773
@@ -104,8 +85,13 @@ export const build = async ({
     throw err;
   }
 
-  console.log('Installing dependencies...');
-  await pipInstall(pipPath, workPath, 'werkzeug');
+  console.log('Installing required dependencies...');
+
+  await installRequirement({
+    dependency: 'werkzeug',
+    workPath,
+    meta,
+  });
 
   let fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
@@ -124,12 +110,12 @@ export const build = async ({
     // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
     // it into a separate folder.
     const tempDir = await getWriteableDirectory();
-    await pipInstall(
-      pipPath,
-      tempDir,
-      'pipfile-requirements',
-      '--no-warn-script-location'
-    );
+    await installRequirement({
+      dependency: 'pipfile-requirements',
+      workPath: tempDir,
+      meta,
+      args: ['--no-warn-script-location'],
+    });
 
     // Python needs to know where to look up all the packages we just installed.
     // We tell it to use the same location as used with `--target`
@@ -144,26 +130,32 @@ export const build = async ({
   if (fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
-    await pipInstall(pipPath, workPath, '-r', requirementsTxtPath);
+    await installRequirementsFile({
+      filePath: requirementsTxtPath,
+      workPath,
+      meta,
+    });
   } else if (fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
-    await pipInstall(pipPath, workPath, '-r', requirementsTxtPath);
+    await installRequirementsFile({
+      filePath: requirementsTxtPath,
+      workPath,
+      meta,
+    });
   }
 
   const originalPyPath = join(__dirname, '..', 'now_init.py');
   const originalNowHandlerPyContents = await readFile(originalPyPath, 'utf8');
-
-  // will be used on `from $here import handler`
-  // for example, `from api.users import handler`
   debug('Entrypoint is', entrypoint);
-  const userHandlerFilePath = entrypoint
-    .replace(/\//g, '.')
-    .replace(/\.py$/, '');
-  const nowHandlerPyContents = originalNowHandlerPyContents.replace(
-    /__NOW_HANDLER_FILENAME/g,
-    userHandlerFilePath
-  );
+  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  // Since `now dev` renames source files, we must reference the original
+  const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
+  const entrypointWithSuffix = `${entrypoint}${suffix}`;
+  debug('Entrypoint with suffix is', entrypointWithSuffix);
+  const nowHandlerPyContents = originalNowHandlerPyContents
+    .replace(/__NOW_HANDLER_MODULE_NAME/g, moduleName)
+    .replace(/__NOW_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
 
   // in order to allow the user to have `server.py`, we need our `server.py` to be called
   // somethig else
@@ -177,16 +169,25 @@ export const build = async ({
   // Use the system-installed version of `python3` when running via `now dev`
   const runtime = meta.isDev ? 'python3' : 'python3.6';
 
+  const globOptions: GlobOptions = {
+    cwd: workPath,
+    ignore:
+      config && typeof config.excludeFiles === 'string'
+        ? config.excludeFiles
+        : 'node_modules/**',
+  };
+
   const lambda = await createLambda({
-    files: await glob('**', workPath),
+    files: await glob('**', globOptions),
     handler: `${nowHandlerPyFilename}.now_handler`,
     runtime,
     environment: {},
   });
 
-  return {
-    [entrypoint]: lambda,
-  };
+  return { output: lambda };
 };
 
 export { shouldServe };
+
+// internal only - expect breaking changes if other packages depend on these exports
+export { installRequirement, installRequirementsFile };

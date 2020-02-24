@@ -7,12 +7,18 @@ import {
   FileFsRef,
   Lambda,
   PackageJson,
+  Config,
 } from '@now/build-utils';
+import { NowConfig } from 'now-client';
+import { HandleValue, Route } from '@now/routing-utils';
 import { Output } from '../output';
+
+export { NowConfig };
 
 export interface DevServerOptions {
   output: Output;
   debug: boolean;
+  devCommand?: string;
 }
 
 export interface EnvConfig {
@@ -20,6 +26,7 @@ export interface EnvConfig {
 }
 
 export interface BuildMatch extends BuildConfig {
+  entrypoint: string;
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
@@ -27,27 +34,7 @@ export interface BuildMatch extends BuildConfig {
   buildProcess?: ChildProcess;
 }
 
-export interface RouteConfig {
-  src: string;
-  dest: string;
-  methods?: string[];
-  headers?: HttpHeadersConfig;
-  status?: number;
-  handle?: string;
-  continue?: boolean;
-}
-
-export interface NowConfig {
-  name?: string;
-  version?: number;
-  env?: EnvConfig;
-  build?: {
-    env?: EnvConfig;
-  };
-  builds?: BuildConfig[];
-  routes?: RouteConfig[];
-  files?: string[];
-}
+export type RouteConfig = Route;
 
 export interface HttpHandler {
   (req: http.IncomingMessage, res: http.ServerResponse): void;
@@ -76,7 +63,7 @@ export interface CacheOutputs {
 export interface BuilderParamsBase {
   files: BuilderInputs;
   entrypoint: string;
-  config: object;
+  config: Config;
   meta?: {
     isDev?: boolean;
     requestPath?: string | null;
@@ -100,7 +87,7 @@ export interface BuilderConfigAttr {
 }
 
 export interface Builder {
-  version?: 2;
+  version?: 1 | 2 | 3 | 4;
   config?: BuilderConfigAttr;
   build(
     params: BuilderParams
@@ -122,10 +109,24 @@ export interface BuildResult {
   distPath?: string;
 }
 
+export interface BuildResultV3 {
+  output: Lambda;
+  routes: RouteConfig[];
+  watch: string[];
+  distPath?: string;
+}
+
+export interface BuildResultV4 {
+  output: { [filePath: string]: Lambda };
+  routes: RouteConfig[];
+  watch: string[];
+  distPath?: string;
+}
+
 export interface ShouldServeParams {
   files: BuilderInputs;
   entrypoint: string;
-  config?: object;
+  config?: Config;
   requestPath: string;
   workPath: string;
 }
@@ -157,6 +158,10 @@ export interface RouteResult {
   matched_route_idx?: number;
   // "userDest": <boolean in case the destination was user defined>
   userDest?: boolean;
+  // url as destination should end routing
+  isDestUrl: boolean;
+  // the phase that this route is defined in
+  phase?: HandleValue | null;
 }
 
 export interface InvokePayload {

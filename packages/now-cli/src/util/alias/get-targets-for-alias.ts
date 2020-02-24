@@ -1,16 +1,22 @@
-import { NowError } from '../now-error';
-import { Output } from '../output';
-import getInferredTargets from './get-inferred-targets';
 import toHost from '../to-host';
 import { Config } from '../../types';
+import * as ERRORS from '../errors-ts';
 
-export default async function getTargetsForAlias(
-  output: Output,
-  args: string[],
-  localConfig: Config
-) {
-  const targets = await getTargets(output, args, localConfig);
-  return targets instanceof NowError ? targets : targetsToHosts(targets);
+export function getTargetsForAlias(args: string[], { alias }: Config) {
+  if (args.length) {
+    return targetsToHosts([args[args.length - 1]]);
+  }
+
+  if (!alias) {
+    return new ERRORS.NoAliasInConfig();
+  }
+
+  // Check the type for the option aliases
+  if (typeof alias !== 'string' && !Array.isArray(alias)) {
+    return new ERRORS.InvalidAliasInConfig(alias);
+  }
+
+  return typeof alias === 'string' ? [alias] : alias;
 }
 
 function targetsToHosts(targets: string[]) {
@@ -19,14 +25,4 @@ function targetsToHosts(targets: string[]) {
 
 function targetToHost(target: string) {
   return target.indexOf('.') !== -1 ? toHost(target) : target;
-}
-
-async function getTargets(
-  output: Output,
-  args: string[],
-  localConfig: Config
-) {
-  return args.length === 0
-    ? getInferredTargets(output, localConfig)
-    : [args[args.length - 1]];
 }

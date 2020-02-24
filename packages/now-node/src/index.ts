@@ -1,4 +1,12 @@
-import { basename, dirname, join, relative, resolve, sep } from 'path';
+import {
+  basename,
+  dirname,
+  join,
+  relative,
+  resolve,
+  sep,
+  parse as parsePath,
+} from 'path';
 import nodeFileTrace from '@zeit/node-file-trace';
 import {
   glob,
@@ -18,7 +26,9 @@ import {
   shouldServe,
   Config,
   debug,
+  isSymbolicLink,
 } from '@now/build-utils';
+export { shouldServe };
 export { NowRequest, NowResponse } from './types';
 import { makeNowLauncher, makeAwsLauncher } from './launcher';
 import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
@@ -46,13 +56,6 @@ const BRIDGE_FILENAME = '___now_bridge';
 const HELPERS_FILENAME = '___now_helpers';
 const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support';
 
-const S_IFMT = 61440; /* 0170000 type of file */
-const S_IFLNK = 40960; /* 0120000 symbolic link */
-
-function isSymbolicLink(mode: number): boolean {
-  return (mode & S_IFMT) === S_IFLNK;
-}
-
 async function downloadInstallAndBundle({
   files,
   entrypoint,
@@ -60,10 +63,7 @@ async function downloadInstallAndBundle({
   config,
   meta,
 }: DownloadOptions) {
-  debug('Downloading user files...');
-  const downloadTime = Date.now();
   const downloadedFiles = await download(files, workPath, meta);
-  debug(`download complete [${Date.now() - downloadTime}ms]`);
 
   console.log('Installing dependencies...');
   const installTime = Date.now();
@@ -71,7 +71,8 @@ async function downloadInstallAndBundle({
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
     undefined,
-    config
+    config,
+    meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   await runNpmInstall(
@@ -281,7 +282,22 @@ async function compile(
   };
 }
 
-export const version = 2;
+function getAWSLambdaHandler(entrypoint: string, config: Config) {
+  if (config.awsLambdaHandler) {
+    return config.awsLambdaHandler as string;
+  }
+
+  if (process.env.NODEJS_AWS_HANDLER_NAME) {
+    const { dir, name } = parsePath(entrypoint);
+    return `${dir}${dir ? sep : ''}${name}.${
+      process.env.NODEJS_AWS_HANDLER_NAME
+    }`;
+  }
+
+  return '';
+}
+
+export const version = 3;
 
 export async function build({
   files,
@@ -290,8 +306,10 @@ export async function build({
   config = {},
   meta = {},
 }: BuildOptions) {
-  const shouldAddHelpers = config.helpers !== false;
-  const awsLambdaHandler = config.awsLambdaHandler as string;
+  const shouldAddHelpers = !(
+    config.helpers === false || process.env.NODEJS_HELPERS === '0'
+  );
+  const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const {
     entrypointPath,
@@ -352,29 +370,21 @@ export async function build({
     });
   }
 
-  // Use the system-installed version of `node` when running via `now dev`
-  const runtime = meta.isDev ? 'nodejs' : nodeVersion.runtime;
-
   const lambda = await createLambda({
     files: {
       ...preparedFiles,
       ...launcherFiles,
     },
     handler: `${LAUNCHER_FILENAME}.launcher`,
-    runtime,
+    runtime: nodeVersion.runtime,
   });
 
-  const output = { [entrypoint]: lambda };
-  const result = { output, watch };
-  return result;
+  return { output: lambda, watch };
 }
 
-export async function prepareCache({ workPath }: PrepareCacheOptions) {
-  return {
-    ...(await glob('node_modules/**', workPath)),
-    ...(await glob('package-lock.json', workPath)),
-    ...(await glob('yarn.lock', workPath)),
-  };
+export async function prepareCache({
+  workPath,
+}: PrepareCacheOptions): Promise<Files> {
+  const cache = await glob('node_modules/**', workPath);
+  return cache;
 }
-
-export { shouldServe };

@@ -5,6 +5,7 @@ import isURL from './is-url';
 import DevServer from './server';
 
 import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
+import { isHandler, Route, HandleValue } from '@now/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
@@ -25,41 +26,54 @@ export function resolveRouteParameters(
   });
 }
 
-export default async function(
+export function getRoutesTypes(routes: Route[] = []) {
+  const handleMap = new Map<HandleValue | null, Route[]>();
+  let prevHandle: HandleValue | null = null;
+  routes.forEach(route => {
+    if (isHandler(route)) {
+      prevHandle = route.handle;
+    } else {
+      const routes = handleMap.get(prevHandle);
+      if (!routes) {
+        handleMap.set(prevHandle, [route]);
+      } else {
+        routes.push(route);
+      }
+    }
+  });
+
+  return handleMap;
+}
+
+export async function devRouter(
   reqUrl: string = '/',
   reqMethod?: string,
   routes?: RouteConfig[],
-  devServer?: DevServer
+  devServer?: DevServer,
+  previousHeaders?: HttpHeadersConfig,
+  missRoutes?: RouteConfig[],
+  phase?: HandleValue | null
 ): Promise<RouteResult> {
   let found: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
-  const combinedHeaders: HttpHeadersConfig = {};
+  const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
+  let status: number | undefined;
 
   // Try route match
   if (routes) {
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
-      let { src, headers, methods, handle } = routeConfig;
-      if (handle) {
-        if (handle === 'filesystem' && devServer) {
-          if (await devServer.hasFilesystem(reqPathname)) {
-            break;
-          }
-        }
+
+      if (isHandler(routeConfig)) {
+        // We don't expect any Handle, only Source routes
         continue;
       }
+
+      let { src, headers, methods } = routeConfig;
 
       if (Array.isArray(methods) && reqMethod && !methods.includes(reqMethod)) {
         continue;
-      }
-
-      if (!src.startsWith('^')) {
-        src = `^${src}`;
-      }
-
-      if (!src.endsWith('$')) {
-        src = `${src}$`;
       }
 
       const keys: string[] = [];
@@ -75,30 +89,74 @@ export default async function(
         }
 
         if (headers) {
-          // Create a clone of the `headers` object to not mutate the original one
-          headers = { ...headers };
-          for (const key of Object.keys(headers)) {
-            headers[key] = resolveRouteParameters(headers[key], match, keys);
+          for (const originalKey of Object.keys(headers)) {
+            const lowerKey = originalKey.toLowerCase();
+            if (
+              previousHeaders &&
+              Object.prototype.hasOwnProperty.call(previousHeaders, lowerKey) &&
+              (phase === 'hit' || phase === 'miss')
+            ) {
+              // don't override headers in the hit or miss phase
+            } else {
+              const originalValue = headers[originalKey];
+              const value = resolveRouteParameters(originalValue, match, keys);
+              combinedHeaders[lowerKey] = value;
+            }
           }
-
-          Object.assign(combinedHeaders, headers);
         }
 
         if (routeConfig.continue) {
+          if (routeConfig.status) {
+            status = routeConfig.status;
+          }
           reqPathname = destPath;
           continue;
         }
 
-        if (isURL(destPath)) {
+        if (routeConfig.check && devServer && phase !== 'hit') {
+          const { pathname = '/' } = url.parse(destPath);
+          const hasDestFile = await devServer.hasFilesystem(pathname);
+
+          if (!hasDestFile) {
+            if (routeConfig.status && phase !== 'miss') {
+              // Equivalent to now-proxy exit_with_status() function
+            } else if (missRoutes && missRoutes.length > 0) {
+              // Trigger a 'miss'
+              const missResult = await devRouter(
+                destPath,
+                reqMethod,
+                missRoutes,
+                devServer,
+                previousHeaders,
+                [],
+                'miss'
+              );
+              if (missResult.found) {
+                return missResult;
+              }
+            } else {
+              if (routeConfig.status && phase === 'miss') {
+                status = routeConfig.status;
+              }
+              reqPathname = destPath;
+              continue;
+            }
+          }
+        }
+
+        const isDestUrl = isURL(destPath);
+        if (isDestUrl) {
           found = {
             found: true,
             dest: destPath,
             userDest: false,
-            status: routeConfig.status,
+            isDestUrl,
+            status: routeConfig.status || status,
             headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx,
+            phase,
           };
           break;
         } else {
@@ -110,11 +168,13 @@ export default async function(
             found: true,
             dest: pathname || '/',
             userDest: Boolean(routeConfig.dest),
-            status: routeConfig.status,
+            isDestUrl,
+            status: routeConfig.status || status,
             headers: combinedHeaders,
             uri_args: query,
             matched_route: routeConfig,
             matched_route_idx: idx,
+            phase,
           };
           break;
         }
@@ -126,8 +186,11 @@ export default async function(
     found = {
       found: false,
       dest: reqPathname,
+      status,
+      isDestUrl: false,
       uri_args: query,
       headers: combinedHeaders,
+      phase,
     };
   }
 

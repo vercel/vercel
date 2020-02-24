@@ -6,14 +6,21 @@ Route validation utilities
 
 `yarn add @now/routing-utils`
 
-exports.normalizeRoutes:
-`(routes: Array<Route> | null) => { routes: Array<Route> | null; error: NowError | null }`
+```ts
+import { normalizeRoutes } from '@now/routing-utils';
 
-exports.schema:
+const { routes, error } = normalizeRoutes(inputRoutes);
 
-```js
+if (error) {
+  console.log(error.code, error.message);
+}
+```
+
+```ts
+import { routesSchema } from '@now/routing-utils';
+
 const ajv = new Ajv();
-const validate = ajv.compile(schema);
+const validate = ajv.compile(routesSchema);
 const valid = validate([{ src: '/about', dest: '/about.html' }]);
 
 if (!valid) console.log(validate.errors);

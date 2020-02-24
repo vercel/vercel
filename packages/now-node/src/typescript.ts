@@ -1,5 +1,6 @@
 import { relative, basename, resolve, dirname } from 'path';
 import _ts from 'typescript';
+import { NowBuildError } from '@now/build-utils';
 
 /*
  * Fork of TS-Node - https://github.com/TypeStrong/ts-node
@@ -87,7 +88,7 @@ const DEFAULTS: Options = {
   ignore: undefined,
   project: undefined,
   ignoreDiagnostics: undefined,
-  logError: null
+  logError: null,
 };
 
 /**
@@ -99,7 +100,7 @@ const TS_NODE_COMPILER_OPTIONS = {
   inlineSources: true,
   declaration: false,
   noEmit: false,
-  outDir: '$$ts-node$$'
+  outDir: '$$ts-node$$',
 };
 
 /**
@@ -129,7 +130,7 @@ function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
       cache.set(arg, fn(arg));
     }
 
-    return cache.get(arg)!;
+    return cache.get(arg) as T;
   };
 }
 
@@ -143,20 +144,21 @@ export function register(opts: Options = {}): Register {
     6059, // "'rootDir' is expected to contain all source files."
     18002, // "The 'files' list in config file is empty."
     18003, // "No inputs were found in config file."
-    ...(options.ignoreDiagnostics || [])
+    ...(options.ignoreDiagnostics || []),
   ].map(Number);
 
   // Require the TypeScript compiler and configuration.
   const cwd = options.basePath || process.cwd();
   const nowNodeBase = resolve(__dirname, '..', '..', '..');
-
+  let compiler: string;
   try {
-    var compiler = require.resolve(options.compiler || 'typescript', {
-      paths: [cwd, nowNodeBase]
+    compiler = require.resolve(options.compiler || 'typescript', {
+      paths: [options.project || cwd, nowNodeBase],
     });
   } catch (e) {
     compiler = require.resolve(eval('"./typescript"'));
   }
+  //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require(compiler);
   if (compiler.startsWith(nowNodeBase)) {
     console.log('Using TypeScript ' + ts.version + ' (now internal)');
@@ -175,12 +177,12 @@ export function register(opts: Options = {}): Register {
   const diagnosticHost: _ts.FormatDiagnosticsHost = {
     getNewLine: () => ts.sys.newLine,
     getCurrentDirectory: () => cwd,
-    getCanonicalFileName: path => path
+    getCanonicalFileName: path => path,
   };
 
   function createTSError(diagnostics: ReadonlyArray<_ts.Diagnostic>) {
-    const diagnosticText = formatDiagnostics(diagnostics, diagnosticHost);
-    return new Error(diagnosticText);
+    const message = formatDiagnostics(diagnostics, diagnosticHost);
+    return new NowBuildError({ code: 'NOW_NODE_TYPESCRIPT_ERROR', message });
   }
 
   function reportTSError(
@@ -191,10 +193,12 @@ export function register(opts: Options = {}): Register {
       return;
     }
     const error = createTSError(diagnostics);
-    // Print error in red color and continue execution.
-    console.error('\x1b[31m%s\x1b[0m', error);
+
     if (shouldExit) {
-      process.exit(1);
+      throw error;
+    } else {
+      // Print error in red color and continue execution.
+      console.error('\x1b[31m%s\x1b[0m', error);
     }
   }
 
@@ -214,7 +218,7 @@ export function register(opts: Options = {}): Register {
         fileName,
         transformers,
         compilerOptions: config.options,
-        reportDiagnostics: true
+        reportDiagnostics: true,
       });
 
       const diagnosticList = result.diagnostics
@@ -269,7 +273,7 @@ export function register(opts: Options = {}): Register {
         getCurrentDirectory: () => cwd,
         getCompilationSettings: () => config.options,
         getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
-        getCustomTransformers: () => transformers
+        getCustomTransformers: () => transformers,
       };
 
       const registry = ts.createDocumentRegistry(
@@ -323,7 +327,7 @@ export function register(opts: Options = {}): Register {
 
         return {
           code: output.outputFiles[1].text,
-          map: output.outputFiles[0].text
+          map: output.outputFiles[0].text,
         };
       };
     }
@@ -332,7 +336,7 @@ export function register(opts: Options = {}): Register {
       configFileName,
       (build = {
         getOutput,
-        getOutputTypeCheck
+        getOutputTypeCheck,
       })
     );
     return build;
@@ -366,7 +370,7 @@ export function register(opts: Options = {}): Register {
         const errorResult = {
           errors: [result.error],
           fileNames: [],
-          options: {}
+          options: {},
         };
         const configDiagnosticList = filterDiagnostics(
           errorResult.errors,
@@ -432,8 +436,8 @@ export function register(opts: Options = {}): Register {
       code: value,
       map: Object.assign(JSON.parse(sourceMap), {
         file: basename(fileName),
-        sources: [fileName]
-      })
+        sources: [fileName],
+      }),
     };
     delete output.map.sourceRoot;
     return output;

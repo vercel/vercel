@@ -7,7 +7,7 @@ import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import { cpus } from 'os';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
-import { getSupportedNodeVersion } from './node-version';
+import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 
 export function spawnAsync(
   command: string,
@@ -37,6 +37,66 @@ export function spawnAsync(
       }
     });
   });
+}
+
+export function execAsync(
+  command: string,
+  args: string[],
+  opts: SpawnOptions = {}
+) {
+  return new Promise<{ stdout: string; stderr: string; code: number }>(
+    (resolve, reject) => {
+      opts.stdio = 'pipe';
+
+      const stdoutList: Buffer[] = [];
+      const stderrList: Buffer[] = [];
+
+      const child = spawn(command, args, opts);
+
+      child.stderr!.on('data', data => {
+        stderrList.push(data);
+      });
+
+      child.stdout!.on('data', data => {
+        stdoutList.push(data);
+      });
+
+      child.on('error', reject);
+      child.on('close', (code, signal) => {
+        if (code !== 0) {
+          return reject(
+            new Error(
+              `Program "${command}" exited with non-zero exit code ${code} ${signal}.`
+            )
+          );
+        }
+
+        return resolve({
+          code,
+          stdout: Buffer.concat(stdoutList).toString(),
+          stderr: Buffer.concat(stderrList).toString(),
+        });
+      });
+    }
+  );
+}
+
+export function spawnCommand(command: string, options: SpawnOptions = {}) {
+  if (process.platform === 'win32') {
+    return spawn('cmd.exe', ['/C', command], options);
+  }
+
+  return spawn('sh', ['-c', command], options);
+}
+
+export async function execCommand(command: string, options: SpawnOptions = {}) {
+  if (process.platform === 'win32') {
+    await spawnAsync('cmd.exe', ['/C', command], options);
+  } else {
+    await spawnAsync('sh', ['-c', command], options);
+  }
+
+  return true;
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -79,23 +139,23 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  minNodeVersion?: string,
-  config?: Config
+  _nodeVersion?: string,
+  _config?: Config,
+  meta?: Meta
 ): Promise<NodeVersion> {
+  if (meta && meta.isDev) {
+    // Use the system-installed version of `node` in PATH for `now dev`
+    const latest = getLatestNodeVersion();
+    return { ...latest, runtime: 'nodejs' };
+  }
   const { packageJson } = await scanParentDirs(destPath, true);
   let range: string | undefined;
-  let silent = false;
+  let isAuto = true;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
     range = packageJson.engines.node;
-  } else if (minNodeVersion) {
-    range = minNodeVersion;
-    silent = true;
-  } else if (config && config.zeroConfig) {
-    // Use latest node version zero config detected
-    range = '10.x';
-    silent = true;
+    isAuto = false;
   }
-  return getSupportedNodeVersion(range, silent);
+  return getSupportedNodeVersion(range, isAuto);
 }
 
 async function scanParentDirs(destPath: string, readPackageJson = false) {
@@ -155,7 +215,7 @@ export async function runNpmInstall(
     commandArgs = args.filter(a => a !== '--prefer-offline');
     await spawnAsync(
       'npm',
-      commandArgs.concat(['install', '--unsafe-perm']),
+      commandArgs.concat(['install', '--no-audit', '--unsafe-perm']),
       opts
     );
   } else {
@@ -247,7 +307,11 @@ export async function runPackageJsonScript(
     await spawnAsync('npm', ['run', scriptName], opts);
   } else {
     console.log(`Running "yarn run ${scriptName}"`);
-    await spawnAsync('yarn', ['--cwd', destPath, 'run', scriptName], opts);
+    await spawnAsync(
+      'yarn',
+      ['--ignore-engines', '--cwd', destPath, 'run', scriptName],
+      opts
+    );
   }
 
   return true;

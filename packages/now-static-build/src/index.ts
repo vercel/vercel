@@ -1,6 +1,6 @@
 import ms from 'ms';
 import path from 'path';
-import spawn from 'cross-spawn';
+import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import { ChildProcess, SpawnOptions } from 'child_process';
@@ -9,7 +9,10 @@ import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
+  execAsync,
   spawnAsync,
+  execCommand,
+  spawnCommand,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -18,13 +21,15 @@ import {
   getNodeVersion,
   getSpawnOptions,
   Files,
-  Route,
+  FileFsRef,
   BuildOptions,
   Config,
   debug,
   PackageJson,
   PrepareCacheOptions,
+  NowBuildError,
 } from '@now/build-utils';
+import { Route, Source } from '@now/routing-utils';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -43,43 +48,46 @@ async function checkForPort(
   }
 }
 
-function validateDistDir(
-  distDir: string,
-  isDev: boolean | undefined,
-  config: Config
-) {
+function validateDistDir(distDir: string) {
   const distDirName = path.basename(distDir);
   const exists = () => existsSync(distDir);
   const isDirectory = () => statSync(distDir).isDirectory();
   const isEmpty = () => readdirSync(distDir).length === 0;
 
-  const hash = isDev
-    ? '#local-development'
-    : '#configuring-the-build-output-directory';
-  const docsUrl = `https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build${hash}`;
-
-  const info = config.zeroConfig
-    ? '\nMore details: https://zeit.co/docs/v2/advanced/platform/frequently-asked-questions#missing-public-directory'
-    : `\nMake sure you configure the the correct distDir: ${docsUrl}`;
+  const link =
+    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
   if (!exists()) {
-    throw new Error(`No output directory named "${distDirName}" found.${info}`);
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
+      message: `No Output Directory named "${distDirName}" found after the Build completed.`,
+      link,
+    });
   }
 
   if (!isDirectory()) {
-    throw new Error(
-      `Build failed because distDir is not a directory: "${distDirName}".${info}`
-    );
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_NOT_A_DIR',
+      message: `The path specified as Output Directory ("${distDirName}") is not actually a directory.`,
+      link,
+    });
   }
 
   if (isEmpty()) {
-    throw new Error(
-      `Build failed because distDir is empty: "${distDirName}".${info}`
-    );
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
+      message: `The Output Directory "${distDirName}" is empty.`,
+      link,
+    });
   }
 }
 
-function getCommand(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
+function hasScript(script: string, pkg: PackageJson) {
+  const scripts = (pkg && pkg.scripts) || {};
+  return typeof scripts[script] === 'string';
+}
+
+function getScriptName(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
   // The `dev` script can be `now dev`
   const nowCmd = `now-${cmd}`;
 
@@ -87,17 +95,46 @@ function getCommand(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
     return nowCmd;
   }
 
-  const scripts = (pkg && pkg.scripts) || {};
-
-  if (scripts[nowCmd]) {
+  if (hasScript(nowCmd, pkg)) {
     return nowCmd;
   }
 
-  if (scripts[cmd]) {
+  if (hasScript(cmd, pkg)) {
     return cmd;
   }
 
   return zeroConfig ? cmd : nowCmd;
+}
+
+function getCommand(
+  name: 'build' | 'dev',
+  pkg: PackageJson | null,
+  config: Config,
+  framework: Framework | undefined
+) {
+  if (!config.zeroConfig) {
+    return null;
+  }
+
+  const propName = name === 'build' ? 'buildCommand' : 'devCommand';
+
+  if (typeof config[propName] === 'string') {
+    return config[propName];
+  }
+
+  if (pkg) {
+    const scriptName = getScriptName(pkg, name, config);
+
+    if (hasScript(scriptName, pkg)) {
+      return null;
+    }
+  }
+
+  if (framework) {
+    return framework[propName] || null;
+  }
+
+  return null;
 }
 
 export const version = 2;
@@ -117,8 +154,8 @@ const nowDevChildProcesses = new Set<ChildProcess>();
   });
 });
 
-const getDevRoute = (srcBase: string, devPort: number, route: Route) => {
-  const basic: Route = {
+const getDevRoute = (srcBase: string, devPort: number, route: Source) => {
+  const basic: Source = {
     src: `${srcBase}${route.src}`,
     dest: `http://localhost:${devPort}${route.dest}`,
   };
@@ -149,6 +186,58 @@ async function getFrameworkRoutes(
   return routes;
 }
 
+function getPkg(entrypoint: string, workPath: string) {
+  if (path.basename(entrypoint) !== 'package.json') {
+    return null;
+  }
+
+  const pkgPath = path.join(workPath, entrypoint);
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
+  return pkg;
+}
+
+function getFramework(
+  config: Config | null,
+  pkg?: PackageJson | null
+): Framework | undefined {
+  if (!config || !config.zeroConfig) {
+    return;
+  }
+  const { framework: configFramework = null } = config || {};
+
+  if (configFramework) {
+    const framework = frameworks.find(({ slug }) => slug === configFramework);
+
+    if (framework) {
+      return framework;
+    }
+  }
+
+  if (!pkg) {
+    return;
+  }
+
+  const dependencies = Object.assign({}, pkg.dependencies, pkg.devDependencies);
+  const framework = frameworks.find(
+    ({ dependency }) => dependencies[dependency || '']
+  );
+  return framework;
+}
+
+async function fetchBinary(url: string, framework: string, version: string) {
+  const res = await fetch(url);
+  if (res.status === 404) {
+    throw new NowBuildError({
+      code: 'NOW_STATIC_BUILD_BINARY_NOT_FOUND',
+      message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
+      link: 'https://zeit.co/docs/v2/build-step#framework-versioning',
+    });
+  }
+  await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
+    shell: true,
+  });
+}
+
 export async function build({
   files,
   entrypoint,
@@ -156,7 +245,6 @@ export async function build({
   config,
   meta = {},
 }: BuildOptions) {
-  debug('Downloading user files...');
   await download(files, workPath, meta);
 
   const mountpoint = path.dirname(entrypoint);
@@ -165,23 +253,28 @@ export async function build({
   let distPath = path.join(
     workPath,
     path.dirname(entrypoint),
-    (config && (config.distDir as string)) || 'dist'
+    (config && (config.distDir as string)) ||
+      (config.outputDirectory as string) ||
+      'dist'
   );
 
-  const entrypointName = path.basename(entrypoint);
+  const pkg = getPkg(entrypoint, workPath);
 
-  if (entrypointName === 'package.json') {
-    const pkgPath = path.join(workPath, entrypoint);
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
+  const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
+  const buildScript = pkg ? getScriptName(pkg, 'build', config) : null;
+
+  const framework = getFramework(config, pkg);
+
+  const devCommand = getCommand('dev', pkg, config, framework);
+  const buildCommand = getCommand('build', pkg, config, framework);
+
+  if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
     const requirementsPath = path.join(workPath, 'requirements.txt');
 
     let output: Files = {};
-    let framework: Framework | undefined = undefined;
-    let minNodeRange: string | undefined = undefined;
 
     const routes: Route[] = [];
-    const devScript = getCommand(pkg, 'dev', config as Config);
 
     if (config.zeroConfig) {
       if (existsSync(gemfilePath) && !meta.isDev) {
@@ -206,38 +299,26 @@ export async function build({
         const isOldVersion = major === 0 && minor < 43;
         const prefix = isOldVersion ? `hugo_` : `hugo_extended_`;
         const url = `https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${prefix}${HUGO_VERSION}_Linux-64bit.tar.gz`;
-        await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
-          shell: true,
-        });
+        await fetchBinary(url, 'Hugo', HUGO_VERSION);
       }
 
       if (ZOLA_VERSION && !meta.isDev) {
         console.log('Installing Zola version ' + ZOLA_VERSION);
         const url = `https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
-        await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
-          shell: true,
-        });
+        await fetchBinary(url, 'Zola', ZOLA_VERSION);
       }
 
       if (GUTENBERG_VERSION && !meta.isDev) {
         console.log('Installing Gutenberg version ' + GUTENBERG_VERSION);
         const url = `https://github.com/getzola/zola/releases/download/v${GUTENBERG_VERSION}/gutenberg-v${GUTENBERG_VERSION}-x86_64-unknown-linux-gnu.tar.gz`;
-        await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
-          shell: true,
-        });
+        await fetchBinary(url, 'Gutenberg', GUTENBERG_VERSION);
       }
 
       // `public` is the default for zero config
-      distPath = path.join(workPath, path.dirname(entrypoint), 'public');
-
-      const dependencies = Object.assign(
-        {},
-        pkg.dependencies,
-        pkg.devDependencies
-      );
-
-      framework = frameworks.find(
-        ({ dependency }) => dependencies[dependency || '']
+      distPath = path.join(
+        workPath,
+        path.dirname(entrypoint),
+        (config.outputDirectory as string) || 'public'
       );
     }
 
@@ -245,34 +326,50 @@ export async function build({
       debug(
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
-
-      if (framework.minNodeRange) {
-        minNodeRange = framework.minNodeRange;
-        debug(
-          `${framework.name} requires Node.js ${framework.minNodeRange}. Switching...`
-        );
-      } else {
-        debug(
-          `${framework.name} does not require a specific Node.js version. Continuing ...`
-        );
-      }
     }
 
     const nodeVersion = await getNodeVersion(
       entrypointDir,
-      minNodeRange,
-      config
+      undefined,
+      config,
+      meta
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
     console.log('Installing dependencies...');
     await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
 
-    if (meta.isDev && pkg.scripts && pkg.scripts[devScript]) {
+    if (pkg && (buildCommand || devCommand)) {
+      // We want to add `node_modules/.bin` after `npm install`
+      const { stdout } = await execAsync('yarn', ['bin'], {
+        cwd: entrypointDir,
+      });
+
+      spawnOpts.env = {
+        ...spawnOpts.env,
+        PATH: `${stdout.trim()}${path.delimiter}${
+          spawnOpts.env ? spawnOpts.env.PATH : ''
+        }`,
+      };
+
+      debug(
+        `Added "${stdout.trim()}" to PATH env because a package.json file was found.`
+      );
+    }
+
+    if (
+      meta.isDev &&
+      (devCommand ||
+        (pkg && devScript && pkg.scripts && pkg.scripts[devScript]))
+    ) {
       let devPort: number | undefined = nowDevScriptPorts.get(entrypoint);
 
       if (typeof devPort === 'number') {
-        debug('`%s` server already running for %j', devScript, entrypoint);
+        debug(
+          '`%s` server already running for %j',
+          devCommand || devScript,
+          entrypoint
+        );
       } else {
         // Run the `now-dev` or `dev` script out-of-bounds, since it is assumed that
         // it will launch a dev server that never "completes"
@@ -282,10 +379,12 @@ export async function build({
         const opts: SpawnOptions = {
           cwd: entrypointDir,
           stdio: 'inherit',
-          env: { ...process.env, PORT: String(devPort) },
+          env: { ...spawnOpts.env, PORT: String(devPort) },
         };
 
-        const child: ChildProcess = spawn('yarn', ['run', devScript], opts);
+        const cmd = devCommand || `yarn run ${devScript}`;
+        const child: ChildProcess = spawnCommand(cmd, opts);
+
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         nowDevChildProcesses.add(child);
 
@@ -320,31 +419,39 @@ export async function build({
       );
     } else {
       if (meta.isDev) {
-        debug(`WARN: "${devScript}" script is missing from package.json`);
+        debug(`WARN: A dev script is missing.`);
         debug(
           'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
         );
       }
 
-      const buildScript = getCommand(pkg, 'build', config as Config);
-      debug(`Running "${buildScript}" script in "${entrypoint}"`);
+      if (buildCommand) {
+        debug(`Executing "${buildCommand}"`);
+      } else {
+        debug(`Running "${buildScript}" in "${entrypoint}"`);
+      }
 
-      const found = await runPackageJsonScript(
-        entrypointDir,
-        buildScript,
-        spawnOpts
-      );
+      const found =
+        typeof buildCommand === 'string'
+          ? await execCommand(buildCommand, {
+              ...spawnOpts,
+              cwd: entrypointDir,
+            })
+          : await runPackageJsonScript(entrypointDir, buildScript!, spawnOpts);
 
       if (!found) {
         throw new Error(
-          `Missing required "${buildScript}" script in "${entrypoint}"`
+          `Missing required "${buildCommand ||
+            buildScript}" script in "${entrypoint}"`
         );
       }
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
 
       if (framework) {
-        const outputDirName = await framework.getOutputDirName(outputDirPrefix);
+        const outputDirName = config.outputDirectory
+          ? config.outputDirectory
+          : await framework.getOutputDirName(outputDirPrefix);
 
         distPath = path.join(outputDirPrefix, outputDirName);
       } else if (!config || !config.distDir) {
@@ -360,7 +467,7 @@ export async function build({
         }
       }
 
-      validateDistDir(distPath, meta.isDev, config);
+      validateDistDir(distPath);
 
       if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
@@ -377,12 +484,17 @@ export async function build({
     return { routes, watch, output, distPath };
   }
 
-  if (!config.zeroConfig && entrypointName.endsWith('.sh')) {
+  if (!config.zeroConfig && entrypoint.endsWith('.sh')) {
     debug(`Running build script "${entrypoint}"`);
-    const nodeVersion = await getNodeVersion(entrypointDir, undefined, config);
+    const nodeVersion = await getNodeVersion(
+      entrypointDir,
+      undefined,
+      config,
+      meta
+    );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-    validateDistDir(distPath, meta.isDev, config);
+    validateDistDir(distPath);
 
     const output = await glob('**', distPath, mountpoint);
 
@@ -403,10 +515,25 @@ export async function build({
   throw new Error(message);
 }
 
-export async function prepareCache({ workPath }: PrepareCacheOptions) {
-  return {
-    ...(await glob('node_modules/**', workPath)),
-    ...(await glob('package-lock.json', workPath)),
-    ...(await glob('yarn.lock', workPath)),
-  };
+export async function prepareCache({
+  entrypoint,
+  workPath,
+  config,
+}: PrepareCacheOptions): Promise<Files> {
+  // default cache paths
+  const defaultCacheFiles = await glob('node_modules/**', workPath);
+
+  // framework specific cache paths
+  let frameworkCacheFiles: { [path: string]: FileFsRef } | null = null;
+
+  const pkg = getPkg(entrypoint, workPath);
+  if (pkg) {
+    const framework = getFramework(config, pkg);
+
+    if (framework && framework.cachePattern) {
+      frameworkCacheFiles = await glob(framework.cachePattern, workPath);
+    }
+  }
+
+  return { ...defaultCacheFiles, ...frameworkCacheFiles };
 }

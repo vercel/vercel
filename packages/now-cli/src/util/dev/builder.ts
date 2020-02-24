@@ -2,16 +2,14 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
+import { promisify } from 'util';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
 import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
-import stripAnsi from 'strip-ansi';
-import chalk from 'chalk';
-import which from 'which';
 import plural from 'pluralize';
-import ora, { Ora } from 'ora';
 import minimatch from 'minimatch';
+import _treeKill from 'tree-kill';
 
 import { Output } from '../output';
 import highlight from '../output/highlight';
@@ -27,8 +25,11 @@ import {
   BuildResult,
   BuilderInputs,
   BuilderOutput,
+  BuildResultV3,
   BuilderOutputs,
 } from './types';
+import { normalizeRoutes } from '@now/routing-utils';
+import getUpdateCommand from '../get-update-command';
 
 interface BuildMessage {
   type: string;
@@ -40,37 +41,17 @@ interface BuildMessageResult extends BuildMessage {
   error?: object;
 }
 
-const isLogging = new WeakSet<ChildProcess>();
-
-let nodeBinPromise: Promise<string>;
-
-async function getNodeBin(): Promise<string> {
-  return which.sync('node', { nothrow: true }) || process.execPath;
-}
-
-function pipeChildLogging(child: ChildProcess): void {
-  if (!isLogging.has(child)) {
-    child.stdout!.pipe(process.stdout);
-    child.stderr!.pipe(process.stderr);
-    isLogging.add(child);
-  }
-}
+const treeKill = promisify(_treeKill);
 
 async function createBuildProcess(
   match: BuildMatch,
   buildEnv: EnvConfig,
   workPath: string,
   output: Output,
-  yarnPath?: string,
-  debugEnabled: boolean = false
+  yarnPath?: string
 ): Promise<ChildProcess> {
-  if (!nodeBinPromise) {
-    nodeBinPromise = getNodeBin();
-  }
-  const [execPath, modulePath] = await Promise.all([
-    nodeBinPromise,
-    builderModulePathPromise,
-  ]);
+  const { execPath } = process;
+  const modulePath = await builderModulePathPromise;
 
   // Ensure that `node` is in the builder's `PATH`
   let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
@@ -87,18 +68,11 @@ async function createBuildProcess(
     NOW_REGION: 'dev1',
   };
 
-  // Builders won't show debug logs by default.
-  // The `NOW_BUILDER_DEBUG` env variable enables them.
-  if (debugEnabled) {
-    env.NOW_BUILDER_DEBUG = '1';
-  }
-
   const buildProcess = fork(modulePath, [], {
     cwd: workPath,
     env,
     execPath,
     execArgv: [],
-    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   match.buildProcess = buildProcess;
 
@@ -108,9 +82,6 @@ async function createBuildProcess(
     );
     match.buildProcess = undefined;
   });
-
-  buildProcess.stdout!.setEncoding('utf8');
-  buildProcess.stderr!.setEncoding('utf8');
 
   return new Promise((resolve, reject) => {
     // The first message that the builder process sends is the `ready` event
@@ -137,7 +108,7 @@ export async function executeBuild(
   const {
     builderWithPkg: { runInProcess, builder, package: pkg },
   } = match;
-  const { src: entrypoint } = match;
+  const { entrypoint } = match;
   const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
 
   const startTime = Date.now();
@@ -163,8 +134,7 @@ export async function executeBuild(
       buildEnv,
       workPath,
       devServer.output,
-      yarnPath,
-      debug
+      yarnPath
     );
   }
 
@@ -183,93 +153,47 @@ export async function executeBuild(
     },
   };
 
-  let buildResultOrOutputs: BuilderOutputs | BuildResult;
+  let buildResultOrOutputs: BuilderOutputs | BuildResult | BuildResultV3;
   if (buildProcess) {
-    let spinLogger;
-    let spinner: Ora | undefined;
-    const fullLogs: string[] = [];
+    buildProcess.send({
+      type: 'build',
+      builderName: pkg.name,
+      buildParams,
+    });
 
-    if (isInitialBuild && !debug && process.stdout.isTTY) {
-      const logTitle = `${chalk.bold(
-        `Preparing ${chalk.underline(entrypoint)} for build`
-      )}:`;
-      spinner = ora(logTitle).start();
-
-      spinLogger = (data: Buffer) => {
-        const rawLog = stripAnsi(data.toString());
-        fullLogs.push(rawLog);
-
-        const lines = rawLog.replace(/\s+$/, '').split('\n');
-        const spinText = `${logTitle} ${lines[lines.length - 1]}`;
-        const maxCols = process.stdout.columns || 80;
-        const overflow = stripAnsi(spinText).length + 2 - maxCols;
-        spinner!.text =
-          overflow > 0 ? `${spinText.slice(0, -overflow - 3)}...` : spinText;
-      };
-
-      buildProcess!.stdout!.on('data', spinLogger);
-      buildProcess!.stderr!.on('data', spinLogger);
-    } else {
-      pipeChildLogging(buildProcess!);
-    }
-
-    try {
-      buildProcess.send({
-        type: 'build',
-        builderName: pkg.name,
-        buildParams,
-      });
-
-      buildResultOrOutputs = await new Promise((resolve, reject) => {
-        function onMessage({ type, result, error }: BuildMessageResult) {
-          cleanup();
-          if (type === 'buildResult') {
-            if (result) {
-              resolve(result);
-            } else if (error) {
-              reject(Object.assign(new Error(), error));
-            }
-          } else {
-            reject(new Error(`Got unexpected message type: ${type}`));
+    buildResultOrOutputs = await new Promise((resolve, reject) => {
+      function onMessage({ type, result, error }: BuildMessageResult) {
+        cleanup();
+        if (type === 'buildResult') {
+          if (result) {
+            resolve(result);
+          } else if (error) {
+            reject(Object.assign(new Error(), error));
           }
+        } else {
+          reject(new Error(`Got unexpected message type: ${type}`));
         }
-        function onExit(code: number | null, signal: string | null) {
-          cleanup();
-          const err = new Error(
-            `Builder exited with ${signal || code} before sending build result`
-          );
-          reject(err);
-        }
-        function cleanup() {
-          buildProcess!.removeListener('exit', onExit);
-          buildProcess!.removeListener('message', onMessage);
-        }
-        buildProcess!.on('exit', onExit);
-        buildProcess!.on('message', onMessage);
-      });
-    } catch (err) {
-      if (spinner) {
-        spinner.stop();
-        spinner = undefined;
-        console.log(fullLogs.join(''));
       }
-      throw err;
-    } finally {
-      if (spinLogger) {
-        buildProcess.stdout!.removeListener('data', spinLogger);
-        buildProcess.stderr!.removeListener('data', spinLogger);
+      function onExit(code: number | null, signal: string | null) {
+        cleanup();
+        const err = new Error(
+          `Builder exited with ${signal || code} before sending build result`
+        );
+        reject(err);
       }
-      if (spinner) {
-        spinner.stop();
+      function cleanup() {
+        buildProcess!.removeListener('exit', onExit);
+        buildProcess!.removeListener('message', onMessage);
       }
-      pipeChildLogging(buildProcess!);
-    }
+      buildProcess!.on('exit', onExit);
+      buildProcess!.on('message', onMessage);
+    });
   } else {
     buildResultOrOutputs = await builder.build(buildParams);
   }
 
   // Sort out build result to builder v2 shape
-  if (builder.version === undefined) {
+  if (!builder.version || builder.version === 1) {
     // `BuilderOutputs` map was returned (Now Builder v1 behavior)
     result = {
       output: buildResultOrOutputs as BuilderOutputs,
@@ -280,13 +204,87 @@ export async function executeBuild(
           ? buildResultOrOutputs.distPath
           : undefined,
     };
-  } else {
+  } else if (builder.version === 2) {
     result = buildResultOrOutputs as BuildResult;
+  } else if (builder.version === 3) {
+    const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
+
+    if (!output || (output as BuilderOutput).type !== 'Lambda') {
+      throw new Error('The result of "builder.build()" must be a `Lambda`');
+    }
+
+    if (output.maxDuration) {
+      throw new Error(
+        'The result of "builder.build()" must not contain `memory`'
+      );
+    }
+
+    if (output.memory) {
+      throw new Error(
+        'The result of "builder.build()" must not contain `maxDuration`'
+      );
+    }
+
+    for (const [src, func] of Object.entries(config.functions || {})) {
+      if (src === entrypoint || minimatch(entrypoint, src)) {
+        if (func.maxDuration) {
+          output.maxDuration = func.maxDuration;
+        }
+
+        if (func.memory) {
+          output.memory = func.memory;
+        }
+
+        break;
+      }
+    }
+
+    result = {
+      ...rest,
+      output: {
+        [entrypoint]: output,
+      },
+    } as BuildResult;
+  } else {
+    throw new Error(
+      `Now CLI does not support builder version ${
+        builder.version
+      }.\nPlease run \`${await getUpdateCommand()}\` to update Now CLI.`
+    );
   }
+
+  // Normalize Builder Routes
+  const normalized = normalizeRoutes(result.routes);
+  if (normalized.error) {
+    throw new Error(normalized.error.message);
+  } else {
+    result.routes = normalized.routes || [];
+  }
+
+  const { output } = result;
+  const { cleanUrls } = nowConfig;
+
+  // Mimic fmeta-util and perform file renaming
+  Object.entries(output).forEach(([path, value]) => {
+    if (cleanUrls && path.endsWith('.html')) {
+      path = path.slice(0, -5);
+
+      if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
+        value.contentType = value.contentType || 'text/html; charset=utf-8';
+      }
+    }
+
+    const extensionless = devServer.getExtensionlessFile(path);
+    if (extensionless) {
+      path = extensionless;
+    }
+
+    delete output[path];
+    output[path] = value;
+  });
 
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
-  const output = result.output as BuilderOutputs;
   for (const name of Object.keys(output)) {
     const obj = output[name] as File;
     let lambda: Lambda;
@@ -358,7 +356,7 @@ export async function executeBuild(
           Code: { ZipFile: asset.zipBuffer },
           Handler: asset.handler,
           Runtime: asset.runtime,
-          MemorySize: 3008,
+          MemorySize: asset.memory || 3008,
           Environment: {
             Variables: {
               ...nowConfig.env,
@@ -390,6 +388,7 @@ export async function getBuildMatches(
   cwd: string,
   yarnDir: string,
   output: Output,
+  devServer: DevServer,
   fileList: string[]
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
@@ -421,6 +420,14 @@ export async function getBuildMatches(
     // try to find a group otherwise
     src = src.replace(/(\[|\])/g, '[$1]');
 
+    // lambda function files are trimmed of their file extension
+    const mapToEntrypoint = new Map<string, string>();
+    const extensionless = devServer.getExtensionlessFile(src);
+    if (extensionless) {
+      mapToEntrypoint.set(extensionless, src);
+      src = extensionless;
+    }
+
     const files = fileList
       .filter(name => name === src || minimatch(name, src))
       .map(name => join(cwd, name));
@@ -435,6 +442,7 @@ export async function getBuildMatches(
       matches.push({
         ...buildConfig,
         src,
+        entrypoint: mapToEntrypoint.get(src) || src,
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),
@@ -459,4 +467,36 @@ export async function getBuildMatches(
   }
 
   return matches;
+}
+
+export async function shutdownBuilder(
+  match: BuildMatch,
+  { debug }: Output
+): Promise<void> {
+  const ops: Promise<void>[] = [];
+
+  if (match.buildProcess) {
+    const { pid } = match.buildProcess;
+    debug(`Killing builder sub-process with PID ${pid}`);
+    const killPromise = treeKill(pid)
+      .then(() => {
+        debug(`Killed builder with PID ${pid}`);
+      })
+      .catch((err: Error) => {
+        debug(`Failed to kill builder with PID ${pid}: ${err}`);
+      });
+    ops.push(killPromise);
+    delete match.buildProcess;
+  }
+
+  if (match.buildOutput) {
+    for (const asset of Object.values(match.buildOutput)) {
+      if (asset.type === 'Lambda' && asset.fn) {
+        debug(`Shutting down Lambda function`);
+        ops.push(asset.fn.destroy());
+      }
+    }
+  }
+
+  await Promise.all(ops);
 }

@@ -1,0 +1,104 @@
+{
+  "name": "aurelia",
+  "description": "An Aurelia client application.",
+  "version": "0.1.0",
+  "repository": {
+    "type": "???",
+    "url": "???"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "aurelia-bootstrapper": "^2.3.2",
+    "aurelia-animator-css": "^1.0.4"
+  },
+  "devDependencies": {
+    "aurelia-cli": "^1.0.2",
+    "aurelia-testing": "^1.0.0",
+    "aurelia-tools": "^2.0.0",
+    "gulp": "^4.0.0",
+    "minimatch": "^3.0.4",
+    "through2": "^3.0.0",
+    "vinyl-fs": "^3.0.3",
+    "promise-polyfill": "^8.1.0",
+    "regenerator-runtime": "0.13.2",
+    "babel-eslint": "^10.0.1",
+    "eslint": "latest",
+    "babel-loader": "^8.0.5",
+    "babel-plugin-istanbul": "^5.1.1",
+    "@babel/plugin-proposal-decorators": "^7.4.0",
+    "@babel/plugin-proposal-class-properties": "^7.4.0",
+    "@babel/preset-env": "^7.4.2",
+    "@babel/core": "^7.4.0",
+    "@babel/register": "^7.4.0",
+    "gulp-rename": "^1.4.0",
+    "html-webpack-plugin": "^3.2.0",
+    "copy-webpack-plugin": "^5.0.0",
+    "mini-css-extract-plugin": "^0.4.3",
+    "aurelia-webpack-plugin": "^3.0.0",
+    "duplicate-package-checker-webpack-plugin": "^3.0.0",
+    "webpack": "^4.27.0",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": "^3.1.9",
+    "expose-loader": "^0.7.5",
+    "style-loader": "^0.23.1",
+    "url-loader": "^1.1.2",
+    "del": "^3.0.0",
+    "css-loader": "^1.0.0",
+    "file-loader": "^2.0.0",
+    "json-loader": "^0.5.7",
+    "html-loader": "^0.5.5",
+    "istanbul-instrumenter-loader": "^3.0.1",
+    "webpack-bundle-analyzer": "^3.0.4",
+    "jest": "^24.1.0",
+    "jest-cli": "^24.1.0",
+    "jest-transform-stub": "^2.0.0",
+    "aurelia-loader-nodejs": "^1.0.1",
+    "aurelia-pal-nodejs": "^1.2.0",
+    "babel-jest": "^24.5.0"
+  },
+  "scripts": {
+    "build": "au build",
+    "start": "au run",
+    "dev": "au run --port $PORT",
+    "test": "au test"
+  },
+  "engines": {
+    "node": ">=8.9.0"
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^aurelia-binding$": "<rootDir>/node_modules/aurelia-binding"
+    },
+    "modulePaths": [
+      "<rootDir>/src",
+      "<rootDir>/node_modules"
+    ],
+    "moduleFileExtensions": [
+      "js",
+      "json"
+    ],
+    "transform": {
+      "^.+\\.(css|less|sass|scss|styl|jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "jest-transform-stub",
+      "^.+\\.js$": "babel-jest"
+    },
+    "testRegex": "\\.spec\\.js$",
+    "setupFiles": [
+      "<rootDir>/test/jest-pretest.js"
+    ],
+    "testEnvironment": "node",
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!**/*.spec.js",
+      "!**/node_modules/**",
+      "!**/test/**"
+    ],
+    "coverageDirectory": "<rootDir>/test/coverage-jest",
+    "coverageReporters": [
+      "json",
+      "lcov",
+      "text",
+      "html"
+    ]
+  }
+}

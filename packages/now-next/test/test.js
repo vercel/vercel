@@ -3,7 +3,7 @@ const path = require('path');
 
 const {
   packAndDeploy,
-  testDeployment
+  testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(4 * 60 * 1000);
@@ -11,6 +11,7 @@ const buildUtilsUrl = '@canary';
 let builderUrl;
 
 beforeAll(async () => {
+  process.env.NEXT_TELEMETRY_DISABLED = '1';
   const builderPath = path.resolve(__dirname, '..');
   builderUrl = await packAndDeploy(builderPath);
   console.log('builderUrl', builderUrl);

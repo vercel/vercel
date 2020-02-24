@@ -2,13 +2,7 @@ import { NowConfig } from './util/dev/types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
-export interface Config extends NowConfig {
-  alias?: string[] | string;
-  aliases?: string[] | string;
-  name?: string;
-  type?: string;
-  scope?: string;
-}
+export type Config = NowConfig;
 
 export interface NowContext {
   argv: string[];
@@ -53,6 +47,7 @@ export type User = {
     login: string;
     updatedAt: number;
   };
+  name?: string;
 };
 
 export type Team = {
@@ -195,28 +190,31 @@ export type DNSRecord = {
 };
 
 type SRVRecordData = {
-  name: string,
-  type: 'SRV',
+  name: string;
+  type: 'SRV';
   srv: {
-    port: number,
-    priority: number,
-    target: string,
-    weight: number,
-  }
-}
-
-type MXRecordData = {
-  name: string,
-  type: 'MX',
-  value: string,
-  mxPriority: number,
+    port: number;
+    priority: number;
+    target: string;
+    weight: number;
+  };
 };
 
-export type DNSRecordData = {
-  name: string,
-  type: string,
-  value: string,
-} | SRVRecordData | MXRecordData;
+type MXRecordData = {
+  name: string;
+  type: 'MX';
+  value: string;
+  mxPriority: number;
+};
+
+export type DNSRecordData =
+  | {
+      name: string;
+      type: string;
+      value: string;
+    }
+  | SRVRecordData
+  | MXRecordData;
 
 export interface Project {
   id: string;
@@ -224,4 +222,18 @@ export interface Project {
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  devCommand?: string | null;
+  framework?: string | null;
+  rootDirectory?: string | null;
+}
+
+export interface Org {
+  type: 'user' | 'team';
+  id: string;
+  slug: string;
+}
+
+export interface ProjectLink {
+  projectId: string;
+  orgId: string;
 }

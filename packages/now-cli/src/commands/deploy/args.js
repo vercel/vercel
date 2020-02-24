@@ -38,7 +38,6 @@ export const latestHelp = () => `
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     -V, --platform-version         Set the platform version to deploy to
-    -n, --name                     Set the project name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
 )}   Path to the local ${'`now.json`'} file
@@ -66,6 +65,7 @@ export const latestHelp = () => `
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --prod                         Create a production deployment
+    -c, --confirm                  Confirm default options and skip questions
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
@@ -96,7 +96,6 @@ export const latestHelp = () => `
 `;
 
 export const latestArgs = {
-  '--name': String,
   '--force': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
@@ -107,15 +106,20 @@ export const latestArgs = {
   // This is not an array in favor of matching
   // the config property name.
   '--regions': String,
-  '--target': String,
   '--prod': Boolean,
-  '-n': '--name',
+  '--confirm': Boolean,
   '-f': '--force',
   '-p': '--public',
   '-e': '--env',
   '-b': '--build-env',
   '-C': '--no-clipboard',
   '-m': '--meta',
+  '-c': '--confirm',
+
+  // deprecated
+  '--name': String,
+  '-n': '--name',
+  '--target': String,
 };
 
 export const legacyArgsMri = {
@@ -127,6 +131,7 @@ export const legacyArgsMri = {
     'session-affinity',
     'regions',
     'dotenv',
+    'target',
   ],
   boolean: [
     'help',
@@ -144,6 +149,7 @@ export const legacyArgsMri = {
     'no-scale',
     'no-verify',
     'dotenv',
+    'prod',
   ],
   default: {
     C: false,

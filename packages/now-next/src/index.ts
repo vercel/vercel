@@ -1,5 +1,33 @@
+import {
+  BuildOptions,
+  Config,
+  createLambda,
+  debug,
+  download,
+  FileBlob,
+  FileFsRef,
+  Files,
+  getLambdaOptionsFromFunction,
+  getNodeVersion,
+  getSpawnOptions,
+  glob,
+  Lambda,
+  PackageJson,
+  PrepareCacheOptions,
+  Prerender,
+  runNpmInstall,
+  runPackageJsonScript,
+} from '@now/build-utils';
+import { Route, Source } from '@now/routing-utils';
+import {
+  convertRedirects,
+  convertRewrites,
+  convertHeaders,
+} from '@now/routing-utils/dist/superstatic';
+import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import {
+  lstatSync,
   pathExists,
   readFile,
   unlink as unlinkFile,
@@ -7,49 +35,32 @@ import {
 } from 'fs-extra';
 import os from 'os';
 import path from 'path';
-import semver from 'semver';
 import resolveFrom from 'resolve-from';
-
-import {
-  BuildOptions,
-  Config,
-  createLambda,
-  download,
-  FileBlob,
-  FileFsRef,
-  Files,
-  getNodeVersion,
-  getSpawnOptions,
-  glob,
-  Lambda,
-  PrepareCacheOptions,
-  Route,
-  runNpmInstall,
-  runPackageJsonScript,
-  debug,
-  PackageJson,
-} from '@now/build-utils';
-import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
-
+import semver from 'semver';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import {
+  createLambdaFromPseudoLayers,
+  createPseudoLayer,
   EnvConfig,
   excludeFiles,
   ExperimentalTraceVersion,
   getDynamicRoutes,
+  getExportIntent,
+  getExportStatus,
   getNextConfig,
   getPathsInside,
+  getPrerenderManifest,
   getRoutes,
+  getRoutesManifest,
+  getSourceFilePathFromPage,
   isDynamicRoute,
   normalizePackageJson,
   normalizePage,
+  PseudoLayer,
   stringMap,
   syncEnvVars,
   validateEntrypoint,
-  createLambdaFromPseudoLayers,
-  PseudoLayer,
-  createPseudoLayer,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -66,7 +77,7 @@ interface BuildParamsType extends BuildOptions {
 }
 
 export const version = 2;
-
+const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
@@ -152,23 +163,19 @@ const name = '[@now/next]';
 const urls: stringMap = {};
 
 function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
-  // The runtime env vars are encoded and passed in as `argv[2]`, so that the
-  // dev-server process can replace them onto `process.env` after the Next.js
-  // "prepare" step
-  const encodedEnv = Buffer.from(JSON.stringify(runtimeEnv)).toString('base64');
-
-  // `env` is omitted since that
-  // makes it default to `process.env`
-  const forked = fork(path.join(__dirname, 'dev-server.js'), [encodedEnv], {
+  // `env` is omitted since that makes it default to `process.env`
+  const forked = fork(path.join(__dirname, 'dev-server.js'), [], {
     cwd: entryPath,
     execArgv: [],
   });
 
   const getUrl = () =>
     new Promise<string>((resolve, reject) => {
-      forked.on('message', resolve);
-      forked.on('error', reject);
+      forked.once('message', resolve);
+      forked.once('error', reject);
     });
+
+  forked.send({ dir: entryPath, runtimeEnv });
 
   return { forked, getUrl };
 }
@@ -191,13 +198,12 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const dotNextStatic = path.join(entryPath, '.next/static');
 
-  debug(`${name} Downloading user files...`);
   await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
 
-  const nodeVersion = await getNodeVersion(entryPath, undefined, config);
+  const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   if (!nextVersion) {
@@ -236,7 +242,7 @@ export const build = async ({
 
     return {
       output: {},
-      routes: getRoutes(
+      routes: await getRoutes(
         entryPath,
         entryDirectory,
         pathsInside,
@@ -328,6 +334,171 @@ export const build = async ({
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
 
+  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const headers: Route[] = [];
+  const rewrites: Route[] = [];
+  const redirects: Route[] = [];
+  const nextBasePathRoute: Route[] = [];
+  let nextBasePath: string | undefined;
+  // whether they have enabled pages/404.js as the custom 404 page
+  let hasPages404 = false;
+
+  if (routesManifest) {
+    switch (routesManifest.version) {
+      case 1:
+      case 2: {
+        redirects.push(...convertRedirects(routesManifest.redirects));
+        rewrites.push(...convertRewrites(routesManifest.rewrites));
+
+        if (routesManifest.headers) {
+          headers.push(...convertHeaders(routesManifest.headers));
+        }
+
+        if (routesManifest.pages404) {
+          hasPages404 = true;
+        }
+
+        if (routesManifest.basePath && routesManifest.basePath !== '/') {
+          nextBasePath = routesManifest.basePath;
+
+          if (!nextBasePath.startsWith('/')) {
+            throw new Error(
+              'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+            );
+          }
+          if (nextBasePath.endsWith('/')) {
+            throw new Error(
+              'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+            );
+          }
+
+          nextBasePathRoute.push({
+            src: `^${nextBasePath}(?:$|/(.*))$`,
+            dest: `/$1`,
+            continue: true,
+          });
+        }
+        break;
+      }
+      default: {
+        // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
+        throw new Error(
+          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
+        );
+      }
+    }
+  }
+
+  const userExport = await getExportStatus(entryPath);
+
+  if (userExport) {
+    const exportIntent = await getExportIntent(entryPath);
+    const { trailingSlash = false } = exportIntent || {};
+
+    const resultingExport = await getExportStatus(entryPath);
+    if (!resultingExport) {
+      throw new Error(
+        'Exporting Next.js app failed. Please check your build logs and contact us if this continues.'
+      );
+    }
+
+    if (resultingExport.success !== true) {
+      throw new Error(
+        'Export of Next.js app failed. Please check your build logs.'
+      );
+    }
+
+    const outDirectory = resultingExport.outDirectory;
+
+    debug(`next export should use trailing slash: ${trailingSlash}`);
+
+    // This handles pages, `public/`, and `static/`.
+    const filesAfterBuild = await glob('**', outDirectory);
+
+    const output: Files = { ...filesAfterBuild };
+
+    // Strip `.html` extensions from build output
+    Object.entries(output)
+      .filter(([name]) => name.endsWith('.html'))
+      .forEach(([name, value]) => {
+        const cleanName = name.slice(0, -5);
+        delete output[name];
+        output[cleanName] = value;
+        if (value.type === 'FileBlob' || value.type === 'FileFsRef') {
+          value.contentType = value.contentType || 'text/html; charset=utf-8';
+        }
+      });
+
+    return {
+      output,
+      routes: [
+        // TODO: low priority: handle trailingSlash
+
+        // Add top level rewrite for basePath if provided
+        ...nextBasePathRoute,
+
+        // User headers
+        ...headers,
+
+        // User redirects
+        ...redirects,
+
+        // Before we handle static files we need to set proper caching headers
+        {
+          // This ensures we only match known emitted-by-Next.js files and not
+          // user-emitted files which may be missing a hash in their filename.
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          // Next.js assets contain a hash or entropy in their filenames, so they
+          // are guaranteed to be unique and cacheable indefinitely.
+          headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+          continue: true,
+        },
+        {
+          src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
+        },
+        // Next.js pages, `static/` folder, reserved assets, and `public/`
+        // folder
+        { handle: 'filesystem' },
+
+        // This needs to come directly after handle: filesystem to make sure to
+        // 404 and clear the cache header for _next requests
+        {
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          headers: {
+            'cache-control': '',
+          },
+          status: 404,
+        },
+
+        ...rewrites,
+        // Dynamic routes
+        // TODO: do we want to do this?: ...dynamicRoutes,
+
+        // 404
+        ...(output['404']
+          ? [
+              {
+                src: path.join('/', entryDirectory, '.*'),
+                dest: path.join('/', entryDirectory, '404'),
+                status: 404,
+              },
+            ]
+          : []),
+      ],
+      watch: [],
+      childProcesses: [],
+    };
+  }
+
   if (isLegacy) {
     debug('Running npm install --production...');
     await runNpmInstall(
@@ -342,10 +513,16 @@ export const build = async ({
     await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
-  const exportedPageRoutes: Route[] = [];
   const lambdas: { [key: string]: Lambda } = {};
+  const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
+  const dynamicDataRoutes: Array<Source> = [];
+  let static404Page: string | undefined;
+
+  const appMountPrefixNoTrailingSlash = path.posix
+    .join('/', entryDirectory)
+    .replace(/\/+$/, '');
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
@@ -383,10 +560,15 @@ export const build = async ({
     if (filesAfterBuild['next.config.js']) {
       nextFiles['next.config.js'] = filesAfterBuild['next.config.js'];
     }
-    const pages = await glob(
-      '**/*.js',
-      path.join(entryPath, '.next', 'server', 'static', buildId, 'pages')
+    const pagesDir = path.join(
+      entryPath,
+      '.next',
+      'server',
+      'static',
+      buildId,
+      'pages'
     );
+    const pages = await glob('**/*.js', pagesDir);
     const launcherPath = path.join(__dirname, 'legacy-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -418,6 +600,11 @@ export const build = async ({
           ],
         };
 
+        const lambdaOptions = await getLambdaOptionsFromFunction({
+          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          config,
+        });
+
         debug(`Creating serverless function for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
           files: {
@@ -427,6 +614,7 @@ export const build = async ({
           },
           handler: 'now__launcher.launcher',
           runtime: nodeVersion.runtime,
+          ...lambdaOptions,
         });
         debug(`Created serverless function for page: "${page}"`);
       })
@@ -437,25 +625,47 @@ export const build = async ({
 
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
+    const prerenderManifest = await getPrerenderManifest(entryPath);
 
     Object.keys(staticPageFiles).forEach((page: string) => {
-      const staticRoute = path.join(entryDirectory, page);
-      staticPages[staticRoute] = staticPageFiles[page];
-
       const pathname = page.replace(/\.html$/, '');
+      const routeName = normalizePage(pathname);
 
-      if (isDynamicRoute(pathname)) {
-        dynamicPages.push(normalizePage(pathname));
+      // Prerendered routes emit a `.html` file but should not be treated as a
+      // static page.
+      // Lazily prerendered routes have a fallback `.html` file on newer
+      // Next.js versions so we need to also not treat it as a static page here.
+      if (
+        prerenderManifest.routes[routeName] ||
+        (prerenderManifest.lazyRoutes[routeName] &&
+          prerenderManifest.lazyRoutes[routeName].fallback)
+      ) {
         return;
       }
 
-      exportedPageRoutes.push({
-        src: `^${path.join('/', entryDirectory, pathname)}$`,
-        dest: path.join('/', staticRoute),
-      });
+      const staticRoute = path.join(entryDirectory, pathname);
+
+      staticPages[staticRoute] = staticPageFiles[page];
+      staticPages[staticRoute].contentType = htmlContentType;
+
+      if (isDynamicRoute(pathname)) {
+        dynamicPages.push(routeName);
+        return;
+      }
     });
 
+    // this can be either 404.html in latest versions
+    // or _errors/404.html versions while this was experimental
+    static404Page =
+      staticPages['404'] && hasPages404
+        ? '404'
+        : staticPages['_errors/404']
+        ? '_errors/404'
+        : undefined;
+
+    // > 1 because _error is a lambda but isn't used if a static 404 is available
     const pageKeys = Object.keys(pages);
+    const hasLambdas = !static404Page || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
       const nextConfig = await getNextConfig(workPath, entryPath);
@@ -472,7 +682,7 @@ export const build = async ({
     }
 
     // Assume tracing to be safe, bail if we know we don't need it.
-    let requiresTracing = true;
+    let requiresTracing = hasLambdas;
     try {
       if (
         realNextVersion &&
@@ -510,7 +720,7 @@ export const build = async ({
 
     if (requiresTracing) {
       const tracingLabel =
-        'Tracing Next.js serverless functions for external files ...';
+        'Traced Next.js serverless functions for external files in';
       console.time(tracingLabel);
 
       const apiPages: string[] = [];
@@ -546,9 +756,11 @@ export const build = async ({
           // Initial files are manually added to the lambda later
           return;
         }
+        const { mode } = lstatSync(path.join(workPath, file));
 
         files[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
+          mode,
         });
       };
 
@@ -556,7 +768,7 @@ export const build = async ({
       apiFileList.forEach(collectTracedFiles(apiReasons, apiTracedFiles));
       console.timeEnd(tracingLabel);
 
-      const zippingLabel = 'Compressing shared serverless function files';
+      const zippingLabel = 'Compressed shared serverless function files';
       console.time(zippingLabel);
 
       pseudoLayers.push(await createPseudoLayer(tracedFiles));
@@ -586,8 +798,11 @@ export const build = async ({
 
     const launcherPath = path.join(__dirname, 'templated-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
-    const allLambdasLabel = `All serverless functions created`;
-    console.time(allLambdasLabel);
+    const allLambdasLabel = `All serverless functions created in`;
+
+    if (hasLambdas) {
+      console.time(allLambdasLabel);
+    }
 
     await Promise.all(
       pageKeys.map(async page => {
@@ -596,14 +811,21 @@ export const build = async ({
           return;
         }
 
+        // Don't create _error lambda if we have a static 404 page or
+        // pages404 is enabled and 404.js is present
+        if (
+          page === '_error.js' &&
+          ((static404Page && staticPages[static404Page]) ||
+            (hasPages404 && pages['404.js']))
+        ) {
+          return;
+        }
+
         const pathname = page.replace(/\.js$/, '');
 
         if (isDynamicRoute(pathname)) {
           dynamicPages.push(normalizePage(pathname));
         }
-
-        const label = `Creating serverless function for page: "${page}"...`;
-        console.time(label);
 
         const pageFileName = path.normalize(
           path.relative(workPath, pages[page].fsPath)
@@ -619,10 +841,15 @@ export const build = async ({
           'now__launcher.js': new FileBlob({ data: launcher }),
         };
 
+        const lambdaOptions = await getLambdaOptionsFromFunction({
+          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          config,
+        });
+
+        const outputName = path.join(entryDirectory, pathname);
+
         if (requiresTracing) {
-          lambdas[
-            path.join(entryDirectory, pathname)
-          ] = await createLambdaFromPseudoLayers({
+          lambdas[outputName] = await createLambdaFromPseudoLayers({
             files: {
               ...launcherFiles,
               [requiresTracing ? pageFileName : 'page.js']: pages[page],
@@ -630,9 +857,10 @@ export const build = async ({
             layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
             handler: 'now__launcher.launcher',
             runtime: nodeVersion.runtime,
+            ...lambdaOptions,
           });
         } else {
-          lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+          lambdas[outputName] = await createLambda({
             files: {
               ...launcherFiles,
               ...assets,
@@ -641,12 +869,118 @@ export const build = async ({
             },
             handler: 'now__launcher.launcher',
             runtime: nodeVersion.runtime,
+            ...lambdaOptions,
           });
         }
-        console.timeEnd(label);
       })
     );
-    console.timeEnd(allLambdasLabel);
+
+    if (hasLambdas) {
+      console.timeEnd(allLambdasLabel);
+    }
+
+    let prerenderGroup = 1;
+    const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
+      // Get the route file as it'd be mounted in the builder output
+      const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
+      const lazyHtmlFallback =
+        isLazy && prerenderManifest.lazyRoutes[routeKey].fallback;
+
+      const htmlFsRef =
+        isLazy && !lazyHtmlFallback
+          ? null
+          : new FileFsRef({
+              fsPath: path.join(
+                pagesDir,
+                `${lazyHtmlFallback || routeFileNoExt + '.html'}`
+              ),
+            });
+      const jsonFsRef = isLazy
+        ? null
+        : new FileFsRef({
+            fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
+          });
+
+      let initialRevalidate: false | number;
+      let srcRoute: string | null;
+      let dataRoute: string;
+
+      if (isLazy) {
+        const pr = prerenderManifest.lazyRoutes[routeKey];
+        initialRevalidate = 1; // TODO: should Next.js provide this default?
+        // @ts-ignore
+        if (initialRevalidate === false) {
+          // Lazy routes cannot be "snapshotted" in time.
+          throw new Error('invariant isLazy: initialRevalidate !== false');
+        }
+        srcRoute = null;
+        dataRoute = pr.dataRoute;
+      } else {
+        const pr = prerenderManifest.routes[routeKey];
+        ({ initialRevalidate, srcRoute, dataRoute } = pr);
+      }
+
+      const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+      const outputSrcPathPage =
+        srcRoute == null
+          ? outputPathPage
+          : path.posix.join(
+              entryDirectory,
+              srcRoute === '/' ? '/index' : srcRoute
+            );
+      const outputPathData = path.posix.join(entryDirectory, dataRoute);
+
+      if (initialRevalidate === false) {
+        if (htmlFsRef == null || jsonFsRef == null) {
+          throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
+        }
+        htmlFsRef.contentType = htmlContentType;
+        prerenders[outputPathPage] = htmlFsRef;
+        prerenders[outputPathData] = jsonFsRef;
+      } else {
+        const lambda = lambdas[outputSrcPathPage];
+        if (lambda == null) {
+          throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
+        }
+
+        prerenders[outputPathPage] = new Prerender({
+          expiration: initialRevalidate,
+          lambda,
+          fallback: htmlFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+        });
+        prerenders[outputPathData] = new Prerender({
+          expiration: initialRevalidate,
+          lambda,
+          fallback: jsonFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+        });
+
+        ++prerenderGroup;
+      }
+    };
+
+    Object.keys(prerenderManifest.routes).forEach(route =>
+      onPrerenderRoute(route, false)
+    );
+    Object.keys(prerenderManifest.lazyRoutes).forEach(route =>
+      onPrerenderRoute(route, true)
+    );
+
+    // Dynamic pages for lazy routes should be handled by the lambda flow.
+    Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
+      const { dataRouteRegex, dataRoute } = prerenderManifest.lazyRoutes[
+        lazyRoute
+      ];
+      dynamicDataRoutes.push({
+        // Next.js provided data route regex
+        src: dataRouteRegex.replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
+        // Location of lambda in builder output
+        dest: path.posix.join(entryDirectory, dataRoute),
+      });
+    });
   }
 
   const nextStaticFiles = await glob(
@@ -686,52 +1020,102 @@ export const build = async ({
   let dynamicPrefix = path.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
-  const dynamicRoutes = getDynamicRoutes(
+  const dynamicRoutes = await getDynamicRoutes(
     entryPath,
     entryDirectory,
-    dynamicPages
-  ).map(route => {
-    // make sure .html is added to dest for now until
-    // outputting static files to clean routes is available
-    if (staticPages[`${route.dest}.html`.substr(1)]) {
-      route.dest = `${route.dest}.html`;
-    }
-    route.src = route.src.replace('^', `^${dynamicPrefix}`);
-    return route;
-  });
+    dynamicPages,
+    false,
+    routesManifest
+  ).then(arr =>
+    arr.map(route => {
+      route.src = route.src.replace('^', `^${dynamicPrefix}`);
+      return route;
+    })
+  );
 
   return {
     output: {
       ...publicDirectoryFiles,
       ...lambdas,
+      // Prerenders may override Lambdas -- this is an intentional behavior.
+      ...prerenders,
       ...staticPages,
       ...staticFiles,
       ...staticDirectoryFiles,
     },
+    /*
+      Desired routes order
+      - Runtime headers
+      - User headers and redirects
+      - Runtime redirects
+      - Runtime routes
+      - Check filesystem, if nothing found continue
+      - User rewrites
+      - Builder rewrites
+    */
     routes: [
-      // Static exported pages (.html rewrites)
-      ...exportedPageRoutes,
+      // Add top level rewrite for basePath if provided
+      ...nextBasePathRoute,
+
+      // headers
+      ...headers,
+
+      // redirects
+      ...redirects,
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
         // user-emitted files which may be missing a hash in their filename.
-        src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
         headers: { 'cache-control': 'public,max-age=31536000,immutable' },
         continue: true,
       },
+      { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+
+      // This needs to come directly after handle: filesystem to make sure to
+      // 404 and clear the cache header for _next requests
+      {
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
+        headers: {
+          'cache-control': '',
+        },
+        status: 404,
+      },
+
+      ...rewrites,
       // Dynamic routes
       ...dynamicRoutes,
+      ...dynamicDataRoutes,
+      // Custom Next.js 404 page (TODO: do we want to remove this?)
       ...(isLegacy
         ? []
         : [
             {
               src: path.join('/', entryDirectory, '.*'),
-              dest: path.join('/', entryDirectory, '_error'),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                static404Page
+                  ? static404Page
+                  : // if static 404 is not present but we have pages/404.js
+                  // it is a lambda due to _app getInitialProps
+                  hasPages404 && lambdas['404']
+                  ? '404'
+                  : '_error'
+              ),
               status: 404,
             },
           ]),
@@ -744,7 +1128,7 @@ export const build = async ({
 export const prepareCache = async ({
   workPath,
   entrypoint,
-}: PrepareCacheOptions) => {
+}: PrepareCacheOptions): Promise<Files> => {
   debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
@@ -764,8 +1148,6 @@ export const prepareCache = async ({
   const cache = {
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
     ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'package-lock.json'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, 'yarn.lock'), workPath)),
   };
   debug('Cache file manifest produced');
   return cache;

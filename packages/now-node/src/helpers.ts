@@ -13,13 +13,14 @@ function getBodyParser(req: NowRequest, body: Buffer) {
     if (!req.headers['content-type']) {
       return undefined;
     }
-
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { parse: parseContentType } = require('content-type');
     const { type } = parseContentType(req.headers['content-type']);
 
     if (type === 'application/json') {
       try {
-        return JSON.parse(body.toString());
+        const str = body.toString();
+        return str ? JSON.parse(str) : {};
       } catch (error) {
         throw new ApiError(400, 'Invalid JSON');
       }
@@ -30,6 +31,7 @@ function getBodyParser(req: NowRequest, body: Buffer) {
     }
 
     if (type === 'application/x-www-form-urlencoded') {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { parse: parseQS } = require('querystring');
       // note: querystring.parse does not produce an iterable object
       // https://nodejs.org/api/querystring.html#querystring_querystring_parse_str_sep_eq_options
@@ -46,6 +48,7 @@ function getBodyParser(req: NowRequest, body: Buffer) {
 
 function getQueryParser({ url = '/' }: NowRequest) {
   return function parseQuery(): NowRequestQuery {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { URL } = require('url');
     // we provide a placeholder base url because we only want searchParams
     const params = new URL(url, 'https://n').searchParams;
@@ -67,6 +70,7 @@ function getCookieParser(req: NowRequest) {
       return {};
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { parse } = require('cookie');
     return parse(Array.isArray(header) ? header.join(';') : header);
   };
@@ -78,6 +82,7 @@ function status(res: NowResponse, statusCode: number): NowResponse {
 }
 
 function setCharset(type: string, charset: string) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { parse, format } = require('content-type');
   const parsed = parse(type);
   parsed.parameters.charset = charset;
@@ -85,6 +90,7 @@ function setCharset(type: string, charset: string) {
 }
 
 function createETag(body: any, encoding: 'utf8' | undefined) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const etag = require('etag');
   const buf = !Buffer.isBuffer(body) ? Buffer.from(body, encoding) : body;
   return etag(buf, { weak: true });

@@ -7,8 +7,8 @@ const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
 const { nowDeploy } = require('./now-deploy.js');
 
-async function packAndDeploy (builderPath) {
-  await spawnAsync('npm', [ '--loglevel', 'warn', 'pack' ], {
+async function packAndDeploy(builderPath) {
+  await spawnAsync('npm', ['--loglevel', 'warn', 'pack'], {
     stdio: 'inherit',
     cwd: builderPath,
   });
@@ -23,13 +23,16 @@ async function packAndDeploy (builderPath) {
 
 const RANDOMNESS_PLACEHOLDER_STRING = 'RANDOMNESS_PLACEHOLDER';
 
-async function testDeployment (
+async function testDeployment(
   { builderUrl, buildUtilsUrl },
   fixturePath,
   buildDelegate
 ) {
   console.log('testDeployment', fixturePath);
-  const globResult = await glob(`${fixturePath}/**`, { nodir: true, dot: true });
+  const globResult = await glob(`${fixturePath}/**`, {
+    nodir: true,
+    dot: true,
+  });
   const bodies = globResult.reduce((b, f) => {
     const r = path.relative(fixturePath, f);
     b[r] = fs.readFileSync(f);
@@ -50,6 +53,17 @@ async function testDeployment (
   }
 
   const nowJson = JSON.parse(bodies['now.json']);
+
+  if (process.env.NOW_BUILDER_DEBUG) {
+    if (!nowJson.build) {
+      nowJson.build = {};
+    }
+    if (!nowJson.build.env) {
+      nowJson.build.env = {};
+    }
+    nowJson.build.env.NOW_BUILDER_DEBUG = process.env.NOW_BUILDER_DEBUG;
+  }
+
   for (const build of nowJson.builds) {
     if (builderUrl) {
       if (builderUrl === '@canary') {
@@ -81,8 +95,16 @@ async function testDeployment (
 
   for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
+    if (probe.delay) {
+      await new Promise(resolve => setTimeout(resolve, probe.delay));
+      continue;
+    }
     const probeUrl = `https://${deploymentUrl}${probe.path}`;
-    const fetchOpts = { method: probe.method, headers: { ...probe.headers } };
+    const fetchOpts = {
+      ...probe.fetchOptions,
+      method: probe.method,
+      headers: { ...probe.headers },
+    };
     if (probe.body) {
       fetchOpts.headers['content-type'] = 'application/json';
       fetchOpts.body = JSON.stringify(probe.body);
@@ -98,29 +120,59 @@ async function testDeployment (
       }
     }
 
-    if (probe.mustContain) {
-      if (!text.includes(probe.mustContain)) {
+    if (probe.mustContain || probe.mustNotContain) {
+      const shouldContain = !!probe.mustContain;
+      const containsIt = text.includes(probe.mustContain);
+      if (
+        (!containsIt && probe.mustContain) ||
+        (containsIt && probe.mustNotContain)
+      ) {
         fs.writeFileSync(path.join(__dirname, 'failed-page.txt'), text);
         const headers = Array.from(resp.headers.entries())
-          .map(([ k, v ]) => `  ${k}=${v}`)
+          .map(([k, v]) => `  ${k}=${v}`)
           .join('\n');
         throw new Error(
-          `Fetched page ${probeUrl} does not contain ${probe.mustContain}.` +
-            ` Instead it contains ${text.slice(0, 60)}` +
+          `Fetched page ${probeUrl} does${
+            shouldContain ? ' not' : ''
+          } contain ${
+            shouldContain ? probe.mustContain : probe.mustNotContain
+          }.` +
+            (shouldContain ? ` Instead it contains ${text.slice(0, 60)}` : '') +
             ` Response headers:\n ${headers}`
         );
       }
     } else if (probe.responseHeaders) {
       // eslint-disable-next-line no-loop-func
-      Object.keys(probe.responseHeaders).forEach((header) => {
+      Object.keys(probe.responseHeaders).forEach(header => {
         const actual = resp.headers.get(header);
         const expected = probe.responseHeaders[header];
         const isEqual = Array.isArray(expected)
-          ? expected.every((h) => actual.includes(h))
+          ? expected.every(h => actual.includes(h))
+          : expected.startsWith('/') && expected.endsWith('/')
+          ? new RegExp(expected.slice(1, -1)).test(actual)
           : expected === actual;
         if (!isEqual) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([k, v]) => `  ${k}=${v}`)
+            .join('\n');
+
           throw new Error(
             `Page ${probeUrl} does not have header ${header}.\n\nExpected: ${expected}.\nActual: ${headers}`
+          );
+        }
+      });
+    } else if (probe.notResponseHeaders) {
+      Object.keys(probe.notResponseHeaders).forEach(header => {
+        const headerValue = resp.headers.get(header);
+        const expected = probe.notResponseHeaders[header];
+
+        if (headerValue === expected) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([k, v]) => `  ${k}=${v}`)
+            .join('\n');
+
+          throw new Error(
+            `Page ${probeUrl} invalid page header ${header}.\n\n Did not expect: ${header}=${expected}.\nBut got ${headers}`
           );
         }
       });
@@ -137,7 +189,7 @@ async function testDeployment (
   return { deploymentId, deploymentUrl };
 }
 
-async function nowDeployIndexTgz (file) {
+async function nowDeployIndexTgz(file) {
   const bodies = {
     'index.tgz': fs.readFileSync(file),
     'now.json': Buffer.from(JSON.stringify({ version: 2 })),
@@ -146,7 +198,7 @@ async function nowDeployIndexTgz (file) {
   return (await nowDeploy(bodies)).deploymentUrl;
 }
 
-async function fetchDeploymentUrl (url, opts) {
+async function fetchDeploymentUrl(url, opts) {
   for (let i = 0; i < 50; i += 1) {
     const resp = await fetch(url, opts);
     const text = await resp.text();
@@ -154,13 +206,13 @@ async function fetchDeploymentUrl (url, opts) {
       return { resp, text };
     }
 
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   throw new Error(`Failed to wait for deployment READY. Url is ${url}`);
 }
 
-async function fetchTgzUrl (url) {
+async function fetchTgzUrl(url) {
   for (let i = 0; i < 500; i += 1) {
     const resp = await fetch(url);
     if (resp.status === 200) {
@@ -171,19 +223,19 @@ async function fetchTgzUrl (url) {
       }
     }
 
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   throw new Error(`Failed to wait for builder url READY. Url is ${url}`);
 }
 
-async function spawnAsync (...args) {
+async function spawnAsync(...args) {
   return await new Promise((resolve, reject) => {
     const child = spawn(...args);
     let result;
     if (child.stdout) {
       result = '';
-      child.stdout.on('data', (chunk) => {
+      child.stdout.on('data', chunk => {
         result += chunk.toString();
       });
     }
