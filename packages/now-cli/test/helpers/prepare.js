@@ -156,33 +156,6 @@ RUN mkdir /public
 RUN echo hello > /public/index.html
       `,
     },
-    'build-env': {
-      'now.json': JSON.stringify({
-        version: 1,
-        type: 'static',
-        build: {
-          env: { FOO: 'bar' },
-        },
-      }),
-      Dockerfile: `
-FROM alpine
-ARG FOO
-RUN mkdir /public
-RUN echo $FOO > /public/index.html
-      `,
-    },
-    'build-env-arg': {
-      'now.json': JSON.stringify({
-        version: 1,
-        type: 'static',
-      }),
-      Dockerfile: `
-FROM alpine
-ARG NONCE
-RUN mkdir /public
-RUN echo $NONCE > /public/index.html
-      `,
-    },
     'build-env-debug': {
       'now.json':
         '{ "builds": [ { "src": "index.js", "use": "@now/node" } ], "version": 2 }',
