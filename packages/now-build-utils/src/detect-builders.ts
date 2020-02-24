@@ -80,6 +80,7 @@ export async function detectBuilders(
   warnings: ErrorResponse[];
   defaultRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
+  statusRoutes: Route[] | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
@@ -89,6 +90,7 @@ export async function detectBuilders(
 
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
+  const statusRoutes: Route[] = [];
 
   const functionError = validateFunctions(options);
 
@@ -99,6 +101,7 @@ export async function detectBuilders(
       warnings,
       defaultRoutes: null,
       redirectRoutes: null,
+      statusRoutes: null,
     };
   }
 
@@ -153,6 +156,7 @@ export async function detectBuilders(
           warnings,
           defaultRoutes: null,
           redirectRoutes: null,
+          statusRoutes: null,
         };
       }
 
@@ -224,6 +228,7 @@ export async function detectBuilders(
         builders: null,
         redirectRoutes: null,
         defaultRoutes: null,
+        statusRoutes: null,
       };
     }
 
@@ -264,6 +269,7 @@ export async function detectBuilders(
       warnings,
       redirectRoutes: null,
       defaultRoutes: null,
+      statusRoutes: null,
     };
   }
 
@@ -296,6 +302,7 @@ export async function detectBuilders(
 
   defaultRoutes.push(...routesResult.defaultRoutes);
   redirectRoutes.push(...routesResult.redirectRoutes);
+  statusRoutes.push(...routesResult.statusRoutes);
 
   return {
     warnings,
@@ -303,6 +310,7 @@ export async function detectBuilders(
     errors: errors.length ? errors : null,
     redirectRoutes,
     defaultRoutes,
+    statusRoutes,
   };
 }
 
@@ -891,9 +899,11 @@ function mergeRoutes(
 ): {
   defaultRoutes: Route[];
   redirectRoutes: Route[];
+  statusRoutes: Route[];
 } {
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
+  const statusRoutes: Route[] = [];
 
   if (preDefaultRoutes && preDefaultRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -936,7 +946,7 @@ function mergeRoutes(
       }
 
       if (preDefaultRoutes.length) {
-        defaultRoutes.push({
+        statusRoutes.push({
           src: '^/api(/.*)?$',
           status: 404,
           continue: true,
@@ -946,7 +956,7 @@ function mergeRoutes(
       defaultRoutes.push(...preDefaultRoutes);
 
       if (preDefaultRoutes.length) {
-        defaultRoutes.push({
+        statusRoutes.push({
           status: 404,
           src: '^/api(/.*)?$',
         });
@@ -969,6 +979,7 @@ function mergeRoutes(
   return {
     defaultRoutes,
     redirectRoutes,
+    statusRoutes,
   };
 }
 

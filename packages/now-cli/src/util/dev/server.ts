@@ -12,7 +12,11 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
+import {
+  getTransformedRoutes,
+  appendRoutesToPhase,
+  HandleValue,
+} from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
@@ -553,6 +557,7 @@ export default class DevServer {
         errors,
         defaultRoutes,
         redirectRoutes,
+        statusRoutes,
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
@@ -582,7 +587,13 @@ export default class DevServer {
         const routes: RouteConfig[] = [];
         const { routes: nowConfigRoutes } = config;
         routes.push(...(redirectRoutes || []));
-        routes.push(...(nowConfigRoutes || []));
+        routes.push(
+          ...appendRoutesToPhase({
+            routes: nowConfigRoutes,
+            newRoutes: statusRoutes,
+            phase: 'filesystem',
+          })
+        );
         routes.push(...(defaultRoutes || []));
         config.routes = routes;
       }
