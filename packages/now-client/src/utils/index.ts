@@ -2,7 +2,7 @@ import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep } from 'path';
+import { join, sep, relative } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
@@ -191,9 +191,10 @@ export const prepareFiles = (
 
         if (clientOptions.isDirectory) {
           // Directory
-          fileName = clientOptions.path
-            ? name.substring(clientOptions.path.length + 1)
-            : name;
+          fileName =
+            typeof clientOptions.path === 'string'
+              ? relative(clientOptions.path, name)
+              : name;
         } else {
           // Array of files or single file
           const segments = name.split(sep);
