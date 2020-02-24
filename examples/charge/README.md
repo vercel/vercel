@@ -6,7 +6,7 @@ This directory is a brief example of a [Charge.js](https://charge.js.org/) site 
 
 Deploy your own Charge.js project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/charge)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/charge)
 
 _Live Example: https://charge.now-examples.now.sh_
 

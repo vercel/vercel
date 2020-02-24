@@ -6,7 +6,7 @@ This directory is a brief example of a [Name](site-link) site that can be deploy
 
 Deploy your own [Name] project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now-examples/tree/master/example-directory)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now-examples/tree/master/example-directory)
 
 ### How We Created This Example
 

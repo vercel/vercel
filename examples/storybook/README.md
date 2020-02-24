@@ -6,7 +6,7 @@ This directory is a brief example of a [Storybook](https://storybook.js.org/) ap
 
 Deploy your own Storybook project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/storybook)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/storybook)
 
 _Live Example: https://storybook.now-examples.now.sh_
 

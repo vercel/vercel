@@ -8,7 +8,7 @@ This directory is a brief example of a [Preact](https://preactjs.com/) app that 
 
 Deploy your own Preact project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/preact)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/preact)
 
 _Live Example: https://preact.now-examples.now.sh_
 
