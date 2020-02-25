@@ -6,7 +6,7 @@ This directory is a brief example of a [Pelican](https://docs.getpelican.com/en/
 
 Deploy your own Pelican project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/pelican)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/pelican)
 
 _Live Example: https://pelican.now-examples.now.sh_
 

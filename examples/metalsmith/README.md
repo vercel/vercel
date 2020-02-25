@@ -6,7 +6,7 @@ This directory is a brief example of a [Metalsmith](https://metalsmith.io/) app 
 
 Deploy your own Metalsmith project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/metalsmith)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/metalsmith)
 
 _Live Example: https://metalsmith.now-examples.now.sh_
 

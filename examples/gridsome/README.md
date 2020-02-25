@@ -8,7 +8,7 @@ This directory is a brief example of a [Gridsome](https://gridsome.org/) app tha
 
 Deploy your own Gridsome project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/gridsome)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/gridsome)
 
 _Live Example: https://gridsome.now-examples.now.sh_
 
