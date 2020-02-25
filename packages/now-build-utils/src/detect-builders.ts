@@ -80,17 +80,13 @@ export async function detectBuilders(
   warnings: ErrorResponse[];
   defaultRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
-  statusRoutes: Route[] | null;
+  rewriteRoutes: Route[] | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
   const apiBuilders: Builder[] = [];
   let frontendBuilder: Builder | null = null;
-
-  const defaultRoutes: Route[] = [];
-  const redirectRoutes: Route[] = [];
-  const statusRoutes: Route[] = [];
 
   const functionError = validateFunctions(options);
 
@@ -101,7 +97,7 @@ export async function detectBuilders(
       warnings,
       defaultRoutes: null,
       redirectRoutes: null,
-      statusRoutes: null,
+      rewriteRoutes: null,
     };
   }
 
@@ -156,7 +152,7 @@ export async function detectBuilders(
           warnings,
           defaultRoutes: null,
           redirectRoutes: null,
-          statusRoutes: null,
+          rewriteRoutes: null,
         };
       }
 
@@ -228,7 +224,7 @@ export async function detectBuilders(
         builders: null,
         redirectRoutes: null,
         defaultRoutes: null,
-        statusRoutes: null,
+        rewriteRoutes: null,
       };
     }
 
@@ -269,7 +265,7 @@ export async function detectBuilders(
       warnings,
       redirectRoutes: null,
       defaultRoutes: null,
-      statusRoutes: null,
+      rewriteRoutes: null,
     };
   }
 
@@ -300,17 +296,13 @@ export async function detectBuilders(
     options
   );
 
-  defaultRoutes.push(...routesResult.defaultRoutes);
-  redirectRoutes.push(...routesResult.redirectRoutes);
-  statusRoutes.push(...routesResult.statusRoutes);
-
   return {
     warnings,
     builders: builders.length ? builders : null,
     errors: errors.length ? errors : null,
-    redirectRoutes,
-    defaultRoutes,
-    statusRoutes,
+    redirectRoutes: routesResult.redirectRoutes,
+    defaultRoutes: routesResult.defaultRoutes,
+    rewriteRoutes: routesResult.rewriteRoutes,
   };
 }
 
@@ -899,11 +891,11 @@ function mergeRoutes(
 ): {
   defaultRoutes: Route[];
   redirectRoutes: Route[];
-  statusRoutes: Route[];
+  rewriteRoutes: Route[];
 } {
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
-  const statusRoutes: Route[] = [];
+  const rewriteRoutes: Route[] = [];
 
   if (preDefaultRoutes && preDefaultRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -940,15 +932,12 @@ function mergeRoutes(
         }
       }
 
-      if (preDynamicRoutes && preDynamicRoutes.length > 0) {
-        if (defaultRoutes.length === 0) {
-          defaultRoutes.push({ handle: 'miss' });
-        }
-        defaultRoutes.push(...preDynamicRoutes);
+      if (preDynamicRoutes) {
+        rewriteRoutes.push(...preDynamicRoutes);
       }
 
       if (preDefaultRoutes.length) {
-        statusRoutes.push({
+        rewriteRoutes.push({
           src: '^/api(/.*)?$',
           status: 404,
           continue: true,
@@ -981,7 +970,7 @@ function mergeRoutes(
   return {
     defaultRoutes,
     redirectRoutes,
-    statusRoutes,
+    rewriteRoutes,
   };
 }
 

@@ -557,7 +557,7 @@ export default class DevServer {
         errors,
         defaultRoutes,
         redirectRoutes,
-        statusRoutes,
+        rewriteRoutes,
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
@@ -590,7 +590,7 @@ export default class DevServer {
         routes.push(
           ...appendRoutesToPhase({
             routes: nowConfigRoutes,
-            newRoutes: statusRoutes,
+            newRoutes: rewriteRoutes,
             phase: 'filesystem',
           })
         );
