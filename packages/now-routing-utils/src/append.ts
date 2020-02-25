@@ -6,9 +6,15 @@ export function appendRoutesToPhase({
   newRoutes,
   phase,
 }: AppendRoutesToPhaseProps) {
+  if (prevRoutes === null) {
+    return [];
+  }
+  if (newRoutes === null || newRoutes.length === 0) {
+    return prevRoutes;
+  }
   let isInPhase = false;
   let insertIndex = -1;
-  const routes = [...(prevRoutes || [])];
+  const routes = [...prevRoutes];
 
   routes.forEach((r, i) => {
     if (isHandler(r)) {
@@ -22,12 +28,12 @@ export function appendRoutesToPhase({
   });
 
   if (isInPhase) {
-    routes.push(...(newRoutes || []));
+    routes.push(...newRoutes);
   } else if (insertIndex > -1) {
-    routes.splice(insertIndex, 0, ...(newRoutes || []));
+    routes.splice(insertIndex, 0, ...newRoutes);
   } else {
     routes.push({ handle: phase });
-    routes.push(...(newRoutes || []));
+    routes.push(...newRoutes);
   }
   return routes;
 }
