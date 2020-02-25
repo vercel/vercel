@@ -399,7 +399,6 @@ test(
   })
 );
 
-/*
 test(
   '[now dev] does not display directory listing after 404',
   testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
@@ -412,6 +411,7 @@ test(
   })
 );
 
+/*
 test(
   '[now dev] does not display directory listing after multiple 404',
   testFixtureStdio('handle-miss-multiple-404', async (t, port) => {
