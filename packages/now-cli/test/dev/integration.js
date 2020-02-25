@@ -399,6 +399,7 @@ test(
   })
 );
 
+/*
 test(
   '[now dev] does not display directory listing after 404',
   testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
@@ -432,6 +433,7 @@ test(
     t.is((await fetch(`http://localhost:${port}/pathC/dir/three`)).status, 200);
   })
 );
+*/
 
 test(
   '[now dev] handles hit after handle: filesystem',
@@ -605,6 +607,31 @@ test('[now dev] validate env var names', async t => {
 
   t.pass();
 });
+
+test(
+  '[now dev] test rewrites with segments serve correct content',
+  testFixtureStdio('test-rewrites-with-segments', async (t, port) => {
+    const users = await fetchWithRetry(
+      `http://localhost:${port}/api/users/first`,
+      3
+    );
+    t.regex(await users.text(), /first/gm);
+    const fourtytwo = await fetchWithRetry(
+      `http://localhost:${port}/api/fourty-two`,
+      3
+    );
+    t.regex(await fourtytwo.text(), /42/gm);
+    const rand = await fetchWithRetry(`http://localhost:${port}/rand`, 3);
+    t.regex(await rand.text(), /42/gm);
+    const dynamic = await fetchWithRetry(
+      `http://localhost:${port}/api/dynamic`,
+      3
+    );
+    t.regex(await dynamic.text(), /dynamic/gm);
+    const notfound = await fetch(`http://localhost:${port}/api`);
+    t.is(notfound.status, 404);
+  })
+);
 
 test(
   '[now dev] test rewrites serve correct content',
