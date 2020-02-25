@@ -906,11 +906,11 @@ it('Test `detectRoutes`', async () => {
 
     expect(defaultRoutes!.length).toBe(3);
     expect((defaultRoutes![0] as any).src).toBe(
-      '^/api/date(\\/|\\/index|\\/index\\.js)?$'
+      '^/api/date(/|/index|/index\\.js)?$'
     );
     expect((defaultRoutes![0] as any).dest).toBe('/api/date/index.js');
     expect((defaultRoutes![1] as any).src).toBe(
-      '^/api/(date\\/|date|date\\.js)$'
+      '^/api/(date/|date|date\\.js)$'
     );
     expect((defaultRoutes![1] as any).dest).toBe('/api/date.js');
   }
@@ -922,13 +922,13 @@ it('Test `detectRoutes`', async () => {
 
     expect(defaultRoutes!.length).toBe(3);
     expect((defaultRoutes![0] as any).src).toBe(
-      '^/api/([^/]+)(\\/|\\/index|\\/index\\.js)?$'
+      '^/api/([^/]+)(/|/index|/index\\.js)?$'
     );
     expect((defaultRoutes![0] as any).dest).toBe(
       '/api/[date]/index.js?date=$1'
     );
     expect((defaultRoutes![1] as any).src).toBe(
-      '^/api/(date\\/|date|date\\.js)$'
+      '^/api/(date/|date|date\\.js)$'
     );
     expect((defaultRoutes![1] as any).dest).toBe('/api/date.js');
   }
@@ -1179,7 +1179,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         check: true,
       },
       {
-        src: '^/api/([^/]+)(\\/|\\/index|\\/index\\.js)?$',
+        src: '^/api/([^/]+)(/|/index|/index\\.js)?$',
         dest: '/api/[date]/index?date=$1',
         check: true,
       },
@@ -1488,7 +1488,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^/]+)(\\/|\\/index)?$',
+        src: '^/api/([^/]+)(/|/index)?$',
         dest: '/api/[date]/index?date=$1',
         check: true,
       },
@@ -1749,7 +1749,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
-        src: '^/api/([^/]+)(\\/|\\/index)?$',
+        src: '^/api/([^/]+)(/|/index)?$',
         dest: '/api/[date]/index?date=$1',
         check: true,
       },

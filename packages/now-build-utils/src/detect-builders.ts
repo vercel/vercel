@@ -843,10 +843,10 @@ function createRouteFromPath(
     } else if (isLast) {
       const { name: fileName, ext } = parsePath(segment);
       const isIndex = fileName === 'index';
-      const prefix = isIndex ? '\\/' : '';
+      const prefix = isIndex ? '/' : '';
 
       const names = [
-        isIndex ? prefix : `${fileName}\\/`,
+        isIndex ? prefix : `${fileName}/`,
         prefix + escapeName(fileName),
         featHandleMiss && cleanUrls
           ? ''
