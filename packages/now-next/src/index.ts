@@ -20,9 +20,9 @@ import {
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
 import {
+  convertHeaders,
   convertRedirects,
   convertRewrites,
-  convertHeaders,
 } from '@now/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
@@ -91,6 +91,8 @@ const nowDevChildProcesses = new Set<ChildProcess>();
     process.exit(0);
   });
 });
+
+const MAX_AGE_ONE_YEAR = 31536000;
 
 /**
  * Read package.json from files
@@ -455,7 +457,9 @@ export const build = async ({
           ),
           // Next.js assets contain a hash or entropy in their filenames, so they
           // are guaranteed to be unique and cacheable indefinitely.
-          headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+          headers: {
+            'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
+          },
           continue: true,
         },
         {
@@ -930,36 +934,39 @@ export const build = async ({
             );
       const outputPathData = path.posix.join(entryDirectory, dataRoute);
 
+      const lambda = lambdas[outputSrcPathPage];
+      if (lambda == null) {
+        throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
+      }
+
       if (initialRevalidate === false) {
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
-        htmlFsRef.contentType = htmlContentType;
-        prerenders[outputPathPage] = htmlFsRef;
-        prerenders[outputPathData] = jsonFsRef;
-      } else {
-        const lambda = lambdas[outputSrcPathPage];
-        if (lambda == null) {
-          throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
-        }
-
-        prerenders[outputPathPage] = new Prerender({
-          expiration: initialRevalidate,
-          lambda,
-          fallback: htmlFsRef,
-          group: prerenderGroup,
-          bypassToken: prerenderManifest.bypassToken,
-        });
-        prerenders[outputPathData] = new Prerender({
-          expiration: initialRevalidate,
-          lambda,
-          fallback: jsonFsRef,
-          group: prerenderGroup,
-          bypassToken: prerenderManifest.bypassToken,
-        });
-
-        ++prerenderGroup;
       }
+
+      prerenders[outputPathPage] = new Prerender({
+        expiration:
+          initialRevalidate === false
+            ? MAX_AGE_ONE_YEAR * 10
+            : initialRevalidate,
+        lambda,
+        fallback: htmlFsRef,
+        group: prerenderGroup,
+        bypassToken: prerenderManifest.bypassToken,
+      });
+      prerenders[outputPathData] = new Prerender({
+        expiration:
+          initialRevalidate === false
+            ? MAX_AGE_ONE_YEAR * 10
+            : initialRevalidate,
+        lambda,
+        fallback: jsonFsRef,
+        group: prerenderGroup,
+        bypassToken: prerenderManifest.bypassToken,
+      });
+
+      ++prerenderGroup;
     };
 
     Object.keys(prerenderManifest.routes).forEach(route =>
@@ -1073,7 +1080,9 @@ export const build = async ({
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
-        headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+        headers: {
+          'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
+        },
         continue: true,
       },
       { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
