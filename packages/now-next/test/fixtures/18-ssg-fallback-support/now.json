@@ -13,7 +13,7 @@
       "path": "/forever",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "MISS"
+        "x-now-cache": "PRERENDER"
       }
     },
     { "delay": 2000 },
@@ -114,7 +114,7 @@
       "path": "/_next/data/testing-build-id/forever.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "MISS"
+        "x-now-cache": "/PRERENDER|HIT/"
       }
     },
     { "delay": 2000 },
