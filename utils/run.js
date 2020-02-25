@@ -85,7 +85,7 @@ async function main() {
 
   if (process.env.NOW_GITHUB_DEPLOYMENT) {
     execSync(
-      `rm -rf public && mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' > public/output.html`
+      `rm -rf public && mkdir public && echo '<a href="https://zeit.co/import">https://zeit.co/import</a>' > public/output.html`
     );
   }
 }

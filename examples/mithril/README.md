@@ -6,7 +6,7 @@ This directory is a brief example of a [Mithril](https://mithril.js.org/) app th
 
 Deploy your own Mithril project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/mithril)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/mithril)
 
 _Live Example: https://mithril.now-examples.now.sh_
 
