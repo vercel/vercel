@@ -8,7 +8,7 @@ This directory is a brief example of an [Ember](https://emberjs.com/) app that c
 
 Deploy your own Ember project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/ember)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/ember)
 
 _Live Example: https://ember.now-examples.now.sh_
 
