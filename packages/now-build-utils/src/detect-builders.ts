@@ -907,8 +907,6 @@ function mergeRoutes(
 
   if (preDefaultRoutes && preDefaultRoutes.length > 0) {
     if (options.featHandleMiss) {
-      defaultRoutes.push({ handle: 'miss' });
-
       const extSet = detectApiExtensions(apiBuilders);
 
       if (extSet.size > 0) {
@@ -933,6 +931,7 @@ function mergeRoutes(
             status: 308,
           });
         } else {
+          defaultRoutes.push({ handle: 'miss' });
           defaultRoutes.push({
             src: `^/api/(.+)${extGroup}$`,
             dest: '/api/$1',
@@ -941,7 +940,10 @@ function mergeRoutes(
         }
       }
 
-      if (preDynamicRoutes) {
+      if (preDynamicRoutes && preDynamicRoutes.length > 0) {
+        if (defaultRoutes.length === 0) {
+          defaultRoutes.push({ handle: 'miss' });
+        }
         defaultRoutes.push(...preDynamicRoutes);
       }
 
@@ -956,7 +958,7 @@ function mergeRoutes(
       defaultRoutes.push(...preDefaultRoutes);
 
       if (preDefaultRoutes.length) {
-        statusRoutes.push({
+        defaultRoutes.push({
           status: 404,
           src: '^/api(/.*)?$',
         });
