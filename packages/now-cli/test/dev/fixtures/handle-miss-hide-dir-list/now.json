@@ -11,12 +11,12 @@
       "check": true
     },
     {
-      "handle": "miss"
-    },
-    {
       "src": "/.*",
       "status": 404,
       "continue": true
+    },
+    {
+      "handle": "miss"
     },
     {
       "src": "/(.*)",

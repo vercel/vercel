@@ -80,3 +80,18 @@ export interface NowHeaderKeyValue {
   key: string;
   value: string;
 }
+
+export interface AppendRoutesToPhaseProps {
+  /**
+   * All input routes including `handle` phases.
+   */
+  routes: Route[] | null;
+  /**
+   * The routes to append to a specific phase.
+   */
+  newRoutes: Route[] | null;
+  /**
+   * The phase to append the routes such as `filesystem`.
+   */
+  phase: HandleValue;
+}
