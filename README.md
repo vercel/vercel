@@ -21,7 +21,7 @@ now             # Deploy to the cloud
 
 ## Documentation
 
-For details on how to use Now CLI, check out our [documentation](https://zeit.co/docs).
+For details on how to use Now CLI, check out our [documentation](https://zeit.co/docs/now-cli).
 
 ## Caught a Bug?
 
