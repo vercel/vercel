@@ -1188,7 +1188,7 @@ export default class DevServer {
   };
 
   /**
-   * This is the equivalent of exit_with_status() function in now-proxy.
+   * This is the equivalent to now-proxy exit_with_status() function.
    */
   exitWithStatus = async (
     match: BuildMatch | null,
@@ -1199,12 +1199,6 @@ export default class DevServer {
     nowRequestId: string
   ): Promise<boolean> => {
     const { status, headers, dest } = routeResult;
-    /*
-    if (match && status === 404 && phase === 'miss') {
-      status = undefined;
-    }
-    */
-
     const location = headers['location'] || dest;
 
     if (status && location && (300 <= status && status <= 399)) {
