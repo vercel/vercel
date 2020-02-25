@@ -6,7 +6,7 @@ This directory is a brief example of a vanilla site that can be deployed with ZE
 
 Deploy your own vanilla website, along with Serverless Functions, with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/vanilla)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/vanilla)
 
 _Live Example: https://vanilla.now-examples.now.sh_
 

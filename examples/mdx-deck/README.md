@@ -6,7 +6,7 @@ This directory is a brief example of a [mdx-deck](https://github.com/jxnblk/mdx-
 
 Deploy your own mdx-deck project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/mdx-deck)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/mdx-deck)
 
 _Live Example: https://mdx-deck.now-examples.now.sh_
 
