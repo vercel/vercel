@@ -366,20 +366,26 @@ export const build = async ({
           // Load the /_next/data routes for both dynamic SSG and SSP pages.
           // These must be combined and sorted to prevent conflicts
           for (const dataRoute of routesManifest.dataRoutes) {
+            const ssgDataRoute = prerenderManifest.lazyRoutes[dataRoute.page];
+
+            // we don't need to add routes for non-lazy SSG routes since
+            // they have outputs which would override the routes anyways
+            if (prerenderManifest.routes[dataRoute.page]) {
+              continue;
+            }
+
             dataRoutes.push({
               src: dataRoute.dataRouteRegex.replace(
                 /^\^/,
                 `^${appMountPrefixNoTrailingSlash}`
               ),
-              // make sure to route SSG data route to the data prerender output,
-              // we don't do this for SSP routes since they don't have a data
-              // output
               dest: path.join(
                 '/',
                 entryDirectory,
-                `${dataRoute.page}${
-                  prerenderManifest.lazyRoutes[dataRoute.page] ? '.json' : ''
-                }`
+                // make sure to route SSG data route to the data prerender
+                // output, we don't do this for SSP routes since they don't
+                // have a separate data output
+                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
               ),
             });
           }
