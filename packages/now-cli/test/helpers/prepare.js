@@ -314,9 +314,8 @@ fs.writeFileSync(
     await mkdirp(directory);
 
     // Get content from the object property
-    for (const name of Object.keys(needed)) {
+    for (const [name, content] of Object.entries(needed)) {
       const file = join(directory, name);
-      const content = needed[name];
       await mkdirp(dirname(file));
       await writeFile(file.replace('-builds', ''), content);
     }
