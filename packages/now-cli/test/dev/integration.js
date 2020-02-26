@@ -461,6 +461,8 @@ test(
     t.regex(await rand.text(), /random number/gm);
     const rand2 = await fetchWithRetry(`http://localhost:${port}/api/rand.js`);
     t.regex(await rand2.text(), /random number/gm);
+    const notfound = await fetch(`http://localhost:${port}/api`);
+    t.is(notfound.status, 404);
   })
 );
 
