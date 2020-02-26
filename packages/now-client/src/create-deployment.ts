@@ -1,4 +1,3 @@
-import { omit } from 'rambda';
 import { upload } from './upload';
 import readdir from 'recursive-readdir';
 import { DeploymentError } from './errors';
@@ -122,7 +121,11 @@ export async function* createDeployment(
   if (nowConfig) {
     // We'll apply all properties from `now.json`
     // except for some to the payload.
-    const include = omit(['scope', 'github'], nowConfig);
+    const include = Object.assign({}, nowConfig);
+
+    delete include.scope;
+    delete include.github;
+
     Object.assign(deploymentOptions, include);
   }
 

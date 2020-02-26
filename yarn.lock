@@ -9003,11 +9003,6 @@ quick-lru@^1.0.0:
   resolved "https://registry.yarnpkg.com/quick-lru/-/quick-lru-1.1.0.tgz#4360b17c61136ad38078397ff11416e186dcfbb8"
   integrity sha1-Q2CxfGETatOAeDl/8RQW4Ybc+7g=
 
-rambda@4.5.0:
-  version "4.5.0"
-  resolved "https://registry.yarnpkg.com/rambda/-/rambda-4.5.0.tgz#2f01a4387f73f87fd6fc16667e270b80cc1c6d6d"
-  integrity sha512-I0I0FxVTh3KKm+CX9I57dT+DcOvvdo9w87U+Ve6N9viP7XoAq3dn2sYz619Wjr1/vRRGIxXFjaJj4HnpK4P2lw==
-
 range-parser@1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/range-parser/-/range-parser-1.2.0.tgz#f49be6b487894ddc40dcc94a322f611092e00d5e"
