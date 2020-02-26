@@ -54,8 +54,7 @@ function validateDistDir(distDir: string) {
   const isDirectory = () => statSync(distDir).isDirectory();
   const isEmpty = () => readdirSync(distDir).length === 0;
 
-  const link =
-    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
+  const link = 'https://zeit.ink/OD';
 
   if (!exists()) {
     throw new NowBuildError({
