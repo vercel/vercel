@@ -133,6 +133,9 @@ export async function devRouter(
               );
               if (missResult.found) {
                 return missResult;
+              } else {
+                reqPathname = destPath;
+                continue;
               }
             } else {
               if (routeConfig.status && phase === 'miss') {

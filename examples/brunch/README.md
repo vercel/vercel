@@ -6,7 +6,7 @@ This directory is a brief example of a [Brunch](https://brunch.io/) site that ca
 
 Deploy your own Brunch project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/brunch)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/brunch)
 
 _Live Example: https://brunch.now-examples.now.sh_
 

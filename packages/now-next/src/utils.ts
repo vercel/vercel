@@ -306,6 +306,7 @@ type RoutesManifestRegex = {
 };
 
 export type RoutesManifest = {
+  pages404: boolean;
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
   rewrites: (NowRewrite & RoutesManifestRegex)[];
@@ -613,6 +614,8 @@ export async function createLambdaFromPseudoLayers({
 }
 
 export type NextPrerenderedRoutes = {
+  bypassToken: string | null;
+
   routes: {
     [route: string]: {
       initialRevalidate: number | false;
@@ -713,7 +716,7 @@ export async function getPrerenderManifest(
     .catch(() => false);
 
   if (!hasManifest) {
-    return { routes: {}, lazyRoutes: {} };
+    return { routes: {}, lazyRoutes: {}, bypassToken: null };
   }
 
   const manifest: {
@@ -733,6 +736,9 @@ export async function getPrerenderManifest(
         dataRouteRegex: string;
       };
     };
+    preview?: {
+      previewModeId: string;
+    };
   } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
   switch (manifest.version) {
@@ -740,7 +746,12 @@ export async function getPrerenderManifest(
       const routes = Object.keys(manifest.routes);
       const lazyRoutes = Object.keys(manifest.dynamicRoutes);
 
-      const ret: NextPrerenderedRoutes = { routes: {}, lazyRoutes: {} };
+      const ret: NextPrerenderedRoutes = {
+        routes: {},
+        lazyRoutes: {},
+        bypassToken:
+          (manifest.preview && manifest.preview.previewModeId) || null,
+      };
 
       routes.forEach(route => {
         const {
@@ -777,7 +788,7 @@ export async function getPrerenderManifest(
       return ret;
     }
     default: {
-      return { routes: {}, lazyRoutes: {} };
+      return { routes: {}, lazyRoutes: {}, bypassToken: null };
     }
   }
 }

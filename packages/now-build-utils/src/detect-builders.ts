@@ -80,15 +80,13 @@ export async function detectBuilders(
   warnings: ErrorResponse[];
   defaultRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
+  rewriteRoutes: Route[] | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
   const apiBuilders: Builder[] = [];
   let frontendBuilder: Builder | null = null;
-
-  const defaultRoutes: Route[] = [];
-  const redirectRoutes: Route[] = [];
 
   const functionError = validateFunctions(options);
 
@@ -99,6 +97,7 @@ export async function detectBuilders(
       warnings,
       defaultRoutes: null,
       redirectRoutes: null,
+      rewriteRoutes: null,
     };
   }
 
@@ -153,6 +152,7 @@ export async function detectBuilders(
           warnings,
           defaultRoutes: null,
           redirectRoutes: null,
+          rewriteRoutes: null,
         };
       }
 
@@ -224,6 +224,7 @@ export async function detectBuilders(
         builders: null,
         redirectRoutes: null,
         defaultRoutes: null,
+        rewriteRoutes: null,
       };
     }
 
@@ -264,6 +265,7 @@ export async function detectBuilders(
       warnings,
       redirectRoutes: null,
       defaultRoutes: null,
+      rewriteRoutes: null,
     };
   }
 
@@ -294,15 +296,13 @@ export async function detectBuilders(
     options
   );
 
-  defaultRoutes.push(...routesResult.defaultRoutes);
-  redirectRoutes.push(...routesResult.redirectRoutes);
-
   return {
     warnings,
     builders: builders.length ? builders : null,
     errors: errors.length ? errors : null,
-    redirectRoutes,
-    defaultRoutes,
+    redirectRoutes: routesResult.redirectRoutes,
+    defaultRoutes: routesResult.defaultRoutes,
+    rewriteRoutes: routesResult.rewriteRoutes,
   };
 }
 
@@ -835,10 +835,10 @@ function createRouteFromPath(
     } else if (isLast) {
       const { name: fileName, ext } = parsePath(segment);
       const isIndex = fileName === 'index';
-      const prefix = isIndex ? '\\/' : '';
+      const prefix = isIndex ? '/' : '';
 
       const names = [
-        isIndex ? prefix : `${fileName}\\/`,
+        isIndex ? prefix : `${fileName}/`,
         prefix + escapeName(fileName),
         featHandleMiss && cleanUrls
           ? ''
@@ -891,14 +891,14 @@ function mergeRoutes(
 ): {
   defaultRoutes: Route[];
   redirectRoutes: Route[];
+  rewriteRoutes: Route[];
 } {
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
+  const rewriteRoutes: Route[] = [];
 
   if (preDefaultRoutes && preDefaultRoutes.length > 0) {
     if (options.featHandleMiss) {
-      defaultRoutes.push({ handle: 'miss' });
-
       const extSet = detectApiExtensions(apiBuilders);
 
       if (extSet.size > 0) {
@@ -923,6 +923,7 @@ function mergeRoutes(
             status: 308,
           });
         } else {
+          defaultRoutes.push({ handle: 'miss' });
           defaultRoutes.push({
             src: `^/api/(.+)${extGroup}$`,
             dest: '/api/$1',
@@ -932,11 +933,11 @@ function mergeRoutes(
       }
 
       if (preDynamicRoutes) {
-        defaultRoutes.push(...preDynamicRoutes);
+        rewriteRoutes.push(...preDynamicRoutes);
       }
 
       if (preDefaultRoutes.length) {
-        defaultRoutes.push({
+        rewriteRoutes.push({
           src: '^/api(/.*)?$',
           status: 404,
           continue: true,
@@ -969,6 +970,7 @@ function mergeRoutes(
   return {
     defaultRoutes,
     redirectRoutes,
+    rewriteRoutes,
   };
 }
 

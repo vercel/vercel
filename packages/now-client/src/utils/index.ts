@@ -1,10 +1,10 @@
 import ignore from 'ignore';
-import { join, sep } from 'path';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 import { pkgVersion } from '../pkg';
 import { DeploymentFile } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
+import { join, sep, relative } from 'path';
 import { nodeFetch, zeitFetch } from './fetch';
 import { URLSearchParams, parse as parseUrl } from 'url';
 import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
@@ -28,6 +28,7 @@ const EVENTS_ARRAY = [
   'error',
   'notice',
   'tip',
+  'canceled',
 ] as const;
 
 export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
@@ -186,9 +187,10 @@ export const prepareFiles = (
 
         if (clientOptions.isDirectory) {
           // Directory
-          fileName = clientOptions.path
-            ? name.substring(clientOptions.path.length + 1)
-            : name;
+          fileName =
+            typeof clientOptions.path === 'string'
+              ? relative(clientOptions.path, name)
+              : name;
         } else {
           // Array of files or single file
           const segments = name.split(sep);

@@ -565,6 +565,11 @@ export default async function main(
       return 1;
     }
 
+    if (deployment.readyState === 'CANCELED') {
+      output.log('The deployment has been canceled');
+      return 1;
+    }
+
     const deploymentResponse = await getDeploymentByIdOrHost(
       now,
       contextName,
@@ -651,7 +656,12 @@ export default async function main(
       output.error('Build failed');
       output.error(
         `Check your logs at ${now.url}/_logs or run ${code(
-          `now logs ${now.url}`
+          `now logs ${now.url}`,
+          {
+            // Backticks are interpreted as part of the URL, causing CMD+Click
+            // behavior to fail in editors like VSCode.
+            backticks: false,
+          }
         )}`
       );
 
