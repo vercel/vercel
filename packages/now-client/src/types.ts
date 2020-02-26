@@ -96,7 +96,6 @@ export interface DeploymentGithubData {
 }
 
 export interface NowConfig {
-  [key: string]: any;
   name?: string;
   public?: boolean;
   version?: number;
