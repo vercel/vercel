@@ -115,19 +115,6 @@ function formatOutput({ stderr, stdout }) {
   return `Received:\n"${stderr}"\n"${stdout}"`;
 }
 
-async function createSimpleDeployment() {
-  const directory = fixture('static-website');
-  const output = await execute([directory, '--confirm']);
-
-  if (output.exitCode !== 0) {
-    throw output;
-  }
-
-  const { host } = new URL(output.stdout);
-
-  return host;
-}
-
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
 const context = {};
@@ -180,13 +167,26 @@ const waitForPrompt = (cp, assertion) =>
     cp.stderr.on('data', listener);
   });
 
-const getDeploymentBuildsByUrl = async url => {
+async function getDeploymentBuildsByUrl(url) {
   const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
   const { id } = await hostRes.json();
   const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
   const { builds } = await buildsRes.json();
   return builds;
-};
+}
+
+async function createDeploymentWithFixture(project = 'static-website') {
+  const directory = fixture(project);
+  const output = await execute([directory, '--confirm']);
+
+  if (output.exitCode !== 0) {
+    throw output;
+  }
+
+  const { host } = new URL(output.stdout);
+
+  return host;
+}
 
 const createUser = async () => {
   await retry(
@@ -656,7 +656,7 @@ test('try to remove a non-existing payment method', async t => {
 });
 
 test('output logs of a 2.0 deployment', async t => {
-  const deployment = await createSimpleDeployment();
+  const deployment = await createDeploymentWithFixture();
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -678,7 +678,7 @@ test('output logs of a 2.0 deployment', async t => {
 });
 
 test('output logs of a 2.0 deployment without annotate', async t => {
-  const deployment = await createSimpleDeployment();
+  const deployment = await createDeploymentWithFixture();
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -701,8 +701,8 @@ test('output logs of a 2.0 deployment without annotate', async t => {
   t.is(exitCode, 0);
 });
 
-test.only('create wildcard alias for deployment', async t => {
-  const deployment = await createSimpleDeployment();
+test('create wildcard alias for deployment', async t => {
+  const deployment = await createDeploymentWithFixture('context-website');
   const alias = `*.${contextName}.now.sh`;
 
   const { stdout, stderr, exitCode } = await execa(
@@ -713,14 +713,16 @@ test.only('create wildcard alias for deployment', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  const goal = `> Success! ${alias} now points to https://${deployment}`;
-
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  t.true(stdout.startsWith(goal));
+
+  t.regex(
+    stdout,
+    new RegExp(
+      `> Success! \\${alias} now points to https://${deployment}`,
+      'gm'
+    ),
+    formatOutput({ stderr, stdout })
+  );
 
   // Send a test request to the alias
   // Retries to make sure we consider the time it takes to update
@@ -739,7 +741,7 @@ test.only('create wildcard alias for deployment', async t => {
   const content = await response.text();
 
   t.true(response.ok);
-  t.true(content.includes(contextName));
+  t.regex(content, new RegExp(contextName));
 
   context.wildcardAlias = alias;
 });
@@ -1182,23 +1184,18 @@ test('use build-env', async t => {
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--confirm'],
+    [directory, '--public', ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   // Ensure the exit code is right
-  t.is(exitCode, 0);
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
+  const { href } = new URL(deploymentUrl);
 
   await waitForDeployment(href);
 

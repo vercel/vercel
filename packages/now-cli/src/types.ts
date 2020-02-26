@@ -106,7 +106,7 @@ export type DeploymentScale = {
 };
 
 export type NpmDeployment = {
-  uid: string;
+  id: string;
   url: string;
   name: string;
   type: 'NPM';
@@ -119,7 +119,7 @@ export type NpmDeployment = {
 };
 
 export type StaticDeployment = {
-  uid: string;
+  id: string;
   url: string;
   name: string;
   type: 'STATIC';
@@ -131,7 +131,7 @@ export type StaticDeployment = {
 };
 
 export type DockerDeployment = {
-  uid: string;
+  id: string;
   url: string;
   name: string;
   type: 'DOCKER';

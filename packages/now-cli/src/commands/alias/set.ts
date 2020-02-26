@@ -8,7 +8,7 @@ import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import formatNSTable from '../../util/format-ns-table';
-import fetchDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
+import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import getScope from '../../util/get-scope';
 import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
@@ -90,7 +90,7 @@ export default async function set(
 
   const deployment = handleCertError(
     output,
-    await fetchDeploymentByIdOrHost(client, contextName, deploymentIdOrHost)
+    await getDeploymentByIdOrHost(client, contextName, deploymentIdOrHost)
   );
 
   if (deployment === 1) {

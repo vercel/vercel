@@ -158,18 +158,15 @@ RUN echo hello > /public/index.html
     },
     'build-env': {
       'now.json': JSON.stringify({
-        version: 1,
-        type: 'static',
         build: {
           env: { FOO: 'bar' },
         },
       }),
-      Dockerfile: `
-FROM alpine
-ARG FOO
-RUN mkdir /public
-RUN echo $FOO > /public/index.html
-      `,
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo $FOO > public/index.txt',
+        },
+      }),
     },
     'build-env-arg': {
       'now.json': JSON.stringify({
@@ -481,6 +478,9 @@ CMD ["node", "index.js"]`,
     },
     'static-website': {
       'index.html': '<h1>I am a website.</h1>',
+    },
+    'context-website': {
+      'index.txt': session,
     },
   };
 
