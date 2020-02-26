@@ -130,15 +130,15 @@ export async function detectBuilders(
 
   let fallbackEntrypoint: string | null = null;
 
-  const preDefaultRoutes: Source[] = [];
-  const preDynamicRoutes: Source[] = [];
+  const apiRoutes: Source[] = [];
+  const dynamicRoutes: Source[] = [];
 
   // API
   for (const fileName of sortedFiles) {
     const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
-      const { routeError, defaultRoute, dynamicRoute } = getApiRoute(
+      const { routeError, apiRoute, isDynamic } = getApiRoute(
         fileName,
         apiSortedFiles,
         options,
@@ -156,12 +156,11 @@ export async function detectBuilders(
         };
       }
 
-      if (dynamicRoute) {
-        preDynamicRoutes.push(dynamicRoute);
-      }
-
-      if (defaultRoute) {
-        preDefaultRoutes.push(defaultRoute);
+      if (apiRoute) {
+        apiRoutes.push(apiRoute);
+        if (isDynamic) {
+          dynamicRoutes.push(apiRoute);
+        }
       }
 
       addToUsedFunctions(apiBuilder);
@@ -287,9 +286,9 @@ export async function detectBuilders(
     }
   }
 
-  const routesResult = mergeRoutes(
-    preDefaultRoutes,
-    preDynamicRoutes,
+  const routesResult = getRouteResult(
+    apiRoutes,
+    dynamicRoutes,
     usedOutputDirectory,
     apiBuilders,
     frontendBuilder,
@@ -622,16 +621,16 @@ function getApiRoute(
   options: Options,
   absolutePathCache: Map<string, string>
 ): {
-  defaultRoute: Source | null;
-  dynamicRoute: Source | null;
+  apiRoute: Source | null;
+  isDynamic: boolean;
   routeError: ErrorResponse | null;
 } {
   const conflictingSegment = getConflictingSegment(fileName);
 
   if (conflictingSegment) {
     return {
-      defaultRoute: null,
-      dynamicRoute: null,
+      apiRoute: null,
+      isDynamic: false,
       routeError: {
         code: 'conflicting_path_segment',
         message:
@@ -650,8 +649,8 @@ function getApiRoute(
     );
 
     return {
-      defaultRoute: null,
-      dynamicRoute: null,
+      apiRoute: null,
+      isDynamic: false,
       routeError: {
         code: 'conflicting_file_path',
         message:
@@ -669,8 +668,8 @@ function getApiRoute(
   );
 
   return {
-    defaultRoute: out.route,
-    dynamicRoute: out.isDynamic ? out.route : null,
+    apiRoute: out.route,
+    isDynamic: out.isDynamic,
     routeError: null,
   };
 }
@@ -881,9 +880,9 @@ function createRouteFromPath(
   return { route, isDynamic };
 }
 
-function mergeRoutes(
-  preDefaultRoutes: Source[],
-  preDynamicRoutes: Source[],
+function getRouteResult(
+  apiRoutes: Source[],
+  dynamicRoutes: Source[],
   outputDirectory: string,
   apiBuilders: Builder[],
   frontendBuilder: Builder | null,
@@ -897,7 +896,7 @@ function mergeRoutes(
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
 
-  if (preDefaultRoutes && preDefaultRoutes.length > 0) {
+  if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
       const extSet = detectApiExtensions(apiBuilders);
 
@@ -932,21 +931,16 @@ function mergeRoutes(
         }
       }
 
-      if (preDynamicRoutes) {
-        rewriteRoutes.push(...preDynamicRoutes);
-      }
-
-      if (preDefaultRoutes.length) {
-        rewriteRoutes.push({
-          src: '^/api(/.*)?$',
-          status: 404,
-          continue: true,
-        });
-      }
+      rewriteRoutes.push(...dynamicRoutes);
+      rewriteRoutes.push({
+        src: '^/api(/.*)?$',
+        status: 404,
+        continue: true,
+      });
     } else {
-      defaultRoutes.push(...preDefaultRoutes);
+      defaultRoutes.push(...apiRoutes);
 
-      if (preDefaultRoutes.length) {
+      if (apiRoutes.length) {
         defaultRoutes.push({
           status: 404,
           src: '^/api(/.*)?$',
