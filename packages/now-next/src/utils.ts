@@ -306,6 +306,7 @@ type RoutesManifestRegex = {
 };
 
 export type RoutesManifest = {
+  pages404: boolean;
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
   rewrites: (NowRewrite & RoutesManifestRegex)[];
@@ -619,6 +620,8 @@ export async function createLambdaFromPseudoLayers({
 }
 
 export type NextPrerenderedRoutes = {
+  bypassToken: string | null;
+
   routes: {
     [route: string]: {
       initialRevalidate: number | false;
@@ -629,6 +632,7 @@ export type NextPrerenderedRoutes = {
 
   lazyRoutes: {
     [route: string]: {
+      fallback?: string;
       routeRegex: string;
       dataRoute: string;
       dataRouteRegex: string;
@@ -718,7 +722,7 @@ export async function getPrerenderManifest(
     .catch(() => false);
 
   if (!hasManifest) {
-    return { routes: {}, lazyRoutes: {} };
+    return { routes: {}, lazyRoutes: {}, bypassToken: null };
   }
 
   const manifest: {
@@ -732,10 +736,14 @@ export async function getPrerenderManifest(
     };
     dynamicRoutes: {
       [key: string]: {
+        fallback?: string;
         routeRegex: string;
         dataRoute: string;
         dataRouteRegex: string;
       };
+    };
+    preview?: {
+      previewModeId: string;
     };
   } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
@@ -744,7 +752,12 @@ export async function getPrerenderManifest(
       const routes = Object.keys(manifest.routes);
       const lazyRoutes = Object.keys(manifest.dynamicRoutes);
 
-      const ret: NextPrerenderedRoutes = { routes: {}, lazyRoutes: {} };
+      const ret: NextPrerenderedRoutes = {
+        routes: {},
+        lazyRoutes: {},
+        bypassToken:
+          (manifest.preview && manifest.preview.previewModeId) || null,
+      };
 
       routes.forEach(route => {
         const {
@@ -765,17 +778,23 @@ export async function getPrerenderManifest(
       lazyRoutes.forEach(lazyRoute => {
         const {
           routeRegex,
+          fallback,
           dataRoute,
           dataRouteRegex,
         } = manifest.dynamicRoutes[lazyRoute];
 
-        ret.lazyRoutes[lazyRoute] = { routeRegex, dataRoute, dataRouteRegex };
+        ret.lazyRoutes[lazyRoute] = {
+          routeRegex,
+          fallback,
+          dataRoute,
+          dataRouteRegex,
+        };
       });
 
       return ret;
     }
     default: {
-      return { routes: {}, lazyRoutes: {} };
+      return { routes: {}, lazyRoutes: {}, bypassToken: null };
     }
   }
 }

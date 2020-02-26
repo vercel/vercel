@@ -20,9 +20,9 @@ import {
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
 import {
+  convertHeaders,
   convertRedirects,
   convertRewrites,
-  convertHeaders,
 } from '@now/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
@@ -91,6 +91,8 @@ const nowDevChildProcesses = new Set<ChildProcess>();
     process.exit(0);
   });
 });
+
+const MAX_AGE_ONE_YEAR = 31536000;
 
 /**
  * Read package.json from files
@@ -345,6 +347,8 @@ export const build = async ({
   const nextBasePathRoute: Route[] = [];
   const serverPropsRoutes: Route[] = [];
   let nextBasePath: string | undefined;
+  // whether they have enabled pages/404.js as the custom 404 page
+  let hasPages404 = false;
 
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -370,6 +374,10 @@ export const build = async ({
               dest: path.join('/', entryDirectory, page),
             });
           });
+        }
+
+        if (routesManifest.pages404) {
+          hasPages404 = true;
         }
 
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
@@ -469,7 +477,9 @@ export const build = async ({
           ),
           // Next.js assets contain a hash or entropy in their filenames, so they
           // are guaranteed to be unique and cacheable indefinitely.
-          headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+          headers: {
+            'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
+          },
           continue: true,
         },
         {
@@ -478,6 +488,20 @@ export const build = async ({
         // Next.js pages, `static/` folder, reserved assets, and `public/`
         // folder
         { handle: 'filesystem' },
+
+        // This needs to come directly after handle: filesystem to make sure to
+        // 404 and clear the cache header for _next requests
+        {
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          headers: {
+            'cache-control': '',
+          },
+          status: 404,
+        },
 
         ...rewrites,
         // Dynamic routes
@@ -518,6 +542,7 @@ export const build = async ({
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
   const dynamicDataRoutes: Array<Source> = [];
+  let static404Page: string | undefined;
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
@@ -628,18 +653,18 @@ export const build = async ({
 
       // Prerendered routes emit a `.html` file but should not be treated as a
       // static page.
-      // Lazily prerendered routes do not have a `.html` file so we don't need
-      // to check/skip it here.
+      // Lazily prerendered routes have a fallback `.html` file on newer
+      // Next.js versions so we need to also not treat it as a static page here.
       if (
-        Object.prototype.hasOwnProperty.call(
-          prerenderManifest.routes,
-          routeName
-        )
+        prerenderManifest.routes[routeName] ||
+        (prerenderManifest.lazyRoutes[routeName] &&
+          prerenderManifest.lazyRoutes[routeName].fallback)
       ) {
         return;
       }
 
       const staticRoute = path.join(entryDirectory, pathname);
+
       staticPages[staticRoute] = staticPageFiles[page];
       staticPages[staticRoute].contentType = htmlContentType;
 
@@ -649,9 +674,18 @@ export const build = async ({
       }
     });
 
-    const pageKeys = Object.keys(pages);
+    // this can be either 404.html in latest versions
+    // or _errors/404.html versions while this was experimental
+    static404Page =
+      staticPages['404'] && hasPages404
+        ? '404'
+        : staticPages['_errors/404']
+        ? '_errors/404'
+        : undefined;
+
     // > 1 because _error is a lambda but isn't used if a static 404 is available
-    const hasLambdas = !staticPages['_errors/404'] || pageKeys.length > 1;
+    const pageKeys = Object.keys(pages);
+    const hasLambdas = !static404Page || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
       const nextConfig = await getNextConfig(workPath, entryPath);
@@ -797,8 +831,13 @@ export const build = async ({
           return;
         }
 
-        // Don't create _error lambda if we have a static 404 page
-        if (staticPages['_errors/404'] && page === '_error.js') {
+        // Don't create _error lambda if we have a static 404 page or
+        // pages404 is enabled and 404.js is present
+        if (
+          page === '_error.js' &&
+          ((static404Page && staticPages[static404Page]) ||
+            (hasPages404 && pages['404.js']))
+        ) {
           return;
         }
 
@@ -827,10 +866,10 @@ export const build = async ({
           config,
         });
 
+        const outputName = path.join(entryDirectory, pathname);
+
         if (requiresTracing) {
-          lambdas[
-            path.join(entryDirectory, pathname)
-          ] = await createLambdaFromPseudoLayers({
+          lambdas[outputName] = await createLambdaFromPseudoLayers({
             files: {
               ...launcherFiles,
               [requiresTracing ? pageFileName : 'page.js']: pages[page],
@@ -841,7 +880,7 @@ export const build = async ({
             ...lambdaOptions,
           });
         } else {
-          lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+          lambdas[outputName] = await createLambda({
             files: {
               ...launcherFiles,
               ...assets,
@@ -864,12 +903,18 @@ export const build = async ({
     const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
+      const lazyHtmlFallback =
+        isLazy && prerenderManifest.lazyRoutes[routeKey].fallback;
 
-      const htmlFsRef = isLazy
-        ? null
-        : new FileFsRef({
-            fsPath: path.join(pagesDir, `${routeFileNoExt}.html`),
-          });
+      const htmlFsRef =
+        isLazy && !lazyHtmlFallback
+          ? null
+          : new FileFsRef({
+              fsPath: path.join(
+                pagesDir,
+                `${lazyHtmlFallback || routeFileNoExt + '.html'}`
+              ),
+            });
       const jsonFsRef = isLazy
         ? null
         : new FileFsRef({
@@ -905,34 +950,39 @@ export const build = async ({
             );
       const outputPathData = path.posix.join(entryDirectory, dataRoute);
 
+      const lambda = lambdas[outputSrcPathPage];
+      if (lambda == null) {
+        throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
+      }
+
       if (initialRevalidate === false) {
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
-        htmlFsRef.contentType = htmlContentType;
-        prerenders[outputPathPage] = htmlFsRef;
-        prerenders[outputPathData] = jsonFsRef;
-      } else {
-        const lambda = lambdas[outputSrcPathPage];
-        if (lambda == null) {
-          throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
-        }
-
-        prerenders[outputPathPage] = new Prerender({
-          expiration: initialRevalidate,
-          lambda,
-          fallback: htmlFsRef,
-          group: prerenderGroup,
-        });
-        prerenders[outputPathData] = new Prerender({
-          expiration: initialRevalidate,
-          lambda,
-          fallback: jsonFsRef,
-          group: prerenderGroup,
-        });
-
-        ++prerenderGroup;
       }
+
+      prerenders[outputPathPage] = new Prerender({
+        expiration:
+          initialRevalidate === false
+            ? MAX_AGE_ONE_YEAR * 10
+            : initialRevalidate,
+        lambda,
+        fallback: htmlFsRef,
+        group: prerenderGroup,
+        bypassToken: prerenderManifest.bypassToken,
+      });
+      prerenders[outputPathData] = new Prerender({
+        expiration:
+          initialRevalidate === false
+            ? MAX_AGE_ONE_YEAR * 10
+            : initialRevalidate,
+        lambda,
+        fallback: jsonFsRef,
+        group: prerenderGroup,
+        bypassToken: prerenderManifest.bypassToken,
+      });
+
+      ++prerenderGroup;
     };
 
     Object.keys(prerenderManifest.routes).forEach(route =>
@@ -1046,7 +1096,9 @@ export const build = async ({
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
-        headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+        headers: {
+          'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
+        },
         continue: true,
       },
       { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
@@ -1057,6 +1109,20 @@ export const build = async ({
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+
+      // This needs to come directly after handle: filesystem to make sure to
+      // 404 and clear the cache header for _next requests
+      {
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
+        headers: {
+          'cache-control': '',
+        },
+        status: 404,
+      },
 
       ...rewrites,
       // Dynamic routes
@@ -1071,7 +1137,13 @@ export const build = async ({
               dest: path.join(
                 '/',
                 entryDirectory,
-                staticPages['_errors/404'] ? '_errors/404' : '_error'
+                static404Page
+                  ? static404Page
+                  : // if static 404 is not present but we have pages/404.js
+                  // it is a lambda due to _app getInitialProps
+                  hasPages404 && lambdas['404']
+                  ? '404'
+                  : '_error'
               ),
               status: 404,
             },

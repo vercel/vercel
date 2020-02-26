@@ -77,6 +77,15 @@ export async function* checkDeploymentStatus(
       yield { type: 'building', payload: deploymentUpdate };
     }
 
+    if (
+      deploymentUpdate.readyState === 'CANCELED' &&
+      !finishedEvents.has('canceled')
+    ) {
+      debug('Deployment state changed to CANCELED');
+      finishedEvents.add('canceled');
+      yield { type: 'canceled', payload: deploymentUpdate };
+    }
+
     if (isReady(deploymentUpdate) && !finishedEvents.has('ready')) {
       debug('Deployment state changed to READY');
       finishedEvents.add('ready');

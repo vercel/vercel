@@ -7,12 +7,23 @@
       "config": {
         "includeFiles": ["templates/**"]
       }
+    },
+    {
+      "src": "another.go",
+      "use": "@now/go",
+      "config": {
+        "includeFiles": "templates/**"
+      }
     }
   ],
   "probes": [
     {
       "path": "/",
       "mustContain": "foobar from file"
+    },
+    {
+      "path": "/another.go",
+      "mustContain": "another text file"
     }
   ]
 }

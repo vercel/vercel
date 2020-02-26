@@ -12,7 +12,11 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
+import {
+  getTransformedRoutes,
+  appendRoutesToPhase,
+  HandleValue,
+} from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
@@ -24,7 +28,6 @@ import {
   FileFsRef,
   PackageJson,
   detectBuilders,
-  detectRoutes,
   detectApiDirectory,
   detectApiExtensions,
   spawnCommand,
@@ -548,10 +551,20 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      let { builders, warnings, errors } = await detectBuilders(files, pkg, {
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+        rewriteRoutes,
+      } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
         ...(projectSettings ? { projectSettings } : {}),
+        featHandleMiss,
+        cleanUrls,
+        trailingSlash,
       });
 
       if (errors) {
@@ -568,32 +581,21 @@ export default class DevServer {
           builders = builders.filter(filterFrontendBuilds);
         }
 
-        const {
-          defaultRoutes,
-          redirectRoutes,
-          error: routesError,
-        } = await detectRoutes(
-          files,
-          builders,
-          featHandleMiss,
-          cleanUrls,
-          trailingSlash
-        );
-
         config.builds = config.builds || [];
         config.builds.push(...builders);
 
-        if (routesError) {
-          this.output.error(routesError.message);
-          await this.exit();
-        } else {
-          const routes: RouteConfig[] = [];
-          const { routes: nowConfigRoutes } = config;
-          routes.push(...(redirectRoutes || []));
-          routes.push(...(nowConfigRoutes || []));
-          routes.push(...(defaultRoutes || []));
-          config.routes = routes;
-        }
+        const routes: RouteConfig[] = [];
+        const { routes: nowConfigRoutes } = config;
+        routes.push(...(redirectRoutes || []));
+        routes.push(
+          ...appendRoutesToPhase({
+            routes: nowConfigRoutes,
+            newRoutes: rewriteRoutes,
+            phase: 'filesystem',
+          })
+        );
+        routes.push(...(defaultRoutes || []));
+        config.routes = routes;
       }
     }
 
@@ -1186,6 +1188,35 @@ export default class DevServer {
   };
 
   /**
+   * This is the equivalent to now-proxy exit_with_status() function.
+   */
+  exitWithStatus = async (
+    match: BuildMatch | null,
+    routeResult: RouteResult,
+    phase: HandleValue | null,
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    nowRequestId: string
+  ): Promise<boolean> => {
+    const { status, headers, dest } = routeResult;
+    const location = headers['location'] || dest;
+
+    if (status && location && (300 <= status && status <= 399)) {
+      this.output.debug(`Route found with redirect status code ${status}`);
+      await this.sendRedirect(req, res, nowRequestId, location, status);
+      return true;
+    }
+
+    if (!match && status && phase !== 'miss') {
+      this.output.debug(`Route found with with status code ${status}`);
+      await this.sendError(req, res, nowRequestId, '', status);
+      return true;
+    }
+
+    return false;
+  };
+
+  /**
    * Serve project directory as a Now v2 deployment.
    */
   serveProjectAsNowV2 = async (
@@ -1268,6 +1299,19 @@ export default class DevServer {
         this
       );
 
+      if (
+        await this.exitWithStatus(
+          match,
+          routeResult,
+          phase,
+          req,
+          res,
+          nowRequestId
+        )
+      ) {
+        return;
+      }
+
       if (!match && missRoutes.length > 0) {
         // Since there was no build match, enter the miss phase
         routeResult = await devRouter(
@@ -1286,6 +1330,18 @@ export default class DevServer {
           routeResult.dest,
           this
         );
+        if (
+          await this.exitWithStatus(
+            match,
+            routeResult,
+            phase,
+            req,
+            res,
+            nowRequestId
+          )
+        ) {
+          return;
+        }
       } else if (match && hitRoutes.length > 0) {
         // Since there was a build match, enter the hit phase.
         // The hit phase must not set status code.
@@ -1303,28 +1359,6 @@ export default class DevServer {
       }
 
       statusCode = routeResult.status;
-
-      if (match && statusCode === 404 && routeResult.phase === 'miss') {
-        statusCode = undefined;
-      }
-
-      const location = routeResult.headers['location'] || routeResult.dest;
-
-      if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
-        // Equivalent to now-proxy exit_with_status() function
-        this.output.debug(
-          `Route found with redirect status code ${statusCode}`
-        );
-        await this.sendRedirect(req, res, nowRequestId, location, statusCode);
-        return;
-      }
-
-      if (!match && statusCode && routeResult.phase !== 'miss') {
-        // Equivalent to now-proxy exit_with_status() function
-        this.output.debug(`Route found with with status code ${statusCode}`);
-        await this.sendError(req, res, nowRequestId, '', statusCode);
-        return;
-      }
 
       if (match) {
         // end the phase

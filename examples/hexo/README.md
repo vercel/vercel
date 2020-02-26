@@ -1,4 +1,4 @@
-![Hexo Logo](../../packages/frameworks/logos/hexo.svg)
+![Hexo Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/hexo.svg)
 
 # Hexo Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Hexo](https://hexo.io/) site that can be
 
 Deploy your own Hexo project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/hexo)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/hexo)
 
 _Live Example: https://hexo.now-examples.now.sh_
 

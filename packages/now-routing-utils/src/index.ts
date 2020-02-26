@@ -19,6 +19,7 @@ import {
 
 export { getCleanUrls } from './superstatic';
 export { mergeRoutes } from './merge';
+export { appendRoutesToPhase } from './append';
 
 const VALID_HANDLE_VALUES = ['filesystem', 'hit', 'miss'] as const;
 const validHandleValues = new Set<string>(VALID_HANDLE_VALUES);

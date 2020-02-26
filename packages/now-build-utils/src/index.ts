@@ -64,12 +64,11 @@ export {
 };
 
 export {
-  detectRoutes,
+  detectBuilders,
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
-} from './detect-routes';
-export { detectBuilders } from './detect-builders';
+} from './detect-builders';
 export { detectFramework } from './detect-framework';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';

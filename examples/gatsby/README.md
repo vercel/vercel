@@ -1,4 +1,4 @@
-![Gatsby Logo](../../packages/frameworks/logos/gatsby.svg)
+![Gatsby Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/gatsby.svg)
 
 # Gatsby Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Gatsby](https://www.gatsbyjs.org/) app w
 
 Deploy your own Gatsby project, along with Serverless Functions, with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/gatsby)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/gatsby)
 
 _Live Example: https://gatsby.now-examples.now.sh_
 
