@@ -65,7 +65,7 @@ export default async function main(ctx) {
   const { print, log, error } = output;
 
   // extract the first parameter
-  const [deploymentIdOrHost] = argv._;
+  const [_, deploymentIdOrHost] = argv._;
 
   if (argv._.length !== 2) {
     error(`${cmd('now inspect <url>')} expects exactly one argument`);
