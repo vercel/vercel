@@ -18,7 +18,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
 } from '@now/build-utils';
-import { Route, Source } from '@now/routing-utils';
+import { Route } from '@now/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
@@ -341,11 +341,12 @@ export const build = async ({
     .replace(/\/+$/, '');
 
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const prerenderManifest = await getPrerenderManifest(entryPath);
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
-  const serverPropsRoutes: Route[] = [];
+  const dataRoutes: Route[] = [];
   let nextBasePath: string | undefined;
   // whether they have enabled pages/404.js as the custom 404 page
   let hasPages404 = false;
@@ -361,19 +362,27 @@ export const build = async ({
           headers.push(...convertHeaders(routesManifest.headers));
         }
 
-        if (routesManifest.serverPropsRoutes) {
-          const sspRoutes = routesManifest.serverPropsRoutes;
-
-          // build the /_next/data routes for getServerProps
-          Object.keys(sspRoutes).forEach(page => {
-            serverPropsRoutes.push({
-              src: sspRoutes[page].dataRouteRegex.replace(
+        if (routesManifest.dataRoutes) {
+          // Load the /_next/data routes for both dynamic SSG and SSP pages.
+          // These must be combined and sorted to prevent conflicts
+          for (const dataRoute of routesManifest.dataRoutes) {
+            dataRoutes.push({
+              src: dataRoute.dataRouteRegex.replace(
                 /^\^/,
                 `^${appMountPrefixNoTrailingSlash}`
               ),
-              dest: path.join('/', entryDirectory, page),
+              // make sure to route SSG data route to the data prerender output,
+              // we don't do this for SSP routes since they don't have a data
+              // output
+              dest: path.join(
+                '/',
+                entryDirectory,
+                `${dataRoute.page}${
+                  prerenderManifest.lazyRoutes[dataRoute.page] ? '.json' : ''
+                }`
+              ),
             });
-          });
+          }
         }
 
         if (routesManifest.pages404) {
@@ -541,7 +550,6 @@ export const build = async ({
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
-  const dynamicDataRoutes: Array<Source> = [];
   let static404Page: string | undefined;
 
   if (isLegacy) {
@@ -645,7 +653,6 @@ export const build = async ({
 
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
-    const prerenderManifest = await getPrerenderManifest(entryPath);
 
     Object.keys(staticPageFiles).forEach((page: string) => {
       const pathname = page.replace(/\.html$/, '');
@@ -991,19 +998,6 @@ export const build = async ({
     Object.keys(prerenderManifest.lazyRoutes).forEach(route =>
       onPrerenderRoute(route, true)
     );
-
-    // Dynamic pages for lazy routes should be handled by the lambda flow.
-    Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
-      const { dataRouteRegex, dataRoute } = prerenderManifest.lazyRoutes[
-        lazyRoute
-      ];
-      dynamicDataRoutes.push({
-        // Next.js provided data route regex
-        src: dataRouteRegex.replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
-        // Location of lambda in builder output
-        dest: path.posix.join(entryDirectory, dataRoute),
-      });
-    });
   }
 
   const nextStaticFiles = await glob(
@@ -1103,9 +1097,6 @@ export const build = async ({
       },
       { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
 
-      // /_next/data routes for getServerProps pages
-      ...serverPropsRoutes,
-
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
@@ -1127,7 +1118,10 @@ export const build = async ({
       ...rewrites,
       // Dynamic routes
       ...dynamicRoutes,
-      ...dynamicDataRoutes,
+
+      // /_next/data routes for getServerProps/getStaticProps pages
+      ...dataRoutes,
+
       // Custom Next.js 404 page (TODO: do we want to remove this?)
       ...(isLegacy
         ? []
