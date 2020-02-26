@@ -1,3 +1,4 @@
+import { URL } from 'url';
 import ignore from 'ignore';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
@@ -6,7 +7,6 @@ import { DeploymentFile } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
 import { join, sep, relative } from 'path';
 import { nodeFetch, zeitFetch } from './fetch';
-import { URLSearchParams, parse as parseUrl } from 'url';
 import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 
 export const API_FILES = '/v2/now/files';
@@ -134,11 +134,9 @@ export const fetch = async (
   delete opts.apiUrl;
 
   if (opts.teamId) {
-    const parsedUrl = parseUrl(url, true);
-    const query = new URLSearchParams(parsedUrl.query);
-    query.set('teamId', opts.teamId);
-
-    url = `${parsedUrl.href}?${query}`;
+    const parsedUrl = new URL(url);
+    parsedUrl.searchParams.set('teamId', opts.teamId);
+    url = parsedUrl.toString();
     delete opts.teamId;
   }
 
