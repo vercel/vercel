@@ -175,7 +175,7 @@ async function getDeploymentBuildsByUrl(url) {
   return builds;
 }
 
-async function createDeploymentWithFixture(project = 'static-website') {
+async function createDeploymentWithFixture(project = 'static-deployment') {
   const directory = fixture(project);
   const output = await execute([directory, '--confirm']);
 
@@ -222,7 +222,7 @@ test.before(async () => {
     await prepareFixtures(contextName);
   } catch (err) {
     console.log('Failed `test.before`');
-    console.log(err);
+    throw err;
   }
 });
 
@@ -1002,43 +1002,6 @@ test('create a builds deployments with no actual builds', async t => {
   t.is(host.split('-')[0], session);
 });
 
-test('create a builds deployments without platform version flag', async t => {
-  const directory = fixture('builds');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
 test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
 
@@ -1307,7 +1270,7 @@ test('try to deploy non-existing path', async t => {
 });
 
 test('try to deploy with non-existing team', async t => {
-  const target = fixture('node');
+  const target = fixture('static-deployment');
   const goal = `Error! The specified scope does not exist`;
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1569,23 +1532,6 @@ test('fail `now dev` dev script without now.json', async t => {
     stderr.includes('must not contain `now dev`'),
     `Received instead: "${stderr}"`
   );
-});
-
-test('print correct link in legacy warning', async t => {
-  const deploymentPath = fixture('v1-warning-link');
-  const { exitCode, stderr, stdout } = await execute([
-    deploymentPath,
-    '--confirm',
-  ]);
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // It is expected to fail,
-  // since the package.json does not have a start script
-  t.is(exitCode, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
 });
 
 test('`now rm` 404 exits quickly', async t => {
