@@ -25,7 +25,6 @@ export async function responseError(
   fallbackMessage: string | null = null,
   parsedBody: any = {}
 ) {
-  let message: string | null = null;
   let bodyError: { [key: string]: any } = {};
 
   if (res.status >= 400 && res.status < 500) {
@@ -39,21 +38,17 @@ export async function responseError(
 
     // Some APIs wrongly return `err` instead of `error`
     bodyError = body.error || body.err || {};
-    message = bodyError.message;
   }
 
-  if (!message) {
-    message = fallbackMessage === null ? 'Response Error' : fallbackMessage;
-  }
-
-  const err = new ResponseError(message, res.status);
+  const err = new ResponseError(
+    bodyError.message || fallbackMessage || 'Response Error',
+    res.status
+  );
 
   // Copy every field that was added manually to the error
-  if (bodyError) {
-    for (const field of Object.keys(bodyError)) {
-      if (field !== 'message' && field !== 'stack') {
-        err[field] = bodyError[field];
-      }
+  for (const field of Object.keys(bodyError)) {
+    if (field !== 'message' && field !== 'stack') {
+      err[field] = bodyError[field];
     }
   }
 
