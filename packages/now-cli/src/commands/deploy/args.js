@@ -93,7 +93,6 @@ export const args = {
   '--env': [String],
   '--build-env': [String],
   '--meta': [String],
-  '--no-scale': Boolean,
   // This is not an array in favor of matching
   // the config property name.
   '--regions': String,

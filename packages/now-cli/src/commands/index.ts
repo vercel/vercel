@@ -25,7 +25,6 @@ export default new Map([
   ['projects', 'projects'],
   ['remove', 'remove'],
   ['rm', 'remove'],
-  ['scale', 'scale'],
   ['secret', 'secrets'],
   ['secrets', 'secrets'],
   ['switch', 'teams'],
