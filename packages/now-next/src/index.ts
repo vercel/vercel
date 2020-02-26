@@ -998,6 +998,26 @@ export const build = async ({
     Object.keys(prerenderManifest.lazyRoutes).forEach(route =>
       onPrerenderRoute(route, true)
     );
+
+    // We still need to use lazyRoutes if the dataRoutes field
+    // isn't available for backwards compatibility
+    if (!(routesManifest && routesManifest.dataRoutes)) {
+      // Dynamic pages for lazy routes should be handled by the lambda flow.
+      Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
+        const { dataRouteRegex, dataRoute } = prerenderManifest.lazyRoutes[
+          lazyRoute
+        ];
+        dataRoutes.push({
+          // Next.js provided data route regex
+          src: dataRouteRegex.replace(
+            /^\^/,
+            `^${appMountPrefixNoTrailingSlash}`
+          ),
+          // Location of lambda in builder output
+          dest: path.posix.join(entryDirectory, dataRoute),
+        });
+      });
+    }
   }
 
   const nextStaticFiles = await glob(
