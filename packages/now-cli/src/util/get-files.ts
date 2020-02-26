@@ -1,9 +1,9 @@
+import fs from 'fs-extra';
 import { resolve, join } from 'path';
 import _glob, { IOptions } from 'glob';
-import fs from 'fs-extra';
+import { getNowIgnore } from 'now-client';
 import uniqueStrings from './unique-strings';
 import { Output } from './output/create-output';
-import { NowConfig, getNowIgnore } from 'now-client';
 
 type NullableString = string | null;
 
@@ -33,80 +33,6 @@ const glob = async function(pattern: string, options: IOptions) {
   });
 };
 
-interface WalkSyncOptions {
-  output: Output;
-}
-
-/**
- * Will recursivly walk through a directory and return an array of the files found within.
- * @param {string} dir the directory to walk
- * @param {string} path the path to this directory
- * @param {Array[string]} filelist a list of files so far identified
- * @param {Object} options
- *  - `output` {Object} "output" helper object
- * @returns {Array}
- */
-const walkSync = async (
-  dir: string,
-  path: string,
-  filelist: string[] = [],
-  opts: WalkSyncOptions
-) => {
-  const { debug } = opts.output;
-  const dirc = await fs.readdir(asAbsolute(dir, path));
-  for (let file of dirc) {
-    file = asAbsolute(file, dir);
-    try {
-      const file_stat = await fs.stat(file);
-      filelist = file_stat.isDirectory()
-        ? await walkSync(file, path, filelist, opts)
-        : filelist.concat(file);
-    } catch (e) {
-      debug(`Ignoring invalid file ${file}`);
-    }
-  }
-  return filelist;
-};
-
-interface FilesInWhitelistOptions {
-  output: Output;
-}
-
-/**
- * Will return an array containing the expaneded list of all files included in the whitelist.
- * @param {Array[string]} whitelist array of files and directories to include.
- * @param {string} path the path of the deployment.
- * @param {Object} options
- *  - `output` {Object} "output" helper object
- * @returns {Array} the expanded list of whitelisted files.
- */
-const getFilesInWhitelist = async function(
-  whitelist: string[],
-  path: string,
-  opts: FilesInWhitelistOptions
-) {
-  const { debug } = opts.output;
-  const files: string[] = [];
-
-  await Promise.all(
-    whitelist.map(async (file: string) => {
-      file = asAbsolute(file, path);
-      try {
-        const file_stat = await fs.stat(file);
-        if (file_stat.isDirectory()) {
-          const dir_files = await walkSync(file, path, [], opts);
-          files.push(...dir_files);
-        } else {
-          files.push(file);
-        }
-      } catch (e) {
-        debug(`Ignoring invalid file ${file}`);
-      }
-    })
-  );
-  return files;
-};
-
 /**
  * Transform relative paths into absolutes,
  * and maintains absolutes as such.
@@ -125,7 +51,6 @@ const asAbsolute = function(path: string, parent: string) {
 
 interface StaticFilesOptions {
   output: Output;
-  isBuilds: boolean;
   src?: string;
 }
 
@@ -136,7 +61,6 @@ interface StaticFilesOptions {
  *
  * @param {String} full path to directory
  * @param {Object} options:
- *  - `isBuilds` {boolean} true for Now 2.0 builders
  *  - `output` {Object} "output" helper object
  *  - `src` {string|undefined} optional builder source
  * @return {Array} comprehensive list of paths to sync
@@ -144,57 +68,50 @@ interface StaticFilesOptions {
 
 export async function staticFiles(
   path: string,
-  nowConfig: NowConfig = {},
-  { output, isBuilds, src }: StaticFilesOptions
+  { output, src }: StaticFilesOptions
 ) {
   const { debug, time } = output;
-  let files: string[] = [];
 
-  if (!isBuilds && nowConfig.files && Array.isArray(nowConfig.files)) {
-    files = await getFilesInWhitelist(nowConfig.files, path, { output });
-  } else {
-    // The package.json `files` whitelist still
-    // honors ignores: https://docs.npmjs.com/files/package.json#files
-    const source = src || '.';
-    // Convert all filenames into absolute paths
-    const search = await glob(source, { cwd: path, absolute: true, dot: true });
+  // The package.json `files` whitelist still
+  // honors ignores: https://docs.npmjs.com/files/package.json#files
+  const source = src || '.';
+  // Convert all filenames into absolute paths
+  const search = await glob(source, { cwd: path, absolute: true, dot: true });
 
-    // Compile list of ignored patterns and files
-    const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
-    const { ig } = await getNowIgnore(resolve(path, ignoreName));
-    const filter = ig.createFilter();
+  // Compile list of ignored patterns and files
+  const { ig } = await getNowIgnore(resolve(path, '.nowignore'));
+  const filter = ig.createFilter();
 
-    const prefixLength = path.length + 1;
+  const prefixLength = path.length + 1;
 
-    // The package.json `files` whitelist still
-    // honors npmignores: https://docs.npmjs.com/files/package.json#files
-    // but we don't ignore if the user is explicitly listing files
-    // under the now namespace, or using files in combination with gitignore
-    const accepts = (file: string) => {
-      const relativePath = file.substr(prefixLength);
+  // The package.json `files` whitelist still
+  // honors npmignores: https://docs.npmjs.com/files/package.json#files
+  // but we don't ignore if the user is explicitly listing files
+  // under the now namespace, or using files in combination with gitignore
+  const accepts = (file: string) => {
+    const relativePath = file.substr(prefixLength);
 
-      if (relativePath === '') {
-        return true;
-      }
+    if (relativePath === '') {
+      return true;
+    }
 
-      const accepted = filter(relativePath);
+    const accepted = filter(relativePath);
 
-      if (!accepted) {
-        debug(`Ignoring ${file}`);
-      }
+    if (!accepted) {
+      debug(`Ignoring ${file}`);
+    }
 
-      return accepted;
-    };
+    return accepted;
+  };
 
-    // Locate files
-    files = await time(
-      `Locating files ${path}`,
-      explode(search, {
-        accepts,
-        output,
-      })
-    );
-  }
+  // Locate files
+  const files = await time(
+    `Locating files ${path}`,
+    explode(search, {
+      accepts,
+      output,
+    })
+  );
 
   // Get files
   return uniqueStrings(files);

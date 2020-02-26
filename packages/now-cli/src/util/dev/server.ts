@@ -752,8 +752,7 @@ export default class DevServer {
     this.env = env;
     this.buildEnv = buildEnv;
 
-    const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowConfig, opts);
+    const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
