@@ -316,6 +316,7 @@ export type RoutesManifest = {
     regex: string;
   }[];
   version: number;
+  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
 };
 
 export async function getRoutesManifest(
