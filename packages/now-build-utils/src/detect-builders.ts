@@ -936,13 +936,11 @@ function mergeRoutes(
         rewriteRoutes.push(...preDynamicRoutes);
       }
 
-      if (preDefaultRoutes.length) {
-        rewriteRoutes.push({
-          src: '^/api(/.*)?$',
-          status: 404,
-          continue: true,
-        });
-      }
+      rewriteRoutes.push({
+        src: '^/api(/.*)?$',
+        status: 404,
+        continue: true,
+      });
     } else {
       defaultRoutes.push(...preDefaultRoutes);
 
