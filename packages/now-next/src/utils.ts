@@ -641,6 +641,8 @@ export type NextPrerenderedRoutes = {
       dataRouteRegex: string;
     };
   };
+
+  omittedLambdas: string[];
 };
 
 export async function getExportIntent(
@@ -730,6 +732,7 @@ export async function getPrerenderManifest(
       legacyBlockingRoutes: {},
       fallbackRoutes: {},
       bypassToken: null,
+      omittedLambdas: [],
     };
   }
 
@@ -788,6 +791,7 @@ export async function getPrerenderManifest(
         fallbackRoutes: {},
         bypassToken:
           (manifest.preview && manifest.preview.previewModeId) || null,
+        omittedLambdas: [],
       };
 
       routes.forEach(route => {
@@ -841,6 +845,7 @@ export async function getPrerenderManifest(
         legacyBlockingRoutes: {},
         fallbackRoutes: {},
         bypassToken: manifest.preview.previewModeId,
+        omittedLambdas: [],
       };
 
       routes.forEach(route => {
@@ -870,6 +875,7 @@ export async function getPrerenderManifest(
         if (!fallback) {
           // Fallback behavior is disabled, all routes would've been provided
           // in the top-level `routes` key (`staticRoutes`).
+          ret.omittedLambdas.push(lazyRoute);
           return;
         }
 
@@ -889,6 +895,7 @@ export async function getPrerenderManifest(
         legacyBlockingRoutes: {},
         fallbackRoutes: {},
         bypassToken: null,
+        omittedLambdas: [],
       };
     }
   }
