@@ -1,4 +1,4 @@
-# [Name] Example
+# Dojo Example
 
 This directory is a brief example of a [Dojo](https://dojo.io) site that can be deployed with ZEIT Now and zero configuration.
 
