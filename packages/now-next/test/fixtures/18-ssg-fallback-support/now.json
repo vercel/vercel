@@ -83,6 +83,21 @@
       }
     },
     {
+      "path": "/_next/data/testing-build-id/blog/post-4.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "MISS"
+      }
+    },
+    { "delay": 2000 },
+    {
+      "path": "/_next/data/testing-build-id/blog/post-4.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "/HIT|STALE/"
+      }
+    },
+    {
       "path": "/blog/post-3",
       "status": 200,
       "mustContain": "post-3"

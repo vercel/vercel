@@ -72,9 +72,7 @@
     {
       "path": "/blog/post-3",
       "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
+      "mustContain": "loading..."
     },
     { "delay": 2000 },
     {
@@ -100,6 +98,11 @@
       }
     },
     {
+      "path": "/blog/post-3",
+      "status": 200,
+      "mustContain": "post-3"
+    },
+    {
       "path": "/blog/post-1/comment-1",
       "status": 200,
       "responseHeaders": {
@@ -116,9 +119,7 @@
     {
       "path": "/blog/post-3/comment-3",
       "status": 200,
-      "responseHeaders": {
-        "x-now-cache": "MISS"
-      }
+      "mustContain": "loading..."
     },
     {
       "path": "/_next/data/testing-build-id/lambda.json",
@@ -132,6 +133,11 @@
       }
     },
     { "delay": 2000 },
+    {
+      "path": "/blog/post-3/comment-3",
+      "status": 200,
+      "mustContain": "comment-3"
+    },
     {
       "path": "/_next/data/testing-build-id/forever.json",
       "status": 200,
@@ -174,6 +180,39 @@
       "responseHeaders": {
         "x-now-cache": "PRERENDER"
       }
+    },
+    {
+      "path": "/nofallback/one",
+      "status": 200,
+      "mustContain": "one"
+    },
+    {
+      "path": "/nofallback/two",
+      "status": 200,
+      "mustContain": "two"
+    },
+    {
+      "path": "/nofallback/nope",
+      "status": 404,
+      "mustContain": "This page could not be found"
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/one.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "/HIT|STALE|PRERENDER/"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/two.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "/HIT|STALE|PRERENDER/"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/nope.json",
+      "status": 404
     }
   ]
 }

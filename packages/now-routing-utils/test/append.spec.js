@@ -1,7 +1,7 @@
 const { deepEqual } = require('assert');
 const { appendRoutesToPhase } = require('../dist/append');
 
-test('appendRoutesToPhase `routes=null`', () => {
+test('appendRoutesToPhase `routes=null` and `newRoutes=[]`', () => {
   const routes = null;
   const newRoutes = [];
   const phase = 'filesystem';
@@ -10,7 +10,16 @@ test('appendRoutesToPhase `routes=null`', () => {
   deepEqual(actual, expected);
 });
 
-test('appendRoutesToPhase `newRoutes=null`', () => {
+test('appendRoutesToPhase `routes=null` and one `newRoutes`', () => {
+  const routes = null;
+  const newRoutes = [{ src: '/foo', dest: '/bar' }];
+  const phase = 'filesystem';
+  const actual = appendRoutesToPhase({ routes, newRoutes, phase });
+  const expected = [{ handle: 'filesystem' }, ...newRoutes];
+  deepEqual(actual, expected);
+});
+
+test('appendRoutesToPhase `routes=[]` and `newRoutes=null`', () => {
   const routes = [];
   const newRoutes = null;
   const phase = 'filesystem';
