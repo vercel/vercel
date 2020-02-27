@@ -206,10 +206,10 @@ export async function runNpmInstall(
   debug(`Installing to ${destPath}`);
   const { hasPackageLockJson } = await scanParentDirs(destPath);
 
-  const opts = { cwd: destPath, ...spawnOpts } || {
-    cwd: destPath,
-    env: process.env,
-  };
+  const opts: SpawnOptions = { cwd: destPath, ...spawnOpts };
+  const env = opts.env || { ...process.env };
+  delete env.NODE_ENV;
+  opts.env = env;
 
   if (hasPackageLockJson) {
     commandArgs = args.filter(a => a !== '--prefer-offline');
@@ -239,10 +239,7 @@ export async function runBundleInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { cwd: destPath, ...spawnOpts } || {
-    cwd: destPath,
-    env: process.env,
-  };
+  const opts = { cwd: destPath, ...spawnOpts };
 
   await spawnAsync(
     'bundle',
@@ -270,10 +267,7 @@ export async function runPipInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { cwd: destPath, ...spawnOpts } || {
-    cwd: destPath,
-    env: process.env,
-  };
+  const opts = { cwd: destPath, ...spawnOpts };
 
   await spawnAsync(
     'pip3',
