@@ -366,11 +366,16 @@ export const build = async ({
           // Load the /_next/data routes for both dynamic SSG and SSP pages.
           // These must be combined and sorted to prevent conflicts
           for (const dataRoute of routesManifest.dataRoutes) {
-            const ssgDataRoute = prerenderManifest.lazyRoutes[dataRoute.page];
+            const ssgDataRoute =
+              prerenderManifest.fallbackRoutes[dataRoute.page] ||
+              prerenderManifest.legacyBlockingRoutes[dataRoute.page];
 
             // we don't need to add routes for non-lazy SSG routes since
             // they have outputs which would override the routes anyways
-            if (prerenderManifest.routes[dataRoute.page]) {
+            if (
+              prerenderManifest.staticRoutes[dataRoute.page] ||
+              prerenderManifest.omittedRoutes.includes(dataRoute.page)
+            ) {
               continue;
             }
 
@@ -669,9 +674,8 @@ export const build = async ({
       // Lazily prerendered routes have a fallback `.html` file on newer
       // Next.js versions so we need to also not treat it as a static page here.
       if (
-        prerenderManifest.routes[routeName] ||
-        (prerenderManifest.lazyRoutes[routeName] &&
-          prerenderManifest.lazyRoutes[routeName].fallback)
+        prerenderManifest.staticRoutes[routeName] ||
+        prerenderManifest.fallbackRoutes[routeName]
       ) {
         return;
       }
@@ -913,33 +917,49 @@ export const build = async ({
     }
 
     let prerenderGroup = 1;
-    const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
+    const onPrerenderRoute = (
+      routeKey: string,
+      { isBlocking, isFallback }: { isBlocking: boolean; isFallback: boolean }
+    ) => {
+      if (isBlocking && isFallback) {
+        throw new Error(
+          'invariant: isBlocking and isFallback cannot both be true'
+        );
+      }
+
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
-      const lazyHtmlFallback =
-        isLazy && prerenderManifest.lazyRoutes[routeKey].fallback;
 
-      const htmlFsRef =
-        isLazy && !lazyHtmlFallback
+      const htmlFsRef = isBlocking
+        ? // Blocking pages do not have an HTML fallback
+          null
+        : new FileFsRef({
+            fsPath: path.join(
+              pagesDir,
+              isFallback
+                ? // Fallback pages have a special file.
+                  prerenderManifest.fallbackRoutes[routeKey].fallback
+                : // Otherwise, the route itself should exist as a static HTML
+                  // file.
+                  `${routeFileNoExt}.html`
+            ),
+          });
+      const jsonFsRef =
+        // JSON data does not exist for fallback or blocking pages
+        isFallback || isBlocking
           ? null
           : new FileFsRef({
-              fsPath: path.join(
-                pagesDir,
-                `${lazyHtmlFallback || routeFileNoExt + '.html'}`
-              ),
+              fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
             });
-      const jsonFsRef = isLazy
-        ? null
-        : new FileFsRef({
-            fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
-          });
 
       let initialRevalidate: false | number;
       let srcRoute: string | null;
       let dataRoute: string;
 
-      if (isLazy) {
-        const pr = prerenderManifest.lazyRoutes[routeKey];
+      if (isFallback || isBlocking) {
+        const pr = isFallback
+          ? prerenderManifest.fallbackRoutes[routeKey]
+          : prerenderManifest.legacyBlockingRoutes[routeKey];
         initialRevalidate = 1; // TODO: should Next.js provide this default?
         // @ts-ignore
         if (initialRevalidate === false) {
@@ -949,7 +969,7 @@ export const build = async ({
         srcRoute = null;
         dataRoute = pr.dataRoute;
       } else {
-        const pr = prerenderManifest.routes[routeKey];
+        const pr = prerenderManifest.staticRoutes[routeKey];
         ({ initialRevalidate, srcRoute, dataRoute } = pr);
       }
 
@@ -998,21 +1018,24 @@ export const build = async ({
       ++prerenderGroup;
     };
 
-    Object.keys(prerenderManifest.routes).forEach(route =>
-      onPrerenderRoute(route, false)
+    Object.keys(prerenderManifest.staticRoutes).forEach(route =>
+      onPrerenderRoute(route, { isBlocking: false, isFallback: false })
     );
-    Object.keys(prerenderManifest.lazyRoutes).forEach(route =>
-      onPrerenderRoute(route, true)
+    Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
+      onPrerenderRoute(route, { isBlocking: false, isFallback: true })
+    );
+    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach(route =>
+      onPrerenderRoute(route, { isBlocking: true, isFallback: false })
     );
 
     // We still need to use lazyRoutes if the dataRoutes field
     // isn't available for backwards compatibility
     if (!(routesManifest && routesManifest.dataRoutes)) {
       // Dynamic pages for lazy routes should be handled by the lambda flow.
-      Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
-        const { dataRouteRegex, dataRoute } = prerenderManifest.lazyRoutes[
-          lazyRoute
-        ];
+      [
+        ...Object.entries(prerenderManifest.fallbackRoutes),
+        ...Object.entries(prerenderManifest.legacyBlockingRoutes),
+      ].forEach(([, { dataRouteRegex, dataRoute }]) => {
         dataRoutes.push({
           // Next.js provided data route regex
           src: dataRouteRegex.replace(
@@ -1068,13 +1091,31 @@ export const build = async ({
     entryDirectory,
     dynamicPages,
     false,
-    routesManifest
+    routesManifest,
+    new Set(prerenderManifest.omittedRoutes)
   ).then(arr =>
     arr.map(route => {
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
       return route;
     })
   );
+
+  // We need to delete lambdas from output instead of omitting them from the
+  // start since we rely on them for powering Preview Mode (read above in
+  // onPrerenderRoute).
+  prerenderManifest.omittedRoutes.forEach(routeKey => {
+    // Get the route file as it'd be mounted in the builder output
+    const routeFileNoExt = path.posix.join(
+      entryDirectory,
+      routeKey === '/' ? '/index' : routeKey
+    );
+    if (typeof lambdas[routeFileNoExt] === undefined) {
+      throw new Error(
+        `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`
+      );
+    }
+    delete lambdas[routeFileNoExt];
+  });
 
   return {
     output: {
