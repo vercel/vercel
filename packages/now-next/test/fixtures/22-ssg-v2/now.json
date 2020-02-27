@@ -193,7 +193,8 @@
     },
     {
       "path": "/nofallback/nope",
-      "status": 404
+      "status": 404,
+      "mustContain": "This page could not be found"
     },
     {
       "path": "/_next/data/testing-build-id/nofallback/one.json",
