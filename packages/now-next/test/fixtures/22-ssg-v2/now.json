@@ -180,6 +180,38 @@
       "responseHeaders": {
         "x-now-cache": "PRERENDER"
       }
+    },
+    {
+      "path": "/nofallback/one",
+      "status": 200,
+      "mustContain": "one"
+    },
+    {
+      "path": "/nofallback/two",
+      "status": 200,
+      "mustContain": "two"
+    },
+    {
+      "path": "/nofallback/nope",
+      "status": 404
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/one.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "/HIT|STALE|PRERENDER/"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/two.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-now-cache": "/HIT|STALE|PRERENDER/"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/nope.json",
+      "status": 404
     }
   ]
 }

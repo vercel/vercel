@@ -3,34 +3,28 @@ import React from 'react';
 // eslint-disable-next-line camelcase
 export async function unstable_getStaticPaths() {
   return {
-    paths: ['/blog/post-1', { params: { post: 'post-2' } }],
-    fallback: true,
+    paths: ['/nofallback/one', { params: { slug: 'two' } }],
+    fallback: false,
   };
 }
 
 // eslint-disable-next-line camelcase
 export async function unstable_getStaticProps({ params }) {
-  if (params.post === 'post-10') {
-    await new Promise(resolve => {
-      setTimeout(() => resolve(), 1000);
-    });
-  }
-
   return {
     props: {
-      post: params.post,
+      slug: params.slug,
       time: (await import('perf_hooks')).performance.now(),
     },
     revalidate: 10,
   };
 }
 
-export default ({ post, time }) => {
-  if (!post) return <p>loading...</p>;
-
+export default ({ slug, time }) => {
   return (
     <>
-      <p>Post: {post}</p>
+      <p>
+        Slug ({slug.length}): {slug}
+      </p>
       <span>time: {time}</span>
     </>
   );
