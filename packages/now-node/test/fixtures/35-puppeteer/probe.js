@@ -13,6 +13,7 @@ async function tryTest({
     assert.equal(res.status, 200);
     const text = await res.text();
     assert.equal(text.trim(), `${testName}:${randomness}`);
+    console.log(`Finished testing "${testName}" probe.`);
   } catch (e) {
     if (retries === 0) {
       console.error(e);
@@ -28,7 +29,6 @@ async function tryTest({
       retries: retries - 1,
     });
   }
-  console.log(`Finished testing "${testName}" probe.`);
 }
 
 module.exports = async ({ deploymentUrl, fetch, randomness }) => {
