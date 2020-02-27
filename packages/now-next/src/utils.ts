@@ -354,7 +354,8 @@ export async function getDynamicRoutes(
   entryDirectory: string,
   dynamicPages: string[],
   isDev?: boolean,
-  routesManifest?: RoutesManifest
+  routesManifest?: RoutesManifest,
+  omittedRoutes?: Set<string>
 ): Promise<Source[]> {
   if (!dynamicPages.length) {
     return [];
@@ -364,14 +365,16 @@ export async function getDynamicRoutes(
     switch (routesManifest.version) {
       case 1:
       case 2: {
-        return routesManifest.dynamicRoutes.map(
-          ({ page, regex }: { page: string; regex: string }) => {
+        return routesManifest.dynamicRoutes
+          .filter(({ page }) =>
+            omittedRoutes ? !omittedRoutes.has(page) : true
+          )
+          .map(({ page, regex }: { page: string; regex: string }) => {
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
             };
-          }
-        );
+          });
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION
@@ -642,7 +645,7 @@ export type NextPrerenderedRoutes = {
     };
   };
 
-  omittedLambdas: string[];
+  omittedRoutes: string[];
 };
 
 export async function getExportIntent(
@@ -732,7 +735,7 @@ export async function getPrerenderManifest(
       legacyBlockingRoutes: {},
       fallbackRoutes: {},
       bypassToken: null,
-      omittedLambdas: [],
+      omittedRoutes: [],
     };
   }
 
@@ -791,7 +794,7 @@ export async function getPrerenderManifest(
         fallbackRoutes: {},
         bypassToken:
           (manifest.preview && manifest.preview.previewModeId) || null,
-        omittedLambdas: [],
+        omittedRoutes: [],
       };
 
       routes.forEach(route => {
@@ -845,7 +848,7 @@ export async function getPrerenderManifest(
         legacyBlockingRoutes: {},
         fallbackRoutes: {},
         bypassToken: manifest.preview.previewModeId,
-        omittedLambdas: [],
+        omittedRoutes: [],
       };
 
       routes.forEach(route => {
@@ -875,7 +878,7 @@ export async function getPrerenderManifest(
         if (!fallback) {
           // Fallback behavior is disabled, all routes would've been provided
           // in the top-level `routes` key (`staticRoutes`).
-          ret.omittedLambdas.push(lazyRoute);
+          ret.omittedRoutes.push(lazyRoute);
           return;
         }
 
@@ -895,7 +898,7 @@ export async function getPrerenderManifest(
         legacyBlockingRoutes: {},
         fallbackRoutes: {},
         bypassToken: null,
-        omittedLambdas: [],
+        omittedRoutes: [],
       };
     }
   }

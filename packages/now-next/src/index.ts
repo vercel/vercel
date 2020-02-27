@@ -372,7 +372,10 @@ export const build = async ({
 
             // we don't need to add routes for non-lazy SSG routes since
             // they have outputs which would override the routes anyways
-            if (prerenderManifest.staticRoutes[dataRoute.page]) {
+            if (
+              prerenderManifest.staticRoutes[dataRoute.page] ||
+              prerenderManifest.omittedRoutes.includes(dataRoute.page)
+            ) {
               continue;
             }
 
@@ -1088,13 +1091,31 @@ export const build = async ({
     entryDirectory,
     dynamicPages,
     false,
-    routesManifest
+    routesManifest,
+    new Set(prerenderManifest.omittedRoutes)
   ).then(arr =>
     arr.map(route => {
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
       return route;
     })
   );
+
+  // We need to delete lambdas from output instead of omitting them from the
+  // start since we rely on them for powering Preview Mode (read above in
+  // onPrerenderRoute).
+  prerenderManifest.omittedRoutes.forEach(routeKey => {
+    // Get the route file as it'd be mounted in the builder output
+    const routeFileNoExt = path.posix.join(
+      entryDirectory,
+      routeKey === '/' ? '/index' : routeKey
+    );
+    if (typeof lambdas[routeFileNoExt] === undefined) {
+      throw new Error(
+        `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`
+      );
+    }
+    delete lambdas[routeFileNoExt];
+  });
 
   return {
     output: {
