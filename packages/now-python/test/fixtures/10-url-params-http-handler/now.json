@@ -3,7 +3,7 @@
   "builds": [{ "src": "*.py", "use": "@now/python" }],
   "routes": [{ "src": "/another", "dest": "custom.py" }],
   "probes": [
-    { "path": "/?hello=/", "mustContain": "path=/?hello=/" },
-    { "path": "/another?hello=/", "mustContain": "path=/another?hello=/" }
+    { "path": "/?hello=/", "mustContain": "path=/?hello=%2F" },
+    { "path": "/another?hello=/", "mustContain": "path=/another?hello=%2F" }
   ]
 }
