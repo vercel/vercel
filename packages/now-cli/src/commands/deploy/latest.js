@@ -284,13 +284,22 @@ export default async function main(
       return 0;
     }
 
-    org = await selectOrg(
-      output,
-      'Which scope do you want to deploy to?',
-      client,
-      ctx.config.currentTeam,
-      autoConfirm
-    );
+    try {
+      org = await selectOrg(
+        output,
+        'Which scope do you want to deploy to?',
+        client,
+        ctx.config.currentTeam,
+        autoConfirm
+      );
+    } catch (err) {
+      if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+        output.error(err.message);
+        return 1;
+      }
+
+      throw err;
+    }
 
     // We use `localConfig` here to read the name
     // even though the `now.json` file can change
