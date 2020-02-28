@@ -66,7 +66,11 @@ export const SENTRY_DSN: string | undefined =  ${envToString('SENTRY_DSN')};
 }
 
 function envToString(key: string) {
-  return JSON.stringify(process.env[key]);
+  const value = process.env[key];
+  if (!value) {
+    console.log(`- Constant ${key} is not assigned`);
+  }
+  return JSON.stringify(value);
 }
 
 async function main() {
