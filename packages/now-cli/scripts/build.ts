@@ -4,7 +4,13 @@ import execa from 'execa';
 import { join } from 'path';
 import pipe from 'promisepipe';
 import { createGzip } from 'zlib';
-import { createWriteStream, mkdirp, remove, writeJSON } from 'fs-extra';
+import {
+  createWriteStream,
+  mkdirp,
+  remove,
+  writeJSON,
+  writeFile,
+} from 'fs-extra';
 
 import { getDistTag } from '../src/util/get-dist-tag';
 import pkg from '../package.json';
@@ -47,10 +53,34 @@ async function createBuildersTarball() {
   );
 }
 
+async function createConstants() {
+  console.log('Creating constants.ts');
+  const filename = join(dirRoot, 'src/util/constants.ts');
+  const contents = `// This file is auto-generated
+export const GA_TRACKING_ID: string | undefined = ${envToString(
+    'GA_TRACKING_ID'
+  )};
+export const SENTRY_DSN: string | undefined =  ${envToString('SENTRY_DSN')};
+`;
+  await writeFile(filename, contents, 'utf8');
+}
+
+function envToString(key: string) {
+  const value = process.env[key];
+  if (!value) {
+    console.log(`- Constant ${key} is not assigned`);
+  }
+  return JSON.stringify(value);
+}
+
 async function main() {
   const isDev = process.argv[2] === '--dev';
 
   if (!isDev) {
+    // Read the secrets from GitHub Actions and generate a file.
+    // During local development, these secrets will be empty.
+    createConstants();
+
     // Create a tarball from all the `@now` scoped builders which will be bundled
     // with Now CLI
     await createBuildersTarball();

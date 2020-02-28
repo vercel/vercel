@@ -247,12 +247,14 @@ function testFixtureStdio(directory, fn) {
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
           dev.kill('SIGTERM');
-          throw new Error(`Failed for "${directory}" with port ${port}.`);
+          throw new Error(
+            `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
+          );
         }
 
         if (stderr.includes('Command failed') || stderr.includes('Error!')) {
           dev.kill('SIGTERM');
-          throw new Error(`Failed for "${directory}".`);
+          throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });
 
