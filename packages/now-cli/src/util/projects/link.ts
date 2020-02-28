@@ -20,7 +20,14 @@ export const NOW_FOLDER = '.now';
 export const NOW_FOLDER_README = 'README.txt';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
 
-async function getLink(path?: string): Promise<ProjectLink | null> {
+async function getLink(
+  output: Output,
+  path?: string
+): Promise<
+  | { status: 'error'; exitCode: number }
+  | { status: 'linked'; link: ProjectLink }
+  | { status: 'not_linked'; link: null }
+> {
   try {
     const json = await readFile(
       join(path || process.cwd(), NOW_FOLDER, NOW_PROJECT_LINK_FILE),
@@ -29,20 +36,26 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
 
     const link: ProjectLink = JSON.parse(json);
 
-    return link;
+    return { status: 'linked', link };
   } catch (error) {
     // link file does not exists, project is not linked
     if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
-      return null;
+      return { status: 'not_linked', link: null };
     }
 
     // link file can't be read
+    output.print(
+      `${chalk.red(
+        'Error!'
+      )} Now project settings could not be retrieved. To link your project again, remove the ".now" directory.\n`
+    );
+
+    // do not report syntax error (the user edited the .now folder content)
     if (error.name === 'SyntaxError') {
-      throw new Error(
-        'Now project settings could not be retrieved. To link your project again, remove the `.now` directory.'
-      );
+      return { status: 'error', exitCode: 1 };
     }
 
+    // report other errors
     throw error;
   }
 }
@@ -74,10 +87,14 @@ export async function getLinkedOrg(
   if (NOW_ORG_ID) {
     orgId = NOW_ORG_ID;
   } else {
-    const link = await getLink(path);
+    const linkResult = await getLink(output, path);
 
-    if (link) {
-      orgId = link.orgId;
+    if (linkResult.status === 'error') {
+      return linkResult;
+    }
+
+    if (linkResult.status === 'linked') {
+      orgId = linkResult.link.orgId;
     }
   }
 
@@ -131,10 +148,21 @@ export async function getLinkedProject(
     return { status: 'error', exitCode: 1 };
   }
 
-  const link =
-    NOW_ORG_ID && NOW_PROJECT_ID
-      ? { orgId: NOW_ORG_ID, projectId: NOW_PROJECT_ID }
-      : await getLink(path);
+  let link;
+
+  if (NOW_ORG_ID && NOW_PROJECT_ID) {
+    link = { orgId: NOW_ORG_ID, projectId: NOW_PROJECT_ID };
+  } else {
+    const linkResult = await getLink(output, path);
+
+    if (linkResult.status === 'error') {
+      return linkResult;
+    }
+
+    if (linkResult.status === 'linked') {
+      link = linkResult.link;
+    }
+  }
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null };
@@ -190,11 +218,11 @@ export async function linkFolderToProject(
   }
 
   // if the project is already linked, we skip linking
-  const link = await getLink(path);
+  const linkResult = await getLink(output, path);
   if (
-    link &&
-    link.orgId === projectLink.orgId &&
-    link.projectId === projectLink.projectId
+    linkResult.status === 'linked' &&
+    linkResult.link.orgId === projectLink.orgId &&
+    linkResult.link.projectId === projectLink.projectId
   ) {
     return;
   }
