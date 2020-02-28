@@ -5,30 +5,18 @@
 
 ## Usage
 
-To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
-
-```
-npm i -g now
-```
-
-To quickly start a new project, run the following commands:
-
-```
-now init        # Pick an example project to clone
-cd <PROJECT>    # Change directory to the newly created project
-now             # Deploy to the cloud
-```
+Get started by [Importing a Git Project](https://zeit.co/import) and use `git push` to deploy. Alternatively, you can [install Now CLI](https://zeit.co/download).
 
 ## Documentation
 
-For details on how to use Now CLI, check out our [documentation](https://zeit.co/docs/now-cli).
+For details on how to use ZEIT Now, check out our [documentation](https://zeit.co/docs).
 
 ## Caught a Bug?
 
 1. [Fork](https://help.github.com/articles/fork-a-repo/) this repository to your own GitHub account and then [clone](https://help.github.com/articles/cloning-a-repository/) it to your local device
 2. Install dependencies with `yarn install`
 3. Compile the code: `yarn build`
-4. Link the package to the global module directory: `yarn link`
+4. Link the package to the global module directory: `cd ./packages/now-cli && yarn link`
 5. You can now start using `now` anywhere inside the command line
 
 As always, you should use `yarn test-unit` to run the tests and see if your changes have broken anything.
