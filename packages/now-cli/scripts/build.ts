@@ -57,10 +57,16 @@ async function createConstants() {
   console.log('Creating constants.ts');
   const filename = join(dirRoot, 'src/util/constants.ts');
   const contents = `// This file is auto-generated
-export const GA_TRACKING_ID: string | undefined = '${process.env.GA_TRACKING_ID}';
-export const SENTRY_DSN: string | undefined = '${process.env.SENTRY_DSN}';
+export const GA_TRACKING_ID: string | undefined = ${envToString(
+    'GA_TRACKING_ID'
+  )};
+export const SENTRY_DSN: string | undefined =  ${envToString('SENTRY_DSN')};
 `;
   await writeFile(filename, contents, 'utf8');
+}
+
+function envToString(key: string) {
+  return JSON.stringify(process.env[key]);
 }
 
 async function main() {

@@ -10,12 +10,10 @@ const config: any = configFiles.getConfigFilePath();
 
 export const shouldCollectMetrics =
   (config.collectMetrics === undefined || config.collectMetrics === true) &&
-  process.env.NOW_CLI_COLLECT_METRICS !== '0';
+  process.env.NOW_CLI_COLLECT_METRICS !== '0' &&
+  GA_TRACKING_ID;
 
-export const metrics = () => {
-  if (!GA_TRACKING_ID) {
-    return function noop() {};
-  }
+export const metrics = (): ua.Visitor => {
   const token =
     typeof config.token === 'string' ? config.token : platform() + release();
   const salt = userInfo().username;
@@ -24,7 +22,7 @@ export const metrics = () => {
     .toString('hex')
     .substring(0, 24);
 
-  return ua(GA_TRACKING_ID, {
+  return ua(GA_TRACKING_ID || '', {
     cid: hash,
     strictCidFormat: false,
     uid: hash,
