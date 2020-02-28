@@ -995,20 +995,14 @@ export const build = async ({
       }
 
       prerenders[outputPathPage] = new Prerender({
-        expiration:
-          initialRevalidate === false
-            ? MAX_AGE_ONE_YEAR * 10
-            : initialRevalidate,
+        expiration: initialRevalidate,
         lambda,
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
       });
       prerenders[outputPathData] = new Prerender({
-        expiration:
-          initialRevalidate === false
-            ? MAX_AGE_ONE_YEAR * 10
-            : initialRevalidate,
+        expiration: initialRevalidate,
         lambda,
         fallback: jsonFsRef,
         group: prerenderGroup,
