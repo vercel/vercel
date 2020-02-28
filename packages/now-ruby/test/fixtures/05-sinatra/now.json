@@ -1,9 +1,5 @@
 {
   "version": 2,
-  "functions": {
-    "api/**/*.ru": {
-      "runtime": "@now/ruby@1.0.1"
-    }
-  },
-  "probes": [{ "path": "/api", "mustContain": "gem:RANDOMNESS_PLACEHOLDER" }]
+  "builds": [{ "src": "index.ru", "use": "@now/ruby" }],
+  "probes": [{ "path": "/", "mustContain": "gem:RANDOMNESS_PLACEHOLDER" }]
 }
