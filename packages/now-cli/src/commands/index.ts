@@ -11,7 +11,6 @@ export default new Map([
   ['domain', 'domains'],
   ['domains', 'domains'],
   ['downgrade', 'upgrade'],
-  ['help', 'help'],
   ['init', 'init'],
   ['inspect', 'inspect'],
   ['list', 'list'],
