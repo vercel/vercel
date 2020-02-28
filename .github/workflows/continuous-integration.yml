@@ -94,7 +94,7 @@ jobs:
 
   coverage:
     name: Coverage
-    timeout-minutes: 10
+    timeout-minutes: 5
     needs: [test-unit, test-now-cli, test-now-dev, test-integration]
     runs-on: ubuntu-latest
     steps:
@@ -107,3 +107,5 @@ jobs:
           path: packages/now-cli/.nyc_output
       - run: yarn install
       - run: yarn workspace now run coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
