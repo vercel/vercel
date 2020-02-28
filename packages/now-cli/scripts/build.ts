@@ -79,7 +79,7 @@ async function main() {
   if (!isDev) {
     // Read the secrets from GitHub Actions and generate a file.
     // During local development, these secrets will be empty.
-    createConstants();
+    await createConstants();
 
     // Create a tarball from all the `@now` scoped builders which will be bundled
     // with Now CLI
