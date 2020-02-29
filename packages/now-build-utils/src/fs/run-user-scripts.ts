@@ -207,7 +207,7 @@ export async function runNpmInstall(
   const { hasPackageLockJson } = await scanParentDirs(destPath);
 
   const opts: SpawnOptions = { cwd: destPath, ...spawnOpts };
-  const env = opts.env || { ...process.env };
+  const env = opts.env ? { ...opts.env } : { ...process.env };
   delete env.NODE_ENV;
   opts.env = env;
 
