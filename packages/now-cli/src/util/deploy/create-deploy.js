@@ -1,5 +1,4 @@
 import generateCertForDeploy from './generate-cert-for-deploy';
-import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
@@ -18,41 +17,41 @@ export default async function createDeploy(
     return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
   } catch (error) {
     if (error.code === 'rate_limited') {
-      throw new ERRORS_TS.DeploymentsRateLimited(error.message);
+      throw new ERRORS.DeploymentsRateLimited(error.message);
     }
 
     // Means that the domain used as a suffix no longer exists
     if (error.code === 'domain_missing') {
-      throw new ERRORS_TS.DomainNotFound(error.value);
+      throw new ERRORS.DomainNotFound(error.value);
     }
 
     if (error.code === 'domain_not_found' && error.domain) {
-      throw new ERRORS_TS.DomainNotFound(error.domain);
+      throw new ERRORS.DomainNotFound(error.domain);
     }
 
     // This error occures when a domain used in the `alias`
     // is not yet verified
     if (error.code === 'domain_not_verified' && error.domain) {
-      throw new ERRORS_TS.DomainNotVerified(error.domain);
+      throw new ERRORS.DomainNotVerified(error.domain);
     }
 
     // If the domain used as a suffix is not verified, we fail
     if (error.code === 'domain_not_verified' && error.value) {
-      throw new ERRORS_TS.DomainVerificationFailed(error.value);
+      throw new ERRORS.DomainVerificationFailed(error.value);
     }
 
     // If the domain isn't owned by the user
     if (error.code === 'not_domain_owner') {
-      throw new ERRORS_TS.NotDomainOwner(error.message);
+      throw new ERRORS.NotDomainOwner(error.message);
     }
 
     if (error.code === 'builds_rate_limited') {
-      throw new ERRORS_TS.BuildsRateLimited(error.message);
+      throw new ERRORS.BuildsRateLimited(error.message);
     }
 
     // If the user doesn't have permissions over the domain used as a suffix we fail
     if (error.code === 'forbidden') {
-      throw new ERRORS_TS.DomainPermissionDenied(error.value, contextName);
+      throw new ERRORS.DomainPermissionDenied(error.value, contextName);
     }
 
     if (error.code === 'bad_request' && error.keyword) {
@@ -65,19 +64,19 @@ export default async function createDeploy(
     }
 
     if (error.code === 'domain_configured') {
-      throw new ERRORS_TS.AliasDomainConfigured(error);
+      throw new ERRORS.AliasDomainConfigured(error);
     }
 
     if (error.code === 'missing_build_script') {
-      throw new ERRORS_TS.MissingBuildScript(error);
+      throw new ERRORS.MissingBuildScript(error);
     }
 
     if (error.code === 'conflicting_file_path') {
-      throw new ERRORS_TS.ConflictingFilePath(error);
+      throw new ERRORS.ConflictingFilePath(error);
     }
 
     if (error.code === 'conflicting_path_segment') {
-      throw new ERRORS_TS.ConflictingPathSegment(error);
+      throw new ERRORS.ConflictingPathSegment(error);
     }
 
     // If the cert is missing we try to generate a new one and the retry
@@ -103,7 +102,7 @@ export default async function createDeploy(
     }
 
     if (error.code === 'not_found') {
-      throw new ERRORS_TS.DeploymentNotFound({ context: contextName });
+      throw new ERRORS.DeploymentNotFound({ context: contextName });
     }
 
     const certError = mapCertError(error);

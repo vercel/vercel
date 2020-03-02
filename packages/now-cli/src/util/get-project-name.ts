@@ -1,6 +1,14 @@
-import {basename} from 'path';
+import { basename } from 'path';
+import { NowConfig } from './dev/types';
 
-export default function getProjectName({argv, nowConfig, isFile, paths, pre}) {
+interface Options {
+  argv: { [key: string]: string };
+  nowConfig: NowConfig;
+  isFile: boolean;
+  paths: string[];
+}
+
+export function getProjectName({ argv, nowConfig, isFile, paths }: Options) {
   const nameCli = argv['--name'] || argv.name;
 
   if (nameCli) {
@@ -11,16 +19,10 @@ export default function getProjectName({argv, nowConfig, isFile, paths, pre}) {
     return nowConfig.name;
   }
 
-  // For the legacy deployment pipeline, the name might have already
-  // been determined using `package.json`.
-  if (pre) {
-    return pre;
-  }
-
   if (isFile || paths.length > 1) {
     return 'files';
   }
 
   // Otherwise let's send the name of the directory
   return basename(paths[0]);
-};
+}

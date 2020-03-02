@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
 import { Domain } from '../../types';
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import Client from '../client';
 import wait from '../output/wait';
 
@@ -24,7 +24,7 @@ export default async function verifyDomain(
         purchased: false,
         domain: error.name as string,
         nsVerification: error.nsVerification as ERRORS.NSVerificationError,
-        txtVerification: error.txtVerification as ERRORS.TXTVerificationError
+        txtVerification: error.txtVerification as ERRORS.TXTVerificationError,
       });
     }
     throw error;
@@ -42,7 +42,7 @@ async function performVerifyDomain(client: Client, domain: string) {
         `/v4/domains/${encodeURIComponent(domain)}/verify`,
         {
           body: {},
-          method: 'POST'
+          method: 'POST',
         }
       ),
     { retries: 5, maxTimeout: 8000 }

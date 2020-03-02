@@ -1,7 +1,7 @@
 import bytes from 'bytes';
 import info from './output/info';
 import errorOutput from './output/error';
-import { APIError } from './errors-ts';
+import { APIError } from './errors';
 
 export default function handleError(
   error: string | Error | APIError,

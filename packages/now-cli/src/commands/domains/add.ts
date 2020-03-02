@@ -3,10 +3,9 @@ import psl from 'psl';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
-import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -140,33 +139,14 @@ export default async function add(
 
   if (!domainResponse.verified) {
     output.warn(
-      `The domain was added but it is not verified. To verify it, you should either:`
-    );
-    output.print(
-      `  ${chalk.gray(
-        'a)'
-      )} Change your domain nameservers to the following intended set: ${chalk.gray(
-        '[recommended]'
-      )}\n`
+      `The domain was added but it is not verified. ` +
+        `To verify it, you should change your domain nameservers to the following intended set`
     );
     output.print(
       `\n${formatNSTable(
         domainResponse.intendedNameservers,
         domainResponse.nameservers,
         { extraSpace: '     ' }
-      )}\n\n`
-    );
-    output.print(
-      `  ${chalk.gray(
-        'b)'
-      )} Add a DNS TXT record with the name and value shown below.\n`
-    );
-    output.print(
-      `\n${formatDnsTable(
-        [['_now', 'TXT', domainResponse.verificationRecord]],
-        {
-          extraSpace: '     ',
-        }
       )}\n\n`
     );
     output.print(

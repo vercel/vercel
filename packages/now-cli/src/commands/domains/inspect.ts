@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
