@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import Now from '../util';
+import Now from '../util/now';
 import getAliases from '../util/alias/get-aliases';
 import createOutput from '../util/output';
 import logo from '../util/output/logo';

@@ -3,7 +3,7 @@ import psl from 'psl';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import addDomain from '../../util/domains/add-domain';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
@@ -27,7 +27,7 @@ export default async function add(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -131,7 +131,7 @@ export default async function add(
     );
     output.print(
       `\n${formatDnsTable([['_now', 'TXT', addedDomain.verificationRecord]], {
-        extraSpace: '     '
+        extraSpace: '     ',
       })}\n\n`
     );
     output.print(

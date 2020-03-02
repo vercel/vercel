@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import Now from '../../util';
+import Now from '../../util/now';
 import Client from '../../util/client.ts';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope.ts';
@@ -36,7 +36,6 @@ export default async function ls(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const lsStamp = stamp();
   let cancelWait;

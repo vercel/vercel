@@ -3,7 +3,7 @@ import Client from '../client';
 import { Output } from '../output';
 import { Cert } from '../../types';
 import getCertById from './get-cert-by-id';
-import { CertNotFound } from '../errors-ts';
+import { CertNotFound } from '../errors';
 
 type Response = {
   certs: Cert[];
@@ -24,7 +24,11 @@ function sortByCreated(a: Cert, b: Cert) {
   return 0;
 }
 
-export default async function getCerts(output: Output, client: Client, options?: { after?: string; }) {
+export default async function getCerts(
+  output: Output,
+  client: Client,
+  options?: { after?: string }
+) {
   const query = new URLSearchParams({ limit: '100' });
 
   if (options && options.after) {

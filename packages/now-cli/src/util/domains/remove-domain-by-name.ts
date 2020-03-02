@@ -1,4 +1,4 @@
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import Client from '../client';
 
 export default async function removeDomainByName(
@@ -23,7 +23,7 @@ export default async function removeDomainByName(
         pendingAsyncPurchase: error.pendingAsyncPurchase,
         resolvable: error.resolvable,
         suffix: error.suffix,
-        transferring: error.transferring
+        transferring: error.transferring,
       });
     }
     throw error;

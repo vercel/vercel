@@ -1,7 +1,5 @@
 import chalk from 'chalk';
-
-// @ts-ignore
-import Now from '../../util';
+import Now from '../../util/now';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -61,7 +59,6 @@ async function add(
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 
   if (overwite) {

@@ -1,7 +1,7 @@
 import Client from './client';
 import getUser from './get-user';
 import getTeamById from './get-team-by-id';
-import { TeamDeleted } from './errors-ts';
+import { TeamDeleted } from './errors';
 
 export default async function getScope(client: Client) {
   const user = await getUser(client);
@@ -17,7 +17,7 @@ export default async function getScope(client: Client) {
       contextName: team.slug,
       platformVersion: team.platformVersion,
       team,
-      user
+      user,
     };
   }
 
@@ -25,6 +25,6 @@ export default async function getScope(client: Client) {
     contextName: user.username || user.email,
     platformVersion: user.platformVersion,
     team: null,
-    user
+    user,
   };
 }

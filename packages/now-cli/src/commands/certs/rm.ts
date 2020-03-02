@@ -3,7 +3,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 import { NowContext, Cert } from '../../types';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
@@ -25,7 +25,7 @@ async function rm(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -115,7 +115,7 @@ function readConfirmation(output: Output, msg: string, certs: Cert[]) {
     output.print(
       `${table(certs.map(formatCertRow), {
         align: ['l', 'r', 'l'],
-        hsep: ' '.repeat(6)
+        hsep: ' '.repeat(6),
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
@@ -141,7 +141,7 @@ function formatCertRow(cert: Cert) {
     chalk.bold(cert.cns ? cert.cns.join(', ') : '–'),
     ...(cert.created
       ? [chalk.gray(`${ms(Date.now() - new Date(cert.created).getTime())} ago`)]
-      : [])
+      : []),
   ];
 }
 

@@ -1,4 +1,4 @@
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import Client from '../client';
 
 type Response = {
@@ -15,7 +15,7 @@ export default async function moveOutDomain(
   try {
     return await client.fetch<Response>(`/v4/domains/${name}`, {
       body: { op: 'move-out', destination },
-      method: 'PATCH'
+      method: 'PATCH',
     });
   } catch (error) {
     if (error.code === 'forbidden') {
@@ -33,7 +33,7 @@ export default async function moveOutDomain(
         message,
         pendingAsyncPurchase,
         resolvable,
-        suffix
+        suffix,
       });
     }
     throw error;
