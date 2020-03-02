@@ -6,7 +6,7 @@ This directory is a brief example of a [Zola](https://www.getzola.org/) site tha
 
 Deploy your own Zola project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/zola)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/zola)
 
 _Live Example: https://zola.now-examples.now.sh_
 

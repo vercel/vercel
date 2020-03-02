@@ -6,7 +6,7 @@ This directory is a brief example of a [MkDocs](https://www.mkdocs.org/) site th
 
 Deploy your own MkDocs project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/mkdocs)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/mkdocs)
 
 _Live Example: https://mkdocs.now-examples.now.sh_
 

@@ -284,13 +284,22 @@ export default async function main(
       return 0;
     }
 
-    org = await selectOrg(
-      output,
-      'Which scope do you want to deploy to?',
-      client,
-      ctx.config.currentTeam,
-      autoConfirm
-    );
+    try {
+      org = await selectOrg(
+        output,
+        'Which scope do you want to deploy to?',
+        client,
+        ctx.config.currentTeam,
+        autoConfirm
+      );
+    } catch (err) {
+      if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+        output.error(err.message);
+        return 1;
+      }
+
+      throw err;
+    }
 
     // We use `localConfig` here to read the name
     // even though the `now.json` file can change
@@ -566,6 +575,11 @@ export default async function main(
       return 1;
     }
 
+    if (deployment.readyState === 'CANCELED') {
+      output.log('The deployment has been canceled');
+      return 1;
+    }
+
     const deploymentResponse = await getDeploymentByIdOrHost(
       now,
       contextName,
@@ -652,7 +666,12 @@ export default async function main(
       output.error('Build failed');
       output.error(
         `Check your logs at ${now.url}/_logs or run ${code(
-          `now logs ${now.url}`
+          `now logs ${now.url}`,
+          {
+            // Backticks are interpreted as part of the URL, causing CMD+Click
+            // behavior to fail in editors like VSCode.
+            backticks: false,
+          }
         )}`
       );
 

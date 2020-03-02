@@ -9,6 +9,7 @@ import exit from '../util/exit';
 import Client from '../util/client.ts';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
+import createOutput from '../util/output';
 
 const e = encodeURIComponent;
 
@@ -63,13 +64,26 @@ const main = async ctx => {
     await exit(0);
   }
 
+  const output = createOutput({ debug });
+
   const {
     authConfig: { token },
     config: { currentTeam },
   } = ctx;
   const client = new Client({ apiUrl, token, currentTeam, debug });
 
-  const { contextName } = await getScope(client);
+  let contextName = null;
+
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      output.error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   try {
     await run({ client, contextName });

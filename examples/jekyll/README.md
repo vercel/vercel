@@ -6,7 +6,7 @@ This directory is a brief example of a [Jekyll](https://jekyllrb.com/) site that
 
 Deploy your own Jekyll project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/jekyll)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/jekyll)
 
 _Live Example: https://jekyll.now-examples.now.sh_
 

@@ -306,6 +306,7 @@ type RoutesManifestRegex = {
 };
 
 export type RoutesManifest = {
+  pages404: boolean;
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
   rewrites: (NowRewrite & RoutesManifestRegex)[];
@@ -315,6 +316,7 @@ export type RoutesManifest = {
     regex: string;
   }[];
   version: number;
+  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
 };
 
 export async function getRoutesManifest(
@@ -352,7 +354,8 @@ export async function getDynamicRoutes(
   entryDirectory: string,
   dynamicPages: string[],
   isDev?: boolean,
-  routesManifest?: RoutesManifest
+  routesManifest?: RoutesManifest,
+  omittedRoutes?: Set<string>
 ): Promise<Source[]> {
   if (!dynamicPages.length) {
     return [];
@@ -362,14 +365,16 @@ export async function getDynamicRoutes(
     switch (routesManifest.version) {
       case 1:
       case 2: {
-        return routesManifest.dynamicRoutes.map(
-          ({ page, regex }: { page: string; regex: string }) => {
+        return routesManifest.dynamicRoutes
+          .filter(({ page }) =>
+            omittedRoutes ? !omittedRoutes.has(page) : true
+          )
+          .map(({ page, regex }: { page: string; regex: string }) => {
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
             };
-          }
-        );
+          });
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION
@@ -613,7 +618,9 @@ export async function createLambdaFromPseudoLayers({
 }
 
 export type NextPrerenderedRoutes = {
-  routes: {
+  bypassToken: string | null;
+
+  staticRoutes: {
     [route: string]: {
       initialRevalidate: number | false;
       dataRoute: string;
@@ -621,13 +628,24 @@ export type NextPrerenderedRoutes = {
     };
   };
 
-  lazyRoutes: {
+  legacyBlockingRoutes: {
     [route: string]: {
       routeRegex: string;
       dataRoute: string;
       dataRouteRegex: string;
     };
   };
+
+  fallbackRoutes: {
+    [route: string]: {
+      fallback: string;
+      routeRegex: string;
+      dataRoute: string;
+      dataRouteRegex: string;
+    };
+  };
+
+  omittedRoutes: string[];
 };
 
 export async function getExportIntent(
@@ -712,33 +730,72 @@ export async function getPrerenderManifest(
     .catch(() => false);
 
   if (!hasManifest) {
-    return { routes: {}, lazyRoutes: {} };
+    return {
+      staticRoutes: {},
+      legacyBlockingRoutes: {},
+      fallbackRoutes: {},
+      bypassToken: null,
+      omittedRoutes: [],
+    };
   }
 
-  const manifest: {
-    version: 1;
-    routes: {
-      [key: string]: {
-        initialRevalidateSeconds: number | false;
-        dataRoute: string;
-        srcRoute: string | null;
-      };
-    };
-    dynamicRoutes: {
-      [key: string]: {
-        routeRegex: string;
-        dataRoute: string;
-        dataRouteRegex: string;
-      };
-    };
-  } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
+  const manifest:
+    | {
+        version: 1;
+        routes: {
+          [key: string]: {
+            initialRevalidateSeconds: number | false;
+            dataRoute: string;
+            srcRoute: string | null;
+          };
+        };
+        dynamicRoutes: {
+          [key: string]: {
+            fallback?: string;
+            routeRegex: string;
+            dataRoute: string;
+            dataRouteRegex: string;
+          };
+        };
+        preview?: {
+          previewModeId: string;
+        };
+      }
+    | {
+        version: 2;
+        routes: {
+          [route: string]: {
+            initialRevalidateSeconds: number | false;
+            srcRoute: string | null;
+            dataRoute: string;
+          };
+        };
+        dynamicRoutes: {
+          [route: string]: {
+            routeRegex: string;
+            fallback: string | false;
+            dataRoute: string;
+            dataRouteRegex: string;
+          };
+        };
+        preview: {
+          previewModeId: string;
+        };
+      } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
   switch (manifest.version) {
     case 1: {
       const routes = Object.keys(manifest.routes);
       const lazyRoutes = Object.keys(manifest.dynamicRoutes);
 
-      const ret: NextPrerenderedRoutes = { routes: {}, lazyRoutes: {} };
+      const ret: NextPrerenderedRoutes = {
+        staticRoutes: {},
+        legacyBlockingRoutes: {},
+        fallbackRoutes: {},
+        bypassToken:
+          (manifest.preview && manifest.preview.previewModeId) || null,
+        omittedRoutes: [],
+      };
 
       routes.forEach(route => {
         const {
@@ -746,7 +803,7 @@ export async function getPrerenderManifest(
           dataRoute,
           srcRoute,
         } = manifest.routes[route];
-        ret.routes[route] = {
+        ret.staticRoutes[route] = {
           initialRevalidate:
             initialRevalidateSeconds === false
               ? false
@@ -759,17 +816,90 @@ export async function getPrerenderManifest(
       lazyRoutes.forEach(lazyRoute => {
         const {
           routeRegex,
+          fallback,
           dataRoute,
           dataRouteRegex,
         } = manifest.dynamicRoutes[lazyRoute];
 
-        ret.lazyRoutes[lazyRoute] = { routeRegex, dataRoute, dataRouteRegex };
+        if (fallback) {
+          ret.fallbackRoutes[lazyRoute] = {
+            routeRegex,
+            fallback,
+            dataRoute,
+            dataRouteRegex,
+          };
+        } else {
+          ret.legacyBlockingRoutes[lazyRoute] = {
+            routeRegex,
+            dataRoute,
+            dataRouteRegex,
+          };
+        }
+      });
+
+      return ret;
+    }
+    case 2: {
+      const routes = Object.keys(manifest.routes);
+      const lazyRoutes = Object.keys(manifest.dynamicRoutes);
+
+      const ret: NextPrerenderedRoutes = {
+        staticRoutes: {},
+        legacyBlockingRoutes: {},
+        fallbackRoutes: {},
+        bypassToken: manifest.preview.previewModeId,
+        omittedRoutes: [],
+      };
+
+      routes.forEach(route => {
+        const {
+          initialRevalidateSeconds,
+          dataRoute,
+          srcRoute,
+        } = manifest.routes[route];
+        ret.staticRoutes[route] = {
+          initialRevalidate:
+            initialRevalidateSeconds === false
+              ? false
+              : Math.max(1, initialRevalidateSeconds),
+          dataRoute,
+          srcRoute,
+        };
+      });
+
+      lazyRoutes.forEach(lazyRoute => {
+        const {
+          routeRegex,
+          fallback,
+          dataRoute,
+          dataRouteRegex,
+        } = manifest.dynamicRoutes[lazyRoute];
+
+        if (!fallback) {
+          // Fallback behavior is disabled, all routes would've been provided
+          // in the top-level `routes` key (`staticRoutes`).
+          ret.omittedRoutes.push(lazyRoute);
+          return;
+        }
+
+        ret.fallbackRoutes[lazyRoute] = {
+          routeRegex,
+          fallback,
+          dataRoute,
+          dataRouteRegex,
+        };
       });
 
       return ret;
     }
     default: {
-      return { routes: {}, lazyRoutes: {} };
+      return {
+        staticRoutes: {},
+        legacyBlockingRoutes: {},
+        fallbackRoutes: {},
+        bypassToken: null,
+        omittedRoutes: [],
+      };
     }
   }
 }
