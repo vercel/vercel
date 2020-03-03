@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
-import { DomainAlreadyExists, InvalidDomain } from '../errors-ts';
+import { DomainAlreadyExists, InvalidDomain } from '../errors';
 import { Domain } from '../../types';
 import Client from '../client';
 import wait from '../output/wait';
@@ -27,16 +27,13 @@ export default async function addDomain(
   }
 }
 
-async function performAddRequest(
-  client: Client,
-  domainName: string
-) {
+async function performAddRequest(client: Client, domainName: string) {
   return retry(
     async () => {
       try {
         const { domain } = await client.fetch<Response>('/v4/domains', {
           body: { name: domainName },
-          method: 'POST'
+          method: 'POST',
         });
         return domain;
       } catch (error) {

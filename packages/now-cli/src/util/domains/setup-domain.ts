@@ -2,7 +2,7 @@ import psl from 'psl';
 import { NowError } from '../now-error';
 import { Domain } from '../../types';
 import { Output } from '../output';
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import addDomain from './add-domain';
 import Client from '../client';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
@@ -53,8 +53,8 @@ export default async function setupDomain(
           domain,
           nsVerification: {
             intendedNameservers: verificationResult.intendedNameservers,
-            nameservers: verificationResult.nameservers
-          }
+            nameservers: verificationResult.nameservers,
+          },
         });
       }
 
@@ -125,7 +125,7 @@ export default async function setupDomain(
         domain: verificationResult.meta.domain,
         nsVerification: verificationResult.meta.nsVerification,
         txtVerification: verificationResult.meta.txtVerification,
-        purchased: true
+        purchased: true,
       });
     }
 

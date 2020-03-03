@@ -1,6 +1,6 @@
 {
   "name": "now-client",
-  "version": "7.0.1-canary.1",
+  "version": "8.0.0-canary.1",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://zeit.co",
@@ -45,7 +45,6 @@
     "ignore": "4.0.6",
     "ms": "2.1.2",
     "node-fetch": "2.6.0",
-    "querystring": "^0.2.0",
     "recursive-readdir": "2.2.2",
     "sleep-promise": "8.0.1"
   }

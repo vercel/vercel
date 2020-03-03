@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Now from '../../util';
+import Now from '../../util/now';
 import cmd from '../../util/output/cmd.ts';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
@@ -13,7 +13,10 @@ import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
 export default async function rm(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debugEnabled } = opts;
@@ -21,7 +24,7 @@ export default async function rm(ctx, opts, args, output) {
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
 
@@ -36,7 +39,6 @@ export default async function rm(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const [aliasOrId] = args;
 
@@ -70,7 +72,7 @@ export default async function rm(ctx, opts, args, output) {
   }
 
   const removeStamp = stamp();
-  if (!opts['--yes'] && !await confirmAliasRemove(output, alias)) {
+  if (!opts['--yes'] && !(await confirmAliasRemove(output, alias))) {
     output.log('Aborted');
     return 0;
   }
@@ -93,13 +95,13 @@ async function confirmAliasRemove(output, alias) {
       [
         ...(srcUrl ? [srcUrl] : []),
         chalk.underline(alias.alias),
-        chalk.gray(`${ms(new Date() - new Date(alias.created))} ago`)
-      ]
+        chalk.gray(`${ms(new Date() - new Date(alias.created))} ago`),
+      ],
     ],
     {
       align: ['l', 'l', 'r'],
       hsep: ' '.repeat(4),
-      stringLength: strlen
+      stringLength: strlen,
     }
   );
 
