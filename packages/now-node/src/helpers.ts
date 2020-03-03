@@ -49,16 +49,8 @@ function getBodyParser(req: NowRequest, body: Buffer) {
 function getQueryParser({ url = '/' }: NowRequest) {
   return function parseQuery(): NowRequestQuery {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { URL } = require('url');
-    // we provide a placeholder base url because we only want searchParams
-    const params = new URL(url, 'https://n').searchParams;
-
-    const query: { [key: string]: string | string[] } = {};
-    for (const [key, value] of params) {
-      query[key] = value;
-    }
-
-    return query;
+    const { parse: parseURL } = require('url');
+    return parseURL(url, true).query;
   };
 }
 
