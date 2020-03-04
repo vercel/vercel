@@ -1,4 +1,3 @@
-require('./polyfill');
 import { join, dirname } from 'path';
 import execa from 'execa';
 import {
@@ -18,8 +17,6 @@ import {
   debug,
 } from '@now/build-utils';
 import { installBundler } from './install-ruby';
-
-const REQUIRED_VENDOR_DIR = 'vendor/bundle/ruby/2.5.0';
 
 async function matchPaths(
   configPatterns: string | string[] | undefined,
@@ -78,30 +75,27 @@ async function bundleInstall(
 
 export const version = 3;
 
-export const build = async ({
+export async function build({
   workPath,
   files,
   entrypoint,
   config,
-}: BuildOptions) => {
-  await download(files, workPath);
+  meta = {},
+}: BuildOptions) {
+  await download(files, workPath, meta);
 
-  const { gemHome, bundlerPath } = await installBundler();
+  const { gemHome, bundlerPath, vendorPath, runtime } = await installBundler(
+    meta
+  );
   process.env.GEM_HOME = gemHome;
 
   const fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
   const fsEntryDirectory = dirname(fsFiles[entrypoint].fsPath);
-
-  // check for an existing vendor directory
-  debug(
-    'checking for existing vendor directory at',
-    '"' + REQUIRED_VENDOR_DIR + '"'
-  );
-  const vendorDir = join(workPath, REQUIRED_VENDOR_DIR);
-  const bundleDir = join(workPath, 'vendor/bundle');
-  const relativeVendorDir = join(fsEntryDirectory, REQUIRED_VENDOR_DIR);
-
+  debug(`Checking existing vendor directory at "${vendorPath}"`);
+  const vendorDir = join(workPath, vendorPath);
+  const bundleDir = join(workPath, 'vendor', 'bundle');
+  const relativeVendorDir = join(fsEntryDirectory, vendorPath);
   const hasRootVendorDir = await pathExists(vendorDir);
   const hasRelativeVendorDir = await pathExists(relativeVendorDir);
   const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
@@ -199,7 +193,7 @@ export const build = async ({
       }
 
       // whitelist vendor directory
-      if (excludedPaths[i].startsWith(REQUIRED_VENDOR_DIR)) {
+      if (excludedPaths[i].startsWith(vendorPath)) {
         continue;
       }
 
@@ -210,9 +204,9 @@ export const build = async ({
   const lambda = await createLambda({
     files: outputFiles,
     handler: `${nowHandlerRbFilename}.now__handler`,
-    runtime: 'ruby2.5',
+    runtime,
     environment: {},
   });
 
   return { output: lambda };
-};
+}
