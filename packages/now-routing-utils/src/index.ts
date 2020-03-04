@@ -27,6 +27,7 @@ const VALID_HANDLE_VALUES = [
   'miss',
   'rewrite',
   'error',
+  'resource',
 ] as const;
 const validHandleValues = new Set<string>(VALID_HANDLE_VALUES);
 export type HandleValue = typeof VALID_HANDLE_VALUES[number];
