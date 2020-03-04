@@ -81,9 +81,35 @@ async function isBinary(nowPath) {
   return !stats.isDirectory();
 }
 
+function validateNodeVersion() {
+  let semver = '>= 0';
+  let major = '1';
+
+  try {
+    major = process.versions.node.split('.')[0];
+    const pkg = require('../package.json');
+    semver = pkg.engines.node;
+  } catch (e) {
+    debug('Failed to read package.json engines');
+  }
+
+  const isValid = eval(`${major} ${semver}`);
+  return { isValid, expected: semver, actual: process.versions.node };
+}
+
 async function main() {
   if (!isGlobal()) {
     debug('Skip preinstall since now is being installed locally');
+    return;
+  }
+
+  const ver = validateNodeVersion();
+
+  if (!ver.isValid) {
+    error(
+      `Expected Node.js ${ver.expected} but found ${ver.actual}.\n` +
+        `Please update to the latest Node.js LTS version to install Now CLI.`
+    );
     return;
   }
 
