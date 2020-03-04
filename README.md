@@ -1,7 +1,6 @@
 ![now](https://assets.zeit.co/image/upload/v1581518533/repositories/now-cli/v4.png)
 
 [![CI Status](https://badgen.net/github/checks/zeit/now?label=CI)](https://github.com/zeit/now/actions?workflow=CI)
-[![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
 
 ## Usage
 
