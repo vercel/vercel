@@ -58,6 +58,14 @@ describe('normalizeRoutes', () => {
         headers: { 'Cache-Control': 'max-age=10' },
         continue: true,
       },
+      { handle: 'rewrite' },
+      { src: '^.*$', dest: '/somewhere' },
+      {
+        handle: 'error',
+        src: '.*',
+        dest: '/404',
+        status: 404,
+      },
     ];
 
     assertValid(routes);
@@ -65,6 +73,32 @@ describe('normalizeRoutes', () => {
     const normalized = normalizeRoutes(routes);
     assert.equal(normalized.error, null);
     assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('should show proper error for invalid handle: error', () => {
+    const routes = [
+      {
+        handle: 'error',
+        status: 404,
+        invalid: 'value',
+        dest: '/404',
+        src: '^.*$',
+      },
+    ];
+    const normalized = normalizeRoutes(routes);
+
+    expect(normalized.error).toMatchInlineSnapshot(`
+      Object {
+        "code": "invalid_routes",
+        "errors": Array [
+          Object {
+            "message": "Cannot have keys other than handle, src, dest, status when handle: error is used. Invalid keys: invalid",
+          },
+        ],
+        "message": "One or more invalid routes were found:
+      - Cannot have keys other than handle, src, dest, status when handle: error is used. Invalid keys: invalid",
+      }
+    `);
   });
 
   test('normalizes src', () => {
@@ -129,8 +163,7 @@ describe('normalizeRoutes', () => {
     // @ts-ignore
     routes.push({ handle: 'filesystem', illegal: true });
     errors.push({
-      message:
-        'Cannot have any other keys when handle is used (handle: filesystem)',
+      message: 'Cannot have any other keys when handle: filesystem is used',
       handle: 'filesystem',
     });
 
@@ -164,7 +197,7 @@ describe('normalizeRoutes', () => {
       normalized.error.message,
       `One or more invalid routes were found:
 - This is not a valid handler (handle: doesnotexist)
-- Cannot have any other keys when handle is used (handle: filesystem)
+- Cannot have any other keys when handle: filesystem is used
 - You can only handle something once (handle: filesystem)
 - Invalid regular expression: "^/(broken]$"
 - A route must set either handle or src`
