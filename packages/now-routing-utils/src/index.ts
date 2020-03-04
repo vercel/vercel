@@ -28,7 +28,6 @@ const VALID_HANDLE_VALUES = [
   'rewrite',
   'error',
 ] as const;
-const VALID_HANDLE_ERROR_KEYS = ['handle', 'src', 'dest', 'status'];
 const validHandleValues = new Set<string>(VALID_HANDLE_VALUES);
 export type HandleValue = typeof VALID_HANDLE_VALUES[number];
 
@@ -54,23 +53,9 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
 
   for (const route of routes) {
     if (isHandler(route)) {
-      if (route.handle === 'error') {
-        const invalidKeys = Object.keys(route).filter(key => {
-          return !VALID_HANDLE_ERROR_KEYS.includes(key);
-        });
-
-        if (invalidKeys.length > 0) {
-          errors.push({
-            message: `Cannot have keys other than ${VALID_HANDLE_ERROR_KEYS.join(
-              ', '
-            )} when handle: ${
-              route.handle
-            } is used. Invalid keys: ${invalidKeys.join(',')}`,
-          });
-        }
-      } else if (Object.keys(route).length !== 1) {
+      if (Object.keys(route).length !== 1) {
         errors.push({
-          message: `Cannot have any other keys when handle: ${route.handle} is used`,
+          message: `Cannot have any other keys when handle is used (handle: ${route.handle})`,
           handle: route.handle,
         });
       }

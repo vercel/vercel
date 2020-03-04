@@ -60,9 +60,9 @@ describe('normalizeRoutes', () => {
       },
       { handle: 'rewrite' },
       { src: '^.*$', dest: '/somewhere' },
+      { handle: 'error' },
       {
-        handle: 'error',
-        src: '.*',
+        src: '^.*$',
         dest: '/404',
         status: 404,
       },
@@ -73,32 +73,6 @@ describe('normalizeRoutes', () => {
     const normalized = normalizeRoutes(routes);
     assert.equal(normalized.error, null);
     assert.deepStrictEqual(normalized.routes, routes);
-  });
-
-  test('should show proper error for invalid handle: error', () => {
-    const routes = [
-      {
-        handle: 'error',
-        status: 404,
-        invalid: 'value',
-        dest: '/404',
-        src: '^.*$',
-      },
-    ];
-    const normalized = normalizeRoutes(routes);
-
-    assert.deepStrictEqual(normalized.error.code, 'invalid_routes');
-    assert.deepStrictEqual(normalized.error.errors, [
-      {
-        message:
-          'Cannot have keys other than handle, src, dest, status when handle: error is used. Invalid keys: invalid',
-      },
-    ]);
-    assert.deepStrictEqual(
-      normalized.error.message,
-      `One or more invalid routes were found:
-- Cannot have keys other than handle, src, dest, status when handle: error is used. Invalid keys: invalid`
-    );
   });
 
   test('normalizes src', () => {
@@ -142,14 +116,6 @@ describe('normalizeRoutes', () => {
     assert.strictEqual(routes, input);
   });
 
-  test('returns if empty', () => {
-    const input = [];
-    const { error, routes } = normalizeRoutes(input);
-
-    assert.strictEqual(error, null);
-    assert.strictEqual(routes, input);
-  });
-
   test('fails with abnormal routes', () => {
     const errors = [];
     const routes = [];
@@ -163,7 +129,8 @@ describe('normalizeRoutes', () => {
     // @ts-ignore
     routes.push({ handle: 'filesystem', illegal: true });
     errors.push({
-      message: 'Cannot have any other keys when handle: filesystem is used',
+      message:
+        'Cannot have any other keys when handle is used (handle: filesystem)',
       handle: 'filesystem',
     });
 
@@ -197,7 +164,7 @@ describe('normalizeRoutes', () => {
       normalized.error.message,
       `One or more invalid routes were found:
 - This is not a valid handler (handle: doesnotexist)
-- Cannot have any other keys when handle: filesystem is used
+- Cannot have any other keys when handle is used (handle: filesystem)
 - You can only handle something once (handle: filesystem)
 - Invalid regular expression: "^/(broken]$"
 - A route must set either handle or src`
