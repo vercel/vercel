@@ -87,18 +87,18 @@ describe('normalizeRoutes', () => {
     ];
     const normalized = normalizeRoutes(routes);
 
-    expect(normalized.error).toMatchInlineSnapshot(`
-      Object {
-        "code": "invalid_routes",
-        "errors": Array [
-          Object {
-            "message": "Cannot have keys other than handle, src, dest, status when handle: error is used. Invalid keys: invalid",
-          },
-        ],
-        "message": "One or more invalid routes were found:
-      - Cannot have keys other than handle, src, dest, status when handle: error is used. Invalid keys: invalid",
-      }
-    `);
+    assert.deepStrictEqual(normalized.error.code, 'invalid_routes');
+    assert.deepStrictEqual(normalized.error.errors, [
+      {
+        message:
+          'Cannot have keys other than handle, src, dest, status when handle: error is used. Invalid keys: invalid',
+      },
+    ]);
+    assert.deepStrictEqual(
+      normalized.error.message,
+      `One or more invalid routes were found:
+- Cannot have keys other than handle, src, dest, status when handle: error is used. Invalid keys: invalid`
+    );
   });
 
   test('normalizes src', () => {
