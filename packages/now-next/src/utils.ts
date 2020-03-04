@@ -373,6 +373,7 @@ export async function getDynamicRoutes(
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              check: true,
             };
           });
       }
@@ -439,6 +440,7 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
+        check: true,
       });
     }
   });

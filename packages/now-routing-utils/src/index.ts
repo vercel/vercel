@@ -21,7 +21,13 @@ export { getCleanUrls } from './superstatic';
 export { mergeRoutes } from './merge';
 export { appendRoutesToPhase } from './append';
 
-const VALID_HANDLE_VALUES = ['filesystem', 'hit', 'miss'] as const;
+const VALID_HANDLE_VALUES = [
+  'filesystem',
+  'hit',
+  'miss',
+  'error',
+  'rewrite',
+] as const;
 const validHandleValues = new Set<string>(VALID_HANDLE_VALUES);
 export type HandleValue = typeof VALID_HANDLE_VALUES[number];
 

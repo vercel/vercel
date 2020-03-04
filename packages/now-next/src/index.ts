@@ -18,7 +18,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
 } from '@now/build-utils';
-import { Route } from '@now/routing-utils';
+import { Route, Handler } from '@now/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
@@ -392,6 +392,7 @@ export const build = async ({
                 // have a separate data output
                 (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
               ),
+              check: true,
             });
           }
         }
@@ -486,6 +487,16 @@ export const build = async ({
         // User redirects
         ...redirects,
 
+        // Next.js pages, `static/` folder, reserved assets, and `public/`
+        // folder
+        { handle: 'filesystem' },
+
+        ...rewrites,
+        // Dynamic routes
+        // TODO: do we want to do this?: ...dynamicRoutes,
+
+        // routes to call after a file has been matched
+        { handle: 'hit' },
         // Before we handle static files we need to set proper caching headers
         {
           // This ensures we only match known emitted-by-Next.js files and not
@@ -500,41 +511,17 @@ export const build = async ({
           headers: {
             'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
           },
-          continue: true,
-        },
-        {
-          src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
-        },
-        // Next.js pages, `static/` folder, reserved assets, and `public/`
-        // folder
-        { handle: 'filesystem' },
-
-        // This needs to come directly after handle: filesystem to make sure to
-        // 404 and clear the cache header for _next requests
-        {
-          src: path.join(
-            '/',
-            entryDirectory,
-            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
-          ),
-          headers: {
-            'cache-control': '',
-          },
-          status: 404,
         },
 
-        ...rewrites,
-        // Dynamic routes
-        // TODO: do we want to do this?: ...dynamicRoutes,
-
-        // 404
+        // error handling
         ...(output['404']
           ? [
               {
-                src: path.join('/', entryDirectory, '.*'),
-                dest: path.join('/', entryDirectory, '404'),
                 status: 404,
-              },
+                handle: 'error',
+                src: path.join(entryDirectory, '.*'),
+                dest: path.join('/', entryDirectory, '404'),
+              } as Handler,
             ]
           : []),
       ],
@@ -1140,6 +1127,24 @@ export const build = async ({
 
       // redirects
       ...redirects,
+
+      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
+      // folder
+      { handle: 'filesystem' },
+
+      ...rewrites,
+
+      // routes that are called after each rewrite or after routes
+      // if there no rewrites
+      { handle: 'rewrite' },
+      // Dynamic routes
+      ...dynamicRoutes,
+
+      // /_next/data routes for getServerProps/getStaticProps pages
+      ...dataRoutes,
+
+      // routes to call after a file has been matched
+      { handle: 'hit' },
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
@@ -1156,38 +1161,14 @@ export const build = async ({
         },
         continue: true,
       },
-      { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
 
-      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
-      // folder
-      { handle: 'filesystem' },
-
-      // This needs to come directly after handle: filesystem to make sure to
-      // 404 and clear the cache header for _next requests
-      {
-        src: path.join(
-          '/',
-          entryDirectory,
-          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
-        ),
-        headers: {
-          'cache-control': '',
-        },
-        status: 404,
-      },
-
-      ...rewrites,
-      // Dynamic routes
-      ...dynamicRoutes,
-
-      // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
-
-      // Custom Next.js 404 page (TODO: do we want to remove this?)
+      // error handling
       ...(isLegacy
         ? []
         : [
+            // Custom Next.js 404 page
             {
+              handle: 'error',
               src: path.join('/', entryDirectory, '.*'),
               dest: path.join(
                 '/',
@@ -1201,7 +1182,7 @@ export const build = async ({
                   : '_error'
               ),
               status: 404,
-            },
+            } as Handler,
           ]),
     ],
     watch: [],
