@@ -108,16 +108,16 @@ describe('normalizeRoutes', () => {
     }
   });
 
-  test('returns if empty', () => {
-    const input = [];
+  test('returns if null', () => {
+    const input = null;
     const { error, routes } = normalizeRoutes(input);
 
     assert.strictEqual(error, null);
     assert.strictEqual(routes, input);
   });
 
-  test('returns if null', () => {
-    const input = null;
+  test('returns if empty', () => {
+    const input = [];
     const { error, routes } = normalizeRoutes(input);
 
     assert.strictEqual(error, null);
