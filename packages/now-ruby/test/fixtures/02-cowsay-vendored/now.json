@@ -1,5 +1,6 @@
 {
   "version": 2,
   "builds": [{ "src": "index.rb", "use": "@now/ruby" }],
+  "build": { "env": { "RUBY_VERSION": "2.5.x" } },
   "probes": [{ "path": "/", "mustContain": "gem:RANDOMNESS_PLACEHOLDER" }]
 }
