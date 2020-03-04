@@ -107,10 +107,11 @@ async function main() {
 
   if (!ver.isValid) {
     error(
-      `Expected Node.js ${ver.expected} but found ${ver.actual}.\n` +
+      `Detected unsupported Node.js version.\n` +
+        `Expected "${ver.expected}" but found "${ver.actual}".\n` +
         `Please update to the latest Node.js LTS version to install Now CLI.`
     );
-    return;
+    process.exit(1);
   }
 
   const nowPath = getNowPath();
