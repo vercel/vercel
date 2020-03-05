@@ -114,7 +114,7 @@
     "debug": "3.1.0",
     "deployment-type": "1.0.1",
     "docker-file-parser": "1.0.2",
-    "dot": "1.1.2",
+    "dot": "1.1.3",
     "dotenv": "4.0.0",
     "download": "6.2.5",
     "email-prompt": "0.3.2",
