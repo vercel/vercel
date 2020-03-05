@@ -16,6 +16,7 @@ import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
 import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
+import hasCertForDomain from '../../util/certs/has-cert-for-domain';
 import {
   BuildsRateLimited,
   DeploymentNotFound,
@@ -85,6 +86,7 @@ const addProcessEnv = async (log, env) => {
 
 const printDeploymentStatus = async (
   output,
+  client,
   {
     readyState,
     alias: aliasList,
@@ -127,11 +129,18 @@ const printDeploymentStatus = async (
         ) || aliasList[0];
 
       isWildcard = isWildcardAlias(mainAlias);
-      previewUrl = isWildcard ? mainAlias : `https://${mainAlias}`;
+      const hasCert = await hasCertForDomain(output, client, mainAlias);
+      previewUrl = isWildcard
+        ? mainAlias
+        : hasCert
+        ? `https://${mainAlias}`
+        : `http://${mainAlias}`;
     } else {
       // fallback to deployment url
       isWildcard = false;
-      previewUrl = `https://${deploymentUrl}`;
+      const hasCert = await hasCertForDomain(output, client, deploymentUrl);
+      const prefix = hasCert ? `https://` : `http://`;
+      previewUrl = `${prefix}${deploymentUrl}`;
     }
 
     // copy to clipboard
@@ -696,6 +705,7 @@ export default async function main(
 
   return printDeploymentStatus(
     output,
+    client,
     deployment,
     deployStamp,
     !argv['--no-clipboard'],

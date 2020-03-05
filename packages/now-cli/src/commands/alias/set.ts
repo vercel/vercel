@@ -16,6 +16,7 @@ import { isValidName } from '../../util/is-valid-name';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
+import hasCertForDomain from '../../util/certs/has-cert-for-domain';
 
 type Options = {
   '--debug': boolean;
@@ -147,7 +148,8 @@ export default async function set(
     return 1;
   }
 
-  const prefix = isWildcard ? '' : 'https://';
+  const hasCert = await hasCertForDomain(output, client, deployment.url);
+  const prefix = isWildcard ? '' : hasCert ? 'https://' : 'http://';
 
   console.log(
     `${chalk.cyan('> Success!')} ${chalk.bold(
