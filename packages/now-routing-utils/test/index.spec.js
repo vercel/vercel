@@ -58,6 +58,14 @@ describe('normalizeRoutes', () => {
         headers: { 'Cache-Control': 'max-age=10' },
         continue: true,
       },
+      { handle: 'rewrite' },
+      { src: '^.*$', dest: '/somewhere' },
+      { handle: 'error' },
+      {
+        src: '^.*$',
+        dest: '/404',
+        status: 404,
+      },
     ];
 
     assertValid(routes);
