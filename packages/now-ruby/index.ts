@@ -15,6 +15,7 @@ import {
   createLambda,
   BuildOptions,
   debug,
+  walkParentDirs,
 } from '@now/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -82,15 +83,21 @@ export async function build({
   config,
   meta = {},
 }: BuildOptions) {
-  await download(files, workPath, meta);
-
+  const fsFiles = await download(files, workPath, meta);
+  const entryDirectory = dirname(entrypoint);
+  const gemfilePath = await walkParentDirs({
+    start: entryDirectory,
+    filename: 'Gemfile',
+  });
+  const gemfileContents = gemfilePath
+    ? await readFile(gemfilePath, 'utf8')
+    : '';
   const { gemHome, bundlerPath, vendorPath, runtime } = await installBundler(
-    meta
+    meta,
+    gemfileContents
   );
   process.env.GEM_HOME = gemHome;
 
-  const fsFiles = await glob('**', workPath);
-  const entryDirectory = dirname(entrypoint);
   const fsEntryDirectory = dirname(fsFiles[entrypoint].fsPath);
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);
@@ -119,13 +126,10 @@ export async function build({
 
   // no vendor directory, check for Gemfile to install
   if (!hasVendorDir) {
-    const gemFile = join(entryDirectory, 'Gemfile');
-
-    if (fsFiles[gemFile]) {
+    if (gemfilePath) {
       debug(
         'did not find a vendor directory but found a Gemfile, bundling gems...'
       );
-      const gemfilePath = fsFiles[gemFile].fsPath;
 
       // try installing. this won't work if native extesions are required.
       // if that's the case, gems should be vendored locally before deploying.

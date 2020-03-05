@@ -189,6 +189,31 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
   return { hasPackageLockJson, packageJson };
 }
 
+interface WalkParentDirsProps {
+  start: string;
+  filename: string;
+}
+
+export async function walkParentDirs({
+  start,
+  filename,
+}: WalkParentDirsProps): string | null {
+  assert(path.isAbsolute(start));
+  let parent = '';
+
+  for (let current = start; current !== parent; current = parent) {
+    const fullPath = path.join(current, filename);
+    // eslint-disable-next-line no-await-in-loop
+    if (await fs.pathExists(fullPath)) {
+      return fullPath;
+    }
+
+    parent = path.dirname(current);
+  }
+
+  return null;
+}
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
