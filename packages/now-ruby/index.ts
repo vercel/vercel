@@ -83,10 +83,10 @@ export async function build({
   config,
   meta = {},
 }: BuildOptions) {
-  const fsFiles = await download(files, workPath, meta);
-  const entryDirectory = dirname(entrypoint);
+  await download(files, workPath, meta);
+  const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfilePath = await walkParentDirs({
-    start: entryDirectory,
+    start: entrypointFsDirname,
     filename: 'Gemfile',
   });
   const gemfileContents = gemfilePath
@@ -97,12 +97,10 @@ export async function build({
     gemfileContents
   );
   process.env.GEM_HOME = gemHome;
-
-  const fsEntryDirectory = dirname(fsFiles[entrypoint].fsPath);
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);
   const bundleDir = join(workPath, 'vendor', 'bundle');
-  const relativeVendorDir = join(fsEntryDirectory, vendorPath);
+  const relativeVendorDir = join(entrypointFsDirname, vendorPath);
   const hasRootVendorDir = await pathExists(vendorDir);
   const hasRelativeVendorDir = await pathExists(relativeVendorDir);
   const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
