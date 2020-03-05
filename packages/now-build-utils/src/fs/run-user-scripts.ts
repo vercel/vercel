@@ -197,12 +197,13 @@ interface WalkParentDirsProps {
 export async function walkParentDirs({
   start,
   filename,
-}: WalkParentDirsProps): string | null {
+}: WalkParentDirsProps): Promise<string | null> {
   assert(path.isAbsolute(start));
   let parent = '';
 
   for (let current = start; current !== parent; current = parent) {
     const fullPath = path.join(current, filename);
+
     // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(fullPath)) {
       return fullPath;
