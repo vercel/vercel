@@ -2,6 +2,14 @@ const { execSync, spawn } = require('child_process');
 const { join, relative } = require('path');
 const { readdirSync } = require('fs');
 
+if (
+  process.env.GITHUB_REPOSITORY &&
+  process.env.GITHUB_REPOSITORY !== 'zeit/now'
+) {
+  console.log('Detected fork, skipping tests');
+  return;
+}
+
 process.chdir(join(__dirname, '..'));
 
 async function main() {
@@ -75,9 +83,11 @@ async function main() {
     await runScript(pkgName, script);
   }
 
-  execSync(
-    `rm -rf public && mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' > public/index.html`
-  );
+  if (process.env.NOW_GITHUB_DEPLOYMENT) {
+    execSync(
+      `rm -rf public && mkdir public && echo '<a href="https://zeit.co/import">https://zeit.co/import</a>' > public/output.html`
+    );
+  }
 }
 
 function runScript(pkgName, script) {
@@ -91,7 +101,11 @@ function runScript(pkgName, script) {
     }
     if (pkgJson && pkgJson.scripts && pkgJson.scripts[script]) {
       console.log(`\n[${pkgName}] Running yarn ${script}`);
-      const child = spawn('yarn', [script], { cwd, stdio: 'inherit' });
+      const child = spawn('yarn', [script], {
+        cwd,
+        stdio: 'inherit',
+        shell: true,
+      });
       child.on('error', reject);
       child.on('close', (code, signal) => {
         if (code === 0) {

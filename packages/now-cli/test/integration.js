@@ -1,5 +1,4 @@
 import ms from 'ms';
-import os from 'os';
 import path from 'path';
 import { URL } from 'url';
 import test from 'ava';
@@ -9,7 +8,14 @@ import _execa from 'execa';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import fs, { writeFile, readFile, remove, copy } from 'fs-extra';
+import fs, {
+  writeFile,
+  readFile,
+  remove,
+  copy,
+  ensureDir,
+  exists,
+} from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
@@ -21,12 +27,11 @@ function execa(file, args, options) {
   return _execa(file, args, options);
 }
 
+const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
-const session = Math.random()
-  .toString(36)
-  .split('.')[1];
+let session = 'temp-session';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -162,45 +167,75 @@ const waitForPrompt = (cp, assertion) =>
     cp.stderr.on('data', listener);
   });
 
-const getDeploymentBuildsByUrl = async url => {
+async function getDeploymentBuildsByUrl(url) {
   const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
   const { id } = await hostRes.json();
   const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
   const { builds } = await buildsRes.json();
   return builds;
+}
+
+async function createDeploymentWithFixture(project = 'static-deployment') {
+  const directory = fixture(project);
+  const output = await execute([directory, '--confirm']);
+
+  if (output.exitCode !== 0) {
+    throw output;
+  }
+
+  const { host } = new URL(output.stdout);
+
+  return host;
+}
+
+const createUser = async () => {
+  await retry(
+    async () => {
+      const location = getConfigPath();
+      const url = Buffer.from(str, 'base64').toString();
+      token = await fetchTokenWithRetry(url);
+
+      if (!fs.existsSync(location)) {
+        await createDirectory(location);
+      }
+
+      await fs.writeJSON(getConfigAuthPath(), { token });
+
+      const user = await fetchTokenInformation(token);
+
+      email = user.email;
+      contextName = user.email.split('@')[0];
+      session = Math.random()
+        .toString(36)
+        .split('.')[1];
+    },
+    { retries: 3, factor: 1 }
+  );
 };
+
+const getConfigPath = () => path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+const getConfigAuthPath = () => path.join(getConfigPath(), 'auth.json');
 
 test.before(async () => {
   try {
-    await retry(
-      async () => {
-        const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-        const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-        const url = Buffer.from(str, 'base64').toString();
-        token = await fetchTokenWithRetry(url);
-
-        if (!fs.existsSync(location)) {
-          await createDirectory(location);
-        }
-
-        await writeFile(
-          path.join(location, `auth.json`),
-          JSON.stringify({ token })
-        );
-
-        const user = await fetchTokenInformation(token);
-
-        email = user.email;
-        contextName = user.email.split('@')[0];
-      },
-      { retries: 3, factor: 1 }
-    );
-
+    await createUser();
     await prepareFixtures(contextName);
   } catch (err) {
     console.log('Failed `test.before`');
-    console.log(err);
+    throw err;
   }
+});
+
+test.after.always(async () => {
+  // Make sure the token gets revoked
+  await execa(binaryPath, ['logout', ...defaultArgs]);
+
+  if (!tmpDir) {
+    return;
+  }
+
+  // Remove config directory entirely
+  tmpDir.removeCallback();
 });
 
 test('login', async t => {
@@ -222,8 +257,7 @@ test('login', async t => {
   );
 
   // Save the new token
-  const location = path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-  const auth = JSON.parse(await readFile(path.join(location, 'auth.json')));
+  const auth = await fs.readJSON(getConfigAuthPath());
 
   token = auth.token;
 
@@ -365,55 +399,6 @@ test('output the version', async t => {
   t.is(version, pkg.version);
 });
 
-test('detect update command', async t => {
-  {
-    const { stderr } = await execute(['update']);
-    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
-  }
-
-  if (process.version.startsWith('v8.')) {
-    // Don't do further checks for node 8 here
-    // since `npm i -g <tarball>` seems to fail
-    return;
-  }
-
-  {
-    const pkg = require('../package.json');
-
-    const packResult = await execa('npm', ['pack']);
-    t.is(packResult.exitCode, 0);
-
-    const prefix = os.tmpdir();
-    const binPrefix = path.join(prefix, 'bin');
-
-    process.env.PATH = `${binPrefix}${path.delimeter}${process.env.PATH}`;
-    process.env.PREFIX = prefix;
-    process.env.npm_config_prefix = prefix;
-    process.env.NPM_CONFIG_PREFIX = prefix;
-
-    // Install now to `binPrefix`
-    const pkgPath = path.resolve(`now-${pkg.version}.tgz`);
-
-    const installResult = await execa('npm', ['i', '-g', pkgPath], {
-      env: process.env,
-    });
-    t.is(installResult.exitCode, 0);
-
-    const { stdout, stderr, exitCode } = await execa(
-      path.join(binPrefix, 'now'),
-      ['update'],
-      {
-        env: process.env,
-      }
-    );
-
-    console.log(stderr);
-    console.log(exitCode);
-    console.log(stdout);
-    t.regex(stderr, /npm i -g now@/gm, `Received:\n"${stderr}"\n"${stdout}"`);
-  }
-});
-
 test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
@@ -433,36 +418,6 @@ test('login with unregistered user', async t => {
 
   t.is(exitCode, 1);
   t.is(last, goal);
-});
-
-test('test invalid json alias rules', async t => {
-  const fixturePath = fixture('alias-rules');
-  const output = await execute(['alias', '-r', 'invalid-json-rules.json'], {
-    cwd: fixturePath,
-  });
-
-  t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Error parsing/, formatOutput(output));
-});
-
-test('test invalid alias rules', async t => {
-  const fixturePath = fixture('alias-rules');
-  const output = await execute(['alias', '-r', 'invalid-rules.json'], {
-    cwd: fixturePath,
-  });
-
-  t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
-});
-
-test('test invalid type for alias rules', async t => {
-  const fixturePath = fixture('alias-rules');
-  const output = await execute(['alias', '-r', 'invalid-type-rules.json'], {
-    cwd: fixturePath,
-  });
-
-  t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
 });
 
 test('ignore files specified in .nowignore', async t => {
@@ -665,7 +620,7 @@ test('try to move an invalid domain', async t => {
 test('try to set default without existing payment method', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['billing', 'set-default', ...defaultArgs],
+    ['billing', 'set-default', '-y', ...defaultArgs],
     {
       reject: false,
     }
@@ -682,7 +637,7 @@ test('try to set default without existing payment method', async t => {
 test('try to remove a non-existing payment method', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
+    ['billing', 'rm', 'card_d2j32d9382jr928rd', '-y', ...defaultArgs],
     {
       reject: false,
     }
@@ -700,111 +655,12 @@ test('try to remove a non-existing payment method', async t => {
   );
 });
 
-test('set platform version using `-V` to invalid number', async t => {
-  const directory = fixture('builds');
-  const goal =
-    'Error! The "--platform-version" option must be either `1` or `2`.';
-
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '-V', 3],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 1);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
-test('set platform version using `--platform-version` to invalid number', async t => {
-  const directory = fixture('builds');
-  const goal =
-    'Error! The "--platform-version" option must be either `1` or `2`.';
-
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--platform-version',
-      3,
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 1);
-
-  // Ensure the error message shows up
-  t.true(stderr.includes(goal));
-});
-
-test('set platform version using `-V` to `2`', async t => {
-  const directory = fixture('builds');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '-V',
-      2,
-      '--force',
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  const output = `Received:\n"${stderr}"\n"${stdout}"`;
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0, output);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session, output);
-
-  if (host) {
-    context.deployment = host;
-  }
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
 test('output logs of a 2.0 deployment', async t => {
+  const deployment = await createDeploymentWithFixture();
+
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['logs', context.deployment, ...defaultArgs],
+    ['logs', deployment, ...defaultArgs],
     {
       reject: false,
     }
@@ -814,14 +670,19 @@ test('output logs of a 2.0 deployment', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  t.true(stderr.includes(`Fetched deployment "${context.deployment}"`));
+  t.true(
+    stderr.includes(`Fetched deployment "${deployment}"`),
+    formatOutput({ stderr, stdout })
+  );
   t.is(exitCode, 0);
 });
 
 test('output logs of a 2.0 deployment without annotate', async t => {
+  const deployment = await createDeploymentWithFixture();
+
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['logs', context.deployment, ...defaultArgs],
+    ['logs', deployment, ...defaultArgs],
     {
       reject: false,
     }
@@ -841,27 +702,27 @@ test('output logs of a 2.0 deployment without annotate', async t => {
 });
 
 test('create wildcard alias for deployment', async t => {
-  const hosts = {
-    deployment: context.deployment,
-    alias: `*.${contextName}.now.sh`,
-  };
+  const deployment = await createDeploymentWithFixture('context-website');
+  const alias = `*.${contextName}.now.sh`;
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
+    ['alias', deployment, alias, ...defaultArgs],
     {
       reject: false,
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
-
-  t.is(exitCode, 0);
-  t.true(stdout.startsWith(goal));
+  t.regex(
+    stdout,
+    new RegExp(
+      `> Success! \\${alias} now points to https://${deployment}`,
+      'gm'
+    ),
+    formatOutput({ stderr, stdout })
+  );
 
   // Send a test request to the alias
   // Retries to make sure we consider the time it takes to update
@@ -880,9 +741,9 @@ test('create wildcard alias for deployment', async t => {
   const content = await response.text();
 
   t.true(response.ok);
-  t.true(content.includes(contextName));
+  t.regex(content, new RegExp(contextName));
 
-  context.wildcardAlias = hosts.alias;
+  context.wildcardAlias = alias;
 });
 
 test('remove the wildcard alias', async t => {
@@ -925,45 +786,6 @@ test('ensure username in list is right', async t => {
 
   // Ensure username column have username
   t.truthy(columns.pop().includes('now-builders-ci-bot'));
-});
-
-test('set platform version using `--platform-version` to `2`', async t => {
-  const directory = fixture('builds');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--platform-version',
-      2,
-      '--force',
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
 });
 
 test('ensure we render a warning for deployments with no files', async t => {
@@ -1180,79 +1002,6 @@ test('create a builds deployments with no actual builds', async t => {
   t.is(host.split('-')[0], session);
 });
 
-test('create a builds deployments without platform version flag', async t => {
-  const directory = fixture('builds');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
-test('deploy multiple static files', async t => {
-  const directory = fixture('static-multiple-files');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  const contentType = response.headers.get('content-type');
-  t.is(contentType, 'application/json; charset=utf-8');
-
-  const content = await response.json();
-  t.is(content.files.length, 3);
-});
-
 test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
 
@@ -1340,124 +1089,36 @@ test('create a production deployment', async t => {
   t.is(deployment.target, 'production', JSON.stringify(deployment, null, 2));
 });
 
-test('ensure we are getting a warning for the old team flag', async t => {
-  const directory = fixture('static-multiple-files');
-
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--team',
-      email,
-      ...defaultArgs,
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the warning is printed
-  t.true(
-    stderr.includes(
-      'WARN! The "--team" flag is deprecated. Please use "--scope" instead.'
-    )
-  );
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  const contentType = response.headers.get('content-type');
-  t.is(contentType, 'application/json; charset=utf-8');
-
-  const content = await response.json();
-  t.is(content.files.length, 3);
-});
-
-test('deploy multiple static files with custom scope', async t => {
-  const directory = fixture('static-multiple-files');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--scope',
-      email,
-      ...defaultArgs,
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  const contentType = response.headers.get('content-type');
-  t.is(contentType, 'application/json; charset=utf-8');
-
-  const content = await response.json();
-  t.is(content.files.length, 3);
-});
-
-test('deploying a file should fail', async t => {
+test('deploying a file should not show prompts and display deprecation', async t => {
   const file = fixture('static-single-file/first.png');
 
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [file, '--public', '--name', session, ...defaultArgs, '--confirm'],
-    {
-      reject: false,
-    }
-  );
+  const output = await execute([file], {
+    reject: false,
+  });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
+  const { stdout, stderr, exitCode } = output;
 
   // Ensure the exit code is right
-  t.is(exitCode, 1);
-  t.true(
-    stderr
-      .trim()
-      .endsWith('The path you are trying to deploy is not a directory.')
+  t.is(exitCode, 0, formatOutput(output));
+  t.true(stderr.includes('Deploying files with ZEIT Now is deprecated'));
+
+  // Ensure `.now` was not created
+  t.is(
+    await exists(path.join(path.dirname(file), '.now')),
+    false,
+    '.now should not exists'
   );
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], 'files');
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'image/png');
+  t.deepEqual(await readFile(file), await response.buffer());
 });
 
 test('deploying more than 1 path should fail', async t => {
@@ -1481,57 +1142,23 @@ test('deploying more than 1 path should fail', async t => {
   t.true(stderr.trim().endsWith(`Can't deploy more than one path.`));
 });
 
-test('deploy a static directory', async t => {
-  const directory = fixture('static-single-file');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--confirm'],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
 test('use build-env', async t => {
   const directory = fixture('build-env');
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--confirm'],
+    [directory, '--public', ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   // Ensure the exit code is right
-  t.is(exitCode, 0);
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
+  const { href } = new URL(deploymentUrl);
 
   await waitForDeployment(href);
 
@@ -1643,7 +1270,7 @@ test('try to deploy non-existing path', async t => {
 });
 
 test('try to deploy with non-existing team', async t => {
-  const target = fixture('node');
+  const target = fixture('static-deployment');
   const goal = `Error! The specified scope does not exist`;
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1907,23 +1534,6 @@ test('fail `now dev` dev script without now.json', async t => {
   );
 });
 
-test('print correct link in legacy warning', async t => {
-  const deploymentPath = fixture('v1-warning-link');
-  const { exitCode, stderr, stdout } = await execute([
-    deploymentPath,
-    '--confirm',
-  ]);
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // It is expected to fail,
-  // since the package.json does not have a start script
-  t.is(exitCode, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
-});
-
 test('`now rm` 404 exits quickly', async t => {
   const start = Date.now();
   const { exitCode, stderr, stdout } = await execute([
@@ -2112,44 +1722,6 @@ test('now secret rm', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('deploy with a custom API URL', async t => {
-  const directory = fixture('static-single-file');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--api',
-      'https://zeit.co/api',
-      ...defaultArgs,
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
-  t.is(host.split('-')[0], session);
-
-  // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/html; charset=utf-8');
-});
-
 test('deploy a Lambda with 128MB of memory', async t => {
   const directory = fixture('lambda-with-128-memory');
   const output = await execute([directory, '--confirm']);
@@ -2251,6 +1823,32 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
+test('change user', async t => {
+  const { stdout: prevUser } = await execute(['whoami']);
+
+  // Delete the current token
+  const logoutOutput = await execute(['logout']);
+  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
+
+  await createUser();
+
+  const loginOutput = await execute(['login', email]);
+  t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
+
+  const auth = await fs.readJSON(getConfigAuthPath());
+
+  token = auth.token;
+
+  const { stdout: nextUser } = await execute(['whoami']);
+
+  console.log('prev user', prevUser);
+  console.log('next user', nextUser);
+
+  t.is(typeof prevUser, 'string', prevUser);
+  t.is(typeof nextUser, 'string', nextUser);
+  t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
+});
+
 test('should show prompts to set up project', async t => {
   const directory = fixture('project-link');
   const projectName = `project-link-${
@@ -2281,6 +1879,11 @@ test('should show prompts to set up project', async t => {
     chunk.includes('What’s your project’s name?')
   );
   now.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Want to override the settings?')
@@ -2319,53 +1922,22 @@ test('should show prompts to set up project', async t => {
   // Ensure .gitignore is created
   t.is((await readFile(path.join(directory, '.gitignore'))).toString(), '.now');
 
+  // Ensure .now/project.json and .now/README.txt are created
+  t.is(
+    await exists(path.join(directory, '.now', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(directory, '.now', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+
   // Send a test request to the deployment
   const response = await fetch(new URL(output.stdout).href);
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
-});
-
-test('should not prompt "project settings overwrite" for undetected projects', async t => {
-  const directory = fixture('static-deployment');
-  const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
-
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
-
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
-  now.stdin.write('yes\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
-  now.stdin.write('\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Link to existing project?')
-  );
-  now.stdin.write('no\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
-  now.stdin.write(`${projectName}\n`);
-
-  await waitForPrompt(now, chunk => {
-    t.false(
-      chunk.includes('Want to override the settings?'),
-      'Should not ask to override'
-    );
-    return chunk.includes('Linked to');
-  });
-
-  const output = await now;
-  t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test('should prefill "project name" prompt with folder name', async t => {
@@ -2403,6 +1975,16 @@ test('should prefill "project name" prompt with folder name', async t => {
   );
   now.stdin.write(`\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  now.stdin.write('no\n');
+
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
 });
@@ -2425,8 +2007,18 @@ test('should prefill "project name" prompt with --name', async t => {
     ...defaultArgs,
   ]);
 
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  let isDeprecated = false;
+
+  await waitForPrompt(now, chunk => {
+    if (chunk.includes('The "--name" flag is deprecated')) {
+      isDeprecated = true;
+    }
+
+    return /Set up and deploy [^?]+\?/.test(chunk);
+  });
   now.stdin.write('yes\n');
+
+  t.is(isDeprecated, true);
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
@@ -2442,6 +2034,16 @@ test('should prefill "project name" prompt with --name', async t => {
     chunk.includes(`What’s your project’s name? (${projectName})`)
   );
   now.stdin.write(`\n`);
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  now.stdin.write('no\n');
 
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
@@ -2466,7 +2068,19 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   const now = execa(binaryPath, [directory, ...defaultArgs]);
 
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  let isDeprecated = false;
+
+  now.stderr.on('data', data => {
+    if (
+      data.toString().includes('The `name` property in now.json is deprecated')
+    ) {
+      isDeprecated = true;
+    }
+  });
+
+  await waitForPrompt(now, chunk => {
+    return /Set up and deploy [^?]+\?/.test(chunk);
+  });
   now.stdin.write('yes\n');
 
   await waitForPrompt(now, chunk =>
@@ -2484,22 +2098,73 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   );
   now.stdin.write(`\n`);
 
+  await waitForPrompt(now, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  now.stdin.write('\n');
+
+  await waitForPrompt(now, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  now.stdin.write('no\n');
+
   const output = await now;
   t.is(output.exitCode, 0, formatOutput(output));
+
+  t.is(isDeprecated, true);
+
+  // clean up
+  await remove(path.join(directory, 'now.json'));
 });
 
-test('deploy with unknown `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+test('deploy with unknown `NOW_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
+  const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
     env: {
-      NOW_ORG_ID: 'asdf',
+      NOW_ORG_ID: user.uid,
       NOW_PROJECT_ID: 'asdf',
     },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
+  const directory = fixture('static-deployment');
+  const user = await fetchTokenInformation(token);
+
+  const output = await execute([directory], {
+    env: { NOW_ORG_ID: user.uid },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes(
+      'You specified `NOW_ORG_ID` but you forgot to specify `NOW_PROJECT_ID`. You need to specify both to deploy to a custom project.'
+    ),
+    true,
+    formatOutput(output)
+  );
+});
+
+test('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async t => {
+  const directory = fixture('static-deployment');
+
+  const output = await execute([directory], {
+    env: { NOW_PROJECT_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes(
+      'You specified `NOW_PROJECT_ID` but you forgot to specify `NOW_ORG_ID`. You need to specify both to deploy to a custom project.'
+    ),
+    true,
+    formatOutput(output)
+  );
 });
 
 test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
@@ -2522,14 +2187,118 @@ test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
   t.is(output.stdout.includes('Linked to'), false);
 });
 
-test.after.always(async () => {
-  // Make sure the token gets revoked
-  await execa(binaryPath, ['logout', ...defaultArgs]);
+test('deploy shows notice when project in `.now` does not exists', async t => {
+  const directory = fixture('static-deployment');
 
-  if (!tmpDir) {
-    return;
-  }
+  // overwrite .now with unexisting project
+  await ensureDir(path.join(directory, '.now'));
+  await writeFile(
+    path.join(directory, '.now/project.json'),
+    JSON.stringify({
+      orgId: 'asdf',
+      projectId: 'asdf',
+    })
+  );
 
-  // Remove config directory entirely
-  tmpDir.removeCallback();
+  const now = execute([directory]);
+
+  let detectedNotice = false;
+
+  // kill after first prompt
+  await waitForPrompt(now, chunk => {
+    detectedNotice =
+      detectedNotice ||
+      chunk.includes(
+        'Your project was either removed from ZEIT Now or you’re not a member of it anymore'
+      );
+
+    return /Set up and deploy [^?]+\?/.test(chunk);
+  });
+  now.stdin.write('no\n');
+
+  t.is(detectedNotice, true, 'did not detect notice');
+});
+
+test('use `rootDirectory` from project when deploying', async t => {
+  const directory = fixture('project-root-directory');
+
+  const firstResult = await execute([directory, '--confirm', '--public']);
+  t.is(firstResult.exitCode, 0, formatOutput(firstResult));
+
+  const { host: firstHost } = new URL(firstResult.stdout);
+  const response = await apiFetch(`/v12/now/deployments/get?url=${firstHost}`);
+  t.is(response.status, 200);
+  const { projectId } = await response.json();
+  t.is(typeof projectId, 'string', projectId);
+
+  const projectResponse = await apiFetch(`/v2/projects/${projectId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      rootDirectory: 'src',
+    }),
+  });
+  console.log('response', await projectResponse.text());
+  t.is(projectResponse.status, 200);
+
+  const secondResult = await execute([directory, '--public']);
+  t.is(secondResult.exitCode, 0, formatOutput(secondResult));
+
+  const pageResponse1 = await fetch(secondResult.stdout);
+  t.is(pageResponse1.status, 200);
+  t.regex(await pageResponse1.text(), /I am a website/gm);
+
+  // Ensures that the `now.json` file has been applied
+  const pageResponse2 = await fetch(`${secondResult.stdout}/i-do-exist`);
+  t.is(pageResponse2.status, 200);
+  t.regex(await pageResponse2.text(), /I am a website/gm);
+
+  await apiFetch(`/v2/projects/${projectId}`, {
+    method: 'DELETE',
+  });
+});
+
+test('whoami with unknown `NOW_ORG_ID` should error', async t => {
+  const output = await execute(['whoami'], {
+    env: { NOW_ORG_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes('Organization not found'),
+    true,
+    formatOutput(output)
+  );
+});
+
+test('whoami with `NOW_ORG_ID`', async t => {
+  const user = await fetchTokenInformation(token);
+
+  const output = await execute(['whoami', '--scope', 'asdf'], {
+    env: { NOW_ORG_ID: user.uid },
+  });
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes(contextName), true, formatOutput(output));
+});
+
+test('whoami with local .now scope', async t => {
+  const directory = fixture('static-deployment');
+  const user = await fetchTokenInformation(token);
+
+  // create local .now
+  await ensureDir(path.join(directory, '.now'));
+  await fs.writeFile(
+    path.join(directory, '.now', 'project.json'),
+    JSON.stringify({ orgId: user.uid })
+  );
+
+  const output = await execute(['whoami'], {
+    cwd: directory,
+  });
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.is(output.stdout.includes(contextName), true, formatOutput(output));
+
+  // clean up
+  await remove(path.join(directory, '.now'));
 });

@@ -6,14 +6,11 @@ import {
   DeploymentOptions,
   NowClientOptions,
 } from 'now-client';
-import wait from '../output/wait';
 import { Output } from '../output';
-// @ts-ignore
-import Now from '../../util';
+import Now from '../../util/now';
 import { NowConfig } from '../dev/types';
 import { Org } from '../../types';
 import ua from '../ua';
-import processLegacyDeployment from './process-legacy-deployment';
 import { linkFolderToProject } from '../projects/link';
 import { prependEmoji, emoji } from '../emoji';
 
@@ -48,42 +45,37 @@ function printInspectUrl(
 }
 
 export default async function processDeployment({
-  isLegacy,
   org,
+  cwd,
   projectName,
-  shouldLinkFolder,
-  isDetectingFramework,
+  isSettingUpProject,
   skipAutoDetectionConfirmation,
   ...args
 }: {
   now: Now;
   output: Output;
-  hashes: { [key: string]: any };
   paths: string[];
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
   deployStamp: () => string;
-  isLegacy: boolean;
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
   org: Org;
   projectName: string;
-  shouldLinkFolder: boolean;
-  isDetectingFramework: boolean;
+  isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
+  cwd?: string;
 }) {
-  if (isLegacy) return processLegacyDeployment(args);
-
   let {
     now,
     output,
-    hashes,
     paths,
     requestBody,
     deployStamp,
     force,
     nowConfig,
+    quiet,
   } = args;
 
   const { debug } = output;
@@ -106,8 +98,8 @@ export default async function processDeployment({
   let buildSpinner = null;
   let deploySpinner = null;
 
-  let deployingSpinner = wait(
-    isDetectingFramework
+  let deployingSpinner = output.spinner(
+    isSettingUpProject
       ? `Setting up project`
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
     0
@@ -122,15 +114,11 @@ export default async function processDeployment({
     requestBody,
     nowConfig
   )) {
-    if (event.type === 'hashes-calculated') {
-      hashes = event.payload;
-    }
-
     if (['tip', 'notice', 'warning'].includes(event.type)) {
       indications.push(event);
     }
 
-    if (event.type === 'file_count') {
+    if (event.type === 'file-count') {
       debug(
         `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
       );
@@ -165,45 +153,49 @@ export default async function processDeployment({
         deployingSpinner();
       }
 
-      now._host = event.payload.url;
-
-      if (shouldLinkFolder) {
-        await linkFolderToProject(
-          output,
-          paths[0],
-          {
-            orgId: org.id,
-            projectId: event.payload.projectId,
-          },
-          projectName,
-          org.slug
-        );
-      }
+      await linkFolderToProject(
+        output,
+        cwd || paths[0],
+        {
+          orgId: org.id,
+          projectId: event.payload.projectId,
+        },
+        projectName,
+        org.slug
+      );
 
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
+
+      if (quiet) {
+        process.stdout.write(`https://${event.payload.url}`);
+      }
 
       if (queuedSpinner === null) {
         queuedSpinner =
           event.payload.readyState === 'QUEUED'
-            ? wait('Queued', 0)
-            : wait('Building', 0);
+            ? output.spinner('Queued', 0)
+            : output.spinner('Building', 0);
       }
     }
 
-    if (
-      event.type === 'build-state-changed' &&
-      event.payload.readyState === 'BUILDING'
-    ) {
+    if (event.type === 'building') {
       if (queuedSpinner) {
         queuedSpinner();
       }
 
       if (buildSpinner === null) {
-        buildSpinner = wait('Building', 0);
+        buildSpinner = output.spinner('Building', 0);
       }
     }
 
-    if (event.type === 'all-builds-completed') {
+    if (event.type === 'canceled') {
+      if (buildSpinner) {
+        buildSpinner();
+      }
+      return event.payload;
+    }
+
+    if (event.type === 'ready') {
       if (queuedSpinner) {
         queuedSpinner();
       }
@@ -211,7 +203,7 @@ export default async function processDeployment({
         buildSpinner();
       }
 
-      deploySpinner = wait('Completing', 0);
+      deploySpinner = output.spinner('Completing', 0);
     }
 
     // Handle error events
@@ -230,7 +222,6 @@ export default async function processDeployment({
       }
 
       const error = await now.handleDeploymentError(event.payload, {
-        hashes,
         env,
       });
 

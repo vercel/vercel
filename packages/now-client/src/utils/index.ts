@@ -1,42 +1,42 @@
-import { DeploymentFile } from './hashes';
-import { parse as parseUrl } from 'url';
-import { RequestInit } from 'node-fetch';
-import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep } from 'path';
-import qs from 'querystring';
+import { URL } from 'url';
 import ignore from 'ignore';
-import { pkgVersion } from '../pkg';
-import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
-const semaphore = new Sema(10);
+import { pkgVersion } from '../pkg';
+import { DeploymentFile } from './hashes';
+import { FetchOptions } from '@zeit/fetch';
+import { join, sep, relative } from 'path';
+import { nodeFetch, zeitFetch } from './fetch';
+import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 
 export const API_FILES = '/v2/now/files';
-export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
-export const EVENTS = new Set([
+const semaphore = new Sema(10);
+
+const EVENTS_ARRAY = [
   // File events
   'hashes-calculated',
-  'file_count',
+  'file-count',
   'file-uploaded',
   'all-files-uploaded',
   // Deployment events
   'created',
+  'building',
   'ready',
   'alias-assigned',
   'warning',
   'error',
-  // Build events
-  'build-state-changed',
-]);
+  'notice',
+  'tip',
+  'canceled',
+] as const;
+
+export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
+export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl(
-  metadata?: Pick<DeploymentOptions, 'version' | 'builds' | 'functions'>
+  metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
 ) {
-  if (metadata && metadata.version !== 2) {
-    return '/v3/now/deployments';
-  }
-
   if (metadata && metadata.builds && !metadata.functions) {
     return '/v10/now/deployments';
   }
@@ -111,7 +111,7 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
   return { ig, ignores };
 }
 
-interface FetchOpts extends RequestInit {
+interface FetchOpts extends FetchOptions {
   apiUrl?: string;
   method?: string;
   teamId?: string;
@@ -134,11 +134,9 @@ export const fetch = async (
   delete opts.apiUrl;
 
   if (opts.teamId) {
-    const parsedUrl = parseUrl(url, true);
-    const query = parsedUrl.query;
-
-    query.teamId = opts.teamId;
-    url = `${parsedUrl.href}?${qs.encode(query)}`;
+    const parsedUrl = new URL(url);
+    parsedUrl.searchParams.set('teamId', opts.teamId);
+    url = parsedUrl.toString();
     delete opts.teamId;
   }
 
@@ -187,9 +185,10 @@ export const prepareFiles = (
 
         if (clientOptions.isDirectory) {
           // Directory
-          fileName = clientOptions.path
-            ? name.substring(clientOptions.path.length + 1)
-            : name;
+          fileName =
+            typeof clientOptions.path === 'string'
+              ? relative(clientOptions.path, name)
+              : name;
         } else {
           // Array of files or single file
           const segments = name.split(sep);

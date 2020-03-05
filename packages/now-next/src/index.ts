@@ -18,11 +18,11 @@ import {
   runNpmInstall,
   runPackageJsonScript,
 } from '@now/build-utils';
-import { Route, Source } from '@now/routing-utils';
+import { Route } from '@now/routing-utils';
 import {
+  convertHeaders,
   convertRedirects,
   convertRewrites,
-  convertHeaders,
 } from '@now/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
@@ -91,6 +91,8 @@ const nowDevChildProcesses = new Set<ChildProcess>();
     process.exit(0);
   });
 });
+
+const MAX_AGE_ONE_YEAR = 31536000;
 
 /**
  * Read package.json from files
@@ -334,12 +336,20 @@ export const build = async ({
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
 
+  const appMountPrefixNoTrailingSlash = path.posix
+    .join('/', entryDirectory)
+    .replace(/\/+$/, '');
+
   const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const prerenderManifest = await getPrerenderManifest(entryPath);
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
+  const dataRoutes: Route[] = [];
   let nextBasePath: string | undefined;
+  // whether they have enabled pages/404.js as the custom 404 page
+  let hasPages404 = false;
 
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -350,6 +360,44 @@ export const build = async ({
 
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
+        }
+
+        if (routesManifest.dataRoutes) {
+          // Load the /_next/data routes for both dynamic SSG and SSP pages.
+          // These must be combined and sorted to prevent conflicts
+          for (const dataRoute of routesManifest.dataRoutes) {
+            const ssgDataRoute =
+              prerenderManifest.fallbackRoutes[dataRoute.page] ||
+              prerenderManifest.legacyBlockingRoutes[dataRoute.page];
+
+            // we don't need to add routes for non-lazy SSG routes since
+            // they have outputs which would override the routes anyways
+            if (
+              prerenderManifest.staticRoutes[dataRoute.page] ||
+              prerenderManifest.omittedRoutes.includes(dataRoute.page)
+            ) {
+              continue;
+            }
+
+            dataRoutes.push({
+              src: dataRoute.dataRouteRegex.replace(
+                /^\^/,
+                `^${appMountPrefixNoTrailingSlash}`
+              ),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                // make sure to route SSG data route to the data prerender
+                // output, we don't do this for SSP routes since they don't
+                // have a separate data output
+                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
+              ),
+            });
+          }
+        }
+
+        if (routesManifest.pages404) {
+          hasPages404 = true;
         }
 
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
@@ -438,9 +486,42 @@ export const build = async ({
         // User redirects
         ...redirects,
 
+        // Before we handle static files we need to set proper caching headers
+        {
+          // This ensures we only match known emitted-by-Next.js files and not
+          // user-emitted files which may be missing a hash in their filename.
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          // Next.js assets contain a hash or entropy in their filenames, so they
+          // are guaranteed to be unique and cacheable indefinitely.
+          headers: {
+            'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
+          },
+          continue: true,
+        },
+        {
+          src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
+        },
         // Next.js pages, `static/` folder, reserved assets, and `public/`
         // folder
         { handle: 'filesystem' },
+
+        // This needs to come directly after handle: filesystem to make sure to
+        // 404 and clear the cache header for _next requests
+        {
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          headers: {
+            'cache-control': '',
+          },
+          status: 404,
+        },
 
         ...rewrites,
         // Dynamic routes
@@ -456,23 +537,6 @@ export const build = async ({
               },
             ]
           : []),
-
-        // Routes that are checked after filesystem match
-        { handle: 'hit' },
-        // Before we handle static files we need to set proper caching headers
-        {
-          // This ensures we only match known emitted-by-Next.js files and not
-          // user-emitted files which may be missing a hash in their filename.
-          src: path.join(
-            '/',
-            entryDirectory,
-            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
-          ),
-          // Next.js assets contain a hash or entropy in their filenames, so they
-          // are guaranteed to be unique and cacheable indefinitely.
-          headers: { 'cache-control': 'public,max-age=31536000,immutable' },
-          continue: true,
-        },
       ],
       watch: [],
       childProcesses: [],
@@ -497,11 +561,7 @@ export const build = async ({
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
-  const dynamicDataRoutes: Array<Source> = [];
-
-  const appMountPrefixNoTrailingSlash = path.posix
-    .join('/', entryDirectory)
-    .replace(/\/+$/, '');
+  let static404Page: string | undefined;
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
@@ -604,7 +664,6 @@ export const build = async ({
 
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
-    const prerenderManifest = await getPrerenderManifest(entryPath);
 
     Object.keys(staticPageFiles).forEach((page: string) => {
       const pathname = page.replace(/\.html$/, '');
@@ -612,18 +671,17 @@ export const build = async ({
 
       // Prerendered routes emit a `.html` file but should not be treated as a
       // static page.
-      // Lazily prerendered routes do not have a `.html` file so we don't need
-      // to check/skip it here.
+      // Lazily prerendered routes have a fallback `.html` file on newer
+      // Next.js versions so we need to also not treat it as a static page here.
       if (
-        Object.prototype.hasOwnProperty.call(
-          prerenderManifest.routes,
-          routeName
-        )
+        prerenderManifest.staticRoutes[routeName] ||
+        prerenderManifest.fallbackRoutes[routeName]
       ) {
         return;
       }
 
       const staticRoute = path.join(entryDirectory, pathname);
+
       staticPages[staticRoute] = staticPageFiles[page];
       staticPages[staticRoute].contentType = htmlContentType;
 
@@ -633,9 +691,18 @@ export const build = async ({
       }
     });
 
-    const pageKeys = Object.keys(pages);
+    // this can be either 404.html in latest versions
+    // or _errors/404.html versions while this was experimental
+    static404Page =
+      staticPages['404'] && hasPages404
+        ? '404'
+        : staticPages['_errors/404']
+        ? '_errors/404'
+        : undefined;
+
     // > 1 because _error is a lambda but isn't used if a static 404 is available
-    const hasLambdas = !staticPages['_errors/404'] || pageKeys.length > 1;
+    const pageKeys = Object.keys(pages);
+    const hasLambdas = !static404Page || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
       const nextConfig = await getNextConfig(workPath, entryPath);
@@ -781,8 +848,13 @@ export const build = async ({
           return;
         }
 
-        // Don't create _error lambda if we have a static 404 page
-        if (staticPages['_errors/404'] && page === '_error.js') {
+        // Don't create _error lambda if we have a static 404 page or
+        // pages404 is enabled and 404.js is present
+        if (
+          page === '_error.js' &&
+          ((static404Page && staticPages[static404Page]) ||
+            (hasPages404 && pages['404.js']))
+        ) {
           return;
         }
 
@@ -811,10 +883,10 @@ export const build = async ({
           config,
         });
 
+        const outputName = path.join(entryDirectory, pathname);
+
         if (requiresTracing) {
-          lambdas[
-            path.join(entryDirectory, pathname)
-          ] = await createLambdaFromPseudoLayers({
+          lambdas[outputName] = await createLambdaFromPseudoLayers({
             files: {
               ...launcherFiles,
               [requiresTracing ? pageFileName : 'page.js']: pages[page],
@@ -825,7 +897,7 @@ export const build = async ({
             ...lambdaOptions,
           });
         } else {
-          lambdas[path.join(entryDirectory, pathname)] = await createLambda({
+          lambdas[outputName] = await createLambda({
             files: {
               ...launcherFiles,
               ...assets,
@@ -845,27 +917,49 @@ export const build = async ({
     }
 
     let prerenderGroup = 1;
-    const onPrerenderRoute = (routeKey: string, isLazy: boolean) => {
+    const onPrerenderRoute = (
+      routeKey: string,
+      { isBlocking, isFallback }: { isBlocking: boolean; isFallback: boolean }
+    ) => {
+      if (isBlocking && isFallback) {
+        throw new Error(
+          'invariant: isBlocking and isFallback cannot both be true'
+        );
+      }
+
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
 
-      const htmlFsRef = isLazy
-        ? null
+      const htmlFsRef = isBlocking
+        ? // Blocking pages do not have an HTML fallback
+          null
         : new FileFsRef({
-            fsPath: path.join(pagesDir, `${routeFileNoExt}.html`),
+            fsPath: path.join(
+              pagesDir,
+              isFallback
+                ? // Fallback pages have a special file.
+                  prerenderManifest.fallbackRoutes[routeKey].fallback
+                : // Otherwise, the route itself should exist as a static HTML
+                  // file.
+                  `${routeFileNoExt}.html`
+            ),
           });
-      const jsonFsRef = isLazy
-        ? null
-        : new FileFsRef({
-            fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
-          });
+      const jsonFsRef =
+        // JSON data does not exist for fallback or blocking pages
+        isFallback || isBlocking
+          ? null
+          : new FileFsRef({
+              fsPath: path.join(pagesDir, `${routeFileNoExt}.json`),
+            });
 
       let initialRevalidate: false | number;
       let srcRoute: string | null;
       let dataRoute: string;
 
-      if (isLazy) {
-        const pr = prerenderManifest.lazyRoutes[routeKey];
+      if (isFallback || isBlocking) {
+        const pr = isFallback
+          ? prerenderManifest.fallbackRoutes[routeKey]
+          : prerenderManifest.legacyBlockingRoutes[routeKey];
         initialRevalidate = 1; // TODO: should Next.js provide this default?
         // @ts-ignore
         if (initialRevalidate === false) {
@@ -875,7 +969,7 @@ export const build = async ({
         srcRoute = null;
         dataRoute = pr.dataRoute;
       } else {
-        const pr = prerenderManifest.routes[routeKey];
+        const pr = prerenderManifest.staticRoutes[routeKey];
         ({ initialRevalidate, srcRoute, dataRoute } = pr);
       }
 
@@ -889,56 +983,64 @@ export const build = async ({
             );
       const outputPathData = path.posix.join(entryDirectory, dataRoute);
 
+      const lambda = lambdas[outputSrcPathPage];
+      if (lambda == null) {
+        throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
+      }
+
       if (initialRevalidate === false) {
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
         }
-        htmlFsRef.contentType = htmlContentType;
-        prerenders[outputPathPage] = htmlFsRef;
-        prerenders[outputPathData] = jsonFsRef;
-      } else {
-        const lambda = lambdas[outputSrcPathPage];
-        if (lambda == null) {
-          throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
-        }
-
-        prerenders[outputPathPage] = new Prerender({
-          expiration: initialRevalidate,
-          lambda,
-          fallback: htmlFsRef,
-          group: prerenderGroup,
-        });
-        prerenders[outputPathData] = new Prerender({
-          expiration: initialRevalidate,
-          lambda,
-          fallback: jsonFsRef,
-          group: prerenderGroup,
-        });
-
-        ++prerenderGroup;
       }
+
+      prerenders[outputPathPage] = new Prerender({
+        expiration: initialRevalidate,
+        lambda,
+        fallback: htmlFsRef,
+        group: prerenderGroup,
+        bypassToken: prerenderManifest.bypassToken,
+      });
+      prerenders[outputPathData] = new Prerender({
+        expiration: initialRevalidate,
+        lambda,
+        fallback: jsonFsRef,
+        group: prerenderGroup,
+        bypassToken: prerenderManifest.bypassToken,
+      });
+
+      ++prerenderGroup;
     };
 
-    Object.keys(prerenderManifest.routes).forEach(route =>
-      onPrerenderRoute(route, false)
+    Object.keys(prerenderManifest.staticRoutes).forEach(route =>
+      onPrerenderRoute(route, { isBlocking: false, isFallback: false })
     );
-    Object.keys(prerenderManifest.lazyRoutes).forEach(route =>
-      onPrerenderRoute(route, true)
+    Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
+      onPrerenderRoute(route, { isBlocking: false, isFallback: true })
+    );
+    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach(route =>
+      onPrerenderRoute(route, { isBlocking: true, isFallback: false })
     );
 
-    // Dynamic pages for lazy routes should be handled by the lambda flow.
-    Object.keys(prerenderManifest.lazyRoutes).forEach(lazyRoute => {
-      const { dataRouteRegex, dataRoute } = prerenderManifest.lazyRoutes[
-        lazyRoute
-      ];
-      dynamicDataRoutes.push({
-        // Next.js provided data route regex
-        src: dataRouteRegex.replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
-        // Location of lambda in builder output
-        dest: path.posix.join(entryDirectory, dataRoute),
-        check: true,
+    // We still need to use lazyRoutes if the dataRoutes field
+    // isn't available for backwards compatibility
+    if (!(routesManifest && routesManifest.dataRoutes)) {
+      // Dynamic pages for lazy routes should be handled by the lambda flow.
+      [
+        ...Object.entries(prerenderManifest.fallbackRoutes),
+        ...Object.entries(prerenderManifest.legacyBlockingRoutes),
+      ].forEach(([, { dataRouteRegex, dataRoute }]) => {
+        dataRoutes.push({
+          // Next.js provided data route regex
+          src: dataRouteRegex.replace(
+            /^\^/,
+            `^${appMountPrefixNoTrailingSlash}`
+          ),
+          // Location of lambda in builder output
+          dest: path.posix.join(entryDirectory, dataRoute),
+        });
       });
-    });
+    }
   }
 
   const nextStaticFiles = await glob(
@@ -983,13 +1085,31 @@ export const build = async ({
     entryDirectory,
     dynamicPages,
     false,
-    routesManifest
+    routesManifest,
+    new Set(prerenderManifest.omittedRoutes)
   ).then(arr =>
     arr.map(route => {
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
       return route;
     })
   );
+
+  // We need to delete lambdas from output instead of omitting them from the
+  // start since we rely on them for powering Preview Mode (read above in
+  // onPrerenderRoute).
+  prerenderManifest.omittedRoutes.forEach(routeKey => {
+    // Get the route file as it'd be mounted in the builder output
+    const routeFileNoExt = path.posix.join(
+      entryDirectory,
+      routeKey === '/' ? '/index' : routeKey
+    );
+    if (typeof lambdas[routeFileNoExt] === undefined) {
+      throw new Error(
+        `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`
+      );
+    }
+    delete lambdas[routeFileNoExt];
+  });
 
   return {
     output: {
@@ -1020,33 +1140,6 @@ export const build = async ({
 
       // redirects
       ...redirects,
-      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
-      // folder
-      { handle: 'filesystem' },
-
-      ...rewrites,
-      // Custom Next.js 404 page (TODO: do we want to remove this?)
-      ...(isLegacy
-        ? []
-        : [
-            {
-              src: path.join('/', entryDirectory, '.*'),
-              dest: path.join(
-                '/',
-                entryDirectory,
-                staticPages['_errors/404'] ? '_errors/404' : '_error'
-              ),
-              status: 404,
-              check: true,
-            },
-          ]),
-      // Routes that are checked after each rewrite and no filesystem match
-      { handle: 'miss' },
-      // Dynamic routes
-      ...dynamicRoutes,
-      ...dynamicDataRoutes,
-      // Routes that are checked after filesystem match
-      { handle: 'hit' },
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
@@ -1058,9 +1151,58 @@ export const build = async ({
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
-        headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+        headers: {
+          'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
+        },
         continue: true,
       },
+      { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
+
+      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
+      // folder
+      { handle: 'filesystem' },
+
+      // This needs to come directly after handle: filesystem to make sure to
+      // 404 and clear the cache header for _next requests
+      {
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
+        headers: {
+          'cache-control': '',
+        },
+        status: 404,
+      },
+
+      ...rewrites,
+      // Dynamic routes
+      ...dynamicRoutes,
+
+      // /_next/data routes for getServerProps/getStaticProps pages
+      ...dataRoutes,
+
+      // Custom Next.js 404 page (TODO: do we want to remove this?)
+      ...(isLegacy
+        ? []
+        : [
+            {
+              src: path.join('/', entryDirectory, '.*'),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                static404Page
+                  ? static404Page
+                  : // if static 404 is not present but we have pages/404.js
+                  // it is a lambda due to _app getInitialProps
+                  hasPages404 && lambdas['404']
+                  ? '404'
+                  : '_error'
+              ),
+              status: 404,
+            },
+          ]),
     ],
     watch: [],
     childProcesses: [],

@@ -1,6 +1,7 @@
 # now client
 
-[![Build Status](https://travis-ci.org/zeit/now-client.svg?branch=master)](https://travis-ci.org/zeit/now-client) [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
+[![Build Status](https://travis-ci.org/zeit/now-client.svg?branch=master)](https://travis-ci.org/zeit/now-client)
+[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
 
 The official Node.js client for deploying to [Now](https://zeit.co/now). It supports v1 and v2 deployments.
 
@@ -32,10 +33,10 @@ Then call inside a `for...of` loop to follow the progress with the following arg
 async function deploy() {
   let deployment;
 
-  for await (const event of createDeployment(
-    '/Users/zeit-user/projects/front',
-    { token: process.env.TOKEN }
-  )) {
+  for await (const event of createDeployment({
+    token: process.env.TOKEN,
+    path: '/Users/zeit-user/projects/front',
+  })) {
     if (event.type === 'ready') {
       deployment = event.payload;
       break;
@@ -50,16 +51,18 @@ Full list of events:
 
 ```js
 [
-  // File events (receive relevant data as payload)
+  // File events
   'hashes-calculated',
+  'file-count',
   'file-uploaded',
   'all-files-uploaded',
-  // Deployment events (receive deployment object as payload)
+  // Deployment events
   'created',
+  'building',
   'ready',
+  'alias-assigned',
+  'warning',
   'error',
-  // Build events (receive build object as payload)
-  'build-state-changed'
 ];
 ```
 

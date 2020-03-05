@@ -3,10 +3,9 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import Now from '../util';
+import Now from '../util/now';
 import getAliases from '../util/alias/get-aliases';
 import createOutput from '../util/output';
-import wait from '../util/output/wait';
 import logo from '../util/output/logo';
 import cmd from '../util/output/cmd.ts';
 import elapsed from '../util/output/elapsed.ts';
@@ -132,7 +131,7 @@ export default async function main(ctx) {
     throw err;
   }
 
-  const cancelWait = wait(
+  const cancelWait = output.spinner(
     `Fetching deployment(s) ${ids
       .map(id => `"${id}"`)
       .join(' ')} in ${chalk.bold(contextName)}`

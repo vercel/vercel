@@ -21,26 +21,36 @@ export default async function({ teams, config, apiUrl, token }) {
 
   const stopUserSpinner = wait('Fetching user information');
   const client = new Client({ apiUrl, token, currentTeam });
-  const user = await getUser(client);
+  let user;
+  try {
+    user = await getUser(client);
+  } catch (err) {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      console.error(error(err.message));
+      return 1;
+    }
+
+    throw err;
+  }
 
   stopUserSpinner();
 
   if (accountIsCurrent) {
     currentTeam = {
-      slug: user.username || user.email
+      slug: user.username || user.email,
     };
   }
 
   const teamList = list.map(({ slug, name }) => ({
     name,
     value: slug,
-    current: slug === currentTeam.slug ? chars.tick : ''
+    current: slug === currentTeam.slug ? chars.tick : '',
   }));
 
   teamList.unshift({
     name: user.email,
     value: user.username || user.email,
-    current: (accountIsCurrent && chars.tick) || ''
+    current: (accountIsCurrent && chars.tick) || '',
   });
 
   // Let's bring the current team to the beginning of the list

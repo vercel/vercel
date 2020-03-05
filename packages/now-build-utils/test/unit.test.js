@@ -11,6 +11,10 @@ const {
 } = require('../dist');
 
 it('should re-create symlinks properly', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
   const files = await glob('**', path.join(__dirname, 'symlinks'));
   assert.equal(Object.keys(files).length, 2);
 
@@ -29,6 +33,10 @@ it('should re-create symlinks properly', async () => {
 });
 
 it('should create zip files with symlinks properly', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
   const files = await glob('**', path.join(__dirname, 'symlinks'));
   assert.equal(Object.keys(files).length, 2);
 
@@ -116,10 +124,7 @@ it('should throw for discontinued versions', async () => {
   const realDateNow = Date.now.bind(global.Date);
   global.Date.now = () => new Date('2020-02-14').getTime();
 
-  expect(getSupportedNodeVersion('', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
-
-  expect(getSupportedNodeVersion('', true)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
 
   expect(getDiscontinuedNodeVersions().length).toBe(1);

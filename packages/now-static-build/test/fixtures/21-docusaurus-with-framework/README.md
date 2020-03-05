@@ -8,7 +8,7 @@ This directory is a brief example of a [Docusaurus](https://docusaurus.io/) site
 
 Deploy your own Docusaurus project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/docusaurus)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/docusaurus)
 
 _Live Example: https://docusaurus.now-examples.now.sh_
 

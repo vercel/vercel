@@ -109,16 +109,14 @@ function validateResponseHeaders(t, res) {
 async function exec(directory, args = []) {
   return execa(binaryPath, ['dev', directory, ...args], {
     reject: false,
+    shell: true,
+    env: { __NOW_SKIP_DEV_COMMAND: 1 },
   });
 }
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    if (process.platform === 'darwin' && satisfies(process.version, '8.x')) {
-      await execa('yarn', ['cache', 'clean']);
-    }
-
-    return execa('yarn', ['install'], { cwd: fixturePath });
+    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
   }
 }
 
@@ -126,6 +124,7 @@ async function getPackedBuilderPath(builderDirName) {
   const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
   const output = await execa('npm', ['pack'], {
     cwd: packagePath,
+    shell: true,
   });
 
   if (output.exitCode !== 0 || output.stdout.trim() === '') {
@@ -163,8 +162,10 @@ async function testFixture(directory, opts = {}, args = []) {
     {
       reject: false,
       detached: true,
+      shell: true,
       stdio: 'pipe',
       ...opts,
+      env: { ...opts.env, __NOW_SKIP_DEV_COMMAND: 1 },
     }
   );
 
@@ -227,7 +228,10 @@ function testFixtureStdio(directory, fn) {
       let stderr = '';
       let printedOutput = false;
 
-      dev = execa(binaryPath, ['dev', dir, '-l', port]);
+      dev = execa(binaryPath, ['dev', dir, '-l', port], {
+        shell: true,
+        env: { __NOW_SKIP_DEV_COMMAND: 1 },
+      });
 
       dev.stdout.on('data', data => {
         stdoutList.push(data);
@@ -243,12 +247,14 @@ function testFixtureStdio(directory, fn) {
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
           dev.kill('SIGTERM');
-          throw new Error(`Failed for "${directory}" with port ${port}.`);
+          throw new Error(
+            `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
+          );
         }
 
         if (stderr.includes('Command failed') || stderr.includes('Error!')) {
           dev.kill('SIGTERM');
-          throw new Error(`Failed for "${directory}".`);
+          throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });
 
@@ -288,6 +294,7 @@ test.beforeEach(() => {
 
 test.afterEach(async () => {
   await Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Array.from(processList).map(([_procId, proc]) => {
       if (proc.killed === false) {
         console.log(
@@ -407,28 +414,6 @@ test(
 );
 
 test(
-  '[now dev] does not display directory listing after multiple 404',
-  testFixtureStdio('handle-miss-multiple-404', async (t, port) => {
-    t.is((await fetch(`http://localhost:${port}/pathA/dir`)).status, 404);
-    t.is((await fetch(`http://localhost:${port}/pathB/dir`)).status, 404);
-    t.is((await fetch(`http://localhost:${port}/pathC/dir`)).status, 200);
-  })
-);
-
-test(
-  '[now dev] does not display directory listing after `handle: miss` and 404',
-  testFixtureStdio('handle-miss-handle-filesystem-404', async (t, port) => {
-    t.is((await fetch(`http://localhost:${port}/pathA/dir`)).status, 404);
-    t.is((await fetch(`http://localhost:${port}/pathB/dir`)).status, 404);
-    t.is((await fetch(`http://localhost:${port}/pathC/dir`)).status, 200);
-
-    t.is((await fetch(`http://localhost:${port}/pathA/dir/one`)).status, 200);
-    t.is((await fetch(`http://localhost:${port}/pathB/dir/two`)).status, 200);
-    t.is((await fetch(`http://localhost:${port}/pathC/dir/three`)).status, 200);
-  })
-);
-
-test(
   '[now dev] handles hit after handle: filesystem',
   testFixtureStdio('handle-hit-after-fs', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/blog.html`);
@@ -478,6 +463,8 @@ test(
     t.regex(await rand.text(), /random number/gm);
     const rand2 = await fetchWithRetry(`http://localhost:${port}/api/rand.js`);
     t.regex(await rand2.text(), /random number/gm);
+    const notfound = await fetch(`http://localhost:${port}/api`);
+    t.is(notfound.status, 404);
   })
 );
 
@@ -602,6 +589,31 @@ test('[now dev] validate env var names', async t => {
 });
 
 test(
+  '[now dev] test rewrites with segments serve correct content',
+  testFixtureStdio('test-rewrites-with-segments', async (t, port) => {
+    const users = await fetchWithRetry(
+      `http://localhost:${port}/api/users/first`,
+      3
+    );
+    t.regex(await users.text(), /first/gm);
+    const fourtytwo = await fetchWithRetry(
+      `http://localhost:${port}/api/fourty-two`,
+      3
+    );
+    t.regex(await fourtytwo.text(), /42/gm);
+    const rand = await fetchWithRetry(`http://localhost:${port}/rand`, 3);
+    t.regex(await rand.text(), /42/gm);
+    const dynamic = await fetchWithRetry(
+      `http://localhost:${port}/api/dynamic`,
+      3
+    );
+    t.regex(await dynamic.text(), /dynamic/gm);
+    const notfound = await fetch(`http://localhost:${port}/api`);
+    t.is(notfound.status, 404);
+  })
+);
+
+test(
   '[now dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/hello`, 3);
@@ -637,7 +649,7 @@ test(
       await testPath(200, '/about/', 'About Page');
       await testPath(200, '/sub/', 'Sub Index Page');
       await testPath(200, '/sub/another/', 'Sub Another Page');
-      await testPath(200, '/style.css/', 'body { color: green }');
+      await testPath(200, '/style.css', 'body { color: green }');
       await testPath(308, '/index.html', '', { Location: '/' });
       await testPath(308, '/about.html', '', { Location: '/about/' });
       await testPath(308, '/sub/index.html', '', { Location: '/sub/' });
@@ -652,17 +664,15 @@ test(
   '[now dev] test trailingSlash true serve correct content',
   testFixtureStdio('test-trailing-slash', async (t, port, testPath) => {
     await testPath(200, '/', 'Index Page');
-    await testPath(200, '/index.html/', 'Index Page');
-    await testPath(200, '/about.html/', 'About Page');
+    await testPath(200, '/index.html', 'Index Page');
+    await testPath(200, '/about.html', 'About Page');
     await testPath(200, '/sub/', 'Sub Index Page');
-    await testPath(200, '/sub/index.html/', 'Sub Index Page');
-    await testPath(200, '/sub/another.html/', 'Sub Another Page');
-    await testPath(200, '/style.css/', 'body { color: green }');
-    await testPath(308, '/about.html', '', { Location: '/about.html/' });
+    await testPath(200, '/sub/index.html', 'Sub Index Page');
+    await testPath(200, '/sub/another.html', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(308, '/about.html/', '', { Location: '/about.html' });
+    await testPath(308, '/style.css/', '', { Location: '/style.css' });
     await testPath(308, '/sub', '', { Location: '/sub/' });
-    await testPath(308, '/sub/another.html', '', {
-      Location: '/sub/another.html/',
-    });
   })
 );
 
@@ -759,8 +769,6 @@ test('[now dev] 02-angular-node', async t => {
 });
 
 test('[now dev] 03-aurelia', async t => {
-  if (shouldSkip(t, '03-aurelia', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
-
   const tester = testFixtureStdio('03-aurelia', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -773,17 +781,17 @@ test('[now dev] 03-aurelia', async t => {
   await tester(t);
 });
 
-// test(
-//   '[now dev] 04-create-react-app-node',
-//   testFixtureStdio('create-react-app', async(t, port) => {
-//     const response = await fetch(`http://localhost:${port}`);
+test(
+  '[now dev] 04-create-react-app',
+  testFixtureStdio('04-create-react-app', async (t, port) => {
+    const response = await fetch(`http://localhost:${port}`);
 
-//     validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
 
-//     const body = await response.text();
-//     t.regex(body, /React App/gm);
-//   })
-// );
+    const body = await response.text();
+    t.regex(body, /React App/gm);
+  })
+);
 
 test('[now dev] 05-gatsby', async t => {
   if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
@@ -801,8 +809,6 @@ test('[now dev] 05-gatsby', async t => {
 });
 
 test('[now dev] 06-gridsome', async t => {
-  if (shouldSkip(t, '06-gridsome', '>= 6.9.0 <7.0.0 || >= 8.9.0')) return;
-
   const tester = testFixtureStdio('06-gridsome', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -949,8 +955,6 @@ test('[now dev] 14-svelte-node', async t => {
 // });
 
 test('[now dev] 16-vue-node', async t => {
-  if (shouldSkip(t, '16-vue-node', '^8.12.0 || >=9.7.0')) return;
-
   const directory = fixture('16-vue-node');
   const { dev, port } = await testFixture(directory);
 
@@ -970,8 +974,6 @@ test('[now dev] 16-vue-node', async t => {
 });
 
 test('[now dev] 17-vuepress-node', async t => {
-  if (shouldSkip(t, '17-vuepress-node', '^8.12.0 || >=9.7.0')) return;
-
   const directory = fixture('17-vuepress-node');
   const { dev, port } = await testFixture(directory);
 
@@ -1045,8 +1047,6 @@ test('[now dev] double slashes redirect', async t => {
 });
 
 test('[now dev] 18-marko', async t => {
-  if (shouldSkip(t, '18-marko', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
-
   const tester = testFixtureStdio('18-marko', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -1084,8 +1084,6 @@ test(
 );
 
 test('[now dev] 21-charge', async t => {
-  if (shouldSkip(t, '21-charge', '>= 8.10.0')) return;
-
   const tester = testFixtureStdio('21-charge', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -1111,8 +1109,6 @@ test(
 );
 
 test('[now dev] 23-docusaurus', async t => {
-  if (shouldSkip(t, '23-docusaurus', '>= 8.10')) return;
-
   const tester = testFixtureStdio('23-docusaurus', async (t, port) => {
     const response = await fetch(`http://localhost:${port}`);
 
@@ -1245,15 +1241,6 @@ test('[now dev] no build matches warning', async t => {
 });
 
 test('[now dev] do not recursivly check the path', async t => {
-  if (
-    shouldSkip(
-      t,
-      'do not recursivly check the path',
-      '^8.10.0 || ^10.13.0 || >=11.10.1'
-    )
-  )
-    return;
-
   const directory = fixture('handle-filesystem-missing');
   const { dev, port } = await testFixture(directory);
 
@@ -1370,8 +1357,6 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
 });
 
 test('[now dev] 25-nextjs-src-dir', async t => {
-  if (shouldSkip(t, '25-nextjs-src-dir', '>= 8.9.0')) return;
-
   const directory = fixture('25-nextjs-src-dir');
   const { dev, port } = await testFixture(directory);
 
@@ -1391,13 +1376,40 @@ test('[now dev] 25-nextjs-src-dir', async t => {
 });
 
 test(
+  '[now dev] Use `@now/python` with Flask requirements.txt',
+  testFixtureStdio('python-flask', async (t, port) => {
+    const name = 'Alice';
+    const year = new Date().getFullYear();
+    const user = await fetchWithRetry(
+      `http://localhost:${port}/api/user?name=${name}`
+    );
+    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
+    const ext = await fetchWithRetry(`http://localhost:${port}/api/date.py`);
+
+    validateResponseHeaders(t, user);
+    validateResponseHeaders(t, date);
+    validateResponseHeaders(t, ext);
+
+    t.regex(await user.text(), new RegExp(`Hello ${name}`));
+    t.regex(await date.text(), new RegExp(`Current date is ${year}`));
+    t.regex(await ext.text(), new RegExp(`Current date is ${year}`));
+  })
+);
+
+test(
   '[now dev] Use runtime from the functions property',
   testFixtureStdio('custom-runtime', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/api/user`);
+    const extensionless = await fetchWithRetry(
+      `http://localhost:${port}/api/user`
+    );
+    const extension = await fetchWithRetry(
+      `http://localhost:${port}/api/user.sh`
+    );
 
-    validateResponseHeaders(t, response);
+    validateResponseHeaders(t, extensionless);
+    validateResponseHeaders(t, extension);
 
-    const body = await response.text();
-    t.regex(body, /Hello, from Bash!/gm);
+    t.regex(await extensionless.text(), /Hello, from Bash!/gm);
+    t.regex(await extension.text(), /Hello, from Bash!/gm);
   })
 );

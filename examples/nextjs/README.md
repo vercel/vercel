@@ -1,4 +1,4 @@
-![Next.js Logo](../../packages/frameworks/logos/next.svg)
+![Next.js Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/next.svg)
 
 # Next.js Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Next.js](https://nextjs.org) app that ca
 
 Deploy your own Next.js project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/nextjs)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/nextjs)
 
 _Live Example: https://nextjs.now-examples.now.sh_
 

@@ -3,8 +3,8 @@ import {
   DomainNotFound,
   DNSPermissionDenied,
   DNSInvalidPort,
-  DNSInvalidType
-} from '../../util/errors-ts';
+  DNSInvalidType,
+} from '../../util/errors';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import addDNSRecord from '../../util/dns/add-dns-record';
@@ -26,7 +26,7 @@ export default async function add(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -37,7 +37,7 @@ export default async function add(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }

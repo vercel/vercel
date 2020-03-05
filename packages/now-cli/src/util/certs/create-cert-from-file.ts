@@ -8,8 +8,7 @@ export default async function createCertFromFile(
   client: Client,
   keyPath: string,
   certPath: string,
-  caPath: string,
-  context: string
+  caPath: string
 ) {
   const cancelWait = wait('Adding your custom certificate');
 

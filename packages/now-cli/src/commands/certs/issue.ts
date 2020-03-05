@@ -3,7 +3,7 @@ import chalk from 'chalk';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
@@ -87,13 +87,7 @@ export default async function issue(
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(
-      client,
-      keyPath,
-      crtPath,
-      caPath,
-      contextName
-    );
+    cert = await createCertFromFile(client, keyPath, crtPath, caPath);
 
     if (cert instanceof Error) {
       output.error(cert.message);

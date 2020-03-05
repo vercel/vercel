@@ -1,6 +1,6 @@
 # Contributing
 
-When contributing to this repository, please first discuss the change you wish to make via [GitHub Issue](https://github.com/zeit/now/issues/new) or [Spectrum](https://spectrum.chat/zeit) with the owners of this repository before submitting a Pull Request.
+When contributing to this repository, please first discuss the change you wish to make via [GitHub Discussions](https://github.com/zeit/now/discussions/new) with the owners of this repository before submitting a Pull Request.
 
 Please read our [code of conduct](CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
 
@@ -97,10 +97,9 @@ Sometimes you want to test changes to a Builder against an existing project, may
 
 ## Add a New Framework
 
-1. Add the framework to the `@now/frameworks` package.
-   The file is located in `packages/frameworks/frameworks.json`.
-2. Add an example to the `examples/` directory.
-   The name of the directory should equal the slug of the framework in `@now/frameworks`.
-   The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a README for the example.
-3. Finally, `@now/static-build` must be adjusted.
-   The files `packages/now-static-build/src/frameworks.ts` has to be extended.
+You can add support for a new Framework by creating a Pull Request for this repository and following the steps below:
+
+1. Add the Framework to the `@now/frameworks` package: The file is located in `packages/frameworks/frameworks.json`. You can copy the structure of an existing one and adjust the required fields. Note that the `settings` property either contains a `value` or a `placeholder`. The `value` property is used when something is not configurable, the `placeholder` is used when something is configurable and can be changed with configuration. An example would be the Output Directory for Hugo, it's `public` by default but can be changed through its config file, so we use `placeholder` with an explanation of what can be used.
+2. Add an example to the `examples/` directory: The name of the directory should equal the slug of the framework used in `@now/frameworks`. The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a `README.md` file for the example.
+3. Update the `@now/static-build` package: The file `packages/now-static-build/src/frameworks.ts` has to be extended. You can add default routes that will always be applied to projects that use this Framework or specify some paths that will be cached to speed up the build process.
+4. After your Pull Request has been merged and released, other users can select the example on the ZEIT Now dashboard and deploy it.

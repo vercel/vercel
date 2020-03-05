@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { email as regexEmail } from '../../util/input/regexes';
+import createOutput from '../../util/output/create-output';
 import wait from '../../util/output/wait';
-import fatalError from '../../util/fatal-error';
 import cmd from '../../util/output/cmd.ts';
 import info from '../../util/output/info';
 import stamp from '../../util/output/stamp.ts';
@@ -30,7 +30,7 @@ const domains = Array.from(
     'inbox.com',
     'mail.com',
     'gmx.com',
-    'icloud.com'
+    'icloud.com',
   ])
 );
 
@@ -56,17 +56,16 @@ const emailAutoComplete = (value, teamSlug) => {
   return false;
 };
 
-export default async function(
-  {
-    teams,
-    args,
-    config,
-    introMsg,
-    noopMsg = 'No changes made',
-    apiUrl,
-    token
-  } = {}
-) {
+export default async function({
+  teams,
+  args,
+  config,
+  introMsg,
+  noopMsg = 'No changes made',
+  apiUrl,
+  token,
+} = {}) {
+  const output = createOutput();
   const { currentTeam: currentTeamId } = config;
 
   const stopSpinner = wait('Fetching teams');
@@ -78,7 +77,17 @@ export default async function(
 
   const stopUserSpinner = wait('Fetching user information');
   const client = new Client({ apiUrl, token });
-  const user = await getUser(client);
+  let user;
+  try {
+    user = await getUser(client);
+  } catch (err) {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      console.error(error(err.message));
+      return 1;
+    }
+
+    throw err;
+  }
 
   stopUserSpinner();
 
@@ -86,8 +95,13 @@ export default async function(
 
   if (!currentTeam) {
     // We specifically need a team scope here
-    let err = `You can't run this command under ${param(user.username || user.email)}.\nPlease select a team scope using ${cmd('now switch')} or use ${cmd('--scope')}`;
-    return fatalError(err);
+    let err = `You can't run this command under ${param(
+      user.username || user.email
+    )}.\nPlease select a team scope using ${cmd('now switch')} or use ${cmd(
+      '--scope'
+    )}`;
+    output.error(err);
+    return 1;
   }
 
   console.log(
@@ -107,7 +121,9 @@ export default async function(
           userInfo = res.name || res.username;
         } catch (err) {
           if (err.code === 'user_not_found') {
-            console.error(error(`No user exists with the email address "${email}".`));
+            console.error(
+              error(`No user exists with the email address "${email}".`)
+            );
             return 1;
           }
 
@@ -115,7 +131,11 @@ export default async function(
         }
 
         stopSpinner();
-        console.log(`${chalk.cyan(chars.tick)} ${email}${userInfo ? ` (${userInfo})` : ''} ${elapsed()}`);
+        console.log(
+          `${chalk.cyan(chars.tick)} ${email}${
+            userInfo ? ` (${userInfo})` : ''
+          } ${elapsed()}`
+        );
       } else {
         console.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
       }
@@ -135,7 +155,7 @@ export default async function(
       email = await textInput({
         label: `- ${inviteUserPrefix}`,
         validateValue: validateEmail,
-        autoComplete: value => emailAutoComplete(value, currentTeam.slug)
+        autoComplete: value => emailAutoComplete(value, currentTeam.slug),
       });
     } catch (err) {
       if (err.message !== 'USER_ABORT') {
@@ -149,7 +169,10 @@ export default async function(
       stopSpinner = wait(inviteUserPrefix + email);
       try {
         // eslint-disable-next-line no-await-in-loop
-        const { name, username } = await teams.inviteUser({ teamId: currentTeam.id, email });
+        const { name, username } = await teams.inviteUser({
+          teamId: currentTeam.id,
+          email,
+        });
         stopSpinner();
         const userInfo = name || username;
         email = `${email}${userInfo ? ` (${userInfo})` : ''} ${elapsed()}`;

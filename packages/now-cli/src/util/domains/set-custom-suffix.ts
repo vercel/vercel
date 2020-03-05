@@ -1,4 +1,4 @@
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import Client from '../client';
 
 export default async function setCustomSuffix(
@@ -11,8 +11,8 @@ export default async function setCustomSuffix(
     return await client.fetch(`/v1/custom-suffix`, {
       method: 'PATCH',
       body: {
-        suffix
-      }
+        suffix,
+      },
     });
   } catch (error) {
     if (error.code === 'forbidden') {

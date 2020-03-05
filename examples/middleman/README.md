@@ -6,7 +6,7 @@ This directory is a brief example of a [Middleman](https://middlemanapp.com/) si
 
 Deploy your own Middleman project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/middleman)
+[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/middleman)
 
 _Live Example: https://middleman.now-examples.now.sh_
 

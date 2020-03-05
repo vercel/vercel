@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "server/**/*.js": {
-      "runtime": "@now/node@1.2.1"
-    }
-  }
-}

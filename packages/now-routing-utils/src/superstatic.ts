@@ -49,7 +49,7 @@ export function convertRedirects(
 ): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const loc = replaceSegments(segments, r.destination);
+    const loc = replaceSegments(segments, r.destination, true);
     const route: Route = {
       src,
       headers: { Location: loc },
@@ -105,8 +105,13 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   const routes: Route[] = [];
   if (enable) {
     routes.push({
-      src: '^/(.*[^\\/])$',
+      src: '^/((?:[^/]+/)*[^/\\.]+)$',
       headers: { Location: '/$1/' },
+      status,
+    });
+    routes.push({
+      src: '^/((?:[^/]+/)*[^/]+\\.\\w+)/$',
+      headers: { Location: '/$1' },
       status,
     });
   } else {
@@ -123,39 +128,77 @@ export function sourceToRegex(
   source: string
 ): { src: string; segments: string[] } {
   const keys: Key[] = [];
-  const r = pathToRegexp(source, keys, { strict: true });
+  const r = pathToRegexp(source, keys, {
+    strict: true,
+    sensitive: true,
+    delimiter: '/',
+  });
   const segments = keys.map(k => k.name).filter(isString);
   return { src: r.source, segments };
 }
 
-function replaceSegments(segments: string[], destination: string): string {
+function replaceSegments(
+  segments: string[],
+  destination: string,
+  isRedirect?: boolean
+): string {
   const parsedDestination = parseUrl(destination, true);
-  let { pathname, hash } = parsedDestination;
+  delete parsedDestination.href;
+  delete parsedDestination.path;
+  delete parsedDestination.search;
+  // eslint-disable-next-line prefer-const
+  let { pathname, hash, query, ...rest } = parsedDestination;
   pathname = pathname || '';
   hash = hash || '';
-
-  if ((pathname + hash).includes(':') && segments.length > 0) {
-    const pathnameCompiler = compile(pathname);
-    const hashCompiler = compile(hash);
+  if (segments.length > 0) {
     const indexes: { [k: string]: string } = {};
-
     segments.forEach((name, index) => {
       indexes[name] = toSegmentDest(index);
     });
-    pathname = pathnameCompiler(indexes);
-    hash = hash ? `${hashCompiler(indexes)}` : null;
+
+    if (destination.includes(':') && segments.length > 0) {
+      const pathnameCompiler = compile(pathname);
+      const hashCompiler = compile(hash);
+      pathname = pathnameCompiler(indexes);
+      hash = hash ? `${hashCompiler(indexes)}` : null;
+
+      for (const [key, strOrArray] of Object.entries(query)) {
+        let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
+        if (value) {
+          const queryCompiler = compile(value);
+          value = queryCompiler(indexes);
+        }
+        query[key] = value;
+      }
+    }
+
+    for (const [name, value] of Object.entries(indexes)) {
+      if (
+        isRedirect &&
+        new RegExp(`\\${value}(?!\\d)`).test(pathname + (hash || ''))
+      ) {
+        // Don't add segment to query if used in destination
+        // and it's a redirect so that we don't pollute the query
+        // with unwanted values
+        continue;
+      }
+
+      if (!(name in query)) {
+        query[name] = value;
+      }
+    }
+
     destination = formatUrl({
-      ...parsedDestination,
+      ...rest,
       pathname,
+      query,
       hash,
     });
-  } else if (segments.length > 0) {
-    let prefix = '?';
-    segments.forEach((name, index) => {
-      destination += `${prefix}${name}=${toSegmentDest(index)}`;
-      prefix = '&';
-    });
+
+    // url.format() escapes the query string but we must preserve dollar signs
+    destination = destination.replace(/=%24/g, '=$');
   }
+
   return destination;
 }
 

@@ -2,18 +2,17 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import Now from '../../util';
+import Now from '../../util/now';
 import Client from '../../util/client.ts';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen.ts';
-import wait from '../../util/output/wait';
 
 export default async function ls(ctx, opts, args, output) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -22,7 +21,7 @@ export default async function ls(ctx, opts, args, output) {
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
 
@@ -37,7 +36,6 @@ export default async function ls(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const lsStamp = stamp();
   let cancelWait;
@@ -51,7 +49,7 @@ export default async function ls(ctx, opts, args, output) {
     return 1;
   }
 
-  cancelWait = wait(
+  cancelWait = output.spinner(
     args[0]
       ? `Fetching alias details for "${args[0]}" under ${chalk.bold(
           contextName
@@ -112,13 +110,13 @@ function printAliasTable(aliases) {
           ? a.deployment.url
           : chalk.gray('–'),
         a.alias,
-        ms(Date.now() - new Date(a.created))
-      ])
+        ms(Date.now() - new Date(a.created)),
+      ]),
     ],
     {
       align: ['l', 'l', 'r'],
       hsep: ' '.repeat(4),
-      stringLength: strlen
+      stringLength: strlen,
     }
   ).replace(/^/gm, '  ')}\n\n`;
 }
@@ -130,13 +128,13 @@ function printPathAliasTable(rules) {
       rules.map(rule => [
         rule.pathname ? rule.pathname : chalk.cyan('[fallthrough]'),
         rule.method ? rule.method : '*',
-        rule.dest
+        rule.dest,
       ])
     ),
     {
       align: ['l', 'l', 'l', 'l'],
       hsep: ' '.repeat(6),
-      stringLength: strlen
+      stringLength: strlen,
     }
   ).replace(/^(.*)/gm, '  $1')}\n`;
 }
