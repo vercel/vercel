@@ -64,7 +64,7 @@ Contributing to Now Examples should be an enjoyable experience, as such we have 
 
 The guidelines cover important information such as the requirements for new examples and where to get help if you have any questions.
 
-We have tried to make contributing to Now Examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [ZEIT Spectrum](https://spectrum.chat/zeit) where we will do our best to help you.
+We have tried to make contributing to Now Examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [GitHub Discussions](https://github.com/zeit/now/discussions) where we will do our best to help you.
 
 ## Reporting Issues
 
@@ -80,6 +80,6 @@ Now Examples is an open source project released under the [MIT License](https://
 
 ## Get In Touch
 
-If you have any questions that are not covered by raising an issue then please get in touch with us on the [ZEIT Spectrum](https://spectrum.chat/zeit). There you will find both members of the community and staff who are happy to help answer questions on anything ZEIT related.
+If you have any questions that are not covered by raising an issue then please get in touch with us on [GitHub Discussions](https://github.com/zeit/now/discussions). There you will find both members of the community and staff who are happy to help answer questions on anything ZEIT related.
 
-[![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
+[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
