@@ -9,7 +9,7 @@ interface RubyVersion extends NodeVersion {
 
 const allOptions: RubyVersion[] = [
   { major: 2, minor: 7, range: '2.7.x', runtime: 'ruby2.7' },
-  { major: 2, minor: 6, range: '2.6.x', runtime: 'ruby2.6' },
+  { major: 2, minor: 5, range: '2.5.x', runtime: 'ruby2.5' },
 ];
 
 function getLatestRubyVersion(): RubyVersion {
@@ -30,7 +30,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       const strVersion = line
         .slice(4)
         .trim()
-        .slice(0, -1)
+        .slice(1, -1)
         .replace('~>', '');
       const found = allOptions.some(o => {
         // The array is already in order so return the first
@@ -41,7 +41,9 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       if (!found) {
         throw new NowBuildError({
           code: 'NOW_RUBY_INVALID_VERSION',
-          message: `Invalid Ruby Version: ${line}`,
+          message: 'Found `Gemfile` with invalid Ruby version: `' + line + '`.',
+          link:
+            'https://zeit.co/docs/runtimes#official-runtimes/ruby/ruby-version',
         });
       }
     }
