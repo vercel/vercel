@@ -64,7 +64,7 @@ async function testDeployment(
     nowJson.build.env.NOW_BUILDER_DEBUG = process.env.NOW_BUILDER_DEBUG;
   }
 
-  for (const build of nowJson.builds) {
+  for (const build of nowJson.builds || []) {
     if (builderUrl) {
       if (builderUrl === '@canary') {
         build.use = `${build.use}@canary`;
