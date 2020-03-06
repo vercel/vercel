@@ -664,8 +664,8 @@ export default async function main(
     if (err instanceof BuildError) {
       output.error('Build failed');
       output.error(
-        `Check your logs at ${now.url}/_logs or run ${code(
-          `now logs ${now.url}`,
+        `Check your logs at ${deployment.url}/_logs or run ${code(
+          `now logs ${deployment.url}`,
           {
             // Backticks are interpreted as part of the URL, causing CMD+Click
             // behavior to fail in editors like VSCode.
