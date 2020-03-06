@@ -86,6 +86,7 @@ export async function build({
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfilePath = await walkParentDirs({
+    base: workPath,
     start: entrypointFsDirname,
     filename: 'Gemfile',
   });

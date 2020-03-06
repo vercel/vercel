@@ -190,18 +190,32 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
 }
 
 interface WalkParentDirsProps {
+  /**
+   * The highest directory, typically the workPath root of the project.
+   * If this directory is reached and it doesn't contain the file, null is returned.
+   */
+  base: string;
+  /**
+   * The directory to start searching, typically the same directory of the entrypoint.
+   * If this directory doesn't contain the file, the parent is checked, etc.
+   */
   start: string;
+  /**
+   * The name of the file to search for, typically `package.json` or `Gemfile`.
+   */
   filename: string;
 }
 
 export async function walkParentDirs({
+  base,
   start,
   filename,
 }: WalkParentDirsProps): Promise<string | null> {
-  assert(path.isAbsolute(start));
+  assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
+  assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
   let parent = '';
 
-  for (let current = start; current !== parent; current = parent) {
+  for (let current = start; base.length <= current.length; current = parent) {
     const fullPath = path.join(current, filename);
 
     // eslint-disable-next-line no-await-in-loop
