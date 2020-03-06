@@ -1,6 +1,7 @@
 const assert = require('assert');
 const bufferReplace = require('buffer-replace');
 const fs = require('fs');
+const json5 = require('json5');
 const glob = require('util').promisify(require('glob'));
 const path = require('path');
 const { spawn } = require('child_process');
@@ -52,7 +53,11 @@ async function testDeployment(
     );
   }
 
-  const nowJson = JSON.parse(bodies['now.json']);
+  const nowJson = JSON.parse(
+    // we use json5 to allow comments for probes and re-stringify
+    // to make sure it's still valid JSON other than the comments
+    JSON.stringify(json5.parse(bodies['now.json']))
+  );
 
   if (process.env.NOW_BUILDER_DEBUG) {
     if (!nowJson.build) {

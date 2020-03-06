@@ -516,12 +516,13 @@ export const build = async ({
         // error handling
         ...(output['404']
           ? [
+              { handle: 'error' } as Handler,
+
               {
                 status: 404,
-                handle: 'error',
                 src: path.join(entryDirectory, '.*'),
                 dest: path.join('/', entryDirectory, '404'),
-              } as Handler,
+              },
             ]
           : []),
       ],
@@ -1167,8 +1168,9 @@ export const build = async ({
         ? []
         : [
             // Custom Next.js 404 page
+            { handle: 'error' } as Handler,
+
             {
-              handle: 'error',
               src: path.join('/', entryDirectory, '.*'),
               dest: path.join(
                 '/',
@@ -1182,7 +1184,7 @@ export const build = async ({
                   : '_error'
               ),
               status: 404,
-            } as Handler,
+            },
           ]),
     ],
     watch: [],
