@@ -337,6 +337,7 @@ export const build = async ({
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
 
   if (config.buildCommand) {
+    console.log(`Running "${config.buildCommand}"`);
     await execCommand(config.buildCommand, {
       ...spawnOpts,
       cwd: entryPath,
