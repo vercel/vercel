@@ -491,6 +491,10 @@ export const build = async ({
         // folder
         { handle: 'filesystem' },
 
+        // These need to come before handle: miss or else they are grouped
+        // with that routing section
+        ...rewrites,
+
         // We need to make sure to 404 for /_next after handle: miss since
         // handle: miss is called before rewrites and to prevent rewriting
         // /_next
@@ -505,8 +509,6 @@ export const build = async ({
           check: true,
           dest: '$0',
         },
-
-        ...rewrites,
 
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
@@ -1151,6 +1153,10 @@ export const build = async ({
       // folder
       { handle: 'filesystem' },
 
+      // These need to come before handle: miss or else they are grouped
+      // with that routing section
+      ...rewrites,
+
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
       { handle: 'miss' },
@@ -1164,8 +1170,6 @@ export const build = async ({
         check: true,
         dest: '$0',
       },
-
-      ...rewrites,
 
       // routes that are called after each rewrite or after routes
       // if there no rewrites
