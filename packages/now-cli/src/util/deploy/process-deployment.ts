@@ -164,6 +164,8 @@ export default async function processDeployment({
         org.slug
       );
 
+      now.url = event.payload.url;
+
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
       if (quiet) {
