@@ -53,11 +53,8 @@ async function testDeployment(
     );
   }
 
-  const nowJson = JSON.parse(
-    // we use json5 to allow comments for probes and re-stringify
-    // to make sure it's still valid JSON other than the comments
-    JSON.stringify(json5.parse(bodies['now.json']))
-  );
+  // we use json5 to allow comments for probes
+  const nowJson = json5.parse(bodies['now.json']);
 
   if (process.env.NOW_BUILDER_DEBUG) {
     if (!nowJson.build) {

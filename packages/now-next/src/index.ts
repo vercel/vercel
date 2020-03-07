@@ -491,9 +491,28 @@ export const build = async ({
         // folder
         { handle: 'filesystem' },
 
+        // We need to make sure to 404 for /_next after handle: miss since
+        // handle: miss is called before rewrites and to prevent rewriting
+        // /_next
+        { handle: 'miss' },
+        {
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          headers: {
+            'cache-control': '',
+          },
+          status: 404,
+          continue: true,
+        },
+
         ...rewrites,
+
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
+        // (if so make sure to add any dynamic routes after handle: 'rewrite' )
 
         // routes to call after a file has been matched
         { handle: 'hit' },
@@ -511,6 +530,7 @@ export const build = async ({
           headers: {
             'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
           },
+          continue: true,
         },
 
         // error handling
@@ -1132,6 +1152,22 @@ export const build = async ({
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+
+      // We need to make sure to 404 for /_next after handle: miss since
+      // handle: miss is called before rewrites and to prevent rewriting /_next
+      { handle: 'miss' },
+      {
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
+        headers: {
+          'cache-control': '',
+        },
+        status: 404,
+        continue: true,
+      },
 
       ...rewrites,
 
