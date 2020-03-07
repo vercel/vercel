@@ -505,7 +505,8 @@ export const build = async ({
             'cache-control': '',
           },
           status: 404,
-          continue: true,
+          check: true,
+          dest: '$0',
         },
 
         ...rewrites,
@@ -1166,7 +1167,8 @@ export const build = async ({
           'cache-control': '',
         },
         status: 404,
-        continue: true,
+        check: true,
+        dest: '$0',
       },
 
       ...rewrites,
