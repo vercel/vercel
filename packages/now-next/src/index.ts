@@ -501,9 +501,6 @@ export const build = async ({
             entryDirectory,
             '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
           ),
-          headers: {
-            'cache-control': '',
-          },
           status: 404,
           check: true,
           dest: '$0',
@@ -1163,9 +1160,6 @@ export const build = async ({
           entryDirectory,
           '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
         ),
-        headers: {
-          'cache-control': '',
-        },
         status: 404,
         check: true,
         dest: '$0',
