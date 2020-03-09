@@ -17,6 +17,7 @@ import {
   Prerender,
   runNpmInstall,
   runPackageJsonScript,
+  execCommand,
 } from '@now/build-utils';
 import { Route } from '@now/routing-utils';
 import {
@@ -334,7 +335,20 @@ export const build = async ({
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
   const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
-  await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
+
+  if (config.buildCommand) {
+    console.log(`Running "${config.buildCommand}"`);
+    await execCommand(config.buildCommand, {
+      ...spawnOpts,
+      cwd: entryPath,
+      env,
+    });
+  } else {
+    await runPackageJsonScript(entryPath, shouldRunScript, {
+      ...spawnOpts,
+      env,
+    });
+  }
 
   const appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
