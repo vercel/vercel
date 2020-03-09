@@ -199,7 +199,8 @@ export const build = async ({
 
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
-  const dotNextStatic = path.join(entryPath, '.next/static');
+  const outputDirectory = config.outputDirectory || '.next';
+  const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
 
   await download(files, workPath, meta);
 
@@ -584,7 +585,7 @@ export const build = async ({
     let buildId: string;
     try {
       buildId = await readFile(
-        path.join(entryPath, '.next', 'BUILD_ID'),
+        path.join(entryPath, outputDirectory, 'BUILD_ID'),
         'utf8'
       );
     } catch (err) {
@@ -593,8 +594,11 @@ export const build = async ({
       );
       throw new Error('Missing BUILD_ID');
     }
-    const dotNextRootFiles = await glob('.next/*', entryPath);
-    const dotNextServerRootFiles = await glob('.next/server/*', entryPath);
+    const dotNextRootFiles = await glob(`${outputDirectory}/*`, entryPath);
+    const dotNextServerRootFiles = await glob(
+      `${outputDirectory}/server/*`,
+      entryPath
+    );
     const nodeModules = excludeFiles(
       await glob('node_modules/**', entryPath),
       file => file.startsWith('node_modules/.cache')
@@ -615,7 +619,7 @@ export const build = async ({
     }
     const pagesDir = path.join(
       entryPath,
-      '.next',
+      outputDirectory,
       'server',
       'static',
       buildId,
@@ -639,17 +643,17 @@ export const build = async ({
         );
 
         const pageFiles = {
-          [`.next/server/static/${buildId}/pages/_document.js`]: filesAfterBuild[
-            `.next/server/static/${buildId}/pages/_document.js`
+          [`${outputDirectory}/server/static/${buildId}/pages/_document.js`]: filesAfterBuild[
+            `${outputDirectory}/server/static/${buildId}/pages/_document.js`
           ],
-          [`.next/server/static/${buildId}/pages/_app.js`]: filesAfterBuild[
-            `.next/server/static/${buildId}/pages/_app.js`
+          [`${outputDirectory}/server/static/${buildId}/pages/_app.js`]: filesAfterBuild[
+            `${outputDirectory}/server/static/${buildId}/pages/_app.js`
           ],
-          [`.next/server/static/${buildId}/pages/_error.js`]: filesAfterBuild[
-            `.next/server/static/${buildId}/pages/_error.js`
+          [`${outputDirectory}/server/static/${buildId}/pages/_error.js`]: filesAfterBuild[
+            `${outputDirectory}/server/static/${buildId}/pages/_error.js`
           ],
-          [`.next/server/static/${buildId}/pages/${page}`]: filesAfterBuild[
-            `.next/server/static/${buildId}/pages/${page}`
+          [`${outputDirectory}/server/static/${buildId}/pages/${page}`]: filesAfterBuild[
+            `${outputDirectory}/server/static/${buildId}/pages/${page}`
           ],
         };
 
@@ -674,7 +678,12 @@ export const build = async ({
     );
   } else {
     debug('Preparing serverless function files...');
-    const pagesDir = path.join(entryPath, '.next', 'serverless', 'pages');
+    const pagesDir = path.join(
+      entryPath,
+      outputDirectory,
+      'serverless',
+      'pages'
+    );
 
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
@@ -832,7 +841,7 @@ export const build = async ({
       // lambdas.
       assets = await glob(
         'assets/**',
-        path.join(entryPath, '.next', 'serverless')
+        path.join(entryPath, outputDirectory, 'serverless')
       );
 
       const assetKeys = Object.keys(assets);
@@ -1059,7 +1068,7 @@ export const build = async ({
 
   const nextStaticFiles = await glob(
     '**',
-    path.join(entryPath, '.next', 'static')
+    path.join(entryPath, outputDirectory, 'static')
   );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
   const publicFolderFiles = await glob('**', path.join(entryPath, 'public'));
@@ -1226,10 +1235,12 @@ export const build = async ({
 export const prepareCache = async ({
   workPath,
   entrypoint,
+  config = {},
 }: PrepareCacheOptions): Promise<Files> => {
   debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
+  const outputDirectory = config.outputDirectory || '.next';
 
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
@@ -1245,7 +1256,10 @@ export const prepareCache = async ({
   const cacheEntrypoint = path.relative(workPath, entryPath);
   const cache = {
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
+    ...(await glob(
+      path.join(cacheEntrypoint, outputDirectory, 'cache/**'),
+      workPath
+    )),
   };
   debug('Cache file manifest produced');
   return cache;
