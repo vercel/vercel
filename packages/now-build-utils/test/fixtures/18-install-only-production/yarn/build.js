@@ -21,4 +21,4 @@ if (development) {
 // This is to satisfy `@now/static-build` which needs a `dist` directory.
 const { execSync } = require('child_process');
 execSync('mkdir dist');
-execSync('echo "prod:RANDOMNESS_PLACEHOLDER" > dist/index.html');
+execSync('echo "yarn-prod:RANDOMNESS_PLACEHOLDER" > dist/index.html');

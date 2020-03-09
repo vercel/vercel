@@ -1,6 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/static-build" }],
-  "build": { "env": { "NPM_ONLY_PRODUCTION": "1" } },
-  "probes": [{ "path": "/", "mustContain": "prod:RANDOMNESS_PLACEHOLDER" }]
-}
