@@ -107,6 +107,7 @@ export default class DevServer {
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
+  public frameworkSlug: string | null;
   public files: BuilderInputs;
   public yarnPath: string;
   public address: string;
@@ -142,6 +143,7 @@ export default class DevServer {
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
+    this.frameworkSlug = options.frameworkSlug;
 
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
@@ -1677,6 +1679,7 @@ export default class DevServer {
     const env: EnvConfig = {
       ...process.env,
       ...this.buildEnv,
+      ...(this.frameworkSlug === 'nextjs' ? this.env : {}),
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };

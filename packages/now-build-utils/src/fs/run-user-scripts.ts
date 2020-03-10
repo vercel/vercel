@@ -201,30 +201,31 @@ export async function runNpmInstall(
   }
 
   assert(path.isAbsolute(destPath));
-
-  let commandArgs = args;
   debug(`Installing to ${destPath}`);
-  const { hasPackageLockJson } = await scanParentDirs(destPath);
 
+  const { hasPackageLockJson } = await scanParentDirs(destPath);
   const opts: SpawnOptions = { cwd: destPath, ...spawnOpts };
   const env = opts.env ? { ...opts.env } : { ...process.env };
   delete env.NODE_ENV;
   opts.env = env;
 
+  let command: 'npm' | 'yarn';
+  let commandArgs: string[];
+
   if (hasPackageLockJson) {
-    commandArgs = args.filter(a => a !== '--prefer-offline');
-    await spawnAsync(
-      'npm',
-      commandArgs.concat(['install', '--no-audit', '--unsafe-perm']),
-      opts
-    );
+    command = 'npm';
+    commandArgs = args
+      .filter(a => a !== '--prefer-offline')
+      .concat(['install', '--no-audit', '--unsafe-perm']);
   } else {
-    await spawnAsync(
-      'yarn',
-      commandArgs.concat(['--ignore-engines', '--cwd', destPath]),
-      opts
-    );
+    command = 'yarn';
+    commandArgs = args.concat(['install', '--ignore-engines']);
   }
+
+  if (process.env.NPM_ONLY_PRODUCTION) {
+    commandArgs.push('--production');
+  }
+  await spawnAsync(command, commandArgs, opts);
 }
 
 export async function runBundleInstall(
