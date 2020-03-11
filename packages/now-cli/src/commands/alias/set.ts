@@ -65,6 +65,13 @@ export default async function set(
     return 1;
   }
 
+  if (args.length < 2) {
+    output.error(
+      `${cmd('now alias <deployment> <target>')} requires two arguments`
+    );
+    return 1;
+  }
+
   if (args.length >= 1 && !isValidName(args[0])) {
     output.error(
       `The provided argument "${args[0]}" is not a valid deployment`
