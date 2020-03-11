@@ -1667,6 +1667,7 @@ export default class DevServer {
     const port = await getPort();
 
     const env: EnvConfig = {
+      ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
       ...this.buildEnv,
       ...(this.frameworkSlug === 'nextjs' ? this.env : {}),
@@ -1706,7 +1707,29 @@ export default class DevServer {
 
     this.output.debug(`Spawning dev command: ${command}`);
 
-    const p = spawnCommand(command, { stdio: 'inherit', cwd, env });
+    const p = spawnCommand(command, {
+      stdio: [process.stdin, 'pipe', 'pipe'],
+      cwd,
+      env,
+    });
+
+    if (!p.stdout || !p.stderr) {
+      throw new Error('Expected child process to have stdout and stderr');
+    }
+
+    p.stdout.on('data', data => {
+      if (data) {
+        this.output.debug(`Replacing framework output with now dev address`);
+        data = data
+          .toString()
+          .replace(`http://localhost:${port}`, this.address);
+      }
+      process.stdout.write(data);
+    });
+
+    p.stderr.on('data', data => {
+      process.stderr.write(data);
+    });
 
     p.on('exit', () => {
       this.devProcessPort = undefined;
