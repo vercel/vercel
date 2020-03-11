@@ -1710,19 +1710,23 @@ export default class DevServer {
 
     this.output.debug(`Spawning dev command: ${command}`);
 
-    const p = spawnCommand(command, { stdio: 'pipe', cwd, env });
+    const devPort = new URL(this.address).port;
+    const proxyPort = new RegExp(port.toString(), 'g');
+    const p = spawnCommand(command, {
+      stdio: ['inherit', 'pipe', 'pipe'],
+      cwd,
+      env,
+    });
 
-    if (!p.stdin || !p.stdout || !p.stderr) {
-      throw new Error('Expected child process to have standard output');
+    if (!p.stdout || !p.stderr) {
+      throw new Error('Expected child process to have stdout and stderr');
     }
 
-    process.stdin.pipe(p.stdin);
     p.stderr.pipe(process.stderr);
     p.stdout.setEncoding('utf8');
-    const devPort = new URL(this.address).port;
 
     p.stdout.on('data', (data: string) => {
-      process.stdout.write(data.replace(port.toString(), devPort));
+      process.stdout.write(data.replace(proxyPort, devPort));
     });
 
     p.on('exit', () => {
