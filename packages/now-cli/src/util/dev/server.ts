@@ -475,14 +475,11 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache, isInitialLoad);
+    this.getNowConfigPromise = this._getNowConfig(canUseCache);
     try {
       return await this.getNowConfigPromise;
     } finally {
@@ -490,10 +487,7 @@ export default class DevServer {
     }
   }
 
-  async _getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       return this.cachedNowConfig;
     }
@@ -598,11 +592,7 @@ export default class DevServer {
       }
     }
 
-    if (!config.builds || config.builds.length === 0) {
-      if (isInitialLoad && !this.devCommand) {
-        this.output.note(`Serving all files as static`);
-      }
-    } else if (Array.isArray(config.builds)) {
+    if (Array.isArray(config.builds)) {
       if (this.devCommand) {
         config.builds = config.builds.filter(filterFrontendBuilds);
       }
@@ -744,7 +734,7 @@ export default class DevServer {
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false, true);
+    const nowConfig = await this.getNowConfig(false);
     const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),
