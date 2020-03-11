@@ -1,4 +1,4 @@
-import url from 'url';
+import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
@@ -1667,6 +1667,10 @@ export default class DevServer {
     const port = await getPort();
 
     const env: EnvConfig = {
+      // Because of child process 'pipe' below, isTTY will be false.
+      // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
+      FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
+      ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
       ...this.buildEnv,
       ...(this.frameworkSlug === 'nextjs' ? this.env : {}),
@@ -1706,7 +1710,24 @@ export default class DevServer {
 
     this.output.debug(`Spawning dev command: ${command}`);
 
-    const p = spawnCommand(command, { stdio: 'inherit', cwd, env });
+    const devPort = new URL(this.address).port;
+    const proxyPort = new RegExp(port.toString(), 'g');
+    const p = spawnCommand(command, {
+      stdio: ['inherit', 'pipe', 'pipe'],
+      cwd,
+      env,
+    });
+
+    if (!p.stdout || !p.stderr) {
+      throw new Error('Expected child process to have stdout and stderr');
+    }
+
+    p.stderr.pipe(process.stderr);
+    p.stdout.setEncoding('utf8');
+
+    p.stdout.on('data', (data: string) => {
+      process.stdout.write(data.replace(proxyPort, devPort));
+    });
 
     p.on('exit', () => {
       this.devProcessPort = undefined;
