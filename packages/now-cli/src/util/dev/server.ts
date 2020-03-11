@@ -1,4 +1,4 @@
-import url from 'url';
+import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
@@ -1710,28 +1710,19 @@ export default class DevServer {
 
     this.output.debug(`Spawning dev command: ${command}`);
 
-    const p = spawnCommand(command, {
-      stdio: [process.stdin, 'pipe', 'pipe'],
-      cwd,
-      env,
-    });
+    const p = spawnCommand(command, { stdio: 'pipe', cwd, env });
 
-    if (!p.stdout || !p.stderr) {
-      throw new Error('Expected child process to have stdout and stderr');
+    if (!p.stdin || !p.stdout || !p.stderr) {
+      throw new Error('Expected child process to have standard output');
     }
 
-    p.stdout.on('data', data => {
-      if (data) {
-        this.output.debug(`Replacing framework output with now dev address`);
-        data = data
-          .toString()
-          .replace(`http://localhost:${port}`, this.address);
-      }
-      process.stdout.write(data);
-    });
+    process.stdin.pipe(p.stdin);
+    p.stderr.pipe(process.stderr);
+    p.stdout.setEncoding('utf8');
+    const devPort = new URL(this.address).port;
 
-    p.stderr.on('data', data => {
-      process.stderr.write(data);
+    p.stdout.on('data', (data: string) => {
+      process.stdout.write(data.replace(port.toString(), devPort));
     });
 
     p.on('exit', () => {
