@@ -1667,6 +1667,9 @@ export default class DevServer {
     const port = await getPort();
 
     const env: EnvConfig = {
+      // Because of child process 'pipe' below, isTTY will be false.
+      // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
+      FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
       ...this.buildEnv,
