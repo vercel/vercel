@@ -107,6 +107,7 @@ export default class DevServer {
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
+  public frameworkSlug: string | null;
   public files: BuilderInputs;
   public yarnPath: string;
   public address: string;
@@ -142,6 +143,7 @@ export default class DevServer {
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
+    this.frameworkSlug = options.frameworkSlug;
 
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
@@ -473,14 +475,11 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache, isInitialLoad);
+    this.getNowConfigPromise = this._getNowConfig(canUseCache);
     try {
       return await this.getNowConfigPromise;
     } finally {
@@ -488,10 +487,7 @@ export default class DevServer {
     }
   }
 
-  async _getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       return this.cachedNowConfig;
     }
@@ -596,11 +592,7 @@ export default class DevServer {
       }
     }
 
-    if (!config.builds || config.builds.length === 0) {
-      if (isInitialLoad && !this.devCommand) {
-        this.output.note(`Serving all files as static`);
-      }
-    } else if (Array.isArray(config.builds)) {
+    if (Array.isArray(config.builds)) {
       if (this.devCommand) {
         config.builds = config.builds.filter(filterFrontendBuilds);
       }
@@ -742,7 +734,7 @@ export default class DevServer {
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false, true);
+    const nowConfig = await this.getNowConfig(false);
     const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),
@@ -1677,6 +1669,7 @@ export default class DevServer {
     const env: EnvConfig = {
       ...process.env,
       ...this.buildEnv,
+      ...(this.frameworkSlug === 'nextjs' ? this.env : {}),
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };

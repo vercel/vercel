@@ -47,6 +47,8 @@ export default class Now extends EventEmitter {
   public _apiUrl: string;
   public currentTeam?: string;
 
+  public url?: string;
+
   constructor({
     apiUrl,
     token,
