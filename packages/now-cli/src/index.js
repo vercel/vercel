@@ -519,7 +519,12 @@ const main = async argv_ => {
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
-  if (process.env.NOW_ORG_ID || !scope) {
+  const targetCommand = commands.get(subcommand);
+
+  if (
+    !['login', 'logout'].includes(targetCommand) &&
+    (process.env.NOW_ORG_ID || !scope)
+  ) {
     const client = new Client({ apiUrl, token });
     const link = await getLinkedOrg(client, output);
 
@@ -531,8 +536,6 @@ const main = async argv_ => {
       scope = link.org.slug;
     }
   }
-
-  const targetCommand = commands.get(subcommand);
 
   if (
     typeof scope === 'string' &&
