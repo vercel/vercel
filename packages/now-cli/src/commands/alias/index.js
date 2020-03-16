@@ -78,6 +78,7 @@ export default async function main(ctx) {
       '--json': Boolean,
       '--yes': Boolean,
       '-y': '--yes',
+      '--next': Number,
     });
   } catch (err) {
     handleError(err);
