@@ -747,7 +747,7 @@ export class NoAliasInConfig extends NowError<'NO_ALIAS_IN_CONFIG', {}> {
     super({
       code: 'NO_ALIAS_IN_CONFIG',
       meta: {},
-      message: `There is no alias set up in config file.`,
+      message: `Couldn't find an alias in the config file.`,
     });
   }
 }
@@ -760,7 +760,7 @@ export class InvalidAliasInConfig extends NowError<
     super({
       code: 'INVALID_ALIAS_IN_CONFIG',
       meta: { value },
-      message: `Invalid alias option in configuration.`,
+      message: `Wrong value for alias found in config. It must be a string or an array of strings.`,
     });
   }
 }
