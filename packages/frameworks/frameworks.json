@@ -353,10 +353,10 @@
         "placeholder": "npm run build"
       },
       "devCommand": {
-        "value": "stencil build --dev --watch --serve --port $PORT"
+        "value": "npm run start"
       },
       "outputDirectory": {
-        "value": "public"
+        "value": "build"
       }
     }
   },
