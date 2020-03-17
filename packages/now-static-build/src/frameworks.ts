@@ -413,7 +413,7 @@ const frameworkList: Framework[] = [
   {
     name: 'Jekyll',
     slug: 'jekyll',
-    buildCommand: 'jekyll build && bundle clean',
+    buildCommand: 'jekyll build',
     cachePattern: 'vendor/bundle/**',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
       const config = await readConfigFile(join(dirPrefix, '_config.yml'));
