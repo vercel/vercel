@@ -4,6 +4,7 @@
       "src": "package.json",
       "use": "@now/next",
       "config": {
+        "buildCommand": "npm run build",
         "outputDirectory": "the-output-directory"
       }
     }
