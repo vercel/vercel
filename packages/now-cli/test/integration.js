@@ -785,7 +785,7 @@ test('ensure username in list is right', async t => {
   const columns = line.split(/\s+/);
 
   // Ensure username column have username
-  t.truthy(columns.pop().includes('now-builders-ci-bot'));
+  t.truthy(columns.pop().includes(contextName));
 });
 
 test('ensure we render a warning for deployments with no files', async t => {
