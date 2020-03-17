@@ -1,7 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "^/(api/v1/frameworks)?$",
+      "source": "/",
+      "destination": "/api/frameworks"
+    },
+    {
+      "source": "/api/v1/frameworks",
       "destination": "/api/frameworks"
     }
   ],
