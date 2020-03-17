@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/",
       "destination": "/api/frameworks"
     }
   ],
