@@ -17,7 +17,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`build` from `package.json` or `next build`"
+        "placeholder": "`npm run build` or `next build`"
       },
       "devCommand": {
         "value": "next dev --port $PORT"
@@ -45,7 +45,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`gatsby build` or `npm run build`"
+        "placeholder": "`npm run build` or `gatsby build`"
       },
       "devCommand": {
         "value": "gatsby develop --port $PORT"
@@ -72,7 +72,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`hexo generate` or `npm run build`"
+        "placeholder": "`npm run build` or `hexo generate`"
       },
       "devCommand": {
         "value": "hexo server --port $PORT"
@@ -99,7 +99,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`npx @11ty/eleventy` or `npm run build`"
+        "placeholder": "`npm run build` or `npx @11ty/eleventy`"
       },
       "devCommand": {
         "value": "npx @11ty/eleventy --serve --watch --port $PORT"
@@ -130,7 +130,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`docusaurus-build` or `npm run build`"
+        "placeholder": "`npm run build` or `docusaurus-build`"
       },
       "devCommand": {
         "value": "docusaurus-start --port $PORT"
@@ -158,7 +158,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`preact build` or `npm run build`"
+        "placeholder": "`npm run build` or `preact build`"
       },
       "devCommand": {
         "value": "preact watch --port $PORT"
@@ -185,7 +185,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`ember build` or `npm run build`"
+        "placeholder": "`npm run build` or `ember build`"
       },
       "devCommand": {
         "value": "ember serve --port $PORT"
@@ -213,7 +213,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`vue-cli-service build` or `npm run build`"
+        "placeholder": "`npm run build` or `vue-cli-service build`"
       },
       "devCommand": {
         "value": "vue-cli-service serve --port $PORT"
@@ -239,7 +239,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`ng build && scully` or `npm run build`"
+        "placeholder": "`npm run build` or `ng build && scully`"
       },
       "devCommand": {
         "value": "ng serve --port $PORT"
@@ -267,7 +267,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`ng build` or `npm run build`"
+        "placeholder": "`npm run build` or `ng build`"
       },
       "devCommand": {
         "value": "ng serve --port $PORT"
@@ -294,7 +294,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`polymer build` or `npm run build`"
+        "placeholder": "`npm run build` or `polymer build`"
       },
       "devCommand": {
         "value": "polymer serve --port $PORT"
@@ -322,7 +322,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`rollup -c` or `npm run build`"
+        "placeholder": "`npm run build` or `rollup -c`"
       },
       "devCommand": {
         "value": "sirv public --single --dev --port $PORT"
@@ -382,7 +382,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`react-scripts build` or `npm run build`"
+        "placeholder": "`npm run build` or `react-scripts build`"
       },
       "devCommand": {
         "value": "react-scripts start"
@@ -409,7 +409,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`gridsome build` or `npm run build`"
+        "placeholder": "`npm run build` or `gridsome build`"
       },
       "devCommand": {
         "value": "gridsome develop -p $PORT"
@@ -437,7 +437,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`umi build` or `npm run build`"
+        "placeholder": "`npm run build` or `umi build`"
       },
       "devCommand": {
         "value": "umi dev --port $PORT"
@@ -465,7 +465,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`sapper export` or `npm run build`"
+        "placeholder": "`npm run build` or `sapper export`"
       },
       "devCommand": {
         "value": "sapper dev --port $PORT"
@@ -492,7 +492,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`saber build` or `npm run build`"
+        "placeholder": "`npm run build` or `saber build`"
       },
       "devCommand": {
         "value": "saber --port $PORT"
@@ -519,7 +519,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`stencil build` or `npm run build`"
+        "placeholder": "`npm run build` or `stencil build`"
       },
       "devCommand": {
         "value": "stencil build --dev --watch --serve --port $PORT"
@@ -547,7 +547,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`nuxt build` or `npm run build`"
+        "placeholder": "`npm run build` or `nuxt build`"
       },
       "devCommand": {
         "value": "nuxt"
@@ -632,7 +632,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`brunch build --production` or `npm run build`"
+        "placeholder": "`npm run build` or `brunch build --production`"
       },
       "devCommand": {
         "value": "brunch watch --server --port $PORT"
