@@ -241,3 +241,9 @@ export interface ProjectLink {
   projectId: string;
   orgId: string;
 }
+
+export interface PaginationOptions {
+  prev: number;
+  count: number;
+  next?: number;
+}

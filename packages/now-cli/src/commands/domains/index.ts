@@ -72,7 +72,7 @@ const COMMAND_CONFIG = {
   move: ['move'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
-  verify: ['verify']
+  verify: ['verify'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -83,7 +83,8 @@ export default async function main(ctx: NowContext) {
       '--cdn': Boolean,
       '--code': String,
       '--no-cdn': Boolean,
-      '--yes': Boolean
+      '--yes': Boolean,
+      '--next': Number,
     });
   } catch (error) {
     handleError(error);
