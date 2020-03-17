@@ -60,7 +60,7 @@ function validateDistDir(distDir: string) {
   if (!exists()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
-      message: `No Output Directory named "${distDirName}" found after the Build completed.`,
+      message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your project settings.`,
       link,
     });
   }
