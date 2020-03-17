@@ -350,7 +350,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`build` from `package.json`"
+        "placeholder": "`npm run build`"
       },
       "devCommand": {
         "value": "stencil build --dev --watch --serve --port $PORT"
@@ -675,7 +675,7 @@
     "description": "No framework or a unoptimized framework.",
     "settings": {
       "buildCommand": {
-        "placeholder": "`build` or `now-build` from `package.json` if it exists"
+        "placeholder": "`npm run now-build` or `npm run build`"
       },
       "devCommand": {
         "placeholder": "None"
