@@ -580,7 +580,7 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "hugo -D --gc"
+        "placeholder": "`npm run build` or `hugo -D --gc`"
       },
       "devCommand": {
         "value": "hugo server -D -w -p $PORT"
@@ -606,7 +606,7 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "jekyll build"
+        "placeholder": "`npm run build` or `jekyll build`"
       },
       "devCommand": {
         "value": "bundle exec jekyll serve --watch --port $PORT"
@@ -658,7 +658,7 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "bundle exec middleman build"
+        "value": "`npm run build` or `bundle exec middleman build`"
       },
       "devCommand": {
         "value": "bundle exec middleman server -p $PORT"
