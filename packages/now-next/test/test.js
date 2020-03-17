@@ -21,12 +21,6 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  console.log('test fixture', fixture);
-
-  if (!fixture.startsWith('23-')) {
-    continue;
-  }
-
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
