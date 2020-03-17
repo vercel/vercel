@@ -350,7 +350,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`npm run build`"
+        "placeholder": "npm run build"
       },
       "devCommand": {
         "value": "stencil build --dev --watch --serve --port $PORT"
