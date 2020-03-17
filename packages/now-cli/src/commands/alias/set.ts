@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { toHost } from '../../util/to-host';
 import { SetDifference } from 'utility-types';
 import { AliasRecord } from '../../util/alias/create-alias';
 import { NowContext, Domain } from '../../types';
@@ -16,9 +17,12 @@ import { isValidName } from '../../util/is-valid-name';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
+import { User, Config } from '../../types';
+import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 
 type Options = {
   '--debug': boolean;
+  '--local-config': string;
 };
 
 export default async function set(
@@ -30,6 +34,7 @@ export default async function set(
   const {
     authConfig: { token },
     config,
+    localConfig,
   } = ctx;
 
   const { currentTeam } = config;
@@ -44,10 +49,12 @@ export default async function set(
     currentTeam,
     debug: debugEnabled,
   });
-  let contextName = null;
+
+  let user: User;
+  let contextName: string | null = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    ({ contextName, user } = await getScope(client));
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
@@ -61,13 +68,6 @@ export default async function set(
   if (args.length > 2) {
     output.error(
       `${cmd('now alias <deployment> <target>')} accepts at most two arguments`
-    );
-    return 1;
-  }
-
-  if (args.length < 2) {
-    output.error(
-      `${cmd('now alias <deployment> <target>')} requires two arguments`
     );
     return 1;
   }
@@ -93,8 +93,76 @@ export default async function set(
     return 1;
   }
 
-  const [deploymentIdOrHost, aliasTarget] = args;
+  // For `now alias <argument>`
+  if (args.length === 1) {
+    const deployment = handleCertError(
+      output,
+      await getDeploymentForAlias(
+        client,
+        output,
+        args,
+        opts['--local-config'],
+        user,
+        contextName,
+        localConfig
+      )
+    );
 
+    if (deployment === 1) {
+      return deployment;
+    }
+
+    if (deployment instanceof Error) {
+      output.error(deployment.message);
+      return 1;
+    }
+
+    if (!deployment) {
+      output.error(
+        `Couldn't find a deployment to alias. Please provide one as an argument.`
+      );
+      return 1;
+    }
+
+    // Find the targets to perform the alias	  const [deploymentIdOrHost, aliasTarget] = args;
+    const targets = getTargetsForAlias(args, localConfig);
+
+    if (targets instanceof Error) {
+      output.error(targets.message);
+      return 1;
+    }
+
+    for (const target of targets) {
+      output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
+
+      const record = await assignAlias(
+        output,
+        client,
+        deployment,
+        target,
+        contextName
+      );
+
+      const handleResult = handleSetupDomainError(
+        output,
+        handleCreateAliasError(output, record)
+      );
+
+      if (handleResult === 1) {
+        return 1;
+      }
+
+      console.log(
+        `${chalk.cyan('> Success!')} ${chalk.bold(
+          `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`
+        )} now points to https://${deployment.url} ${setStamp()}`
+      );
+    }
+
+    return 0;
+  }
+
+  const [deploymentIdOrHost, aliasTarget] = args;
   const deployment = handleCertError(
     output,
     await getDeploymentByIdOrHost(client, contextName, deploymentIdOrHost)
@@ -366,4 +434,23 @@ function handleCreateAliasError<T>(
   }
 
   return error;
+}
+
+function getTargetsForAlias(args: string[], { alias }: Config) {
+  if (args.length) {
+    return [args[args.length - 1]]
+      .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))
+      .filter((x): x is string => !!x && typeof x === 'string');
+  }
+
+  if (!alias) {
+    return new ERRORS.NoAliasInConfig();
+  }
+
+  // Check the type for the option aliases
+  if (typeof alias !== 'string' && !Array.isArray(alias)) {
+    return new ERRORS.InvalidAliasInConfig(alias);
+  }
+
+  return typeof alias === 'string' ? [alias] : alias;
 }
