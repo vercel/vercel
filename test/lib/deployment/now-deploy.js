@@ -94,10 +94,11 @@ async function filePost (body, digest) {
     headers,
     body,
   });
+  console.log(`fetch /v2/now/files status: ${resp.status} ${resp.statusText}`);
   const json = await resp.json();
 
   if (json.error) {
-    console.log('headers', resp.headers);
+    console.log(json.error, { headers: resp.headers });
     throw new Error(json.error.message);
   }
   return json;
@@ -109,11 +110,11 @@ async function deploymentPost (payload) {
     body: JSON.stringify(payload),
   });
 
-  console.log(`fetch status: ${resp.status} ${resp.statusText}`);
+  console.log(`fetch /v6/now/deployments status: ${resp.status} ${resp.statusText}`);
   const json = await resp.json();
 
   if (json.error) {
-    console.log('headers', resp.headers);
+    console.log(json.error, { headers: resp.headers });
     throw new Error(json.error.message);
   }
   return json;
@@ -121,7 +122,12 @@ async function deploymentPost (payload) {
 
 async function deploymentGet (deploymentId) {
   const resp = await fetchWithAuth(`/v3/now/deployments/${deploymentId}`);
-  return await resp.json();
+  console.log(`fetch /v3/now/deployments status: ${resp.status} ${resp.statusText}`);
+  const json = await resp.json();
+  if (json.error) {
+    console.log(json.error, { headers: resp.headers });
+  }
+  return json
 }
 
 let token;
