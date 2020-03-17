@@ -66,7 +66,7 @@ export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
   constructor() {
     super({
       code: `NOT_AUTHORIZED`,
-      message: `The specified token is not valid`,
+      message: 'Access token invalid. Run `now login` to authorize.',
       meta: {},
     });
   }
