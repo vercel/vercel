@@ -89,43 +89,52 @@ async function filePost (body, digest) {
     'x-now-size': body.length,
   };
 
-  const resp = await fetchWithAuth('/v2/now/files', {
+  const url = '/v2/now/files';
+
+  const resp = await fetchWithAuth(url, {
     method: 'POST',
     headers,
     body,
   });
-  console.log(`fetch /v2/now/files status: ${resp.status} ${resp.statusText}`);
+
   const json = await resp.json();
 
   if (json.error) {
-    console.log(json.error, { headers: resp.headers });
-    throw new Error(json.error.message);
+    const { status, statusText, headers } = resp;
+    const { message } = json.error;
+    console.log('Fetch Error', { url , status, statusText, headers, digest });
+    throw new Error(message);
   }
   return json;
 }
 
 async function deploymentPost (payload) {
-  const resp = await fetchWithAuth('/v6/now/deployments?forceNew=1', {
+  const url = '/v6/now/deployments?forceNew=1';
+  const resp = await fetchWithAuth(url, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 
-  console.log(`fetch /v6/now/deployments status: ${resp.status} ${resp.statusText}`);
   const json = await resp.json();
 
   if (json.error) {
-    console.log(json.error, { headers: resp.headers });
-    throw new Error(json.error.message);
+    const { status, statusText, headers } = resp;
+    const { message } = json.error;
+    console.log('Fetch Error', { url , status, statusText, headers });
+    throw new Error(message);
   }
   return json;
 }
 
 async function deploymentGet (deploymentId) {
-  const resp = await fetchWithAuth(`/v3/now/deployments/${deploymentId}`);
-  console.log(`fetch /v3/now/deployments status: ${resp.status} ${resp.statusText}`);
+  const url = `/v3/now/deployments/${deploymentId}`;
+  const resp = await fetchWithAuth(url);
   const json = await resp.json();
   if (json.error) {
-    console.log(json.error, { headers: resp.headers });
+    const { status, statusText, headers } = resp;
+    const { message } = json.error;
+    console.log('Fetch Error', { url , status, statusText, headers });
+    throw new Error(message);
   }
   return json
 }
