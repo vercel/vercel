@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import plural from 'pluralize';
 import table from 'text-table';
 import Now from '../util/now';
 import getArgs from '../util/get-args';
@@ -71,6 +70,7 @@ export default async function main(ctx) {
       '--meta': [String],
       '-a': '--all',
       '-m': '--meta',
+      '--next': Number,
     });
   } catch (err) {
     handleError(err);
@@ -123,6 +123,13 @@ export default async function main(ctx) {
     throw err;
   }
 
+  const nextTimestamp = argv['--next'];
+
+  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
+    error('Please provide a number for flag `--next`');
+    return 1;
+  }
+
   const stopSpinner = wait(
     `Fetching deployments in ${chalk.bold(contextName)}`
   );
@@ -160,15 +167,21 @@ export default async function main(ctx) {
     host = asHost;
   }
 
-  let deployments;
+  let response;
 
   try {
     debug('Fetching deployments');
-    deployments = await now.list(app, { version: 5, meta });
+    response = await now.list(app, {
+      version: 6,
+      meta,
+      nextTimestamp,
+    });
   } catch (err) {
     stopSpinner();
     throw err;
   }
+
+  let { deployments, pagination } = response;
 
   if (app && !deployments.length) {
     debug(
@@ -201,11 +214,9 @@ export default async function main(ctx) {
 
   stopSpinner();
   log(
-    `Fetched ${plural(
-      'deployment',
-      deployments.length,
-      true
-    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+    `Deployments under ${chalk.bold(contextName)} ${elapsed(
+      Date.now() - start
+    )}`
   );
 
   // we don't output the table headers if we have no deployments
@@ -235,7 +246,7 @@ export default async function main(ctx) {
               getProjectName(dep),
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
               stateString(dep.state),
-              chalk.gray(ms(Date.now() - new Date(dep.created))),
+              chalk.gray(ms(Date.now() - new Date(dep.createdAt))),
               dep.creator.username,
             ],
           ])
@@ -257,6 +268,10 @@ export default async function main(ctx) {
       }
     ).replace(/^/gm, '  ')}\n\n`
   );
+
+  if (deployments.length === 20) {
+    log(`To display the next page use the flag --next ${pagination.next}`);
+  }
 }
 
 function getProjectName(d) {
@@ -288,7 +303,7 @@ function stateString(s) {
 // sorts by most recent deployment
 function sortRecent() {
   return function recencySort(a, b) {
-    return b.created - a.created;
+    return b.createdAt - a.createdAt;
   };
 }
 

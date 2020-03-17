@@ -221,7 +221,12 @@ export default class Now extends EventEmitter {
     {
       version = 4,
       meta = {},
-    }: { version?: number; meta?: Dictionary<string> } = {}
+      nextTimestamp,
+    }: {
+      version?: number;
+      meta?: Dictionary<string>;
+      nextTimestamp?: number;
+    } = {}
   ) {
     const fetchRetry = async (url: string, options: any = {}) => {
       return this.retry(
@@ -248,8 +253,8 @@ export default class Now extends EventEmitter {
     };
 
     if (!app && !Object.keys(meta).length) {
-      // Get the 35 latest projects and their latest deployment
-      const query = new URLSearchParams({ limit: (35).toString() });
+      // Get the 20 latest projects and their latest deployment
+      const query = new URLSearchParams({ limit: (20).toString() });
       const projects = await fetchRetry(`/v2/projects/?${query}`);
 
       const deployments = await Promise.all(
@@ -265,7 +270,7 @@ export default class Now extends EventEmitter {
         })
       );
 
-      return deployments.filter(x => x);
+      return { deployments: deployments.filter(x => x) };
     }
 
     const query = new URLSearchParams();
@@ -276,10 +281,14 @@ export default class Now extends EventEmitter {
 
     Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
 
-    const { deployments } = await fetchRetry(
-      `/v${version}/now/deployments?${query}`
-    );
-    return deployments;
+    query.set('limit', '20');
+
+    if (nextTimestamp) {
+      query.set('until', String(nextTimestamp));
+    }
+
+    const response = await fetchRetry(`/v${version}/now/deployments?${query}`);
+    return response;
   }
 
   async findDeployment(hostOrId: string) {
