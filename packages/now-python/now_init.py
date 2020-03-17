@@ -45,6 +45,7 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
 
         payload = json.loads(event['body'])
         path = unquote(payload['path'])
+        path = path.replace(' ', '%20')
         headers = payload['headers']
         method = payload['method']
         encoding = payload.get('encoding')

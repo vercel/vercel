@@ -1,4 +1,4 @@
-import { CantParseJSONFile } from '../errors-ts';
+import { CantParseJSONFile } from '../errors';
 import readJSONFile from '../read-json-file';
 import { Config } from '../../types';
 import getLocalConfigPath from './local-path';

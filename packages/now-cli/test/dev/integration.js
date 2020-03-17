@@ -247,12 +247,14 @@ function testFixtureStdio(directory, fn) {
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
           dev.kill('SIGTERM');
-          throw new Error(`Failed for "${directory}" with port ${port}.`);
+          throw new Error(
+            `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
+          );
         }
 
         if (stderr.includes('Command failed') || stderr.includes('Error!')) {
           dev.kill('SIGTERM');
-          throw new Error(`Failed for "${directory}".`);
+          throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });
 
@@ -412,28 +414,6 @@ test(
 );
 
 test(
-  '[now dev] does not display directory listing after multiple 404',
-  testFixtureStdio('handle-miss-multiple-404', async (t, port) => {
-    t.is((await fetch(`http://localhost:${port}/pathA/dir`)).status, 404);
-    t.is((await fetch(`http://localhost:${port}/pathB/dir`)).status, 404);
-    t.is((await fetch(`http://localhost:${port}/pathC/dir`)).status, 200);
-  })
-);
-
-test(
-  '[now dev] does not display directory listing after `handle: miss` and 404',
-  testFixtureStdio('handle-miss-handle-filesystem-404', async (t, port) => {
-    t.is((await fetch(`http://localhost:${port}/pathA/dir`)).status, 404);
-    t.is((await fetch(`http://localhost:${port}/pathB/dir`)).status, 404);
-    t.is((await fetch(`http://localhost:${port}/pathC/dir`)).status, 200);
-
-    t.is((await fetch(`http://localhost:${port}/pathA/dir/one`)).status, 200);
-    t.is((await fetch(`http://localhost:${port}/pathB/dir/two`)).status, 200);
-    t.is((await fetch(`http://localhost:${port}/pathC/dir/three`)).status, 200);
-  })
-);
-
-test(
   '[now dev] handles hit after handle: filesystem',
   testFixtureStdio('handle-hit-after-fs', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}/blog.html`);
@@ -483,6 +463,8 @@ test(
     t.regex(await rand.text(), /random number/gm);
     const rand2 = await fetchWithRetry(`http://localhost:${port}/api/rand.js`);
     t.regex(await rand2.text(), /random number/gm);
+    const notfound = await fetch(`http://localhost:${port}/api`);
+    t.is(notfound.status, 404);
   })
 );
 
@@ -605,6 +587,31 @@ test('[now dev] validate env var names', async t => {
 
   t.pass();
 });
+
+test(
+  '[now dev] test rewrites with segments serve correct content',
+  testFixtureStdio('test-rewrites-with-segments', async (t, port) => {
+    const users = await fetchWithRetry(
+      `http://localhost:${port}/api/users/first`,
+      3
+    );
+    t.regex(await users.text(), /first/gm);
+    const fourtytwo = await fetchWithRetry(
+      `http://localhost:${port}/api/fourty-two`,
+      3
+    );
+    t.regex(await fourtytwo.text(), /42/gm);
+    const rand = await fetchWithRetry(`http://localhost:${port}/rand`, 3);
+    t.regex(await rand.text(), /42/gm);
+    const dynamic = await fetchWithRetry(
+      `http://localhost:${port}/api/dynamic`,
+      3
+    );
+    t.regex(await dynamic.text(), /dynamic/gm);
+    const notfound = await fetch(`http://localhost:${port}/api`);
+    t.is(notfound.status, 404);
+  })
+);
 
 test(
   '[now dev] test rewrites serve correct content',
@@ -1367,6 +1374,20 @@ test('[now dev] 25-nextjs-src-dir', async t => {
     dev.kill('SIGTERM');
   }
 });
+
+test(
+  '[now dev] 26-nextjs-secrets',
+  testFixtureStdio('26-nextjs-secrets', async (t, port) => {
+    const user = await fetchWithRetry(`http://localhost:${port}/api/user`);
+    const index = await fetchWithRetry(`http://localhost:${port}`);
+
+    validateResponseHeaders(t, user);
+    validateResponseHeaders(t, index);
+
+    t.regex(await user.text(), new RegExp('runtime'));
+    t.regex(await index.text(), new RegExp('buildtime'));
+  })
+);
 
 test(
   '[now dev] Use `@now/python` with Flask requirements.txt',

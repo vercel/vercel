@@ -1,5 +1,5 @@
 import { DNSRecord } from '../../types';
-import { DomainNotFound } from '../errors-ts';
+import { DomainNotFound } from '../errors';
 import { Output } from '../output';
 import Client from '../client';
 import getDomainDNSRecords from './get-domain-dns-records';
@@ -19,8 +19,8 @@ export default async function getDNSRecords(
   const domainsRecords = await Promise.all(
     domainNames.map(createGetDomainRecords(output, client))
   );
-  const onlyRecords = domainsRecords.map(
-    item => ((item instanceof DomainNotFound) ? [] : item)
+  const onlyRecords = domainsRecords.map(item =>
+    item instanceof DomainNotFound ? [] : item
   ) as DNSRecord[][];
   return onlyRecords.reduce(getAddDomainName(domainNames), []);
 }
@@ -36,14 +36,12 @@ function getAddDomainName(domainNames: string[]) {
     ...prev,
     {
       domainName: domainNames[idx],
-      records: item.sort((a, b) => a.slug.localeCompare(b.slug))
-    }
+      records: item.sort((a, b) => a.slug.localeCompare(b.slug)),
+    },
   ];
 }
 
 async function getDomainNames(client: Client, contextName: string) {
   const domains = await getDomains(client, contextName);
-  return domains
-    .map(domain => domain.name)
-    .sort((a, b) => a.localeCompare(b));
+  return domains.map(domain => domain.name).sort((a, b) => a.localeCompare(b));
 }

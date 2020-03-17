@@ -1,4 +1,4 @@
-import url from 'url';
+import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
@@ -12,12 +12,17 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
+import {
+  getTransformedRoutes,
+  appendRoutesToPhase,
+  HandleValue,
+} from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import which from 'which';
+import { getNowIgnore } from 'now-client';
 
 import {
   Builder,
@@ -35,13 +40,9 @@ import { Output } from '../output';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
-import { MissingDotenvVarsError } from '../errors-ts';
+import { MissingDotenvVarsError } from '../errors';
 import { version as cliVersion } from '../../../package.json';
-import {
-  createIgnore,
-  staticFiles as getFiles,
-  getAllProjectFiles,
-} from '../get-files';
+import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
 import {
   validateNowConfigBuilds,
   validateNowConfigRoutes,
@@ -106,6 +107,7 @@ export default class DevServer {
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
+  public frameworkSlug: string | null;
   public files: BuilderInputs;
   public yarnPath: string;
   public address: string;
@@ -141,6 +143,7 @@ export default class DevServer {
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
+    this.frameworkSlug = options.frameworkSlug;
 
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
@@ -472,14 +475,11 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache, isInitialLoad);
+    this.getNowConfigPromise = this._getNowConfig(canUseCache);
     try {
       return await this.getNowConfigPromise;
     } finally {
@@ -487,10 +487,7 @@ export default class DevServer {
     }
   }
 
-  async _getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       return this.cachedNowConfig;
     }
@@ -553,6 +550,7 @@ export default class DevServer {
         errors,
         defaultRoutes,
         redirectRoutes,
+        rewriteRoutes,
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
@@ -582,17 +580,19 @@ export default class DevServer {
         const routes: RouteConfig[] = [];
         const { routes: nowConfigRoutes } = config;
         routes.push(...(redirectRoutes || []));
-        routes.push(...(nowConfigRoutes || []));
+        routes.push(
+          ...appendRoutesToPhase({
+            routes: nowConfigRoutes,
+            newRoutes: rewriteRoutes,
+            phase: 'filesystem',
+          })
+        );
         routes.push(...(defaultRoutes || []));
         config.routes = routes;
       }
     }
 
-    if (!config.builds || config.builds.length === 0) {
-      if (isInitialLoad && !this.devCommand) {
-        this.output.note(`Serving all files as static`);
-      }
-    } else if (Array.isArray(config.builds)) {
+    if (Array.isArray(config.builds)) {
       if (this.devCommand) {
         config.builds = config.builds.filter(filterFrontendBuilds);
       }
@@ -730,11 +730,11 @@ export default class DevServer {
 
     this.yarnPath = await getYarnPath(this.output);
 
-    const ig = await createIgnore(join(this.cwd, '.nowignore'));
+    const { ig } = await getNowIgnore(join(this.cwd, '.nowignore'));
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false, true);
+    const nowConfig = await this.getNowConfig(false);
     const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),
@@ -744,8 +744,7 @@ export default class DevServer {
     this.env = env;
     this.buildEnv = buildEnv;
 
-    const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowConfig, opts);
+    const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
@@ -1177,6 +1176,35 @@ export default class DevServer {
   };
 
   /**
+   * This is the equivalent to now-proxy exit_with_status() function.
+   */
+  exitWithStatus = async (
+    match: BuildMatch | null,
+    routeResult: RouteResult,
+    phase: HandleValue | null,
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    nowRequestId: string
+  ): Promise<boolean> => {
+    const { status, headers, dest } = routeResult;
+    const location = headers['location'] || dest;
+
+    if (status && location && (300 <= status && status <= 399)) {
+      this.output.debug(`Route found with redirect status code ${status}`);
+      await this.sendRedirect(req, res, nowRequestId, location, status);
+      return true;
+    }
+
+    if (!match && status && phase !== 'miss') {
+      this.output.debug(`Route found with with status code ${status}`);
+      await this.sendError(req, res, nowRequestId, '', status);
+      return true;
+    }
+
+    return false;
+  };
+
+  /**
    * Serve project directory as a Now v2 deployment.
    */
   serveProjectAsNowV2 = async (
@@ -1259,6 +1287,19 @@ export default class DevServer {
         this
       );
 
+      if (
+        await this.exitWithStatus(
+          match,
+          routeResult,
+          phase,
+          req,
+          res,
+          nowRequestId
+        )
+      ) {
+        return;
+      }
+
       if (!match && missRoutes.length > 0) {
         // Since there was no build match, enter the miss phase
         routeResult = await devRouter(
@@ -1277,6 +1318,18 @@ export default class DevServer {
           routeResult.dest,
           this
         );
+        if (
+          await this.exitWithStatus(
+            match,
+            routeResult,
+            phase,
+            req,
+            res,
+            nowRequestId
+          )
+        ) {
+          return;
+        }
       } else if (match && hitRoutes.length > 0) {
         // Since there was a build match, enter the hit phase.
         // The hit phase must not set status code.
@@ -1294,28 +1347,6 @@ export default class DevServer {
       }
 
       statusCode = routeResult.status;
-
-      if (match && statusCode === 404 && routeResult.phase === 'miss') {
-        statusCode = undefined;
-      }
-
-      const location = routeResult.headers['location'] || routeResult.dest;
-
-      if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
-        // Equivalent to now-proxy exit_with_status() function
-        this.output.debug(
-          `Route found with redirect status code ${statusCode}`
-        );
-        await this.sendRedirect(req, res, nowRequestId, location, statusCode);
-        return;
-      }
-
-      if (!match && statusCode && routeResult.phase !== 'miss') {
-        // Equivalent to now-proxy exit_with_status() function
-        this.output.debug(`Route found with with status code ${statusCode}`);
-        await this.sendError(req, res, nowRequestId, '', statusCode);
-        return;
-      }
 
       if (match) {
         // end the phase
@@ -1636,8 +1667,13 @@ export default class DevServer {
     const port = await getPort();
 
     const env: EnvConfig = {
+      // Because of child process 'pipe' below, isTTY will be false.
+      // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
+      FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
+      ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
       ...this.buildEnv,
+      ...(this.frameworkSlug === 'nextjs' ? this.env : {}),
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };
@@ -1674,7 +1710,24 @@ export default class DevServer {
 
     this.output.debug(`Spawning dev command: ${command}`);
 
-    const p = spawnCommand(command, { stdio: 'inherit', cwd, env });
+    const devPort = new URL(this.address).port;
+    const proxyPort = new RegExp(port.toString(), 'g');
+    const p = spawnCommand(command, {
+      stdio: ['inherit', 'pipe', 'pipe'],
+      cwd,
+      env,
+    });
+
+    if (!p.stdout || !p.stderr) {
+      throw new Error('Expected child process to have stdout and stderr');
+    }
+
+    p.stderr.pipe(process.stderr);
+    p.stdout.setEncoding('utf8');
+
+    p.stdout.on('data', (data: string) => {
+      process.stdout.write(data.replace(proxyPort, devPort));
+    });
 
     p.on('exit', () => {
       this.devProcessPort = undefined;

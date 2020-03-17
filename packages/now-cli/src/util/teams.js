@@ -1,4 +1,4 @@
-import Now from './index';
+import Now from './now';
 
 export default class Teams extends Now {
   async create({ slug }) {
@@ -10,8 +10,8 @@ export default class Teams extends Now {
       const res = await this._fetch(`/teams`, {
         method: 'POST',
         body: {
-          slug
-        }
+          slug,
+        },
       });
 
       if (this._debug) {
@@ -55,7 +55,7 @@ export default class Teams extends Now {
 
       const res = await this._fetch(`/teams/${id}`, {
         method: 'PATCH',
-        body: payload
+        body: payload,
       });
 
       if (this._debug) {
@@ -95,8 +95,8 @@ export default class Teams extends Now {
       const res = await this._fetch(`/teams/${teamId}/members`, {
         method: 'POST',
         body: {
-          email
-        }
+          email,
+        },
       });
 
       if (this._debug) {

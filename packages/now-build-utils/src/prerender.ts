@@ -4,7 +4,7 @@ import FileRef from './file-ref';
 import { Lambda } from './lambda';
 
 interface PrerenderOptions {
-  expiration: number;
+  expiration: number | false;
   lambda: Lambda;
   fallback: FileBlob | FileFsRef | FileRef | null;
   group?: number;
@@ -13,7 +13,7 @@ interface PrerenderOptions {
 
 export class Prerender {
   public type: 'Prerender';
-  public expiration: number;
+  public expiration: number | false;
   public lambda: Lambda;
   public fallback: FileBlob | FileFsRef | FileRef | null;
   public group?: number;

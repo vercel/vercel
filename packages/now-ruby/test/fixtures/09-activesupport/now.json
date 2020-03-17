@@ -1,0 +1,5 @@
+{
+  "version": 2,
+  "builds": [{ "src": "index.rb", "use": "@now/ruby" }],
+  "probes": [{ "path": "/", "mustContain": "gem:RANDOMNESS_PLACEHOLDER" }]
+}

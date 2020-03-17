@@ -4,7 +4,7 @@ import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
-import { ProjectNotFound } from '../errors-ts';
+import { ProjectNotFound } from '../errors';
 import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
@@ -68,33 +68,29 @@ export async function getLinkedOrg(
   | { status: 'not_linked'; org: null }
   | { status: 'error'; exitCode: number }
 > {
-  const { NOW_ORG_ID } = process.env;
-
-  let orgId: string | null = null;
-  if (NOW_ORG_ID) {
-    orgId = NOW_ORG_ID;
-  } else {
-    const link = await getLink(path);
-
-    if (link) {
-      orgId = link.orgId;
-    }
-  }
-
-  if (!orgId) {
-    return { status: 'not_linked', org: null };
-  }
-
   const spinner = output.spinner('Retrieving scope…', 1000);
   try {
+    const { NOW_ORG_ID } = process.env;
+
+    let orgId: string | null = null;
+    if (NOW_ORG_ID) {
+      orgId = NOW_ORG_ID;
+    } else {
+      const link = await getLink(path);
+
+      if (link) {
+        orgId = link.orgId;
+      }
+    }
+
+    if (!orgId) {
+      return { status: 'not_linked', org: null };
+    }
+
     const org = await getOrgById(client, orgId);
 
     if (!org && NOW_ORG_ID) {
-      output.print(
-        `${chalk.red('Error!')} Organization not found (${JSON.stringify({
-          NOW_ORG_ID,
-        })})\n`
-      );
+      output.error(`Organization not found (${JSON.stringify({ NOW_ORG_ID })}`);
       return { status: 'error', exitCode: 1 };
     }
 
@@ -103,8 +99,16 @@ export async function getLinkedOrg(
     }
 
     return { status: 'linked', org };
+  } catch (error) {
+    if (error.code === 'NOT_AUTHORIZED' || error.code === 'TEAM_DELETED') {
+      output.error(error.message);
+      return { status: 'error', exitCode: 1 };
+    }
+    throw error;
   } finally {
-    spinner();
+    if (spinner) {
+      spinner();
+    }
   }
 }
 
@@ -121,8 +125,8 @@ export async function getLinkedProject(
   const shouldUseEnv = Boolean(NOW_ORG_ID && NOW_PROJECT_ID);
 
   if ((NOW_ORG_ID || NOW_PROJECT_ID) && !shouldUseEnv) {
-    output.print(
-      `${chalk.red('Error!')} You specified ${
+    output.error(
+      `You specified ${
         NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
       } but you forgot to specify ${
         NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
@@ -154,8 +158,8 @@ export async function getLinkedProject(
 
   if (!org || !project || project instanceof ProjectNotFound) {
     if (shouldUseEnv) {
-      output.print(
-        `${chalk.red('Error!')} Project not found (${JSON.stringify({
+      output.error(
+        `Project not found (${JSON.stringify({
           NOW_PROJECT_ID,
           NOW_ORG_ID,
         })})\n`

@@ -1,7 +1,7 @@
 import ms from 'ms';
 import { parse } from 'psl';
 import chalk from 'chalk';
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import { Output } from '../output';
 import dnsTable from '../format-dns-table';
 
@@ -19,7 +19,7 @@ export default function handleCertError<T>(
       `Too many requests detected for ${error.meta.api} API. Try again in ${ms(
         error.meta.retryAfter * 1000,
         {
-          long: true
+          long: true,
         }
       )}.`
     );
@@ -66,9 +66,7 @@ export default function handleCertError<T>(
       output.print(
         `  ${chalk.cyan(`now certs issue --challenge-only <cns>`)}\n`
       );
-      output.print(
-        '  Read more: https://err.sh/now/dns-configuration-error\n'
-      );
+      output.print('  Read more: https://err.sh/now/dns-configuration-error\n');
     } else {
       output.print(
         `  We configured them for you, but the propagation may take a few minutes. Please try again later.\n`
