@@ -22,7 +22,6 @@ import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import which from 'which';
-import { getNowIgnore } from 'now-client';
 
 import {
   Builder,
@@ -40,9 +39,13 @@ import { Output } from '../output';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
-import { MissingDotenvVarsError } from '../errors';
+import { MissingDotenvVarsError } from '../errors-ts';
 import { version as cliVersion } from '../../../package.json';
-import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
+import {
+  createIgnore,
+  staticFiles as getFiles,
+  getAllProjectFiles,
+} from '../get-files';
 import {
   validateNowConfigBuilds,
   validateNowConfigRoutes,
@@ -730,7 +733,7 @@ export default class DevServer {
 
     this.yarnPath = await getYarnPath(this.output);
 
-    const { ig } = await getNowIgnore(join(this.cwd, '.nowignore'));
+    const ig = await createIgnore(join(this.cwd, '.nowignore'));
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
@@ -744,7 +747,8 @@ export default class DevServer {
     this.env = env;
     this.buildEnv = buildEnv;
 
-    const files = await getFiles(this.cwd, { output: this.output });
+    const opts = { output: this.output, isBuilds: true };
+    const files = await getFiles(this.cwd, nowConfig, opts);
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
