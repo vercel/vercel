@@ -20,6 +20,7 @@ import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
 import prepareFixtures from './helpers/prepare';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 // log command when running `execa`
 function execa(file, args, options) {
@@ -69,25 +70,6 @@ const waitForDeployment = async href => {
     await sleep(2000);
   }
 };
-
-function fetchTokenWithRetry(url, retries = 3) {
-  return retry(
-    async () => {
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data.token;
-    },
-    { retries, factor: 1 }
-  );
-}
 
 function fetchTokenInformation(token, retries = 3) {
   const url = `https://api.zeit.co/www/user`;

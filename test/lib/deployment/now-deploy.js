@@ -1,7 +1,9 @@
 const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
+const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry.js');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 
@@ -166,38 +168,30 @@ async function fetchWithAuth (url, opts = {}) {
   return await fetchApi(url, opts);
 }
 
-function fetchTokenWithRetry (url, retries = 4) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(
-          `Unexpected response from token factory: status ${res.status}`
-        );
-      }
-      const data = await res.json();
-      if (!data) {
-        throw new Error(`Unexpected response from token factory: no body`);
-      }
-      if (!data.token) {
-        throw new Error(
-          `Unexpected response from token factory: ${JSON.stringify(data)}`
-        );
-      }
-      resolve(data.token);
-    } catch (error) {
-      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
-      if (retries === 0) {
-        reject(error);
-        return;
-      }
-      setTimeout(() => {
-        fetchTokenWithRetry(url, retries - 1)
-          .then(resolve)
-          .catch(reject);
-      }, 500);
+async function fetchTokenWithRetry (url, retries = 4) {
+  try {
+    const res = await _fetch(url);
+    if (!res.ok) {
+      throw new Error(`Unexpected status from token factory: ${res.status}`);
     }
-  });
+    const data = await res.json();
+    if (!data) {
+      throw new Error(`Unexpected response from token factory: no body`);
+    }
+    if (!data.token) {
+      const text = JSON.stringify(data)
+      throw new Error(`Unexpected response from token factory: ${text}`);
+    }
+    return data.token;
+  } catch (error) {
+    console.log(`Failed to fetch token. Retries remaining: ${retries}`);
+    if (retries === 0) {
+      console.log(error);
+      throw error;
+    }
+    await sleep(500);
+    return fetchTokenWithRetry(url, retries - 1);
+  }
 }
 
 async function fetchApi (url, opts = {}) {
@@ -225,4 +219,5 @@ module.exports = {
   fetchApi,
   fetchWithAuth,
   nowDeploy,
+  fetchTokenWithRetry,
 };
