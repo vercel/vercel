@@ -28,7 +28,6 @@ function execa(file, args, options) {
   return _execa(file, args, options);
 }
 
-const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
@@ -174,8 +173,7 @@ const createUser = async () => {
   await retry(
     async () => {
       const location = getConfigPath();
-      const url = Buffer.from(str, 'base64').toString();
-      token = await fetchTokenWithRetry(url);
+      token = await fetchTokenWithRetry();
 
       if (!fs.existsSync(location)) {
         await createDirectory(location);
