@@ -23,7 +23,7 @@ export const NOW_PROJECT_LINK_FILE = 'project.json';
 
 const linkSchema = {
   type: 'object',
-  required: ['projectId', 'orgid'],
+  required: ['projectId', 'orgId'],
   properties: {
     projectId: {
       type: 'string',
