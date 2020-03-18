@@ -5,9 +5,6 @@ const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry.js');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const str =
-  'aHR0cHM6Ly96ZWl0LmNvL2FwaS9ub3cvcmVnaXN0cmF0aW9uL3Rlc3QtYWNjb3VudD9zbHVnPXplaXQ';
-
 async function nowDeploy(bodies, randomness) {
   const files = Object.keys(bodies)
     .filter(n => n !== 'now.json')
@@ -171,18 +168,18 @@ async function fetchWithAuth(url, opts = {}) {
 }
 
 async function fetchTokenWithRetry(retries = 5) {
-  const { NOW_TOKEN, ZEIT_TEAM_TOKEN } = process.env;
+  const { NOW_TOKEN, ZEIT_TEAM_TOKEN, ZEIT_REGISTRATION_URL } = process.env;
   if (NOW_TOKEN) {
     console.log('Using NOW_TOKEN for test deployment');
     return NOW_TOKEN;
   }
-  if (!ZEIT_TEAM_TOKEN) {
+  if (!ZEIT_TEAM_TOKEN || !ZEIT_REGISTRATION_URL) {
     throw new Error(
-      'Expected NOW_TOKEN or ZEIT_TEAM_TOKEN to create test deployments'
+      'Failed to create test deployment. Did you forget to set NOW_TOKEN?'
     );
   }
   try {
-    const res = await _fetch(Buffer.from(str, 'base64').toString(), {
+    const res = await _fetch(ZEIT_REGISTRATION_URL, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${ZEIT_TEAM_TOKEN}`,
