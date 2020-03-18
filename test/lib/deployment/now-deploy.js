@@ -166,12 +166,16 @@ async function fetchWithAuth (url, opts = {}) {
   return await fetchApi(url, opts);
 }
 
-function fetchTokenWithRetry (url, retries = 3) {
+function fetchTokenWithRetry (url, retries = 4) {
   return new Promise(async (resolve, reject) => {
     try {
       const res = await fetch(url);
       const data = await res.json();
-      resolve(data.token);
+      if (res.status === 200 && data && data.token) {
+        resolve(data.token);
+      } else {
+        throw new Error('Unexpected response from token factory');
+      }
     } catch (error) {
       console.log(`Failed to fetch token. Retries remaining: ${retries}`);
       if (retries === 0) {
