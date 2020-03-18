@@ -1,15 +1,12 @@
 import { basename } from 'path';
-import { NowConfig } from './dev/types';
-import { Dictionary } from 'now-client';
 
-interface Options {
-  argv: Dictionary<any>;
-  nowConfig: NowConfig;
-  isFile: boolean;
-  paths: string[];
-}
-
-export function getProjectName({ argv, nowConfig, isFile, paths }: Options) {
+export default function getProjectName({
+  argv,
+  nowConfig,
+  isFile,
+  paths,
+  pre,
+}) {
   const nameCli = argv['--name'] || argv.name;
 
   if (nameCli) {
@@ -18,6 +15,12 @@ export function getProjectName({ argv, nowConfig, isFile, paths }: Options) {
 
   if (nowConfig.name) {
     return nowConfig.name;
+  }
+
+  // For the legacy deployment pipeline, the name might have already
+  // been determined using `package.json`.
+  if (pre) {
+    return pre;
   }
 
   if (isFile || paths.length > 1) {

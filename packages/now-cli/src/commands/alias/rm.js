@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Now from '../../util/now';
+import Now from '../../util';
 import cmd from '../../util/output/cmd.ts';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
@@ -39,6 +39,7 @@ export default async function rm(ctx, opts, args, output) {
     throw err;
   }
 
+  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const [aliasOrId] = args;
 

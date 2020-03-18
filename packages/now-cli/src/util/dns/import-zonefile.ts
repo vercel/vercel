@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { Response } from 'node-fetch';
-import { DomainNotFound, InvalidDomain } from '../errors';
+import { DomainNotFound, InvalidDomain } from '../errors-ts';
 import Client from '../client';
 import wait from '../output/wait';
 
