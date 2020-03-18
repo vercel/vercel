@@ -2424,7 +2424,7 @@ test('whoami with local .now scope', async t => {
   await ensureDir(path.join(directory, '.now'));
   await fs.writeFile(
     path.join(directory, '.now', 'project.json'),
-    JSON.stringify({ orgId: user.uid })
+    JSON.stringify({ orgId: user.uid, projectId: 'xxx' })
   );
 
   const output = await execute(['whoami'], {
