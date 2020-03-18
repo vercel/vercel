@@ -867,6 +867,7 @@ export default class DevServer {
    * Shuts down the `now dev` server, and cleans up any temporary resources.
    */
   async stop(exitCode?: number): Promise<void> {
+    const { devProcess } = this;
     if (this.stopping) return;
 
     this.stopping = true;
@@ -883,17 +884,22 @@ export default class DevServer {
       ops.push(shutdownBuilder(match, this.output));
     }
 
-    ops.push(
-      new Promise(resolve => {
-        if (!this.devProcess) {
-          resolve();
-          return;
-        }
-
-        this.devProcess.on('exit', () => resolve());
-        process.kill(this.devProcess.pid, exitCode);
-      })
-    );
+    if (devProcess) {
+      ops.push(
+        new Promise((resolve, reject) => {
+          devProcess.once('exit', () => resolve());
+          try {
+            process.kill(devProcess.pid);
+          } catch (err) {
+            if (err.code === 'ESRCH') {
+              // Process already exited
+              return resolve();
+            }
+            reject(err);
+          }
+        })
+      );
+    }
 
     ops.push(close(this.server));
 
