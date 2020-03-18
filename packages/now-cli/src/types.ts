@@ -4,10 +4,6 @@ export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
 export type Config = NowConfig;
 
-export interface Dictionary<T> {
-  [key: string]: T;
-}
-
 export interface NowContext {
   argv: string[];
   apiUrl: string;
@@ -106,7 +102,7 @@ export type DeploymentScale = {
 };
 
 export type NpmDeployment = {
-  id: string;
+  uid: string;
   url: string;
   name: string;
   type: 'NPM';
@@ -119,7 +115,7 @@ export type NpmDeployment = {
 };
 
 export type StaticDeployment = {
-  id: string;
+  uid: string;
   url: string;
   name: string;
   type: 'STATIC';
@@ -131,7 +127,7 @@ export type StaticDeployment = {
 };
 
 export type DockerDeployment = {
-  id: string;
+  uid: string;
   url: string;
   name: string;
   type: 'DOCKER';

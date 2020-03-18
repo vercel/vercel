@@ -22,11 +22,6 @@ describe('create v2 deployment', () => {
           method: 'DELETE',
         }
       );
-
-      if (!response.ok) {
-        console.error(await response.text());
-      }
-
       expect(response.status).toEqual(200);
     }
   });
@@ -160,8 +155,8 @@ describe('create v2 deployment', () => {
     expect(deployment.readyState).toEqual('READY');
 
     const index = await fetch_(`https://${deployment.url}`);
-    expect(await index.text()).toBe('Hello World!');
     expect(index.status).toBe(200);
+    expect(await index.text()).toBe('Hello World!');
 
     const ignore1 = await fetch_(`https://${deployment.url}/ignore.txt`);
     expect(ignore1.status).toBe(404);

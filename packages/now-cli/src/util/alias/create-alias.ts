@@ -1,6 +1,6 @@
 import { Deployment } from '../../types';
 import { Output } from '../output';
-import * as ERRORS from '../errors';
+import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
 
@@ -62,7 +62,7 @@ async function performCreateAlias(
 ) {
   try {
     return await client.fetch<AliasRecord>(
-      `/now/deployments/${deployment.id}/aliases`,
+      `/now/deployments/${deployment.uid}/aliases`,
       {
         method: 'POST',
         body: { alias },
@@ -78,7 +78,7 @@ async function performCreateAlias(
     if (error.code === 'deployment_not_found') {
       return new ERRORS.DeploymentNotFound({
         context: contextName,
-        id: deployment.id,
+        id: deployment.uid,
       });
     }
     if (error.code === 'gone') {
