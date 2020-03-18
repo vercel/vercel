@@ -12,6 +12,7 @@ import { Project } from '../../types';
 import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
 import { prependEmoji, emoji } from '../emoji';
+import AJV from 'ajv';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -20,6 +21,21 @@ export const NOW_FOLDER = '.now';
 export const NOW_FOLDER_README = 'README.txt';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
 
+const linkSchema = {
+  type: 'object',
+  required: ['projectId', 'orgId'],
+  properties: {
+    projectId: {
+      type: 'string',
+      minLength: 1,
+    },
+    orgId: {
+      type: 'string',
+      minLength: 1,
+    },
+  },
+};
+
 async function getLink(path?: string): Promise<ProjectLink | null> {
   try {
     const json = await readFile(
@@ -27,7 +43,14 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
       { encoding: 'utf8' }
     );
 
+    const ajv = new AJV();
     const link: ProjectLink = JSON.parse(json);
+
+    if (!ajv.validate(linkSchema, link)) {
+      throw new Error(
+        'Now project settings are invalid. To link your project again, remove the `.now` directory.'
+      );
+    }
 
     return link;
   } catch (error) {
