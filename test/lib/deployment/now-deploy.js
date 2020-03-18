@@ -170,12 +170,21 @@ function fetchTokenWithRetry (url, retries = 4) {
   return new Promise(async (resolve, reject) => {
     try {
       const res = await fetch(url);
-      const data = await res.json();
-      if (res.status === 200 && data && data.token) {
-        resolve(data.token);
-      } else {
-        throw new Error('Unexpected response from token factory');
+      if (!res.ok) {
+        throw new Error(
+          `Unexpected response from token factory: status ${res.status}`
+        );
       }
+      const data = await res.json();
+      if (!data) {
+        throw new Error(`Unexpected response from token factory: no body`);
+      }
+      if (!data.token) {
+        throw new Error(
+          `Unexpected response from token factory: ${JSON.stringify(data)}`
+        );
+      }
+      resolve(data.token);
     } catch (error) {
       console.log(`Failed to fetch token. Retries remaining: ${retries}`);
       if (retries === 0) {
