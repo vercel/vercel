@@ -140,7 +140,7 @@ export async function getLinkedProject(
       ? { orgId: NOW_ORG_ID, projectId: NOW_PROJECT_ID }
       : await getLink(path);
 
-  if (!link) {
+  if (!link || !link.orgId) {
     return { status: 'not_linked', org: null, project: null };
   }
 
