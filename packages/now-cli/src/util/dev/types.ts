@@ -18,7 +18,8 @@ export { NowConfig };
 export interface DevServerOptions {
   output: Output;
   debug: boolean;
-  devCommand?: string;
+  devCommand: string | undefined;
+  frameworkSlug: string | null;
 }
 
 export interface EnvConfig {

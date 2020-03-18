@@ -3,6 +3,10 @@
     {
       "source": "/",
       "destination": "/api/frameworks"
+    },
+    {
+      "source": "/api/v1/frameworks",
+      "destination": "/api/frameworks"
     }
   ],
   "env": {

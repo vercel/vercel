@@ -25,6 +25,9 @@ export type Source = {
 
 export type Handler = {
   handle: HandleValue;
+  src?: string;
+  dest?: string;
+  status?: number;
 };
 
 export type Route = Source | Handler;

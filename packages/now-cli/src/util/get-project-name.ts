@@ -1,8 +1,9 @@
 import { basename } from 'path';
 import { NowConfig } from './dev/types';
+import { Dictionary } from 'now-client';
 
 interface Options {
-  argv: { [key: string]: string };
+  argv: Dictionary<any>;
   nowConfig: NowConfig;
   isFile: boolean;
   paths: string[];

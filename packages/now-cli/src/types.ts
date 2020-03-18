@@ -240,6 +240,7 @@ export interface Project {
   devCommand?: string | null;
   framework?: string | null;
   rootDirectory?: string | null;
+  latestDeployments?: Partial<Deployment>[];
 }
 
 export interface Org {
