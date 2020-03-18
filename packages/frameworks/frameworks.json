@@ -62,6 +62,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hexo.svg",
     "tagline": "Hexo is a fast, simple & powerful blog framework powered by Node.js.",
     "description": "A Hexo site, created with the Hexo CLI.",
+    "website": "https://hexo.io/",
     "detectors": {
       "every": [
         {
@@ -89,6 +90,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/eleventy.svg",
     "tagline": "11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.",
     "description": "An Eleventy site, created with npm init.",
+    "website": "https://www.11ty.dev/",
     "detectors": {
       "every": [
         {
@@ -116,6 +118,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
     "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
     "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
+    "website": "https://docusaurus.io/",
     "detectors": {
       "some": [
         {
@@ -175,6 +178,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ember.svg",
     "tagline": "Ember.js helps webapp developers be more productive out of the box.",
     "description": "An Ember app, created with the Ember CLI.",
+    "website": "https://emberjs.com/",
     "detectors": {
       "every": [
         {
@@ -229,6 +233,7 @@
     "demo": "https://scully.now-examples.now.sh",
     "tagline": "Scully is a static site generator for Angular.",
     "description": "The Static Site Generator for Angular apps.",
+    "website": "https://github.com/scullyio/scully",
     "detectors": {
       "every": [
         {
@@ -284,6 +289,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/polymer.svg",
     "tagline": "Polymer is an open-source webapps library from Google, for building using Web Components.",
     "description": "A Polymer app, created with the Polymer CLI.",
+    "website": "https://www.polymer-project.org/",
     "detectors": {
       "every": [
         {
@@ -399,6 +405,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gridsome.svg",
     "tagline": "Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default.",
     "description": "A Gridsome app, created with the Gridsome CLI.",
+    "website": "https://gridsome.org/",
     "detectors": {
       "every": [
         {
@@ -482,6 +489,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/saber.svg",
     "tagline": "Saber is a framework for building static sites in Vue.js that supports data from any source.",
     "description": "A Saber site, created with npm init.",
+    "website": "https://saber.land/",
     "detectors": {
       "every": [
         {
@@ -509,6 +517,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/stencil.svg",
     "tagline": "Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems.",
     "description": "A Stencil site, created with the Stencil CLI.",
+    "website": "https://stenciljs.com/",
     "detectors": {
       "every": [
         {
@@ -597,6 +606,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/jekyll.svg",
     "tagline": "Jekyll makes it super easy to transform your plain text into static websites and blogs.",
     "description": "A Jekyll site, created with the Jekyll CLI.",
+    "website": "https://jekyllrb.com/",
     "detectors": {
       "every": [
         {
@@ -623,6 +633,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/brunch.svg",
     "tagline": "Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development.",
     "description": "A Brunch app, created with the Brunch CLI.",
+    "website": "https://brunch.io/",
     "detectors": {
       "every": [
         {
@@ -649,6 +660,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/middleman.svg",
     "tagline": "Middleman is a static site generator that uses all the shortcuts and tools in modern web development.",
     "description": "A Middleman app, created with the Middleman CLI.",
+    "website": "https://middlemanapp.com/",
     "detectors": {
       "every": [
         {
