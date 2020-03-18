@@ -542,10 +542,6 @@ export default class Now extends EventEmitter {
     return this._id;
   }
 
-  get url() {
-    return `https://${this._host}`;
-  }
-
   get fileCount() {
     return this._fileCount;
   }
