@@ -1,14 +1,16 @@
 const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
+const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry.js');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 
-async function nowDeploy (bodies, randomness) {
+async function nowDeploy(bodies, randomness) {
   const files = Object.keys(bodies)
-    .filter((n) => n !== 'now.json')
-    .map((n) => ({
+    .filter(n => n !== 'now.json')
+    .map(n => ({
       sha: digestOfFile(bodies[n]),
       size: bodies[n].length,
       file: n,
@@ -35,7 +37,7 @@ async function nowDeploy (bodies, randomness) {
   };
 
   if (process.env.FORCE_BUILD_IN_REGION) {
-    const { builds=[] } = nowDeployPayload;
+    const { builds = [] } = nowDeployPayload;
     builds.forEach(b => {
       if (!b.config) {
         b.config = {};
@@ -55,7 +57,8 @@ async function nowDeploy (bodies, randomness) {
 
   {
     const json = await deploymentPost(nowDeployPayload);
-    if (json.error && json.error.code === 'missing_files') throw new Error('Missing files');
+    if (json.error && json.error.code === 'missing_files')
+      throw new Error('Missing files');
     deploymentId = json.id;
     deploymentUrl = json.url;
   }
@@ -65,21 +68,22 @@ async function nowDeploy (bodies, randomness) {
 
   for (let i = 0; i < 750; i += 1) {
     const { state } = await deploymentGet(deploymentId);
-    if (state === 'ERROR') throw new Error(`State of ${deploymentUrl} is ${state}`);
+    if (state === 'ERROR')
+      throw new Error(`State of ${deploymentUrl} is ${state}`);
     if (state === 'READY') break;
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   return { deploymentId, deploymentUrl };
 }
 
-function digestOfFile (body) {
+function digestOfFile(body) {
   return createHash('sha1')
     .update(body)
     .digest('hex');
 }
 
-async function filePost (body, digest) {
+async function filePost(body, digest) {
   assert(Buffer.isBuffer(body));
 
   const headers = {
@@ -102,13 +106,13 @@ async function filePost (body, digest) {
   if (json.error) {
     const { status, statusText, headers } = resp;
     const { message } = json.error;
-    console.log('Fetch Error', { url , status, statusText, headers, digest });
+    console.log('Fetch Error', { url, status, statusText, headers, digest });
     throw new Error(message);
   }
   return json;
 }
 
-async function deploymentPost (payload) {
+async function deploymentPost(payload) {
   const url = '/v6/now/deployments?forceNew=1';
   const resp = await fetchWithAuth(url, {
     method: 'POST',
@@ -120,30 +124,30 @@ async function deploymentPost (payload) {
   if (json.error) {
     const { status, statusText, headers } = resp;
     const { message } = json.error;
-    console.log('Fetch Error', { url , status, statusText, headers });
+    console.log('Fetch Error', { url, status, statusText, headers });
     throw new Error(message);
   }
   return json;
 }
 
-async function deploymentGet (deploymentId) {
+async function deploymentGet(deploymentId) {
   const url = `/v3/now/deployments/${deploymentId}`;
   const resp = await fetchWithAuth(url);
   const json = await resp.json();
   if (json.error) {
     const { status, statusText, headers } = resp;
     const { message } = json.error;
-    console.log('Fetch Error', { url , status, statusText, headers });
+    console.log('Fetch Error', { url, status, statusText, headers });
     throw new Error(message);
   }
-  return json
+  return json;
 }
 
 let token;
 let currentCount = 0;
 const MAX_COUNT = 10;
 
-async function fetchWithAuth (url, opts = {}) {
+async function fetchWithAuth(url, opts = {}) {
   if (!opts.headers) opts.headers = {};
 
   if (!opts.headers.Authorization) {
@@ -166,28 +170,33 @@ async function fetchWithAuth (url, opts = {}) {
   return await fetchApi(url, opts);
 }
 
-function fetchTokenWithRetry (url, retries = 3) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      resolve(data.token);
-    } catch (error) {
-      console.log(`Failed to fetch token. Retries remaining: ${retries}`);
-      if (retries === 0) {
-        reject(error);
-        return;
-      }
-      setTimeout(() => {
-        fetchTokenWithRetry(url, retries - 1)
-          .then(resolve)
-          .catch(reject);
-      }, 500);
+async function fetchTokenWithRetry(url, retries = 5) {
+  try {
+    const res = await _fetch(url);
+    if (!res.ok) {
+      throw new Error(`Unexpected status from token factory: ${res.status}`);
     }
-  });
+    const data = await res.json();
+    if (!data) {
+      throw new Error(`Unexpected response from token factory: no body`);
+    }
+    if (!data.token) {
+      const text = JSON.stringify(data);
+      throw new Error(`Unexpected response from token factory: ${text}`);
+    }
+    return data.token;
+  } catch (error) {
+    console.log(`Failed to fetch token. Retries remaining: ${retries}`);
+    if (retries === 0) {
+      console.log(error);
+      throw error;
+    }
+    await sleep(500);
+    return fetchTokenWithRetry(url, retries - 1);
+  }
 }
 
-async function fetchApi (url, opts = {}) {
+async function fetchApi(url, opts = {}) {
   const apiHost = process.env.API_HOST || 'api.zeit.co';
   const urlWithHost = `https://${apiHost}${url}`;
   const { method = 'GET', body } = opts;
@@ -212,4 +221,5 @@ module.exports = {
   fetchApi,
   fetchWithAuth,
   nowDeploy,
+  fetchTokenWithRetry,
 };
