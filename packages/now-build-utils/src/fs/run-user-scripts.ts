@@ -244,6 +244,11 @@ export async function runBundleInstall(
 
   await spawnAsync(
     'bundle',
+    ['config', 'path', 'vendor/bundle']
+  );
+
+  await spawnAsync(
+    'bundle',
     args.concat([
       'install',
       '--no-prune',
