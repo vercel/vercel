@@ -355,7 +355,11 @@ export const build = async ({
     .join('/', entryDirectory)
     .replace(/\/+$/, '');
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const routesManifest = await getRoutesManifest(
+    entryPath,
+    outputDirectory,
+    realNextVersion
+  );
   const prerenderManifest = await getPrerenderManifest(entryPath);
   const headers: Route[] = [];
   const rewrites: Route[] = [];
