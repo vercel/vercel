@@ -1,6 +1,6 @@
 {
   "name": "@now/frameworks",
-  "version": "0.0.11-canary.1",
+  "version": "0.0.11-canary.2",
   "main": "frameworks.json",
   "license": "UNLICENSED"
 }
