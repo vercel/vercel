@@ -1,8 +1,8 @@
 {
-  "name": "gohugo-default-theme",
+  "name": "31-gohugo-default-theme",
   "version": "1.0.0",
   "description": "Base Theme to start Hugo Sites",
-  "main": "index.js",  
+  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/theNewDynamic/thenewdynamic.com.git"
