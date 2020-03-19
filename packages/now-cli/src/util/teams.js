@@ -1,4 +1,4 @@
-import Now from './now';
+import Now from './index';
 
 export default class Teams extends Now {
   async create({ slug }) {

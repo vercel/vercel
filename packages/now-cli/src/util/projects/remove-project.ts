@@ -1,5 +1,5 @@
 import Client from '../client';
-import { ProjectNotFound } from '../errors';
+import { ProjectNotFound } from '../errors-ts';
 
 export default async function removeProject(
   client: Client,
