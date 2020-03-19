@@ -327,7 +327,7 @@ export default async function main(ctx) {
     ).replace(/^/gm, '  ')}\n\n`
   );
 
-  if (deployments.length === 20) {
+  if (pagination && deployments.length === 20) {
     log(`To display the next page use the flag --next ${pagination.next}`);
   }
 }
