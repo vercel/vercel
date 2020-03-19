@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors';
+import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import { NowContext, Domain } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
@@ -12,7 +12,7 @@ import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
-import * as ERRORS from '../../util/errors';
+import * as ERRORS from '../../util/errors-ts';
 import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import setCustomSuffix from '../../util/domains/set-custom-suffix';
