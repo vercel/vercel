@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import { hostname } from 'os';
-import { InvalidEmail, AccountNotFound } from '../errors';
+import { InvalidEmail, AccountNotFound } from '../errors-ts';
 import ua from '../ua';
 
 type LoginData = {
