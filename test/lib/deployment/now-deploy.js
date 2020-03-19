@@ -5,8 +5,6 @@ const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry.js');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
-
 async function nowDeploy(bodies, randomness) {
   const files = Object.keys(bodies)
     .filter(n => n !== 'now.json')
@@ -158,9 +156,8 @@ async function fetchWithAuth(url, opts = {}) {
         // used for health checks
         token = process.env.NOW_TOKEN;
       } else {
-        token = await fetchTokenWithRetry(
-          Buffer.from(str, 'base64').toString()
-        );
+        // used by GH Actions
+        token = await fetchTokenWithRetry();
       }
     }
 
@@ -170,19 +167,34 @@ async function fetchWithAuth(url, opts = {}) {
   return await fetchApi(url, opts);
 }
 
-async function fetchTokenWithRetry(url, retries = 5) {
+async function fetchTokenWithRetry(retries = 5) {
+  const { NOW_TOKEN, ZEIT_TEAM_TOKEN, ZEIT_REGISTRATION_URL } = process.env;
+  if (NOW_TOKEN) {
+    console.log('Using NOW_TOKEN for test deployment');
+    return NOW_TOKEN;
+  }
+  if (!ZEIT_TEAM_TOKEN || !ZEIT_REGISTRATION_URL) {
+    throw new Error(
+      'Failed to create test deployment. Did you forget to set NOW_TOKEN?'
+    );
+  }
   try {
-    const res = await _fetch(url);
+    const res = await _fetch(ZEIT_REGISTRATION_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${ZEIT_TEAM_TOKEN}`,
+      },
+    });
     if (!res.ok) {
-      throw new Error(`Unexpected status from token factory: ${res.status}`);
+      throw new Error(`Unexpected status from registration: ${res.status}`);
     }
     const data = await res.json();
     if (!data) {
-      throw new Error(`Unexpected response from token factory: no body`);
+      throw new Error(`Unexpected response from registration: no body`);
     }
     if (!data.token) {
       const text = JSON.stringify(data);
-      throw new Error(`Unexpected response from token factory: ${text}`);
+      throw new Error(`Unexpected response from registration: ${text}`);
     }
     return data.token;
   } catch (error) {
@@ -192,7 +204,7 @@ async function fetchTokenWithRetry(url, retries = 5) {
       throw error;
     }
     await sleep(500);
-    return fetchTokenWithRetry(url, retries - 1);
+    return fetchTokenWithRetry(retries - 1);
   }
 }
 
