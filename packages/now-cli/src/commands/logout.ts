@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import fetch from 'node-fetch';
 import logo from '../util/output/logo';
+// @ts-ignore
 import { handleError } from '../util/error';
 import {
   readConfigFile,

@@ -3,13 +3,14 @@ import ms from 'ms';
 import plural from 'pluralize';
 import psl from 'psl';
 import table from 'text-table';
-import Now from '../../util/now';
+// @ts-ignore
+import Now from '../../util';
 import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
-import { CertNotFound } from '../../util/errors';
+import { CertNotFound } from '../../util/errors-ts';
 import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
 import { NowContext, Cert } from '../../types';

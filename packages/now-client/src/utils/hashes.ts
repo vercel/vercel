@@ -1,6 +1,6 @@
+import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import { Sema } from 'async-sema';
-import { createHash } from 'crypto';
 
 export interface DeploymentFile {
   names: string[];
