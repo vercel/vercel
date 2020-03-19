@@ -1,15 +1,10 @@
 import chalk from 'chalk';
 import { metrics, shouldCollectMetrics } from '../metrics';
-
-interface ApiError {
-  message: string;
-  slug?: string;
-  link?: string;
-}
+import { APIError } from '../errors-ts';
 
 const metric = metrics();
 
-export default function error(...input: string[] | [ApiError]) {
+export default function error(...input: string[] | [APIError]) {
   let messages = input;
   if (typeof input[0] === 'object') {
     const { slug, message, link } = input[0];
