@@ -7,7 +7,7 @@ import { parse } from 'url';
  * google.com => google.com
  */
 
-export function toHost(url: string) {
+function toHost(url: string) {
   if (/^https?:\/\//.test(url)) {
     return parse(url).host;
   }
@@ -16,3 +16,5 @@ export function toHost(url: string) {
   // `a.b.c/` => `a.b.c`
   return url.replace(/(\/\/)?([^/]+)(.*)/, '$2');
 }
+
+export default toHost;

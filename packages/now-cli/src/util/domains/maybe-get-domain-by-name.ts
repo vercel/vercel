@@ -1,4 +1,4 @@
-import { DomainPermissionDenied, DomainNotFound } from '../errors';
+import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
 import getDomainByName from './get-domain-by-name';
 import Client from '../client';
 

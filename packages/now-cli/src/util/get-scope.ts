@@ -1,7 +1,7 @@
 import Client from './client';
 import getUser from './get-user';
 import getTeamById from './get-team-by-id';
-import { TeamDeleted } from './errors';
+import { TeamDeleted } from './errors-ts';
 
 export default async function getScope(client: Client) {
   const user = await getUser(client);
