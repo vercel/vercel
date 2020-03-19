@@ -4,7 +4,7 @@ import { Output } from '../output';
 import Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';
-import { InvalidDomain } from '../errors';
+import { InvalidDomain } from '../errors-ts';
 
 export default async function generateCertForDeploy(
   output: Output,

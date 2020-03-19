@@ -1,4 +1,4 @@
-import * as ERRORS from '../errors';
+import * as ERRORS from '../errors-ts';
 
 export default function mapCertError(error: any, cns?: string[]) {
   const errorCode: string = error.code;

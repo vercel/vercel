@@ -1,5 +1,5 @@
 import path from 'path';
-import { CantParseJSONFile } from './errors';
+import { CantParseJSONFile } from './errors-ts';
 import readJSONFile from './read-json-file';
 import { Config } from '../types';
 import { PackageJson } from '@now/build-utils';
