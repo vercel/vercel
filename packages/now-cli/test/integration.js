@@ -1862,11 +1862,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
   const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /Functions must have a memory value between 128 and 3008 in steps of 64\./gm,
-    formatOutput(output)
-  );
+  t.regex(output.stderr, /in steps of 64\./gm, formatOutput(output));
 });
 
 test('deploy a Lambda with 3 seconds of maxDuration', async t => {
