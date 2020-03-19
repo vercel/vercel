@@ -501,6 +501,13 @@ export const build = async ({
         // User redirects
         ...redirects,
 
+        // Make sure to 404 for the /404 path itself
+        {
+          src: path.join('/', entryDirectory, '404'),
+          status: 404,
+          continue: true,
+        },
+
         // Next.js pages, `static/` folder, reserved assets, and `public/`
         // folder
         { handle: 'filesystem' },
@@ -1162,6 +1169,13 @@ export const build = async ({
 
       // redirects
       ...redirects,
+
+      // Make sure to 404 for the /404 path itself
+      {
+        src: path.join('/', entryDirectory, '404'),
+        status: 404,
+        continue: true,
+      },
 
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
