@@ -13,6 +13,7 @@ import code from './output/code';
 export class APIError extends Error {
   status: number;
   serverMessage: string;
+  link?: string;
   retryAfter: number | null | 'never';
   [key: string]: any;
 
