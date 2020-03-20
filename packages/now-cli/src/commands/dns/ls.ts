@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import { Output } from '../../util/output';
-import { DomainNotFound } from '../../util/errors';
+import { DomainNotFound } from '../../util/errors-ts';
 import { ThenArg, DNSRecord, NowContext } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';

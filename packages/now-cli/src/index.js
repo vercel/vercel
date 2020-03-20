@@ -43,7 +43,7 @@ import { handleError } from './util/error';
 import highlight from './util/output/highlight';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
-import * as ERRORS from './util/errors';
+import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
@@ -519,7 +519,12 @@ const main = async argv_ => {
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
-  if (process.env.NOW_ORG_ID || !scope) {
+  const targetCommand = commands.get(subcommand);
+
+  if (
+    !['login', 'logout'].includes(targetCommand) &&
+    (process.env.NOW_ORG_ID || !scope)
+  ) {
     const client = new Client({ apiUrl, token });
     const link = await getLinkedOrg(client, output);
 
@@ -531,8 +536,6 @@ const main = async argv_ => {
       scope = link.org.slug;
     }
   }
-
-  const targetCommand = commands.get(subcommand);
 
   if (
     typeof scope === 'string' &&

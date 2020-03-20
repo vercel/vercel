@@ -3,7 +3,7 @@ import Client from '../client';
 import { Output } from '../output';
 import { Cert } from '../../types';
 import getCertById from './get-cert-by-id';
-import { CertNotFound } from '../errors';
+import { CertNotFound } from '../errors-ts';
 
 type Response = {
   certs: Cert[];

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors';
+import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
