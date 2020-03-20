@@ -21,8 +21,10 @@
   },
   "devDependencies": {
     "@types/fs-extra": "8.0.0",
+    "@types/semver": "6.0.0",
     "execa": "2.0.4",
     "fs-extra": "^7.0.1",
+    "semver": "6.1.1",
     "typescript": "3.5.2"
   }
 }
