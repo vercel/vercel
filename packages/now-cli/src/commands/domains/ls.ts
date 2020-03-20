@@ -68,7 +68,7 @@ export default async function ls(
     console.log(`${formatDomainsTable(domains)}\n`);
   }
 
-  if (domains.length === 20) {
+  if (pagination && domains.length === 20) {
     output.log(
       `To display the next page use the flag --next ${pagination.next}`
     );
