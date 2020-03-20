@@ -101,7 +101,7 @@ export default async function ls(ctx, opts, args, output) {
     console.log(printAliasTable(aliases));
   }
 
-  if (aliases.length === 20) {
+  if (pagination && aliases.length === 20) {
     output.log(
       `To display the next page use the flag --next ${pagination.next}`
     );
