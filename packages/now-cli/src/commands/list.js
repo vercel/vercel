@@ -1,9 +1,10 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import plural from 'pluralize';
 import table from 'text-table';
-import Now from '../util/now';
+import Now from '../util';
+import getAliases from '../util/alias/get-aliases';
 import getArgs from '../util/get-args';
+import getDeploymentInstances from '../util/deploy/get-deployment-instances';
 import createOutput from '../util/output';
 import { handleError } from '../util/error';
 import cmd from '../util/output/cmd.ts';
@@ -13,7 +14,7 @@ import wait from '../util/output/wait';
 import strlen from '../util/strlen.ts';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
-import { toHost } from '../util/to-host';
+import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
 
@@ -62,6 +63,8 @@ const help = () => {
 `);
 };
 
+// Options
+// $FlowFixMe
 export default async function main(ctx) {
   let argv;
 
@@ -71,6 +74,7 @@ export default async function main(ctx) {
       '--meta': [String],
       '-a': '--all',
       '-m': '--meta',
+      '--next': Number,
     });
   } catch (err) {
     handleError(err);
@@ -123,6 +127,13 @@ export default async function main(ctx) {
     throw err;
   }
 
+  const nextTimestamp = argv['--next'];
+
+  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
+    error('Please provide a number for flag `--next`');
+    return 1;
+  }
+
   const stopSpinner = wait(
     `Fetching deployments in ${chalk.bold(contextName)}`
   );
@@ -160,15 +171,21 @@ export default async function main(ctx) {
     host = asHost;
   }
 
-  let deployments;
+  let response;
 
   try {
     debug('Fetching deployments');
-    deployments = await now.list(app, { version: 5, meta });
+    response = await now.list(app, {
+      version: 6,
+      meta,
+      nextTimestamp,
+    });
   } catch (err) {
     stopSpinner();
     throw err;
   }
+
+  let { deployments, pagination } = response;
 
   if (app && !deployments.length) {
     debug(
@@ -193,7 +210,50 @@ export default async function main(ctx) {
     }
   }
 
+  if (app && !deployments.length) {
+    debug(
+      'No deployments: attempting to find aliases that matches supplied app name'
+    );
+    const aliases = await getAliases(now);
+    const item = aliases.find(e => e.uid === app || e.alias === app);
+
+    if (item) {
+      debug(`Found alias that matches app name: ${item.alias}`);
+
+      if (Array.isArray(item.rules)) {
+        now.close();
+        stopSpinner();
+        log(`Found matching path alias: ${chalk.cyan(item.alias)}`);
+        log(`Please run ${cmd(`now alias ls ${item.alias}`)} instead`);
+        return 0;
+      }
+
+      const match = await now.findDeployment(item.deploymentId);
+      const instances = await getDeploymentInstances(
+        now,
+        item.deploymentId,
+        'now_cli_alias_instances'
+      );
+      match.instanceCount = Object.keys(instances).reduce(
+        (count, dc) => count + instances[dc].instances.length,
+        0
+      );
+      if (match !== null && typeof match !== 'undefined') {
+        deployments = Array.of(match);
+      }
+    }
+  }
+
   now.close();
+
+  if (argv['--all']) {
+    await Promise.all(
+      deployments.map(async ({ uid, instanceCount }, i) => {
+        deployments[i].instances =
+          instanceCount > 0 ? await now.listInstances(uid) : [];
+      })
+    );
+  }
 
   if (host) {
     deployments = deployments.filter(deployment => deployment.url === host);
@@ -201,11 +261,9 @@ export default async function main(ctx) {
 
   stopSpinner();
   log(
-    `Fetched ${plural(
-      'deployment',
-      deployments.length,
-      true
-    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+    `Deployments under ${chalk.bold(contextName)} ${elapsed(
+      Date.now() - start
+    )}`
   );
 
   // we don't output the table headers if we have no deployments
@@ -218,6 +276,8 @@ export default async function main(ctx) {
     log(
       `To list more deployments for a project run ${cmd('now ls [project]')}`
     );
+  } else if (!argv['--all']) {
+    log(`To list deployment instances run ${cmd('now ls --all [project]')}`);
   }
 
   print('\n');
@@ -235,9 +295,18 @@ export default async function main(ctx) {
               getProjectName(dep),
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
               stateString(dep.state),
-              chalk.gray(ms(Date.now() - new Date(dep.created))),
+              chalk.gray(ms(Date.now() - new Date(dep.createdAt))),
               dep.creator.username,
             ],
+            ...(argv['--all']
+              ? dep.instances.map(i => [
+                  '',
+                  ` ${chalk.gray('-')} ${i.url} `,
+                  '',
+                  '',
+                  '',
+                ])
+              : []),
           ])
           // flatten since the previous step returns a nested
           // array of the deployment and (optionally) its instances
@@ -257,6 +326,10 @@ export default async function main(ctx) {
       }
     ).replace(/^/gm, '  ')}\n\n`
   );
+
+  if (pagination && deployments.length === 20) {
+    log(`To display the next page use the flag --next ${pagination.next}`);
+  }
 }
 
 function getProjectName(d) {
@@ -288,7 +361,7 @@ function stateString(s) {
 // sorts by most recent deployment
 function sortRecent() {
   return function recencySort(a, b) {
-    return b.created - a.created;
+    return b.createdAt - a.createdAt;
   };
 }
 
