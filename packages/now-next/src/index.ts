@@ -340,7 +340,7 @@ export const build = async ({
 
   if (config.buildCommand) {
     // Add `node_modules/.bin` to PATH
-    const nodeBinPath = await getNodeBinPath(entryPath);
+    const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     debug(

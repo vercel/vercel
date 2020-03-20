@@ -341,7 +341,7 @@ export async function build({
 
     if (pkg && (buildCommand || devCommand)) {
       // We want to add `node_modules/.bin` after `npm install`
-      const nodeBinPath = await getNodeBinPath(entrypointDir);
+      const nodeBinPath = await getNodeBinPath({ cwd: entrypointDir });
 
       spawnOpts.env = {
         ...spawnOpts.env,

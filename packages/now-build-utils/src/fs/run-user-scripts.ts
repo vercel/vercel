@@ -99,11 +99,8 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
-export async function getNodeBinPath(entrypointDir: string) {
-  const { stdout } = await execAsync('yarn', ['bin'], {
-    cwd: entrypointDir,
-  });
-
+export async function getNodeBinPath({ cwd }: { cwd: string }) {
+  const { stdout } = await execAsync('npm', ['bin'], { cwd });
   return stdout.trim();
 }
 
