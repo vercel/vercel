@@ -20,6 +20,7 @@ import {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
+  getNodeBinPath,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -48,6 +49,7 @@ export {
   runPackageJsonScript,
   execCommand,
   spawnCommand,
+  getNodeBinPath,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
