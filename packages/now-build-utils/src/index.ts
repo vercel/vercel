@@ -21,6 +21,7 @@ import {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
+  getNodeBinPath,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -50,6 +51,7 @@ export {
   execCommand,
   spawnCommand,
   walkParentDirs,
+  getNodeBinPath,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
