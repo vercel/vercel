@@ -99,6 +99,14 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
+export async function getNodeBinPath(entrypointDir: string) {
+  const { stdout } = await execAsync('yarn', ['bin'], {
+    cwd: entrypointDir,
+  });
+
+  return stdout.trim();
+}
+
 async function chmodPlusX(fsPath: string) {
   const s = await fs.stat(fsPath);
   const newMode = s.mode | 64 | 8 | 1; // eslint-disable-line no-bitwise
