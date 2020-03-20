@@ -18,6 +18,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   execCommand,
+  getNodeBinPath,
 } from '@now/build-utils';
 import { Route, Handler } from '@now/routing-utils';
 import {
@@ -338,6 +339,14 @@ export const build = async ({
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
 
   if (config.buildCommand) {
+    // Add `node_modules/.bin` to PATH
+    const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
+    env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+
+    debug(
+      `Added "${nodeBinPath}" to PATH env because a build command was used.`
+    );
+
     console.log(`Running "${config.buildCommand}"`);
     await execCommand(config.buildCommand, {
       ...spawnOpts,
