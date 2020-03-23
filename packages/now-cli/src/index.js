@@ -369,13 +369,15 @@ const main = async argv_ => {
   // we check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(process.cwd(), targetOrSubcommand);
-    const targetPathExists =
-      existsSync(targetPath) && lstatSync(targetPath).isDirectory();
+    const targetPathExists = existsSync(targetPath);
     const subcommandExists =
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
       commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
+      const fileType = lstatSync(targetPath).isDirectory()
+        ? 'subdirectory'
+        : 'file';
       const plural = targetOrSubcommand + 's';
       const singular = targetOrSubcommand.endsWith('s')
         ? targetOrSubcommand.slice(0, -1)
@@ -389,7 +391,7 @@ const main = async argv_ => {
       console.error(
         error(
           `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-            `\nIf you wish to deploy the subdirectory ${param(
+            `\nIf you wish to deploy the ${fileType} ${param(
               targetOrSubcommand
             )}, first run "cd ${targetOrSubcommand}". ` +
             (alternative
