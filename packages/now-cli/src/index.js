@@ -15,7 +15,7 @@ try {
 }
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, lstatSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
@@ -369,16 +369,34 @@ const main = async argv_ => {
   // we check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(process.cwd(), targetOrSubcommand);
-    const targetPathExists = existsSync(targetPath);
+    const targetPathExists =
+      existsSync(targetPath) && lstatSync(targetPath).isDirectory();
     const subcommandExists =
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
       commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
+      const plural = targetOrSubcommand + 's';
+      const singular = targetOrSubcommand.endsWith('s')
+        ? targetOrSubcommand.slice(0, -1)
+        : '';
+      let alternative = '';
+      if (commands.has(plural)) {
+        alternative = plural;
+      } else if (commands.has(singular)) {
+        alternative = singular;
+      }
       console.error(
         error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous. ` +
-            'Both a directory and a subcommand are known'
+          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+            `\nIf you wish to deploy the subdirectory ${param(
+              targetOrSubcommand
+            )}, first run "cd ${targetOrSubcommand}". ` +
+            (alternative
+              ? `\nIf you wish to use the subcommand ${param(
+                  targetOrSubcommand
+                )}, use ${param(alternative)} instead.`
+              : '')
         )
       );
       return 1;
