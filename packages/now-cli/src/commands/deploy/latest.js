@@ -506,6 +506,7 @@ export default async function main(
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
+      forceNewWithCache: argv['--force-with-cache'],
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       isFile,

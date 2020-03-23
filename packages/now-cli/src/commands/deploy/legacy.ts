@@ -93,6 +93,7 @@ let paths: string[];
 
 // Options
 let forceNew: boolean;
+let forceNewWithCache: boolean;
 let deploymentName: string;
 let sessionAffinity: string;
 let log: any;
@@ -238,6 +239,7 @@ export default async function main(
 
   // Options
   forceNew = argv.force;
+  forceNewWithCache = argv['force-with-cache'];
   deploymentName = argv.name;
   sessionAffinity = argv['session-affinity'];
   debugEnabled = argv.debug;
@@ -741,6 +743,7 @@ async function sync({
           meta: metadata,
           followSymlinks,
           forceNew,
+          forceNewWithCache,
           forwardNpm,
           quiet,
           scale,
