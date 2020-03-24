@@ -195,7 +195,7 @@
         "placeholder": "`dojo build` or `build` from `package.json`"
       },
       "devCommand": {
-        "value": "dojo build -m dev -w -s"
+        "value": "dojo build -m dev -w -s -p $PORT"
       },
       "outputDirectory": {
         "value": "output/dist"

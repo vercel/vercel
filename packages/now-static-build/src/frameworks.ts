@@ -132,7 +132,7 @@ const frameworkList: Framework[] = [
     slug: 'dojo',
     dependency: '@dojo/cli',
     buildCommand: 'dojo build',
-    getOutputDirName: async () => 'output/dist',
+    getOutputDirName: async () => join('output', 'dist'),
     defaultRoutes: [
       {
         handle: 'filesystem',
