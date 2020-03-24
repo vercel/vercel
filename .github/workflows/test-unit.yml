@@ -9,7 +9,7 @@ on:
   pull_request:
 
 jobs:
-  test-unit:
+  test:
     timeout-minutes: 15
     strategy:
       fail-fast: false
