@@ -19,6 +19,14 @@
     {
       "path": "/non-existent",
       "mustContain": "__next"
+    },
+    {
+      "path": "/non-existent",
+      "status": 404
+    },
+    {
+      "path": "/404",
+      "status": 404
     }
   ]
 }

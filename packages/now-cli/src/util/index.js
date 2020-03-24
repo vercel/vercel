@@ -348,7 +348,7 @@ export default class Now extends EventEmitter {
     return secrets;
   }
 
-  async list(app, { version = 4, meta = {} } = {}) {
+  async list(app, { version = 4, meta = {}, nextTimestamp } = {}) {
     const fetchRetry = async (url, options = {}) => {
       return this.retry(
         async bail => {
@@ -402,8 +402,8 @@ export default class Now extends EventEmitter {
 
     query.set('limit', '20');
 
-    if (meta.nextTimestamp) {
-      query.set('until', String(meta.nextTimestamp));
+    if (nextTimestamp) {
+      query.set('until', String(nextTimestamp));
     }
 
     const response = await fetchRetry(`/v${version}/now/deployments?${query}`);

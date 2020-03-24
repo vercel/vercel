@@ -9,11 +9,11 @@ import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
-  execAsync,
   spawnAsync,
   execCommand,
   spawnCommand,
   runNpmInstall,
+  getNodeBinPath,
   runBundleInstall,
   runPipInstall,
   runPackageJsonScript,
@@ -341,19 +341,17 @@ export async function build({
 
     if (pkg && (buildCommand || devCommand)) {
       // We want to add `node_modules/.bin` after `npm install`
-      const { stdout } = await execAsync('yarn', ['bin'], {
-        cwd: entrypointDir,
-      });
+      const nodeBinPath = await getNodeBinPath({ cwd: entrypointDir });
 
       spawnOpts.env = {
         ...spawnOpts.env,
-        PATH: `${stdout.trim()}${path.delimiter}${
+        PATH: `${nodeBinPath}${path.delimiter}${
           spawnOpts.env ? spawnOpts.env.PATH : ''
         }`,
       };
 
       debug(
-        `Added "${stdout.trim()}" to PATH env because a package.json file was found.`
+        `Added "${nodeBinPath}" to PATH env because a package.json file was found.`
       );
     }
 

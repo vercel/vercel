@@ -366,6 +366,30 @@ test('output the version', async t => {
   t.is(version, pkg.version);
 });
 
+test('should error with suggestion for secrets subcommand', async t => {
+  const target = fixture('subdirectory-secret');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['secret', 'add', 'key', 'value', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.regex(
+    stderr,
+    /secrets/gm,
+    `Expected "secrets" suggestion but received "${stderr}"`
+  );
+});
+
 test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
@@ -1862,11 +1886,8 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
   const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /Functions must have a memory value between 128 and 3008 in steps of 64\./gm,
-    formatOutput(output)
-  );
+  t.regex(output.stderr, /steps of 64/gm, formatOutput(output));
+  t.regex(output.stderr, /More details/gm, formatOutput(output));
 });
 
 test('deploy a Lambda with 3 seconds of maxDuration', async t => {

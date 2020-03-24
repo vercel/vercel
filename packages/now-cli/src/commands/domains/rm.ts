@@ -111,12 +111,26 @@ async function removeDomain(
 
   for (const id of aliasIds) {
     output.debug(`Removing alias ${id}`);
-    await removeAliasById(client, id);
+    try {
+      await removeAliasById(client, id);
+    } catch (error) {
+      // Ignore if the alias does not exist anymore
+      if (error.status !== 404) {
+        throw error;
+      }
+    }
   }
 
   for (const id of certIds) {
     output.debug(`Removing cert ${id}`);
-    await deleteCertById(output, client, id);
+    try {
+      await deleteCertById(output, client, id);
+    } catch (error) {
+      // Ignore if the cert does not exist anymore
+      if (error.status !== 404) {
+        throw error;
+      }
+    }
   }
 
   if (suffix) {
