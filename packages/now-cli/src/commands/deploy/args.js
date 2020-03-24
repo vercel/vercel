@@ -46,6 +46,7 @@ export const latestHelp = () => `
 )}    Path to the global ${'`.now`'} directory
     -d, --debug                    Debug mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
+    --force-with-cache             Force a new deployment even if nothing has changed but retain build cache
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
   'TOKEN'
 )}        Login token
@@ -97,6 +98,7 @@ export const latestHelp = () => `
 
 export const latestArgs = {
   '--force': Boolean,
+  '--force-with-cache': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
   '--env': [String],
