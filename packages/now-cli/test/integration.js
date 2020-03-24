@@ -1511,8 +1511,7 @@ test('initialize example to existing directory with "-f"', async t => {
 test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
-  const goal =
-    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
+  const goal = /Destination path "angular" already exists and is not an empty directory/gm;
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
@@ -1526,7 +1525,7 @@ test('try to initialize example to existing directory', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.regex(stdout, goal, formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async t => {
