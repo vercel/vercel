@@ -38,9 +38,9 @@
     "build": "node utils/run.js build all",
     "test-lint": "node utils/run.js test-lint",
     "test-unit": "node utils/run.js test-unit",
-    "test-integration": "node utils/run.js test-integration",
+    "test-integration-cli": "node utils/run.js test-integration-cli",
     "test-integration-once": "node utils/run.js test-integration-once",
-    "test-integration-now-dev": "node utils/run.js test-integration-now-dev",
+    "test-integration-dev": "node utils/run.js test-integration-dev",
     "lint": "eslint . --ext .ts,.js"
   },
   "lint-staged": {
