@@ -576,7 +576,7 @@ export default async function main(
     }
 
     if (deployment.readyState === 'CANCELED') {
-      output.log('The deployment has been canceled.');
+      output.print('The deployment has been canceled.\n');
       return 1;
     }
 

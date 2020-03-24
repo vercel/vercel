@@ -366,6 +366,30 @@ test('output the version', async t => {
   t.is(version, pkg.version);
 });
 
+test('should error with suggestion for secrets subcommand', async t => {
+  const target = fixture('subdirectory-secret');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['secret', 'add', 'key', 'value', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.regex(
+    stderr,
+    /secrets/gm,
+    `Expected "secrets" suggestion but received "${stderr}"`
+  );
+});
+
 test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
