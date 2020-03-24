@@ -42,6 +42,6 @@ function getAddDomainName(domainNames: string[]) {
 }
 
 async function getDomainNames(client: Client, contextName: string) {
-  const domains = await getDomains(client, contextName);
+  const { domains } = await getDomains(client, contextName);
   return domains.map(domain => domain.name).sort((a, b) => a.localeCompare(b));
 }

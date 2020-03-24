@@ -45,6 +45,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -61,6 +62,12 @@ const help = () => {
       if it's configured with these nameservers (no need to ${chalk.dim(
         '`domain add`'
       )}).
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+      ${chalk.cyan(`$ now domains ls --next 1584722256178`)}
 `);
 };
 
@@ -72,7 +79,7 @@ const COMMAND_CONFIG = {
   move: ['move'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
-  verify: ['verify']
+  verify: ['verify'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -83,7 +90,9 @@ export default async function main(ctx: NowContext) {
       '--cdn': Boolean,
       '--code': String,
       '--no-cdn': Boolean,
-      '--yes': Boolean
+      '--yes': Boolean,
+      '--next': Number,
+      '-N': '--next',
     });
   } catch (error) {
     handleError(error);
