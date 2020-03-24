@@ -208,6 +208,9 @@ export default async function processDeployment({
     }
 
     if (event.type === 'canceled') {
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
       if (buildSpinner) {
         buildSpinner();
       }

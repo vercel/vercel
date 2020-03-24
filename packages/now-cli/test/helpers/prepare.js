@@ -319,6 +319,10 @@ CMD ["node", "index.js"]`,
         name: 'nested-level',
       }),
     },
+    'subdirectory-secret': {
+      'index.html': 'Home page',
+      'secret/file.txt': 'my secret',
+    },
     'alias-rules': {
       'rules.json': JSON.stringify({
         rules: [
