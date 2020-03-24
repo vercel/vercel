@@ -192,7 +192,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`dojo build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `dojo build`"
       },
       "devCommand": {
         "value": "dojo build -m dev -w -s -p $PORT"
