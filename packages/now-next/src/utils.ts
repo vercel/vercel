@@ -321,6 +321,7 @@ export type RoutesManifest = {
 
 export async function getRoutesManifest(
   entryPath: string,
+  outputDirectory: string,
   nextVersion?: string
 ): Promise<RoutesManifest | undefined> {
   const shouldHaveManifest =
@@ -329,7 +330,7 @@ export async function getRoutesManifest(
 
   const pathRoutesManifest = path.join(
     entryPath,
-    '.next',
+    outputDirectory,
     'routes-manifest.json'
   );
   const hasRoutesManifest = await fs

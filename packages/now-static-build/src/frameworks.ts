@@ -95,6 +95,21 @@ const frameworkList: Framework[] = [
 
       return base;
     },
+    defaultRoutes: [
+      {
+        src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '.*',
+        status: 404,
+        dest: '404.html',
+      },
+    ],
   },
   {
     name: 'Preact',
@@ -365,7 +380,7 @@ const frameworkList: Framework[] = [
     buildCommand: 'stencil build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
-      { 
+      {
         src: '/assets/(.*)',
         headers: { 'cache-control': 'max-age=2592000' },
         continue: true,

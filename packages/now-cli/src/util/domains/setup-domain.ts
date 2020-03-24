@@ -2,7 +2,7 @@ import psl from 'psl';
 import { NowError } from '../now-error';
 import { Domain } from '../../types';
 import { Output } from '../output';
-import * as ERRORS from '../errors';
+import * as ERRORS from '../errors-ts';
 import addDomain from './add-domain';
 import Client from '../client';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
