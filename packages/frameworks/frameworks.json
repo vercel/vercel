@@ -411,10 +411,10 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "npm run build"
+        "placeholder": "`npm run build` or `react-scripts build`"
       },
       "devCommand": {
-        "value": "stencil build --dev --watch --serve --port $PORT"
+        "value": "react-scripts start"
       },
       "outputDirectory": {
         "value": "public"
