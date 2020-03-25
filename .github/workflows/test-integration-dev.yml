@@ -10,6 +10,7 @@ on:
 
 jobs:
   test:
+    name: Dev
     timeout-minutes: 30
     strategy:
       fail-fast: false
