@@ -118,7 +118,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
     "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
     "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
-    "website": "https://docusaurus.io/",
+    "website": "https://v2.docusaurus.io",
     "detectors": {
       "some": [
         {
