@@ -80,7 +80,7 @@ const frameworkList: Framework[] = [
   },
   {
     name: 'Docusaurus',
-    slug: 'docusaurus',
+    slug: 'docusaurus-2',
     dependency: '@docusaurus/core',
     buildCommand: 'docusaurus build',
     getOutputDirName: async (dirPrefix: string) => {
