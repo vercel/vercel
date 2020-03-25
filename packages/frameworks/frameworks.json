@@ -196,6 +196,37 @@
     }
   },
   {
+    "name": "Dojo",
+    "slug": "dojo",
+    "demo": "https://dojo.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/dojo.svg",
+    "tagline": "Dojo is a modern progressive, TypeScript first framework.",
+    "description": "A Dojo app, created with the Dojo CLI's cli-create-app command.",
+    "website": "https://dojo.io",
+    "detectors": {
+      "some": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@dojo\\/framework\":\\s*\".+?\"[^}]*}"
+        },
+        {
+          "path": ".dojorc"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `dojo build`"
+      },
+      "devCommand": {
+        "value": "dojo build -m dev -w -s -p $PORT"
+      },
+      "outputDirectory": {
+        "value": "output/dist"
+      }
+    }
+  },
+  {
     "name": "Ember",
     "slug": "ember",
     "demo": "https://ember.now-examples.now.sh",
