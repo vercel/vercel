@@ -12,8 +12,8 @@ export function generateQueryString(clientOptions: NowClientOptions): string {
     options.set('forceNew', '1');
   }
 
-  if (clientOptions.forceNewWithCache) {
-    options.set('forceNewWithCache', '1');
+  if (clientOptions.withCache) {
+    options.set('withCache', '1');
   }
 
   if (clientOptions.skipAutoDetectionConfirmation) {
