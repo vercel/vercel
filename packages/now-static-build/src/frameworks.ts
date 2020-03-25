@@ -82,7 +82,7 @@ const frameworkList: Framework[] = [
     name: 'Docusaurus',
     slug: 'docusaurus',
     dependency: '@docusaurus/core',
-    buildCommand: 'docusaurus-build',
+    buildCommand: 'docusaurus build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
       const location = join(dirPrefix, base);

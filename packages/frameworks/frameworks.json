@@ -133,10 +133,10 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`npm run build` or `docusaurus-build`"
+        "placeholder": "`npm run build` or `docusaurus build`"
       },
       "devCommand": {
-        "value": "docusaurus-start --port $PORT"
+        "value": "docusaurus start --port $PORT"
       },
       "outputDirectory": {
         "value": "build"
