@@ -6,6 +6,6 @@ export default async function deploymentIsAliased(
   client: Client,
   deployment: Deployment
 ) {
-  const aliases = await getAliases(client);
+  const { aliases } = await getAliases(client);
   return aliases.some(alias => alias.deploymentId === deployment.uid);
 }

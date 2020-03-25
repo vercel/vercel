@@ -222,7 +222,7 @@ export default async function main(ctx) {
     debug(
       'No deployments: attempting to find aliases that matches supplied app name'
     );
-    const aliases = await getAliases(now);
+    const { aliases } = await getAliases(now);
     const item = aliases.find(e => e.uid === app || e.alias === app);
 
     if (item) {

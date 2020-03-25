@@ -1115,7 +1115,7 @@ test('[now dev] 23-docusaurus', async t => {
     validateResponseHeaders(t, response);
 
     const body = await response.text();
-    t.regex(body, /Test Site · A website for testing/gm);
+    t.regex(body, /My Site/gm);
   });
 
   await tester(t);
