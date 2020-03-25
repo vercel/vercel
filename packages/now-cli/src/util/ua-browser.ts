@@ -9,6 +9,6 @@ const getOSVersion = () => {
   } else if (platform() === 'linux') {
     return `(X11; Linux ${release()})`;
   }
-}
+};
 
 export default `Mozilla/5.0 ${getOSVersion()}`;

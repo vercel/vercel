@@ -29,7 +29,7 @@ export default async function transferIn(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -40,7 +40,7 @@ export default async function transferIn(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -66,7 +66,7 @@ export default async function transferIn(
   const availableStamp = stamp();
   const [domainPrice, { transferable, transferPolicy }] = await Promise.all([
     getDomainPrice(client, domainName, 'renewal'),
-    checkTransfer(client, domainName)
+    checkTransfer(client, domainName),
   ]);
 
   if (domainPrice instanceof ERRORS.UnsupportedTLD) {

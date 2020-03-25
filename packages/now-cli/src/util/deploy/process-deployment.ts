@@ -66,6 +66,7 @@ export default async function processDeployment({
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
+  forceNewWithCache?: boolean;
   org: Org;
   projectName: string;
   isSettingUpProject: boolean;
@@ -82,6 +83,7 @@ export default async function processDeployment({
     requestBody,
     deployStamp,
     force,
+    forceNewWithCache,
     nowConfig,
     quiet,
   } = args;
@@ -99,6 +101,7 @@ export default async function processDeployment({
     userAgent: ua,
     path: paths[0],
     force,
+    forceNewWithCache,
     skipAutoDetectionConfirmation,
   };
 
@@ -178,6 +181,8 @@ export default async function processDeployment({
         org.slug
       );
 
+      now.url = event.payload.url;
+
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
       if (quiet) {
@@ -203,6 +208,9 @@ export default async function processDeployment({
     }
 
     if (event.type === 'canceled') {
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
       if (buildSpinner) {
         buildSpinner();
       }

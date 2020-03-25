@@ -284,13 +284,22 @@ export default async function main(
       return 0;
     }
 
-    org = await selectOrg(
-      output,
-      'Which scope do you want to deploy to?',
-      client,
-      ctx.config.currentTeam,
-      autoConfirm
-    );
+    try {
+      org = await selectOrg(
+        output,
+        'Which scope do you want to deploy to?',
+        client,
+        ctx.config.currentTeam,
+        autoConfirm
+      );
+    } catch (err) {
+      if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+        output.error(err.message);
+        return 1;
+      }
+
+      throw err;
+    }
 
     // We use `localConfig` here to read the name
     // even though the `now.json` file can change
@@ -497,6 +506,7 @@ export default async function main(
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
+      forceNewWithCache: argv['--force-with-cache'],
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       isFile,
@@ -567,7 +577,7 @@ export default async function main(
     }
 
     if (deployment.readyState === 'CANCELED') {
-      output.log('The deployment has been canceled');
+      output.print('The deployment has been canceled.\n');
       return 1;
     }
 

@@ -15,7 +15,7 @@ try {
 }
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, lstatSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
@@ -375,10 +375,30 @@ const main = async argv_ => {
       commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
+      const fileType = lstatSync(targetPath).isDirectory()
+        ? 'subdirectory'
+        : 'file';
+      const plural = targetOrSubcommand + 's';
+      const singular = targetOrSubcommand.endsWith('s')
+        ? targetOrSubcommand.slice(0, -1)
+        : '';
+      let alternative = '';
+      if (commands.has(plural)) {
+        alternative = plural;
+      } else if (commands.has(singular)) {
+        alternative = singular;
+      }
       console.error(
         error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous. ` +
-            'Both a directory and a subcommand are known'
+          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+            `\nIf you wish to deploy the ${fileType} ${param(
+              targetOrSubcommand
+            )}, first run "cd ${targetOrSubcommand}". ` +
+            (alternative
+              ? `\nIf you wish to use the subcommand ${param(
+                  targetOrSubcommand
+                )}, use ${param(alternative)} instead.`
+              : '')
         )
       );
       return 1;
@@ -519,7 +539,12 @@ const main = async argv_ => {
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
-  if (process.env.NOW_ORG_ID || !scope) {
+  const targetCommand = commands.get(subcommand);
+
+  if (
+    !['login', 'logout'].includes(targetCommand) &&
+    (process.env.NOW_ORG_ID || !scope)
+  ) {
     const client = new Client({ apiUrl, token });
     const link = await getLinkedOrg(client, output);
 
@@ -531,8 +556,6 @@ const main = async argv_ => {
       scope = link.org.slug;
     }
   }
-
-  const targetCommand = commands.get(subcommand);
 
   if (
     typeof scope === 'string' &&

@@ -20,7 +20,12 @@ jobs:
       run: yarn install --check-files --frozen-lockfile
     - name: Build
       run: yarn build
+      env:
+        GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     - name: Publish
       run: yarn publish-from-github
       env:
         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}

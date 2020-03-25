@@ -67,9 +67,9 @@ import {
 } from '../../util/errors-ts';
 import {
   InvalidAllForScale,
+  SchemaValidationFailed,
   InvalidRegionOrDCForScale,
 } from '../../util/errors';
-import { SchemaValidationFailed } from '../../util/errors';
 
 interface Env {
   [name: string]: string | null | undefined;
@@ -93,6 +93,7 @@ let paths: string[];
 
 // Options
 let forceNew: boolean;
+let forceNewWithCache: boolean;
 let deploymentName: string;
 let sessionAffinity: string;
 let log: any;
@@ -238,6 +239,7 @@ export default async function main(
 
   // Options
   forceNew = argv.force;
+  forceNewWithCache = argv['force-with-cache'];
   deploymentName = argv.name;
   sessionAffinity = argv['session-affinity'];
   debugEnabled = argv.debug;
@@ -741,6 +743,7 @@ async function sync({
           meta: metadata,
           followSymlinks,
           forceNew,
+          forceNewWithCache,
           forwardNpm,
           quiet,
           scale,
@@ -852,7 +855,7 @@ async function sync({
     const { url } = now;
     const dcs =
       deploymentType !== 'static' && deployment.scale
-        ? ` (${ chalk.bold(Object.keys(deployment.scale).join(', ')) })`
+        ? ` (${chalk.bold(Object.keys(deployment.scale).join(', '))})`
         : '';
 
     if (isTTY) {

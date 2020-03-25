@@ -27,16 +27,13 @@ export default async function addDomain(
   }
 }
 
-async function performAddRequest(
-  client: Client,
-  domainName: string
-) {
+async function performAddRequest(client: Client, domainName: string) {
   return retry(
     async () => {
       try {
         const { domain } = await client.fetch<Response>('/v4/domains', {
           body: { name: domainName },
-          method: 'POST'
+          method: 'POST',
         });
         return domain;
       } catch (error) {

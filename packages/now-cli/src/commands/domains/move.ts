@@ -30,7 +30,7 @@ export default async function move(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -42,7 +42,7 @@ export default async function move(
   try {
     ({ contextName, user } = await getScope(client));
   } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -115,12 +115,7 @@ export default async function move(
 
   const context = contextName;
   const moveTokenResult = await withSpinner('Moving', () => {
-    return moveOutDomain(
-      client,
-      context,
-      domainName,
-      matchId || destination
-    );
+    return moveOutDomain(client, context, domainName, matchId || destination);
   });
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
     const { suffix, pendingAsyncPurchase } = moveTokenResult.meta;
@@ -184,14 +179,14 @@ async function getArgs(args: string[]) {
   if (!domainName) {
     domainName = await textInput({
       label: `- Domain name: `,
-      validateValue: isRootDomain
+      validateValue: isRootDomain,
     });
   }
 
   if (!destination) {
     destination = await textInput({
       label: `- Destination: `,
-      validateValue: (v: string) => Boolean(v && v.length > 0)
+      validateValue: (v: string) => Boolean(v && v.length > 0),
     });
   }
 

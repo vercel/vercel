@@ -23,7 +23,10 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
@@ -90,14 +93,16 @@ function getDNSRecordsTable(dnsRecords: DNSRecords) {
     ['l', 'r', 'l', 'l', 'l', 'l'],
     dnsRecords.map(({ domainName, records }) => ({
       name: chalk.bold(domainName),
-      rows: records.map(getDNSRecordRow)
+      rows: records.map(getDNSRecordRow),
     }))
   );
 }
 
 function getDNSRecordRow(record: DNSRecord) {
   const isSystemRecord = record.creator === 'system';
-  const createdAt = `${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`;
+  const createdAt = `${ms(
+    Date.now() - new Date(Number(record.created)).getTime()
+  )} ago`;
   const priority = record.mxPriority || record.priority || null;
   return [
     '',
@@ -105,6 +110,6 @@ function getDNSRecordRow(record: DNSRecord) {
     record.name,
     record.type,
     priority ? `${priority} ${record.value}` : record.value,
-    chalk.gray(isSystemRecord ? 'default' : createdAt)
+    chalk.gray(isSystemRecord ? 'default' : createdAt),
   ];
 }

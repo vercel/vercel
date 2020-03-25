@@ -12,7 +12,7 @@ export default class Secrets extends Now {
       }
 
       const res = await this._fetch(`/now/secrets/${nameOrId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
 
       if (this._debug) {
@@ -43,8 +43,8 @@ export default class Secrets extends Now {
         method: 'POST',
         body: {
           name,
-          value: value.toString()
-        }
+          value: value.toString(),
+        },
       });
 
       if (this._debug) {
@@ -74,8 +74,8 @@ export default class Secrets extends Now {
       const res = await this._fetch(`/now/secrets/${nameOrId}`, {
         method: 'PATCH',
         body: {
-          name: newName
-        }
+          name: newName,
+        },
       });
 
       if (this._debug) {

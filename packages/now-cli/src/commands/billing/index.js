@@ -60,8 +60,8 @@ export default async ctx => {
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      debug: 'd'
-    }
+      debug: 'd',
+    },
   });
 
   argv._ = argv._.slice(1);
@@ -75,7 +75,10 @@ export default async ctx => {
     return 2;
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
 
   return run({ token, config });
 };
@@ -91,13 +94,13 @@ function buildInquirerChoices(cards) {
     const str = [
       id,
       indent(source.name || source.owner.name, 2),
-      indent(`${source.brand || source.card.brand} ${number}`, 2)
+      indent(`${source.brand || source.card.brand} ${number}`, 2),
     ].join('\n');
 
     return {
       name: str, // Will be displayed by Inquirer
       value: source.id, // Will be used to identify the answer
-      short: source.id // Will be displayed after the users answers
+      short: source.id, // Will be displayed after the users answers
     };
   });
 }
@@ -149,7 +152,7 @@ async function run({ token, config: { currentTeam } }) {
           return [
             id,
             indent(source.name || source.owner.name, 2),
-            indent(`${source.brand || source.card.brand} ${number}`, 2)
+            indent(`${source.brand || source.card.brand} ${number}`, 2),
           ].join('\n');
         })
         .join('\n\n');
@@ -203,7 +206,7 @@ async function run({ token, config: { currentTeam } }) {
           message,
           choices,
           separator: true,
-          abort: 'end'
+          abort: 'end',
         });
       }
 
@@ -212,7 +215,7 @@ async function run({ token, config: { currentTeam } }) {
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`;
         const confirmation = await promptBool(label, {
-          trailing: '\n'
+          trailing: '\n',
         });
 
         if (!confirmation) {
@@ -278,7 +281,7 @@ async function run({ token, config: { currentTeam } }) {
           message,
           choices,
           separator: true,
-          abort: 'start'
+          abort: 'start',
         });
       }
 
@@ -334,7 +337,7 @@ async function run({ token, config: { currentTeam } }) {
     case 'add': {
       await addBilling({
         creditCards,
-        contextName
+        contextName,
       });
 
       break;

@@ -17,8 +17,10 @@ import {
   Prerender,
   runNpmInstall,
   runPackageJsonScript,
+  execCommand,
+  getNodeBinPath,
 } from '@now/build-utils';
-import { Route } from '@now/routing-utils';
+import { Route, Handler } from '@now/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
@@ -198,7 +200,8 @@ export const build = async ({
 
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
-  const dotNextStatic = path.join(entryPath, '.next/static');
+  const outputDirectory = config.outputDirectory || '.next';
+  const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
 
   await download(files, workPath, meta);
 
@@ -334,13 +337,38 @@ export const build = async ({
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
   const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
-  await runPackageJsonScript(entryPath, shouldRunScript, { ...spawnOpts, env });
+
+  if (config.buildCommand) {
+    // Add `node_modules/.bin` to PATH
+    const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
+    env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+
+    debug(
+      `Added "${nodeBinPath}" to PATH env because a build command was used.`
+    );
+
+    console.log(`Running "${config.buildCommand}"`);
+    await execCommand(config.buildCommand, {
+      ...spawnOpts,
+      cwd: entryPath,
+      env,
+    });
+  } else {
+    await runPackageJsonScript(entryPath, shouldRunScript, {
+      ...spawnOpts,
+      env,
+    });
+  }
 
   const appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
     .replace(/\/+$/, '');
 
-  const routesManifest = await getRoutesManifest(entryPath, realNextVersion);
+  const routesManifest = await getRoutesManifest(
+    entryPath,
+    outputDirectory,
+    realNextVersion
+  );
   const prerenderManifest = await getPrerenderManifest(entryPath);
   const headers: Route[] = [];
   const rewrites: Route[] = [];
@@ -392,6 +420,7 @@ export const build = async ({
                 // have a separate data output
                 (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
               ),
+              check: true,
             });
           }
         }
@@ -486,6 +515,42 @@ export const build = async ({
         // User redirects
         ...redirects,
 
+        // Make sure to 404 for the /404 path itself
+        {
+          src: path.join('/', entryDirectory, '404'),
+          status: 404,
+          continue: true,
+        },
+
+        // Next.js pages, `static/` folder, reserved assets, and `public/`
+        // folder
+        { handle: 'filesystem' },
+
+        // These need to come before handle: miss or else they are grouped
+        // with that routing section
+        ...rewrites,
+
+        // We need to make sure to 404 for /_next after handle: miss since
+        // handle: miss is called before rewrites and to prevent rewriting
+        // /_next
+        { handle: 'miss' },
+        {
+          src: path.join(
+            '/',
+            entryDirectory,
+            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          ),
+          status: 404,
+          check: true,
+          dest: '$0',
+        },
+
+        // Dynamic routes
+        // TODO: do we want to do this?: ...dynamicRoutes,
+        // (if so make sure to add any dynamic routes after handle: 'rewrite' )
+
+        // routes to call after a file has been matched
+        { handle: 'hit' },
         // Before we handle static files we need to set proper caching headers
         {
           // This ensures we only match known emitted-by-Next.js files and not
@@ -502,38 +567,16 @@ export const build = async ({
           },
           continue: true,
         },
-        {
-          src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?'),
-        },
-        // Next.js pages, `static/` folder, reserved assets, and `public/`
-        // folder
-        { handle: 'filesystem' },
 
-        // This needs to come directly after handle: filesystem to make sure to
-        // 404 and clear the cache header for _next requests
-        {
-          src: path.join(
-            '/',
-            entryDirectory,
-            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
-          ),
-          headers: {
-            'cache-control': '',
-          },
-          status: 404,
-        },
-
-        ...rewrites,
-        // Dynamic routes
-        // TODO: do we want to do this?: ...dynamicRoutes,
-
-        // 404
+        // error handling
         ...(output['404']
           ? [
+              { handle: 'error' } as Handler,
+
               {
-                src: path.join('/', entryDirectory, '.*'),
-                dest: path.join('/', entryDirectory, '404'),
                 status: 404,
+                src: path.join(entryDirectory, '.*'),
+                dest: path.join('/', entryDirectory, '404'),
               },
             ]
           : []),
@@ -570,7 +613,7 @@ export const build = async ({
     let buildId: string;
     try {
       buildId = await readFile(
-        path.join(entryPath, '.next', 'BUILD_ID'),
+        path.join(entryPath, outputDirectory, 'BUILD_ID'),
         'utf8'
       );
     } catch (err) {
@@ -579,8 +622,11 @@ export const build = async ({
       );
       throw new Error('Missing BUILD_ID');
     }
-    const dotNextRootFiles = await glob('.next/*', entryPath);
-    const dotNextServerRootFiles = await glob('.next/server/*', entryPath);
+    const dotNextRootFiles = await glob(`${outputDirectory}/*`, entryPath);
+    const dotNextServerRootFiles = await glob(
+      `${outputDirectory}/server/*`,
+      entryPath
+    );
     const nodeModules = excludeFiles(
       await glob('node_modules/**', entryPath),
       file => file.startsWith('node_modules/.cache')
@@ -601,7 +647,7 @@ export const build = async ({
     }
     const pagesDir = path.join(
       entryPath,
-      '.next',
+      outputDirectory,
       'server',
       'static',
       buildId,
@@ -625,17 +671,17 @@ export const build = async ({
         );
 
         const pageFiles = {
-          [`.next/server/static/${buildId}/pages/_document.js`]: filesAfterBuild[
-            `.next/server/static/${buildId}/pages/_document.js`
+          [`${outputDirectory}/server/static/${buildId}/pages/_document.js`]: filesAfterBuild[
+            `${outputDirectory}/server/static/${buildId}/pages/_document.js`
           ],
-          [`.next/server/static/${buildId}/pages/_app.js`]: filesAfterBuild[
-            `.next/server/static/${buildId}/pages/_app.js`
+          [`${outputDirectory}/server/static/${buildId}/pages/_app.js`]: filesAfterBuild[
+            `${outputDirectory}/server/static/${buildId}/pages/_app.js`
           ],
-          [`.next/server/static/${buildId}/pages/_error.js`]: filesAfterBuild[
-            `.next/server/static/${buildId}/pages/_error.js`
+          [`${outputDirectory}/server/static/${buildId}/pages/_error.js`]: filesAfterBuild[
+            `${outputDirectory}/server/static/${buildId}/pages/_error.js`
           ],
-          [`.next/server/static/${buildId}/pages/${page}`]: filesAfterBuild[
-            `.next/server/static/${buildId}/pages/${page}`
+          [`${outputDirectory}/server/static/${buildId}/pages/${page}`]: filesAfterBuild[
+            `${outputDirectory}/server/static/${buildId}/pages/${page}`
           ],
         };
 
@@ -660,7 +706,12 @@ export const build = async ({
     );
   } else {
     debug('Preparing serverless function files...');
-    const pagesDir = path.join(entryPath, '.next', 'serverless', 'pages');
+    const pagesDir = path.join(
+      entryPath,
+      outputDirectory,
+      'serverless',
+      'pages'
+    );
 
     const pages = await glob('**/*.js', pagesDir);
     const staticPageFiles = await glob('**/*.html', pagesDir);
@@ -818,7 +869,7 @@ export const build = async ({
       // lambdas.
       assets = await glob(
         'assets/**',
-        path.join(entryPath, '.next', 'serverless')
+        path.join(entryPath, outputDirectory, 'serverless')
       );
 
       const assetKeys = Object.keys(assets);
@@ -1045,7 +1096,7 @@ export const build = async ({
 
   const nextStaticFiles = await glob(
     '**',
-    path.join(entryPath, '.next', 'static')
+    path.join(entryPath, outputDirectory, 'static')
   );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
   const publicFolderFiles = await glob('**', path.join(entryPath, 'public'));
@@ -1140,6 +1191,47 @@ export const build = async ({
 
       // redirects
       ...redirects,
+
+      // Make sure to 404 for the /404 path itself
+      {
+        src: path.join('/', entryDirectory, '404'),
+        status: 404,
+        continue: true,
+      },
+
+      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
+      // folder
+      { handle: 'filesystem' },
+
+      // These need to come before handle: miss or else they are grouped
+      // with that routing section
+      ...rewrites,
+
+      // We need to make sure to 404 for /_next after handle: miss since
+      // handle: miss is called before rewrites and to prevent rewriting /_next
+      { handle: 'miss' },
+      {
+        src: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+        ),
+        status: 404,
+        check: true,
+        dest: '$0',
+      },
+
+      // routes that are called after each rewrite or after routes
+      // if there no rewrites
+      { handle: 'rewrite' },
+      // Dynamic routes
+      ...dynamicRoutes,
+
+      // /_next/data routes for getServerProps/getStaticProps pages
+      ...dataRoutes,
+
+      // routes to call after a file has been matched
+      { handle: 'hit' },
       // Before we handle static files we need to set proper caching headers
       {
         // This ensures we only match known emitted-by-Next.js files and not
@@ -1156,37 +1248,14 @@ export const build = async ({
         },
         continue: true,
       },
-      { src: path.join('/', entryDirectory, '_next(?!/data(?:/|$))(?:/.*)?') },
 
-      // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
-      // folder
-      { handle: 'filesystem' },
-
-      // This needs to come directly after handle: filesystem to make sure to
-      // 404 and clear the cache header for _next requests
-      {
-        src: path.join(
-          '/',
-          entryDirectory,
-          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
-        ),
-        headers: {
-          'cache-control': '',
-        },
-        status: 404,
-      },
-
-      ...rewrites,
-      // Dynamic routes
-      ...dynamicRoutes,
-
-      // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
-
-      // Custom Next.js 404 page (TODO: do we want to remove this?)
+      // error handling
       ...(isLegacy
         ? []
         : [
+            // Custom Next.js 404 page
+            { handle: 'error' } as Handler,
+
             {
               src: path.join('/', entryDirectory, '.*'),
               dest: path.join(
@@ -1212,10 +1281,12 @@ export const build = async ({
 export const prepareCache = async ({
   workPath,
   entrypoint,
+  config = {},
 }: PrepareCacheOptions): Promise<Files> => {
   debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
+  const outputDirectory = config.outputDirectory || '.next';
 
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
@@ -1231,7 +1302,10 @@ export const prepareCache = async ({
   const cacheEntrypoint = path.relative(workPath, entryPath);
   const cache = {
     ...(await glob(path.join(cacheEntrypoint, 'node_modules/**'), workPath)),
-    ...(await glob(path.join(cacheEntrypoint, '.next/cache/**'), workPath)),
+    ...(await glob(
+      path.join(cacheEntrypoint, outputDirectory, 'cache/**'),
+      workPath
+    )),
   };
   debug('Cache file manifest produced');
   return cache;

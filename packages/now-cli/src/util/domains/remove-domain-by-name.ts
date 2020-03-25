@@ -23,7 +23,7 @@ export default async function removeDomainByName(
         pendingAsyncPurchase: error.pendingAsyncPurchase,
         resolvable: error.resolvable,
         suffix: error.suffix,
-        transferring: error.transferring
+        transferring: error.transferring,
       });
     }
     throw error;

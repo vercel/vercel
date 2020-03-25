@@ -27,7 +27,7 @@ export default async function add(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -131,7 +131,7 @@ export default async function add(
     );
     output.print(
       `\n${formatDnsTable([['_now', 'TXT', addedDomain.verificationRecord]], {
-        extraSpace: '     '
+        extraSpace: '     ',
       })}\n\n`
     );
     output.print(

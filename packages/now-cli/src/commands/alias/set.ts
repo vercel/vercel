@@ -22,6 +22,7 @@ import upsertPathAlias from '../../util/alias/upsert-path-alias';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
+import { User } from '../../types';
 
 type Options = {
   '--debug': boolean;
@@ -58,8 +59,9 @@ export default async function set(
     currentTeam,
     debug: debugEnabled,
   });
-  let contextName = null;
-  let user = null;
+
+  let user: User;
+  let contextName: string | null = null;
 
   try {
     ({ contextName, user } = await getScope(client));
@@ -173,6 +175,7 @@ export default async function set(
   }
 
   // If there are no rules for path alias we should find out a deployment and perform the alias
+
   const deployment = handleCertError(
     output,
     await getDeploymentForAlias(

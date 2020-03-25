@@ -59,7 +59,7 @@ const capitalizePlatform = name => {
   const names = {
     github: 'GitHub',
     gitlab: 'GitLab',
-    bitbucket: 'Bitbucket'
+    bitbucket: 'Bitbucket',
   };
 
   return names[name];
@@ -97,7 +97,7 @@ const splittedURL = fullURL => {
   return {
     main,
     ref,
-    type: capitalizePlatform(parsedURL.host.split('.')[0])
+    type: capitalizePlatform(parsedURL.host.split('.')[0]),
   };
 };
 
@@ -118,7 +118,7 @@ export const gitPathParts = main => {
   return {
     main,
     ref,
-    type: capitalizePlatform('github')
+    type: capitalizePlatform('github'),
   };
 };
 
@@ -129,7 +129,7 @@ const downloadRepo = async repoPath => {
     // We'll remove it manually once deployment is done
     keep: true,
     // Recursively remove directory when calling respective method
-    unsafeCleanup: true
+    unsafeCleanup: true,
   });
 
   let gitInstalled = true;
@@ -167,7 +167,7 @@ const downloadRepo = async repoPath => {
 
   try {
     await download(url, tmpDir.path, {
-      extract: true
+      extract: true,
     });
   } catch (err) {
     tmpDir.cleanup();

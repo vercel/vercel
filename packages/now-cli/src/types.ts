@@ -225,6 +225,7 @@ export interface Project {
   devCommand?: string | null;
   framework?: string | null;
   rootDirectory?: string | null;
+  latestDeployments?: Partial<Deployment>[];
 }
 
 export interface Org {
@@ -236,4 +237,10 @@ export interface Org {
 export interface ProjectLink {
   projectId: string;
   orgId: string;
+}
+
+export interface PaginationOptions {
+  prev: number;
+  count: number;
+  next?: number;
 }

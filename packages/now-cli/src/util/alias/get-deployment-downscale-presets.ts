@@ -6,7 +6,7 @@ export default function getDeploymentDownscalePresets(
   return Object.keys(deployment.scale).reduce(
     (result, dc) =>
       Object.assign(result, {
-        [dc]: { min: 0, max: 1 }
+        [dc]: { min: 0, max: 1 },
       }),
     {}
   );

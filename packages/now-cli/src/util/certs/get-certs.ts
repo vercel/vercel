@@ -24,7 +24,11 @@ function sortByCreated(a: Cert, b: Cert) {
   return 0;
 }
 
-export default async function getCerts(output: Output, client: Client, options?: { after?: string; }) {
+export default async function getCerts(
+  output: Output,
+  client: Client,
+  options?: { after?: string }
+) {
   const query = new URLSearchParams({ limit: '100' });
 
   if (options && options.after) {

@@ -14,6 +14,6 @@ export default function uuid() {
     h(8 | (Math.random() * 4)) + s(3), // {8|9|A|B}xxx
     Date.now()
       .toString(16)
-      .slice(-10) + s(2) // Use timestamp to avoid collisions
+      .slice(-10) + s(2), // Use timestamp to avoid collisions
   ].join('-');
 }

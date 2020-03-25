@@ -16,7 +16,7 @@ async function getEventsStream(now, idOrHost, options) {
       q: options.query,
       since: options.since,
       types: (options.types || []).join(','),
-      until: options.until
+      until: options.until,
     })}`
   );
   const stream = response.readable ? await response.readable() : response.body;
