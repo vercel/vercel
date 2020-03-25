@@ -16,7 +16,7 @@ export default async function ls(ctx, opts, args, output) {
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const { '--debug': debugEnabled } = opts;
+  const { '--debug': debugEnabled, '--next': nextTimestamp } = opts;
   const client = new Client({
     apiUrl,
     token,
@@ -36,8 +36,17 @@ export default async function ls(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
+    output.error('Please provide a number for flag --next');
+    return 1;
+  }
+
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+  });
   const lsStamp = stamp();
   let cancelWait;
 
@@ -58,7 +67,11 @@ export default async function ls(ctx, opts, args, output) {
       : `Fetching aliases under ${chalk.bold(contextName)}`
   );
 
-  const aliases = await getAliases(now);
+  const { aliases, pagination } = await getAliases(
+    now,
+    undefined,
+    nextTimestamp
+  );
   if (cancelWait) cancelWait();
 
   if (args[0]) {
@@ -84,13 +97,14 @@ export default async function ls(ctx, opts, args, output) {
       output.print(`${printPathAliasTable(rules)}\n`);
     }
   } else {
-    aliases.sort((a, b) => new Date(b.created) - new Date(a.created));
-    output.log(
-      `${plural('alias', aliases.length, true)} found under ${chalk.bold(
-        contextName
-      )} ${lsStamp()}`
-    );
+    output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
     console.log(printAliasTable(aliases));
+  }
+
+  if (pagination && aliases.length === 20) {
+    output.log(
+      `To display the next page use the flag --next ${pagination.next}`
+    );
   }
 
   now.close();
@@ -111,7 +125,7 @@ function printAliasTable(aliases) {
           ? a.deployment.url
           : chalk.gray('–'),
         a.alias,
-        ms(Date.now() - new Date(a.created)),
+        ms(Date.now() - new Date(a.createdAt)),
       ]),
     ],
     {

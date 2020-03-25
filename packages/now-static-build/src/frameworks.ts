@@ -79,8 +79,8 @@ const frameworkList: Framework[] = [
     getOutputDirName: async () => '_site',
   },
   {
-    name: 'Docusaurus',
-    slug: 'docusaurus',
+    name: 'Docusaurus 2',
+    slug: 'docusaurus-2',
     dependency: '@docusaurus/core',
     buildCommand: 'docusaurus build',
     getOutputDirName: async (dirPrefix: string) => {
