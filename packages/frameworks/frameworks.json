@@ -112,19 +112,15 @@
     }
   },
   {
-    "name": "Docusaurus",
-    "slug": "docusaurus",
+    "name": "Docusaurus 2",
+    "slug": "docusaurus-2",
     "demo": "https://docusaurus.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
     "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
     "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
-    "website": "https://docusaurus.io/",
+    "website": "https://v2.docusaurus.io",
     "detectors": {
       "some": [
-        {
-          "path": "package.json",
-          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"docusaurus\":\\s*\".+?\"[^}]*}"
-        },
         {
           "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@docusaurus\\/core\":\\s*\".+?\"[^}]*}"
@@ -137,6 +133,34 @@
       },
       "devCommand": {
         "value": "docusaurus start --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
+    }
+  },
+  {
+    "name": "Docusaurus 1",
+    "slug": "docusaurus",
+    "demo": "https://docusaurus.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
+    "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
+    "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
+    "website": "https://docusaurus.io/",
+    "detectors": {
+      "some": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"docusaurus\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `docusaurus-build`"
+      },
+      "devCommand": {
+        "value": "docusaurus-start --port $PORT"
       },
       "outputDirectory": {
         "value": "build"
