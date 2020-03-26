@@ -1224,11 +1224,12 @@ export const build = async ({
       // routes that are called after each rewrite or after routes
       // if there no rewrites
       { handle: 'rewrite' },
-      // Dynamic routes
-      ...dynamicRoutes,
 
       // /_next/data routes for getServerProps/getStaticProps pages
       ...dataRoutes,
+
+      // Dynamic routes (must come after dataRoutes as they are more specific)
+      ...dynamicRoutes,
 
       // routes to call after a file has been matched
       { handle: 'hit' },
