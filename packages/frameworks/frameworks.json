@@ -424,7 +424,7 @@
   {
     "name": "Ionic Angular",
     "slug": "ionic-angular",
-    "demo": "https://ionic-angular.now-examples.now.sh/tutorial",
+    "demo": "https://ionic-angular.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic.svg",
     "tagline": "Ionic Angular allows you to build mobile PWAs with Angular and the Ionic Framework.",
     "description": "An Ionic Angular site, created with the Ionic CLI.",
