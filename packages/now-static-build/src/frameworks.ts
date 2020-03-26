@@ -128,6 +128,27 @@ const frameworkList: Framework[] = [
     ],
   },
   {
+    name: 'Dojo',
+    slug: 'dojo',
+    dependency: '@dojo/cli',
+    buildCommand: 'dojo build',
+    getOutputDirName: async () => join('output', 'dist'),
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Ember',
     slug: 'ember',
     dependency: 'ember-cli',

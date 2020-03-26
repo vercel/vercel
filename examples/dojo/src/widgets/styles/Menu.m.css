@@ -1,0 +1,23 @@
+.root {
+	flex: 1;
+	overflow: hidden;
+}
+
+.link:hover {
+	color: #4db3ff;
+	background-color:#ccddee;
+}
+
+.link {
+	min-width: 140px;
+	text-align: center;
+	text-transform: uppercase;
+	text-decoration: none;
+	padding: 18px;
+	color: black;
+	box-sizing: border-box;
+}
+
+.selected {
+	color: darkorange;
+}
