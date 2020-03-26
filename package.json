@@ -59,9 +59,6 @@
       "pre-commit": "lint-staged"
     }
   },
-  "resolutions": {
-    "signal-exit": "TooTallNate/signal-exit#update/sighub-to-sigint-on-windows"
-  },
   "prettier": {
     "trailingComma": "es5",
     "singleQuote": true
