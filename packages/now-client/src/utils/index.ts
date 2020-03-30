@@ -5,6 +5,7 @@ import { nodeFetch, zeitFetch } from './fetch';
 import { join, sep, relative } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
+type Ignore = ReturnType<typeof ignore>;
 import { pkgVersion } from '../pkg';
 import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
@@ -74,15 +75,17 @@ const maybeRead = async function<T>(path: string, default_: T) {
   }
 };
 
-export async function getNowIgnore(path: string | string[]): Promise<any> {
-  let ignores: string[] = [
-    '.hg',
-    '.git',
+export async function getNowIgnore(
+  path: string | string[]
+): Promise<{ ig: Ignore; ignores: string[] }> {
+  const ignores: string[] = [
+    '.hg/',
+    '.git/',
     '.gitmodules',
-    '.svn',
+    '.svn/',
     '.cache',
-    '.next',
-    '.now',
+    '.next/',
+    '.now/',
     '.npmignore',
     '.dockerignore',
     '.gitignore',
@@ -95,7 +98,7 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
     '.venv',
     'npm-debug.log',
     'config.gypi',
-    'node_modules',
+    'node_modules/',
     '__pycache__/',
     'venv/',
     'CVS',
