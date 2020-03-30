@@ -66,7 +66,7 @@ export default async function processDeployment({
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
-  forceNewWithCache?: boolean;
+  withCache?: boolean;
   org: Org;
   projectName: string;
   isSettingUpProject: boolean;
@@ -83,7 +83,7 @@ export default async function processDeployment({
     requestBody,
     deployStamp,
     force,
-    forceNewWithCache,
+    withCache,
     nowConfig,
     quiet,
   } = args;
@@ -101,7 +101,7 @@ export default async function processDeployment({
     userAgent: ua,
     path: paths[0],
     force,
-    forceNewWithCache,
+    withCache,
     skipAutoDetectionConfirmation,
   };
 

@@ -19,7 +19,7 @@ export interface NowClientOptions {
   teamId?: string;
   apiUrl?: string;
   force?: boolean;
-  forceNewWithCache?: boolean;
+  withCache?: boolean;
   userAgent?: string;
   defaultName?: string;
   isDirectory?: boolean;
