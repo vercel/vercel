@@ -172,19 +172,13 @@ function replaceSegments(
       }
     }
 
-    for (const [name, value] of Object.entries(indexes)) {
-      if (
-        isRedirect &&
-        new RegExp(`\\${value}(?!\\d)`).test(pathname + (hash || ''))
-      ) {
-        // Don't add segment to query if used in destination
-        // and it's a redirect so that we don't pollute the query
-        // with unwanted values
-        continue;
-      }
-
-      if (!(name in query)) {
-        query[name] = value;
+    // We only add path segments to redirect queries if manually
+    // specified
+    if (!isRedirect) {
+      for (const [name, value] of Object.entries(indexes)) {
+        if (!(name in query)) {
+          query[name] = value;
+        }
       }
     }
 

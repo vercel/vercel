@@ -211,7 +211,7 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/projects(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
-      headers: { Location: '/projects.html?id=$1&action=$2' },
+      headers: { Location: '/projects.html' },
       status: 308,
     },
     {
@@ -236,7 +236,7 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
-      headers: { Location: '/api/user?id=$1' },
+      headers: { Location: '/api/user' },
       status: 308,
     },
     {
