@@ -21,6 +21,7 @@ export default class Client extends EventEmitter {
   _apiUrl: string;
   _debug: boolean;
   _forceNew: boolean;
+  _withCache: boolean;
   _output: Output;
   _token: string;
   currentTeam?: string;
@@ -30,18 +31,21 @@ export default class Client extends EventEmitter {
     token,
     currentTeam,
     forceNew = false,
+    withCache = false,
     debug = false,
   }: {
     apiUrl: string;
     token: string;
     currentTeam?: string;
     forceNew?: boolean;
+    withCache?: boolean;
     debug?: boolean;
   }) {
     super();
     this._token = token;
     this._debug = debug;
     this._forceNew = forceNew;
+    this._withCache = withCache;
     this._output = createOutput({ debug });
     this._apiUrl = apiUrl;
     this._onRetry = this._onRetry.bind(this);

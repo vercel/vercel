@@ -40,7 +40,7 @@ const help = () => {
   )}             Login token
     -S, --scope                         Set a custom scope
     -n, --no-verify                     Don't wait until instance count meets the previous alias constraints
-
+    -N, --next                          Show next page of results
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.now.sh')}
@@ -81,6 +81,12 @@ const help = () => {
       ${chalk.cyan(
         `$ now alias ls aliasId --json > ${chalk.underline('rules.json')}`
       )}
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+      ${chalk.cyan(`$ now alias ls --next 1584722256178`)}
 `);
 };
 
@@ -100,9 +106,11 @@ export default async function main(ctx) {
       '--no-verify': Boolean,
       '--rules': String,
       '--yes': Boolean,
+      '--next': Number,
       '-n': '--no-verify',
       '-r': '--rules',
       '-y': '--yes',
+      '-N': '--next',
     });
   } catch (err) {
     handleError(err);

@@ -29,12 +29,20 @@ const IS_WIN = process.platform.startsWith('win');
 const SEP = IS_WIN ? '\\' : '/';
 
 export default class Now extends EventEmitter {
-  constructor({ apiUrl, token, currentTeam, forceNew = false, debug = false }) {
+  constructor({
+    apiUrl,
+    token,
+    currentTeam,
+    forceNew = false,
+    withCache = false,
+    debug = false,
+  }) {
     super();
 
     this._token = token;
     this._debug = debug;
     this._forceNew = forceNew;
+    this._withCache = withCache;
     this._output = createOutput({ debug });
     this._apiUrl = apiUrl;
     this._onRetry = this._onRetry.bind(this);
@@ -64,6 +72,7 @@ export default class Now extends EventEmitter {
       env,
       build,
       forceNew = false,
+      withCache = false,
       target = null,
       deployStamp,
       projectSettings,
@@ -155,6 +164,7 @@ export default class Now extends EventEmitter {
         meta,
         public: wantsPublic || nowConfig.public,
         forceNew,
+        withCache,
         name,
         project,
         description,
@@ -180,6 +190,7 @@ export default class Now extends EventEmitter {
       quiet,
       nowConfig,
       force: forceNew,
+      withCache,
       org,
       projectName: name,
       isSettingUpProject,
@@ -348,7 +359,7 @@ export default class Now extends EventEmitter {
     return secrets;
   }
 
-  async list(app, { version = 4, meta = {} } = {}) {
+  async list(app, { version = 4, meta = {}, nextTimestamp } = {}) {
     const fetchRetry = async (url, options = {}) => {
       return this.retry(
         async bail => {
@@ -402,8 +413,8 @@ export default class Now extends EventEmitter {
 
     query.set('limit', '20');
 
-    if (meta.nextTimestamp) {
-      query.set('until', String(meta.nextTimestamp));
+    if (nextTimestamp) {
+      query.set('until', String(nextTimestamp));
     }
 
     const response = await fetchRetry(`/v${version}/now/deployments?${query}`);

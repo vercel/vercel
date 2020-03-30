@@ -99,6 +99,11 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
+export async function getNodeBinPath({ cwd }: { cwd: string }) {
+  const { stdout } = await execAsync('npm', ['bin'], { cwd });
+  return stdout.trim();
+}
+
 async function chmodPlusX(fsPath: string) {
   const s = await fs.stat(fsPath);
   const newMode = s.mode | 64 | 8 | 1; // eslint-disable-line no-bitwise
@@ -187,6 +192,46 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
   }
 
   return { hasPackageLockJson, packageJson };
+}
+
+interface WalkParentDirsProps {
+  /**
+   * The highest directory, typically the workPath root of the project.
+   * If this directory is reached and it doesn't contain the file, null is returned.
+   */
+  base: string;
+  /**
+   * The directory to start searching, typically the same directory of the entrypoint.
+   * If this directory doesn't contain the file, the parent is checked, etc.
+   */
+  start: string;
+  /**
+   * The name of the file to search for, typically `package.json` or `Gemfile`.
+   */
+  filename: string;
+}
+
+export async function walkParentDirs({
+  base,
+  start,
+  filename,
+}: WalkParentDirsProps): Promise<string | null> {
+  assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
+  assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
+  let parent = '';
+
+  for (let current = start; base.length <= current.length; current = parent) {
+    const fullPath = path.join(current, filename);
+
+    // eslint-disable-next-line no-await-in-loop
+    if (await fs.pathExists(fullPath)) {
+      return fullPath;
+    }
+
+    parent = path.dirname(current);
+  }
+
+  return null;
 }
 
 export async function runNpmInstall(

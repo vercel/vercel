@@ -112,7 +112,35 @@
     }
   },
   {
-    "name": "Docusaurus",
+    "name": "Docusaurus 2",
+    "slug": "docusaurus-2",
+    "demo": "https://docusaurus.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
+    "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
+    "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
+    "website": "https://v2.docusaurus.io",
+    "detectors": {
+      "some": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@docusaurus\\/core\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `docusaurus build`"
+      },
+      "devCommand": {
+        "value": "docusaurus start --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
+    }
+  },
+  {
+    "name": "Docusaurus 1",
     "slug": "docusaurus",
     "demo": "https://docusaurus.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
@@ -124,10 +152,6 @@
         {
           "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"docusaurus\":\\s*\".+?\"[^}]*}"
-        },
-        {
-          "path": "package.json",
-          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@docusaurus\\/core\":\\s*\".+?\"[^}]*}"
         }
       ]
     },
@@ -168,6 +192,37 @@
       },
       "outputDirectory": {
         "value": "build"
+      }
+    }
+  },
+  {
+    "name": "Dojo",
+    "slug": "dojo",
+    "demo": "https://dojo.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/dojo.svg",
+    "tagline": "Dojo is a modern progressive, TypeScript first framework.",
+    "description": "A Dojo app, created with the Dojo CLI's cli-create-app command.",
+    "website": "https://dojo.io",
+    "detectors": {
+      "some": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@dojo\\/framework\":\\s*\".+?\"[^}]*}"
+        },
+        {
+          "path": ".dojorc"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `dojo build`"
+      },
+      "devCommand": {
+        "value": "dojo build -m dev -w -s -p $PORT"
+      },
+      "outputDirectory": {
+        "value": "output/dist"
       }
     }
   },

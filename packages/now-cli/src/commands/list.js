@@ -40,6 +40,7 @@ const help = () => {
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -60,6 +61,12 @@ const help = () => {
   ${chalk.gray('–')} Filter deployments by metadata
 
     ${chalk.cyan('$ now ls -m key1=value1 -m key2=value2')}
+  
+  ${chalk.gray('–')} Paginate deployments for a project, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+    ${chalk.cyan(`$ now ls my-app --next 1584722256178`)}
 `);
 };
 
@@ -75,6 +82,7 @@ export default async function main(ctx) {
       '-a': '--all',
       '-m': '--meta',
       '--next': Number,
+      '-N': '--next',
     });
   } catch (err) {
     handleError(err);
@@ -214,7 +222,7 @@ export default async function main(ctx) {
     debug(
       'No deployments: attempting to find aliases that matches supplied app name'
     );
-    const aliases = await getAliases(now);
+    const { aliases } = await getAliases(now);
     const item = aliases.find(e => e.uid === app || e.alias === app);
 
     if (item) {

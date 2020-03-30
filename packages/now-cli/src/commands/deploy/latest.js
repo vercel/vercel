@@ -506,6 +506,7 @@ export default async function main(
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
+      withCache: argv['--with-cache'],
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       isFile,
@@ -576,7 +577,7 @@ export default async function main(
     }
 
     if (deployment.readyState === 'CANCELED') {
-      output.log('The deployment has been canceled.');
+      output.print('The deployment has been canceled.\n');
       return 1;
     }
 

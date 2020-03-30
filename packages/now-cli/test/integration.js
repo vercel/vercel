@@ -366,6 +366,30 @@ test('output the version', async t => {
   t.is(version, pkg.version);
 });
 
+test('should error with suggestion for secrets subcommand', async t => {
+  const target = fixture('subdirectory-secret');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['secret', 'add', 'key', 'value', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.regex(
+    stderr,
+    /secrets/gm,
+    `Expected "secrets" suggestion but received "${stderr}"`
+  );
+});
+
 test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
@@ -1480,7 +1504,7 @@ test('initialize example to existing directory with "-f"', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 0);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
   t.true(verifyExampleAngular(cwd, 'angular'));
 });
 
@@ -1488,7 +1512,7 @@ test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
+    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
@@ -1502,7 +1526,7 @@ test('try to initialize example to existing directory', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async t => {
@@ -1518,7 +1542,7 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize example "example-404"', async t => {
@@ -1536,7 +1560,7 @@ test('try to initialize example "example-404"', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to revert a deployment and assign the automatic aliases', async t => {

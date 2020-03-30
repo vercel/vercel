@@ -9,11 +9,11 @@ import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
-  execAsync,
   spawnAsync,
   execCommand,
   spawnCommand,
   runNpmInstall,
+  getNodeBinPath,
   runBundleInstall,
   runPipInstall,
   runPackageJsonScript,
@@ -30,6 +30,7 @@ import {
   NowBuildError,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
+import { getNowIgnore } from 'now-client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -341,19 +342,17 @@ export async function build({
 
     if (pkg && (buildCommand || devCommand)) {
       // We want to add `node_modules/.bin` after `npm install`
-      const { stdout } = await execAsync('yarn', ['bin'], {
-        cwd: entrypointDir,
-      });
+      const nodeBinPath = await getNodeBinPath({ cwd: entrypointDir });
 
       spawnOpts.env = {
         ...spawnOpts.env,
-        PATH: `${stdout.trim()}${path.delimiter}${
+        PATH: `${nodeBinPath}${path.delimiter}${
           spawnOpts.env ? spawnOpts.env.PATH : ''
         }`,
       };
 
       debug(
-        `Added "${stdout.trim()}" to PATH env because a package.json file was found.`
+        `Added "${nodeBinPath}" to PATH env because a package.json file was found.`
       );
     }
 
@@ -477,7 +476,15 @@ export async function build({
         routes.push(...frameworkRoutes);
       }
 
-      output = await glob('**', distPath, mountpoint);
+      let ignore: string[] = [];
+      if (config.zeroConfig) {
+        const result = await getNowIgnore(distPath);
+        ignore = result.ignores
+          .map(file => (file.endsWith('/') ? `${file}**` : file))
+          .concat(['yarn.lock', 'package-lock.json', 'package.json']);
+        debug(`Using ignore: ${JSON.stringify(ignore)}`);
+      }
+      output = await glob('**', { cwd: distPath, ignore }, mountpoint);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];

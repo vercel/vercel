@@ -79,10 +79,10 @@ const frameworkList: Framework[] = [
     getOutputDirName: async () => '_site',
   },
   {
-    name: 'Docusaurus',
-    slug: 'docusaurus',
+    name: 'Docusaurus 2',
+    slug: 'docusaurus-2',
     dependency: '@docusaurus/core',
-    buildCommand: 'docusaurus-build',
+    buildCommand: 'docusaurus build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
       const location = join(dirPrefix, base);
@@ -120,6 +120,27 @@ const frameworkList: Framework[] = [
     defaultRoutes: [
       {
         handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
+    name: 'Dojo',
+    slug: 'dojo',
+    dependency: '@dojo/cli',
+    buildCommand: 'dojo build',
+    getOutputDirName: async () => join('output', 'dist'),
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
       },
       {
         src: '/(.*)',

@@ -211,7 +211,7 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/projects(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
-      headers: { Location: '/projects.html?id=$1&action=$2' },
+      headers: { Location: '/projects.html' },
       status: 308,
     },
     {
@@ -236,7 +236,7 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
-      headers: { Location: '/api/user?id=$1' },
+      headers: { Location: '/api/user' },
       status: 308,
     },
     {
@@ -321,6 +321,8 @@ test('convertRewrites', () => {
       destination: '/another-catch/:hello+',
     },
     { source: '/catchme/:id*', destination: '/api/user' },
+    { source: '/:path', destination: '/test?path=:path' },
+    { source: '/:path/:two', destination: '/test?path=:path' },
   ]);
 
   const expected = [
@@ -386,6 +388,16 @@ test('convertRewrites', () => {
       dest: '/api/user?id=$1',
       check: true,
     },
+    {
+      src: '^(?:\\/([^\\/]+?))$',
+      dest: '/test?path=$1',
+      check: true,
+    },
+    {
+      check: true,
+      dest: '/test?path=$1&two=$2',
+      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -404,6 +416,8 @@ test('convertRewrites', () => {
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
     ['/catchme/id-1', '/catchme/id/2'],
+    ['/first', '/another'],
+    ['/first/second', '/one/two'],
   ];
 
   const mustNotMatch = [
@@ -420,6 +434,8 @@ test('convertRewrites', () => {
     ['/random-catch/'],
     ['/another-catch/'],
     ['/catchm', '/random'],
+    ['/another/one'],
+    ['/not', '/these'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

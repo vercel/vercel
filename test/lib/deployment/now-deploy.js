@@ -15,6 +15,7 @@ async function nowDeploy(bodies, randomness) {
       mode: path.extname(n) === '.sh' ? 0o100755 : 0o100644,
     }));
 
+  const { FORCE_BUILD_IN_REGION, NOW_DEBUG } = process.env;
   const nowJson = JSON.parse(bodies['now.json']);
 
   const nowDeployPayload = {
@@ -25,6 +26,8 @@ async function nowDeploy(bodies, randomness) {
       env: {
         ...(nowJson.build || {}).env,
         RANDOMNESS_BUILD_ENV_VAR: randomness,
+        FORCE_BUILD_IN_REGION,
+        NOW_DEBUG,
       },
     },
     name: 'test2020',
@@ -33,16 +36,6 @@ async function nowDeploy(bodies, randomness) {
     routes: nowJson.routes || [],
     meta: {},
   };
-
-  if (process.env.FORCE_BUILD_IN_REGION) {
-    const { builds = [] } = nowDeployPayload;
-    builds.forEach(b => {
-      if (!b.config) {
-        b.config = {};
-      }
-      b.config.forceBuildIn = process.env.FORCE_BUILD_IN_REGION;
-    });
-  }
 
   console.log(`posting ${files.length} files`);
 
