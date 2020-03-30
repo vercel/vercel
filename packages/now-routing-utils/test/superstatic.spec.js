@@ -321,6 +321,7 @@ test('convertRewrites', () => {
       destination: '/another-catch/:hello+',
     },
     { source: '/catchme/:id*', destination: '/api/user' },
+    { source: '/:path', destination: '/test?path=:path' },
   ]);
 
   const expected = [
@@ -386,6 +387,11 @@ test('convertRewrites', () => {
       dest: '/api/user?id=$1',
       check: true,
     },
+    {
+      src: '^(?:\\/([^\\/]+?))$',
+      dest: '/test?path=$1',
+      check: true,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -404,6 +410,7 @@ test('convertRewrites', () => {
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
     ['/catchme/id-1', '/catchme/id/2'],
+    ['/first', '/another'],
   ];
 
   const mustNotMatch = [
@@ -420,6 +427,7 @@ test('convertRewrites', () => {
     ['/random-catch/'],
     ['/another-catch/'],
     ['/catchm', '/random'],
+    ['/another/one'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
