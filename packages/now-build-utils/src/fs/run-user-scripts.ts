@@ -6,6 +6,7 @@ import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import { cpus } from 'os';
+import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 
@@ -29,12 +30,15 @@ export function spawnAsync(
         return resolve();
       }
 
-      const errorLogs = stderrLogs.map(line => line.toString()).join('');
-      if (opts.stdio !== 'inherit') {
-        reject(new Error(`Exited with ${code || signal}\n${errorLogs}`));
-      } else {
-        reject(new Error(`Exited with ${code || signal}`));
-      }
+      reject(
+        new NowBuildError({
+          code: `NOW_BUILD_UTILS_SPAWN_${code}_${signal}`,
+          message:
+            opts.stdio === 'inherit'
+              ? `Command exited with ${code || signal}`
+              : stderrLogs.map(line => line.toString()).join(''),
+        })
+      );
     });
   });
 }
@@ -65,9 +69,10 @@ export function execAsync(
       child.on('close', (code, signal) => {
         if (code !== 0) {
           return reject(
-            new Error(
-              `Program "${command}" exited with non-zero exit code ${code} ${signal}.`
-            )
+            new NowBuildError({
+              code: `NOW_BUILD_UTILS_EXEC_${code}_${signal}`,
+              message: `Program "${command}" exited with non-zero exit code ${code} ${signal}.`,
+            })
           );
         }
 
