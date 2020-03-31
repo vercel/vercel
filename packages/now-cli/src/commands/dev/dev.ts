@@ -56,6 +56,7 @@ export default async function dev(
   }
 
   let devCommand: undefined | string;
+  let frameworkSlug: null | string = null;
   if (link.status === 'linked') {
     const { project } = link;
 
@@ -65,6 +66,7 @@ export default async function dev(
       const framework = frameworks.find(f => f.slug === project.framework);
 
       if (framework) {
+        frameworkSlug = framework.slug;
         const defaults = framework.settings.devCommand;
 
         if (isSettingValue(defaults)) {
@@ -78,7 +80,12 @@ export default async function dev(
     }
   }
 
-  const devServer = new DevServer(cwd, { output, debug, devCommand });
+  const devServer = new DevServer(cwd, {
+    output,
+    debug,
+    devCommand,
+    frameworkSlug,
+  });
 
   process.once('SIGINT', () => devServer.stop());
 

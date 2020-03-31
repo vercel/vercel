@@ -19,7 +19,7 @@ import {
 } from 'fs-extra';
 import pkg from '../../../package.json';
 
-import { NoBuilderCacheError } from '../errors';
+import { NoBuilderCacheError } from '../errors-ts';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
 

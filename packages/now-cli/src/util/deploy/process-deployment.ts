@@ -7,10 +7,12 @@ import {
   NowClientOptions,
 } from 'now-client';
 import { Output } from '../output';
-import Now from '../../util/now';
+// @ts-ignore
+import Now from '../../util';
 import { NowConfig } from '../dev/types';
 import { Org } from '../../types';
 import ua from '../ua';
+import processLegacyDeployment from './process-legacy-deployment';
 import { linkFolderToProject } from '../projects/link';
 import { prependEmoji, emoji } from '../emoji';
 
@@ -45,6 +47,7 @@ function printInspectUrl(
 }
 
 export default async function processDeployment({
+  isLegacy,
   org,
   cwd,
   projectName,
@@ -54,26 +57,33 @@ export default async function processDeployment({
 }: {
   now: Now;
   output: Output;
+  hashes: { [key: string]: any };
   paths: string[];
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
   deployStamp: () => string;
+  isLegacy: boolean;
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
+  withCache?: boolean;
   org: Org;
   projectName: string;
   isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
   cwd?: string;
 }) {
+  if (isLegacy) return processLegacyDeployment(args);
+
   let {
     now,
     output,
+    hashes,
     paths,
     requestBody,
     deployStamp,
     force,
+    withCache,
     nowConfig,
     quiet,
   } = args;
@@ -91,6 +101,7 @@ export default async function processDeployment({
     userAgent: ua,
     path: paths[0],
     force,
+    withCache,
     skipAutoDetectionConfirmation,
   };
 
@@ -114,6 +125,10 @@ export default async function processDeployment({
     requestBody,
     nowConfig
   )) {
+    if (event.type === 'hashes-calculated') {
+      hashes = event.payload;
+    }
+
     if (['tip', 'notice', 'warning'].includes(event.type)) {
       indications.push(event);
     }
@@ -153,6 +168,8 @@ export default async function processDeployment({
         deployingSpinner();
       }
 
+      now._host = event.payload.url;
+
       await linkFolderToProject(
         output,
         cwd || paths[0],
@@ -163,6 +180,8 @@ export default async function processDeployment({
         projectName,
         org.slug
       );
+
+      now.url = event.payload.url;
 
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
@@ -189,6 +208,9 @@ export default async function processDeployment({
     }
 
     if (event.type === 'canceled') {
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
       if (buildSpinner) {
         buildSpinner();
       }
@@ -222,6 +244,7 @@ export default async function processDeployment({
       }
 
       const error = await now.handleDeploymentError(event.payload, {
+        hashes,
         env,
       });
 

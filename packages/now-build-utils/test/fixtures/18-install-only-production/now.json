@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "build": { "env": { "NPM_ONLY_PRODUCTION": "1" } },
+  "builds": [
+    { "src": "npm/package.json", "use": "@now/static-build" },
+    { "src": "yarn/package.json", "use": "@now/static-build" }
+  ],
+  "probes": [
+    { "path": "/npm", "mustContain": "npm-prod:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/yarn", "mustContain": "yarn-prod:RANDOMNESS_PLACEHOLDER" }
+  ]
+}

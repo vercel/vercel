@@ -1,21 +1,22 @@
 import { DeploymentFile } from './utils/hashes';
-import { generateQueryString } from './utils/query-string';
-import { isReady, isAliasAssigned } from './utils/ready-state';
-import { checkDeploymentStatus } from './check-deployment-status';
 import {
   fetch,
   prepareFiles,
   createDebug,
   getApiDeploymentsUrl,
 } from './utils';
+import { checkDeploymentStatus } from './check-deployment-status';
+import { generateQueryString } from './utils/query-string';
+import { isReady, isAliasAssigned } from './utils/ready-state';
 import {
   Deployment,
   DeploymentOptions,
+  NowConfig,
   NowClientOptions,
   DeploymentEventType,
 } from './types';
 
-async function* postDeployment(
+async function* createDeployment(
   files: Map<string, DeploymentFile>,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
@@ -25,62 +26,58 @@ async function* postDeployment(
   const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
 
   debug('Sending deployment creation API request');
+  try {
+    const dpl = await fetch(
+      `${apiDeployments}${generateQueryString(clientOptions)}`,
+      clientOptions.token,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...deploymentOptions,
+          files: preparedFiles,
+        }),
+        apiUrl: clientOptions.apiUrl,
+        userAgent: clientOptions.userAgent,
+      }
+    );
 
-  const response = await fetch(
-    `${apiDeployments}${generateQueryString(clientOptions)}`,
-    clientOptions.token,
-    {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...deploymentOptions,
-        files: preparedFiles,
-      }),
-      apiUrl: clientOptions.apiUrl,
-      userAgent: clientOptions.userAgent,
+    const json = await dpl.json();
+
+    debug('Deployment response:', JSON.stringify(json));
+
+    if (!dpl.ok || json.error) {
+      debug('Error: Deployment request status is', dpl.status);
+      // Return error object
+      return yield {
+        type: 'error',
+        payload: json.error
+          ? { ...json.error, status: dpl.status }
+          : { ...json, status: dpl.status },
+      };
     }
-  );
 
-  const deployment = await response.json();
+    for (const [name, value] of dpl.headers.entries()) {
+      if (name.startsWith('x-now-warning-')) {
+        debug('Deployment created with a warning:', value);
+        yield { type: 'warning', payload: value };
+      }
+      if (name.startsWith('x-now-notice-')) {
+        debug('Deployment created with a notice:', value);
+        yield { type: 'notice', payload: value };
+      }
+      if (name.startsWith('x-now-tip-')) {
+        debug('Deployment created with a tip:', value);
+        yield { type: 'tip', payload: value };
+      }
+    }
 
-  if (clientOptions.debug) {
-    // Wrapped because there is no need to
-    // call JSON.stringify if we don't debug.
-    debug('Deployment response:', JSON.stringify(deployment));
+    yield { type: 'created', payload: json };
+  } catch (e) {
+    return yield { type: 'error', payload: e };
   }
-
-  if (!response.ok || deployment.error) {
-    debug('Error: Deployment request status is', response.status);
-    // Return error object
-    return yield {
-      type: 'error',
-      payload: deployment.error
-        ? { ...deployment.error, status: response.status }
-        : { ...deployment, status: response.status },
-    };
-  }
-
-  for (const [name, value] of response.headers.entries()) {
-    if (name.startsWith('x-now-warning-')) {
-      debug('Deployment created with a warning:', value);
-      yield { type: 'warning', payload: value };
-    }
-
-    if (name.startsWith('x-now-notice-')) {
-      debug('Deployment created with a notice:', value);
-      yield { type: 'notice', payload: value };
-    }
-
-    if (name.startsWith('x-now-tip-')) {
-      debug('Deployment created with a tip:', value);
-      yield { type: 'tip', payload: value };
-    }
-  }
-
-  yield { type: 'created', payload: deployment };
 }
 
 function getDefaultName(
@@ -104,13 +101,15 @@ function getDefaultName(
 
 export async function* deploy(
   files: Map<string, DeploymentFile>,
+  nowConfig: NowConfig,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(clientOptions.debug);
 
   // Check if we should default to a static deployment
-  if (!deploymentOptions.name) {
+  if (!deploymentOptions.version && !deploymentOptions.name) {
+    deploymentOptions.version = 2;
     deploymentOptions.name =
       files.size === 1 ? 'file' : getDefaultName(files, clientOptions);
 
@@ -146,11 +145,41 @@ export async function* deploy(
     debug('No name provided. Defaulting to', deploymentOptions.name);
   }
 
+  if (
+    deploymentOptions.version === 1 &&
+    !deploymentOptions.deploymentType &&
+    nowConfig.type
+  ) {
+    debug(`Setting 'type' for 1.0 deployment to '${nowConfig.type}'`);
+    deploymentOptions.deploymentType = nowConfig.type.toUpperCase() as DeploymentOptions['deploymentType'];
+  }
+
+  if (deploymentOptions.version === 1 && !deploymentOptions.config) {
+    debug(`Writing 'config' values for 1.0 deployment`);
+    deploymentOptions.config = { ...nowConfig };
+    delete deploymentOptions.config.version;
+  }
+
+  if (
+    deploymentOptions.version === 1 &&
+    !deploymentOptions.forceNew &&
+    clientOptions.force
+  ) {
+    debug(`Setting 'forceNew' for 1.0 deployment`);
+    deploymentOptions.forceNew = clientOptions.force;
+  }
+
+  if (clientOptions.withCache) {
+    debug(
+      `'withCache' is provided. Force deploy will be performed with cache retention`
+    );
+  }
+
   let deployment: Deployment | undefined;
 
   try {
     debug('Creating deployment');
-    for await (const event of postDeployment(
+    for await (const event of createDeployment(
       files,
       clientOptions,
       deploymentOptions

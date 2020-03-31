@@ -1,27 +1,11 @@
-import Now from './now';
-import { responseError } from './error';
+import Now from '.';
 
 export default class Secrets extends Now {
-  async ls() {
-    const { secrets } = await this.retry(async bail => {
-      const res = await this._fetch('/now/secrets');
-
-      if (res.status === 200) {
-        // What we want
-        return res.json();
-      }
-      if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to list secrets'));
-      }
-      // If something is wrong with the server, we retry
-      throw await responseError(res, 'Failed to list secrets');
-    });
-
-    return secrets;
+  ls() {
+    return this.listSecrets();
   }
 
-  async rm(nameOrId) {
+  rm(nameOrId) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
         console.time(`> [debug] #${attempt} DELETE /secrets/${nameOrId}`);
@@ -49,7 +33,7 @@ export default class Secrets extends Now {
     });
   }
 
-  async add(name, value) {
+  add(name, value) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
         console.time(`> [debug] #${attempt} POST /secrets`);
@@ -81,7 +65,7 @@ export default class Secrets extends Now {
     });
   }
 
-  async rename(nameOrId, newName) {
+  rename(nameOrId, newName) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
         console.time(`> [debug] #${attempt} PATCH /secrets/${nameOrId}`);

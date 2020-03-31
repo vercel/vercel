@@ -1,5 +1,5 @@
 {
-  "name": "47-nuxt-with-custom-output",
+  "name": "48-nuxt-without-framework",
   "version": "1.0.0",
   "main": "pages/index.js",
   "scripts": {

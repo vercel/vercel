@@ -1115,7 +1115,7 @@ test('[now dev] 23-docusaurus', async t => {
     validateResponseHeaders(t, response);
 
     const body = await response.text();
-    t.regex(body, /Test Site · A website for testing/gm);
+    t.regex(body, /My Site/gm);
   });
 
   await tester(t);
@@ -1374,6 +1374,20 @@ test('[now dev] 25-nextjs-src-dir', async t => {
     dev.kill('SIGTERM');
   }
 });
+
+test(
+  '[now dev] 26-nextjs-secrets',
+  testFixtureStdio('26-nextjs-secrets', async (t, port) => {
+    const user = await fetchWithRetry(`http://localhost:${port}/api/user`);
+    const index = await fetchWithRetry(`http://localhost:${port}`);
+
+    validateResponseHeaders(t, user);
+    validateResponseHeaders(t, index);
+
+    t.regex(await user.text(), new RegExp('runtime'));
+    t.regex(await index.text(), new RegExp('buildtime'));
+  })
+);
 
 test(
   '[now dev] Use `@now/python` with Flask requirements.txt',

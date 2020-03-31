@@ -1,4 +1,4 @@
-import url from 'url';
+import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
@@ -22,7 +22,6 @@ import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import which from 'which';
-import { getNowIgnore } from 'now-client';
 
 import {
   Builder,
@@ -40,9 +39,13 @@ import { Output } from '../output';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
-import { MissingDotenvVarsError } from '../errors';
+import { MissingDotenvVarsError } from '../errors-ts';
 import { version as cliVersion } from '../../../package.json';
-import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
+import {
+  createIgnore,
+  staticFiles as getFiles,
+  getAllProjectFiles,
+} from '../get-files';
 import {
   validateNowConfigBuilds,
   validateNowConfigRoutes,
@@ -107,6 +110,7 @@ export default class DevServer {
   public output: Output;
   public env: EnvConfig;
   public buildEnv: EnvConfig;
+  public frameworkSlug: string | null;
   public files: BuilderInputs;
   public yarnPath: string;
   public address: string;
@@ -142,6 +146,7 @@ export default class DevServer {
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
+    this.frameworkSlug = options.frameworkSlug;
 
     // This gets updated when `start()` is invoked
     this.yarnPath = '/';
@@ -473,14 +478,11 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache, isInitialLoad);
+    this.getNowConfigPromise = this._getNowConfig(canUseCache);
     try {
       return await this.getNowConfigPromise;
     } finally {
@@ -488,10 +490,7 @@ export default class DevServer {
     }
   }
 
-  async _getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       return this.cachedNowConfig;
     }
@@ -596,11 +595,7 @@ export default class DevServer {
       }
     }
 
-    if (!config.builds || config.builds.length === 0) {
-      if (isInitialLoad && !this.devCommand) {
-        this.output.note(`Serving all files as static`);
-      }
-    } else if (Array.isArray(config.builds)) {
+    if (Array.isArray(config.builds)) {
       if (this.devCommand) {
         config.builds = config.builds.filter(filterFrontendBuilds);
       }
@@ -738,11 +733,11 @@ export default class DevServer {
 
     this.yarnPath = await getYarnPath(this.output);
 
-    const { ig } = await getNowIgnore(join(this.cwd, '.nowignore'));
+    const ig = await createIgnore(join(this.cwd, '.nowignore'));
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false, true);
+    const nowConfig = await this.getNowConfig(false);
     const nowConfigBuild = nowConfig.build || {};
     const [env, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),
@@ -752,7 +747,8 @@ export default class DevServer {
     this.env = env;
     this.buildEnv = buildEnv;
 
-    const files = await getFiles(this.cwd, { output: this.output });
+    const opts = { output: this.output, isBuilds: true };
+    const files = await getFiles(this.cwd, nowConfig, opts);
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
@@ -875,6 +871,7 @@ export default class DevServer {
    * Shuts down the `now dev` server, and cleans up any temporary resources.
    */
   async stop(exitCode?: number): Promise<void> {
+    const { devProcess } = this;
     if (this.stopping) return;
 
     this.stopping = true;
@@ -891,17 +888,22 @@ export default class DevServer {
       ops.push(shutdownBuilder(match, this.output));
     }
 
-    ops.push(
-      new Promise(resolve => {
-        if (!this.devProcess) {
-          resolve();
-          return;
-        }
-
-        this.devProcess.on('exit', () => resolve());
-        process.kill(this.devProcess.pid, exitCode);
-      })
-    );
+    if (devProcess) {
+      ops.push(
+        new Promise((resolve, reject) => {
+          devProcess.once('exit', () => resolve());
+          try {
+            process.kill(devProcess.pid);
+          } catch (err) {
+            if (err.code === 'ESRCH') {
+              // Process already exited
+              return resolve();
+            }
+            reject(err);
+          }
+        })
+      );
+    }
 
     ops.push(close(this.server));
 
@@ -1675,8 +1677,13 @@ export default class DevServer {
     const port = await getPort();
 
     const env: EnvConfig = {
+      // Because of child process 'pipe' below, isTTY will be false.
+      // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
+      FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
+      ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
       ...this.buildEnv,
+      ...(this.frameworkSlug === 'nextjs' ? this.env : {}),
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };
@@ -1713,7 +1720,24 @@ export default class DevServer {
 
     this.output.debug(`Spawning dev command: ${command}`);
 
-    const p = spawnCommand(command, { stdio: 'inherit', cwd, env });
+    const devPort = new URL(this.address).port;
+    const proxyPort = new RegExp(port.toString(), 'g');
+    const p = spawnCommand(command, {
+      stdio: ['inherit', 'pipe', 'pipe'],
+      cwd,
+      env,
+    });
+
+    if (!p.stdout || !p.stderr) {
+      throw new Error('Expected child process to have stdout and stderr');
+    }
+
+    p.stderr.pipe(process.stderr);
+    p.stdout.setEncoding('utf8');
+
+    p.stdout.on('data', (data: string) => {
+      process.stdout.write(data.replace(proxyPort, devPort));
+    });
 
     p.on('exit', () => {
       this.devProcessPort = undefined;

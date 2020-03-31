@@ -79,10 +79,10 @@ const frameworkList: Framework[] = [
     getOutputDirName: async () => '_site',
   },
   {
-    name: 'Docusaurus',
-    slug: 'docusaurus',
+    name: 'Docusaurus 2',
+    slug: 'docusaurus-2',
     dependency: '@docusaurus/core',
-    buildCommand: 'docusaurus-build',
+    buildCommand: 'docusaurus build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
       const location = join(dirPrefix, base);
@@ -95,6 +95,21 @@ const frameworkList: Framework[] = [
 
       return base;
     },
+    defaultRoutes: [
+      {
+        src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '.*',
+        status: 404,
+        dest: '404.html',
+      },
+    ],
   },
   {
     name: 'Preact',
@@ -105,6 +120,27 @@ const frameworkList: Framework[] = [
     defaultRoutes: [
       {
         handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
+    name: 'Dojo',
+    slug: 'dojo',
+    dependency: '@dojo/cli',
+    buildCommand: 'dojo build',
+    getOutputDirName: async () => join('output', 'dist'),
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
       },
       {
         src: '/(.*)',
@@ -365,7 +401,7 @@ const frameworkList: Framework[] = [
     buildCommand: 'stencil build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
-      { 
+      {
         src: '/assets/(.*)',
         headers: { 'cache-control': 'max-age=2592000' },
         continue: true,

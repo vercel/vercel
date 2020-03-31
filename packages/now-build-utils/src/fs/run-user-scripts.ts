@@ -99,6 +99,11 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
+export async function getNodeBinPath({ cwd }: { cwd: string }) {
+  const { stdout } = await execAsync('npm', ['bin'], { cwd });
+  return stdout.trim();
+}
+
 async function chmodPlusX(fsPath: string) {
   const s = await fs.stat(fsPath);
   const newMode = s.mode | 64 | 8 | 1; // eslint-disable-line no-bitwise
@@ -189,6 +194,46 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
   return { hasPackageLockJson, packageJson };
 }
 
+interface WalkParentDirsProps {
+  /**
+   * The highest directory, typically the workPath root of the project.
+   * If this directory is reached and it doesn't contain the file, null is returned.
+   */
+  base: string;
+  /**
+   * The directory to start searching, typically the same directory of the entrypoint.
+   * If this directory doesn't contain the file, the parent is checked, etc.
+   */
+  start: string;
+  /**
+   * The name of the file to search for, typically `package.json` or `Gemfile`.
+   */
+  filename: string;
+}
+
+export async function walkParentDirs({
+  base,
+  start,
+  filename,
+}: WalkParentDirsProps): Promise<string | null> {
+  assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
+  assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
+  let parent = '';
+
+  for (let current = start; base.length <= current.length; current = parent) {
+    const fullPath = path.join(current, filename);
+
+    // eslint-disable-next-line no-await-in-loop
+    if (await fs.pathExists(fullPath)) {
+      return fullPath;
+    }
+
+    parent = path.dirname(current);
+  }
+
+  return null;
+}
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
@@ -201,30 +246,31 @@ export async function runNpmInstall(
   }
 
   assert(path.isAbsolute(destPath));
-
-  let commandArgs = args;
   debug(`Installing to ${destPath}`);
-  const { hasPackageLockJson } = await scanParentDirs(destPath);
 
+  const { hasPackageLockJson } = await scanParentDirs(destPath);
   const opts: SpawnOptions = { cwd: destPath, ...spawnOpts };
   const env = opts.env ? { ...opts.env } : { ...process.env };
   delete env.NODE_ENV;
   opts.env = env;
 
+  let command: 'npm' | 'yarn';
+  let commandArgs: string[];
+
   if (hasPackageLockJson) {
-    commandArgs = args.filter(a => a !== '--prefer-offline');
-    await spawnAsync(
-      'npm',
-      commandArgs.concat(['install', '--no-audit', '--unsafe-perm']),
-      opts
-    );
+    command = 'npm';
+    commandArgs = args
+      .filter(a => a !== '--prefer-offline')
+      .concat(['install', '--no-audit', '--unsafe-perm']);
   } else {
-    await spawnAsync(
-      'yarn',
-      commandArgs.concat(['--ignore-engines', '--cwd', destPath]),
-      opts
-    );
+    command = 'yarn';
+    commandArgs = args.concat(['install', '--ignore-engines']);
   }
+
+  if (process.env.NPM_ONLY_PRODUCTION) {
+    commandArgs.push('--production');
+  }
+  await spawnAsync(command, commandArgs, opts);
 }
 
 export async function runBundleInstall(

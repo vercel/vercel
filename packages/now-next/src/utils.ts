@@ -321,6 +321,7 @@ export type RoutesManifest = {
 
 export async function getRoutesManifest(
   entryPath: string,
+  outputDirectory: string,
   nextVersion?: string
 ): Promise<RoutesManifest | undefined> {
   const shouldHaveManifest =
@@ -329,7 +330,7 @@ export async function getRoutesManifest(
 
   const pathRoutesManifest = path.join(
     entryPath,
-    '.next',
+    outputDirectory,
     'routes-manifest.json'
   );
   const hasRoutesManifest = await fs
@@ -373,6 +374,7 @@ export async function getDynamicRoutes(
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              check: true,
             };
           });
       }
@@ -439,6 +441,7 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
+        check: true,
       });
     }
   });
