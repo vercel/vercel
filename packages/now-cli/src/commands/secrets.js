@@ -269,17 +269,17 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       typeof parsedValue === 'boolean' &&
       parsedValue !== originalValue
     ) {
-      if (typeof originalValue === 'boolean') {
-        const example = chalk.cyan(`$ now secret add -- "${args[0]}"`);
-        console.log(
-          `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
-        );
-        return exit(1);
-      } else {
-        // Corner case where `mri` transforms the secret value into a boolean because
-        // it starts with a `-` so it thinks its a flag, so we use the original value instead.
-        value = originalValue;
-      }
+      // Corner case where `mri` transforms the secret value into a boolean because
+      // it starts with a `-` so it thinks its a flag, so we use the original value instead.
+      value = originalValue;
+    }
+
+    if (typeof value === 'boolean') {
+      const example = chalk.cyan(`$ now secret add -- "${name}"`);
+      console.log(
+        `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
+      );
+      return exit(1);
     }
 
     await secrets.add(name, value);
