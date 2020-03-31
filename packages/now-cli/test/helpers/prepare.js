@@ -327,7 +327,7 @@ CMD ["node", "index.js"]`,
       'package.json': JSON.stringify({
         private: true,
         scripts: {
-          build: 'echo $MY_SECRET > public/index.txt',
+          build: 'mkdir public && echo $MY_SECRET > public/index.txt',
         },
       }),
       'now.json': JSON.stringify({

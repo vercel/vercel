@@ -397,7 +397,7 @@ test('should add secret with hyphen prefix', async t => {
 
   let secretCall = await execa(
     binaryPath,
-    ['secrets', 'add', key, value, ...defaultArgs],
+    ['secrets', 'add', ...defaultArgs, key, value],
     {
       cwd: target,
       reject: false,
@@ -421,7 +421,7 @@ test('should add secret with hyphen prefix', async t => {
     formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
   );
   const { host } = new URL(targetCall.stdout);
-  const response = await fetch(`https://${host}/ignored.txt`);
+  const response = await fetch(`https://${host}`);
   t.is(
     response.status,
     200,
@@ -429,7 +429,7 @@ test('should add secret with hyphen prefix', async t => {
   );
   t.is(
     await response.text(),
-    value,
+    `${value}\n`,
     formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
   );
 });
