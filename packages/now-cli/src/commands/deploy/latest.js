@@ -666,7 +666,7 @@ export default async function main(
     if (err instanceof BuildError) {
       output.error('Build failed');
       output.error(
-        `Check your logs at ${now.url}/_logs or run ${code(
+        `Check your logs at https://${now.url}/_logs or run ${code(
           `now logs ${now.url}`,
           {
             // Backticks are interpreted as part of the URL, causing CMD+Click
