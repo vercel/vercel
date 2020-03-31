@@ -110,7 +110,7 @@ const main = async ctx => {
   }
 
   try {
-    await run({ output, token, contextName, currentTeam });
+    await run({ output, token, contextName, currentTeam, ctx });
   } catch (err) {
     handleError(err);
     exit(1);
@@ -126,7 +126,7 @@ export default async ctx => {
   }
 };
 
-async function run({ output, token, contextName, currentTeam }) {
+async function run({ output, token, contextName, currentTeam, ctx }) {
   const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
@@ -260,7 +260,28 @@ async function run({ output, token, contextName, currentTeam }) {
       return exit(1);
     }
 
-    const [name, value] = args;
+    const [name, parsedValue] = args;
+    const [originalName, originalValue] = ctx.argv.slice(-2);
+
+    let value = parsedValue;
+    if (
+      name === originalName &&
+      typeof parsedValue === 'boolean' &&
+      parsedValue !== originalValue
+    ) {
+      // Corner case where `mri` transforms the secret value into a boolean because
+      // it starts with a `-` so it thinks its a flag, so we use the original value instead.
+      value = originalValue;
+    }
+
+    if (typeof value === 'boolean') {
+      const example = chalk.cyan(`$ now secret add -- "${name}"`);
+      console.log(
+        `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
+      );
+      return exit(1);
+    }
+
     await secrets.add(name, value);
     const elapsed = ms(new Date() - start);
 
