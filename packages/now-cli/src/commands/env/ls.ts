@@ -1,18 +1,14 @@
-// TODO: GET /v1/projects/:projectid/env/?target=:target
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import { Output } from '../../util/output';
-import { DomainNotFound } from '../../util/errors-ts';
-import { ThenArg, DNSRecord, NowContext } from '../../types';
+import { ProjectEnvVariable, ProjectEnvTarget, NowContext } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import getDNSRecords from '../../util/dns/get-dns-records';
-import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import getScope from '../../util/get-scope';
+import getEnvVariables from '../../util/env/get-env-records';
+import { getLinkedProject } from '../../util/projects/link';
 import stamp from '../../util/output/stamp';
-
-type DNSRecords = ThenArg<ReturnType<typeof getDNSRecords>>;
+import cmd from '../../util/output/cmd';
 
 type Options = {
   '--debug': boolean;
@@ -24,9 +20,6 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  if (args.length === 0 || args.length > 0) {
-    throw new Error('Not implemented yet');
-  }
   const {
     authConfig: { token },
     config,
@@ -35,85 +28,78 @@ export default async function ls(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-  let contextName = null;
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
+  const link = await getLinkedProject(output, client);
 
-    throw err;
-  }
-
-  const [domainName] = args;
-  const lsStamp = stamp();
-
-  if (args.length > 1) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now dns ls [domain]`'
-      )}`
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.print(
+      `${chalk.red(
+        'Error!'
+      )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
+        'now'
+      )} to link it.\n`
     );
     return 1;
-  }
+  } else {
+    const { project } = link;
+    const envTarget = args[0] as ProjectEnvTarget | undefined;
+    const lsStamp = stamp();
 
-  if (domainName) {
-    const records = await getDomainDNSRecords(output, client, domainName);
-    if (records instanceof DomainNotFound) {
+    if (args.length > 1) {
       output.error(
-        `The domain ${domainName} can't be found under ${chalk.bold(
-          contextName
-        )} ${chalk.gray(lsStamp())}`
+        `Invalid number of arguments. Usage: ${chalk.cyan(
+          '`now env ls [environment]`'
+        )}`
       );
       return 1;
     }
 
-    output.log(
-      `${plural('Record', records.length, true)} found under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(lsStamp())}`
+    const records = await getEnvVariables(
+      output,
+      client,
+      project.id,
+      envTarget
     );
-    console.log(getDNSRecordsTable([{ domainName, records }]));
+    output.log(
+      `${plural(
+        'Environment Variables',
+        records.length,
+        true
+      )} found under ${chalk.bold(project.name)} ${chalk.gray(lsStamp())}`
+    );
+    console.log(getTable(records));
     return 0;
   }
-
-  const dnsRecords = await getDNSRecords(output, client, contextName);
-  const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
-  output.log(
-    `${plural('Record', nRecords, true)} found under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(lsStamp())}`
-  );
-  console.log(getDNSRecordsTable(dnsRecords));
-  return 0;
 }
 
-function getDNSRecordsTable(dnsRecords: DNSRecords) {
+function getTable(records: ProjectEnvVariable[]) {
   return formatTable(
-    ['', 'id', 'name', 'type', 'value', 'created'],
-    ['l', 'r', 'l', 'l', 'l', 'l'],
-    dnsRecords.map(({ domainName, records }) => ({
-      name: chalk.bold(domainName),
-      rows: records.map(getDNSRecordRow),
-    }))
+    ['key', 'value', 'environment', 'created', 'updated'],
+    ['r', 'l', 'l', 'l', 'l'],
+    [
+      {
+        name: 'Environment Variables',
+        rows: records.map(getRow),
+      },
+    ]
   );
 }
 
-function getDNSRecordRow(record: DNSRecord) {
-  const isSystemRecord = record.creator === 'system';
-  const createdAt = `${ms(
-    Date.now() - new Date(Number(record.created)).getTime()
-  )} ago`;
-  const priority = record.mxPriority || record.priority || null;
+function getRow({
+  key,
+  value,
+  target,
+  createdAt = 0,
+  updatedAt = 0,
+}: ProjectEnvVariable) {
+  const now = Date.now();
   return [
-    '',
-    !isSystemRecord ? record.id : '',
-    record.name,
-    record.type,
-    priority ? `${priority} ${record.value}` : record.value,
-    chalk.gray(isSystemRecord ? 'default' : createdAt),
+    key,
+    value,
+    target || chalk.gray('global'),
+    `${ms(now - createdAt)} ago`,
+    `${ms(now - updatedAt)} ago`,
   ];
 }

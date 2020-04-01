@@ -216,6 +216,21 @@ export type DNSRecordData =
   | SRVRecordData
   | MXRecordData;
 
+export enum ProjectEnvTarget {
+  Production = 'production',
+  Preview = 'preview',
+  Development = 'development',
+}
+
+export interface ProjectEnvVariable {
+  key: string;
+  value: string;
+  configurationId?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
+  target?: ProjectEnvTarget;
+}
+
 export interface Project {
   id: string;
   name: string;
