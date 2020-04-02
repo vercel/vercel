@@ -12,7 +12,7 @@ export default async function getEnvVariables(
     `Fetching environment variables of project ${projectId} and target ${target}`
   );
   const qs = target ? `?target=${encodeURIComponent(target)}` : '';
-  const url = `/v4/projects/${encodeURIComponent(projectId)}/env${qs}`;
+  const url = `/v4/projects/${projectId}/env${qs}`;
   const records = await client.fetch<ProjectEnvVariable[]>(url);
   return records;
 }

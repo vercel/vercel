@@ -1,4 +1,3 @@
-// TODO: GET /v2/now/secrets/:secretid?decrypt=1
 import chalk from 'chalk';
 import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';

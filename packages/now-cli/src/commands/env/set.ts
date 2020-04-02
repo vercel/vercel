@@ -1,19 +1,13 @@
-// TODO: POST /v1/projects/:projectid/env/:key?target=:target
 import chalk from 'chalk';
-import {
-  DomainNotFound,
-  DNSPermissionDenied,
-  DNSInvalidPort,
-  DNSInvalidType,
-} from '../../util/errors-ts';
-import { NowContext } from '../../types';
+import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';
-import addDNSRecord from '../../util/dns/add-dns-record';
 import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import stamp from '../../util/output/stamp';
-import getDNSData from '../../util/dns/get-dns-data';
+import { getLinkedProject } from '../../util/projects/link';
+import addEnvRecord from '../../util/env/add-env-record';
+import cmd from '../../util/output/cmd';
+import withSpinner from '../../util/with-spinner';
+import { emoji, prependEmoji } from '../../util/emoji';
 
 type Options = {
   '--debug': boolean;
@@ -25,9 +19,6 @@ export default async function set(
   args: string[],
   output: Output
 ) {
-  if (args.length === 0 || args.length > 0) {
-    throw new Error('Not implemented yet');
-  }
   const {
     authConfig: { token },
     config,
@@ -36,88 +27,57 @@ export default async function set(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-  let contextName = null;
+  const link = await getLinkedProject(output, client);
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.print(
+      `${chalk.red(
+        'Error!'
+      )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
+        'now'
+      )} to link it.\n`
+    );
+    return 1;
+  } else {
+    const { org, project } = link;
+    if (args.length > 3) {
+      output.error(
+        `Invalid number of arguments. See: ${chalk.cyan(
+          '`now env --help`'
+        )} for usage.`
+      );
       return 1;
     }
 
-    throw err;
-  }
+    const addStamp = stamp();
+    const [key, environmentType] = args;
+    let value = 'some secret';
+    const environments = [environmentType] as ProjectEnvTarget[];
 
-  const parsedParams = parseAddDNSRecordArgs(args);
-  if (!parsedParams) {
-    output.error(
-      `Invalid number of arguments. See: ${chalk.cyan(
-        '`now dns --help`'
-      )} for usage.`
+    await withSpinner('Saving', async () => {
+      for (const env of environments) {
+        await addEnvRecord(output, client, project.id, key, value, env);
+      }
+    });
+
+    output.print(
+      `${prependEmoji(
+        `Added ${environments.join(' ')} environment variable ${chalk.bold(
+          key
+        )} to project ${chalk.bold(project.id)} ${chalk.gray(addStamp())}`,
+        emoji('success')
+      )}\n`
     );
-    return 1;
-  }
 
-  const addStamp = stamp();
-  const { domain, data: argData } = parsedParams;
-  const data = await getDNSData(output, argData);
-  if (!data) {
-    output.log(`Aborted`);
-    return 1;
-  }
-
-  const record = await addDNSRecord(client, domain, data);
-  if (record instanceof DomainNotFound) {
-    output.error(
-      `The domain ${domain} can't be found under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(addStamp())}`
+    output.print(
+      `${prependEmoji(
+        `Environments variables can be managed here: https://zeit.co/${org.slug}/${project.name}/settings#env`,
+        emoji('tip')
+      )}\n`
     );
-    return 1;
+
+    return 0;
   }
-
-  if (record instanceof DNSPermissionDenied) {
-    output.error(
-      `You don't have permissions to add records to domain ${domain} under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(addStamp())}`
-    );
-    return 1;
-  }
-
-  if (record instanceof DNSInvalidPort) {
-    output.error(
-      `Invalid <port> parameter. A number was expected ${chalk.gray(
-        addStamp()
-      )}`
-    );
-    return 1;
-  }
-
-  if (record instanceof DNSInvalidType) {
-    output.error(
-      `Invalid <type> parameter "${
-        record.meta.type
-      }". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT ${chalk.gray(
-        addStamp()
-      )}`
-    );
-    return 1;
-  }
-
-  if (record instanceof Error) {
-    output.error(record.message);
-    return 1;
-  }
-
-  console.log(
-    `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
-      domain
-    )} ${chalk.gray(`(${record.uid})`)} created under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(addStamp())}`
-  );
-
-  return 0;
 }

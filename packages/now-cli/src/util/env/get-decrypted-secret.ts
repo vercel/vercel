@@ -8,7 +8,7 @@ export default async function getDecryptedSecret(
   secretId: string
 ): Promise<string> {
   output.debug(`Fetching decrypted secret ${secretId}`);
-  const url = `/v2/now/secrets/${encodeURIComponent(secretId)}?decrypt=true`;
+  const url = `/v2/now/secrets/${secretId}?decrypt=true`;
   const secret = await client.fetch<Secret>(url);
   return secret.value;
 }
