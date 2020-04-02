@@ -28,7 +28,6 @@ export default async function ls(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-
   const link = await getLinkedProject(output, client);
 
   if (link.status === 'error') {

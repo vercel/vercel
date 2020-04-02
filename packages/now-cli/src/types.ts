@@ -216,6 +216,17 @@ export type DNSRecordData =
   | SRVRecordData
   | MXRecordData;
 
+export interface Secret {
+  uid: string;
+  name: string;
+  value: string;
+  teamId?: string;
+  userId?: string;
+  projectId?: string;
+  created: string;
+  createdAt: number;
+}
+
 export enum ProjectEnvTarget {
   Production = 'production',
   Preview = 'preview',

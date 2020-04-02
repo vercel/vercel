@@ -1,13 +1,18 @@
-// TODO: GET /v1/projects/:projectid/env?target=development
 // TODO: GET /v2/now/secrets/:secretid?decrypt=1
 import chalk from 'chalk';
-import { NowContext } from '../../types';
+import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import stamp from '../../util/output/stamp';
-import importZonefile from '../../util/dns/import-zonefile';
+import getEnvVariables from '../../util/env/get-env-records';
+import getDecryptedSecret from '../../util/env/get-decrypted-secret';
+import { getLinkedProject } from '../../util/projects/link';
+import cmd from '../../util/output/cmd';
+import withSpinner from '../../util/with-spinner';
+import { join } from 'path';
+import { promises } from 'fs';
+import { emoji, prependEmoji } from '../../util/emoji';
+const { writeFile } = promises;
 
 type Options = {
   '--debug': boolean;
@@ -19,9 +24,6 @@ export default async function pull(
   args: string[],
   output: Output
 ) {
-  if (args.length === 0 || args.length > 0) {
-    throw new Error('Not implemented yet');
-  }
   const {
     authConfig: { token },
     config,
@@ -30,61 +32,69 @@ export default async function pull(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-  let contextName = null;
+  const link = await getLinkedProject(output, client);
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.print(
+      `${chalk.red(
+        'Error!'
+      )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
+        'now'
+      )} to link it.\n`
+    );
+    return 1;
+  } else {
+    const { project } = link;
+    if (args.length > 1) {
+      output.error(
+        `Invalid number of arguments. Usage: ${chalk.cyan(
+          '`now env pull <file>`'
+        )}`
+      );
       return 1;
     }
 
-    throw err;
-  }
-
-  if (args.length !== 2) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now dns import <domain> <zonefile>`'
-      )}`
+    const [filename = '.env'] = args;
+    output.print(
+      `Downloading Development environment variables for project ${chalk.bold(
+        project.name
+      )}\n`
     );
-    return 1;
-  }
+    const pullStamp = stamp();
 
-  const addStamp = stamp();
-  const [domain, zonefilePath] = args;
+    const records = await withSpinner('Downloading', async () => {
+      const dev = ProjectEnvTarget.Development;
+      const envs = await getEnvVariables(output, client, project.id, dev);
+      for (const env of envs) {
+        env.value = await getDecryptedSecret(output, client, env.value);
+      }
+      return envs;
+    });
 
-  const recordIds = await importZonefile(
-    client,
-    contextName,
-    domain,
-    zonefilePath
-  );
-  if (recordIds instanceof DomainNotFound) {
-    output.error(
-      `The domain ${domain} can't be found under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(addStamp())}`
+    const quote = '"';
+    const contents =
+      records
+        .map(
+          ({ key, value }) =>
+            `${key}=${quote}${escapeValue(value, quote)}${quote}`
+        )
+        .join('\n') + '\n';
+
+    const fullPath = join(process.cwd(), filename);
+    await writeFile(fullPath, contents, 'utf8');
+
+    output.print(
+      `${prependEmoji(
+        `Updated file ${chalk.bold(filename)} ${chalk.gray(pullStamp())}`,
+        emoji('success')
+      )}\n`
     );
-    return 1;
+    return 0;
   }
+}
 
-  if (recordIds instanceof InvalidDomain) {
-    output.error(
-      `The domain ${domain} doesn't match with the one found in the Zone file ${chalk.gray(
-        addStamp()
-      )}`
-    );
-    return 1;
-  }
-
-  console.log(
-    `${chalk.cyan('> Success!')} ${
-      recordIds.length
-    } DNS records for domain ${chalk.bold(domain)} created under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(addStamp())}`
-  );
-  return 0;
+function escapeValue(value: string, char: string) {
+  return value.replace(new RegExp(`\\${char}`, 'g'), `\\${char}`);
 }
