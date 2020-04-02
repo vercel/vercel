@@ -9,7 +9,7 @@
       }
     }
   ],
-  "propes": [
+  "probes": [
     {
       "path": "/",
       "status": 200,

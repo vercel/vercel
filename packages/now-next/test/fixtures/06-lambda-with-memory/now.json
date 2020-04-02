@@ -12,7 +12,7 @@
       }
     }
   ],
-  "propes": [
+  "probes": [
     {
       "path": "/api/memory",
       "status": 200,
