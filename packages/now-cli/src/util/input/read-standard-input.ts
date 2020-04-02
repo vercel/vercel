@@ -7,7 +7,7 @@ export default async function readStandardInput(): Promise<string> {
       resolve('');
     } else {
       process.stdin.setEncoding('utf8');
-      process.stdin.on('data', data => resolve(data));
+      process.stdin.once('data', data => resolve(data));
     }
   });
 }
