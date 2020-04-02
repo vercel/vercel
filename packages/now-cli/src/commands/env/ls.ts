@@ -63,7 +63,7 @@ export default async function ls(
       envTarget
     );
     output.log(
-      `${plural('Record', records.length, true)} found under ${chalk.bold(
+      `${plural('Record', records.length, true)} found in project ${chalk.bold(
         project.name
       )} ${chalk.gray(lsStamp())}`
     );
@@ -74,7 +74,7 @@ export default async function ls(
 
 function getTable(records: ProjectEnvVariable[]) {
   return formatTable(
-    ['key', 'value', 'environment', 'created', 'updated'],
+    ['name', 'value', 'environment', 'created', 'updated'],
     ['l', 'l', 'l', 'l', 'l'],
     [
       {
