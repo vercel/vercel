@@ -88,9 +88,12 @@ export default async function set(
 
     while (!envValue) {
       const { inputValue } = await inquirer.prompt({
-        type: 'input',
+        type: 'password',
         name: 'inputValue',
         message: `What’s the value of ${envName}?`,
+        /*transformer: (txt: string) => {
+          return `${chalk.gray(chalk.italic('*'.repeat(txt.length)))}`;
+        },*/
       });
 
       if (!inputValue) {
@@ -129,7 +132,7 @@ export default async function set(
 
     output.print(
       `${prependEmoji(
-        `Added ${envTargets.join(' ')} environment variable ${chalk.bold(
+        `Added environment variable ${chalk.bold(
           envName
         )} to project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
         emoji('success')
@@ -138,7 +141,7 @@ export default async function set(
 
     output.print(
       `${prependEmoji(
-        `Environment variables can be managed here: https://zeit.co/${org.slug}/${project.name}/settings#env`,
+        `Environment variables can be managed here: https://zeit.co/${org.slug}/${project.name}/settings`,
         emoji('tip')
       )}\n`
     );
