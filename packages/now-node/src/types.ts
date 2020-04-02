@@ -2,12 +2,12 @@ import { ServerResponse, IncomingMessage } from 'http';
 
 export type NowRequestCookies = { [key: string]: string };
 export type NowRequestQuery = { [key: string]: string | string[] };
-export type NowRequestBody = any;
+export type NowRequestBody<T = any> = T | undefined;
 
-export type NowRequest = IncomingMessage & {
+export type NowRequest<T = any> = IncomingMessage & {
   query: NowRequestQuery;
   cookies: NowRequestCookies;
-  body: NowRequestBody;
+  body: NowRequestBody<T>;
 };
 
 export type NowResponse = ServerResponse & {
@@ -15,3 +15,8 @@ export type NowResponse = ServerResponse & {
   json: (jsonBody: any) => NowResponse;
   status: (statusCode: number) => NowResponse;
 };
+
+export type NowApiHandler<T = any> = (
+  req: NowRequest<T>,
+  res: NowResponse
+) => void;
