@@ -2485,3 +2485,77 @@ test('whoami with local .now scope', async t => {
   // clean up
   await remove(path.join(directory, '.now'));
 });
+
+test('Deploy `api-env` fixture and test `now env` command', async t => {
+  const target = fixture('api-env');
+
+  async function nowDeploy() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [...defaultArgs, '--confirm'],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    console.log({ stdout });
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvAdd() {
+    const now = await execa(binaryPath, ['env', 'add', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+    await waitForPrompt(now, chunk =>
+      chunk.includes('What’s the name of the variable?')
+    );
+    now.stdin.write('MY_ENV_VAR\n');
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('What’s the value of') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('MY_VALUE\n');
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which environments') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('a\n'); // select all
+
+    t.is(
+      now.exitCode,
+      0,
+      formatOutput({ stderr: now.stderr, stdout: now.stdout })
+    );
+  }
+
+  async function nowEnvLs() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'ls', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+    const lines = stdout
+      .split('\n')
+      .filter(line => line.includes('MY_ENV_VAR'));
+    t.is(lines.length, 3);
+
+    const [development, preview, production] = lines;
+    t.regex(development, /development/gm);
+    t.regex(preview, /preview/gm);
+    t.regex(production, /production/gm);
+  }
+
+  await nowDeploy();
+  await nowEnvAdd();
+  await nowEnvLs();
+});
