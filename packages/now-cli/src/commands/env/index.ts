@@ -18,10 +18,10 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    add     [key] [environment]        Add environment variable (see below for examples)
-    pull    [filename]                 Read development environment from the cloud and write to a file, default .env
-    rm      [key] [environment]        Remove environment variable
     ls      [environment]              List all variables for the specified environment
+    add     [name] [environment]       Add an environment variable (see examples below)
+    rm      [name] [environment]       Remove an environment variable
+    pull    [filename]                 Read development environment from the cloud and write to a file, default .env
 
   ${chalk.dim('Options:')}
 
@@ -69,10 +69,10 @@ const help = () => {
 };
 
 const COMMAND_CONFIG = {
-  add: ['add'],
-  pull: ['pull'],
   ls: ['ls', 'list'],
+  add: ['add'],
   rm: ['rm', 'remove'],
+  pull: ['pull'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -93,15 +93,20 @@ export default async function main(ctx: NowContext) {
   const output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
-    case 'add':
-      return add(ctx, argv, args, output);
-    case 'pull':
-      return pull(ctx, argv, args, output);
-    case 'rm':
-      return rm(ctx, argv, args, output);
     case 'ls':
       return ls(ctx, argv, args, output);
+    case 'add':
+      return add(ctx, argv, args, output);
+    case 'rm':
+      return rm(ctx, argv, args, output);
+    case 'pull':
+      return pull(ctx, argv, args, output);
     default:
+      output.error(
+        `Please specify a valid subcommand: ${Object.keys(COMMAND_CONFIG).join(
+          ' | '
+        )}`
+      );
       help();
       return 2;
   }
