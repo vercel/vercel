@@ -96,9 +96,6 @@ export default async function add(
         type: 'password',
         name: 'inputValue',
         message: `What’s the value of ${envName}?`,
-        /*transformer: (txt: string) => {
-          return `${chalk.gray(chalk.italic('*'.repeat(txt.length)))}`;
-        },*/
       });
 
       if (!inputValue) {
