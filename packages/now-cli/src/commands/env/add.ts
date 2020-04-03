@@ -147,6 +147,7 @@ export default async function add(
       )}\n`
     );
 
+    ttys.stdin.destroy();
     return 0;
   }
 }

@@ -138,6 +138,7 @@ export default async function rm(
       ))
     ) {
       output.log('Aborted');
+      ttys.stdin.destroy();
       return 0;
     }
 
@@ -155,6 +156,8 @@ export default async function rm(
         emoji('success')
       )}\n`
     );
+
+    ttys.stdin.destroy();
     return 0;
   }
 }
