@@ -4,6 +4,7 @@ import { NowContext } from '../../types';
 import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 
@@ -79,7 +80,7 @@ export default async function main(ctx: NowContext) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {});
+    argv = getArgs(ctx.argv.slice(2), { '--yes': Boolean });
   } catch (error) {
     handleError(error);
     return 1;
@@ -102,11 +103,7 @@ export default async function main(ctx: NowContext) {
     case 'pull':
       return pull(ctx, argv, args, output);
     default:
-      output.error(
-        `Please specify a valid subcommand: ${Object.keys(COMMAND_CONFIG).join(
-          ' | '
-        )}`
-      );
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
       help();
       return 2;
   }

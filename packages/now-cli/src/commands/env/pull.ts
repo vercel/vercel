@@ -9,7 +9,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import cmd from '../../util/output/cmd';
 import withSpinner from '../../util/with-spinner';
 import { join } from 'path';
-import { promises } from 'fs';
+import { promises, existsSync } from 'fs';
 import { emoji, prependEmoji } from '../../util/emoji';
 const { writeFile } = promises;
 
@@ -82,11 +82,14 @@ export default async function pull(
         .join('\n') + '\n';
 
     const fullPath = join(process.cwd(), filename);
+    const exists = existsSync(fullPath);
     await writeFile(fullPath, contents, 'utf8');
 
     output.print(
       `${prependEmoji(
-        `Updated file ${chalk.bold(filename)} ${chalk.gray(pullStamp())}`,
+        `${exists ? 'Updated' : 'Created'} file ${chalk.bold(
+          filename
+        )} ${chalk.gray(pullStamp())}`,
         emoji('success')
       )}\n`
     );

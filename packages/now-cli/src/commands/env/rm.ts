@@ -19,6 +19,7 @@ import { emoji, prependEmoji } from '../../util/emoji';
 
 type Options = {
   '--debug': boolean;
+  '--yes': boolean;
 };
 
 export default async function rm(
@@ -122,13 +123,16 @@ export default async function rm(
       }
     }
 
-    const yes = await promptBool(
-      output,
-      `Remove environment variable ${cmd(envName)} from project ${chalk.bold(
-        project.name
-      )}. Are you sure?`
-    );
-    if (!yes) {
+    const skipConfirmation = opts['--yes'];
+    if (
+      !skipConfirmation &&
+      !(await promptBool(
+        output,
+        `Remove environment variable ${cmd(envName)} from project ${chalk.bold(
+          project.name
+        )}. Are you sure?`
+      ))
+    ) {
       output.log('Aborted');
       return 0;
     }
