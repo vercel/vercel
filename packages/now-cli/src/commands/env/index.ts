@@ -80,7 +80,10 @@ export default async function main(ctx: NowContext) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), { '--yes': Boolean });
+    argv = getArgs(ctx.argv.slice(2), {
+      '--yes': Boolean,
+      '-y': '--yes',
+    });
   } catch (error) {
     handleError(error);
     return 1;
