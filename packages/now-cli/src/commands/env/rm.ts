@@ -1,5 +1,6 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import { createPromptModule } from 'inquirer';
+import ttys from 'ttys';
 import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';
 import promptBool from '../../util/prompt-bool';
@@ -17,6 +18,7 @@ import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
+const prompt = createPromptModule({ input: ttys.stdin, output: ttys.stdout });
 
 type Options = {
   '--debug': boolean;
@@ -77,7 +79,7 @@ export default async function rm(
     }
 
     while (!envName) {
-      const { inputName } = await inquirer.prompt({
+      const { inputName } = await prompt({
         type: 'input',
         name: 'inputName',
         message: `What’s the name of the variable?`,
@@ -115,7 +117,7 @@ export default async function rm(
       } else if (choices.length === 1) {
         envTargets = [choices[0].value];
       } else {
-        const { inputTargets } = await inquirer.prompt({
+        const { inputTargets } = await prompt({
           name: 'inputTargets',
           type: 'checkbox',
           message: `Remove ${envName} from which environments (select multiple)?`,

@@ -1,5 +1,6 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import { createPromptModule } from 'inquirer';
+import ttys from 'ttys';
 import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
@@ -16,6 +17,7 @@ import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
+const prompt = createPromptModule({ input: ttys.stdin, output: ttys.stdout });
 
 type Options = {
   '--debug': boolean;
@@ -77,7 +79,7 @@ export default async function add(
     }
 
     while (!envName) {
-      const { inputName } = await inquirer.prompt({
+      const { inputName } = await prompt({
         type: 'input',
         name: 'inputName',
         message: `What’s the name of the variable?`,
@@ -92,7 +94,7 @@ export default async function add(
     }
 
     while (!envValue) {
-      const { inputValue } = await inquirer.prompt({
+      const { inputValue } = await prompt({
         type: 'password',
         name: 'inputValue',
         message: `What’s the value of ${envName}?`,
@@ -107,7 +109,7 @@ export default async function add(
     }
 
     if (envTargets.length === 0) {
-      const { inputTargets } = await inquirer.prompt({
+      const { inputTargets } = await prompt({
         name: 'inputTargets',
         type: 'checkbox',
         message: `Enable ${envName} in which environments (select multiple)?`,

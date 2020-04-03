@@ -10736,6 +10736,11 @@ tsutils@^3.14.0:
   dependencies:
     tslib "^1.8.1"
 
+ttys@0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/ttys/-/ttys-0.0.3.tgz#15bacde7831020de5f2f28f01b1732ef03651f4d"
+  integrity sha1-FbrN54MQIN5fLyjwGxcy7wNlH00=
+
 tunnel-agent@^0.6.0:
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/tunnel-agent/-/tunnel-agent-0.6.0.tgz#27a5dea06b36b04a0a9966774b290868f0fc40fd"
