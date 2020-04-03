@@ -6,9 +6,11 @@ import { ProjectEnvVariable, ProjectEnvTarget, NowContext } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvVariables from '../../util/env/get-env-records';
+import { isValidEnvTarget, validEnvTargets } from '../../util/env/env-target';
 import { getLinkedProject } from '../../util/projects/link';
 import stamp from '../../util/output/stamp';
 import cmd from '../../util/output/cmd';
+import param from '../../util/output/param';
 
 type Options = {
   '--debug': boolean;
@@ -44,6 +46,16 @@ export default async function ls(
   } else {
     const { project } = link;
     const envTarget = args[0] as ProjectEnvTarget | undefined;
+
+    if (!isValidEnvTarget(envTarget)) {
+      output.error(
+        `The environment ${param(
+          envTarget
+        )} is invalid. It must be one of: <${validEnvTargets().join(' | ')}>.`
+      );
+      return 1;
+    }
+
     const lsStamp = stamp();
 
     if (args.length > 1) {

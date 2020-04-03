@@ -14,6 +14,7 @@ import {
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import cmd from '../../util/output/cmd';
+import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 
@@ -66,10 +67,9 @@ export default async function rm(
     if (envTarget) {
       if (!isValidEnvTarget(envTarget)) {
         output.error(
-          `The environment ${cmd(envTarget)} is not valid.\n` +
-            `Please use one of the following: <${validEnvTargets().join(
-              ' | '
-            )}>.`
+          `The environment ${param(
+            envTarget
+          )} is invalid. It must be one of: <${validEnvTargets().join(' | ')}>.`
         );
         return 1;
       }
@@ -97,7 +97,9 @@ export default async function rm(
     );
 
     if (existing.size === 0) {
-      output.error(`The environment variable ${cmd(envName)} was not found.\n`);
+      output.error(
+        `The environment variable ${param(envName)} was not found.\n`
+      );
       return 1;
     }
 
@@ -105,7 +107,7 @@ export default async function rm(
       const choices = getEnvTargetChoices().filter(c => existing.has(c.value));
       if (choices.length === 0) {
         output.error(
-          `The environment variable ${cmd(
+          `The environment variable ${param(
             envName
           )} was found but it is not assign to any environments.\n`
         );
@@ -128,9 +130,9 @@ export default async function rm(
       !skipConfirmation &&
       !(await promptBool(
         output,
-        `Remove environment variable ${cmd(envName)} from project ${chalk.bold(
-          project.name
-        )}. Are you sure?`
+        `Remove environment variable ${param(
+          envName
+        )} from project ${chalk.bold(project.name)}. Are you sure?`
       ))
     ) {
       output.log('Aborted');

@@ -13,6 +13,7 @@ import {
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import cmd from '../../util/output/cmd';
+import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 
@@ -66,10 +67,9 @@ export default async function add(
     if (envTarget) {
       if (!isValidEnvTarget(envTarget)) {
         output.error(
-          `The environment ${cmd(envTarget)} is not valid.\n` +
-            `Please use one of the following: <${validEnvTargets().join(
-              ' | '
-            )}>.`
+          `The environment ${param(
+            envTarget
+          )} is invalid. It must be one of: <${validEnvTargets().join(' | ')}>.`
         );
         return 1;
       }
