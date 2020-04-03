@@ -7,7 +7,7 @@ import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 
-import set from './set';
+import add from './add';
 import pull from './pull';
 import ls from './ls';
 import rm from './rm';
@@ -18,7 +18,7 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    set     [key] [environment]        Set environment variable (see below for examples)
+    add     [key] [environment]        Add environment variable (see below for examples)
     pull    [filename]                 Read development environment from the cloud and write to a file, default .env
     rm      [key] [environment]        Remove environment variable
     ls      [environment]              List all variables for the specified environment
@@ -41,35 +41,35 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new variable to multiple environments
 
-      ${chalk.cyan('$ now env set <key>')}
-      ${chalk.cyan('$ now env set API_TOKEN')}
+      ${chalk.cyan('$ now env add <name>')}
+      ${chalk.cyan('$ now env add API_TOKEN')}
 
   ${chalk.gray('–')} Add a new variable for a specific environment
 
-      ${chalk.cyan('$ now env set <key> <production | preview | development>')}
-      ${chalk.cyan('$ now env set DB_CONNECTION production')}
+      ${chalk.cyan('$ now env add <name> <production | preview | development>')}
+      ${chalk.cyan('$ now env add DB_CONNECTION production')}
 
   ${chalk.gray('–')} Add a new environment variable from stdin
 
       ${chalk.cyan(
-        '$ cat <file> | now env set <key> <production | preview | development>'
+        '$ cat <file> | now env add <name> <production | preview | development>'
       )}
-      ${chalk.cyan('$ cat ~/.npmrc | now env set NPM_RC preview')}
+      ${chalk.cyan('$ cat ~/.npmrc | now env add NPM_RC preview')}
 
   ${chalk.gray('–')} Remove a variable from multiple environments
 
-      ${chalk.cyan('$ now env rm <key>')}
+      ${chalk.cyan('$ now env rm <name>')}
       ${chalk.cyan('$ now env rm API_TOKEN')}
 
   ${chalk.gray('–')} Remove a variable from a specific environment
 
-      ${chalk.cyan('$ now env rm <key> <production | preview | development>')}
+      ${chalk.cyan('$ now env rm <name> <production | preview | development>')}
       ${chalk.cyan('$ now env rm NPM_RC preview')}
 `);
 };
 
 const COMMAND_CONFIG = {
-  set: ['set'],
+  add: ['add'],
   pull: ['pull'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
@@ -93,8 +93,8 @@ export default async function main(ctx: NowContext) {
   const output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
-    case 'set':
-      return set(ctx, argv, args, output);
+    case 'add':
+      return add(ctx, argv, args, output);
     case 'pull':
       return pull(ctx, argv, args, output);
     case 'rm':

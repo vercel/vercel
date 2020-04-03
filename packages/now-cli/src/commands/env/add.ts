@@ -20,7 +20,7 @@ type Options = {
   '--debug': boolean;
 };
 
-export default async function set(
+export default async function add(
   ctx: NowContext,
   opts: Options,
   args: string[],
