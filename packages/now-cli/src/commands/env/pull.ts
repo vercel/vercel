@@ -45,16 +45,14 @@ export default async function pull(
     );
     return 1;
   } else {
-    const { project } = link;
     if (args.length > 1) {
       output.error(
-        `Invalid number of arguments. Usage: ${chalk.cyan(
-          '`now env pull <file>`'
-        )}`
+        `Invalid number of arguments. Usage: ${cmd('now env pull <file>')}`
       );
       return 1;
     }
 
+    const { project } = link;
     const [filename = '.env'] = args;
     output.print(
       `Downloading Development environment variables for project ${chalk.bold(

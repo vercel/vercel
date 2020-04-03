@@ -5,6 +5,7 @@ import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 
@@ -14,6 +15,7 @@ import ls from './ls';
 import rm from './rm';
 
 const help = () => {
+  const placeholder = getEnvTargetPlaceholder();
   console.log(`
   ${chalk.bold(`${logo} now env`)} [options] <command>
 
@@ -21,8 +23,8 @@ const help = () => {
 
     ls      [environment]              List all variables for the specified environment
     add     [name] [environment]       Add an environment variable (see examples below)
-    rm      [name] [environment]       Remove an environment variable
-    pull    [filename]                 Read development environment from the cloud and write to a file, default .env
+    rm      [name] [environment]       Remove an environment variable (see examples below)
+    pull    [filename]                 Read development environment from the cloud and write to a file [.env]
 
   ${chalk.dim('Options:')}
 
@@ -47,14 +49,12 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new variable for a specific environment
 
-      ${chalk.cyan('$ now env add <name> <production | preview | development>')}
+      ${chalk.cyan(`$ now env add <name> ${placeholder}`)}
       ${chalk.cyan('$ now env add DB_CONNECTION production')}
 
   ${chalk.gray('–')} Add a new environment variable from stdin
 
-      ${chalk.cyan(
-        '$ cat <file> | now env add <name> <production | preview | development>'
-      )}
+      ${chalk.cyan(`$ cat <file> | now env add <name> ${placeholder}`)}
       ${chalk.cyan('$ cat ~/.npmrc | now env add NPM_RC preview')}
 
   ${chalk.gray('–')} Remove a variable from multiple environments
@@ -64,7 +64,7 @@ const help = () => {
 
   ${chalk.gray('–')} Remove a variable from a specific environment
 
-      ${chalk.cyan('$ now env rm <name> <production | preview | development>')}
+      ${chalk.cyan(`$ now env rm <name> ${placeholder}`)}
       ${chalk.cyan('$ now env rm NPM_RC preview')}
 `);
 };

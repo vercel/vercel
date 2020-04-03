@@ -8,7 +8,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import addEnvRecord from '../../util/env/add-env-record';
 import {
   isValidEnvTarget,
-  validEnvTargets,
+  getEnvTargetPlaceholder,
   getEnvTargetChoices,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
@@ -49,16 +49,16 @@ export default async function add(
     );
     return 1;
   } else {
-    const { org, project } = link;
     if (args.length > 2) {
       output.error(
-        `Invalid number of arguments. See: ${chalk.cyan(
-          '`now env --help`'
-        )} for usage.`
+        `Invalid number of arguments. Usage: ${cmd(
+          `now env add <name> ${getEnvTargetPlaceholder()}`
+        )}`
       );
       return 1;
     }
 
+    const { org, project } = link;
     let envValue = await readStandardInput();
     const addStamp = stamp();
     let [envName, envTarget] = args;
@@ -69,7 +69,7 @@ export default async function add(
         output.error(
           `The environment ${param(
             envTarget
-          )} is invalid. It must be one of: <${validEnvTargets().join(' | ')}>.`
+          )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
         );
         return 1;
       }

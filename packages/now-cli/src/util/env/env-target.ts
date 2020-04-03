@@ -1,6 +1,6 @@
 import { ProjectEnvTarget } from '../../types';
 
-export function validEnvTargets(): string[] {
+function envTargets(): string[] {
   return Object.values(ProjectEnvTarget);
 }
 
@@ -14,5 +14,9 @@ export function getEnvTargetChoices() {
 export function isValidEnvTarget(
   target?: string
 ): target is ProjectEnvTarget | undefined {
-  return typeof target === 'undefined' || validEnvTargets().includes(target);
+  return typeof target === 'undefined' || envTargets().includes(target);
+}
+
+export function getEnvTargetPlaceholder() {
+  return `<${envTargets().join(' | ')}>`;
 }

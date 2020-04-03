@@ -8,7 +8,7 @@ import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvVariables from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
-  validEnvTargets,
+  getEnvTargetPlaceholder,
   getEnvTargetChoices,
 } from '../../util/env/env-target';
 import Client from '../../util/client';
@@ -51,16 +51,16 @@ export default async function rm(
     );
     return 1;
   } else {
-    const { project } = link;
     if (args.length > 2) {
       output.error(
-        `Invalid number of arguments. Usage: ${chalk.cyan(
-          '`now env rm <key> <environment>`'
+        `Invalid number of arguments. Usage: ${cmd(
+          `now env rm <name> ${getEnvTargetPlaceholder()}`
         )}`
       );
       return 1;
     }
 
+    const { project } = link;
     let [envName, envTarget] = args;
     let envTargets: ProjectEnvTarget[] = [];
 
@@ -69,7 +69,7 @@ export default async function rm(
         output.error(
           `The environment ${param(
             envTarget
-          )} is invalid. It must be one of: <${validEnvTargets().join(' | ')}>.`
+          )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
         );
         return 1;
       }

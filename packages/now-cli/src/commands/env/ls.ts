@@ -6,7 +6,10 @@ import { ProjectEnvVariable, ProjectEnvTarget, NowContext } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvVariables from '../../util/env/get-env-records';
-import { isValidEnvTarget, validEnvTargets } from '../../util/env/env-target';
+import {
+  isValidEnvTarget,
+  getEnvTargetPlaceholder,
+} from '../../util/env/env-target';
 import { getLinkedProject } from '../../util/projects/link';
 import stamp from '../../util/output/stamp';
 import cmd from '../../util/output/cmd';
@@ -44,6 +47,15 @@ export default async function ls(
     );
     return 1;
   } else {
+    if (args.length > 1) {
+      output.error(
+        `Invalid number of arguments. Usage: ${cmd(
+          `now env ls ${getEnvTargetPlaceholder()}`
+        )}`
+      );
+      return 1;
+    }
+
     const { project } = link;
     const envTarget = args[0] as ProjectEnvTarget | undefined;
 
@@ -51,21 +63,12 @@ export default async function ls(
       output.error(
         `The environment ${param(
           envTarget
-        )} is invalid. It must be one of: <${validEnvTargets().join(' | ')}>.`
+        )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
       );
       return 1;
     }
 
     const lsStamp = stamp();
-
-    if (args.length > 1) {
-      output.error(
-        `Invalid number of arguments. Usage: ${chalk.cyan(
-          '`now env ls [environment]`'
-        )}`
-      );
-      return 1;
-    }
 
     const records = await getEnvVariables(
       output,
