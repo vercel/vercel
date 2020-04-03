@@ -1,14 +1,21 @@
-// TODO: DELETE /v1/projects/:projectid/env/:key?target=:target
 import chalk from 'chalk';
-import ms from 'ms';
-import table from 'text-table';
-import { NowContext, DNSRecord } from '../../types';
+import inquirer from 'inquirer';
+import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';
+import promptBool from '../../util/prompt-bool';
+import { getLinkedProject } from '../../util/projects/link';
+import removeEnvRecord from '../../util/env/remove-env-record';
+import getEnvVariables from '../../util/env/get-env-records';
+import {
+  isValidEnvTarget,
+  validEnvTargets,
+  getEnvTargetChoices,
+} from '../../util/env/env-target';
 import Client from '../../util/client';
-import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
-import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
-import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
+import cmd from '../../util/output/cmd';
+import withSpinner from '../../util/with-spinner';
+import { emoji, prependEmoji } from '../../util/emoji';
 
 type Options = {
   '--debug': boolean;
@@ -20,9 +27,6 @@ export default async function rm(
   args: string[],
   output: Output
 ) {
-  if (args.length === 0 || args.length > 0) {
-    throw new Error('Not implemented yet');
-  }
   const {
     authConfig: { token },
     config,
@@ -31,104 +35,118 @@ export default async function rm(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-  let contextName = null;
+  const link = await getLinkedProject(output, client);
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.print(
+      `${chalk.red(
+        'Error!'
+      )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
+        'now'
+      )} to link it.\n`
+    );
+    return 1;
+  } else {
+    const { project } = link;
+    if (args.length > 2) {
+      output.error(
+        `Invalid number of arguments. Usage: ${chalk.cyan(
+          '`now env rm <key> <environment>`'
+        )}`
+      );
       return 1;
     }
 
-    throw err;
-  }
+    let [envName, envTarget] = args;
+    let envTargets: ProjectEnvTarget[] = [];
 
-  const [recordId] = args;
-  if (args.length !== 1) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan('`now dns rm <id>`')}`
+    if (envTarget) {
+      if (!isValidEnvTarget(envTarget)) {
+        output.error(
+          `The environment ${cmd(envTarget)} is not valid.\n` +
+            `Please use one of the following: <${validEnvTargets().join(
+              ' | '
+            )}>.`
+        );
+        return 1;
+      }
+      envTargets.push(envTarget);
+    }
+
+    while (!envName) {
+      const { inputName } = await inquirer.prompt({
+        type: 'input',
+        name: 'inputName',
+        message: `What’s the name of the variable?`,
+      });
+
+      if (!inputName) {
+        output.error(`Name cannot be empty`);
+        continue;
+      }
+
+      envName = inputName;
+    }
+
+    const envs = await getEnvVariables(output, client, project.id);
+    const existing = new Set(
+      envs.filter(r => r.key === envName).map(r => r.target)
     );
-    return 1;
-  }
 
-  const domainRecord = await getDNSRecordById(
-    output,
-    client,
-    contextName,
-    recordId
-  );
+    if (existing.size === 0) {
+      output.error(`The environment variable ${cmd(envName)} was not found.\n`);
+      return 1;
+    }
 
-  if (!domainRecord) {
-    output.error('DNS record not found');
-    return 1;
-  }
+    if (envTargets.length === 0) {
+      const choices = getEnvTargetChoices().filter(c => existing.has(c.value));
+      if (choices.length === 0) {
+        output.error(
+          `The environment variable ${cmd(
+            envName
+          )} was found but it is not assign to any environments.\n`
+        );
+        return 1;
+      } else if (choices.length === 1) {
+        envTargets = [choices[0].value];
+      } else {
+        const { inputTargets } = await inquirer.prompt({
+          name: 'inputTargets',
+          type: 'checkbox',
+          message: `Remove ${envName} from which environments (select multiple)?`,
+          choices,
+        });
+        envTargets = inputTargets;
+      }
+    }
 
-  const { domainName, record } = domainRecord;
-  const yes = await readConfirmation(
-    output,
-    'The following record will be removed permanently',
-    domainName,
-    record
-  );
+    const yes = await promptBool(
+      output,
+      `Remove environment variable ${cmd(envName)} from project ${chalk.bold(
+        project.name
+      )}. Are you sure?`
+    );
+    if (!yes) {
+      output.log('Aborted');
+      return 0;
+    }
 
-  if (!yes) {
-    output.error(`User aborted.`);
+    const rmStamp = stamp();
+
+    await withSpinner('Removing', async () => {
+      for (const target of envTargets) {
+        await removeEnvRecord(output, client, project.id, envName, target);
+      }
+    });
+
+    output.print(
+      `${prependEmoji(
+        `Removed environment variable ${chalk.gray(rmStamp())}`,
+        emoji('success')
+      )}\n`
+    );
     return 0;
   }
-
-  const rmStamp = stamp();
-  await deleteDNSRecordById(client, domainName, record.id);
-  console.log(
-    `${chalk.cyan('> Success!')} Record ${chalk.gray(
-      `${record.id}`
-    )} removed ${chalk.gray(rmStamp())}`
-  );
-  return 0;
-}
-
-function readConfirmation(
-  output: Output,
-  msg: string,
-  domainName: string,
-  record: DNSRecord
-) {
-  return new Promise(resolve => {
-    output.log(msg);
-    output.print(
-      `${table([getDeleteTableRow(domainName, record)], {
-        align: ['l', 'r', 'l'],
-        hsep: ' '.repeat(6),
-      }).replace(/^(.*)/gm, '  $1')}\n`
-    );
-    output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    );
-    process.stdin
-      .on('data', d => {
-        process.stdin.pause();
-        resolve(
-          d
-            .toString()
-            .trim()
-            .toLowerCase() === 'y'
-        );
-      })
-      .resume();
-  });
-}
-
-function getDeleteTableRow(domainName: string, record: DNSRecord) {
-  const recordName = `${
-    record.name.length > 0 ? `${record.name}.` : ''
-  }${domainName}`;
-  return [
-    record.id,
-    chalk.bold(
-      `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
-    ),
-    chalk.gray(
-      `${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`
-    ),
-  ];
 }

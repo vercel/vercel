@@ -6,6 +6,11 @@ import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import { getLinkedProject } from '../../util/projects/link';
 import addEnvRecord from '../../util/env/add-env-record';
+import {
+  isValidEnvTarget,
+  validEnvTargets,
+  getEnvTargetChoices,
+} from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import cmd from '../../util/output/cmd';
 import withSpinner from '../../util/with-spinner';
@@ -109,10 +114,7 @@ export default async function set(
         name: 'inputTargets',
         type: 'checkbox',
         message: `Enable ${envName} in which environments (select multiple)?`,
-        choices: Object.entries(ProjectEnvTarget).map(([key, value]) => ({
-          name: key,
-          value: value,
-        })),
+        choices: getEnvTargetChoices(),
       });
       envTargets = inputTargets;
     }
@@ -148,14 +150,4 @@ export default async function set(
 
     return 0;
   }
-}
-
-function validEnvTargets(): string[] {
-  return Object.values(ProjectEnvTarget);
-}
-
-function isValidEnvTarget(
-  target?: string
-): target is ProjectEnvTarget | undefined {
-  return typeof target === 'undefined' || validEnvTargets().includes(target);
 }
