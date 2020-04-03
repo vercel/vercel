@@ -1,8 +1,6 @@
 import { Output } from '../output';
 import Client from '../client';
-import { ProjectEnvTarget } from '../../types';
-
-type Response = {};
+import { ProjectEnvTarget, Secret, ProjectEnvVariable } from '../../types';
 
 export default async function removeEnvRecord(
   output: Output,
@@ -19,12 +17,22 @@ export default async function removeEnvRecord(
   const urlProject = `/v4/projects/${projectId}/env/${encodeURIComponent(
     envName
   )}${qs}`;
-  await client.fetch<Response>(urlProject, {
+
+  const env = await client.fetch<ProjectEnvVariable>(urlProject, {
     method: 'DELETE',
   });
 
-  const urlSecret = `/v2/now/secrets/${encodeURIComponent(envName)}`;
-  await client.fetch<Response>(urlSecret, {
-    method: 'DELETE',
-  });
+  const idOrName = (env.value || '').startsWith('@')
+    ? env.value.slice(1)
+    : env.value;
+  const urlSecret = `/v2/now/secrets/${idOrName}`;
+  const secret = await client.fetch<Secret>(urlSecret);
+
+  // Since integrations add global secrets, we must only delete if the secret was
+  // specifically added to this project
+  if (secret && secret.projectId === projectId) {
+    await client.fetch<Secret>(urlSecret, {
+      method: 'DELETE',
+    });
+  }
 }

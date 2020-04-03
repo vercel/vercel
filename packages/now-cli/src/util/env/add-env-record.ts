@@ -1,6 +1,6 @@
 import { Output } from '../output';
 import Client from '../client';
-import { Secret, ProjectEnvTarget } from '../../types';
+import { Secret, ProjectEnvTarget, ProjectEnvVariable } from '../../types';
 import { customAlphabet } from 'nanoid';
 import slugify from '@sindresorhus/slugify';
 
@@ -26,7 +26,7 @@ export default async function addEnvRecord(
   });
 
   const urlProject = `/v4/projects/${projectId}/env`;
-  await client.fetch<Secret>(urlProject, {
+  await client.fetch<ProjectEnvVariable>(urlProject, {
     method: 'POST',
     body: JSON.stringify({
       key: envName,
