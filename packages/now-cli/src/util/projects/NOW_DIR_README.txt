@@ -11,4 +11,4 @@ No, you should not share the ".now" folder with anyone.
 Upon creation, it will be automatically added to your ".gitignore" file.
 
 You can learn more about project linking on our documentation:
-https://zeit.co/docs/now-cli#commands/now/project-linking
+https://zeit.ink/2R8divK
