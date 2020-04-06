@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { createPromptModule } from 'inquirer';
-import ttys from 'ttys';
 import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
@@ -17,6 +16,12 @@ import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
+let ttys = { stdin: process.stdin, stdout: process.stdout };
+try {
+  ttys = require('ttys');
+} catch (e) {
+  // fallback to original stdin for Windows
+}
 const prompt = createPromptModule({ input: ttys.stdin, output: ttys.stdout });
 
 type Options = {
