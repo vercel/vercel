@@ -136,6 +136,7 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 
 const waitForPrompt = (cp, assertion) =>
   new Promise(resolve => {
+    console.log('Waiting for prompt...');
     const listener = chunk => {
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
