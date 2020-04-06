@@ -1,12 +1,14 @@
 import chalk from 'chalk';
 import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';
+import promptBool from '../../util/prompt-bool';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import getEnvVariables from '../../util/env/get-env-records';
 import getDecryptedSecret from '../../util/env/get-decrypted-secret';
 import { getLinkedProject } from '../../util/projects/link';
 import cmd from '../../util/output/cmd';
+import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { join } from 'path';
 import { promises, existsSync } from 'fs';
@@ -15,6 +17,7 @@ const { writeFile } = promises;
 
 type Options = {
   '--debug': boolean;
+  '--yes': boolean;
 };
 
 export default async function pull(
@@ -54,6 +57,22 @@ export default async function pull(
 
     const { project } = link;
     const [filename = '.env'] = args;
+    const fullPath = join(process.cwd(), filename);
+    const exists = existsSync(fullPath);
+    const skipConfirmation = opts['--yes'];
+
+    if (
+      exists &&
+      !skipConfirmation &&
+      !(await promptBool(
+        output,
+        `Found existing file ${param(filename)}. Do you want to overwrite?`
+      ))
+    ) {
+      output.log('Aborted');
+      return 0;
+    }
+
     output.print(
       `Downloading Development environment variables for project ${chalk.bold(
         project.name
@@ -75,8 +94,6 @@ export default async function pull(
         .map(({ key, value }) => `${key}="${escapeValue(value)}"`)
         .join('\n') + '\n';
 
-    const fullPath = join(process.cwd(), filename);
-    const exists = existsSync(fullPath);
     await writeFile(fullPath, contents, 'utf8');
 
     output.print(
