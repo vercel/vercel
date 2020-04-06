@@ -4,7 +4,7 @@ import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
-import { ProjectNotFound } from '../errors-ts';
+import { ProjectNotFound } from '../errors';
 import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';

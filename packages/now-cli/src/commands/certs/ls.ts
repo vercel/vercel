@@ -3,14 +3,12 @@ import ms from 'ms';
 import plural from 'pluralize';
 import psl from 'psl';
 import table from 'text-table';
-// @ts-ignore
-import Now from '../../util';
 import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
-import { CertNotFound } from '../../util/errors-ts';
+import { CertNotFound } from '../../util/errors';
 import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
 import { NowContext, Cert } from '../../types';
@@ -48,7 +46,6 @@ async function ls(
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug, currentTeam });
   const lsStamp = stamp();
 
   if (args.length !== 0) {
@@ -59,7 +56,9 @@ async function ls(
   }
 
   // Get the list of certificates
-  const certificates = await getCerts(output, now, { after }).catch(err => err);
+  const certificates = await getCerts(output, client, { after }).catch(
+    err => err
+  );
 
   if (certificates instanceof CertNotFound) {
     output.error(certificates.message);

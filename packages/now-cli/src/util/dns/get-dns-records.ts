@@ -1,5 +1,5 @@
 import { DNSRecord } from '../../types';
-import { DomainNotFound } from '../errors-ts';
+import { DomainNotFound } from '../errors';
 import { Output } from '../output';
 import Client from '../client';
 import getDomainDNSRecords from './get-domain-dns-records';

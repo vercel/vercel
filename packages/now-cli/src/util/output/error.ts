@@ -1,6 +1,6 @@
 import chalk from 'chalk';
+import { APIError } from '../errors';
 import { metrics, shouldCollectMetrics } from '../metrics';
-import { APIError } from '../errors-ts';
 
 const metric = metrics();
 

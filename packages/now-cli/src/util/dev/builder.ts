@@ -14,7 +14,7 @@ import _treeKill from 'tree-kill';
 import { Output } from '../output';
 import highlight from '../output/highlight';
 import { relative } from '../path-helpers';
-import { LambdaSizeExceededError } from '../errors-ts';
+import { LambdaSizeExceededError } from '../errors';
 
 import DevServer from './server';
 import { builderModulePathPromise, getBuilder } from './builder-cache';

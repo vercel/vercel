@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { CantParseJSONFile } from './errors-ts';
+import { CantParseJSONFile } from './errors';
 
 export default async function readJSONFile(
   file: string

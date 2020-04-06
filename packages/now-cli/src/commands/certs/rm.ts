@@ -3,7 +3,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 import { NowContext, Cert } from '../../types';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';

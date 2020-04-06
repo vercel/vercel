@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
-import { DomainAlreadyExists, InvalidDomain } from '../errors-ts';
+import { DomainAlreadyExists, InvalidDomain } from '../errors';
 import { Domain } from '../../types';
 import Client from '../client';
 import wait from '../output/wait';

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import { Cert } from '../../types';
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import Client from '../client';
 import wait from '../output/wait';
 import mapCertError from './map-cert-error';

@@ -3,7 +3,7 @@ import psl from 'psl';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import addDomain from '../../util/domains/add-domain';
 import Client from '../../util/client';
 import cmd from '../../util/output/cmd';

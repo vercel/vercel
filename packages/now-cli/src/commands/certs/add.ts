@@ -1,7 +1,4 @@
 import chalk from 'chalk';
-
-// @ts-ignore
-import Now from '../../util';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -61,12 +58,9 @@ async function add(
     throw err;
   }
 
-  // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
-
   if (overwite) {
     output.error('Overwrite option is deprecated');
-    now.close();
+    client.close();
     return 1;
   }
 
@@ -80,12 +74,12 @@ async function add(
           `now certs add --crt <domain.crt> --key <domain.key> --ca <ca.crt>`
         )}\n`
       );
-      now.close();
+      client.close();
       return 1;
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(now, keyPath, crtPath, caPath);
+    cert = await createCertFromFile(client, keyPath, crtPath, caPath);
   } else {
     output.warn(
       `${chalk.cyan(
@@ -100,7 +94,7 @@ async function add(
         `Invalid number of arguments to create a custom certificate entry. Usage:`
       );
       output.print(`  ${chalk.cyan(`now certs add <cn>[, <cn>]`)}\n`);
-      now.close();
+      client.close();
       return 1;
     }
 
@@ -113,7 +107,7 @@ async function add(
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
 
-    cert = await createCertForCns(now, cns, contextName);
+    cert = await createCertForCns(client, cns, contextName);
     cancelWait();
   }
 
