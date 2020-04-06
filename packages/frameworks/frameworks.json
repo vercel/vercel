@@ -417,7 +417,7 @@
         "value": "react-scripts start"
       },
       "outputDirectory": {
-        "value": "public"
+        "value": "build"
       }
     }
   },
