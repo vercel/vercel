@@ -264,6 +264,53 @@ const frameworkList: Framework[] = [
     ],
   },
   {
+    name: 'Ionic React',
+    slug: 'ionic-react',
+    dependency: '@ionic/react',
+    buildCommand: 'react-scripts build',
+    getOutputDirName: async () => 'build',
+    defaultRoutes: [
+      {
+        src: '/static/(.*)',
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+      {
+        src: '/sockjs-node/(.*)',
+        dest: '/sockjs-node/$1',
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        headers: { 'cache-control': 's-maxage=0' },
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
+    name: 'Ionic Angular',
+    slug: 'ionic-angular',
+    dependency: '@ionic/angular',
+    buildCommand: 'ng build',
+    getOutputDirName: async () => 'www',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Create React App',
     slug: 'create-react-app',
     dependency: 'react-scripts',
