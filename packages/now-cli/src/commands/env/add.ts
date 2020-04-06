@@ -6,6 +6,7 @@ import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import { getLinkedProject } from '../../util/projects/link';
 import addEnvRecord from '../../util/env/add-env-record';
+import getEnvVariables from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -90,12 +91,28 @@ export default async function add(
         message: `What’s the name of the variable?`,
       });
 
-      if (!inputName) {
-        output.error(`Name cannot be empty`);
-        continue;
-      }
-
       envName = inputName;
+
+      if (!inputName) {
+        output.error('Name cannot be empty');
+      }
+    }
+
+    const envs = await getEnvVariables(output, client, project.id);
+    const existing = new Set(
+      envs.filter(r => r.key === envName).map(r => r.target)
+    );
+    const choices = getEnvTargetChoices().filter(c => !existing.has(c.value));
+
+    if (choices.length === 0) {
+      output.error(
+        `The variable ${param(
+          envName
+        )} has already been added to all environments. To remove, run ${cmd(
+          `now env rm ${envName}`
+        )}.`
+      );
+      return 1;
     }
 
     while (!envValue) {
@@ -105,22 +122,26 @@ export default async function add(
         message: `What’s the value of ${envName}?`,
       });
 
-      if (!inputValue) {
-        output.error(`Value cannot be empty`);
-        continue;
-      }
-
       envValue = inputValue;
+
+      if (!inputValue) {
+        output.error('Value cannot be empty');
+      }
     }
 
-    if (envTargets.length === 0) {
+    while (envTargets.length === 0) {
       const { inputTargets } = await prompt({
         name: 'inputTargets',
         type: 'checkbox',
-        message: `Enable ${envName} in which environments (select multiple)?`,
-        choices: getEnvTargetChoices(),
+        message: `Add ${envName} to which environments (select multiple)?`,
+        choices,
       });
+
       envTargets = inputTargets;
+
+      if (inputTargets.length === 0) {
+        output.error('Please select at least one environment');
+      }
     }
 
     await withSpinner('Saving', async () => {
