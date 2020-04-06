@@ -34,7 +34,7 @@ export default class Now extends EventEmitter {
     token,
     currentTeam,
     forceNew = false,
-    forceNewWithCache = false,
+    withCache = false,
     debug = false,
   }) {
     super();
@@ -42,7 +42,7 @@ export default class Now extends EventEmitter {
     this._token = token;
     this._debug = debug;
     this._forceNew = forceNew;
-    this._forceNewWithCache = forceNewWithCache;
+    this._withCache = withCache;
     this._output = createOutput({ debug });
     this._apiUrl = apiUrl;
     this._onRetry = this._onRetry.bind(this);
@@ -72,7 +72,7 @@ export default class Now extends EventEmitter {
       env,
       build,
       forceNew = false,
-      forceNewWithCache = false,
+      withCache = false,
       target = null,
       deployStamp,
       projectSettings,
@@ -164,7 +164,7 @@ export default class Now extends EventEmitter {
         meta,
         public: wantsPublic || nowConfig.public,
         forceNew,
-        forceNewWithCache,
+        withCache,
         name,
         project,
         description,
@@ -190,7 +190,7 @@ export default class Now extends EventEmitter {
       quiet,
       nowConfig,
       force: forceNew,
-      forceNewWithCache: forceNewWithCache,
+      withCache,
       org,
       projectName: name,
       isSettingUpProject,

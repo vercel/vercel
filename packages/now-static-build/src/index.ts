@@ -30,6 +30,7 @@ import {
   NowBuildError,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
+import { getNowIgnore } from 'now-client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -475,7 +476,15 @@ export async function build({
         routes.push(...frameworkRoutes);
       }
 
-      output = await glob('**', distPath, mountpoint);
+      let ignore: string[] = [];
+      if (config.zeroConfig) {
+        const result = await getNowIgnore(distPath);
+        ignore = result.ignores
+          .map(file => (file.endsWith('/') ? `${file}**` : file))
+          .concat(['yarn.lock', 'package-lock.json', 'package.json']);
+        debug(`Using ignore: ${JSON.stringify(ignore)}`);
+      }
+      output = await glob('**', { cwd: distPath, ignore }, mountpoint);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];

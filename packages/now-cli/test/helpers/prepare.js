@@ -323,6 +323,21 @@ CMD ["node", "index.js"]`,
       'index.html': 'Home page',
       'secret/file.txt': 'my secret',
     },
+    'build-secret': {
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'mkdir public && echo $MY_SECRET > public/index.txt',
+        },
+      }),
+      'now.json': JSON.stringify({
+        build: {
+          env: {
+            MY_SECRET: '@mysecret',
+          },
+        },
+      }),
+    },
     'alias-rules': {
       'rules.json': JSON.stringify({
         rules: [

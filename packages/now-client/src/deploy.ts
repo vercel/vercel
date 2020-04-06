@@ -169,9 +169,9 @@ export async function* deploy(
     deploymentOptions.forceNew = clientOptions.force;
   }
 
-  if (clientOptions.forceNewWithCache) {
+  if (clientOptions.withCache) {
     debug(
-      `'forceNewWithCache' is provided. Force deploy will be performed with cache retention`
+      `'withCache' is provided. Force deploy will be performed with cache retention`
     );
   }
 
