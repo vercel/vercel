@@ -49,22 +49,30 @@ export function convertRedirects(
 ): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const loc = replaceSegments(segments, r.destination, true);
-    const route: Route = {
-      src,
-      headers: { Location: loc },
-      status: r.statusCode || defaultStatus,
-    };
-    return route;
+    try {
+      const loc = replaceSegments(segments, r.destination, true);
+      const route: Route = {
+        src,
+        headers: { Location: loc },
+        status: r.statusCode || defaultStatus,
+      };
+      return route;
+    } catch (e) {
+      throw new Error('Failed to parse destination: ' + r.destination);
+    }
   });
 }
 
 export function convertRewrites(rewrites: NowRewrite[]): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const dest = replaceSegments(segments, r.destination);
-    const route: Route = { src, dest, check: true };
-    return route;
+    try {
+      const dest = replaceSegments(segments, r.destination);
+      const route: Route = { src, dest, check: true };
+      return route;
+    } catch (e) {
+      throw new Error('Failed to parse destination: ' + r.destination);
+    }
   });
 }
 
@@ -82,11 +90,11 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
     h.headers.forEach(({ key, value }) => {
       if (hasSegments) {
         if (key.includes(':')) {
-          const keyCompiler = tryCompile(key);
+          const keyCompiler = compile(key);
           key = keyCompiler(indexes);
         }
         if (value.includes(':')) {
-          const valueCompiler = tryCompile(value);
+          const valueCompiler = compile(value);
           value = valueCompiler(indexes);
         }
       }
@@ -157,15 +165,15 @@ function replaceSegments(
     });
 
     if (destination.includes(':') && segments.length > 0) {
-      const pathnameCompiler = tryCompile(pathname);
-      const hashCompiler = tryCompile(hash);
+      const pathnameCompiler = compile(pathname);
+      const hashCompiler = compile(hash);
       pathname = pathnameCompiler(indexes);
       hash = hash ? `${hashCompiler(indexes)}` : null;
 
       for (const [key, strOrArray] of Object.entries(query)) {
         let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
         if (value) {
-          const queryCompiler = tryCompile(value);
+          const queryCompiler = compile(value);
           value = queryCompiler(indexes);
         }
         query[key] = value;
@@ -203,12 +211,4 @@ function toSegmentDest(index: number): string {
 
 function toRoute(filePath: string): string {
   return filePath.startsWith('/') ? filePath : '/' + filePath;
-}
-
-function tryCompile(str: string) {
-  try {
-    return compile(str);
-  } catch (e) {
-    throw new Error('Unable to compile input: ' + str);
-  }
 }
