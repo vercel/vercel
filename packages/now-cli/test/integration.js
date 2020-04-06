@@ -2503,7 +2503,9 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   }
 
   async function nowEnvAdd() {
-    const now = await execa(binaryPath, ['env', 'add', ...defaultArgs]);
+    const now = await execa(binaryPath, ['env', 'add', ...defaultArgs], {
+      cwd: target,
+    });
     await waitForPrompt(now, chunk =>
       chunk.includes('What’s the name of the variable?')
     );
