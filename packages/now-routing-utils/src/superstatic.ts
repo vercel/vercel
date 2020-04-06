@@ -82,11 +82,11 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
     h.headers.forEach(({ key, value }) => {
       if (hasSegments) {
         if (key.includes(':')) {
-          const keyCompiler = compile(key);
+          const keyCompiler = tryCompile(key);
           key = keyCompiler(indexes);
         }
         if (value.includes(':')) {
-          const valueCompiler = compile(value);
+          const valueCompiler = tryCompile(value);
           value = valueCompiler(indexes);
         }
       }
@@ -157,15 +157,15 @@ function replaceSegments(
     });
 
     if (destination.includes(':') && segments.length > 0) {
-      const pathnameCompiler = compile(pathname);
-      const hashCompiler = compile(hash);
+      const pathnameCompiler = tryCompile(pathname);
+      const hashCompiler = tryCompile(hash);
       pathname = pathnameCompiler(indexes);
       hash = hash ? `${hashCompiler(indexes)}` : null;
 
       for (const [key, strOrArray] of Object.entries(query)) {
         let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
         if (value) {
-          const queryCompiler = compile(value);
+          const queryCompiler = tryCompile(value);
           value = queryCompiler(indexes);
         }
         query[key] = value;
@@ -203,4 +203,12 @@ function toSegmentDest(index: number): string {
 
 function toRoute(filePath: string): string {
   return filePath.startsWith('/') ? filePath : '/' + filePath;
+}
+
+function tryCompile(str: string) {
+  try {
+    return compile(str);
+  } catch (e) {
+    throw new Error('Unable to compile input: ' + str);
+  }
 }
