@@ -70,13 +70,9 @@ export default async function pull(
       return envs;
     });
 
-    const quote = '"';
     const contents =
       records
-        .map(
-          ({ key, value }) =>
-            `${key}=${quote}${escapeValue(value, quote)}${quote}`
-        )
+        .map(({ key, value }) => `${key}="${escapeValue(value)}"`)
         .join('\n') + '\n';
 
     const fullPath = join(process.cwd(), filename);
@@ -95,6 +91,9 @@ export default async function pull(
   }
 }
 
-function escapeValue(value: string, char: string) {
-  return value.replace(new RegExp(`\\${char}`, 'g'), `\\${char}`);
+function escapeValue(value: string) {
+  return value
+    .replace(new RegExp('\\"', 'g'), '\\"') // escape quotes
+    .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
+    .replace(new RegExp('\r', 'g'), '\\r'); // combine newlines (windows) into one line
 }
