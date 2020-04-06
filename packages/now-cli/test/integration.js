@@ -342,8 +342,23 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  async function nowEnvLsIsEmpty() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'ls', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stdout, /0 Records/gm);
+  }
+
   async function nowEnvAdd() {
     const now = await execa(binaryPath, ['env', 'add', ...defaultArgs], {
+      reject: false,
       cwd: target,
     });
     await waitForPrompt(now, chunk =>
@@ -371,7 +386,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
   }
 
-  async function nowEnvLs() {
+  async function nowEnvLsIncludesVar() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
       ['env', 'ls', ...defaultArgs],
@@ -395,8 +410,9 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   }
 
   await nowDeploy();
+  await nowEnvLsIsEmpty();
   await nowEnvAdd();
-  await nowEnvLs();
+  await nowEnvLsIncludesVar();
 });
 
 test('print the deploy help message', async t => {
