@@ -65,7 +65,7 @@ export default async function add(
       return 1;
     }
 
-    const { org, project } = link;
+    const { project } = link;
     let envValue = await readStandardInput();
     const addStamp = stamp();
     let [envName, envTarget] = args;
@@ -142,13 +142,6 @@ export default async function add(
           envName
         )} to project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
         emoji('success')
-      )}\n`
-    );
-
-    output.print(
-      `${prependEmoji(
-        `Environment variables can be managed here: https://zeit.co/${org.slug}/${project.name}/settings`,
-        emoji('tip')
       )}\n`
     );
 
