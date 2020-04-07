@@ -56,6 +56,7 @@ const help = () => {
 
       ${chalk.cyan(`$ cat <file> | now env add <name> ${placeholder}`)}
       ${chalk.cyan('$ cat ~/.npmrc | now env add NPM_RC preview')}
+      ${chalk.cyan('$ now env add DB_PASS production < secret.txt')}
 
   ${chalk.gray('–')} Remove a variable from multiple environments
 
