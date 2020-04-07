@@ -357,7 +357,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   }
 
   async function nowEnvAdd() {
-    const now = await execa(binaryPath, ['env', 'add', ...defaultArgs], {
+    const now = execa(binaryPath, ['env', 'add', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
@@ -379,11 +379,9 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
     now.stdin.write('a\n'); // select all
 
-    t.is(
-      now.exitCode,
-      0,
-      formatOutput({ stderr: now.stderr, stdout: now.stdout })
-    );
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr: stderr, stdout: stdout }));
   }
 
   async function nowEnvLsIncludesVar() {
