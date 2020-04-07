@@ -136,6 +136,7 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 
 const waitForPrompt = (cp, assertion) =>
   new Promise(resolve => {
+    console.log('Waiting for prompt...');
     const listener = chunk => {
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
@@ -323,6 +324,195 @@ test('deploy using --local-config flag above target', async t => {
   t.is(anotherTestText, '<h1>hello another</h1>');
 
   t.regex(host, /root-level/gm, `Expected "root-level" but received "${host}"`);
+});
+
+test('Deploy `api-env` fixture and test `now env` command', async t => {
+  const target = fixture('api-env');
+
+  async function nowDeploy() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [...defaultArgs, '--confirm'],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    console.log({ stdout });
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvLsIsEmpty() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'ls', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /0 Records found in project/gm);
+  }
+
+  async function nowEnvAdd() {
+    const now = execa(binaryPath, ['env', 'add', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+    await waitForPrompt(now, chunk =>
+      chunk.includes('What’s the name of the variable?')
+    );
+    now.stdin.write('MY_ENV_VAR\n');
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('What’s the value of') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('MY_VALUE\n');
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which environments') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvAddFromStdin() {
+    const now = execa(
+      binaryPath,
+      ['env', 'add', 'MY_STDIN_VAR', 'preview', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    now.stdin.end('MY_STDIN_VALUE');
+    const { exitCode, stderr, stdout } = await now;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvLsIncludesVar() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'ls', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+    const lines = stdout.split('\n');
+
+    const myEnvVars = lines.filter(line => line.includes('MY_ENV_VAR'));
+    t.is(myEnvVars.length, 3);
+    t.regex(myEnvVars.join('\n'), /development/gm);
+    t.regex(myEnvVars.join('\n'), /preview/gm);
+    t.regex(myEnvVars.join('\n'), /production/gm);
+
+    const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
+    t.is(myStdinVars.length, 1);
+    t.regex(myStdinVars.join('\n'), /preview/gm);
+  }
+
+  async function nowEnvPull() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'pull', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    t.is(contents, 'MY_ENV_VAR="MY_VALUE"\n');
+  }
+
+  async function nowDeployWithVar() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    const { host } = new URL(stdout);
+
+    const apiUrl = `https://${host}/api/get-env`;
+    console.log({ apiUrl });
+    const apiRes = await fetch(apiUrl);
+    t.is(apiRes.status, 200, formatOutput({ stderr, stdout }));
+    const apiJson = await apiRes.json();
+    t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(apiJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+
+    const homeUrl = `https://${host}`;
+    console.log({ homeUrl });
+    const homeRes = await fetch(homeUrl);
+    t.is(homeRes.status, 200, formatOutput({ stderr, stdout }));
+    const homeJson = await homeRes.json();
+    t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(homeJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+  }
+
+  async function nowEnvRemove() {
+    const now = execa(binaryPath, ['env', 'rm', '-y', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+    await waitForPrompt(now, chunk =>
+      chunk.includes('What’s the name of the variable?')
+    );
+    now.stdin.write('MY_ENV_VAR\n');
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which environments') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvRemoveWithArgs() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'rm', 'MY_STDIN_VAR', 'preview', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  await nowDeploy();
+  await nowEnvLsIsEmpty();
+  await nowEnvAdd();
+  await nowEnvAddFromStdin();
+  await nowEnvLsIncludesVar();
+  await nowEnvPull();
+  await nowDeployWithVar();
+  await nowEnvRemove();
+  await nowEnvRemoveWithArgs();
+  await nowEnvLsIsEmpty();
 });
 
 test('print the deploy help message', async t => {
