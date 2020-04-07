@@ -1,13 +1,12 @@
-export default async function readStandardInput(): Promise<string> {
+export default async function readStandardInput(wait = 150): Promise<string> {
   return new Promise<string>(resolve => {
-    if (process.stdin.isTTY) {
-      // In this case, no data is being piped to stdin.
-      // See https://stackoverflow.com/q/39801643/266535
-      // The empty string is used here to avoid `<string | undefined>` type.
-      resolve('');
-    } else {
-      process.stdin.setEncoding('utf8');
-      process.stdin.once('data', data => resolve(data));
-    }
+    // There is no reliable way to determine if stdin was provided
+    // so we use a timeout to resolve in case there is no stdin.
+    const t = setTimeout(() => resolve(''), wait);
+    process.stdin.setEncoding('utf8');
+    process.stdin.once('data', data => {
+      clearTimeout(t);
+      resolve(data);
+    });
   });
 }
