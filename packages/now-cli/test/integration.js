@@ -435,15 +435,23 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
     const { host } = new URL(stdout);
-    const response = await fetch(`https://${host}/api/get-env`);
-    t.is(response.status, 200, formatOutput({ stderr, stdout }));
+    const apiUrl = `https://${host}/api/get-env`;
+    console.log({ apiUrl });
+    const apiRes = await fetch(apiUrl);
+    t.is(apiRes.status, 200, formatOutput({ stderr, stdout }));
+    const apiJson = await apiRes.json();
+    t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
 
-    const json = await response.json();
-    t.is(json['MY_ENV_VAR'], 'MY_VALUE');
+    const staticUrl = `https://${host}/api/index.html`;
+    console.log({ staticUrl });
+    const staticRes = await fetch(staticUrl);
+    t.is(staticRes.status, 200, formatOutput({ stderr, stdout }));
+    const staticJson = await staticRes.json();
+    t.is(staticJson['MY_ENV_VAR'], 'MY_VALUE');
   }
 
   async function nowEnvRemove() {
-    const now = execa(binaryPath, ['env', 'rm', ...defaultArgs], {
+    const now = execa(binaryPath, ['env', 'rm', '-y', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
