@@ -419,9 +419,8 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-    const contents = fs
-      .readFileSync(path.join(target, '.env'), 'utf8')
-      .t.is(contents, 'MY_ENV_VAR="MY_VALUE"\n');
+    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    t.is(contents, 'MY_ENV_VAR="MY_VALUE"\n');
   }
 
   async function nowDeployWithVar() {
@@ -462,7 +461,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
 
     const { exitCode, stderr, stdout } = await now;
 
-    t.is(exitCode, 0, formatOutput({ stderr: stderr, stdout: stdout }));
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
   await nowDeploy();
