@@ -414,13 +414,13 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
 
     const myEnvVars = lines.filter(line => line.includes('MY_ENV_VAR'));
     t.is(myEnvVars.length, 3);
-    t.regex(myEnvVars[0], /development/gm);
-    t.regex(myEnvVars[1], /preview/gm);
-    t.regex(myEnvVars[2], /production/gm);
+    t.regex(myEnvVars.join('\n'), /development/gm);
+    t.regex(myEnvVars.join('\n'), /preview/gm);
+    t.regex(myEnvVars.join('\n'), /production/gm);
 
     const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
     t.is(myStdinVars.length, 1);
-    t.regex(myStdinVars[0], /preview/gm);
+    t.regex(myStdinVars.join('\n'), /preview/gm);
   }
 
   async function nowEnvPull() {
