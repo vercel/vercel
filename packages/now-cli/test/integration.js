@@ -384,6 +384,20 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  async function nowEnvAddFromStdin() {
+    const now = execa(
+      binaryPath,
+      ['env', 'add', 'MY_STDIN_VAR', 'preview', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    now.stdin.end('MY_STDIN_VALUE\n');
+    const { exitCode, stderr, stdout } = await now;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
   async function nowEnvLsIncludesVar() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
@@ -396,10 +410,9 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-    const lines = stdout
-      .split('\n')
-      .filter(line => line.includes('MY_ENV_VAR'));
-    t.is(lines.length, 3);
+    const lines = stdout.split('\n');
+    t.is(lines.filter(line => line.includes('MY_ENV_VAR')).length, 3);
+    t.is(lines.filter(line => line.includes('MY_STDIN_VAR')).length, 1);
 
     const [development, preview, production] = lines;
     t.regex(development, /development/gm);
@@ -441,6 +454,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(apiRes.status, 200, formatOutput({ stderr, stdout }));
     const apiJson = await apiRes.json();
     t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(apiJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
 
     const homeUrl = `https://${host}`;
     console.log({ homeUrl });
@@ -448,6 +462,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(homeRes.status, 200, formatOutput({ stderr, stdout }));
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(homeJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
   }
 
   async function nowEnvRemove() {
@@ -475,6 +490,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowDeploy();
   await nowEnvLsIsEmpty();
   await nowEnvAdd();
+  await nowEnvAddFromStdin();
   await nowEnvLsIncludesVar();
   await nowEnvPull();
   await nowDeployWithVar();
