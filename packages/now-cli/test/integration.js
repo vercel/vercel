@@ -393,7 +393,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
         cwd: target,
       }
     );
-    now.stdin.end('MY_STDIN_VALUE\n');
+    now.stdin.end('MY_STDIN_VALUE');
     const { exitCode, stderr, stdout } = await now;
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
@@ -411,13 +411,16 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
     const lines = stdout.split('\n');
-    t.is(lines.filter(line => line.includes('MY_ENV_VAR')).length, 3);
-    t.is(lines.filter(line => line.includes('MY_STDIN_VAR')).length, 1);
 
-    const [development, preview, production] = lines;
-    t.regex(development, /development/gm);
-    t.regex(preview, /preview/gm);
-    t.regex(production, /production/gm);
+    const myEnvVars = lines.filter(line => line.includes('MY_ENV_VAR'));
+    t.is(myEnvVars.length, 3);
+    t.regex(myEnvVars[0], /development/gm);
+    t.regex(myEnvVars[1], /preview/gm);
+    t.regex(myEnvVars[2], /production/gm);
+
+    const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
+    t.is(myStdinVars.length, 1);
+    t.regex(myStdinVars[0], /preview/gm);
   }
 
   async function nowEnvPull() {
@@ -487,6 +490,19 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  async function nowEnvRemoveWithArgs() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'rm', 'MY_STDIN_VAR', 'preview', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
   await nowDeploy();
   await nowEnvLsIsEmpty();
   await nowEnvAdd();
@@ -495,6 +511,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowEnvPull();
   await nowDeployWithVar();
   await nowEnvRemove();
+  await nowEnvRemoveWithArgs();
   await nowEnvLsIsEmpty();
 });
 
