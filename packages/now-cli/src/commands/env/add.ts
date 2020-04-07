@@ -66,7 +66,7 @@ export default async function add(
     if (envValue && (!envName || !envTarget)) {
       output.error(
         `Invalid number of arguments. Usage: ${cmd(
-          `cat secret.txt | now env add <name> ${getEnvTargetPlaceholder()}`
+          `cat <file> | now env add <name> ${getEnvTargetPlaceholder()}`
         )}`
       );
       return 1;
