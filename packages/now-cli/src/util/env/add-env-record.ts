@@ -50,5 +50,7 @@ const randomSecretSuffix = customAlphabet(
 );
 
 function generateSecretName(envName: string, target: ProjectEnvTarget) {
-  return `${slugify(envName)}-${target}-${randomSecretSuffix()}`;
+  return `${
+    slugify(envName).substring(0, 80) // we truncate because the max secret length is 100
+  }-${target}-${randomSecretSuffix()}`
 }
