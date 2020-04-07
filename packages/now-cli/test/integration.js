@@ -381,7 +381,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
 
     const { exitCode, stderr, stdout } = await now;
 
-    t.is(exitCode, 0, formatOutput({ stderr: stderr, stdout: stdout }));
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
   async function nowEnvLsIncludesVar() {
@@ -407,10 +407,72 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.regex(production, /production/gm);
   }
 
+  async function nowEnvPull() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'pull', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+    const contents = fs
+      .readFileSync(path.join(target, '.env'), 'utf8')
+      .t.is(contents, 'MY_ENV_VAR="MY_VALUE"\n');
+  }
+
+  async function nowDeployWithVar() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+    const { host } = new URL(stdout);
+    const response = await fetch(`https://${host}/api/get-env`);
+    t.is(response.status, 200, formatOutput({ stderr, stdout }));
+
+    const json = await response.json();
+    t.is(json['MY_ENV_VAR'], 'MY_VALUE');
+  }
+
+  async function nowEnvRemove() {
+    const now = execa(binaryPath, ['env', 'rm', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+    await waitForPrompt(now, chunk =>
+      chunk.includes('What’s the name of the variable?')
+    );
+    now.stdin.write('MY_ENV_VAR\n');
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which environments') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr: stderr, stdout: stdout }));
+  }
+
   await nowDeploy();
   await nowEnvLsIsEmpty();
   await nowEnvAdd();
   await nowEnvLsIncludesVar();
+  await nowEnvPull();
+  await nowDeployWithVar();
+  await nowEnvRemove();
+  await nowEnvLsIsEmpty();
 });
 
 test('print the deploy help message', async t => {
