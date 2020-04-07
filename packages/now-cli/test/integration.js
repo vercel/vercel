@@ -353,7 +353,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-    t.regex(stdout, /0 Records/gm);
+    t.regex(stderr, /0 Records found in project/gm);
   }
 
   async function nowEnvAdd() {

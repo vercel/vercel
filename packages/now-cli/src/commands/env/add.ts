@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { createPromptModule } from 'inquirer';
+import inquirer from 'inquirer';
 import { NowContext, ProjectEnvTarget } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
@@ -17,13 +17,6 @@ import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
-let ttys = { stdin: process.stdin, stdout: process.stdout };
-try {
-  ttys = require('ttys');
-} catch (e) {
-  // fallback to original stdin for Windows
-}
-const prompt = createPromptModule({ input: ttys.stdin, output: ttys.stdout });
 
 type Options = {
   '--debug': boolean;
@@ -57,6 +50,10 @@ export default async function add(
     );
     return 1;
   } else {
+    const { project } = link;
+    let envValue = await readStandardInput();
+    let [envName, envTarget] = args;
+
     if (args.length > 2) {
       output.error(
         `Invalid number of arguments. Usage: ${cmd(
@@ -66,10 +63,14 @@ export default async function add(
       return 1;
     }
 
-    const { project } = link;
-    let envValue = await readStandardInput();
-    const addStamp = stamp();
-    let [envName, envTarget] = args;
+    if (envValue && (!envName || !envTarget)) {
+      output.error(
+        `Invalid number of arguments. Usage: ${cmd(
+          `cat secret.txt | now env add <name> ${getEnvTargetPlaceholder()}`
+        )}`
+      );
+      return 1;
+    }
 
     let envTargets: ProjectEnvTarget[] = [];
     if (envTarget) {
@@ -85,7 +86,7 @@ export default async function add(
     }
 
     while (!envName) {
-      const { inputName } = await prompt({
+      const { inputName } = await inquirer.prompt({
         type: 'input',
         name: 'inputName',
         message: `What’s the name of the variable?`,
@@ -116,7 +117,7 @@ export default async function add(
     }
 
     while (!envValue) {
-      const { inputValue } = await prompt({
+      const { inputValue } = await inquirer.prompt({
         type: 'password',
         name: 'inputValue',
         message: `What’s the value of ${envName}?`,
@@ -130,7 +131,7 @@ export default async function add(
     }
 
     while (envTargets.length === 0) {
-      const { inputTargets } = await prompt({
+      const { inputTargets } = await inquirer.prompt({
         name: 'inputTargets',
         type: 'checkbox',
         message: `Add ${envName} to which environments (select multiple)?`,
@@ -144,6 +145,7 @@ export default async function add(
       }
     }
 
+    const addStamp = stamp();
     await withSpinner('Saving', async () => {
       for (const target of envTargets) {
         await addEnvRecord(
@@ -166,7 +168,6 @@ export default async function add(
       )}\n`
     );
 
-    ttys.stdin.destroy();
     return 0;
   }
 }
