@@ -433,8 +433,8 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
       }
     );
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-
     const { host } = new URL(stdout);
+
     const apiUrl = `https://${host}/api/get-env`;
     console.log({ apiUrl });
     const apiRes = await fetch(apiUrl);
@@ -442,7 +442,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const apiJson = await apiRes.json();
     t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
 
-    const staticUrl = `https://${host}/api/index.html`;
+    const staticUrl = `https://${host}/index.html`;
     console.log({ staticUrl });
     const staticRes = await fetch(staticUrl);
     t.is(staticRes.status, 200, formatOutput({ stderr, stdout }));
