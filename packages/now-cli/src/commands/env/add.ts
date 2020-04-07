@@ -146,18 +146,9 @@ export default async function add(
     }
 
     const addStamp = stamp();
-    await withSpinner('Saving', async () => {
-      for (const target of envTargets) {
-        await addEnvRecord(
-          output,
-          client,
-          project.id,
-          envName,
-          envValue,
-          target
-        );
-      }
-    });
+    await withSpinner('Saving', () =>
+      addEnvRecord(output, client, project.id, envName, envValue, envTargets)
+    );
 
     output.print(
       `${prependEmoji(

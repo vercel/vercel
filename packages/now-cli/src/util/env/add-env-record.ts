@@ -10,29 +10,37 @@ export default async function addEnvRecord(
   projectId: string,
   envName: string,
   envValue: string,
-  target: ProjectEnvTarget
+  targets: ProjectEnvTarget[]
 ): Promise<void> {
-  output.debug(`Adding environment variable ${envName}`);
+  output.debug(
+    `Adding environment variable ${envName} to ${targets.length} targets`
+  );
 
   const urlSecret = `/v2/now/secrets/${encodeURIComponent(envName)}`;
-  const secret = await client.fetch<Secret>(urlSecret, {
-    method: 'POST',
-    body: JSON.stringify({
-      name: generateSecretName(envName, target),
-      value: envValue,
-      projectId: projectId,
-      decryptable: target === ProjectEnvTarget.Development,
-    }),
-  });
+  const secrets = await Promise.all(
+    targets.map(target =>
+      client.fetch<Secret>(urlSecret, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: generateSecretName(envName, target),
+          value: envValue,
+          projectId: projectId,
+          decryptable: target === ProjectEnvTarget.Development,
+        }),
+      })
+    )
+  );
+
+  const body = targets.map((target, i) => ({
+    key: envName,
+    value: secrets[i].uid,
+    target,
+  }));
 
   const urlProject = `/v4/projects/${projectId}/env`;
   await client.fetch<ProjectEnvVariable>(urlProject, {
     method: 'POST',
-    body: JSON.stringify({
-      key: envName,
-      value: secret.uid,
-      target,
-    }),
+    body: JSON.stringify(body),
   });
 }
 
