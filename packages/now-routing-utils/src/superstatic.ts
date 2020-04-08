@@ -49,22 +49,30 @@ export function convertRedirects(
 ): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const loc = replaceSegments(segments, r.destination, true);
-    const route: Route = {
-      src,
-      headers: { Location: loc },
-      status: r.statusCode || defaultStatus,
-    };
-    return route;
+    try {
+      const loc = replaceSegments(segments, r.destination, true);
+      const route: Route = {
+        src,
+        headers: { Location: loc },
+        status: r.statusCode || defaultStatus,
+      };
+      return route;
+    } catch (e) {
+      throw new Error('Failed to parse destination: ' + r.destination);
+    }
   });
 }
 
 export function convertRewrites(rewrites: NowRewrite[]): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const dest = replaceSegments(segments, r.destination);
-    const route: Route = { src, dest, check: true };
-    return route;
+    try {
+      const dest = replaceSegments(segments, r.destination);
+      const route: Route = { src, dest, check: true };
+      return route;
+    } catch (e) {
+      throw new Error('Failed to parse destination: ' + r.destination);
+    }
   });
 }
 
