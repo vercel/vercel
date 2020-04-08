@@ -9,6 +9,7 @@ from importlib import util
 __now_spec = util.spec_from_file_location("__NOW_HANDLER_MODULE_NAME", "./__NOW_HANDLER_ENTRYPOINT")
 __now_module = util.module_from_spec(__now_spec)
 __now_spec.loader.exec_module(__now_module)
+sys.modules["__NOW_HANDLER_MODULE_NAME"] = __now_module
 __now_variables = dir(__now_module)
 
 
