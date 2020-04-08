@@ -310,6 +310,34 @@
     }
   },
   {
+    "name": "Ionic Angular",
+    "slug": "ionic-angular",
+    "demo": "https://ionic-angular.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic.svg",
+    "tagline": "Ionic Angular allows you to build mobile PWAs with Angular and the Ionic Framework.",
+    "description": "An Ionic Angular site, created with the Ionic CLI.",
+    "website": "https://ionicframework.com",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@ionic\\/angular\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `ng build`"
+      },
+      "devCommand": {
+        "value": "ng start"
+      },
+      "outputDirectory": {
+        "value": "www"
+      }
+    }
+  },
+  {
     "name": "Angular",
     "slug": "angular",
     "demo": "https://angular.now-examples.now.sh",
@@ -421,35 +449,6 @@
       }
     }
   },
-  {
-    "name": "Ionic Angular",
-    "slug": "ionic-angular",
-    "demo": "https://ionic-angular.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic.svg",
-    "tagline": "Ionic Angular allows you to build mobile PWAs with Angular and the Ionic Framework.",
-    "description": "An Ionic Angular site, created with the Ionic CLI.",
-    "website": "https://ionicframework.com",
-    "detectors": {
-      "every": [
-        {
-          "path": "package.json",
-          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@ionic\\/angular\":\\s*\".+?\"[^}]*}"
-        }
-      ]
-    },
-    "settings": {
-      "buildCommand": {
-        "placeholder": "`npm run build` or `ng build`"
-      },
-      "devCommand": {
-        "value": "ng start"
-      },
-      "outputDirectory": {
-        "value": "www"
-      }
-    }
-  },
-
   {
     "name": "Create React App",
     "slug": "create-react-app",

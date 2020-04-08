@@ -198,6 +198,22 @@ const frameworkList: Framework[] = [
     getOutputDirName: async () => 'dist/static',
   },
   {
+    name: 'Ionic Angular',
+    slug: 'ionic-angular',
+    dependency: '@ionic/angular',
+    buildCommand: 'ng build',
+    getOutputDirName: async () => 'www',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Angular',
     slug: 'angular',
     dependency: '@angular/cli',
@@ -290,22 +306,6 @@ const frameworkList: Framework[] = [
       {
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
-        dest: '/index.html',
-      },
-    ],
-  },
-  {
-    name: 'Ionic Angular',
-    slug: 'ionic-angular',
-    dependency: '@ionic/angular',
-    buildCommand: 'ng build',
-    getOutputDirName: async () => 'www',
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
         dest: '/index.html',
       },
     ],
