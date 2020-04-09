@@ -1264,12 +1264,13 @@ export default class DevServer {
     let routeResult: RouteResult | null = null;
     let match: BuildMatch | null = null;
     let statusCode: number | undefined;
+    let reqUrl = req.url;
 
     for (const phase of phases) {
       statusCode = undefined;
       const phaseRoutes = handleMap.get(phase) || [];
       routeResult = await devRouter(
-        req.url,
+        reqUrl,
         req.method,
         phaseRoutes,
         this,
@@ -1277,6 +1278,8 @@ export default class DevServer {
         missRoutes,
         phase
       );
+      reqUrl =
+        routeResult.continue && routeResult.dest ? routeResult.dest : req.url;
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path

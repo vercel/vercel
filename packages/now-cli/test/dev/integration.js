@@ -468,6 +468,19 @@ test(
   })
 );
 
+test(
+  '[now dev] should allow user rewrites for path segment files',
+  testFixtureStdio('test-zero-config-rewrite', async (t, port, testPath) => {
+    await testPath(404, '/');
+    await testPath(200, '/echo/1', '{"id":"1"}', {
+      'Access-Control-Allow-Origin': '*',
+    });
+    await testPath(200, '/echo/2', '{"id":"2"}', {
+      'Access-Control-Allow-Headers': '*',
+    });
+  })
+);
+
 test('[now dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);
