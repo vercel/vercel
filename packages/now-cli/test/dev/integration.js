@@ -137,7 +137,7 @@ async function getPackedBuilderPath(builderDirName) {
 }
 
 async function testPath(t, port, status, path, expectedText, headers = {}) {
-  const opts = { redirect: 'manual' };
+  const opts = { redirect: 'manual-dont-change' };
   const res = await fetch(`http://localhost:${port}${path}`, opts);
   const msg = `Testing path ${path}`;
   t.is(res.status, status, msg);
@@ -146,8 +146,15 @@ async function testPath(t, port, status, path, expectedText, headers = {}) {
     t.is(actualText.trim(), expectedText.trim(), msg);
   }
   if (headers) {
-    Object.entries(headers).forEach(([key, value]) => {
-      t.is(res.headers.get(key), value, msg);
+    Object.entries(headers).forEach(([key, expectedValue]) => {
+      let actualValue = res.headers.get(key);
+      if (key.toLowerCase() === 'location' && actualValue === '//') {
+        // HACK: `node-fetch` has strang behavior for location header so fix it
+        // with `manual-dont-change` opt and convert double slash to single.
+        // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
+        actualValue = '/';
+      }
+      t.is(actualValue, expectedValue, msg);
     });
   }
 }
