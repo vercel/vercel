@@ -338,6 +338,16 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
+    'api-env': {
+      'api/get-env.js': 'module.exports = (_, res) => res.json(process.env)',
+      'print.js': 'console.log(JSON.stringify(process.env))',
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'mkdir public && node print.js > public/index.json',
+        },
+      }),
+    },
     'alias-rules': {
       'rules.json': JSON.stringify({
         rules: [

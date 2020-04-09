@@ -829,7 +829,7 @@ export const build = async ({
       } = await nodeFileTrace(apiPages, { base: workPath });
 
       const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
-        Object.keys(pages).map(page => pages[page].fsPath),
+        nonApiPages,
         { base: workPath }
       );
 

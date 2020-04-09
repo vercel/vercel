@@ -17,6 +17,7 @@ import getScope from '../util/get-scope.ts';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
+import getCommandFlags from '../util/get-command-flags';
 
 const help = () => {
   console.log(`
@@ -332,11 +333,16 @@ export default async function main(ctx) {
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
-    ).replace(/^/gm, '  ')}\n\n`
+    ).replace(/^/gm, '  ')}\n`
   );
 
   if (pagination && deployments.length === 20) {
-    log(`To display the next page use the flag --next ${pagination.next}`);
+    const flags = getCommandFlags(argv, ['_', '--next']);
+    log(
+      `To display the next page run ${cmd(
+        `now ls ${app}${flags} --next ${pagination.next}`
+      )}`
+    );
   }
 }
 
