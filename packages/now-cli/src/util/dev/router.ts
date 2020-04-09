@@ -62,10 +62,10 @@ export async function devRouter(
 
   // Try route match
   if (routes) {
-    isContinue = false;
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
+      isContinue = false;
 
       if (isHandler(routeConfig)) {
         // We don't expect any Handle, only Source routes
