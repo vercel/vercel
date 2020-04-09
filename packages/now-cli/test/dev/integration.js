@@ -148,7 +148,7 @@ async function testPath(t, port, status, path, expectedText, headers = {}) {
   if (headers) {
     Object.keys(headers).forEach(key => {
       const k = key.toLowerCase();
-      t.is(headers[k], res.headers[k], msg);
+      t.is(headers[key], res.headers[k], msg);
     });
   }
 }
