@@ -137,7 +137,7 @@ async function getPackedBuilderPath(builderDirName) {
 }
 
 async function testPath(t, port, status, path, expectedText, headers = {}) {
-  const opts = { redirect: 'manual' };
+  const opts = { redirect: 'manual-dont-change' };
   const res = await fetch(`http://localhost:${port}${path}`, opts);
   const msg = `Testing path ${path}`;
   t.is(res.status, status, msg);
@@ -146,9 +146,15 @@ async function testPath(t, port, status, path, expectedText, headers = {}) {
     t.is(actualText.trim(), expectedText.trim(), msg);
   }
   if (headers) {
-    Object.keys(headers).forEach(key => {
-      const k = key.toLowerCase();
-      t.is(headers[k], res.headers[k], msg);
+    Object.entries(headers).forEach(([key, expectedValue]) => {
+      let actualValue = res.headers.get(key);
+      if (key.toLowerCase() === 'location' && actualValue === '//') {
+        // HACK: `node-fetch` has strang behavior for location header so fix it
+        // with `manual-dont-change` opt and convert double slash to single.
+        // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
+        actualValue = '/';
+      }
+      t.is(actualValue, expectedValue, msg);
     });
   }
 }
@@ -465,6 +471,19 @@ test(
     t.regex(await rand2.text(), /random number/gm);
     const notfound = await fetch(`http://localhost:${port}/api`);
     t.is(notfound.status, 404);
+  })
+);
+
+test(
+  '[now dev] should allow user rewrites for path segment files',
+  testFixtureStdio('test-zero-config-rewrite', async (t, port, testPath) => {
+    await testPath(404, '/');
+    await testPath(200, '/echo/1', '{"id":"1"}', {
+      'Access-Control-Allow-Origin': '*',
+    });
+    await testPath(200, '/echo/2', '{"id":"2"}', {
+      'Access-Control-Allow-Headers': '*',
+    });
   })
 );
 
