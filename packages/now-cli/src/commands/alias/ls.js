@@ -8,6 +8,8 @@ import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen.ts';
+import getCommandFlags from '../../util/get-command-flags';
+import cmd from '../../util/output/cmd.ts';
 
 export default async function ls(ctx, opts, args, output) {
   const {
@@ -102,8 +104,11 @@ export default async function ls(ctx, opts, args, output) {
   }
 
   if (pagination && aliases.length === 20) {
+    const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
-      `To display the next page use the flag --next ${pagination.next}`
+      `To display the next page run ${cmd(
+        `now alias ls${flags} --next ${pagination.next}`
+      )}`
     );
   }
 
