@@ -1932,11 +1932,15 @@ test('`now rm` removes a deployment', async t => {
   );
 
   const { host } = new URL(stdout);
-  const { exitCode, stdout: stdoutRemove } = await execute([
+  const { exitCode, stderr, stdout: stdoutRemove } = await execute([
     'rm',
     host,
     '--yes',
   ]);
+
+  console.log('Exit code', exitCode);
+  console.log('stdoutRemove', stdoutRemove);
+  console.log('stderr', stderr);
 
   t.is(stdoutRemove, 'Success! Removed 1 deployment');
   t.is(exitCode, 0);
