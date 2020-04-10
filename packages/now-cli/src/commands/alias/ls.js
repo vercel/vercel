@@ -103,7 +103,7 @@ export default async function ls(ctx, opts, args, output) {
     console.log(printAliasTable(aliases));
   }
 
-  if (pagination && aliases.length === 20) {
+  if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${cmd(

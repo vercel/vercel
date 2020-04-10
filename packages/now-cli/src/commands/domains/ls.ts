@@ -70,7 +70,7 @@ export default async function ls(
     console.log(`${formatDomainsTable(domains)}\n`);
   }
 
-  if (pagination && domains.length === 20) {
+  if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${cmd(

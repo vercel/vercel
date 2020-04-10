@@ -336,11 +336,11 @@ export default async function main(ctx) {
     ).replace(/^/gm, '  ')}\n`
   );
 
-  if (pagination && deployments.length === 20) {
+  if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);
     log(
       `To display the next page run ${cmd(
-        `now ls ${app}${flags} --next ${pagination.next}`
+        `now ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
       )}`
     );
   }
