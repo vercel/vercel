@@ -388,7 +388,12 @@ export default class Now extends EventEmitter {
     if (!app && !Object.keys(meta).length) {
       // Get the 20 latest projects and their latest deployment
       const query = new URLSearchParams({ limit: (20).toString() });
-      const projects = await fetchRetry(`/v2/projects/?${query}`);
+      if (nextTimestamp) {
+        query.set('until', String(nextTimestamp));
+      }
+      const { projects, pagination } = await fetchRetry(
+        `/v4/projects/?${query}`
+      );
 
       const deployments = await Promise.all(
         projects.map(async ({ id: projectId }) => {
@@ -400,7 +405,7 @@ export default class Now extends EventEmitter {
         })
       );
 
-      return { deployments: deployments.filter(x => x) };
+      return { deployments: deployments.filter(x => x), pagination };
     }
 
     const query = new URLSearchParams();

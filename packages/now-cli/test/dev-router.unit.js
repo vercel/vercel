@@ -10,6 +10,7 @@ test('[dev-router] 301 redirection', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/redirect',
+    continue: false,
     status: 301,
     headers: { location: 'https://zeit.co' },
     uri_args: {},
@@ -28,6 +29,7 @@ test('[dev-router] captured groups', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/endpoints/user.js',
+    continue: false,
     status: undefined,
     headers: {},
     uri_args: {},
@@ -46,6 +48,7 @@ test('[dev-router] named groups', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/user.js',
+    continue: false,
     status: undefined,
     headers: {},
     uri_args: { id: '123' },
@@ -69,6 +72,7 @@ test('[dev-router] optional named groups', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/api/functions/hello/index.js',
+    continue: false,
     status: undefined,
     headers: {},
     uri_args: { name: '' },
@@ -88,6 +92,7 @@ test('[dev-router] proxy_pass', async t => {
   t.deepEqual(result, {
     found: true,
     dest: 'https://zeit.co',
+    continue: false,
     status: undefined,
     headers: {},
     uri_args: {},
@@ -109,6 +114,7 @@ test('[dev-router] methods', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/get',
+    continue: false,
     status: undefined,
     headers: {},
     uri_args: {},
@@ -123,6 +129,7 @@ test('[dev-router] methods', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/post',
+    continue: false,
     status: undefined,
     headers: {},
     uri_args: {},
@@ -141,6 +148,7 @@ test('[dev-router] match without prefix slash', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/endpoints/user.js',
+    continue: false,
     status: undefined,
     headers: {},
     uri_args: {},
@@ -164,6 +172,7 @@ test('[dev-router] match with needed prefixed slash', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/some/dest',
+    continue: false,
     userDest: true,
     isDestUrl: false,
     phase: undefined,
@@ -197,6 +206,7 @@ test('[dev-router] `continue: true` with fallthrough', async t => {
   t.deepEqual(result, {
     found: false,
     dest: '/_next/static/chunks/0.js',
+    continue: true,
     isDestUrl: false,
     phase: undefined,
     status: undefined,
@@ -230,6 +240,7 @@ test('[dev-router] `continue: true` with match', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/hi',
+    continue: false,
     status: undefined,
     userDest: true,
     isDestUrl: false,
@@ -253,6 +264,7 @@ test('[dev-router] match with catch-all with prefix slash', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/www/',
+    continue: false,
     userDest: true,
     isDestUrl: false,
     phase: undefined,
@@ -271,6 +283,7 @@ test('[dev-router] match with catch-all with no prefix slash', async t => {
   t.deepEqual(result, {
     found: true,
     dest: '/www/',
+    continue: false,
     userDest: true,
     isDestUrl: false,
     phase: undefined,
@@ -295,6 +308,7 @@ test('[dev-router] `continue: true` with `dest`', async t => {
   t.deepEqual(result, {
     found: true,
     dest: 'http://localhost:5000/a/foo',
+    continue: false,
     status: undefined,
     headers: {},
     uri_args: {},
