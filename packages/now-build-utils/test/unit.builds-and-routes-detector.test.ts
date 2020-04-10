@@ -7,6 +7,19 @@ import {
 } from '../';
 
 describe('Test `detectBuilders`', () => {
+  it('should never select now.json src', async () => {
+    const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      projectSettings: {
+        buildCommand: 'mkdocs build',
+        outputDirectory: 'site',
+      },
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBeDefined();
+    expect(builders![0].src).not.toBe('now.json');
+  });
+
   it('package.json + no build', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'pages/index.js', 'public/index.html'];
@@ -817,6 +830,21 @@ describe('Test `detectBuilders`', () => {
 
 describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   const featHandleMiss = true;
+
+  it('should never select now.json src', async () => {
+    const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      featHandleMiss,
+      projectSettings: {
+        buildCommand: 'mkdocs build',
+        outputDirectory: 'site',
+      },
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBeDefined();
+    expect(builders![0].src).not.toBe('now.json');
+  });
+
   it('package.json + no build', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'pages/index.js', 'public/index.html'];
