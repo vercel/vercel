@@ -54,16 +54,18 @@ export async function devRouter(
   missRoutes?: RouteConfig[],
   phase?: HandleValue | null
 ): Promise<RouteResult> {
-  let found: RouteResult | undefined;
+  let result: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
   let status: number | undefined;
+  let isContinue = false;
 
   // Try route match
   if (routes) {
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
+      isContinue = false;
 
       if (isHandler(routeConfig)) {
         // We don't expect any Handle, only Source routes
@@ -110,6 +112,7 @@ export async function devRouter(
             status = routeConfig.status;
           }
           reqPathname = destPath;
+          isContinue = true;
           continue;
         }
 
@@ -149,9 +152,10 @@ export async function devRouter(
 
         const isDestUrl = isURL(destPath);
         if (isDestUrl) {
-          found = {
+          result = {
             found: true,
             dest: destPath,
+            continue: isContinue,
             userDest: false,
             isDestUrl,
             status: routeConfig.status || status,
@@ -167,9 +171,10 @@ export async function devRouter(
             destPath = `/${destPath}`;
           }
           const { pathname, query } = url.parse(destPath, true);
-          found = {
+          result = {
             found: true,
             dest: pathname || '/',
+            continue: isContinue,
             userDest: Boolean(routeConfig.dest),
             isDestUrl,
             status: routeConfig.status || status,
@@ -185,10 +190,11 @@ export async function devRouter(
     }
   }
 
-  if (!found) {
-    found = {
+  if (!result) {
+    result = {
       found: false,
       dest: reqPathname,
+      continue: isContinue,
       status,
       isDestUrl: false,
       uri_args: query,
@@ -197,5 +203,5 @@ export async function devRouter(
     };
   }
 
-  return found;
+  return result;
 }

@@ -147,6 +147,8 @@ export interface RouteResult {
   found: boolean;
   // "dest": <string of the dest, either file for lambda or full url for remote>
   dest: string;
+  // `true` if last route in current phase matched but set `continue: true`
+  continue: boolean;
   // "status": <integer in case exit code is intended to be changed>
   status?: number;
   // "headers": <object of the added response header values>
