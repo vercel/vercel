@@ -85,6 +85,7 @@ import {
   ListenSpec,
   RouteConfig,
   RouteResult,
+  HttpHeadersConfig,
 } from './types';
 
 interface FSEvent {
@@ -1264,19 +1265,25 @@ export default class DevServer {
     let routeResult: RouteResult | null = null;
     let match: BuildMatch | null = null;
     let statusCode: number | undefined;
+    let prevUrl = req.url;
+    let prevHeaders: HttpHeadersConfig = {};
 
     for (const phase of phases) {
       statusCode = undefined;
       const phaseRoutes = handleMap.get(phase) || [];
       routeResult = await devRouter(
-        req.url,
+        prevUrl,
         req.method,
         phaseRoutes,
         this,
-        undefined,
+        prevHeaders,
         missRoutes,
         phase
       );
+      prevUrl =
+        routeResult.continue && routeResult.dest ? routeResult.dest : req.url;
+      prevHeaders =
+        routeResult.continue && routeResult.headers ? routeResult.headers : {};
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
