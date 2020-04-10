@@ -1910,6 +1910,38 @@ test('print correct link in legacy warning', async t => {
   t.regex(stderr, /migrate-to-zeit-now/);
 });
 
+test('`now rm` removes a deployment', async t => {
+  const directory = fixture('builds');
+
+  const { stdout } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      '-V',
+      2,
+      '--force',
+      '--confirm',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  const { host } = new URL(stdout);
+  const { exitCode, stdout: stdoutRemove } = await execute([
+    'rm',
+    host,
+    '--yes',
+  ]);
+
+  t.truthy(stdoutRemove.includes(host));
+  t.is(exitCode, 0);
+});
+
 test('`now rm` 404 exits quickly', async t => {
   const start = Date.now();
   const { exitCode, stderr, stdout } = await execute([
