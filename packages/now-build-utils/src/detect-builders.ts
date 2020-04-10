@@ -190,7 +190,12 @@ export async function detectBuilders(
       hasNextApiFiles = true;
     }
 
-    if (!fallbackEntrypoint && buildCommand && !fileName.includes('/')) {
+    if (
+      !fallbackEntrypoint &&
+      buildCommand &&
+      !fileName.includes('/') &&
+      fileName !== 'now.json'
+    ) {
       fallbackEntrypoint = fileName;
     }
   }
