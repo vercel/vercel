@@ -116,18 +116,14 @@ export default async function add(
       return 1;
     }
 
-    while (!envValue) {
+    while (typeof envValue !== 'undefined') {
       const { inputValue } = await inquirer.prompt({
         type: 'password',
         name: 'inputValue',
         message: `What’s the value of ${envName}?`,
       });
 
-      envValue = inputValue;
-
-      if (!inputValue) {
-        output.error('Value cannot be empty');
-      }
+      envValue = inputValue || '';
     }
 
     while (envTargets.length === 0) {

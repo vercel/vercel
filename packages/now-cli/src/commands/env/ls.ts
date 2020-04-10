@@ -101,7 +101,7 @@ function getTable(records: ProjectEnvVariable[]) {
 
 function getRow({
   key,
-  value = '',
+  system = false,
   target,
   createdAt = 0,
   updatedAt = 0,
@@ -109,7 +109,7 @@ function getRow({
   const now = Date.now();
   return [
     chalk.bold(key),
-    value.startsWith('sec_') ? chalk.gray(chalk.italic('encrypted')) : value,
+    chalk.gray(chalk.italic(system ? 'system' : 'encrypted')),
     target || '',
     `${ms(now - createdAt)} ago`,
     `${ms(now - updatedAt)} ago`,

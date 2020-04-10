@@ -240,6 +240,7 @@ export interface ProjectEnvVariable {
   createdAt?: number;
   updatedAt?: number;
   target?: ProjectEnvTarget;
+  system?: boolean;
 }
 
 export interface Project {
