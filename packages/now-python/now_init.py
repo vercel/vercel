@@ -1,14 +1,16 @@
-from http.server import BaseHTTPRequestHandler
 
+import sys
 import base64
 import json
 import inspect
 from importlib import util
+from http.server import BaseHTTPRequestHandler
 
-# Import relative path https://stackoverflow.com/a/67692/266535
+# Import relative path https://docs.python.org/3.6/library/importlib.html#importing-a-source-file-directly
 __now_spec = util.spec_from_file_location("__NOW_HANDLER_MODULE_NAME", "./__NOW_HANDLER_ENTRYPOINT")
 __now_module = util.module_from_spec(__now_spec)
 __now_spec.loader.exec_module(__now_module)
+sys.modules["__NOW_HANDLER_MODULE_NAME"] = __now_module
 __now_variables = dir(__now_module)
 
 
@@ -83,7 +85,6 @@ elif 'app' in __now_variables:
         not inspect.iscoroutinefunction(__now_module.app.__call__)
     ):
         print('using Web Server Gateway Interface (WSGI)')
-        import sys
         from urllib.parse import urlparse, unquote
         from werkzeug._compat import BytesIO
         from werkzeug._compat import string_types
