@@ -7,6 +7,9 @@ export default async function getDecryptedSecret(
   client: Client,
   secretId: string
 ): Promise<string> {
+  if (!secretId) {
+    return '';
+  }
   output.debug(`Fetching decrypted secret ${secretId}`);
   const url = `/v2/now/secrets/${secretId}?decrypt=true`;
   const secret = await client.fetch<Secret>(url);
