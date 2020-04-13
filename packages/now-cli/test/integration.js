@@ -137,7 +137,7 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 const waitForPrompt = (cp, assertion) =>
   new Promise((resolve, reject) => {
     console.log('Waiting for prompt...');
-    setTimeout(() => reject(new Error('timeout in waitForPrompt'), 10000));
+    setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
     const listener = chunk => {
       console.log('> ' + chunk);
       if (assertion(chunk)) {
