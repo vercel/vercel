@@ -360,6 +360,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const now = execa(binaryPath, ['env', 'add', ...defaultArgs], {
       reject: false,
       cwd: target,
+      env: { __NOW_STDIN_CI: 1 },
     });
     await waitForPrompt(now, chunk =>
       chunk.includes('What’s the name of the variable?')
@@ -391,6 +392,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
       {
         reject: false,
         cwd: target,
+        env: { __NOW_STDIN_CI: 1 },
       }
     );
     now.stdin.end('MY_STDIN_VALUE');
