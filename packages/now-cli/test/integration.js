@@ -353,7 +353,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-    t.regex(stderr, /0 Records found in project/gm);
+    t.regex(stderr, /0 Environment Variables found in Project/gm);
   }
 
   async function nowEnvAdd() {
@@ -409,6 +409,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /4 Environment Variables found in Project/gm);
 
     const lines = stdout.split('\n');
 

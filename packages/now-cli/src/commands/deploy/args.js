@@ -14,6 +14,7 @@ export const latestHelp = () => `
         '(default)'
       )}
       dev                              Start a local development server
+      env                              Manages the Environment Variables for your current Project
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
@@ -28,7 +29,7 @@ export const latestHelp = () => `
       domains              [name]      Manages your domain names
       dns                  [name]      Manages your DNS records
       certs                [cmd]       Manages your SSL certificates
-      secrets              [name]      Manages your secret environment variables
+      secrets              [name]      Manages your global Secrets, for use in Environment Variables
       logs                 [url]       Displays the logs for a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
@@ -84,7 +85,7 @@ export const latestHelp = () => `
 
     ${chalk.cyan('$ now /usr/src/project')}
 
-  ${chalk.gray('–')} Deploy with environment variables
+  ${chalk.gray('–')} Deploy with Environment Variables
 
     ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
 

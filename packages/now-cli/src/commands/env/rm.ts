@@ -98,7 +98,7 @@ export default async function rm(
 
     if (existing.size === 0) {
       output.error(
-        `The environment variable ${param(envName)} was not found.\n`
+        `The Environment Variable ${param(envName)} was not found.\n`
       );
       return 1;
     }
@@ -107,9 +107,9 @@ export default async function rm(
       const choices = getEnvTargetChoices().filter(c => existing.has(c.value));
       if (choices.length === 0) {
         output.error(
-          `The environment variable ${param(
+          `The Environment Variable ${param(
             envName
-          )} was found but it is not assign to any environments.\n`
+          )} was found but it is not assigned to any Environments.\n`
         );
         return 1;
       } else if (choices.length === 1) {
@@ -130,9 +130,9 @@ export default async function rm(
       !skipConfirmation &&
       !(await promptBool(
         output,
-        `Remove environment variable ${param(
+        `Removing Environment Variable ${param(
           envName
-        )} from project ${chalk.bold(project.name)}. Are you sure?`
+        )} from Project ${chalk.bold(project.name)}. Are you sure?`
       ))
     ) {
       output.log('Aborted');
@@ -149,7 +149,7 @@ export default async function rm(
 
     output.print(
       `${prependEmoji(
-        `Removed environment variable ${chalk.gray(rmStamp())}`,
+        `Removed Environment Variable ${chalk.gray(rmStamp())}`,
         emoji('success')
       )}\n`
     );

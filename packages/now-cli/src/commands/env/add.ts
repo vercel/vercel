@@ -51,7 +51,7 @@ export default async function add(
     return 1;
   } else {
     const { project } = link;
-    let envValue = await readStandardInput();
+    let stdInput = await readStandardInput();
     let [envName, envTarget] = args;
 
     if (args.length > 2) {
@@ -63,10 +63,10 @@ export default async function add(
       return 1;
     }
 
-    if (envValue && (!envName || !envTarget)) {
+    if (stdInput && (!envName || !envTarget)) {
       output.error(
         `Invalid number of arguments. Usage: ${cmd(
-          `cat <file> | now env add <name> ${getEnvTargetPlaceholder()}`
+          `now env add <name> <target> < <file>`
         )}`
       );
       return 1;
@@ -116,18 +116,17 @@ export default async function add(
       return 1;
     }
 
-    while (!envValue) {
+    let envValue: string;
+
+    if (stdInput) {
+      envValue = stdInput;
+    } else {
       const { inputValue } = await inquirer.prompt({
         type: 'password',
         name: 'inputValue',
         message: `What’s the value of ${envName}?`,
       });
-
-      envValue = inputValue;
-
-      if (!inputValue) {
-        output.error('Value cannot be empty');
-      }
+      envValue = inputValue || '';
     }
 
     while (envTargets.length === 0) {
@@ -152,9 +151,9 @@ export default async function add(
 
     output.print(
       `${prependEmoji(
-        `Added environment variable ${chalk.bold(
+        `Added Environment Variable ${chalk.bold(
           envName
-        )} to project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
+        )} to Project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
         emoji('success')
       )}\n`
     );
