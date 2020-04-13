@@ -363,8 +363,9 @@ export async function executeBuild(
           MemorySize: asset.memory || 3008,
           Environment: {
             Variables: {
+              ...nowConfig.env,
               ...asset.environment,
-              ...envConfigs.all,
+              ...envConfigs.run,
               NOW_REGION: 'dev1',
             },
           },
