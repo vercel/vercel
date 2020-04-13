@@ -77,9 +77,11 @@ export default async function ls(
       envTarget
     );
     output.log(
-      `${plural('Record', records.length, true)} found in Project ${chalk.bold(
-        project.name
-      )} ${chalk.gray(lsStamp())}`
+      `${plural(
+        'Environment Variable',
+        records.length,
+        true
+      )} found in Project ${chalk.bold(project.name)} ${chalk.gray(lsStamp())}`
     );
     console.log(getTable(records));
     return 0;
@@ -88,11 +90,11 @@ export default async function ls(
 
 function getTable(records: ProjectEnvVariable[]) {
   return formatTable(
-    ['name', 'value', 'environment', 'created', 'updated'],
+    ['name', 'value', 'environment', 'created'],
     ['l', 'l', 'l', 'l', 'l'],
     [
       {
-        name: 'Environment Variables',
+        name: '',
         rows: records.map(getRow),
       },
     ]
@@ -104,7 +106,6 @@ function getRow({
   system = false,
   target,
   createdAt = 0,
-  updatedAt = 0,
 }: ProjectEnvVariable) {
   const now = Date.now();
   return [
@@ -112,6 +113,5 @@ function getRow({
     chalk.gray(chalk.italic(system ? 'Populated by System' : 'Encrypted')),
     target || '',
     `${ms(now - createdAt)} ago`,
-    `${ms(now - updatedAt)} ago`,
   ];
 }
