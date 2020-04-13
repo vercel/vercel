@@ -61,7 +61,7 @@ export default async function ls(
 
     if (!isValidEnvTarget(envTarget)) {
       output.error(
-        `The environment ${param(
+        `The Environment ${param(
           envTarget
         )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
       );

@@ -135,9 +135,11 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 };
 
 const waitForPrompt = (cp, assertion) =>
-  new Promise(resolve => {
+  new Promise((resolve, reject) => {
     console.log('Waiting for prompt...');
+    setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
     const listener = chunk => {
+      console.log('> ' + chunk);
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
         cp.stderr.off && cp.stderr.off('data', listener);
@@ -375,7 +377,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     await waitForPrompt(
       now,
       chunk =>
-        chunk.includes('which environments') && chunk.includes('MY_ENV_VAR')
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
     );
     now.stdin.write('a\n'); // select all
 
@@ -483,7 +485,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     await waitForPrompt(
       now,
       chunk =>
-        chunk.includes('which environments') && chunk.includes('MY_ENV_VAR')
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
     );
     now.stdin.write('a\n'); // select all
 
