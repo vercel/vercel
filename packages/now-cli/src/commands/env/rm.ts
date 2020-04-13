@@ -130,7 +130,7 @@ export default async function rm(
       !skipConfirmation &&
       !(await promptBool(
         output,
-        `Remove Environment Variable ${param(
+        `Removing Environment Variable ${param(
           envName
         )} from Project ${chalk.bold(project.name)}. Are you sure?`
       ))
