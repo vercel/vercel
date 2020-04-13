@@ -67,7 +67,7 @@ export default async function rm(
     if (envTarget) {
       if (!isValidEnvTarget(envTarget)) {
         output.error(
-          `The environment ${param(
+          `The Environment ${param(
             envTarget
           )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
         );
@@ -118,7 +118,7 @@ export default async function rm(
         const { inputTargets } = await inquirer.prompt({
           name: 'inputTargets',
           type: 'checkbox',
-          message: `Remove ${envName} from which environments (select multiple)?`,
+          message: `Remove ${envName} from which Environments (select multiple)?`,
           choices,
         });
         envTargets = inputTargets;
