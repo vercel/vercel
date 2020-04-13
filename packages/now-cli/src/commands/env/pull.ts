@@ -74,7 +74,7 @@ export default async function pull(
     }
 
     output.print(
-      `Downloading Development environment variables for project ${chalk.bold(
+      `Downloading Development Environment Variables for Project ${chalk.bold(
         project.name
       )}\n`
     );

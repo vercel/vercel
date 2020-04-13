@@ -77,7 +77,7 @@ export default async function ls(
       envTarget
     );
     output.log(
-      `${plural('Record', records.length, true)} found in project ${chalk.bold(
+      `${plural('Record', records.length, true)} found in Project ${chalk.bold(
         project.name
       )} ${chalk.gray(lsStamp())}`
     );

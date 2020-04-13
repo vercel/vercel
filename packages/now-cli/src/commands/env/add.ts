@@ -151,9 +151,9 @@ export default async function add(
 
     output.print(
       `${prependEmoji(
-        `Added environment variable ${chalk.bold(
+        `Added Environment Variable ${chalk.bold(
           envName
-        )} to project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
+        )} to Project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
         emoji('success')
       )}\n`
     );

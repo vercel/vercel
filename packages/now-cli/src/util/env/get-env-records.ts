@@ -9,7 +9,7 @@ export default async function getEnvVariables(
   target?: ProjectEnvTarget
 ): Promise<ProjectEnvVariable[]> {
   output.debug(
-    `Fetching environment variables of project ${projectId} and target ${target}`
+    `Fetching Environment Variables of project ${projectId} and target ${target}`
   );
   const qs = target ? `?target=${encodeURIComponent(target)}` : '';
   const url = `/v4/projects/${projectId}/env${qs}`;

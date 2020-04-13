@@ -10,7 +10,7 @@ export default async function removeEnvRecord(
   target?: ProjectEnvTarget
 ): Promise<void> {
   output.debug(
-    `Removing environment variable ${envName} from target ${target}`
+    `Removing Environment Variable ${envName} from target ${target}`
   );
 
   const qs = target ? `?target=${encodeURIComponent(target)}` : '';

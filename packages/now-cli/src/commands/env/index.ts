@@ -21,10 +21,10 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    ls      [environment]              List all variables for the specified environment
-    add     [name] [environment]       Add an environment variable (see examples below)
-    rm      [name] [environment]       Remove an environment variable (see examples below)
-    pull    [filename]                 Read development environment from the cloud and write to a file [.env]
+    ls      [environment]              List all variables for the specified Environment
+    add     [name] [environment]       Add an Environment Variable (see examples below)
+    rm      [name] [environment]       Remove an Environment Variable (see examples below)
+    pull    [filename]                 Pull all Development Environment Variables from the cloud and write to a file [.env]
 
   ${chalk.dim('Options:')}
 
@@ -42,28 +42,28 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Add a new variable to multiple environments
+  ${chalk.gray('–')} Add a new variable to multiple Environments
 
       ${chalk.cyan('$ now env add <name>')}
       ${chalk.cyan('$ now env add API_TOKEN')}
 
-  ${chalk.gray('–')} Add a new variable for a specific environment
+  ${chalk.gray('–')} Add a new variable for a specific Environment
 
       ${chalk.cyan(`$ now env add <name> ${placeholder}`)}
       ${chalk.cyan('$ now env add DB_CONNECTION production')}
 
-  ${chalk.gray('–')} Add a new environment variable from stdin
+  ${chalk.gray('–')} Add a new Environment Variable from stdin
 
       ${chalk.cyan(`$ cat <file> | now env add <name> ${placeholder}`)}
       ${chalk.cyan('$ cat ~/.npmrc | now env add NPM_RC preview')}
       ${chalk.cyan('$ now env add DB_PASS production < secret.txt')}
 
-  ${chalk.gray('–')} Remove a variable from multiple environments
+  ${chalk.gray('–')} Remove an variable from multiple Environments
 
       ${chalk.cyan('$ now env rm <name>')}
       ${chalk.cyan('$ now env rm API_TOKEN')}
 
-  ${chalk.gray('–')} Remove a variable from a specific environment
+  ${chalk.gray('–')} Remove a variable from a specific Environment
 
       ${chalk.cyan(`$ now env rm <name> ${placeholder}`)}
       ${chalk.cyan('$ now env rm NPM_RC preview')}

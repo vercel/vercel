@@ -13,7 +13,7 @@ export default async function addEnvRecord(
   targets: ProjectEnvTarget[]
 ): Promise<void> {
   output.debug(
-    `Adding environment variable ${envName} to ${targets.length} targets`
+    `Adding Environment Variable ${envName} to ${targets.length} targets`
   );
 
   let values: string[] | undefined;
