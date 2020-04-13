@@ -1259,6 +1259,16 @@ test(
 );
 
 test(
+  '[now dev] 27-zero-config-env',
+  testFixtureStdio('27-zero-config-env', async (t, port) => {
+    const api = await fetchWithRetry(`http://localhost:${port}/api/print`);
+    const index = await fetchWithRetry(`http://localhost:${port}`);
+    t.regex(await api.text(), new RegExp('build-and-runtime'));
+    t.regex(await index.text(), new RegExp('build-and-runtime'));
+  })
+);
+
+test(
   '[now dev] Use `@now/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async (t, port) => {
     const name = 'Alice';
