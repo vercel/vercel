@@ -142,7 +142,7 @@ export default class DevServer {
     this.cwd = cwd;
     this.debug = options.debug;
     this.output = options.output;
-    this.envConfigs = { build: {}, run: {}, all: {} };
+    this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
@@ -739,13 +739,13 @@ export default class DevServer {
     // Retrieve the path of the native module
     const nowConfig = await this.getNowConfig(false);
     const nowConfigBuild = nowConfig.build || {};
-    const [env, buildEnv] = await Promise.all([
+    const [runEnv, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),
       this.getLocalEnv('.env.build', nowConfigBuild.env),
     ]);
-    const allEnv = { ...buildEnv, ...env };
+    const allEnv = { ...buildEnv, ...runEnv };
     Object.assign(process.env, allEnv);
-    this.envConfigs = { build: buildEnv, run: env, all: allEnv };
+    this.envConfigs = { buildEnv, runEnv, allEnv };
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
@@ -1688,7 +1688,7 @@ export default class DevServer {
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
-      ...this.envConfigs.all,
+      ...this.envConfigs.allEnv,
       NOW_REGION: 'dev1',
       PORT: `${port}`,
     };

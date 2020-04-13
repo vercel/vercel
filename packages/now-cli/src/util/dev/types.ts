@@ -30,17 +30,17 @@ export interface EnvConfigs {
   /**
    * environment variables from `.env.build` file (deprecated)
    */
-  build: EnvConfig;
+  buildEnv: EnvConfig;
 
   /**
    * environment variables from `.env` file
    */
-  run: EnvConfig;
+  runEnv: EnvConfig;
 
   /**
    * environment variables from `.env` and `.env.build`
    */
-  all: EnvConfig;
+  allEnv: EnvConfig;
 }
 
 export interface BuildMatch extends BuildConfig {

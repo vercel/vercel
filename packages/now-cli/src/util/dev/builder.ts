@@ -66,7 +66,7 @@ async function createBuildProcess(
   const env: EnvConfig = {
     ...process.env,
     PATH,
-    ...envConfigs.all,
+    ...envConfigs.allEnv,
     NOW_REGION: 'dev1',
   };
 
@@ -152,8 +152,8 @@ export async function executeBuild(
       filesRemoved,
       // This env distiniction is only necessary to maintain
       // backwards compatibility with the `@now/next` builder.
-      env: envConfigs.run,
-      buildEnv: envConfigs.build,
+      env: envConfigs.runEnv,
+      buildEnv: envConfigs.buildEnv,
     },
   };
 
@@ -365,7 +365,7 @@ export async function executeBuild(
             Variables: {
               ...nowConfig.env,
               ...asset.environment,
-              ...envConfigs.run,
+              ...envConfigs.runEnv,
               NOW_REGION: 'dev1',
             },
           },
