@@ -66,7 +66,7 @@ export default async function add(
     if (stdInput && (!envName || !envTarget)) {
       output.error(
         `Invalid number of arguments. Usage: ${cmd(
-          `cat <file> | now env add <name> ${getEnvTargetPlaceholder()}`
+          `now env add <name> <target> < <file>`
         )}`
       );
       return 1;
