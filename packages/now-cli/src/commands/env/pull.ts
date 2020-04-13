@@ -102,9 +102,9 @@ export default async function pull(
 
     output.print(
       `${prependEmoji(
-        `${exists ? 'Updated' : 'Created'} file ${chalk.bold(
+        `${exists ? 'Updated' : 'Created'} ${chalk.bold(
           filename
-        )} ${chalk.gray(pullStamp())}`,
+        )} file ${chalk.gray(pullStamp())}`,
         emoji('success')
       )}\n`
     );
