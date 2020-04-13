@@ -109,7 +109,7 @@ function getRow({
   const now = Date.now();
   return [
     chalk.bold(key),
-    chalk.gray(chalk.italic(system ? 'system' : 'encrypted')),
+    chalk.gray(chalk.italic(system ? 'Populated by System' : 'Encrypted')),
     target || '',
     `${ms(now - createdAt)} ago`,
     `${ms(now - updatedAt)} ago`,
