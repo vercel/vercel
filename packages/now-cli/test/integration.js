@@ -135,9 +135,11 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 };
 
 const waitForPrompt = (cp, assertion) =>
-  new Promise(resolve => {
+  new Promise((resolve, reject) => {
     console.log('Waiting for prompt...');
+    setTimeout(() => reject(new Error('timeout in waitForPrompt'), 10000));
     const listener = chunk => {
+      console.log('> ' + chunk);
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
         cp.stderr.off && cp.stderr.off('data', listener);
@@ -360,7 +362,6 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const now = execa(binaryPath, ['env', 'add', ...defaultArgs], {
       reject: false,
       cwd: target,
-      env: { __NOW_STDIN_CI: 1 },
     });
     await waitForPrompt(now, chunk =>
       chunk.includes('What’s the name of the variable?')
@@ -376,7 +377,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     await waitForPrompt(
       now,
       chunk =>
-        chunk.includes('which environments') && chunk.includes('MY_ENV_VAR')
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
     );
     now.stdin.write('a\n'); // select all
 
@@ -392,7 +393,6 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
       {
         reject: false,
         cwd: target,
-        env: { __NOW_STDIN_CI: 1 },
       }
     );
     now.stdin.end('MY_STDIN_VALUE');
@@ -485,7 +485,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     await waitForPrompt(
       now,
       chunk =>
-        chunk.includes('which environments') && chunk.includes('MY_ENV_VAR')
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
     );
     now.stdin.write('a\n'); // select all
 
