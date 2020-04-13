@@ -16,7 +16,8 @@ export default async function addEnvRecord(
     `Adding environment variable ${envName} to ${targets.length} targets`
   );
 
-  let values: string[];
+  let values: string[] | undefined;
+
   if (envValue) {
     const urlSecret = `/v2/now/secrets/${encodeURIComponent(envName)}`;
     const secrets = await Promise.all(
@@ -37,7 +38,7 @@ export default async function addEnvRecord(
 
   const body = targets.map((target, i) => ({
     key: envName,
-    value: values[i] || '',
+    value: values ? values[i] : '',
     target,
   }));
 
