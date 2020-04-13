@@ -51,7 +51,7 @@ export default async function add(
     return 1;
   } else {
     const { project } = link;
-    let envValue = await readStandardInput();
+    let stdInput = await readStandardInput();
     let [envName, envTarget] = args;
 
     if (args.length > 2) {
@@ -63,7 +63,7 @@ export default async function add(
       return 1;
     }
 
-    if (envValue && (!envName || !envTarget)) {
+    if (stdInput && (!envName || !envTarget)) {
       output.error(
         `Invalid number of arguments. Usage: ${cmd(
           `cat <file> | now env add <name> ${getEnvTargetPlaceholder()}`
@@ -116,13 +116,16 @@ export default async function add(
       return 1;
     }
 
-    while (typeof envValue !== 'undefined') {
+    let envValue: string;
+
+    if (stdInput) {
+      envValue = stdInput;
+    } else {
       const { inputValue } = await inquirer.prompt({
         type: 'password',
         name: 'inputValue',
         message: `What’s the value of ${envName}?`,
       });
-
       envValue = inputValue || '';
     }
 
