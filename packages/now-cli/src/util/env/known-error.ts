@@ -1,5 +1,5 @@
 const knownErrorsCodes = new Set([
-  'payment_required',
+  'PAYMENT_REQUIRED',
   'BAD_REQUEST',
   'SYSTEM_ENV_WITH_VALUE',
   'RESERVED_ENV_VARIABLE',
@@ -9,5 +9,5 @@ const knownErrorsCodes = new Set([
 
 export function isKnownError(error: { code?: string }) {
   const code = error && typeof error.code === 'string' ? error.code : '';
-  return knownErrorsCodes.has(code);
+  return knownErrorsCodes.has(code.toUpperCase());
 }
