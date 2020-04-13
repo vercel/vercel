@@ -17,6 +17,7 @@ import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
+import { isKnownError } from '../../util/env/known-error';
 
 type Options = {
   '--debug': boolean;
@@ -145,9 +146,17 @@ export default async function add(
     }
 
     const addStamp = stamp();
-    await withSpinner('Saving', () =>
-      addEnvRecord(output, client, project.id, envName, envValue, envTargets)
-    );
+    try {
+      await withSpinner('Saving', () =>
+        addEnvRecord(output, client, project.id, envName, envValue, envTargets)
+      );
+    } catch (error) {
+      if (isKnownError(error) && error.serverMessage) {
+        output.error(error.serverMessage);
+        return 1;
+      }
+      throw error;
+    }
 
     output.print(
       `${prependEmoji(
