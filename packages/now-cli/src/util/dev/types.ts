@@ -26,6 +26,23 @@ export interface EnvConfig {
   [name: string]: string | undefined;
 }
 
+export interface EnvConfigs {
+  /**
+   * environment variables from `.env.build` file (deprecated)
+   */
+  buildEnv: EnvConfig;
+
+  /**
+   * environment variables from `.env` file
+   */
+  runEnv: EnvConfig;
+
+  /**
+   * environment variables from `.env` and `.env.build`
+   */
+  allEnv: EnvConfig;
+}
+
 export interface BuildMatch extends BuildConfig {
   entrypoint: string;
   builderWithPkg: BuilderWithPackage;

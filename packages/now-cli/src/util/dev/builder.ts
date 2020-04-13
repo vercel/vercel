@@ -27,6 +27,8 @@ import {
   BuilderOutput,
   BuildResultV3,
   BuilderOutputs,
+  BuilderParams,
+  EnvConfigs,
 } from './types';
 import { normalizeRoutes } from '@now/routing-utils';
 import getUpdateCommand from '../get-update-command';
@@ -45,7 +47,7 @@ const treeKill = promisify(_treeKill);
 
 async function createBuildProcess(
   match: BuildMatch,
-  buildEnv: EnvConfig,
+  envConfigs: EnvConfigs,
   workPath: string,
   output: Output,
   yarnPath?: string
@@ -64,7 +66,7 @@ async function createBuildProcess(
   const env: EnvConfig = {
     ...process.env,
     PATH,
-    ...buildEnv,
+    ...envConfigs.allEnv,
     NOW_REGION: 'dev1',
   };
 
@@ -109,7 +111,7 @@ export async function executeBuild(
     builderWithPkg: { runInProcess, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
+  const { debug, envConfigs, yarnPath, cwd: workPath } = devServer;
 
   const startTime = Date.now();
   const showBuildTimestamp =
@@ -131,14 +133,14 @@ export async function executeBuild(
     devServer.output.debug(`Creating build process for ${entrypoint}`);
     buildProcess = await createBuildProcess(
       match,
-      buildEnv,
+      envConfigs,
       workPath,
       devServer.output,
       yarnPath
     );
   }
 
-  const buildParams = {
+  const buildParams: BuilderParams = {
     files,
     entrypoint,
     workPath,
@@ -148,8 +150,10 @@ export async function executeBuild(
       requestPath,
       filesChanged,
       filesRemoved,
-      env,
-      buildEnv,
+      // This env distiniction is only necessary to maintain
+      // backwards compatibility with the `@now/next` builder.
+      env: envConfigs.runEnv,
+      buildEnv: envConfigs.buildEnv,
     },
   };
 
@@ -361,7 +365,7 @@ export async function executeBuild(
             Variables: {
               ...nowConfig.env,
               ...asset.environment,
-              ...env,
+              ...envConfigs.runEnv,
               NOW_REGION: 'dev1',
             },
           },

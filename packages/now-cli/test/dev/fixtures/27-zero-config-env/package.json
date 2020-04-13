@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "mkdir public && echo $FOO > public/index.html"
+  }
+}
