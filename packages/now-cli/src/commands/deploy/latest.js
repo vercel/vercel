@@ -392,6 +392,19 @@ export default async function main(
     );
   }
 
+  if (localConfig.builds) {
+    output.print(
+      `${prependEmoji(
+        `Zero-configuration deployments are recommended instead of a ${code(
+          'builds'
+        )} property in ${highlight(
+          'now.json'
+        )}. The “Build & Development Settings” in your Project will not apply. More details: https://zeit.co/blog/advanced-project-settings`,
+        emoji('notice')
+      )}\n`
+    );
+  }
+
   // build `env`
   const isObject = item =>
     Object.prototype.toString.call(item) === '[object Object]';
