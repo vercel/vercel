@@ -4,7 +4,7 @@ import Now from '../util';
 import createOutput from '../util/output';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
-import { maybeURL, normalizeURL, parseInstanceURL } from '../util/url';
+import { maybeURL, normalizeURL } from '../util/url';
 import printEvents from '../util/events';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
@@ -16,7 +16,6 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    -a, --all                      Include access logs
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`now.json`'} file
@@ -28,9 +27,6 @@ const help = () => {
     -n ${chalk.bold.underline(
       'NUMBER'
     )}                      Number of logs [100]
-    -q ${chalk.bold.underline('QUERY')}, --query=${chalk.bold.underline(
-    'QUERY'
-  )}        Search query
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -65,23 +61,18 @@ export default async function main(ctx) {
   let apiUrl;
   let head;
   let limit;
-  let query;
   let follow;
-  let types;
   let outputMode;
 
   let since;
   let until;
-  let instanceId;
 
   argv = mri(ctx.argv.slice(2), {
-    string: ['query', 'since', 'until', 'output'],
-    boolean: ['help', 'all', 'debug', 'head', 'follow'],
+    string: ['since', 'until', 'output'],
+    boolean: ['help', 'debug', 'head', 'follow'],
     alias: {
       help: 'h',
-      all: 'a',
       debug: 'd',
-      query: 'q',
       follow: 'f',
       output: 'o',
     },
@@ -121,7 +112,7 @@ export default async function main(ctx) {
       return 1;
     }
 
-    [deploymentIdOrURL, instanceId] = parseInstanceURL(normalizedURL);
+    deploymentIdOrURL = normalizedURL;
   }
 
   debug = argv.debug;
@@ -129,10 +120,8 @@ export default async function main(ctx) {
 
   head = argv.head;
   limit = typeof argv.n === 'number' ? argv.n : 100;
-  query = argv.query || '';
   follow = argv.f;
   if (follow) until = 0;
-  types = argv.all ? [] : ['command', 'stdout', 'stderr', 'exit'];
   outputMode = argv.output in logPrinters ? argv.output : 'short';
 
   const {
@@ -204,9 +193,6 @@ export default async function main(ctx) {
   const findOpts1 = {
     direction,
     limit,
-    query,
-    types,
-    instanceId,
     since,
     until,
   }; // no follow
@@ -236,9 +222,6 @@ export default async function main(ctx) {
     const since2 = lastEvent ? lastEvent.date : Date.now();
     const findOpts2 = {
       direction: 'forward',
-      query,
-      types,
-      instanceId,
       since: since2,
       follow: true,
     };

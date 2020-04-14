@@ -155,11 +155,7 @@ export default async function main(ctx) {
     type === STATIC
       ? null
       : caught(
-          now.fetch(
-            `/v1/now/deployments/${encodeURIComponent(
-              finalId
-            )}/events?types=event`
-          )
+          now.fetch(`/v1/now/deployments/${encodeURIComponent(finalId)}/events`)
         ),
     isBuilds ? now.fetch(buildsUrl) : { builds: [] },
   ]);
