@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "name": "test-v2-qa",
+  "builds": [{ "src": "package.json", "use": "now-sapper" }],
+  "regions": ["lhr"]
+}
