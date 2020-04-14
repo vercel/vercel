@@ -18,7 +18,7 @@ async function getDomainByName(
   );
   try {
     const { domain } = await client.fetch<Response>(
-      `/v4/domains/${domainName}`
+      `/v4/domains/${encodeURIComponent(domainName)}`
     );
     cancelWait();
     return domain;
