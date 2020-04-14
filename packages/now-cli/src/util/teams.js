@@ -4,7 +4,7 @@ export default class Teams extends Now {
   async create({ slug }) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} POST /teams}`);
+        console.time(`> [debug] #${attempt} POST /teams`);
       }
 
       const res = await this._fetch(`/teams`, {
@@ -42,7 +42,7 @@ export default class Teams extends Now {
   async edit({ id, slug, name }) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} PATCH /teams/${id}}`);
+        console.time(`> [debug] #${attempt} PATCH /teams/${id}`);
       }
 
       const payload = {};
@@ -86,7 +86,7 @@ export default class Teams extends Now {
   async inviteUser({ teamId, email }) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} POST /teams/${teamId}/members}`);
+        console.time(`> [debug] #${attempt} POST /teams/${teamId}/members`);
       }
 
       const publicRes = await this._fetch(`/www/user/public?email=${email}`);
@@ -100,7 +100,7 @@ export default class Teams extends Now {
       });
 
       if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} POST /teams/${teamId}/members}`);
+        console.timeEnd(`> [debug] #${attempt} POST /teams/${teamId}/members`);
       }
 
       if (res.status === 403) {
@@ -128,7 +128,7 @@ export default class Teams extends Now {
   async ls() {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /teams}`);
+        console.time(`> [debug] #${attempt} GET /teams`);
       }
 
       const res = await this._fetch(`/teams`);
