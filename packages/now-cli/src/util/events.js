@@ -28,11 +28,8 @@ async function printEvents(
   const q = qs.stringify({
     direction: findOpts.direction,
     limit: findOpts.limit,
-    q: findOpts.query,
-    types: (findOpts.types || []).join(','),
     since: findOpts.since,
     until: findOpts.until,
-    instanceId: findOpts.instanceId,
     follow: findOpts.follow ? '1' : '',
     format: 'lines',
   });
