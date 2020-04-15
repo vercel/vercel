@@ -153,7 +153,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
     }
 
     const { secrets: list, pagination } = await secrets.ls(nextTimestamp);
-    const elapsed = ms(new Date() - start);
+    const elapsed = ms(Date.now() - start);
 
     console.log(
       `${list.length > 0 ? 'Secrets' : 'No secrets'} found under ${chalk.bold(
@@ -193,11 +193,8 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
         '-d',
         '-y',
       ]);
-      output.log(
-        `To display the next page run ${cmd(
-          `now secrets ${subcommand}${flags} --next ${pagination.next}`
-        )}`
-      );
+      const nextCmd = `now secrets ${subcommand}${flags} --next ${pagination.next}`;
+      output.log(`To display the next page run ${cmd(nextCmd)}`);
     }
     return secrets.close();
   }
