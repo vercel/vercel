@@ -12,7 +12,7 @@ export default async function getTeamById(
     return team;
   }
 
-  const team = await client.fetch<Team>(`/teams/${teamId}`);
+  team = await client.fetch<Team>(`/teams/${teamId}`);
   teamCache.set(teamId, team);
 
   return team;
