@@ -1,6 +1,6 @@
 # Sapper Example
 
-This directory is a brief example of a [Sapper](https://sapper.svelte.dev/) app that can be deployed with ZEIT Now and zero configuration.
+This directory is a brief example of a [Sapper](https://sapper.svelte.dev/) app that can be deployed with ZEIT Now.
 
 ## Deploy Your Own
 
