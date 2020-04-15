@@ -206,8 +206,10 @@ function safelyCompile(str: string, indexes: { [k: string]: string }): string {
   // path-to-regexp cannot compile question marks
   return str
     .split('?')
-    .map(part => compile(part))
-    .map(func => func(indexes))
+    .map(part => {
+      const compiler = compile(part);
+      return compiler(indexes);
+    })
     .join('?');
 }
 
