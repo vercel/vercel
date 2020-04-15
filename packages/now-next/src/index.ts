@@ -569,7 +569,7 @@ export const build = async ({
         },
 
         // error handling
-        ...(output[path.join(entryDirectory, '404')]
+        ...(output[path.join('./', entryDirectory, '404')]
           ? [
               { handle: 'error' } as Handler,
 

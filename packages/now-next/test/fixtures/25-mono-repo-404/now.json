@@ -1,6 +1,8 @@
 {
   "version": 2,
-  "routes": [{ "src": "/(.*)", "dest": "/packages/webapp/$1" }],
+  "routes": [
+    { "src": "/(.*)", "dest": "/packages/webapp/$1", "continue": true }
+  ],
   "builds": [
     {
       "src": "packages/webapp/next.config.js",
