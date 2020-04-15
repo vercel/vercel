@@ -37,7 +37,7 @@ export default async function dev(
   // retrieve dev command
   const [link, frameworks] = await Promise.all([
     getLinkedProject(output, client, cwd),
-    getFrameworks(),
+    getFrameworks(client),
   ]);
 
   if (link.status === 'error') {
