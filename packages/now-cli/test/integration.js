@@ -2015,19 +2015,15 @@ test('now certs ls', async t => {
   t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
 });
 
-test('now certs ls --after=cert_test', async t => {
-  const output = await execute(['certs', 'ls', '--after=cert_test']);
+test('now certs ls --next=123456', async t => {
+  const output = await execute(['certs', 'ls', '--next=123456']);
 
   console.log(output.stderr);
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /The cert cert_test can't be found\./gm,
-    formatOutput(output)
-  );
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /No certificates found under/gm, formatOutput(output));
 });
 
 test('now hasOwnProperty not a valid subcommand', async t => {
