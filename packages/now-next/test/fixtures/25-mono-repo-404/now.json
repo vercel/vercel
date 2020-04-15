@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/(.*)", "dest": "/packages/webapp/$1", "continue": true }
+  ],
+  "builds": [
+    {
+      "src": "packages/webapp/next.config.js",
+      "use": "@now/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Hi"
+    },
+    {
+      "path": "/",
+      "responseHeaders": {
+        "x-now-cache": "HIT"
+      }
+    },
+    {
+      "path": "/non-existent",
+      "mustContain": "custom 404!!"
+    },
+    {
+      "path": "/non-existent",
+      "mustContain": "__next"
+    },
+    {
+      "path": "/non-existent",
+      "status": 404
+    }
+  ]
+}

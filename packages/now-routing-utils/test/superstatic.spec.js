@@ -181,6 +181,15 @@ test('convertRedirects', () => {
       source: '/hello/:world*',
       destination: '/something#:world*',
     },
+    {
+      source: '/external/:id',
+      destination:
+        'https://example.com/?utm_source=google.com#/guides/:id/page?dynamic=code',
+    },
+    {
+      source: '/optional/:id?',
+      destination: '/api/optional/:id?',
+    },
   ]);
 
   const expected = [
@@ -244,6 +253,19 @@ test('convertRedirects', () => {
       headers: { Location: '/something#$1' },
       status: 308,
     },
+    {
+      src: '^\\/external(?:\\/([^\\/]+?))$',
+      headers: {
+        Location:
+          'https://example.com/?utm_source=google.com#/guides/$1/page?dynamic=code',
+      },
+      status: 308,
+    },
+    {
+      src: '^\\/optional(?:\\/([^\\/]+?))?$',
+      headers: { Location: '/api/optional/$1' },
+      status: 308,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -261,6 +283,8 @@ test('convertRedirects', () => {
     ['/feedback/another'],
     ['/catchme/id-1', '/catchme/id/2'],
     ['/hello/world', '/hello/another/world'],
+    ['/external/1', '/external/2'],
+    ['/optional', '/optional/1'],
   ];
 
   const mustNotMatch = [
@@ -276,6 +300,8 @@ test('convertRedirects', () => {
     ['/feedback/general'],
     ['/catchm', '/random'],
     ['/not-this-one', '/helloo'],
+    ['/externalnope', '/externally'],
+    ['/optionalnope', '/optionally'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
