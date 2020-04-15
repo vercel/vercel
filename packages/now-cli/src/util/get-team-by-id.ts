@@ -8,12 +8,11 @@ export default async function getTeamById(
   teamId: string
 ): Promise<Team> {
   let team = teamCache.get(teamId);
-  if (team) {
-    return team;
+
+  if (!team) {
+    team = await client.fetch<Team>(`/teams/${teamId}`);
+    teamCache.set(teamId, team);
   }
-
-  team = await client.fetch<Team>(`/teams/${teamId}`);
-  teamCache.set(teamId, team);
-
+  
   return team;
 }
