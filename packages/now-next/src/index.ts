@@ -1266,7 +1266,10 @@ export const build = async ({
                 : path.join(
                     '/',
                     entryDirectory,
-                    hasPages404 && lambdas['404'] ? '404' : '_error'
+                    hasPages404 &&
+                      lambdas[path.join('./', entryDirectory, '404')]
+                      ? '404'
+                      : '_error'
                   ),
               status: 404,
             },
