@@ -1,14 +1,10 @@
-import fetch from 'node-fetch';
 import { Framework } from '@now/frameworks';
+import Client from './client';
 
 export async function getFrameworks(): Promise<Framework[]> {
-  const res = await fetch('https://api.zeit.co/v1/frameworks');
+  const client = new Client({
+    apiUrl: 'https://api.zeit.co',
+  });
 
-  if (!res.ok) {
-    throw new Error('Could not retrieve frameworks');
-  }
-
-  const json: Framework[] = await res.json();
-
-  return json;
+  return await client.fetch<Framework[]>('/v1/frameworks');
 }
