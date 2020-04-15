@@ -569,7 +569,7 @@ export const build = async ({
         },
 
         // error handling
-        ...(output['404']
+        ...(output[path.join('./', entryDirectory, '404')]
           ? [
               { handle: 'error' } as Handler,
 
@@ -745,10 +745,10 @@ export const build = async ({
     // this can be either 404.html in latest versions
     // or _errors/404.html versions while this was experimental
     static404Page =
-      staticPages['404'] && hasPages404
-        ? '404'
-        : staticPages['_errors/404']
-        ? '_errors/404'
+      staticPages[path.join(entryDirectory, '404')] && hasPages404
+        ? path.join(entryDirectory, '404')
+        : staticPages[path.join(entryDirectory, '_errors/404')]
+        ? path.join(entryDirectory, '_errors/404')
         : undefined;
 
     // > 1 because _error is a lambda but isn't used if a static 404 is available
@@ -1259,17 +1259,18 @@ export const build = async ({
 
             {
               src: path.join('/', entryDirectory, '.*'),
-              dest: path.join(
-                '/',
-                entryDirectory,
-                static404Page
-                  ? static404Page
-                  : // if static 404 is not present but we have pages/404.js
-                  // it is a lambda due to _app getInitialProps
-                  hasPages404 && lambdas['404']
-                  ? '404'
-                  : '_error'
-              ),
+              // if static 404 is not present but we have pages/404.js
+              // it is a lambda due to _app getInitialProps
+              dest: static404Page
+                ? path.join('/', static404Page)
+                : path.join(
+                    '/',
+                    entryDirectory,
+                    hasPages404 &&
+                      lambdas[path.join('./', entryDirectory, '404')]
+                      ? '404'
+                      : '_error'
+                  ),
               status: 404,
             },
           ]),
