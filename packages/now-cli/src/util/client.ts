@@ -23,7 +23,7 @@ export default class Client extends EventEmitter {
   _forceNew: boolean;
   _withCache: boolean;
   _output: Output;
-  _token?: string;
+  _token: string;
   currentTeam?: string;
 
   constructor({
@@ -35,7 +35,7 @@ export default class Client extends EventEmitter {
     debug = false,
   }: {
     apiUrl: string;
-    token?: string;
+    token: string;
     currentTeam?: string;
     forceNew?: boolean;
     withCache?: boolean;
@@ -95,11 +95,8 @@ export default class Client extends EventEmitter {
     }
 
     opts.headers = opts.headers || {};
+    opts.headers.Authorization = `Bearer ${this._token}`;
     opts.headers['user-agent'] = ua;
-
-    if (this._token) {
-      opts.headers.Authorization = `Bearer ${this._token}`;
-    }
 
     const url = `${apiUrl ? '' : this._apiUrl}${_url}`;
     return this._output.time(
