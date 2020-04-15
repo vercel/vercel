@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import table from 'text-table';
 import mri from 'mri';
 import ms from 'ms';
-import plural from 'pluralize';
 import strlen from '../util/strlen.ts';
 import { handleError, error } from '../util/error';
 import NowSecrets from '../util/secrets';
@@ -12,6 +11,8 @@ import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import createOutput from '../util/output';
 import confirm from '../util/input/confirm';
+import getCommandFlags from '../util/get-command-flags';
+import cmd from '../util/output/cmd.ts';
 
 const help = () => {
   console.log(`
@@ -38,6 +39,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -60,6 +62,12 @@ const help = () => {
   )} symbol)
 
     ${chalk.cyan(`$ now -e MY_SECRET=${chalk.bold('@my-secret')}`)}
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+  
+    ${chalk.cyan(`$ now secrets ls --next 1584722256178`)}
 `);
 };
 
@@ -68,6 +76,7 @@ let argv;
 let debug;
 let apiUrl;
 let subcommand;
+let nextTimestamp;
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
@@ -76,6 +85,7 @@ const main = async ctx => {
       help: 'h',
       debug: 'd',
       yes: 'y',
+      next: 'N',
     },
   });
 
@@ -84,6 +94,7 @@ const main = async ctx => {
   debug = argv.debug;
   apiUrl = ctx.apiUrl;
   subcommand = argv._[0];
+  nextTimestamp = argv.next;
 
   if (argv.help || !subcommand) {
     help();
@@ -132,7 +143,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
   const start = Date.now();
 
   if (subcommand === 'ls' || subcommand === 'list') {
-    if (args.length !== 0) {
+    if (args.length > 1) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`
@@ -141,11 +152,11 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       return exit(1);
     }
 
-    const list = await secrets.ls();
+    const { secrets: list, pagination } = await secrets.ls(nextTimestamp);
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `${plural('secret', list.length, true)} found under ${chalk.bold(
+      `${list.length > 0 ? 'Secrets' : 'No secrets'} found under ${chalk.bold(
         contextName
       )} ${chalk.gray(`[${elapsed}]`)}`
     );
@@ -171,6 +182,22 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       if (out) {
         console.log(`\n${out}\n`);
       }
+    }
+
+    if (pagination && pagination.count === 20) {
+      const prefixedArgs = getPrefixedFlags(argv);
+      const flags = getCommandFlags(prefixedArgs, [
+        '_',
+        '--next',
+        '-N',
+        '-d',
+        '-y',
+      ]);
+      output.log(
+        `To display the next page run ${cmd(
+          `now secrets ${subcommand}${flags} --next ${pagination.next}`
+        )}`
+      );
     }
     return secrets.close();
   }
@@ -324,4 +351,29 @@ async function readConfirmation(output, secret, contextName) {
   output.print(`  ${tbl}\n`);
 
   return confirm(`${chalk.bold.red('Are you sure?')}`, false);
+}
+
+/**
+ * This function adds a prefix `-` or `--` to the flags
+ * passed from the command line, because the package `mri`
+ * used to extract the args removes them for some reason.
+ */
+function getPrefixedFlags(args) {
+  const prefixedArgs = {};
+
+  for (const arg in args) {
+    if (arg === '_') {
+      prefixedArgs[arg] = argv[arg];
+    } else {
+      let prefix = '-';
+      // Full form flags need two dashes, whereas one letter
+      // flags need only one.
+      if (arg.length > 1) {
+        prefix = '--';
+      }
+      prefixedArgs[`${prefix}${arg}`] = argv[arg];
+    }
+  }
+
+  return prefixedArgs;
 }

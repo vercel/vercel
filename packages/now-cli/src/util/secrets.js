@@ -1,8 +1,8 @@
 import Now from '.';
 
 export default class Secrets extends Now {
-  ls() {
-    return this.listSecrets();
+  ls(next) {
+    return this.listSecrets(next);
   }
 
   rm(nameOrId) {
