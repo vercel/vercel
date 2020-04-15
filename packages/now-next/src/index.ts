@@ -575,7 +575,7 @@ export const build = async ({
 
               {
                 status: 404,
-                src: '/.*',
+                src: path.join(entryDirectory, '.*'),
                 dest: path.join('/', entryDirectory, '404'),
               },
             ]
@@ -1258,7 +1258,7 @@ export const build = async ({
             { handle: 'error' } as Handler,
 
             {
-              src: '/.*',
+              src: path.join('/', entryDirectory, '.*'),
               // if static 404 is not present but we have pages/404.js
               // it is a lambda due to _app getInitialProps
               dest: static404Page
