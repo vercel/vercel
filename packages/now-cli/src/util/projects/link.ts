@@ -124,7 +124,7 @@ export async function getLinkedOrg(
     return { status: 'linked', org };
   } catch (error) {
     if (
-      error.code === 'not_authorized' ||
+      error.status === 403 ||
       error.code === 'NOT_AUTHORIZED' ||
       error.code === 'TEAM_DELETED'
     ) {
