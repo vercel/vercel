@@ -6,6 +6,8 @@ import {
   BuildOptions,
   PrepareCacheOptions,
   ShouldServeOptions,
+  StartDevServerOptions,
+  StartDevServerResult,
   Env,
   FileBlob,
   FileFsRef,
@@ -93,6 +95,7 @@ export interface Builder {
     opts: PrepareCacheOptions
   ): CacheOutputs | Promise<CacheOutputs>;
   shouldServe?(params: ShouldServeOptions): boolean | Promise<boolean>;
+  startDevServer?(opts: StartDevServerOptions): Promise<StartDevServerResult>;
 }
 
 export interface BuildResult {

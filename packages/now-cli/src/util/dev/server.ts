@@ -18,6 +18,7 @@ import {
   HandleValue,
   Route,
 } from '@now/routing-utils';
+import once from '@tootallnate/once';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
@@ -35,9 +36,9 @@ import {
   spawnCommand,
 } from '@now/build-utils';
 
-import { once } from '../once';
 import link from '../output/link';
 import { Output } from '../output';
+import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
@@ -1221,6 +1222,8 @@ export default class DevServer {
     routes: Route[] | undefined = nowConfig.routes,
     callLevel: number = 0
   ) => {
+    const { debug } = this.output;
+
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
     const parsed = url.parse(req.url || '/');
@@ -1237,16 +1240,14 @@ export default class DevServer {
         return;
       }
 
-      this.output.debug(`Rewriting URL from "${req.url}" to "${location}"`);
+      debug(`Rewriting URL from "${req.url}" to "${location}"`);
       req.url = location;
     }
 
     await this.updateBuildMatches(nowConfig);
 
     if (this.blockingBuildsPromise) {
-      this.output.debug(
-        'Waiting for builds to complete before handling request'
-      );
+      debug('Waiting for builds to complete before handling request');
       await this.blockingBuildsPromise;
     }
 
@@ -1287,7 +1288,7 @@ export default class DevServer {
         Object.assign(destParsed.query, routeResult.uri_args);
         const destUrl = url.format(destParsed);
 
-        this.output.debug(`ProxyPass: ${destUrl}`);
+        debug(`ProxyPass: ${destUrl}`);
         this.setResponseHeaders(res, nowRequestId);
         return proxyPass(req, res, destUrl, this.output);
       }
@@ -1386,7 +1387,7 @@ export default class DevServer {
     if (!match) {
       // if the dev command is started, proxy to it
       if (this.devProcessPort) {
-        this.output.debug('Proxy to dev command server');
+        debug('Proxying to frontend dev server');
         return proxyPass(
           req,
           res,
@@ -1418,7 +1419,7 @@ export default class DevServer {
       origUrl.pathname = dest;
       Object.assign(origUrl.query, uri_args);
       const newUrl = url.format(origUrl);
-      this.output.debug(
+      debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
       const matchedRoute = await devRouter(
@@ -1428,9 +1429,7 @@ export default class DevServer {
         this
       );
       if (matchedRoute.found && callLevel === 0) {
-        this.output.debug(
-          `Found matching route ${matchedRoute.dest} for ${newUrl}`
-        );
+        debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
         req.url = newUrl;
         await this.serveProjectAsNowV2(
           req,
@@ -1444,7 +1443,44 @@ export default class DevServer {
       }
     }
 
+    // Before doing any asset matching, check if this builder supports the
+    // `startDevServer()` "optimization". In this case, the now dev server invokes
+    // `startDevServer()` on the builder for every HTTP request so that it boots
+    // up a single-serve dev HTTP server that now dev will proxy this HTTP request
+    // to. Once the proxied request is finished, now dev shuts down the dev
+    // server child process.
+    const { builder, package: builderPkg } = match.builderWithPkg;
+    if (typeof builder.startDevServer === 'function') {
+      const { port, pid } = await builder.startDevServer({
+        entrypoint: match.src,
+        workPath: this.cwd,
+      });
+
+      res.once('close', () => {
+        debug(`Killing builder dev server with PID ${pid}`);
+        treeKill(pid)
+          .then(() => {
+            debug(`Killed builder dev server with PID ${pid}`);
+          })
+          .catch((err: Error) => {
+            debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
+          });
+      });
+
+      debug(
+        `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
+      );
+      return proxyPass(
+        req,
+        res,
+        `http://localhost:${port}`,
+        this.output,
+        false
+      );
+    }
+
     let foundAsset = findAsset(match, requestPath, nowConfig);
+
     if (!foundAsset && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
@@ -1455,7 +1491,7 @@ export default class DevServer {
     if (!foundAsset) {
       // if the dev command is started, proxy to it
       if (this.devProcessPort) {
-        this.output.debug('Proxy to dev command server');
+        debug('Proxying to frontend dev server');
         return proxyPass(
           req,
           res,
@@ -1470,7 +1506,7 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
-    this.output.debug(
+    debug(
       `Serving asset: [${asset.type}] ${assetKey} ${(asset as any)
         .contentType || ''}`
     );
@@ -1535,7 +1571,7 @@ export default class DevServer {
           body: body.toString('base64'),
         };
 
-        this.output.debug(`Invoking lambda: "${assetKey}" with ${path}`);
+        debug(`Invoking lambda: "${assetKey}" with ${path}`);
 
         let result: InvokeResult;
         try {
