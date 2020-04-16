@@ -1,4 +1,5 @@
 import http from 'http';
+import path from 'path';
 import { createServerWithHelpers } from './helpers';
 
 function listen(
@@ -21,7 +22,8 @@ async function main() {
 
   //const shouldAddHelpers = true;
 
-  const handler = await import(entrypoint);
+  const entrypointPath = path.join(process.cwd(), entrypoint);
+  const handler = await import(entrypointPath);
 
   /*
   const server = http.createServer((req, res) => {
