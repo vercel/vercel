@@ -16,6 +16,7 @@ import {
   getTransformedRoutes,
   appendRoutesToPhase,
   HandleValue,
+  Route,
 } from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
@@ -25,6 +26,7 @@ import which from 'which';
 
 import {
   Builder,
+  Env,
   FileFsRef,
   PackageJson,
   detectBuilders,
@@ -72,7 +74,6 @@ import errorTemplate502 from './templates/error_502';
 import redirectTemplate from './templates/redirect';
 
 import {
-  EnvConfig,
   NowConfig,
   DevServerOptions,
   BuildMatch,
@@ -83,7 +84,6 @@ import {
   InvokePayload,
   InvokeResult,
   ListenSpec,
-  RouteConfig,
   RouteResult,
   HttpHeadersConfig,
   EnvConfigs,
@@ -451,11 +451,11 @@ export default class DevServer {
     await this.updateBuildMatches(nowConfig);
   }
 
-  async getLocalEnv(fileName: string, base?: EnvConfig): Promise<EnvConfig> {
+  async getLocalEnv(fileName: string, base?: Env): Promise<Env> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
     const filePath = join(this.cwd, fileName);
-    let env: EnvConfig = {};
+    let env: Env = {};
     try {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
@@ -580,7 +580,7 @@ export default class DevServer {
         config.builds = config.builds || [];
         config.builds.push(...builders);
 
-        const routes: RouteConfig[] = [];
+        const routes: Route[] = [];
         const { routes: nowConfigRoutes } = config;
         routes.push(...(redirectRoutes || []));
         routes.push(
@@ -664,11 +664,7 @@ export default class DevServer {
     await this.tryValidateOrExit(config, validateNowConfigFunctions);
   }
 
-  validateEnvConfig(
-    type: string,
-    env: EnvConfig = {},
-    localEnv: EnvConfig = {}
-  ): EnvConfig {
+  validateEnvConfig(type: string, env: Env = {}, localEnv: Env = {}): Env {
     // Validate if there are any missing env vars defined in `now.json`,
     // but not in the `.env` / `.build.env` file
     const missing: string[] = Object.entries(env)
@@ -684,7 +680,7 @@ export default class DevServer {
       throw new MissingDotenvVarsError(type, missing);
     }
 
-    const merged: EnvConfig = { ...env, ...localEnv };
+    const merged: Env = { ...env, ...localEnv };
 
     // Validate that the env var name matches what AWS Lambda allows:
     //   - https://docs.aws.amazon.com/lambda/latest/dg/env_variables.html
@@ -1222,7 +1218,7 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string,
     nowConfig: NowConfig,
-    routes: RouteConfig[] | undefined = nowConfig.routes,
+    routes: Route[] | undefined = nowConfig.routes,
     callLevel: number = 0
   ) => {
     // If there is a double-slash present in the URL,
@@ -1682,7 +1678,7 @@ export default class DevServer {
 
     const port = await getPort();
 
-    const env: EnvConfig = {
+    const env: Env = {
       // Because of child process 'pipe' below, isTTY will be false.
       // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
@@ -1891,7 +1887,7 @@ async function shouldServe(
     const shouldServe = await builder.shouldServe({
       entrypoint: src,
       files,
-      config,
+      config: config || {},
       requestPath,
       workPath: devServer.cwd,
     });
