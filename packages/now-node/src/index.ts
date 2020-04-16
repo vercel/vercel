@@ -65,8 +65,6 @@ async function downloadInstallAndBundle({
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
 
-  console.log('Installing dependencies...');
-  const installTime = Date.now();
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
@@ -75,13 +73,20 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(
-    entrypointFsDirname,
-    ['--prefer-offline'],
-    spawnOpts,
-    meta
-  );
-  debug(`Install complete [${Date.now() - installTime}ms]`);
+
+  if (meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+  } else {
+    const installTime = Date.now();
+    console.log('Installing dependencies...');
+    await runNpmInstall(
+      entrypointFsDirname,
+      ['--prefer-offline'],
+      spawnOpts,
+      meta
+    );
+    debug(`Install complete [${Date.now() - installTime}ms]`);
+  }
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };

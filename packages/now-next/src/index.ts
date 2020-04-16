@@ -222,9 +222,6 @@ export const build = async ({
 
     // If this is the initial build, we want to start the server
     if (!urls[entrypoint]) {
-      debug(`${name} Installing dependencies...`);
-      await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
-
       if (!process.env.NODE_ENV) {
         process.env.NODE_ENV = 'development';
       }
