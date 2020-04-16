@@ -98,7 +98,7 @@ async function getCertsToDelete(
   contextName: string,
   id: string
 ) {
-  const cert = await getCertById(output, client, id);
+  const cert = await getCertById(client, id);
   if (cert instanceof ERRORS.CertNotFound) {
     const certs = await getCertsForDomain(output, client, contextName, id);
     if (certs instanceof ERRORS.CertsPermissionDenied) {

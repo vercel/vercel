@@ -17,6 +17,7 @@ import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
+import { isKnownError } from '../../util/env/known-error';
 
 type Options = {
   '--debug': boolean;
@@ -67,7 +68,7 @@ export default async function rm(
     if (envTarget) {
       if (!isValidEnvTarget(envTarget)) {
         output.error(
-          `The environment ${param(
+          `The Environment ${param(
             envTarget
           )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
         );
@@ -118,7 +119,7 @@ export default async function rm(
         const { inputTargets } = await inquirer.prompt({
           name: 'inputTargets',
           type: 'checkbox',
-          message: `Remove ${envName} from which environments (select multiple)?`,
+          message: `Remove ${envName} from which Environments (select multiple)?`,
           choices,
         });
         envTargets = inputTargets;
@@ -141,11 +142,19 @@ export default async function rm(
 
     const rmStamp = stamp();
 
-    await withSpinner('Removing', async () => {
-      for (const target of envTargets) {
-        await removeEnvRecord(output, client, project.id, envName, target);
+    try {
+      await withSpinner('Removing', async () => {
+        for (const target of envTargets) {
+          await removeEnvRecord(output, client, project.id, envName, target);
+        }
+      });
+    } catch (error) {
+      if (isKnownError(error) && error.serverMessage) {
+        output.error(error.serverMessage);
+        return 1;
       }
-    });
+      throw error;
+    }
 
     output.print(
       `${prependEmoji(

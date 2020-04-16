@@ -13,10 +13,3 @@ export const normalizeURL = u => {
 
   return u;
 };
-
-export const parseInstanceURL = u => {
-  const m = /^(.+)-([a-z0-9]{24})(\.now\.sh)$/.exec(u);
-  const url = m ? m[1] + m[3] : u;
-  const instanceId = m ? m[2] : null;
-  return [url, instanceId];
-};

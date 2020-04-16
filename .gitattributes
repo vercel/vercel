@@ -1,5 +1,8 @@
 # Ignore test fixtures in GitHub Languages
 # See https://github.com/github/linguist#vendored-code
+examples/* linguist-vendored
+utils/* linguist-vendored
+test/* linguist-vendored
 packages/*/test/* linguist-vendored
 
 # Go build fails with Windows line endings.
