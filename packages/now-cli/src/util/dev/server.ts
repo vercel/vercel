@@ -1452,7 +1452,7 @@ export default class DevServer {
     const { builder, package: builderPkg } = match.builderWithPkg;
     if (typeof builder.startDevServer === 'function') {
       const devServerResult = await builder.startDevServer({
-        entrypoint: match.src,
+        entrypoint: match.entrypoint,
         workPath: this.cwd,
       });
       if (devServerResult) {
@@ -1482,7 +1482,7 @@ export default class DevServer {
           false
         );
       } else {
-        debug(`Skipping \`startDevServer()\` for ${match.src}`);
+        debug(`Skipping \`startDevServer()\` for ${match.entrypoint}`);
       }
     }
 
