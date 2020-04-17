@@ -1492,6 +1492,15 @@ export default class DevServer {
         debug(
           `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
         );
+
+        // Mix in the routing based query parameters
+        const parsed = url.parse(req.url || '/', true);
+        Object.assign(parsed.query, uri_args);
+        req.url = url.format({
+          pathname: parsed.pathname,
+          query: parsed.query,
+        });
+
         this.setResponseHeaders(res, nowRequestId);
         return proxyPass(
           req,
