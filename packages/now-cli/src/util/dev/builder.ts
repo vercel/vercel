@@ -2,24 +2,30 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
-import { promisify } from 'util';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import {
+  Builder,
+  BuildOptions,
+  Env,
+  File,
+  Lambda,
+  FileBlob,
+  FileFsRef,
+} from '@now/build-utils';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
-import _treeKill from 'tree-kill';
 
 import { Output } from '../output';
 import highlight from '../output/highlight';
+import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
 import DevServer from './server';
 import { builderModulePathPromise, getBuilder } from './builder-cache';
 import {
-  EnvConfig,
   NowConfig,
   BuildMatch,
   BuildResult,
@@ -27,7 +33,6 @@ import {
   BuilderOutput,
   BuildResultV3,
   BuilderOutputs,
-  BuilderParams,
   EnvConfigs,
 } from './types';
 import { normalizeRoutes } from '@now/routing-utils';
@@ -42,8 +47,6 @@ interface BuildMessageResult extends BuildMessage {
   result?: BuilderOutputs | BuildResult;
   error?: object;
 }
-
-const treeKill = promisify(_treeKill);
 
 async function createBuildProcess(
   match: BuildMatch,
@@ -63,7 +66,7 @@ async function createBuildProcess(
     PATH = `${yarnPath}${delimiter}${PATH}`;
   }
 
-  const env: EnvConfig = {
+  const env: Env = {
     ...process.env,
     PATH,
     ...envConfigs.allEnv,
@@ -140,7 +143,7 @@ export async function executeBuild(
     );
   }
 
-  const buildParams: BuilderParams = {
+  const buildOptions: BuildOptions = {
     files,
     entrypoint,
     workPath,
@@ -162,7 +165,7 @@ export async function executeBuild(
     buildProcess.send({
       type: 'build',
       builderName: pkg.name,
-      buildParams,
+      buildOptions,
     });
 
     buildResultOrOutputs = await new Promise((resolve, reject) => {
@@ -193,7 +196,7 @@ export async function executeBuild(
       buildProcess!.on('message', onMessage);
     });
   } else {
-    buildResultOrOutputs = await builder.build(buildParams);
+    buildResultOrOutputs = await builder.build(buildOptions);
   }
 
   // Sort out build result to builder v2 shape
