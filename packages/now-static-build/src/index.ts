@@ -337,8 +337,14 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-    console.log('Installing dependencies...');
-    await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
+    if (meta.isDev) {
+      debug('Skipping dependency installation because dev mode is enabled');
+    } else {
+      const installTime = Date.now();
+      console.log('Installing dependencies...');
+      await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
+      debug(`Install complete [${Date.now() - installTime}ms]`);
+    }
 
     if (pkg && (buildCommand || devCommand)) {
       // We want to add `node_modules/.bin` after `npm install`
