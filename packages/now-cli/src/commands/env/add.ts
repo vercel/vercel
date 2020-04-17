@@ -17,6 +17,7 @@ import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
+import { isKnownError } from '../../util/env/known-error';
 
 type Options = {
   '--debug': boolean;
@@ -51,7 +52,7 @@ export default async function add(
     return 1;
   } else {
     const { project } = link;
-    let stdInput = await readStandardInput();
+    const stdInput = await readStandardInput();
     let [envName, envTarget] = args;
 
     if (args.length > 2) {
@@ -76,7 +77,7 @@ export default async function add(
     if (envTarget) {
       if (!isValidEnvTarget(envTarget)) {
         output.error(
-          `The environment ${param(
+          `The Environment ${param(
             envTarget
           )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
         );
@@ -109,7 +110,7 @@ export default async function add(
       output.error(
         `The variable ${param(
           envName
-        )} has already been added to all environments. To remove, run ${cmd(
+        )} has already been added to all Environments. To remove, run ${cmd(
           `now env rm ${envName}`
         )}.`
       );
@@ -133,21 +134,29 @@ export default async function add(
       const { inputTargets } = await inquirer.prompt({
         name: 'inputTargets',
         type: 'checkbox',
-        message: `Add ${envName} to which environments (select multiple)?`,
+        message: `Add ${envName} to which Environments (select multiple)?`,
         choices,
       });
 
       envTargets = inputTargets;
 
       if (inputTargets.length === 0) {
-        output.error('Please select at least one environment');
+        output.error('Please select at least one Environment');
       }
     }
 
     const addStamp = stamp();
-    await withSpinner('Saving', () =>
-      addEnvRecord(output, client, project.id, envName, envValue, envTargets)
-    );
+    try {
+      await withSpinner('Saving', () =>
+        addEnvRecord(output, client, project.id, envName, envValue, envTargets)
+      );
+    } catch (error) {
+      if (isKnownError(error) && error.serverMessage) {
+        output.error(error.serverMessage);
+        return 1;
+      }
+      throw error;
+    }
 
     output.print(
       `${prependEmoji(
