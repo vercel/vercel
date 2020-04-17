@@ -1451,32 +1451,39 @@ export default class DevServer {
     // server child process.
     const { builder, package: builderPkg } = match.builderWithPkg;
     if (typeof builder.startDevServer === 'function') {
-      const { port, pid } = await builder.startDevServer({
+      const devServerResult = await builder.startDevServer({
         entrypoint: match.src,
         workPath: this.cwd,
       });
+      if (devServerResult) {
+        const { port, pid } = devServerResult;
 
-      res.once('close', () => {
-        debug(`Killing builder dev server with PID ${pid}`);
-        treeKill(pid)
-          .then(() => {
-            debug(`Killed builder dev server with PID ${pid}`);
-          })
-          .catch((err: Error) => {
-            debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
-          });
-      });
+        res.once('close', () => {
+          debug(`Killing builder dev server with PID ${pid}`);
+          treeKill(pid)
+            .then(() => {
+              debug(`Killed builder dev server with PID ${pid}`);
+            })
+            .catch((err: Error) => {
+              debug(
+                `Failed to kill builder dev server with PID ${pid}: ${err}`
+              );
+            });
+        });
 
-      debug(
-        `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
-      );
-      return proxyPass(
-        req,
-        res,
-        `http://localhost:${port}`,
-        this.output,
-        false
-      );
+        debug(
+          `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
+        );
+        return proxyPass(
+          req,
+          res,
+          `http://localhost:${port}`,
+          this.output,
+          false
+        );
+      } else {
+        debug(`Skipping \`startDevServer()\` for ${match.src}`);
+      }
     }
 
     let foundAsset = findAsset(match, requestPath, nowConfig);
