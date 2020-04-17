@@ -1451,10 +1451,27 @@ export default class DevServer {
     // server child process.
     const { builder, package: builderPkg } = match.builderWithPkg;
     if (typeof builder.startDevServer === 'function') {
-      const devServerResult = await builder.startDevServer({
-        entrypoint: match.entrypoint,
-        workPath: this.cwd,
-      });
+      let devServerResult: DevServerResult = null;
+      try {
+        devServerResult = await builder.startDevServer({
+          entrypoint: match.entrypoint,
+          workPath: this.cwd,
+        });
+      } catch (err) {
+        // `starDevServer()` threw an error. Most likely this means the dev
+        // server process exited before sending the port information message
+        // (missing dependency at runtime, for example).
+        console.error(`Error starting "${builderPkg.name}" dev server:`, err);
+        await this.sendError(
+          req,
+          res,
+          nowRequestId,
+          'NO_STATUS_CODE_FROM_DEV_SERVER',
+          502
+        );
+        return;
+      }
+
       if (devServerResult) {
         const { port, pid } = devServerResult;
 
