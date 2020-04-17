@@ -28,6 +28,7 @@ import which from 'which';
 import {
   Builder,
   Env,
+  StartDevServerResult,
   FileFsRef,
   PackageJson,
   detectBuilders,
@@ -1451,7 +1452,7 @@ export default class DevServer {
     // server child process.
     const { builder, package: builderPkg } = match.builderWithPkg;
     if (typeof builder.startDevServer === 'function') {
-      let devServerResult: DevServerResult = null;
+      let devServerResult: StartDevServerResult = null;
       try {
         devServerResult = await builder.startDevServer({
           entrypoint: match.entrypoint,
