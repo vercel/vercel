@@ -203,7 +203,7 @@ export interface StartDevServerOptions {
   workPath: string;
 }
 
-export interface StartDevServerResult {
+export interface StartDevServerSuccess {
   /**
    * Port number where the dev server can be connected to, assumed to be running
    * on `localhost`.
@@ -216,6 +216,12 @@ export interface StartDevServerResult {
    */
   pid: number;
 }
+
+/**
+ * `startDevServer()` may return `null` to opt-out of spawning a dev server for
+ * a given `entrypoint`.
+ */
+export type StartDevServerResult = StartDevServerSuccess | null;
 
 /**
  * Credit to Iain Reid, MIT license.
