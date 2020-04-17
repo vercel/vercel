@@ -1495,19 +1495,24 @@ export default class DevServer {
       foundAsset = findAsset(match, requestPath, nowConfig);
     }
 
-    if (!foundAsset) {
-      // if the dev command is started, proxy to it
-      if (this.devProcessPort) {
-        debug('Proxying to frontend dev server');
-        return proxyPass(
-          req,
-          res,
-          `http://localhost:${this.devProcessPort}`,
-          this.output,
-          false
-        );
-      }
+    // Proxy to the dev server:
+    // - when there is no asset
+    // - when the asset is not a Lambda (the dev server must take care of all static files)
+    if (
+      this.devProcessPort &&
+      (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
+    ) {
+      debug('Proxying to frontend dev server');
+      return proxyPass(
+        req,
+        res,
+        `http://localhost:${this.devProcessPort}`,
+        this.output,
+        false
+      );
+    }
 
+    if (!foundAsset) {
       await this.send404(req, res, nowRequestId);
       return;
     }

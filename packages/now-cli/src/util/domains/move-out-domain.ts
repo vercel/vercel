@@ -13,10 +13,13 @@ export default async function moveOutDomain(
   destination: string
 ) {
   try {
-    return await client.fetch<Response>(`/v4/domains/${name}`, {
-      body: { op: 'move-out', destination },
-      method: 'PATCH',
-    });
+    return await client.fetch<Response>(
+      `/v4/domains/${encodeURIComponent(name)}`,
+      {
+        body: { op: 'move-out', destination },
+        method: 'PATCH',
+      }
+    );
   } catch (error) {
     if (error.code === 'forbidden') {
       return new ERRORS.DomainPermissionDenied(name, contextName);
