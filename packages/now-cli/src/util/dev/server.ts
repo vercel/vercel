@@ -1492,6 +1492,7 @@ export default class DevServer {
         debug(
           `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
         );
+        this.setResponseHeaders(res, nowRequestId);
         return proxyPass(
           req,
           res,
