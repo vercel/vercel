@@ -921,13 +921,15 @@ export default class DevServer {
 
     for (const pid of this.devServerPids) {
       debug(`Killing builder dev server with PID ${pid}`);
-      treeKill(pid).then(
-        () => {
-          debug(`Killed builder dev server with PID ${pid}`);
-        },
-        (err: Error) => {
-          debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
-        }
+      ops.push(
+        treeKill(pid).then(
+          () => {
+            debug(`Killed builder dev server with PID ${pid}`);
+          },
+          (err: Error) => {
+            debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
+          }
+        )
       );
     }
 
