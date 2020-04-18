@@ -28,6 +28,7 @@ import which from 'which';
 import {
   Builder,
   Env,
+  StartDevServerResult,
   FileFsRef,
   PackageJson,
   detectBuilders,
@@ -134,6 +135,7 @@ export default class DevServer {
   private devCommand?: string;
   private devProcess?: ChildProcess;
   private devProcessPort?: number;
+  private devServerPids: Set<number>;
 
   private getNowConfigPromise: Promise<NowConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
@@ -154,7 +156,7 @@ export default class DevServer {
 
     this.cachedNowConfig = null;
     this.apiDir = null;
-    this.apiExtensions = new Set<string>();
+    this.apiExtensions = new Set();
     this.server = http.createServer(this.devServerHandler);
     this.server.timeout = 0; // Disable timeout
     this.serverUrlPrinted = false;
@@ -174,6 +176,8 @@ export default class DevServer {
     this.podId = Math.random()
       .toString(32)
       .slice(-5);
+
+    this.devServerPids = new Set();
   }
 
   async exit(code = 1) {
@@ -869,6 +873,7 @@ export default class DevServer {
    */
   async stop(exitCode?: number): Promise<void> {
     const { devProcess } = this;
+    const { debug, log } = this.output;
     if (this.stopping) return;
 
     this.stopping = true;
@@ -876,7 +881,7 @@ export default class DevServer {
     if (this.serverUrlPrinted) {
       // This makes it look cleaner
       process.stdout.write('\n');
-      this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
+      log(`Stopping ${chalk.bold('`now dev`')} server`);
     }
 
     const ops: Promise<void>[] = [];
@@ -905,13 +910,27 @@ export default class DevServer {
     ops.push(close(this.server));
 
     if (this.watcher) {
-      this.output.debug(`Closing file watcher`);
+      debug(`Closing file watcher`);
       this.watcher.close();
     }
 
     if (this.updateBuildersPromise) {
-      this.output.debug(`Waiting for builders update to complete`);
+      debug(`Waiting for builders update to complete`);
       ops.push(this.updateBuildersPromise);
+    }
+
+    for (const pid of this.devServerPids) {
+      debug(`Killing builder dev server with PID ${pid}`);
+      ops.push(
+        treeKill(pid).then(
+          () => {
+            debug(`Killed builder dev server with PID ${pid}`);
+          },
+          (err: Error) => {
+            debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
+          }
+        )
+      );
     }
 
     try {
@@ -1451,29 +1470,60 @@ export default class DevServer {
     // server child process.
     const { builder, package: builderPkg } = match.builderWithPkg;
     if (typeof builder.startDevServer === 'function') {
-      const devServerResult = await builder.startDevServer({
-        entrypoint: match.entrypoint,
-        workPath: this.cwd,
-      });
+      let devServerResult: StartDevServerResult = null;
+      try {
+        devServerResult = await builder.startDevServer({
+          entrypoint: match.entrypoint,
+          workPath: this.cwd,
+        });
+      } catch (err) {
+        // `starDevServer()` threw an error. Most likely this means the dev
+        // server process exited before sending the port information message
+        // (missing dependency at runtime, for example).
+        console.error(`Error starting "${builderPkg.name}" dev server:`, err);
+        await this.sendError(
+          req,
+          res,
+          nowRequestId,
+          'NO_STATUS_CODE_FROM_DEV_SERVER',
+          502
+        );
+        return;
+      }
+
       if (devServerResult) {
         const { port, pid } = devServerResult;
+        this.devServerPids.add(pid);
 
         res.once('close', () => {
           debug(`Killing builder dev server with PID ${pid}`);
-          treeKill(pid)
-            .then(() => {
+          treeKill(pid).then(
+            () => {
+              this.devServerPids.delete(pid);
               debug(`Killed builder dev server with PID ${pid}`);
-            })
-            .catch((err: Error) => {
+            },
+            (err: Error) => {
+              this.devServerPids.delete(pid);
               debug(
                 `Failed to kill builder dev server with PID ${pid}: ${err}`
               );
-            });
+            }
+          );
         });
 
         debug(
           `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
         );
+
+        // Mix in the routing based query parameters
+        const parsed = url.parse(req.url || '/', true);
+        Object.assign(parsed.query, uri_args);
+        req.url = url.format({
+          pathname: parsed.pathname,
+          query: parsed.query,
+        });
+
+        this.setResponseHeaders(res, nowRequestId);
         return proxyPass(
           req,
           res,
