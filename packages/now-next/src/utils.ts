@@ -495,23 +495,33 @@ const compressBuffer = (buf: Buffer): Promise<Buffer> => {
   });
 };
 
+export type PseudoLayerResult = {
+  pseudoLayer: PseudoLayer;
+  pseudoLayerBytes: number;
+};
+
 export async function createPseudoLayer(files: {
   [fileName: string]: FileFsRef;
-}): Promise<PseudoLayer> {
+}): Promise<PseudoLayerResult> {
   const pseudoLayer: PseudoLayer = {};
+  let pseudoLayerBytes = 0;
 
   for (const fileName of Object.keys(files)) {
     const file = files[fileName];
 
     if (isSymbolicLink(file.mode)) {
+      const symlinkTarget = await fs.readlink(file.fsPath);
       pseudoLayer[fileName] = {
         file,
         isSymlink: true,
-        symlinkTarget: await fs.readlink(file.fsPath),
+        symlinkTarget: symlinkTarget,
       };
+      const targetStats = await fs.stat(symlinkTarget);
+      pseudoLayerBytes += targetStats.isFile() ? targetStats.size : 0;
     } else {
       const origBuffer = await streamToBuffer(file.toStream());
       const compBuffer = await compressBuffer(origBuffer);
+      pseudoLayerBytes += compBuffer.byteLength;
       pseudoLayer[fileName] = {
         compBuffer,
         isSymlink: false,
@@ -522,7 +532,7 @@ export async function createPseudoLayer(files: {
     }
   }
 
-  return pseudoLayer;
+  return { pseudoLayer, pseudoLayerBytes };
 }
 
 interface CreateLambdaFromPseudoLayersOptions {
