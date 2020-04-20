@@ -2098,7 +2098,7 @@ test('now secret ls', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 0, formatOutput(output));
-  t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
+  t.regex(output.stdout, /Secrets found under/gm, formatOutput(output));
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
 
