@@ -201,13 +201,10 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
         packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
       }
       // eslint-disable-next-line no-await-in-loop
-      const hasPackageLockJson = await fs.pathExists(
-        path.join(currentDestPath, 'package-lock.json')
-      );
-      // eslint-disable-next-line no-await-in-loop
-      const hasYarnLock = await fs.pathExists(
-        path.join(currentDestPath, 'yarn.lock')
-      );
+      const [hasPackageLockJson, hasYarnLock] = await Promise.all([
+        fs.pathExists(path.join(currentDestPath, 'package-lock.json')),
+        fs.pathExists(path.join(currentDestPath, 'yarn.lock')),
+      ]);
       if (hasPackageLockJson && !hasYarnLock) {
         cliType = 'npm';
       }
