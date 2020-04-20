@@ -1,13 +1,15 @@
+import { fork } from 'child_process';
+import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
 import {
   basename,
   dirname,
+  extname,
   join,
   relative,
   resolve,
   sep,
   parse as parsePath,
 } from 'path';
-import nodeFileTrace from '@zeit/node-file-trace';
 import {
   glob,
   download,
@@ -23,16 +25,20 @@ import {
   getSpawnOptions,
   PrepareCacheOptions,
   BuildOptions,
+  StartDevServerOptions,
+  StartDevServerResult,
   shouldServe,
   Config,
   debug,
   isSymbolicLink,
 } from '@now/build-utils';
+import once from '@tootallnate/once';
+import nodeFileTrace from '@zeit/node-file-trace';
+import { makeNowLauncher, makeAwsLauncher } from './launcher';
+import { Register, register } from './typescript';
+
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
-import { makeNowLauncher, makeAwsLauncher } from './launcher';
-import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
-import { Register, register } from './typescript';
 
 interface CompilerConfig {
   debug?: boolean;
@@ -65,8 +71,6 @@ async function downloadInstallAndBundle({
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
 
-  console.log('Installing dependencies...');
-  const installTime = Date.now();
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
@@ -75,13 +79,20 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(
-    entrypointFsDirname,
-    ['--prefer-offline'],
-    spawnOpts,
-    meta
-  );
-  debug(`Install complete [${Date.now() - installTime}ms]`);
+
+  if (meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+  } else {
+    const installTime = Date.now();
+    console.log('Installing dependencies...');
+    await runNpmInstall(
+      entrypointFsDirname,
+      ['--prefer-offline'],
+      spawnOpts,
+      meta
+    );
+    debug(`Install complete [${Date.now() - installTime}ms]`);
+  }
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
@@ -309,6 +320,7 @@ export async function build({
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
+
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const {
@@ -387,4 +399,47 @@ export async function prepareCache({
 }: PrepareCacheOptions): Promise<Files> {
   const cache = await glob('node_modules/**', workPath);
   return cache;
+}
+
+interface PortInfo {
+  port: number;
+}
+
+function isPortInfo(v: any): v is PortInfo {
+  return v && typeof v.port === 'number';
+}
+
+export async function startDevServer({
+  entrypoint,
+  workPath,
+}: StartDevServerOptions): Promise<StartDevServerResult> {
+  if (extname(entrypoint) === '.ts') {
+    // TypeScript isn't supported at the moment, so return `null`
+    // for `now dev` to go through the regular `build()` pipeline.
+    return null;
+  }
+
+  const devServerPath = join(__dirname, 'dev-server.js');
+  const child = fork(devServerPath, [], {
+    cwd: workPath,
+    env: {
+      ...process.env,
+      NOW_DEV_ENTRYPOINT: entrypoint,
+    },
+  });
+  const { pid } = child;
+  const onMessage = once<{ port: number }>(child, 'message');
+  const onExit = once<{ code: number; signal: string | null }>(child, 'exit');
+  const result = await Promise.race([onMessage, onExit]);
+  onExit.cancel();
+  onMessage.cancel();
+  if (isPortInfo(result)) {
+    // "message" event
+    return { port: result.port, pid };
+  } else {
+    // "exit" event
+    throw new Error(
+      `Failed to start dev server for "${entrypoint}" (code=${result.code}, signal=${result.signal})`
+    );
+  }
 }
