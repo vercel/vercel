@@ -48,7 +48,7 @@ function App() {
         .
       </p>
       <br />
-      <h2>The date according to Go is:</h2>
+      <h2>The date selon GO:</h2>
       <p>{date ? date : 'Loading date...'}</p>
     </main>
   );
