@@ -909,11 +909,6 @@ export const build = async ({
       console.time(allLambdasLabel);
     }
 
-    console.log({
-      pseudoLayerBytes,
-      apiPseudoLayerBytes,
-    });
-
     // Do initial check to make sure the traced files don't already
     // exceed the lambda size limit as we won't be able to continue
     // if they do
@@ -1087,19 +1082,10 @@ export const build = async ({
         pageKeys.filter(page => page.startsWith('api/'))
       );
 
-      console.log({
-        pages,
-        apiLambdaGroups,
-        pageLambdaGroups,
-        mergedApiLambdaOptions,
-        mergedPageLambdaOptions,
-      });
-
       await Promise.all(
         [...apiLambdaGroups, ...pageLambdaGroups].map(
           async function buildLambdaGroup(group: LambdaGroup) {
             const groupPageKeys = Object.keys(group.pages);
-            console.log({ group, groupPageKeys });
 
             const launcher = launcherData.replace(
               /\/\/ __LAUNCHER_PAGE_HANDLER__/g,
@@ -1122,8 +1108,6 @@ export const build = async ({
                   */
                   }
                 }
-                console.log('req.url', req.url)
-                console.log('got headers', JSON.stringify(req.headers, null, 2))
                 let toRender = req.headers['x-nextjs-page']
 
                 if (!toRender) {
@@ -1172,8 +1156,6 @@ export const build = async ({
                   }
                 }
 
-                console.log({ toRender })
-
                 if (!currentPage) {
                   res.statusCode = 500
                   return res.end('internal server error')
@@ -1197,8 +1179,6 @@ export const build = async ({
               pageFiles[pageFileName] = pages[pageName];
               pageLambdaMap[page] = group.lambdaIdentifier;
             }
-
-            console.log(pageFiles);
 
             if (requiresTracing) {
               lambdas[
@@ -1237,13 +1217,6 @@ export const build = async ({
       );
       console.timeEnd(allLambdasLabel);
     }
-
-    console.log({
-      lambdas,
-      pageLambdaMap,
-      pageLambdaRoutes,
-      dynamicPageLambdaRoutes,
-    });
 
     let prerenderGroup = 1;
     const onPrerenderRoute = (
