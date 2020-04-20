@@ -80,8 +80,8 @@ interface BuildParamsType extends BuildOptions {
 }
 
 export const version = 2;
-// Limit for max size each lambda can be, currently 50 MB
-const lambdaCompressedByteLimit = 50 * 1000 * 1000;
+// Limit for max size each lambda can be, currently 45 MB
+const lambdaCompressedByteLimit = 45 * 1000 * 1000;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
 
@@ -317,7 +317,7 @@ export const build = async ({
   }
 
   console.log('Installing dependencies...');
-  await runNpmInstall(entryPath, [], spawnOpts, meta);
+  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
   let realNextVersion: string | undefined;
   try {
@@ -589,7 +589,12 @@ export const build = async ({
 
   if (isLegacy) {
     debug('Running npm install --production...');
-    await runNpmInstall(entryPath, ['--production'], spawnOpts, meta);
+    await runNpmInstall(
+      entryPath,
+      ['--prefer-offline', '--production'],
+      spawnOpts,
+      meta
+    );
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
@@ -923,10 +928,10 @@ export const build = async ({
 
     type LambdaGroup = {
       pages: {
-        // '/index': './.next/serverless/pages/index.js
         [outputName: string]: {
           pageName: string;
           pageFileName: string;
+          pageLayer: PseudoLayer;
         };
       };
       isApiLambda: boolean;
@@ -942,7 +947,7 @@ export const build = async ({
         continue;
       }
 
-      // Don't create add _error to lambda if we have a static 404 page or
+      // Don't add _error to lambda if we have a static 404 page or
       // pages404 is enabled and 404.js is present
       if (
         page === '_error.js' &&
@@ -1028,20 +1033,28 @@ export const build = async ({
         page404Path = path.join('/', entryDirectory, pathname);
       }
 
-      // TODO: compress page files here so we can track
-      // how much they increase lambda size
+      // we create the page as it's own layer so we can track how much
+      // it increased the lambda size on it's own and know when we
+      // need to create a new lambda
+      const {
+        pseudoLayer: pageLayer,
+        pseudoLayerBytes: pageLayerBytes,
+      } = await createPseudoLayer({ [pageFileName]: pages[page] });
+
       currentLambdaGroup.pages[outputName] = {
+        pageLayer,
         pageFileName,
         pageName: page,
       };
+      currentLambdaGroup.lambdaCombinedBytes += pageLayerBytes;
       lambdaGroups[lambdaGroupIndex] = currentLambdaGroup;
     }
 
     if (hasLambdas) {
-      // since we combine the pages into lambda groups
-      // we need to merge the lambda options into one
-      // this means they should only configure lambda options
-      // for one page as doing it for another will override it
+      // since we combine the pages into lambda groups we need to merge
+      // the lambda options into one this means they should only configure
+      // lambda options for one page or one API as doing it for
+      // another will override it
       const getMergedLambdaOptions = async (pageKeys: string[]) => {
         if (pageKeys.length === 0) return {};
 
@@ -1104,6 +1117,7 @@ export const build = async ({
                     .join(',\n')}
                   ${
                     '' /*
+                    creates a mapping of the page and the page's module e.g.
                     '/about': require('./.next/serverless/pages/about.js')
                   */
                   }
@@ -1172,12 +1186,12 @@ export const build = async ({
               'now__launcher.js': new FileBlob({ data: launcher }),
             };
 
-            const pageFiles: Files = {};
+            const pageLayers: PseudoLayer[] = [];
 
             for (const page of groupPageKeys) {
-              const { pageFileName, pageName } = group.pages[page];
-              pageFiles[pageFileName] = pages[pageName];
+              const { pageLayer } = group.pages[page];
               pageLambdaMap[page] = group.lambdaIdentifier;
+              pageLayers.push(pageLayer);
             }
 
             if (requiresTracing) {
@@ -1186,10 +1200,11 @@ export const build = async ({
               ] = await createLambdaFromPseudoLayers({
                 files: {
                   ...launcherFiles,
-                  // [requiresTracing ? pageFileName : 'page.js']: pages[page],
-                  ...pageFiles,
                 },
-                layers: group.isApiLambda ? apiPseudoLayers : pseudoLayers,
+                layers: [
+                  ...(group.isApiLambda ? apiPseudoLayers : pseudoLayers),
+                  ...pageLayers,
+                ],
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
                 ...(group.isApiLambda
@@ -1197,14 +1212,14 @@ export const build = async ({
                   : mergedPageLambdaOptions),
               });
             } else {
-              lambdas[group.lambdaIdentifier] = await createLambda({
+              lambdas[
+                group.lambdaIdentifier
+              ] = await createLambdaFromPseudoLayers({
                 files: {
                   ...launcherFiles,
                   ...assets,
-                  ...tracedFiles,
-                  // ['page.js']: pages[page],
-                  ...pageFiles,
                 },
+                layers: pageLayers,
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
                 ...(group.isApiLambda
@@ -1449,13 +1464,14 @@ export const build = async ({
       // if there no rewrites
       { handle: 'rewrite' },
 
-      // re-check page routes to map them to the lambda
-      ...pageLambdaRoutes,
-
       // /_next/data routes for getServerProps/getStaticProps pages
       ...dataRoutes,
 
-      // Dynamic routes (must come after dataRoutes as they are more specific)
+      // re-check page routes to map them to the lambda
+      ...pageLambdaRoutes,
+
+      // Dynamic routes (must come after dataRoutes as dataRoutes are more
+      // specific)
       ...dynamicRoutes,
 
       // finally add dynamic page mappings to their respective lambda
