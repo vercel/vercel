@@ -210,8 +210,8 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       );
       return exit(1);
     }
-    const list = await secrets.ls();
-    const theSecret = list.find(secret => secret.name === args[0]);
+
+    const theSecret = await secrets.getSecretByNameOrId(args[0]);
 
     if (theSecret) {
       const yes =
