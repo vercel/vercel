@@ -58,7 +58,7 @@ export function convertRedirects(
       };
       return route;
     } catch (e) {
-      throw new Error('Failed to parse destination: ' + r.destination);
+      throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
     }
   });
 }
@@ -71,7 +71,7 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
       const route: Route = { src, dest, check: true };
       return route;
     } catch (e) {
-      throw new Error('Failed to parse destination: ' + r.destination);
+      throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
     }
   });
 }
