@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "now-build": "node must-be-yarn.js"
+  }
+}
