@@ -64,6 +64,7 @@ import {
   validateEntrypoint,
   PseudoLayer,
 } from './utils';
+import escapeStringRegexp from 'escape-string-regexp';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -374,6 +375,7 @@ export const build = async ({
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
   const dataRoutes: Route[] = [];
+  let dynamicRoutes: Route[] = [];
   let nextBasePath: string | undefined;
   // whether they have enabled pages/404.js as the custom 404 page
   let hasPages404 = false;
@@ -420,7 +422,6 @@ export const build = async ({
                 (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
               ),
               check: true,
-              continue: true,
             });
           }
         }
@@ -605,23 +606,25 @@ export const build = async ({
   const dynamicPages: string[] = [];
   let static404Page: string | undefined;
   let page404Path = '';
+  let buildId: string;
+
+  try {
+    buildId = await readFile(
+      path.join(entryPath, outputDirectory, 'BUILD_ID'),
+      'utf8'
+    );
+  } catch (err) {
+    console.error(
+      'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
+    );
+    throw new Error('Missing BUILD_ID');
+  }
+  const escapedBuildId = escapeStringRegexp(buildId);
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
 
     debug('Preparing serverless function files...');
-    let buildId: string;
-    try {
-      buildId = await readFile(
-        path.join(entryPath, outputDirectory, 'BUILD_ID'),
-        'utf8'
-      );
-    } catch (err) {
-      console.error(
-        'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
-      );
-      throw new Error('Missing BUILD_ID');
-    }
     const dotNextRootFiles = await glob(`${outputDirectory}/*`, entryPath);
     const dotNextServerRootFiles = await glob(
       `${outputDirectory}/server/*`,
@@ -926,7 +929,10 @@ export const build = async ({
     type LambdaGroup = {
       pages: {
         // '/index': './.next/serverless/pages/index.js
-        [outputName: string]: string;
+        [outputName: string]: {
+          pageName: string;
+          pageFileName: string;
+        };
       };
       isApiLambda: boolean;
       lambdaIdentifier: string;
@@ -951,17 +957,16 @@ export const build = async ({
         continue;
       }
 
+      const pageFileName = path.normalize(
+        path.relative(workPath, pages[page].fsPath)
+      );
       const pathname = page.replace(/\.js$/, '');
-      const routeIsApi = isApiPage(page);
+      const routeIsApi = isApiPage(pageFileName);
       const routeIsDynamic = isDynamicRoute(pathname);
 
       if (routeIsDynamic) {
         dynamicPages.push(normalizePage(pathname));
       }
-
-      const pageFileName = path.normalize(
-        path.relative(workPath, pages[page].fsPath)
-      );
       const outputName = path.join('/', entryDirectory, pathname);
 
       const lambdaGroups = routeIsApi ? apiLambdaGroups : pageLambdaGroups;
@@ -984,19 +989,38 @@ export const build = async ({
             : pseudoLayerBytes,
           lambdaIdentifier: path.join(
             entryDirectory,
-            `__NEXT_${
-              isApiPage(page) ? 'API' : 'PAGE'
-            }_LAMBDA_${lambdaGroupIndex}`
+            `__NEXT_${routeIsApi ? 'API' : 'PAGE'}_LAMBDA_${lambdaGroupIndex}`
           ),
         };
       }
 
+      let dynamicPrefix = path.join('/', entryDirectory);
+      dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
+
+      dynamicRoutes = await getDynamicRoutes(
+        entryPath,
+        entryDirectory,
+        dynamicPages,
+        false,
+        routesManifest,
+        new Set(prerenderManifest.omittedRoutes)
+      ).then(arr =>
+        arr.map(route => {
+          route.src = route.src.replace('^', `^${dynamicPrefix}`);
+          return route;
+        })
+      );
+
       const pageLambdaRoute: Route = {
-        src: `^${outputName}$`,
+        src: `^${escapeStringRegexp(outputName).replace(
+          /\/index$/,
+          '(/|/index|)'
+        )}$`,
         dest: `${path.join('/', currentLambdaGroup.lambdaIdentifier)}`,
         headers: {
           'x-nextjs-page': outputName,
         },
+        check: true,
       };
 
       if (routeIsDynamic) {
@@ -1006,12 +1030,15 @@ export const build = async ({
       }
 
       if (page === '_error.js' || (hasPages404 && page === '404.js')) {
-        page404Path = path.join('/', pathname);
+        page404Path = path.join('/', entryDirectory, pathname);
       }
 
       // TODO: compress page files here so we can track
       // how much they increase lambda size
-      currentLambdaGroup.pages[outputName] = pageFileName;
+      currentLambdaGroup.pages[outputName] = {
+        pageFileName,
+        pageName: page,
+      };
       lambdaGroups[lambdaGroupIndex] = currentLambdaGroup;
     }
 
@@ -1020,30 +1047,52 @@ export const build = async ({
       // we need to merge the lambda options into one
       // this means they should only configure lambda options
       // for one page as doing it for another will override it
-      const mergedLambdaOptions = getLambdaOptionsFromFunction({
-        sourceFile: await getSourceFilePathFromPage({
-          workPath,
-          page: pageKeys[0],
-        }),
-        config,
-      });
+      const getMergedLambdaOptions = async (pageKeys: string[]) => {
+        if (pageKeys.length === 0) return {};
 
-      for (const page of pageKeys) {
-        if (page === pageKeys[0]) continue;
-        const newOptions = getLambdaOptionsFromFunction({
+        const lambdaOptions = await getLambdaOptionsFromFunction({
           sourceFile: await getSourceFilePathFromPage({
             workPath,
-            page,
+            page: pageKeys[0],
           }),
           config,
         });
-        Object.assign(mergedLambdaOptions, newOptions);
-      }
+
+        for (const page of pageKeys) {
+          if (page === pageKeys[0]) continue;
+          const sourceFile = await getSourceFilePathFromPage({
+            workPath,
+            page,
+          });
+          const newOptions = await getLambdaOptionsFromFunction({
+            sourceFile,
+            config,
+          });
+
+          for (const key of Object.keys(newOptions)) {
+            // eslint-disable-next-line
+            if (typeof (newOptions as any)[key] !== 'undefined') {
+              // eslint-disable-next-line
+              (lambdaOptions as any)[key] = (newOptions as any)[key];
+            }
+          }
+        }
+        return lambdaOptions;
+      };
+
+      const mergedPageLambdaOptions = await getMergedLambdaOptions(
+        pageKeys.filter(page => !page.startsWith('api/'))
+      );
+      const mergedApiLambdaOptions = await getMergedLambdaOptions(
+        pageKeys.filter(page => page.startsWith('api/'))
+      );
 
       console.log({
         pages,
         apiLambdaGroups,
         pageLambdaGroups,
+        mergedApiLambdaOptions,
+        mergedPageLambdaOptions,
       });
 
       await Promise.all(
@@ -1055,10 +1104,17 @@ export const build = async ({
             const launcher = launcherData.replace(
               /\/\/ __LAUNCHER_PAGE_HANDLER__/g,
               `
+              const url = require('url');
               page = function(req, res) {
                 const pages = {
                   ${groupPageKeys
-                    .map(page => `'${page}': require('${group.pages[page]}')`)
+                    .map(
+                      page =>
+                        `'${page}': require('./${path.join(
+                          './',
+                          group.pages[page].pageFileName
+                        )}')`
+                    )
                     .join(',\n')}
                   ${
                     '' /*
@@ -1066,9 +1122,57 @@ export const build = async ({
                   */
                   }
                 }
+                console.log('req.url', req.url)
                 console.log('got headers', JSON.stringify(req.headers, null, 2))
-                const toRender = req.headers['x-nextjs-page']
-                const currentPage = pages[toRender]
+                let toRender = req.headers['x-nextjs-page']
+
+                if (!toRender) {
+                  try {
+                    const { pathname } = url.parse(req.url)
+                    toRender = pathname
+                  } catch (_) {
+                    // handle failing to parse url
+                    res.statusCode = 400
+                    return res.end('Bad Request')
+                  }
+                }
+
+                let currentPage = pages[toRender]
+
+                if (
+                  toRender &&
+                  !currentPage &&
+                  toRender.includes('/_next/data')
+                ) {
+                  toRender = toRender
+                    .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
+                    .replace(/\\.json$/, '')
+
+                  currentPage = pages[toRender]
+
+                  if (!currentPage) {
+                    // for prerendered dynamic routes (/blog/post-1) we need to
+                    // find the match since it won't match the page directly
+                    const dynamicRoutes = ${JSON.stringify(
+                      dynamicRoutes.map(route => ({
+                        src: route.src,
+                        dest: route.dest,
+                      }))
+                    )}
+
+                    for (const route of dynamicRoutes) {
+                      const matcher = new RegExp(route.src)
+
+                      if (matcher.test(toRender)) {
+                        toRender = route.dest
+                        currentPage = pages[toRender]
+                        break
+                      }
+                    }
+                  }
+                }
+
+                console.log({ toRender })
 
                 if (!currentPage) {
                   res.statusCode = 500
@@ -1089,8 +1193,8 @@ export const build = async ({
             const pageFiles: Files = {};
 
             for (const page of groupPageKeys) {
-              const pageFileName = group.pages[page];
-              pageFiles[pageFileName] = pages[path.join('./', `${page}.js`)];
+              const { pageFileName, pageName } = group.pages[page];
+              pageFiles[pageFileName] = pages[pageName];
               pageLambdaMap[page] = group.lambdaIdentifier;
             }
 
@@ -1108,7 +1212,9 @@ export const build = async ({
                 layers: group.isApiLambda ? apiPseudoLayers : pseudoLayers,
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...mergedLambdaOptions,
+                ...(group.isApiLambda
+                  ? mergedApiLambdaOptions
+                  : mergedPageLambdaOptions),
               });
             } else {
               lambdas[group.lambdaIdentifier] = await createLambda({
@@ -1121,7 +1227,9 @@ export const build = async ({
                 },
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...mergedLambdaOptions,
+                ...(group.isApiLambda
+                  ? mergedApiLambdaOptions
+                  : mergedPageLambdaOptions),
               });
             }
           }
@@ -1199,9 +1307,7 @@ export const build = async ({
         '/',
         srcRoute == null
           ? outputPathPage
-          : srcRoute === '/'
-          ? '/index'
-          : srcRoute
+          : path.join(entryDirectory, srcRoute === '/' ? '/index' : srcRoute)
       );
 
       const outputPathData = path.posix.join(entryDirectory, dataRoute);
@@ -1253,17 +1359,16 @@ export const build = async ({
       [
         ...Object.entries(prerenderManifest.fallbackRoutes),
         ...Object.entries(prerenderManifest.legacyBlockingRoutes),
-      ].forEach(([, { dataRouteRegex, dataRoute }]) => {
+      ].forEach(([, { dataRoute, dataRouteRegex }]) => {
         dataRoutes.push({
           // Next.js provided data route regex
           src: dataRouteRegex.replace(
             /^\^/,
             `^${appMountPrefixNoTrailingSlash}`
           ),
-          // Location of lambda in builder output
+          // Location of prerender in builder output
           dest: path.posix.join(entryDirectory, dataRoute),
           check: true,
-          continue: true,
         });
       });
     }
@@ -1303,45 +1408,10 @@ export const build = async ({
     {}
   );
 
-  let dynamicPrefix = path.join('/', entryDirectory);
-  dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
-
-  const dynamicRoutes = await getDynamicRoutes(
-    entryPath,
-    entryDirectory,
-    dynamicPages,
-    false,
-    routesManifest,
-    new Set(prerenderManifest.omittedRoutes)
-  ).then(arr =>
-    arr.map(route => {
-      route.src = route.src.replace('^', `^${dynamicPrefix}`);
-      return route;
-    })
-  );
-
-  // We need to delete lambdas from output instead of omitting them from the
-  // start since we rely on them for powering Preview Mode (read above in
-  // onPrerenderRoute).
-  prerenderManifest.omittedRoutes.forEach(routeKey => {
-    // Get the route file as it'd be mounted in the builder output
-    const routeFileNoExt = path.posix.join(
-      entryDirectory,
-      routeKey === '/' ? '/index' : routeKey
-    );
-    if (typeof lambdas[routeFileNoExt] === undefined) {
-      throw new Error(
-        `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`
-      );
-    }
-    delete lambdas[routeFileNoExt];
-  });
-
   return {
     output: {
       ...publicDirectoryFiles,
       ...lambdas,
-      // Prerenders may override Lambdas -- this is an intentional behavior.
       ...prerenders,
       ...staticPages,
       ...staticFiles,
@@ -1353,7 +1423,7 @@ export const build = async ({
       - User headers and redirects
       - Runtime redirects
       - Runtime routes
-      - Check filesystem, if nothing found continue
+      - Check filesystem (including pages), if nothing found continue
       - User rewrites
       - Builder rewrites
     */

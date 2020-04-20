@@ -516,8 +516,6 @@ export async function createPseudoLayer(files: {
         isSymlink: true,
         symlinkTarget: symlinkTarget,
       };
-      const targetStats = await fs.stat(symlinkTarget);
-      pseudoLayerBytes += targetStats.isFile() ? targetStats.size : 0;
     } else {
       const origBuffer = await streamToBuffer(file.toStream());
       const compBuffer = await compressBuffer(origBuffer);
