@@ -41,7 +41,7 @@ async function createBuildersTarball() {
 
   await execa(
     'npm',
-    ['install', '--save-exact', '--save-dev', '--no-package-lock', ...builders],
+    ['install', '--save-exact', '--no-package-lock', ...builders],
     {
       cwd: buildersDir,
       stdio: 'inherit',

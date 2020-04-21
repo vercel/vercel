@@ -262,7 +262,6 @@ export async function installBuilders(
           [
             'install',
             '--save-exact',
-            '--save-dev',
             '--no-package-lock',
             ...packagesToInstall,
           ],
@@ -318,7 +317,6 @@ export async function updateBuilders(
         [
           'install',
           '--save-exact',
-          '--save-dev',
           '--no-package-lock',
           ...packages.filter(p => p !== '@now/static'),
         ],
