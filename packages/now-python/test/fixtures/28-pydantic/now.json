@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "builds": [{ "src": "api/[hello].py", "use": "@now/python" }],
+  "builds": [{ "src": "api/*.py", "use": "@now/python" }],
   "probes": [
     {
-      "path": "/api/[hello].py",
+      "path": "/api/hello.py",
       "method": "POST",
       "body": {
         "name": "Nguyễn Hồng Quân"

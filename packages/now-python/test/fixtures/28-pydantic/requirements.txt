@@ -1,2 +1,2 @@
-fastapi
-pydantic
+fastapi==0.54.1
+pydantic==1.5
