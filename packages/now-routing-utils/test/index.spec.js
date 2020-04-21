@@ -640,6 +640,11 @@ describe('getTransformedRoutes', () => {
       rewrites: [{ source: '/v1', destination: '/v2/api.py' }],
       redirects: [
         { source: '/help', destination: '/support', statusCode: 302 },
+        {
+          source: '/bug',
+          destination: 'https://example.com/bug',
+          statusCode: 308,
+        },
       ],
     };
     const actual = getTransformedRoutes({ nowConfig });
@@ -658,6 +663,11 @@ describe('getTransformedRoutes', () => {
         src: '^/help$',
         headers: { Location: '/support' },
         status: 302,
+      },
+      {
+        src: '^/bug$',
+        headers: { Location: 'https://example.com/bug' },
+        status: 308,
       },
       { handle: 'filesystem' },
       { src: '^/v1$', dest: '/v2/api.py', check: true },
@@ -715,5 +725,43 @@ describe('getTransformedRoutes', () => {
     const nowConfig = { routes: null };
     const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.routes, null);
+  });
+
+  test('should error when segment is defined in `destination` but not `source`', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/iforgot/:id',
+          destination: '/:another',
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, null);
+    assert.ok(
+      actual.error.message.includes(
+        'in "destination" pattern but not in "source"'
+      ),
+      actual.error.message
+    );
+  });
+
+  test('should error when segment is defined in HTTPS `destination` but not `source`', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/iforgot/:id',
+          destination: 'https://example.com/:another',
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, null);
+    assert.ok(
+      actual.error.message.includes(
+        'in "destination" pattern but not in "source"'
+      ),
+      actual.error.message
+    );
   });
 });

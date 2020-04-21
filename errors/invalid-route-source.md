@@ -13,7 +13,7 @@ Wrap the `RegExp` part of your `source` as an un-named parameter.
 ```js
 {
   source: '/feedback/(?!general)',
-  destination: '/feedback/general'
+  destination: '/api/feedback/general'
 }
 ```
 
@@ -22,7 +22,27 @@ Wrap the `RegExp` part of your `source` as an un-named parameter.
 ```js
 {
   source: '/feedback/((?!general).*)',
-  destination: '/feedback/general'
+  destination: '/api/feedback/general'
+}
+```
+
+Ensure any segments used in the `destination` property are also used in the `source` property.
+
+**Before**
+
+```js
+{
+  source: '/feedback/:type',
+  destination: '/api/feedback/:id'
+}
+```
+
+**After**
+
+```js
+{
+  source: '/feedback/:id',
+  destination: '/api/feedback/:id'
 }
 ```
 
