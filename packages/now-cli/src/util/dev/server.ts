@@ -1385,13 +1385,23 @@ export default class DevServer {
     });
 
     if (statusCode) {
-      res.statusCode = statusCode;
+      // Set the `statusCode` as read-only so that `http-proxy`
+      // in not able to modify the value in the future
+      Object.defineProperty(res, 'statusCode', {
+        get() {
+          return statusCode;
+        },
+        /* eslint-disable @typescript-eslint/no-unused-vars */
+        set(_: number) {
+          /* ignore */
+        },
+      });
     }
 
     const requestPath = dest.replace(/^\//, '');
 
     if (!match) {
-      // if the dev command is started, proxy to it
+      // If the dev command is started, then proxy to it
       if (this.devProcessPort) {
         debug('Proxying to frontend dev server');
         return proxyPass(
