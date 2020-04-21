@@ -1386,7 +1386,7 @@ export default class DevServer {
 
     if (statusCode) {
       // Set the `statusCode` as read-only so that `http-proxy`
-      // in not able to modify the value in the future
+      // is not able to modify the value in the future
       Object.defineProperty(res, 'statusCode', {
         get() {
           return statusCode;
