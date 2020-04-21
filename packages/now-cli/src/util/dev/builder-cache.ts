@@ -281,7 +281,6 @@ export async function installBuilders(
     ...buildersPkgAfter.devDependencies,
     ...buildersPkgAfter.dependencies,
   };
-  console.log(depsAfter);
   for (const [name, version] of Object.entries(depsAfter)) {
     if (version !== depsBefore[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);
@@ -399,9 +398,7 @@ function getPackageName(
     ...buildersPkg.dependencies,
   };
   for (const [name, dep] of Object.entries(deps)) {
-    console.log({ dep, raw: parsed.raw, base: basename(dep) });
     if (dep === parsed.raw || basename(dep) === basename(parsed.raw)) {
-      console.log('found match', { name });
       return name;
     }
   }
