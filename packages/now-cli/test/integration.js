@@ -71,7 +71,7 @@ const waitForDeployment = async href => {
 };
 
 function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.zeit.co/www/user`;
+  const url = `https://api.vercel.com/www/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
   return retry(
@@ -125,7 +125,7 @@ const execute = (args, options) =>
   });
 
 const apiFetch = (url, { headers, ...options } = {}) => {
-  return fetch(`https://api.zeit.co${url}`, {
+  return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       ...(headers || {}),
@@ -641,7 +641,7 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `Error! Please sign up: https://zeit.co/signup`;
+  const goal = `Error! Please sign up: https://vercel.com/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
@@ -1532,7 +1532,7 @@ test('deploying a file should not show prompts and display deprecation', async t
 
   // Ensure the exit code is right
   t.is(exitCode, 0, formatOutput(output));
-  t.true(stderr.includes('Deploying files with ZEIT Now is deprecated'));
+  t.true(stderr.includes('Deploying files with Vercel is deprecated'));
 
   // Ensure `.now` was not created
   t.is(
@@ -1911,7 +1911,7 @@ test('print correct link in legacy warning', async t => {
   // It is expected to fail,
   // since the package.json does not have a start script
   t.is(exitCode, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
+  t.regex(stderr, /migrate-to-vercel/);
 });
 
 test('`now rm` removes a deployment', async t => {
@@ -2614,7 +2614,7 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
     detectedNotice =
       detectedNotice ||
       chunk.includes(
-        'Your project was either removed from ZEIT Now or you’re not a member of it anymore'
+        'Your project was either removed from Vercel or you’re not a member of it anymore'
       );
 
     return /Set up and deploy [^?]+\?/.test(chunk);

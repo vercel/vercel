@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Bug Report
-    url: https://zeit.co/support/request
-    about: Report a bug using the ZEIT Now support form
+    url: https://vercel.com/support/request
+    about: Report a bug using the Vercel support form
   - name: Feature Request
     url: https://github.com/zeit/now/discussions/new
     about: Request a feature to be added to the platform

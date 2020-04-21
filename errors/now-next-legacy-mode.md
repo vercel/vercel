@@ -27,7 +27,7 @@ Serverless:
 - Runs `npm run now-build`
 - Does not run `npm install --production` as the output from the build is all that's needed to bundle lambdas.
 - No runtime dependencies, meaning smaller lambda functions
-- Optimized for fast [cold start](https://zeit.co/blog/serverless-ssr#cold-start)
+- Optimized for fast [cold start](https://vercel.com/blog/serverless-ssr#cold-start)
 
 #### Possible Ways to Fix It
 

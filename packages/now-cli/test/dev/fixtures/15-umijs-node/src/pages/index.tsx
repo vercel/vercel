@@ -17,23 +17,16 @@ const App: React.SFC<RouterTypes> = () => {
       <h2>
         Deployed with{' '}
         <a
-          href="https://zeit.co/docs"
+          href="https://vercel.com/docs"
           target="_blank"
           rel="noreferrer noopener"
         >
-          ZEIT Now
+          Vercel
         </a>
         !
       </h2>
       <p>
-        <a
-          href="https://github.com/zeit/now-examples/blob/master/umijs-node"
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          This project
-        </a>{' '}
-        is a <a href="https://umijs.org/">UmiJS</a> app with two directories,{' '}
+        This project is a <a href="https://umijs.org/">UmiJS</a> app with two directories,{' '}
         <code>/pages</code> for content and components, and <code>/api</code>{' '}
         which contains a serverless <a href="https://nodejs.org/en/">Node.js</a>{' '}
         function. See{' '}

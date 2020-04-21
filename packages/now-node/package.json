@@ -3,7 +3,7 @@
   "version": "1.5.2-canary.2",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/node-js",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now.git",

@@ -64,7 +64,7 @@ Sapper uses Rollup or webpack to provide code-splitting and dynamic imports, as 
 
 To start a production version of your app, run `npm run build && npm start`. This will disable live reloading, and activate the appropriate bundler plugins.
 
-You can deploy your application to any environment that supports Node 8 or above. As an example, to deploy to [Now](https://zeit.co/now), run these commands:
+You can deploy your application to any environment that supports Node 8 or above. As an example, to deploy to [Now](https://vercel.com/now), run these commands:
 
 ```bash
 npm install -g now

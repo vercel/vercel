@@ -259,7 +259,7 @@ export default async function main(
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  const infoUrl = 'https://zeit.co/guides/migrate-to-zeit-now';
+  const infoUrl = 'https://vercel.com/guides/migrate-to-vercel';
 
   warn(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
@@ -794,10 +794,10 @@ async function sync({
             });
           }
 
-          let url = 'https://zeit.co/account/plan';
+          let url = 'https://vercel.com/account/plan';
 
           if (currentTeam) {
-            url = `https://zeit.co/teams/${contextName}/settings/plan`;
+            url = `https://vercel.com/teams/${contextName}/settings/plan`;
           }
 
           note(
@@ -1104,7 +1104,7 @@ function handleCreateDeployError(output: Output, error: Error) {
       `Failed to validate ${highlight(
         'now.json'
       )}: ${message}\nDocumentation: ${link(
-        'https://zeit.co/docs/v2/advanced/configuration'
+        'https://vercel.com/docs/configuration'
       )}`
     );
 

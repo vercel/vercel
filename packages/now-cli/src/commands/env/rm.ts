@@ -46,7 +46,7 @@ export default async function rm(
     output.print(
       `${chalk.red(
         'Error!'
-      )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
+      )} Your codebase isn’t linked to a project on Vercel. Run ${cmd(
         'now'
       )} to link it.\n`
     );

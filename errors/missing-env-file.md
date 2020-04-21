@@ -1,7 +1,8 @@
 # Missing Environment Variables While Developing
 
 #### Why This Error Occurred
-You ran `now dev` inside a project that contains a `now.json` file with `env` or `build.env` properties that use [Now Secrets](https://zeit.co/docs/v2/deployments/environment-variables-and-secrets).
+
+You ran `now dev` inside a project that contains a `now.json` file with `env` or `build.env` properties that use [Now Secrets](https://vercel.com/docs/v2/build-step#environment-variables).
 
 In order to use environment variables in your project locally that have values defined using the Now Secrets format (e.g. `@my-secret-value`), you will need to provide the value as an environment variable using a `.env` or `.env.build` file.
 
@@ -23,4 +24,4 @@ TEST=value
 
 In the above example, `TEST` represents the name of the environment variable and `value` its value.
 
-For more information on Environment Variables in development, [see the documentation](https://zeit.co/docs/v2/development/environment-variables/).
+For more information on Environment Variables in development, [see the documentation](https://vercel.com/docs/v2/build-step#environment-variables).

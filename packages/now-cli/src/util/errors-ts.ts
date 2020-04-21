@@ -1041,7 +1041,7 @@ export class AccountNotFound extends NowError<
 > {
   constructor(
     email: string,
-    message: string = `Please sign up: https://zeit.co/signup`
+    message: string = `Please sign up: https://vercel.com/signup`
   ) {
     super({
       code: 'ACCOUNT_NOT_FOUND',

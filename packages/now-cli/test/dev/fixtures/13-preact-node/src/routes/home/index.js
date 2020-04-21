@@ -2,7 +2,7 @@ import { h, Component } from 'preact';
 
 class Home extends Component {
   state = {
-    date: undefined
+    date: undefined,
   };
   componentDidMount() {
     fetch('/api/date')
@@ -17,25 +17,18 @@ class Home extends Component {
         <h2>
           Deployed with{' '}
           <a
-            href="https://zeit.co/docs"
+            href="https://vercel.com/docs"
             target="_blank"
             rel="noreferrer noopener"
           >
-            ZEIT Now
+            Vercel
           </a>
           !
         </h2>
         <p>
-          <a
-            href="https://github.com/zeit/now-examples/blob/master/preact-node"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            This project
-          </a>{' '}
-          is a <a href="https://preactjs.com/">Preact</a> app and contains two
-          directories, <code>/src</code> for components, routing and content,
-          and <code>/api</code> which contains a serverless{' '}
+          This project is a <a href="https://preactjs.com/">Preact</a> app and
+          contains two directories, <code>/src</code> for components, routing
+          and content, and <code>/api</code> which contains a serverless{' '}
           <a href="https://nodejs.org/en/">Node.js</a> function. See{' '}
           <a href="/api/date">
             <code>api/date</code> for the Date API with Node.js

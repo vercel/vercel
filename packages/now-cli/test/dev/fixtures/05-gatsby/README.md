@@ -1,10 +1,10 @@
 # Gatsby Example
 
-This directory is a brief example of a [Gatsby](https://www.gatsbyjs.org/) app that can be deployed to ZEIT Now with zero configuration.
+This directory is a brief example of a [Gatsby](https://www.gatsbyjs.org/) app that can be deployed to Vercel with zero configuration.
 
-## How we created this example 
+## How we created this example
 
-To get started with Gatsby on Now, you can use the [Gatsby CLI](https://www.gatsbyjs.org/docs/gatsby-cli/) to initialize the project:
+To get started with Gatsby on Vercel, you can use the [Gatsby CLI](https://www.gatsbyjs.org/docs/gatsby-cli/) to initialize the project:
 
 ```shell
 $ gatsby new gatsby-site

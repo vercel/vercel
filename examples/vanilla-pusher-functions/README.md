@@ -4,7 +4,7 @@ This directory is a realtime serverless whiteboard powered by Pusher. The fronte
 
 ## Creating This Example
 
-To get started with a realtime whiteboard on Now, you can use [Now CLI](https://zeit.co/download) to initialize the project:
+To get started with a realtime whiteboard on Vercel, you can use [Now CLI](https://vercel.com/download) to initialize the project:
 
 ```shell
 $ now init vanilla-pusher-functions
