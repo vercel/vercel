@@ -40,9 +40,7 @@ const Home = () => (
           className="card"
         >
           <h3>Deploy &rarr;</h3>
-          <p>
-            Instantly deploy your Next.js site to a public URL with ZEIT Now.
-          </p>
+          <p>Instantly deploy your Next.js site to a public URL with Vercel.</p>
         </a>
       </div>
     </main>

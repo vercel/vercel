@@ -1,18 +1,18 @@
 # Nuxt.js Example
 
-This directory is a brief example of a [Nuxt.js](https://nuxtjs.org) app that can be deployed with ZEIT Now and zero configuration.
+This directory is a brief example of a [Nuxt.js](https://nuxtjs.org) app that can be deployed with Vercel and zero configuration.
 
 ## Deploy Your Own
 
-Deploy your own Nuxt.js project with ZEIT Now.
+Deploy your own Nuxt.js project with Vercel.
 
-[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/nuxtjs)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/nuxtjs)
 
 _Live Example: https://nuxtjs.now-examples.now.sh_
 
 ### How We Created This Example
 
-To get started with Nuxt.js deployed with ZEIT Now, you can use the [Create-Nuxt-App CLI](https://www.npmjs.com/package/create-nuxt-app) to initialize the project:
+To get started with Nuxt.js deployed with Vercel, you can use the [Create-Nuxt-App CLI](https://www.npmjs.com/package/create-nuxt-app) to initialize the project:
 
 ```shell
 $ npx create-nuxt-app my-app

@@ -2227,7 +2227,7 @@ test('print correct link in legacy warning', async t => {
   // It is expected to fail,
   // since the package.json does not have a start script
   t.is(exitCode, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
+  t.regex(stderr, /migrate-to-vercel/);
 });
 
 test('`now rm` 404 exits quickly', async t => {

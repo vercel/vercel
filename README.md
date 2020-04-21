@@ -9,7 +9,7 @@ Get started by [Importing a Git Project](https://vercel.com/import) and use `git
 
 ## Documentation
 
-For details on how to use ZEIT Now, check out our [documentation](https://vercel.com/docs).
+For details on how to use Vercel, check out our [documentation](https://vercel.com/docs).
 
 ## Caught a Bug?
 

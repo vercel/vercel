@@ -842,7 +842,7 @@ test(
     const response = await fetchWithRetry(`http://localhost:${port}`);
     validateResponseHeaders(t, response);
     // const body = await response.text();
-    // t.regex(body, /Hugo on ZEIT Now/gm);
+    // t.regex(body, /Hugo on Vercel/gm);
     t.is(response.status, 200, await response.text());
   })
 );
@@ -967,7 +967,7 @@ test(
     const response = await fetchWithRetry(`http://localhost:${port}`);
     validateResponseHeaders(t, response);
     const body = await response.text();
-    t.regex(body, /Mithril on ZEIT Now/gm);
+    t.regex(body, /Mithril on Vercel/gm);
   })
 );
 
@@ -977,7 +977,7 @@ test(
     const response = await fetchWithRetry(`http://localhost:${port}`);
     validateResponseHeaders(t, response);
     const body = await response.text();
-    t.regex(body, /Riot on ZEIT Now/gm);
+    t.regex(body, /Riot on Vercel/gm);
   })
 );
 

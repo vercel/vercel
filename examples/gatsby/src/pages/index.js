@@ -25,7 +25,7 @@ function Index() {
           target="_blank"
           rel="noreferrer noopener"
         >
-          ZEIT Now
+          Vercel
         </a>
         !
       </h2>

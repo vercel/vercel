@@ -14,18 +14,12 @@
   <h2>
     Deployed with
     <a href="https://vercel.com/docs" target="_blank" rel="noreferrer noopener">
-      ZEIT Now
+      Vercel
     </a>
     !
   </h2>
   <p>
-    <a
-      href="https://github.com/zeit/now-examples/blob/master/svelte-node"
-      target="_blank"
-      rel="noreferrer noopener">
-      This project
-    </a>
-    is a
+    This project is a
     <a href="https://svelte.dev/">Svelte</a>
     app with three directories,
     <code>/public</code>

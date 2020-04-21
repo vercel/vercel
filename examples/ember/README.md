@@ -2,19 +2,19 @@
 
 # Ember Example
 
-This directory is a brief example of an [Ember](https://emberjs.com/) app that can be deployed with ZEIT Now and zero configuration.
+This directory is a brief example of an [Ember](https://emberjs.com/) app that can be deployed with Vercel and zero configuration.
 
 ## Deploy Your Own
 
-Deploy your own Ember project with ZEIT Now.
+Deploy your own Ember project with Vercel.
 
-[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/ember)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/ember)
 
 _Live Example: https://ember.now-examples.now.sh_
 
 ### How We Created This Example
 
-To get started with Ember for deployment with ZEIT Now, you can use the [Ember CLI](https://ember-cli.com/) to initialize the project:
+To get started with Ember for deployment with Vercel, you can use the [Ember CLI](https://ember-cli.com/) to initialize the project:
 
 ```shell
 $ npx ember-cli new ember-project

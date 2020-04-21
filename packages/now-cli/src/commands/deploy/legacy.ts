@@ -259,7 +259,7 @@ export default async function main(
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  const infoUrl = 'https://vercel.com/guides/migrate-to-zeit-now';
+  const infoUrl = 'https://vercel.com/guides/migrate-to-vercel';
 
   warn(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`

@@ -1532,7 +1532,7 @@ test('deploying a file should not show prompts and display deprecation', async t
 
   // Ensure the exit code is right
   t.is(exitCode, 0, formatOutput(output));
-  t.true(stderr.includes('Deploying files with ZEIT Now is deprecated'));
+  t.true(stderr.includes('Deploying files with Vercel is deprecated'));
 
   // Ensure `.now` was not created
   t.is(
@@ -1911,7 +1911,7 @@ test('print correct link in legacy warning', async t => {
   // It is expected to fail,
   // since the package.json does not have a start script
   t.is(exitCode, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
+  t.regex(stderr, /migrate-to-vercel/);
 });
 
 test('`now rm` removes a deployment', async t => {
@@ -2614,7 +2614,7 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
     detectedNotice =
       detectedNotice ||
       chunk.includes(
-        'Your project was either removed from ZEIT Now or you’re not a member of it anymore'
+        'Your project was either removed from Vercel or you’re not a member of it anymore'
       );
 
     return /Set up and deploy [^?]+\?/.test(chunk);

@@ -195,7 +195,7 @@ export async function getLinkedProject(
     } else {
       output.print(
         prependEmoji(
-          'Your project was either removed from ZEIT Now or you’re not a member of it anymore.\n',
+          'Your project was either removed from Vercel or you’re not a member of it anymore.\n',
           emoji('warning')
         )
       );

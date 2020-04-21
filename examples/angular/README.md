@@ -2,13 +2,13 @@
 
 # Angular Example
 
-This directory is a brief example of an [Angular](https://angular.io/) app that can be deployed with ZEIT Now and zero configuration.
+This directory is a brief example of an [Angular](https://angular.io/) app that can be deployed with Vercel and zero configuration.
 
 ## Deploy Your Own
 
-Deploy your own Angular project with ZEIT Now.
+Deploy your own Angular project with Vercel.
 
-[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/angular)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/angular)
 
 _Live Example: https://angular.now-examples.now.sh_
 
