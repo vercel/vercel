@@ -7,7 +7,7 @@ import pluralize from 'pluralize';
 import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
-import { join, resolve } from 'path';
+import { basename, join, resolve } from 'path';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
@@ -396,7 +396,9 @@ function getPackageName(
   }
   const deps = { ...buildersPkg.devDependencies, ...buildersPkg.dependencies };
   for (const [name, dep] of Object.entries(deps)) {
-    if (dep === parsed.raw) {
+    console.log({ dep, raw: parsed.raw, base: basename(dep) });
+    if (dep === parsed.raw || basename(dep) === basename(parsed.raw)) {
+      console.log('found match', { name });
       return name;
     }
   }
