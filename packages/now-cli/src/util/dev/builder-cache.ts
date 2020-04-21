@@ -281,6 +281,7 @@ export async function installBuilders(
     ...buildersPkgAfter.devDependencies,
     ...buildersPkgAfter.dependencies,
   };
+  console.log(depsAfter);
   for (const [name, version] of Object.entries(depsAfter)) {
     if (version !== depsBefore[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);

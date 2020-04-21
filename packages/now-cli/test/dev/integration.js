@@ -1175,7 +1175,7 @@ test('[now dev] render warning for empty cwd dir', async t => {
   }
 });
 
-test('[now dev] do not rebuild for changes in the output directory', async t => {
+test.only('[now dev] do not rebuild for changes in the output directory', async t => {
   const directory = fixture('output-is-source');
 
   // Pack the builder and set it in the now.json
