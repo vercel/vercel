@@ -3,7 +3,7 @@
   "version": "1.0.7",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/go",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/go",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now.git",

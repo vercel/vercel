@@ -6,7 +6,7 @@ This directory is a brief example of a [Dojo](https://dojo.io) site that can be 
 
 Deploy your own Dojo project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now-examples/tree/master/dojo)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now-examples/tree/master/dojo)
 
 ### How We Created This Example
 

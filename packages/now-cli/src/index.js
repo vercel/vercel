@@ -68,7 +68,7 @@ Sentry.init({
 });
 
 let debug = () => {};
-let apiUrl = 'https://api.zeit.co';
+let apiUrl = 'https://api.vercel.com';
 
 const main = async argv_ => {
   const { isTTY } = process.stdout;
@@ -168,7 +168,7 @@ const main = async argv_ => {
         targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
       }${
         pkg.version.includes('canary') || targetOrSubcommand === 'dev'
-          ? ' — https://zeit.co/feedback'
+          ? ' — https://vercel.com/feedback'
           : ''
       }`
     )}\n`
@@ -651,10 +651,10 @@ const main = async argv_ => {
         .send();
     }
   } catch (err) {
-    if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
+    if (err.code === 'ENOTFOUND' && err.hostname === 'api.vercel.com') {
       output.error(
         `The hostname ${highlight(
-          'api.zeit.co'
+          'api.vercel.com'
         )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
       );
       output.debug(err.stack);

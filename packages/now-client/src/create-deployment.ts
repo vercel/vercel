@@ -126,7 +126,7 @@ export default function buildCreateDeployment(version: number) {
       Array.isArray(nowConfig.files) &&
       nowConfig.files.length > 0
     ) {
-      // See the docs: https://zeit.co/docs/v1/features/configuration/#files-(array)
+      // See the docs: https://vercel.com/docs/v1/features/configuration/#files-(array)
       debug('Filtering file list based on `files` key in now.json');
       const allowedFiles = new Set<string>(['Dockerfile']);
       const allowedDirs = new Set<string>();

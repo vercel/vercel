@@ -8,7 +8,7 @@ This directory is a brief example of an [Ember](https://emberjs.com/) app that c
 
 Deploy your own Ember project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/ember)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/ember)
 
 _Live Example: https://ember.now-examples.now.sh_
 
@@ -22,7 +22,7 @@ $ npx ember-cli new ember-project
 
 ### Deploying From Your Terminal
 
-You can deploy your new Ember project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can deploy your new Ember project with a single command from your terminal using [Now CLI](https://vercel.com/download):
 
 ```shell
 $ now

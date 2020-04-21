@@ -8,7 +8,7 @@ This directory is a brief example of a [Gridsome](https://gridsome.org/) app tha
 
 Deploy your own Gridsome project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/gridsome)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/gridsome)
 
 _Live Example: https://gridsome.now-examples.now.sh_
 
@@ -22,7 +22,7 @@ $ gridsome create my-website
 
 ### Deploying From Your Terminal
 
-You can deploy your new Gridsome project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can deploy your new Gridsome project with a single command from your terminal using [Now CLI](https://vercel.com/download):
 
 ```shell
 $ now

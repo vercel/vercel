@@ -6,7 +6,7 @@ This directory is a brief example of an [Ionic React](https://ionicframework.com
 
 Deploy your own Ionic React project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/ionic-react)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/ionic-react)
 
 _Live Example: https://ionic-react.now-examples.now.sh_
 
@@ -20,7 +20,7 @@ $ npx ionic start [project-name] conference --type react && cd [project-name]
 
 ### Deploying From Your Terminal
 
-You can deploy your new Ionic React project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can deploy your new Ionic React project with a single command from your terminal using [Now CLI](https://vercel.com/download):
 
 ```shell
 $ now

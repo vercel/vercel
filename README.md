@@ -1,15 +1,15 @@
-![now](https://assets.zeit.co/image/upload/v1581518533/repositories/now-cli/v4.png)
+![now](https://assets.vercel.com/image/upload/v1581518533/repositories/now-cli/v4.png)
 
 [![CI Status](https://badgen.net/github/checks/zeit/now?label=CI)](https://github.com/zeit/now/actions?workflow=CI)
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
 
 ## Usage
 
-Get started by [Importing a Git Project](https://zeit.co/import) and use `git push` to deploy. Alternatively, you can [install Now CLI](https://zeit.co/download).
+Get started by [Importing a Git Project](https://vercel.com/import) and use `git push` to deploy. Alternatively, you can [install Now CLI](https://vercel.com/download).
 
 ## Documentation
 
-For details on how to use ZEIT Now, check out our [documentation](https://zeit.co/docs).
+For details on how to use ZEIT Now, check out our [documentation](https://vercel.com/docs).
 
 ## Caught a Bug?
 

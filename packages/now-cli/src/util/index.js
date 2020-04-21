@@ -223,7 +223,7 @@ export default class Now extends EventEmitter {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
         log(
           `Please upgrade your plan here: ${chalk.cyan(
-            'https://zeit.co/account/plan'
+            'https://vercel.com/account/plan'
           )}`
         );
       }

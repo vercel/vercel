@@ -4,7 +4,7 @@
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
-  "homepage": "https://zeit.co",
+  "homepage": "https://vercel.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now.git",

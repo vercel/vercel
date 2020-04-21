@@ -8,7 +8,7 @@ This directory is a brief example of a [UmiJS](https://umijs.org/) app that can 
 
 Deploy your own UmiJS project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/umijs)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/umijs)
 
 _Live Example: https://umijs.now-examples.now.sh_
 
@@ -22,7 +22,7 @@ $ yarn create umi app-name
 
 ### Deploying From Your Terminal
 
-You can deploy your new UmiJS project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can deploy your new UmiJS project with a single command from your terminal using [Now CLI](https://vercel.com/download):
 
 ```shell
 $ now

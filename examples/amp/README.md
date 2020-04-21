@@ -6,13 +6,13 @@ This directory is a brief example of an [AMP](https://amp.dev/) site that can be
 
 Deploy your own AMP project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/amp)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/amp)
 
 _Live Example: https://amp.now-examples.now.sh_
 
 ### How We Created This Example
 
-To get started deploying AMP with ZEIT Now, you can use the [Now CLI](https://zeit.co/download) to initialize the project:
+To get started deploying AMP with ZEIT Now, you can use the [Now CLI](https://vercel.com/download) to initialize the project:
 
 ```shell
 $ now init amp

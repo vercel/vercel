@@ -87,7 +87,7 @@ function fetchTokenWithRetry(url, retries = 3) {
 }
 
 function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.zeit.co/www/user`;
+  const url = `https://api.vercel.com/www/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
   return retry(
@@ -141,7 +141,7 @@ const execute = (args, options) =>
   });
 
 const apiFetch = (url, { headers, ...options } = {}) => {
-  return fetch(`https://api.zeit.co${url}`, {
+  return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       ...(headers || {}),
@@ -381,7 +381,7 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `> Error! Please sign up: https://zeit.co/signup`;
+  const goal = `> Error! Please sign up: https://vercel.com/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
@@ -2416,7 +2416,7 @@ test('deploy with a custom API URL', async t => {
       '--name',
       session,
       '--api',
-      'https://zeit.co/api',
+      'https://vercel.com/api',
       ...defaultArgs,
     ],
     {

@@ -6,7 +6,7 @@ This directory is a brief example of a [Nuxt.js](https://nuxtjs.org) app that ca
 
 Deploy your own Nuxt.js project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/nuxtjs)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/nuxtjs)
 
 _Live Example: https://nuxtjs.now-examples.now.sh_
 
@@ -22,7 +22,7 @@ $ npx create-nuxt-app my-app
 
 ### Deploying From Your Terminal
 
-You can deploy your new Nuxt.js project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can deploy your new Nuxt.js project with a single command from your terminal using [Now CLI](https://vercel.com/download):
 
 ```shell
 $ now

@@ -36,7 +36,7 @@ Navigate to [localhost:5000](http://localhost:5000). You should see your app run
 
 ## Deploying to the web
 
-### With [now](https://zeit.co/now)
+### With [now](https://vercel.com/now)
 
 Install `now` if you haven't already:
 
@@ -50,7 +50,7 @@ Then, from within your project folder:
 now
 ```
 
-As an alternative, use the [Now desktop client](https://zeit.co/download) and simply drag the unzipped project folder to the taskbar icon.
+As an alternative, use the [Now desktop client](https://vercel.com/download) and simply drag the unzipped project folder to the taskbar icon.
 
 ### With [surge](https://surge.sh/)
 

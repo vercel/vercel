@@ -258,7 +258,7 @@ export const build = async ({
 
   if (await pathExists(dotNextStatic)) {
     console.warn(
-      'WARNING: You should not upload the `.next` directory. See https://zeit.co/docs/v2/deployments/official-builders/next-js-now-next/ for more details.'
+      'WARNING: You should not upload the `.next` directory. See https://vercel.com/docs/v2/deployments/official-builders/next-js-now-next/ for more details.'
     );
   }
 

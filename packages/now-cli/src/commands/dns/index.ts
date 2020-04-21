@@ -64,7 +64,7 @@ const help = () => {
       ${chalk.cyan(
         `$ now dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
       )}
-      ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "zeit.co"'`)}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "vercel.com"'`)}
 
   ${chalk.gray('–')} Import a Zone file
 

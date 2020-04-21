@@ -4,7 +4,7 @@
   "version": "1.1.0",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/ruby",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",
   "files": [
     "dist",
     "now_init.rb"

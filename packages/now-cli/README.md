@@ -1,9 +1,9 @@
-![now](https://assets.zeit.co/image/upload/v1581518533/repositories/now-cli/v4.png)
+![now](https://assets.vercel.com/image/upload/v1581518533/repositories/now-cli/v4.png)
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
 
 ## Usages
 
-To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
+To install the latest version of Now CLI, visit [vercel.com/download](https://vercel.com/download) or run this command:
 
 ```sh
 npm i -g now
@@ -19,4 +19,4 @@ now             # Deploy to the cloud
 
 ## Documentation
 
-For details on how to use Now CLI, check out our [documentation](https://zeit.co/docs).
+For details on how to use Now CLI, check out our [documentation](https://vercel.com/docs).

@@ -202,7 +202,7 @@ async function fetchTokenWithRetry(retries = 5) {
 }
 
 async function fetchApi(url, opts = {}) {
-  const apiHost = process.env.API_HOST || 'api.zeit.co';
+  const apiHost = process.env.API_HOST || 'api.vercel.com';
   const urlWithHost = `https://${apiHost}${url}`;
   const { method = 'GET', body } = opts;
 

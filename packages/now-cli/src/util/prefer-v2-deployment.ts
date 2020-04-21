@@ -19,7 +19,7 @@ export async function hasServerfile(cwd: string) {
   return new Promise(res => exists(join(cwd, 'server.js'), res));
 }
 
-const INFO = `More: ${link('https://zeit.co/docs/version-detection')}`;
+const INFO = `More: ${link('https://vercel.com/docs/version-detection')}`;
 
 export default async function preferV2Deployment({
   client,

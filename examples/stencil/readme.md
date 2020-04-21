@@ -6,7 +6,7 @@ This directory is a brief example of a [Stencil](https://stenciljs.com/) app tha
 
 Deploy your own Stencil project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/stencil)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/stencil)
 
 _Live Example: https://stencil.now-examples.now.sh_
 
@@ -20,7 +20,7 @@ $ npm init stencil
 
 ### Deploying From Your Terminal
 
-You can deploy your new Stencil project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can deploy your new Stencil project with a single command from your terminal using [Now CLI](https://vercel.com/download):
 
 ```shell
 $ now

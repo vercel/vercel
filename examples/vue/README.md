@@ -8,7 +8,7 @@ This directory is a brief example of a [Vue.js](https://vuejs.org/) app that can
 
 Deploy your own Vue.js project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/vue)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/vue)
 
 _Live Example: https://vue.now-examples.now.sh_
 
@@ -22,7 +22,7 @@ $ vue create
 
 ### Deploying From Your Terminal
 
-You can deploy your new Vue.js project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can deploy your new Vue.js project with a single command from your terminal using [Now CLI](https://vercel.com/download):
 
 ```shell
 $ now

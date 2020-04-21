@@ -43,7 +43,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
           code: 'NOW_RUBY_INVALID_VERSION',
           message: 'Found `Gemfile` with invalid Ruby version: `' + line + '`.',
           link:
-            'https://zeit.co/docs/runtimes#official-runtimes/ruby/ruby-version',
+            'https://vercel.com/docs/runtimes#official-runtimes/ruby/ruby-version',
         });
       }
     }

@@ -8,7 +8,7 @@ This directory is a brief example of a [Eleventy](https://www.11ty.io/) site tha
 
 Deploy your own Eleventy project with ZEIT Now.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now/tree/master/examples/eleventy)
+[![Deploy with ZEIT Now](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/eleventy)
 
 _Live Example: https://eleventy.now-examples.now.sh_
 
@@ -22,7 +22,7 @@ $ npx degit 11ty/eleventy-base-blog my-11ty-project
 
 ### Deploying From Your Terminal
 
-You can deploy your new Eleventy project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can deploy your new Eleventy project with a single command from your terminal using [Now CLI](https://vercel.com/download):
 
 ```shell
 $ now
