@@ -394,7 +394,10 @@ function getPackageName(
   if (registryTypes.has(parsed.type)) {
     return parsed.name;
   }
-  const deps = { ...buildersPkg.devDependencies, ...buildersPkg.dependencies };
+  const deps: { [name: string]: string } = {
+    ...buildersPkg.devDependencies,
+    ...buildersPkg.dependencies,
+  };
   for (const [name, dep] of Object.entries(deps)) {
     console.log({ dep, raw: parsed.raw, base: basename(dep) });
     if (dep === parsed.raw || basename(dep) === basename(parsed.raw)) {
