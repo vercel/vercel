@@ -18,7 +18,7 @@ The latest and suggested version is `3`.
 
 ### `analyze`
 
-An **optional** exported function that returns a unique fingerprint used for the purpose of [build de-duplication](https://vercel.com/docs/v2/advanced/concepts/immutability#deduplication-algorithm). If the `analyze` function is not supplied, a random fingerprint is assigned to each build.
+An **optional** exported function that returns a unique fingerprint used for the purpose of [build de-duplication](https://vercel.com/docs/v2/platform/deployments#deduplication). If the `analyze` function is not supplied, a random fingerprint is assigned to each build.
 
 ```js
 export analyze({
@@ -43,7 +43,7 @@ export analyze(options: AnalyzeOptions) {
 
 A **required** exported function that returns a [Serverless Function](#serverless-function).
 
-What's a Serverless Function? Read about [Serverless Function concepts](https://vercel.com/docs/v2/deployments/concepts/lambdas) to learn more.
+What's a Serverless Function? Read about [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction) to learn more.
 
 ```js
 build({
@@ -109,7 +109,7 @@ export prepareCache(options: PrepareCacheOptions) {
 
 ### `shouldServe`
 
-An **optional** exported function that is only used by `now dev` in [Now CLI](https:///download) and indicates whether a [Runtime](https://vercel.com/docs/v2/advanced/runtimes) wants to be responsible for building a certain request path.
+An **optional** exported function that is only used by `now dev` in [Now CLI](https:///download) and indicates whether a [Runtime](https://vercel.com/docs/runtimes) wants to be responsible for building a certain request path.
 
 ```js
 shouldServe({
@@ -153,7 +153,7 @@ Check out our [Node.js Runtime](https://github.com/zeit/now/tree/master/packages
 
 ### Execution Context
 
-A [Serverless Function](https://vercel.com/docs/v2/advanced/concepts/lambdas) is created where the Runtime logic is executed. The lambda is run using the Node.js 8 runtime. A brand new sandbox is created for each deployment, for security reasons. The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
+A [Serverless Function](https://vercel.com/docs/v2/serverless-functions/introduction) is created where the Runtime logic is executed. The lambda is run using the Node.js 8 runtime. A brand new sandbox is created for each deployment, for security reasons. The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
 
 All the APIs you export ([`analyze`](#analyze), [`build`](#build) and [`prepareCache`](#preparecache)) are not guaranteed to be run in the same process, but the filesystem we expose (e.g.: `workPath` and the results of calling [`getWriteableDirectory`](#getWriteableDirectory) ) is retained.
 
@@ -164,8 +164,6 @@ If you need to share state between those steps, use the filesystem.
 When a new build is created, we pre-populate the `workPath` supplied to `analyze` with the results of the `prepareCache` step of the previous build.
 
 The `analyze` step can modify that directory, and it will not be re-created when it's supplied to `build` and `prepareCache`.
-
-To learn how the cache key is computed and invalidated, refer to the [overview](https://vercel.com/docs/v2/advanced/runtimes#technical-details).
 
 ### Accessing Environment and Secrets
 

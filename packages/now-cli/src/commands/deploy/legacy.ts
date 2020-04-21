@@ -1104,7 +1104,7 @@ function handleCreateDeployError(output: Output, error: Error) {
       `Failed to validate ${highlight(
         'now.json'
       )}: ${message}\nDocumentation: ${link(
-        'https://vercel.com/docs/v2/advanced/configuration'
+        'https://vercel.com/docs/configuration'
       )}`
     );
 

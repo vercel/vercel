@@ -766,7 +766,7 @@ function handleCreateDeployError(output, error) {
       return 1;
     }
 
-    const link = 'https://vercel.com/docs/v2/deployments/configuration/';
+    const link = 'https://vercel.com/docs/configuration';
 
     output.error(
       `Failed to validate ${highlight(

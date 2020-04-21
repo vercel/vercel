@@ -56,7 +56,7 @@ For example, the previous `nodejs` example showed a static frontend with a Node.
 
 If you have an existing project you would like to deploy with Vercel, we recommend reading our guide on [migrating to Vercel and zero configuration](https://vercel.com/guides/migrate-to-vercel). By combining the guide with this repository, you will quickly be able to understand how to deploy your application.
 
-If you would like to upgrade a project to take advantage of zero configuration, you may find the [upgrade guide](https://vercel.com/guides/upgrade-to-zero-configuration/) useful. The upgrade guide covers how to remove configuration from existing projects along with how to use the `/api` directory.
+If you would like to upgrade a project to take advantage of zero configuration, you may find the [upgrade guide](https://vercel.com/guides/upgrade-to-zero-configuration) useful. The upgrade guide covers how to remove configuration from existing projects along with how to use the `/api` directory.
 
 ## How to Contribute
 

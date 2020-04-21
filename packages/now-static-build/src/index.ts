@@ -425,9 +425,6 @@ export async function build({
     } else {
       if (meta.isDev) {
         debug(`WARN: A dev script is missing.`);
-        debug(
-          'See the local development docs: https://vercel.com/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
-        );
       }
 
       if (buildCommand) {
