@@ -80,6 +80,6 @@ Now Examples is an open source project released under the [MIT License](https://
 
 ## Get In Touch
 
-If you have any questions that are not covered by raising an issue then please get in touch with us on [GitHub Discussions](https://github.com/zeit/now/discussions). There you will find both members of the community and staff who are happy to help answer questions on anything ZEIT related.
+If you have any questions that are not covered by raising an issue then please get in touch with us on [GitHub Discussions](https://github.com/zeit/now/discussions). There you will find both members of the community and staff who are happy to help answer questions on anything Vercel related.
 
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)

@@ -51,7 +51,7 @@ const Home = () => (
         target="_blank"
         rel="noopener noreferrer"
       >
-        Powered by <img src="/zeit.svg" alt="ZEIT Logo" />
+        Powered by Vercel
       </a>
     </footer>
 
