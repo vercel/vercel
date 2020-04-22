@@ -65,7 +65,7 @@ import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import { installBuilders, updateBuilders } from './builder-cache';
+import { installBuilders } from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -763,6 +763,7 @@ export default class DevServer {
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
+    /*
     this.updateBuildersPromise = updateBuilders(builders, this.output)
       .then(updatedBuilders => {
         this.updateBuildersPromise = null;
@@ -773,6 +774,7 @@ export default class DevServer {
         this.output.error(`Failed to update builders: ${err.message}`);
         this.output.debug(err.stack);
       });
+      */
 
     // Now Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
