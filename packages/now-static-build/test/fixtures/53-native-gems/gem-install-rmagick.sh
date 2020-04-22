@@ -1,8 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+mkdir dist
 GEM="rmagick"
 gem install $GEM -v 3.1.0
-ruby -e "require '$GEM'"
-mkdir dist
-echo "$GEM:RANDOMNESS_PLACEHOLDER" > "dist/$GEM.html"
+ruby -e "require '$GEM'; print Magick::Version" > "dist/$GEM.html"

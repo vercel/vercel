@@ -5,7 +5,7 @@
     { "src": "gem-install-ruby-vips.sh", "use": "@now/static-build" }
   ],
   "probes": [
-    { "path": "/rmagic", "mustContain": "rmagic:RANDOMNESS_PLACEHOLDER" },
-    { "path": "/ruby-vips", "mustContain": "ruby-vips:RANDOMNESS_PLACEHOLDER" }
+    { "path": "/rmagic", "mustContain": "RMagick 3.1.0" },
+    { "path": "/ruby-vips", "mustContain": "2.0.17" }
   ]
 }
