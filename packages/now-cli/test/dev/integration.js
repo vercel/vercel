@@ -240,6 +240,9 @@ function testFixtureStdio(directory, fn) {
         env: { __NOW_SKIP_DEV_COMMAND: 1 },
       });
 
+      dev.stdout.pipe(process.stdout);
+      dev.stderr.pipe(process.stderr);
+
       dev.stdout.on('data', data => {
         stdoutList.push(data);
       });
