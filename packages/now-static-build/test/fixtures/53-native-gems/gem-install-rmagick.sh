@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 GEM="rmagick"
 gem install $GEM -v 3.1.0
