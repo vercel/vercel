@@ -1,10 +1,10 @@
 # Riot Example
 
-This directory is a brief example of a [Riot.js](https://riot.js.org/) app that can be deployed to ZEIT Now with zero configuration.
+This directory is a brief example of a [Riot.js](https://riot.js.org/) app that can be deployed to Vercel with zero configuration.
 
 ## How we created this example
 
-To get started with Riot on Now, you can use the [Now CLI](https://zeit.co/download) to initialize the project:
+To get started with Riot on Vercel, you can use the [Now CLI](https://vercel.com/download) to initialize the project:
 
 ```shell
 $ now init riot

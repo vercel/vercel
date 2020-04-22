@@ -232,7 +232,7 @@ module.exports = (req, res) => {
     },
     'failing-alias': {
       'now.json': JSON.stringify(
-        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'vercel.com' })
       ),
     },
     'local-config-cloud-v1': {

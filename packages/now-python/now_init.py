@@ -30,7 +30,7 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
     base = __now_module.handler if ('handler' in __now_variables) else  __now_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
-        print('See the docs https://zeit.co/docs/runtimes#advanced-usage/advanced-python-usage')
+        print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
         exit(1)
 
     print('using HTTP Handler')
@@ -282,5 +282,5 @@ elif 'app' in __now_variables:
 
 else:
     print('Missing variable `handler` or `app` in file "__NOW_HANDLER_ENTRYPOINT".')
-    print('See the docs https://zeit.co/docs/runtimes#advanced-usage/advanced-python-usage')
+    print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
     exit(1)

@@ -9,4 +9,4 @@ You tried to use `now scale` on a path alias (`now alias -r rules.json`).
 Path aliases are routes to instances. Instances can be scaled independent from each other.
 You can view path aliases by running `now alias ls <id>`.
 
-Documentation for Path Aliases can be found [here](https://zeit.co/docs/features/path-aliases).
+Documentation for Path Aliases can be found [here](https://vercel.com/docs/features/path-aliases).

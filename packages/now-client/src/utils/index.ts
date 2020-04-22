@@ -138,7 +138,7 @@ export const fetch = async (
   const debug = createDebug(debugEnabled);
   let time: number;
 
-  url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
+  url = `${opts.apiUrl || 'https://api.vercel.com'}${url}`;
   delete opts.apiUrl;
 
   if (opts.teamId) {

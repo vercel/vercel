@@ -64,7 +64,7 @@ const help = () => {
       ${chalk.cyan(
         `$ now dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
       )}
-      ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "zeit.co"'`)}
+      ${chalk.cyan(`$ now dns add zeit.rocks '@' CAA '0 issue "example.com"'`)}
 
   ${chalk.gray('–')} Import a Zone file
 
@@ -79,7 +79,7 @@ const COMMAND_CONFIG = {
   add: ['add'],
   import: ['import'],
   ls: ['ls', 'list'],
-  rm: ['rm', 'remove']
+  rm: ['rm', 'remove'],
 };
 
 export default async function main(ctx: NowContext) {

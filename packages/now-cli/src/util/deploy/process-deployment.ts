@@ -34,7 +34,7 @@ function printInspectUrl(
   const deploymentShortId = q.pop();
   const projectName = q.join('-');
 
-  const inspectUrl = `https://zeit.co/${orgSlug}/${projectName}/${deploymentShortId}${
+  const inspectUrl = `https://vercel.com/${orgSlug}/${projectName}/${deploymentShortId}${
     apex !== 'now.sh' ? `/${apex}` : ''
   }`;
 

@@ -8,4 +8,4 @@ In turn, they would have to take the value of the `--token` flag into considerat
 
 #### Possible Ways to Fix It
 
-Specify a value for the `--scope` flag. This needs to be the slug or ID of the team as which you'd like to act (as an example, if your team URL is `https://zeit.co/teams/zeit`, the value can be `zeit`) or the username or ID of a user you'd like to act as.
+Specify a value for the `--scope` flag. This needs to be the slug or ID of the team as which you'd like to act (as an example, if your team URL is `https://vercel.com/teams/zeit`, the value can be `zeit`) or the username or ID of a user you'd like to act as.

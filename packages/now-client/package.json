@@ -3,7 +3,7 @@
   "version": "7.1.0",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
-  "homepage": "https://zeit.co",
+  "homepage": "https://vercel.com",
   "license": "MIT",
   "files": [
     "dist"

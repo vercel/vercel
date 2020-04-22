@@ -352,7 +352,7 @@ export default async function main(
       path,
       sourcePath,
       project
-        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        ? `To change your project settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -766,7 +766,7 @@ function handleCreateDeployError(output, error) {
       return 1;
     }
 
-    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
+    const link = 'https://vercel.com/docs/configuration';
 
     output.error(
       `Failed to validate ${highlight(

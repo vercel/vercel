@@ -40,7 +40,7 @@ const help = () => {
 
       ${chalk.gray(
         '–'
-      )} If your team's url is 'zeit.co/teams/name', 'name' is the slug
+      )} If your team's url is 'vercel.com/teams/name', 'name' is the slug
       ${chalk.gray('–')} If the slug is omitted, you can choose interactively
 
       ${chalk.yellow(

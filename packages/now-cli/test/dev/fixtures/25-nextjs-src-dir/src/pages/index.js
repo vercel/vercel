@@ -20,26 +20,19 @@ function Index() {
       <h2>
         Deployed with{' '}
         <a
-          href="https://zeit.co/docs"
+          href="https://vercel.com/docs"
           target="_blank"
           rel="noreferrer noopener"
         >
-          ZEIT Now
+          Vercel
         </a>
         !
       </h2>
       <p>
-        <a
-          href="https://github.com/zeit/now-examples/blob/master/nextjs-node"
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          This project
-        </a>{' '}
-        is a <a href="https://nextjs.org/">Next.js</a> app with two directories,{' '}
-        <code>/pages</code> for static content and <code>/api</code> which
-        contains a serverless <a href="https://nodejs.org/en/">Node.js</a>{' '}
-        function. See{' '}
+        This project is a <a href="https://nextjs.org/">Next.js</a> app with two
+        directories, <code>/pages</code> for static content and{' '}
+        <code>/api</code> which contains a serverless{' '}
+        <a href="https://nodejs.org/en/">Node.js</a> function. See{' '}
         <a href="/api/date">
           <code>api/date</code> for the Date API with Node.js
         </a>
