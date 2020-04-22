@@ -231,6 +231,13 @@ export async function installBuilders(
   }
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
+  console.log('before', buildersPkgBefore);
+  try {
+    console.log(await readdir(join(builderDir, 'node_modules')));
+  } catch (err) {}
+  try {
+    console.log(await readdir(join(builderDir, 'node_modules/@now')));
+  } catch (err) {}
   const depsBefore = {
     ...buildersPkgBefore.devDependencies,
     ...buildersPkgBefore.dependencies,
@@ -282,9 +289,13 @@ export async function installBuilders(
     ...buildersPkgAfter.devDependencies,
     ...buildersPkgAfter.dependencies,
   };
-  console.log(buildersPkgAfter);
-  console.log(await readdir(join(builderDir, 'node_modules')));
-  console.log(await readdir(join(builderDir, 'node_modules/@now')));
+  console.log('after', buildersPkgAfter);
+  try {
+    console.log(await readdir(join(builderDir, 'node_modules')));
+  } catch (err) {}
+  try {
+    console.log(await readdir(join(builderDir, 'node_modules/@now')));
+  } catch (err) {}
   for (const [name, version] of Object.entries(depsAfter)) {
     if (version !== depsBefore[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);
