@@ -169,7 +169,6 @@ async function testFixture(directory, opts = {}, args = []) {
     {
       reject: false,
       detached: true,
-      shell: true,
       stdio: 'pipe',
       ...opts,
       env: { ...opts.env, __NOW_SKIP_DEV_COMMAND: 1 },
@@ -225,6 +224,7 @@ function testFixtureStdio(directory, fn) {
     const dir = fixture(directory);
 
     await runNpmInstall(dir);
+    console.error('done with npm install');
 
     const stdoutList = [];
     const stderrList = [];
@@ -237,7 +237,6 @@ function testFixtureStdio(directory, fn) {
       let printedOutput = false;
 
       dev = execa(binaryPath, ['dev', dir, '-l', port, '--debug'], {
-        shell: true,
         env: { __NOW_SKIP_DEV_COMMAND: 1 },
       });
 
@@ -786,7 +785,7 @@ test('[now dev] 02-angular-node', async t => {
   }
 });
 
-test.only(
+test(
   '[now dev] 03-aurelia',
   testFixtureStdio('03-aurelia', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`);
