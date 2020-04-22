@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "gem-install-rmagic.sh", "use": "@now/static-build" },
+    { "src": "gem-install-ruby-vips.sh", "use": "@now/static-build" }
+  ],
+  "probes": [
+    { "path": "/rmagic", "mustContain": "rmagic:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/ruby-vips", "mustContain": "ruby-vips:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
