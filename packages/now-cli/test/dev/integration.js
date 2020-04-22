@@ -116,7 +116,8 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
+    console.log('running npm %s', fixturePath);
+    return execa('npm', ['install'], { cwd: fixturePath, stdio: 'inherit' });
   }
 }
 
@@ -219,6 +220,7 @@ async function testFixture(directory, opts = {}, args = []) {
 
 function testFixtureStdio(directory, fn) {
   return async t => {
+    console.error({ directory });
     let dev;
     const dir = fixture(directory);
 
@@ -234,7 +236,7 @@ function testFixtureStdio(directory, fn) {
       let stderr = '';
       let printedOutput = false;
 
-      dev = execa(binaryPath, ['dev', dir, '-l', port], {
+      dev = execa(binaryPath, ['dev', dir, '-l', port, '--debug'], {
         shell: true,
         env: { __NOW_SKIP_DEV_COMMAND: 1 },
       });
@@ -784,7 +786,7 @@ test('[now dev] 02-angular-node', async t => {
   }
 });
 
-test(
+test.only(
   '[now dev] 03-aurelia',
   testFixtureStdio('03-aurelia', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`);
