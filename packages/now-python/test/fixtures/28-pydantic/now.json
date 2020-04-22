@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "builds": [{ "src": "api/*.py", "use": "@now/python" }],
+  "builds": [{ "src": "api/hello.py", "use": "@now/python" }],
   "routes": [{ "src": "/", "dest": "/api/hello.py" }],
   "probes": [
     {
       "path": "/",
       "method": "POST",
       "body": {
-        "name": "Nguyễn Hồng Quân"
+        "name": "RANDOMNESS_PLACEHOLDER"
       },
-      "status": 200
+      "mustContain": "{\"name\":\"RANDOMNESS_PLACEHOLDER\"}"
     }
   ]
 }
