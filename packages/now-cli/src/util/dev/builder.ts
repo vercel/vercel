@@ -24,7 +24,7 @@ import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
 import DevServer from './server';
-import { builderModulePathPromise, getBuilder } from './builder-cache';
+import { getBuilder } from './builder-cache';
 import {
   NowConfig,
   BuildMatch,
@@ -55,7 +55,8 @@ async function createBuildProcess(
   output: Output
 ): Promise<ChildProcess> {
   const { execPath } = process;
-  const modulePath = await builderModulePathPromise;
+  //const modulePath = await builderModulePathPromise;
+  const modulePath = join(__dirname, 'builder-worker.js');
 
   // Ensure that `node` is in the builder's `PATH`
   let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;

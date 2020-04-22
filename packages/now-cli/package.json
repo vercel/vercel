@@ -61,6 +61,15 @@
   "engines": {
     "node": ">= 10"
   },
+  "dependencies": {
+    "@now/build-utils": "2.2.2-canary.1",
+    "@now/go": "1.0.7",
+    "@now/next": "2.5.5-canary.0",
+    "@now/node": "1.5.2-canary.2",
+    "@now/python": "1.1.6",
+    "@now/ruby": "1.1.0",
+    "@now/static-build": "0.16.1-canary.0"
+  },
   "devDependencies": {
     "@sentry/node": "5.5.0",
     "@sindresorhus/slugify": "0.11.0",
