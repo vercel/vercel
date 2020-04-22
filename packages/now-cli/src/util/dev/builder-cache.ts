@@ -11,6 +11,7 @@ import { basename, join, resolve } from 'path';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
+  readdir,
   createReadStream,
   mkdirp,
   readFile,
@@ -281,6 +282,9 @@ export async function installBuilders(
     ...buildersPkgAfter.devDependencies,
     ...buildersPkgAfter.dependencies,
   };
+  console.log(buildersPkgAfter);
+  console.log(await readdir(join(builderDir, 'node_modules')));
+  console.log(await readdir(join(builderDir, 'node_modules/@now')));
   for (const [name, version] of Object.entries(depsAfter)) {
     if (version !== depsBefore[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);
