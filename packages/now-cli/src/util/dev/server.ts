@@ -65,7 +65,11 @@ import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import { installBuilders, updateBuilders } from './builder-cache';
+import {
+  installBuilders,
+  updateBuilders,
+  builderDirPromise,
+} from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -871,7 +875,7 @@ export default class DevServer {
       log(`Stopping ${chalk.bold('`now dev`')} server`);
     }
 
-    const ops: Promise<void>[] = [];
+    const ops: Promise<any>[] = [];
 
     for (const match of this.buildMatches.values()) {
       ops.push(shutdownBuilder(match, this.output));
@@ -909,6 +913,9 @@ export default class DevServer {
     for (const pid of this.devServerPids) {
       ops.push(this.killBuilderDevServer(pid));
     }
+
+    // Ensure that the `builders.tar.gz` file has finished extracting
+    ops.push(builderDirPromise);
 
     try {
       await Promise.all(ops);
