@@ -228,7 +228,7 @@ export type StartDevServerResult = StartDevServerSuccess | null;
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
 // eslint-disable-next-line @typescript-eslint/no-namespace
-export namespace PackageJson {
+namespace PackageJson {
   /**
    * An author or contributor
    */
