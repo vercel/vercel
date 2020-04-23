@@ -11,7 +11,6 @@ import { basename, join, resolve } from 'path';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
-  readdir,
   createReadStream,
   mkdirp,
   readFile,
@@ -101,14 +100,12 @@ export async function prepareBuilderDir() {
   const { dependencies = {} } = JSON.parse(existingPackageJson);
 
   if (!hasBundledBuilders(dependencies)) {
-    console.log(`Extracting builder tarball: ${bundledTarballPath}`);
     const extractor = extract(builderDir);
     await pipe(
       createReadStream(bundledTarballPath),
       createGunzip(),
       extractor
     );
-    console.log(`Done extracting builder tarball`);
   }
 
   return builderDir;
@@ -233,13 +230,6 @@ export async function installBuilders(
   }
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
-  console.log('before', buildersPkgBefore);
-  try {
-    console.log(await readdir(join(builderDir, 'node_modules')));
-  } catch (err) {}
-  try {
-    console.log(await readdir(join(builderDir, 'node_modules/@now')));
-  } catch (err) {}
   const depsBefore = {
     ...buildersPkgBefore.devDependencies,
     ...buildersPkgBefore.dependencies,
@@ -291,13 +281,6 @@ export async function installBuilders(
     ...buildersPkgAfter.devDependencies,
     ...buildersPkgAfter.dependencies,
   };
-  console.log('after', buildersPkgAfter);
-  try {
-    console.log(await readdir(join(builderDir, 'node_modules')));
-  } catch (err) {}
-  try {
-    console.log(await readdir(join(builderDir, 'node_modules/@now')));
-  } catch (err) {}
   for (const [name, version] of Object.entries(depsAfter)) {
     if (version !== depsBefore[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);

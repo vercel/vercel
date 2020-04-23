@@ -116,8 +116,11 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    console.log('running npm %s', fixturePath);
-    return execa('npm', ['install'], { cwd: fixturePath, stdio: 'inherit' });
+    await execa('npm', ['install'], {
+      cwd: fixturePath,
+      shell: true,
+      stdio: 'inherit',
+    });
   }
 }
 
@@ -169,6 +172,7 @@ async function testFixture(directory, opts = {}, args = []) {
     {
       reject: false,
       detached: true,
+      shell: true,
       stdio: 'pipe',
       ...opts,
       env: { ...opts.env, __NOW_SKIP_DEV_COMMAND: 1 },
@@ -219,12 +223,10 @@ async function testFixture(directory, opts = {}, args = []) {
 
 function testFixtureStdio(directory, fn) {
   return async t => {
-    console.error({ directory });
     let dev;
     const dir = fixture(directory);
 
     await runNpmInstall(dir);
-    console.error('done with npm install');
 
     const stdoutList = [];
     const stderrList = [];
