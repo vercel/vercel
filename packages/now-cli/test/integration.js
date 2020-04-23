@@ -2662,8 +2662,21 @@ test('use `rootDirectory` from project when deploying', async t => {
   });
 });
 
-test('whoami with unknown `NOW_ORG_ID` should error', async t => {
-  const output = await execute(['whoami'], {
+test('now deploy with unknown `NOW_ORG_ID` should error', async t => {
+  const output = await execute(['deploy'], {
+    env: { NOW_ORG_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes('Organization not found'),
+    true,
+    formatOutput(output)
+  );
+});
+
+test('now env with unknown `NOW_ORG_ID` should error', async t => {
+  const output = await execute(['env'], {
     env: { NOW_ORG_ID: 'asdf' },
   });
 
