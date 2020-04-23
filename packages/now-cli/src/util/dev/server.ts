@@ -65,7 +65,7 @@ import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import { installBuilders, updateBuilders } from './builder-cache';
+import { installBuilders } from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
