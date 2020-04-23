@@ -2662,30 +2662,22 @@ test('use `rootDirectory` from project when deploying', async t => {
   });
 });
 
-test('now deploy with unknown `NOW_ORG_ID` should error', async t => {
+test('now deploy with unknown `NOW_ORG_ID` or `NOW_PROJECT_ID` should error', async t => {
   const output = await execute(['deploy'], {
-    env: { NOW_ORG_ID: 'asdf' },
+    env: { NOW_ORG_ID: 'asdf', NOW_PROJECT_ID: 'asdf' },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.is(
-    output.stderr.includes('Organization not found'),
-    true,
-    formatOutput(output)
-  );
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('now env with unknown `NOW_ORG_ID` should error', async t => {
+test('now env with unknown `NOW_ORG_ID` or `NOW_PROJECT_ID` should error', async t => {
   const output = await execute(['env'], {
-    env: { NOW_ORG_ID: 'asdf' },
+    env: { NOW_ORG_ID: 'asdf', NOW_PROJECT_ID: 'asdf' },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.is(
-    output.stderr.includes('Organization not found'),
-    true,
-    formatOutput(output)
-  );
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
 test('whoami with `NOW_ORG_ID`', async t => {
