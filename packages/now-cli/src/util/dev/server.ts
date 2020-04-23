@@ -1060,6 +1060,8 @@ export default class DevServer {
       'x-now-trace': 'dev1',
       'x-now-id': nowRequestId,
       'x-now-cache': 'MISS',
+      'x-vercel-id': nowRequestId,
+      'x-vercel-cache': 'MISS',
     };
     for (const [name, value] of Object.entries(allHeaders)) {
       res.setHeader(name, value);
