@@ -108,7 +108,7 @@
     "ava": "2.2.0",
     "bytes": "3.0.0",
     "chalk": "2.4.2",
-    "chokidar": "2.1.6",
+    "chokidar": "3.3.1",
     "clipboardy": "2.1.0",
     "codecov": "3.6.5",
     "cpy": "7.2.0",
