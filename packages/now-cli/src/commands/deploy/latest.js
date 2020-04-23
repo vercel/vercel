@@ -101,9 +101,7 @@ const printDeploymentStatus = async (
 
   if (readyState !== 'READY') {
     output.error(
-      `${chalk.red(
-        'Error!'
-      )} Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+      `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
     );
     return 1;
   }

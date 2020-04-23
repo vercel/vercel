@@ -115,7 +115,7 @@ export default async function main(ctx: NowContext) {
     output.error(
       `Your codebase isn’t linked to a project on Vercel. Run ${cmd(
         'now'
-      )} to link it.\n`
+      )} to link it.`
     );
     return 1;
   } else {

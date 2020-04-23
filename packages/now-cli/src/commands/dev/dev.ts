@@ -47,7 +47,7 @@ export default async function dev(
     output.error(
       `Your codebase isn’t linked to a project on Vercel. Run ${cmd(
         'now'
-      )} to link it.\n`
+      )} to link it.`
     );
     return 1;
   }
