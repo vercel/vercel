@@ -6,8 +6,11 @@ import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import { getLinkedProject } from '../../util/projects/link';
+import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
+import cmd from '../../util/output/cmd';
 
 import add from './add';
 import pull from './pull';
@@ -95,20 +98,42 @@ export default async function main(ctx: NowContext) {
     return 2;
   }
 
-  const output = createOutput({ debug: argv['--debug'] });
+  const debug = argv['--debug'];
+  const output = createOutput({ debug });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
-  switch (subcommand) {
-    case 'ls':
-      return ls(ctx, argv, args, output);
-    case 'add':
-      return add(ctx, argv, args, output);
-    case 'rm':
-      return rm(ctx, argv, args, output);
-    case 'pull':
-      return pull(ctx, argv, args, output);
-    default:
-      output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      help();
-      return 2;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
+  const { currentTeam } = config;
+  const { apiUrl } = ctx;
+  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const link = await getLinkedProject(output, client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${cmd(
+        'now'
+      )} to link it.`
+    );
+    return 1;
+  } else {
+    const { project, org } = link;
+    client.currentTeam = org.type === 'team' ? org.id : undefined;
+    switch (subcommand) {
+      case 'ls':
+        return ls(client, project, argv, args, output);
+      case 'add':
+        return add(client, project, argv, args, output);
+      case 'rm':
+        return rm(client, project, argv, args, output);
+      case 'pull':
+        return pull(client, project, argv, args, output);
+      default:
+        output.error(getInvalidSubcommand(COMMAND_CONFIG));
+        help();
+        return 2;
+    }
   }
 }
