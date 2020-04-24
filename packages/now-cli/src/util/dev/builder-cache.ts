@@ -24,6 +24,7 @@ const registryTypes = new Set(['version', 'tag', 'range']);
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
     runInProcess: true,
+    requirePath: '@now/static',
     builder: Object.freeze(staticBuilder),
     package: Object.freeze({ name: '@now/static', version: '' }),
   },
@@ -207,7 +208,6 @@ export async function installBuilders(
           ],
           {
             cwd: builderDir,
-            stdio: 'inherit',
           }
         ),
       { retries: 2 }
@@ -272,7 +272,6 @@ export async function updateBuilders(
           ['install', '--save-exact', '--no-package-lock', ...packagesToUpdate],
           {
             cwd: builderDir,
-            stdio: 'inherit',
           }
         ),
       { retries: 2 }
@@ -310,30 +309,33 @@ export async function getBuilder(
     if (!builderDir) {
       builderDir = await builderDirPromise;
     }
-    let dest: string;
+    let requirePath: string;
     const parsed = npa(builderPkg);
 
     // First check if it's a bundled Runtime in Now CLI's `node_modules`
     const bundledBuilder = isBundledBuilder(parsed, distTag, nowCliPkg);
     if (bundledBuilder && parsed.name) {
-      dest = parsed.name;
+      requirePath = parsed.name;
     } else {
       const buildersPkg = await readJSON(join(builderDir, 'package.json'));
       const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
-      dest = join(builderDir, 'node_modules', pkgName);
+      requirePath = join(builderDir, 'node_modules', pkgName);
     }
 
     try {
-      output.debug(`Requiring runtime: "${dest}"`);
-      const mod = require(dest);
-      const pkg = require(join(dest, 'package.json'));
+      output.debug(`Requiring runtime: "${requirePath}"`);
+      const mod = require(requirePath);
+      const pkg = require(join(requirePath, 'package.json'));
       builderWithPkg = {
+        requirePath,
         builder: Object.freeze(mod),
         package: Object.freeze(pkg),
       };
     } catch (err) {
       if (err.code === 'MODULE_NOT_FOUND' && !isRetry) {
-        output.debug(`Attempted to require ${dest}, but it is not installed`);
+        output.debug(
+          `Attempted to require ${requirePath}, but it is not installed`
+        );
         const pkgSet = new Set([builderPkg]);
         await installBuilders(pkgSet, output, builderDir);
 
