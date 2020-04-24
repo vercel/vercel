@@ -48,7 +48,6 @@ import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getLinkedOrg } from './util/projects/link';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -540,22 +539,6 @@ const main = async argv_ => {
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
   const targetCommand = commands.get(subcommand);
-
-  if (
-    !['login', 'logout'].includes(targetCommand) &&
-    (process.env.NOW_ORG_ID || !scope)
-  ) {
-    const client = new Client({ apiUrl, token });
-    const link = await getLinkedOrg(client, output);
-
-    if (link.status === 'error') {
-      return link.exitCode;
-    }
-
-    if (link.status === 'linked') {
-      scope = link.org.slug;
-    }
-  }
 
   if (
     typeof scope === 'string' &&
