@@ -108,7 +108,7 @@ export function filterPackage(
 
   // If it's a builder that is part of Now CLI's `dependencies` then
   // the builder is already installed into `node_modules`
-  if (isBundledBuilder(parsed, distTag, nowCliPkg)) {
+  if (isBundledBuilder(parsed, nowCliPkg)) {
     return false;
   }
 
@@ -255,7 +255,7 @@ export async function updateBuilders(
 
     // If it's a builder that is part of Now CLI's `dependencies` then
     // don't update it
-    if (isBundledBuilder(npa(p), distTag, nowCliPkg)) {
+    if (isBundledBuilder(npa(p), nowCliPkg)) {
       return false;
     }
 
@@ -313,7 +313,7 @@ export async function getBuilder(
     const parsed = npa(builderPkg);
 
     // First check if it's a bundled Runtime in Now CLI's `node_modules`
-    const bundledBuilder = isBundledBuilder(parsed, distTag, nowCliPkg);
+    const bundledBuilder = isBundledBuilder(parsed, nowCliPkg);
     if (bundledBuilder && parsed.name) {
       requirePath = parsed.name;
     } else {
@@ -355,7 +355,6 @@ export async function getBuilder(
 
 export function isBundledBuilder(
   parsed: npa.Result,
-  distTag: string,
   pkg: PackageJson
 ): boolean {
   if (!parsed.name || !pkg.dependencies) {
@@ -364,12 +363,14 @@ export function isBundledBuilder(
 
   const bundledVersion = pkg.dependencies[parsed.name];
   if (bundledVersion) {
-    if (distTag !== 'canary' && !bundledVersion.includes('canary')) {
-      return true;
-    }
-
-    if (distTag === 'canary' && bundledVersion.includes('canary')) {
-      return true;
+    if (parsed.type === 'tag') {
+      if (parsed.fetchSpec === 'canary') {
+        return bundledVersion.includes('canary');
+      } else if (parsed.fetchSpec === 'latest') {
+        return !bundledVersion.includes('canary');
+      }
+    } else if (parsed.type === 'version') {
+      return parsed.fetchSpec === bundledVersion;
     }
   }
 
