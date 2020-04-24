@@ -7,7 +7,7 @@ import { basename, join, resolve } from 'path';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
-import pkg from '../pkg';
+import nowCliPkg from '../pkg';
 
 import { NoBuilderCacheError } from '../errors-ts';
 import { Output } from '../output';
@@ -29,7 +29,7 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
   },
 };
 
-const distTag = pkg.version ? getDistTag(pkg.version) : 'canary';
+const distTag = nowCliPkg.version ? getDistTag(nowCliPkg.version) : 'canary';
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
@@ -98,7 +98,8 @@ function parseVersionSafe(rawSpec: string) {
 export function filterPackage(
   builderSpec: string,
   distTag: string,
-  buildersPkg: PackageJson
+  buildersPkg: PackageJson,
+  nowCliPkg: PackageJson = {}
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
@@ -106,7 +107,7 @@ export function filterPackage(
 
   // If it's a builder that is part of Now CLI's `dependencies` then
   // the builder is already installed into `node_modules`
-  if (isBundledBuilder(parsed, distTag, pkg)) {
+  if (isBundledBuilder(parsed, distTag, nowCliPkg)) {
     return false;
   }
 
@@ -206,6 +207,7 @@ export async function installBuilders(
           ],
           {
             cwd: builderDir,
+            stdio: 'inherit',
           }
         ),
       { retries: 2 }
@@ -253,7 +255,7 @@ export async function updateBuilders(
 
     // If it's a builder that is part of Now CLI's `dependencies` then
     // don't update it
-    if (isBundledBuilder(npa(p), distTag, pkg)) {
+    if (isBundledBuilder(npa(p), distTag, nowCliPkg)) {
       return false;
     }
 
@@ -270,6 +272,7 @@ export async function updateBuilders(
           ['install', '--save-exact', '--no-package-lock', ...packagesToUpdate],
           {
             cwd: builderDir,
+            stdio: 'inherit',
           }
         ),
       { retries: 2 }
@@ -311,7 +314,7 @@ export async function getBuilder(
     const parsed = npa(builderPkg);
 
     // First check if it's a bundled Runtime in Now CLI's `node_modules`
-    const bundledBuilder = isBundledBuilder(parsed, distTag, pkg);
+    const bundledBuilder = isBundledBuilder(parsed, distTag, nowCliPkg);
     if (bundledBuilder && parsed.name) {
       dest = parsed.name;
     } else {
