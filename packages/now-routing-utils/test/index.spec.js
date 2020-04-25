@@ -455,6 +455,79 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('fails if redirects permanent is not a boolean', () => {
+    assertError(
+      [
+        {
+          source: '/foo',
+          destination: '/bar',
+          permanent: 301,
+        },
+      ],
+      [
+        {
+          dataPath: '[0].permanent',
+          keyword: 'type',
+          message: 'should be boolean',
+          params: {
+            type: 'boolean',
+          },
+          schemaPath: '#/items/properties/permanent/type',
+        },
+      ],
+      redirectsSchema
+    );
+  });
+
+  test('fails if redirects statusCode is not a number', () => {
+    assertError(
+      [
+        {
+          source: '/foo',
+          destination: '/bar',
+          statusCode: '301',
+        },
+      ],
+      [
+        {
+          dataPath: '[0].statusCode',
+          keyword: 'type',
+          message: 'should be integer',
+          params: {
+            type: 'integer',
+          },
+          schemaPath: '#/items/properties/statusCode/type',
+        },
+      ],
+      redirectsSchema
+    );
+  });
+
+  test('fails if redirects defines both permanent and statusCode', () => {
+    assertError(
+      [
+        {
+          source: '/foo',
+          destination: '/bar',
+          permanent: true,
+          statusCode: 301,
+        },
+      ],
+      [
+        {
+          dataPath: '[0].statusCode',
+          keyword: 'type',
+          message: 'should be integer',
+          params: {
+            type: 'integer',
+          },
+          schemaPath: '#/items/properties/statusCode/type',
+        },
+      ],
+      redirectsSchema
+    );
+  });
+
   test('fails if routes after `handle: hit` use `dest`', () => {
     const input = [
       {
@@ -687,6 +760,7 @@ describe('getTransformedRoutes', () => {
       redirects: [
         { source: '/version1', destination: '/api1.py' },
         { source: '/version2', destination: '/api2.py', statusCode: 302 },
+        { source: '/version3', destination: '/api3.py', permanent: true },
       ],
       headers: [
         {

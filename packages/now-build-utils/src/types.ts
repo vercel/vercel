@@ -351,24 +351,3 @@ export interface BuilderFunctions {
     excludeFiles?: string;
   };
 }
-
-export interface NowRewrite {
-  source: string;
-  destination: string;
-}
-
-export interface NowRedirect {
-  source: string;
-  destination: string;
-  statusCode?: number;
-}
-
-export interface NowHeader {
-  source: string;
-  headers: NowHeaderKeyValue[];
-}
-
-export interface NowHeaderKeyValue {
-  key: string;
-  value: string;
-}
