@@ -1,4 +1,4 @@
-![now](https://assets.zeit.co/image/upload/v1581518533/repositories/now-cli/v4.png)
+![now](https://assets.zeit.co/video/upload/v1587435547/front/blog/zeit-is-now-vercel/vercel-drawing-light.mp4)
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
 
 ## Usages
