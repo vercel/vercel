@@ -19,6 +19,7 @@ import {
   runPackageJsonScript,
   execCommand,
   getNodeBinPath,
+  NowBuildError,
 } from '@now/build-utils';
 import { Route, Handler } from '@now/routing-utils';
 import {
@@ -212,9 +213,11 @@ export const build = async ({
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   if (!nextVersion) {
-    throw new Error(
-      'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"'
-    );
+    throw new NowBuildError({
+      code: 'NOW_NEXT_NO_VERSION',
+      message:
+        'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"',
+    });
   }
 
   if (meta.isDev) {
@@ -428,14 +431,18 @@ export const build = async ({
           nextBasePath = routesManifest.basePath;
 
           if (!nextBasePath.startsWith('/')) {
-            throw new Error(
-              'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-            );
+            throw new NowBuildError({
+              code: 'NOW_NEXT_BASEPATH_STARTING_SLASH',
+              message:
+                'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+            });
           }
           if (nextBasePath.endsWith('/')) {
-            throw new Error(
-              'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-            );
+            throw new NowBuildError({
+              code: 'NOW_NEXT_BASEPATH_TRAILING_SLASH',
+              message:
+                'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+            });
           }
 
           nextBasePathRoute.push({
@@ -448,10 +455,12 @@ export const build = async ({
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
-        throw new Error(
-          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-        );
+        throw new NowBuildError({
+          code: 'NOW_NEXT_VERSION_OUTDATED',
+          message:
+            'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+        });
       }
     }
   }
@@ -464,15 +473,18 @@ export const build = async ({
 
     const resultingExport = await getExportStatus(entryPath);
     if (!resultingExport) {
-      throw new Error(
-        'Exporting Next.js app failed. Please check your build logs and contact us if this continues.'
-      );
+      throw new NowBuildError({
+        code: 'NOW_NEXT_EXPORT_FAILED',
+        message:
+          'Exporting Next.js app failed. Please check your build logs and contact us if this continues.',
+      });
     }
 
     if (resultingExport.success !== true) {
-      throw new Error(
-        'Export of Next.js app failed. Please check your build logs.'
-      );
+      throw new NowBuildError({
+        code: 'NOW_NEXT_EXPORT_FAILED',
+        message: 'Export of Next.js app failed. Please check your build logs.',
+      });
     }
 
     const outDirectory = resultingExport.outDirectory;
@@ -615,7 +627,7 @@ export const build = async ({
       console.error(
         'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
       );
-      throw new Error('Missing BUILD_ID');
+      throw new NowBuildError({ code: 'NOW_NEXT_NO_BUILD_ID', message: 'Missing BUILD_ID' });
     }
     const dotNextRootFiles = await glob(`${outputDirectory}/*`, entryPath);
     const dotNextServerRootFiles = await glob(
@@ -759,9 +771,11 @@ export const build = async ({
         console.info();
       }
 
-      throw new Error(
-        'No serverless pages were built. https://err.sh/zeit/now/now-next-no-serverless-pages-built'
-      );
+      throw new NowBuildError({
+        code: 'NOW_NEXT_NO_SERVERLESS_PAGES',
+        message: 'No serverless pages were built',
+        link: 'https://err.sh/zeit/now/now-next-no-serverless-pages-built',
+      });
     }
 
     // Assume tracing to be safe, bail if we know we don't need it.
@@ -968,9 +982,10 @@ export const build = async ({
       { isBlocking, isFallback }: { isBlocking: boolean; isFallback: boolean }
     ) => {
       if (isBlocking && isFallback) {
-        throw new Error(
-          'invariant: isBlocking and isFallback cannot both be true'
-        );
+        throw new NowBuildError({
+          code: 'NOW_NEXT_ISBLOCKING_ISFALLBACK',
+          message: 'invariant: isBlocking and isFallback cannot both be true',
+        });
       }
 
       // Get the route file as it'd be mounted in the builder output
@@ -1010,7 +1025,10 @@ export const build = async ({
         // @ts-ignore
         if (initialRevalidate === false) {
           // Lazy routes cannot be "snapshotted" in time.
-          throw new Error('invariant isLazy: initialRevalidate !== false');
+          throw new NowBuildError({
+            code: 'NOW_NEXT_ISLAZY_INITIALREVALIDATE',
+            message: 'invariant isLazy: initialRevalidate !== false',
+          });
         }
         srcRoute = null;
         dataRoute = pr.dataRoute;
@@ -1031,12 +1049,18 @@ export const build = async ({
 
       const lambda = lambdas[outputSrcPathPage];
       if (lambda == null) {
-        throw new Error(`Unable to find lambda for route: ${routeFileNoExt}`);
+        throw new NowBuildError({
+          code: 'NOW_NEXT_MISSING_LAMBDA',
+          message: `Unable to find lambda for route: ${routeFileNoExt}`,
+        });
       }
 
       if (initialRevalidate === false) {
         if (htmlFsRef == null || jsonFsRef == null) {
-          throw new Error('invariant: htmlFsRef != null && jsonFsRef != null');
+          throw new NowBuildError({
+            code: 'NOW_NEXT_HTMLFSREF_JSONFSREF',
+            message: 'invariant: htmlFsRef != null && jsonFsRef != null',
+          });
         }
       }
 
@@ -1150,9 +1174,10 @@ export const build = async ({
       routeKey === '/' ? '/index' : routeKey
     );
     if (typeof lambdas[routeFileNoExt] === undefined) {
-      throw new Error(
-        `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`
-      );
+      throw new NowBuildError({
+        code: 'NOW_NEXT__UNKNOWN_ROUTE_KEY',
+        message: `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`,
+      });
     }
     delete lambdas[routeFileNoExt];
   });
@@ -1287,7 +1312,11 @@ export const prepareCache = async ({
 
   const pkg = await readPackageJson(entryPath);
   const nextVersion = getNextVersion(pkg);
-  if (!nextVersion) throw new Error('Could not parse Next.js version');
+  if (!nextVersion)
+    throw new NowBuildError({
+      code: 'NOW_NEXT_VERSION_PARSE_FAILED',
+      message: 'Could not parse Next.js version',
+    });
   const isLegacy = isLegacyNext(nextVersion);
 
   if (isLegacy) {

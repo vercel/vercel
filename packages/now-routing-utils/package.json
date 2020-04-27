@@ -1,6 +1,6 @@
 {
   "name": "@now/routing-utils",
-  "version": "1.8.2-canary.2",
+  "version": "1.8.2-canary.3",
   "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
