@@ -51,10 +51,18 @@ export function convertRedirects(
     const { src, segments } = sourceToRegex(r.source);
     try {
       const loc = replaceSegments(segments, r.destination, true);
+      let status: number;
+      if (typeof r.permanent === 'boolean') {
+        status = r.permanent ? 308 : 307;
+      } else if (r.statusCode) {
+        status = r.statusCode;
+      } else {
+        status = defaultStatus;
+      }
       const route: Route = {
         src,
         headers: { Location: loc },
-        status: r.statusCode || defaultStatus,
+        status,
       };
       return route;
     } catch (e) {
