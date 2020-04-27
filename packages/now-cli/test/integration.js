@@ -209,7 +209,7 @@ test.after.always(async () => {
 });
 
 test('login', async t => {
-  t.timeout(ms('10s'));
+  t.timeout(ms('30s'));
 
   // Delete the current token
   const logoutOutput = await execute(['logout']);
@@ -2231,7 +2231,7 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
 });
 
 test('change user', async t => {
-  t.timeout(ms('10s'));
+  t.timeout(ms('30s'));
 
   const { stdout: prevUser } = await execute(['whoami']);
 
