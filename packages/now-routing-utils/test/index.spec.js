@@ -503,31 +503,6 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('fails if redirects defines both permanent and statusCode', () => {
-    assertError(
-      [
-        {
-          source: '/foo',
-          destination: '/bar',
-          permanent: true,
-          statusCode: 301,
-        },
-      ],
-      [
-        {
-          dataPath: '[0].statusCode',
-          keyword: 'type',
-          message: 'should be integer',
-          params: {
-            type: 'integer',
-          },
-          schemaPath: '#/items/properties/statusCode/type',
-        },
-      ],
-      redirectsSchema
-    );
-  });
-
   test('fails if routes after `handle: hit` use `dest`', () => {
     const input = [
       {
@@ -663,6 +638,22 @@ describe('getTransformedRoutes', () => {
   test('should error when redirects is invalid pattern', () => {
     const nowConfig = {
       redirects: [{ source: '/:?', destination: '/file.html' }],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_redirects');
+  });
+
+  test('should error when redirects defines both permanent and statusCode', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '^/both$',
+          destination: '/api/both',
+          permanent: false,
+          statusCode: 302,
+        },
+      ],
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
