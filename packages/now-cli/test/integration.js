@@ -530,7 +530,7 @@ test('deploy with metadata containing "=" in the value', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const url = stdout.split('https://'.lenght);
+  const url = stdout.split('https://'.length);
 
   const res = await fetch(
     `https://api.vercel.com/v12/now/deployments/get?url=${url}`,
