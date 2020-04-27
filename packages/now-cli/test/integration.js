@@ -518,7 +518,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowEnvLsIsEmpty();
 });
 
-test('deploy with metadata containing "=" in the value', async t => {
+test.only('deploy with metadata containing "=" in the value', async t => {
   const target = fixture('redirects-v2');
 
   const { exitCode, stderr, stdout } = await execa(
@@ -529,10 +529,9 @@ test('deploy with metadata containing "=" in the value', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const url = stdout.substring('https://'.length);
-
+  const { host } = new URL(stdout);
   const res = await fetch(
-    `https://api.vercel.com/v12/now/deployments/get?url=${url}`,
+    `https://api.vercel.com/v12/now/deployments/get?url=${host}`,
     { headers: { authorization: `Bearer ${token}` } }
   );
   const deployment = await res.json();
