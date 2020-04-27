@@ -773,8 +773,8 @@ export const build = async ({
 
       throw new NowBuildError({
         code: '',
-        message:
-          'No serverless pages were built. https://err.sh/zeit/now/now-next-no-serverless-pages-built',
+        message: 'No serverless pages were built',
+        link: 'https://err.sh/zeit/now/now-next-no-serverless-pages-built',
       });
     }
 
