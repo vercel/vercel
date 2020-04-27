@@ -519,6 +519,26 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowEnvLsIsEmpty();
 });
 
+test('deploy with metadata with = as the value', async t => {
+  const target = fixture('redirects-v2');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [target, ...defaultArgs, '--confirm', '--meta', 'someKey=='],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const i = stdout.lastIndexOf('https://');
+  const url = stdout.slice(i);
+  const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
+  const location = res.headers.get('location');
+  t.is(location, 'https://example.com/foo/bar');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
