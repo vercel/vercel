@@ -340,7 +340,7 @@ export async function getRoutesManifest(
 
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new Error(
-      `A routes-manifest.json couldn't be found. This could be due to a failure during the build`
+      `A "routes-manifest.json" couldn't be found. Is the correct output directory configured? This setting does not need to be changed in most cases. More info: https://err.sh/zeit/now/now-next-routes-manifest`
     );
   }
 
