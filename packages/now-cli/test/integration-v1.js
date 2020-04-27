@@ -184,6 +184,8 @@ test.before(async () => {
 });
 
 test('login', async t => {
+  t.timeout(ms('1m'));
+
   // Delete the current token
   const logoutOutput = await execute(['logout']);
   t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
