@@ -24,7 +24,7 @@ import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
 import DevServer from './server';
-import { builderModulePathPromise, getBuilder } from './builder-cache';
+import { getBuilder } from './builder-cache';
 import {
   NowConfig,
   BuildMatch,
@@ -54,11 +54,10 @@ async function createBuildProcess(
   workPath: string,
   output: Output
 ): Promise<ChildProcess> {
-  const { execPath } = process;
-  const modulePath = await builderModulePathPromise;
+  const builderWorkerPath = join(__dirname, 'builder-worker.js');
 
   // Ensure that `node` is in the builder's `PATH`
-  let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
+  let PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
 
   const env: Env = {
     ...process.env,
@@ -67,11 +66,9 @@ async function createBuildProcess(
     NOW_REGION: 'dev1',
   };
 
-  const buildProcess = fork(modulePath, [], {
+  const buildProcess = fork(builderWorkerPath, [], {
     cwd: workPath,
     env,
-    execPath,
-    execArgv: [],
   });
   match.buildProcess = buildProcess;
 
@@ -105,7 +102,7 @@ export async function executeBuild(
   filesRemoved?: string[]
 ): Promise<void> {
   const {
-    builderWithPkg: { runInProcess, builder, package: pkg },
+    builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
   const { debug, envConfigs, cwd: workPath } = devServer;
@@ -157,7 +154,7 @@ export async function executeBuild(
   if (buildProcess) {
     buildProcess.send({
       type: 'build',
-      builderName: pkg.name,
+      requirePath,
       buildOptions,
     });
 

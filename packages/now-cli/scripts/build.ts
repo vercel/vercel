@@ -1,60 +1,9 @@
 import cpy from 'cpy';
-import tar from 'tar-fs';
 import execa from 'execa';
 import { join } from 'path';
-import pipe from 'promisepipe';
-import { createGzip } from 'zlib';
-import {
-  createWriteStream,
-  mkdirp,
-  remove,
-  writeJSON,
-  writeFile,
-} from 'fs-extra';
-
-import { getDistTag } from '../src/util/get-dist-tag';
-import pkg from '../package.json';
-import { getBundledBuilders } from '../src/util/dev/get-bundled-builders';
+import { remove, writeFile } from 'fs-extra';
 
 const dirRoot = join(__dirname, '..');
-
-async function createBuildersTarball() {
-  const distTag = getDistTag(pkg.version);
-  const builders = Array.from(getBundledBuilders()).map(b => `${b}@${distTag}`);
-  console.log(`Creating builders tarball with: ${builders.join(', ')}`);
-
-  const buildersDir = join(dirRoot, '.builders');
-  const assetsDir = join(dirRoot, 'assets');
-  await mkdirp(buildersDir);
-  await mkdirp(assetsDir);
-
-  const buildersTarballPath = join(assetsDir, 'builders.tar.gz');
-
-  try {
-    const buildersPkg = join(buildersDir, 'package.json');
-    await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
-  } catch (err) {
-    if (err.code !== 'EEXIST') {
-      throw err;
-    }
-  }
-
-  await execa(
-    'npm',
-    ['install', '--save-exact', '--no-package-lock', ...builders],
-    {
-      cwd: buildersDir,
-      stdio: 'inherit',
-    }
-  );
-
-  const packer = tar.pack(buildersDir);
-  await pipe(
-    packer,
-    createGzip(),
-    createWriteStream(buildersTarballPath)
-  );
-}
 
 async function createConstants() {
   console.log('Creating constants.ts');
@@ -83,10 +32,6 @@ async function main() {
     // Read the secrets from GitHub Actions and generate a file.
     // During local development, these secrets will be empty.
     await createConstants();
-
-    // Create a tarball from all the `@now` scoped builders which will be bundled
-    // with Now CLI
-    await createBuildersTarball();
 
     // `now dev` uses chokidar to watch the filesystem, but opts-out of the
     // `fsevents` feature using `useFsEvents: false`, so delete the module here so
