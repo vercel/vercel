@@ -1478,7 +1478,7 @@ export default class DevServer {
         // `starDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
-        console.error(`Error starting "${builderPkg.name}" dev server:`, err);
+        debug(`Error starting "${builderPkg.name}" dev server: ${err}`);
         await this.sendError(
           req,
           res,
