@@ -7,6 +7,7 @@ import {
   GetRoutesProps,
   NowError,
   NowErrorNested,
+  NowRedirect,
 } from './types';
 import {
   convertCleanUrls,
@@ -203,6 +204,19 @@ function checkPatternSyntax({
   return null;
 }
 
+function checkRedirect(r: NowRedirect) {
+  if (
+    typeof r.permanent !== 'undefined' &&
+    typeof r.statusCode !== 'undefined'
+  ) {
+    return {
+      message: `Redirect "${r.source}" cannot define both "permanent" and "statusCode".`,
+      src: r.source,
+    };
+  }
+  return null;
+}
+
 function createNowError(
   code: string,
   msg: string,
@@ -316,6 +330,13 @@ export function getTransformedRoutes({
           'Redirect `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
           errorsPattern
         ),
+      };
+    }
+    const errorProps = redirects.map(r => checkRedirect(r)).filter(notEmpty);
+    if (errorProps.length > 0) {
+      return {
+        routes,
+        error: createNowError(code, 'Invalid redirects', errorProps),
       };
     }
     const normalized = normalizeRoutes(convertRedirects(redirects));
