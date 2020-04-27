@@ -124,7 +124,6 @@ export default class DevServer {
   private apiExtensions: Set<string>;
   private server: http.Server;
   private stopping: boolean;
-  private serverUrlPrinted: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private watcher?: FSWatcher;
@@ -156,7 +155,6 @@ export default class DevServer {
     this.apiExtensions = new Set();
     this.server = http.createServer(this.devServerHandler);
     this.server.timeout = 0; // Disable timeout
-    this.serverUrlPrinted = false;
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
@@ -855,7 +853,6 @@ export default class DevServer {
     await devCommandPromise;
 
     this.output.ready(`Available at ${link(this.address)}`);
-    this.serverUrlPrinted = true;
   }
 
   /**
@@ -863,16 +860,10 @@ export default class DevServer {
    */
   async stop(exitCode?: number): Promise<void> {
     const { devProcess } = this;
-    const { debug, log } = this.output;
+    const { debug } = this.output;
     if (this.stopping) return;
 
     this.stopping = true;
-
-    if (this.serverUrlPrinted) {
-      // This makes it look cleaner
-      process.stdout.write('\n');
-      log(`Stopping ${chalk.bold('`now dev`')} server`);
-    }
 
     const ops: Promise<any>[] = [];
 
