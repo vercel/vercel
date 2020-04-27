@@ -37,6 +37,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -71,6 +72,11 @@ const help = () => {
       ${chalk.cyan('$ now dns import <DOMAIN> <FILE>')}
       ${chalk.cyan(`$ now dns import zeit.rocks ./zonefile.txt`)}
 
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+      ${chalk.cyan(`$ now dns ls zeit.rocks --next 1584722256178`)}
 
 `);
 };
@@ -86,7 +92,7 @@ export default async function main(ctx: NowContext) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {});
+    argv = getArgs(ctx.argv.slice(2), { '--next': Number, '-N': '--next' });
   } catch (error) {
     handleError(error);
     return 1;
