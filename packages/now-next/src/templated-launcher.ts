@@ -6,6 +6,7 @@ if (!process.env.NODE_ENV) {
 import { Server } from 'http';
 import { Bridge } from './now__bridge';
 // @ts-ignore
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const page = require(__LAUNCHER_PAGE_PATH__);
 
 // page.render is for React rendering
