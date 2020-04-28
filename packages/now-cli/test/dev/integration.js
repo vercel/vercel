@@ -119,7 +119,10 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(join(fixturePath, 'package.json'))) {
-    await execa('npm', ['install'])
+    await execa('yarn', ['install'], {
+      cwd: fixturePath,
+      shell: true,
+    });
   }
 }
 
