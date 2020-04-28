@@ -39,7 +39,7 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new project
 
-  ${chalk.cyan('$ now projects add my-project')}
+    ${chalk.cyan('$ now projects add my-project')}
 
   ${chalk.gray('–')} Paginate projects, where ${chalk.dim(
     '`1584722256178`'
