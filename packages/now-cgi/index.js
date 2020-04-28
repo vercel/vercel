@@ -3,7 +3,6 @@ const { mkdirp, copyFile } = require('fs-extra');
 
 const {
   glob,
-  debug,
   download,
   shouldServe,
   createLambda,
@@ -14,7 +13,7 @@ exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 
 exports.version = 3;
 
-exports.build = async ({ workPath, files, entrypoint, meta, config }) => {
+exports.build = async ({ workPath, files, entrypoint, meta }) => {
   const outDir = await getWritableDirectory();
 
   await download(files, workPath, meta);

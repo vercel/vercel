@@ -1,5 +1,4 @@
 const {
-  getLatestNodeVersion,
   glob,
   getWriteableDirectory,
 } = require('@now/build-utils');

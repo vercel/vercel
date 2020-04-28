@@ -8,7 +8,7 @@ test('[dev-builder] filter install "latest", cached canary', t => {
       '@now/build-utils': '0.0.1-canary.0',
     },
   };
-  const result = filterPackage('@now/build-utils', 'canary', buildersPkg);
+  const result = filterPackage('@now/build-utils', 'canary', buildersPkg, {});
   t.is(result, true);
 });
 
@@ -21,7 +21,8 @@ test('[dev-builder] filter install "canary", cached stable', t => {
   const result = filterPackage(
     '@now/build-utils@canary',
     'latest',
-    buildersPkg
+    buildersPkg,
+    {}
   );
   t.is(result, true);
 });
@@ -32,7 +33,7 @@ test('[dev-builder] filter install "latest", cached stable', t => {
       '@now/build-utils': '0.0.1',
     },
   };
-  const result = filterPackage('@now/build-utils', 'latest', buildersPkg);
+  const result = filterPackage('@now/build-utils', 'latest', buildersPkg, {});
   t.is(result, false);
 });
 
@@ -45,7 +46,8 @@ test('[dev-builder] filter install "canary", cached canary', t => {
   const result = filterPackage(
     '@now/build-utils@canary',
     'canary',
-    buildersPkg
+    buildersPkg,
+    {}
   );
   t.is(result, false);
 });
@@ -56,7 +58,12 @@ test('[dev-builder] filter install URL, cached stable', t => {
       '@now/build-utils': '0.0.1',
     },
   };
-  const result = filterPackage('https://tarball.now.sh', 'latest', buildersPkg);
+  const result = filterPackage(
+    'https://tarball.now.sh',
+    'latest',
+    buildersPkg,
+    {}
+  );
   t.is(result, true);
 });
 
@@ -66,7 +73,12 @@ test('[dev-builder] filter install URL, cached canary', t => {
       '@now/build-utils': '0.0.1-canary.0',
     },
   };
-  const result = filterPackage('https://tarball.now.sh', 'canary', buildersPkg);
+  const result = filterPackage(
+    'https://tarball.now.sh',
+    'canary',
+    buildersPkg,
+    {}
+  );
   t.is(result, true);
 });
 
@@ -76,7 +88,7 @@ test('[dev-builder] filter install "latest", cached URL - stable', t => {
       '@now/build-utils': 'https://tarball.now.sh',
     },
   };
-  const result = filterPackage('@now/build-utils', 'latest', buildersPkg);
+  const result = filterPackage('@now/build-utils', 'latest', buildersPkg, {});
   t.is(result, true);
 });
 
@@ -86,7 +98,7 @@ test('[dev-builder] filter install "latest", cached URL - canary', t => {
       '@now/build-utils': 'https://tarball.now.sh',
     },
   };
-  const result = filterPackage('@now/build-utils', 'canary', buildersPkg);
+  const result = filterPackage('@now/build-utils', 'canary', buildersPkg, {});
   t.is(result, true);
 });
 
@@ -96,7 +108,12 @@ test('[dev-builder] filter install not bundled version, cached same version', t 
       'not-bundled-package': '0.0.1',
     },
   };
-  const result = filterPackage('not-bundled-package@0.0.1', '_', buildersPkg);
+  const result = filterPackage(
+    'not-bundled-package@0.0.1',
+    '_',
+    buildersPkg,
+    {}
+  );
   t.is(result, false);
 });
 
@@ -106,7 +123,12 @@ test('[dev-builder] filter install not bundled version, cached different version
       'not-bundled-package': '0.0.9',
     },
   };
-  const result = filterPackage('not-bundled-package@0.0.1', '_', buildersPkg);
+  const result = filterPackage(
+    'not-bundled-package@0.0.1',
+    '_',
+    buildersPkg,
+    {}
+  );
   t.is(result, true);
 });
 
@@ -116,7 +138,7 @@ test('[dev-builder] filter install not bundled stable, cached version', t => {
       'not-bundled-package': '0.0.1',
     },
   };
-  const result = filterPackage('not-bundled-package', '_', buildersPkg);
+  const result = filterPackage('not-bundled-package', '_', buildersPkg, {});
   t.is(result, true);
 });
 
@@ -126,7 +148,12 @@ test('[dev-builder] filter install not bundled tagged, cached tagged', t => {
       'not-bundled-package': '16.9.0-alpha.0',
     },
   };
-  const result = filterPackage('not-bundled-package@alpha', '_', buildersPkg);
+  const result = filterPackage(
+    'not-bundled-package@alpha',
+    '_',
+    buildersPkg,
+    {}
+  );
   t.is(result, true);
 });
 

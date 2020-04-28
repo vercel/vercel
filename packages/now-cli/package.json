@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "18.0.1-canary.11",
+  "version": "18.0.1-canary.12",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -19,8 +19,7 @@
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "build": "ts-node ./scripts/build.ts",
-    "build-dev": "ts-node ./scripts/build.ts --dev",
-    "test-lint": "eslint . --ext .ts,.js --ignore-path ../../.eslintignore"
+    "build-dev": "ts-node ./scripts/build.ts --dev"
   },
   "nyc": {
     "include": [
