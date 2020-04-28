@@ -530,6 +530,7 @@ test('deploy with metadata containing "=" in the value', async t => {
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  console.log(stdout);
 
   const { host } = new URL(stdout);
   const res = await fetch(
@@ -537,6 +538,7 @@ test('deploy with metadata containing "=" in the value', async t => {
     { headers: { authorization: `Bearer ${token}` } }
   );
   const deployment = await res.json();
+  console.log(deployment);
   t.is(deployment.meta.someKey, '=');
 });
 
