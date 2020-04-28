@@ -521,11 +521,11 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
 });
 
 test('deploy with metadata containing "=" in the value', async t => {
-  const target = fixture('redirects-v2');
+  const target = fixture('static-v2-meta');
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [target, ...defaultArgs, '--confirm', '--force', '--meta', 'someKey=='],
+    [target, ...defaultArgs, '--confirm', '--meta', 'someKey=='],
     { reject: false }
   );
 
