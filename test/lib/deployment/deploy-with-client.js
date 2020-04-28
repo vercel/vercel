@@ -10,12 +10,11 @@ async function deployWithNowClient(clientOpts, requestBody) {
   let deploymentUrl;
   for await (const event of createDeployment(clientOpts, requestBody)) {
     if (['tip', 'notice', 'warning'].includes(event.type)) {
-      console.log({ event });
+      indications.push(event);
     }
 
     if (event.type === 'created') {
       deploymentUrl = event.payload.url;
-      console.log({ deploymentUrl });
     }
 
     if (event.type === 'ready') {

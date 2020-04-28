@@ -224,8 +224,37 @@ async function testFixture(directory, opts = {}, args = []) {
   };
 }
 
-function testFixtureStdio(directory, fn, testLiveDeployment = true) {
+function testFixtureStdio(directory, fn) {
   return async t => {
+    // Deploy fixture
+    const token = await fetchTokenWithRetry();
+    const clientOpts = { token, path: fixtureAbsolute(directory) };
+    const deploymentOpts = { public: true };
+    let event = await deployWithNowClient(clientOpts, deploymentOpts);
+
+    const { code, projectSettings } = event.payload;
+    if (code === 'missing_project_settings' && projectSettings) {
+      deploymentOpts.projectSettings = projectSettings;
+      event = await deployWithNowClient(clientOpts, deploymentOpts);
+    }
+
+    if (event.type === 'error') {
+      throw new Error(event.payload.message);
+    }
+
+    const { url: deploymentUrl, projectId, ownerId: orgId } = event.payload;
+    if (!deploymentUrl) {
+      throw new Error('Expected deploymentUrl');
+    } else {
+      console.log({ deploymentUrl });
+    }
+
+    // Link project
+    const configFile = join(clientOpts.path, '.now', 'project.json');
+    await fs.ensureFile(configFile);
+    await fs.writeFile(configFile, JSON.stringify({ projectId, orgId }));
+
+    // Start dev
     let dev;
     const dir = fixture(directory);
 
@@ -241,9 +270,7 @@ function testFixtureStdio(directory, fn, testLiveDeployment = true) {
       let stderr = '';
       let printedOutput = false;
 
-      dev = execa(binaryPath, ['dev', dir, '-l', port, '--debug'], {
-        env: { __NOW_SKIP_DEV_COMMAND: 1 },
-      });
+      dev = execa(binaryPath, ['dev', dir, '-l', port, '-t', token, '--debug']);
 
       dev.stdout.pipe(process.stdout);
       dev.stderr.pipe(process.stderr);
@@ -295,32 +322,8 @@ function testFixtureStdio(directory, fn, testLiveDeployment = true) {
 
       await readyResolver;
 
-      let deploymentUrl;
-      if (testLiveDeployment) {
-        const token = await fetchTokenWithRetry();
-        const path = fixtureAbsolute(directory);
-        const clientOpts = { token, path };
-        let event = await deployWithNowClient(clientOpts);
-
-        const { code, projectSettings } = event.payload;
-        if (code === 'missing_project_settings' && projectSettings) {
-          event = await deployWithNowClient(clientOpts, { projectSettings });
-        }
-
-        if (event.type === 'error') {
-          throw new Error(event.payload.message);
-        }
-
-        deploymentUrl = event.deploymentUrl;
-        if (!deploymentUrl) {
-          throw new Error('Expected deploymentUrl');
-        }
-      }
-
       const helperTestPath = async (...args) => {
-        if (deploymentUrl) {
-          await testPath(t, `https://${deploymentUrl}`, ...args);
-        }
+        await testPath(t, `https://${deploymentUrl}`, ...args);
         await testPath(t, `http://localhost:${port}`, ...args);
       };
       await fn(t, port, helperTestPath);
