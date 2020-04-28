@@ -1,13 +1,14 @@
 const { isAbsolute } = require('path');
 const { createDeployment } = require('now-client');
 
-async function deployWithNowClient({ token, path }) {
+async function deployWithNowClient(clientOpts, requestBody) {
+  const { path } = clientOpts;
   if (!isAbsolute(path)) {
     throw new Error('Expected absolute path but found: ' + path);
   }
   const indications = [];
   let deploymentUrl;
-  for await (const event of createDeployment({ token, path })) {
+  for await (const event of createDeployment(clientOpts, requestBody)) {
     if (['tip', 'notice', 'warning'].includes(event.type)) {
       console.log({ event });
     }
@@ -28,10 +29,7 @@ async function deployWithNowClient({ token, path }) {
     }
 
     if (event.type === 'error') {
-      const error = new Error(event.payload.message || 'Deployment failed');
-      error.code = event.payload.code;
-      error.status = event.payload.status;
-      throw error;
+      return event;
     }
   }
 }

@@ -298,12 +298,17 @@ function testFixtureStdio(directory, fn, testLiveDeployment = true) {
       let deploymentUrl;
       if (testLiveDeployment) {
         const token = await fetchTokenWithRetry();
-        const event = await deployWithNowClient({
-          token,
-          path: fixtureAbsolute(directory),
-        });
-        if (event instanceof Error) {
-          throw event;
+        const path = fixtureAbsolute(directory);
+        const clientOpts = { token, path };
+        let event = await deployWithNowClient(clientOpts);
+
+        const { code, projectSettings } = event.payload;
+        if (code === 'missing_project_settings' && projectSettings) {
+          event = await deployWithNowClient(clientOpts, { projectSettings });
+        }
+
+        if (event.type === 'error') {
+          throw new Error(event.payload.message);
         }
 
         deploymentUrl = event.deploymentUrl;
@@ -313,10 +318,10 @@ function testFixtureStdio(directory, fn, testLiveDeployment = true) {
       }
 
       const helperTestPath = async (...args) => {
-        await testPath(t, `http://localhost:${port}`, ...args);
         if (deploymentUrl) {
           await testPath(t, `https://${deploymentUrl}`, ...args);
         }
+        await testPath(t, `http://localhost:${port}`, ...args);
       };
       await fn(t, port, helperTestPath);
     } finally {
