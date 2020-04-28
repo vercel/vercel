@@ -284,6 +284,9 @@ CMD ["node", "index.js"]`,
         files: ['.gitignore', 'folder', 'index.js', 'test.html'],
       }),
     },
+    'static-v2-meta': {
+      'index.html': 'Static V2',
+    },
     'redirects-v2': {
       'now.json': JSON.stringify({
         version: 2,
