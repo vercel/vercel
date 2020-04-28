@@ -249,8 +249,7 @@ test('deploy using only now.json with `redirects` defined', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const i = stdout.lastIndexOf('https://');
-  const url = stdout.slice(i);
+  const url = stdout;
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   t.is(location, 'https://example.com/foo/bar');
@@ -519,6 +518,26 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
   await nowEnvLsIsEmpty();
+});
+
+test.only('deploy with metadata containing "=" in the value', async t => {
+  const target = fixture('redirects-v2');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [target, ...defaultArgs, '--confirm', '--meta', 'someKey=='],
+    { reject: false }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const { host } = new URL(stdout);
+  const res = await fetch(
+    `https://api.vercel.com/v12/now/deployments/get?url=${host}`,
+    { headers: { authorization: `Bearer ${token}` } }
+  );
+  const deployment = await res.json();
+  t.is(deployment.meta.someKey, '=');
 });
 
 test('print the deploy help message', async t => {
