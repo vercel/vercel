@@ -1,3 +1,8 @@
+import { register } from 'ts-node';
+register({
+  transpileOnly: true,
+});
+
 import http from 'http';
 import path from 'path';
 import { createServerWithHelpers } from './helpers';

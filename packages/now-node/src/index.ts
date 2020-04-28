@@ -3,7 +3,6 @@ import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
 import {
   basename,
   dirname,
-  extname,
   join,
   relative,
   resolve,
@@ -413,12 +412,6 @@ export async function startDevServer({
   entrypoint,
   workPath,
 }: StartDevServerOptions): Promise<StartDevServerResult> {
-  if (extname(entrypoint) === '.ts') {
-    // TypeScript isn't supported at the moment, so return `null`
-    // for `now dev` to go through the regular `build()` pipeline.
-    return null;
-  }
-
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
     cwd: workPath,
