@@ -520,7 +520,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowEnvLsIsEmpty();
 });
 
-test.only('deploy with metadata containing "=" in the value', async t => {
+test('deploy with metadata containing "=" in the value', async t => {
   const target = fixture('redirects-v2');
 
   const { exitCode, stderr, stdout } = await execa(
