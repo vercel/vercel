@@ -15,8 +15,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --verbose --runInBand",
-    "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
+    "test-integration-once": "jest --verbose --runInBand"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",
