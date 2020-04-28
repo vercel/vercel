@@ -525,12 +525,11 @@ test('deploy with metadata containing "=" in the value', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [target, ...defaultArgs, '--confirm', '--meta', 'someKey=='],
+    [target, ...defaultArgs, '--confirm', '--force', '--meta', 'someKey=='],
     { reject: false }
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  console.log(stdout);
 
   const { host } = new URL(stdout);
   const res = await fetch(
@@ -538,7 +537,6 @@ test('deploy with metadata containing "=" in the value', async t => {
     { headers: { authorization: `Bearer ${token}` } }
   );
   const deployment = await res.json();
-  console.log(deployment);
   t.is(deployment.meta.someKey, '=');
 });
 
