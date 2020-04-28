@@ -145,8 +145,10 @@ async function getPackedBuilderPath(builderDirName) {
 
 async function testPath(t, origin, status, path, expectedText, headers = {}) {
   const opts = { redirect: 'manual-dont-change' };
-  const res = await fetch(`${origin}${path}`, opts);
-  const msg = `Testing path ${path}`;
+  const url = `${origin}${path}`;
+  const res = await fetch(url, opts);
+  const msg = `Testing path ${url}`;
+  console.log(msg);
   t.is(res.status, status, msg);
   if (expectedText) {
     const actualText = await res.text();
