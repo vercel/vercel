@@ -1,5 +1,6 @@
 import ms from 'ms';
 import fs from 'fs-extra';
+import test from 'ava';
 import path from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
