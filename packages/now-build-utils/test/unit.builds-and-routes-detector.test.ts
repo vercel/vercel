@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { Source, Route, Handler } from '@now/routing-utils';
 import { detectBuilders } from '../src';
 import {
