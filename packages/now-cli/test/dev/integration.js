@@ -1,7 +1,7 @@
 import ms from 'ms';
 import fs from 'fs-extra';
 import test from 'ava';
-import path from 'path';
+import { join, resolve, delimiter } from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
@@ -9,16 +9,19 @@ import retry from 'async-retry';
 import { satisfies } from 'semver';
 import { getDistTag } from '../../src/util/get-dist-tag';
 import { version as cliVersion } from '../../package.json';
+import { deployWithNowClient } from '../../../../test/lib/deployment/deploy-with-client';
+import { fetchTokenWithRetry } from '../../../../test/lib/deployment/now-deploy';
 
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
-const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
-const fixture = name => path.join('test', 'dev', 'fixtures', name);
+const binaryPath = resolve(__dirname, `../../scripts/start.js`);
+const fixture = name => join('test', 'dev', 'fixtures', name);
+const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
 
 // For the Hugo executable
-process.env.PATH = `${path.resolve(fixture('08-hugo'))}${path.delimiter}${
+process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
   process.env.PATH
 }`;
 
@@ -115,7 +118,7 @@ async function exec(directory, args = []) {
 }
 
 async function runNpmInstall(fixturePath) {
-  if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+  if (await fs.exists(join(fixturePath, 'package.json'))) {
     await execa('npm', ['install'], {
       cwd: fixturePath,
       shell: true,
@@ -125,7 +128,7 @@ async function runNpmInstall(fixturePath) {
 }
 
 async function getPackedBuilderPath(builderDirName) {
-  const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
+  const packagePath = join(__dirname, '..', '..', '..', builderDirName);
   const output = await execa('npm', ['pack'], {
     cwd: packagePath,
     shell: true,
@@ -137,12 +140,12 @@ async function getPackedBuilderPath(builderDirName) {
     );
   }
 
-  return path.join(packagePath, output.stdout.trim());
+  return join(packagePath, output.stdout.trim());
 }
 
-async function testPath(t, port, status, path, expectedText, headers = {}) {
+async function testPath(t, origin, status, path, expectedText, headers = {}) {
   const opts = { redirect: 'manual-dont-change' };
-  const res = await fetch(`http://localhost:${port}${path}`, opts);
+  const res = await fetch(`${origin}${path}`, opts);
   const msg = `Testing path ${path}`;
   t.is(res.status, status, msg);
   if (expectedText) {
@@ -221,7 +224,7 @@ async function testFixture(directory, opts = {}, args = []) {
   };
 }
 
-function testFixtureStdio(directory, fn) {
+function testFixtureStdio(directory, fn, testLiveDeployment = true) {
   return async t => {
     let dev;
     const dir = fixture(directory);
@@ -291,7 +294,30 @@ function testFixtureStdio(directory, fn) {
       });
 
       await readyResolver;
-      const helperTestPath = (...args) => testPath(t, port, ...args);
+
+      let deploymentUrl;
+      if (testLiveDeployment) {
+        const token = await fetchTokenWithRetry();
+        const event = await deployWithNowClient({
+          token,
+          path: fixtureAbsolute(directory),
+        });
+        if (event instanceof Error) {
+          throw event;
+        }
+
+        deploymentUrl = event.deploymentUrl;
+        if (!deploymentUrl) {
+          throw new Error('Expected deploymentUrl');
+        }
+      }
+
+      const helperTestPath = async (...args) => {
+        await testPath(t, `http://localhost:${port}`, ...args);
+        if (deploymentUrl) {
+          await testPath(t, `https://${deploymentUrl}`, ...args);
+        }
+      };
       await fn(t, port, helperTestPath);
     } finally {
       dev.kill('SIGTERM');
@@ -1036,7 +1062,7 @@ test(
   '[now dev] temporary directory listing',
   testFixtureStdio('temporary-directory-listing', async (t, port) => {
     const directory = fixture('temporary-directory-listing');
-    await fs.unlink(path.join(directory, 'index.txt')).catch(() => null);
+    await fs.unlink(join(directory, 'index.txt')).catch(() => null);
 
     await sleep(ms('20s'));
 
@@ -1045,7 +1071,7 @@ test(
     const body = await firstResponse.text();
     t.is(firstResponse.status, 404, `Received instead: ${body}`);
 
-    await fs.writeFile(path.join(directory, 'index.txt'), 'hello');
+    await fs.writeFile(join(directory, 'index.txt'), 'hello');
 
     for (let i = 0; i < 20; i++) {
       const response = await fetch(`http://localhost:${port}`);
@@ -1064,13 +1090,11 @@ test(
 test('[now dev] add a `package.json` to trigger `@now/static-build`', async t => {
   const directory = fixture('trigger-static-build');
 
-  await fs.unlink(path.join(directory, 'package.json')).catch(() => null);
+  await fs.unlink(join(directory, 'package.json')).catch(() => null);
 
-  await fs
-    .unlink(path.join(directory, 'public', 'index.txt'))
-    .catch(() => null);
+  await fs.unlink(join(directory, 'public', 'index.txt')).catch(() => null);
 
-  await fs.rmdir(path.join(directory, 'public')).catch(() => null);
+  await fs.rmdir(join(directory, 'public')).catch(() => null);
 
   const tester = testFixtureStdio('trigger-static-build', async (t, port) => {
     {
@@ -1086,10 +1110,7 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
       scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
     };
 
-    await fs.writeFile(
-      path.join(directory, 'package.json'),
-      JSON.stringify(pkg)
-    );
+    await fs.writeFile(join(directory, 'package.json'), JSON.stringify(pkg));
 
     // Wait until file events have been processed
     await sleep(ms('2s'));
@@ -1188,7 +1209,7 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
   const builder = await getPackedBuilderPath('now-static-build');
 
   await fs.writeFile(
-    path.join(directory, 'now.json'),
+    join(directory, 'now.json'),
     JSON.stringify({
       builds: [
         {
@@ -1225,10 +1246,7 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     const text1 = await resp1.text();
     t.is(text1.trim(), 'hello first', stderr.join(''));
 
-    await fs.writeFile(
-      path.join(directory, 'public', 'index.html'),
-      'hello second'
-    );
+    await fs.writeFile(join(directory, 'public', 'index.html'), 'hello second');
 
     await sleep(ms('3s'));
 
