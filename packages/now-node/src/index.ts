@@ -1,12 +1,6 @@
 import { fork, spawn } from 'child_process';
-import {
-  readFileSync,
-  writeFile,
-  lstatSync,
-  readlinkSync,
-  statSync,
-  unlink,
-} from 'fs';
+import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
+import { writeJSON, remove } from 'fs-extra';
 import {
   basename,
   dirname,
@@ -60,6 +54,19 @@ interface DownloadOptions {
   config: Config;
   meta: Meta;
 }
+
+interface PortInfo {
+  port: number;
+}
+
+function isPortInfo(v: any): v is PortInfo {
+  return v && typeof v.port === 'number';
+}
+
+const tscPath = resolve(
+  dirname(require.resolve(eval('"typescript"'))),
+  '../bin/tsc'
+);
 
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
@@ -408,19 +415,6 @@ export async function prepareCache({
   return cache;
 }
 
-interface PortInfo {
-  port: number;
-}
-
-function isPortInfo(v: any): v is PortInfo {
-  return v && typeof v.port === 'number';
-}
-
-const tscPath = resolve(
-  dirname(require.resolve(eval('"typescript"'))),
-  '../bin/tsc'
-);
-
 export async function startDevServer({
   entrypoint,
   workPath,
@@ -440,62 +434,16 @@ export async function startDevServer({
   const result = await Promise.race([onMessage, onExit]);
   onExit.cancel();
   onMessage.cancel();
+
   if (isPortInfo(result)) {
     // "message" event
 
     const ext = extname(entrypoint);
     if (ext === '.ts' || ext === '.tsx') {
-      // In order to type-check a single file, a temporary tsconfig
-      // file needs to be created that inherits from the base one :(
-      // See: https://stackoverflow.com/a/44748041/376773
-      const tempConfigName = `.tsconfig-${Math.random()
-        .toString(32)
-        .substring(2)}.json`;
-      const tsconfig = {
-        extends: './tsconfig.json', // TODO: find nested tsconfig relative to entrypoint
-        include: [entrypoint],
-      };
-      writeFile(tempConfigName, JSON.stringify(tsconfig), err => {
-        if (err) {
-          console.error(
-            'Error writing temporary `tsconfig.json` file for %j',
-            entrypoint,
-            err
-          );
-          return;
-        }
-
-        // Invoke `tsc --noEmit` asynchronously in the background, so
-        // that the HTTP request is not blocked by the type checking.
-        spawn(
-          process.execPath,
-          [
-            tscPath,
-            '--project',
-            tempConfigName,
-            '--noEmit',
-            '--allowJs',
-            '--jsx',
-            'react',
-          ],
-          {
-            cwd: workPath,
-            stdio: 'inherit',
-          }
-        ).once('exit', () => {
-          unlink(tempConfigName, err => {
-            if (err) {
-              if (err.code !== 'ENOENT') {
-                console.error(
-                  'Error deleting temporary `tsconfig.json` file for %j',
-                  entrypoint,
-                  err
-                );
-              }
-              return;
-            }
-          });
-        });
+      // Invoke `tsc --noEmit` asynchronously in the background, so
+      // that the HTTP request is not blocked by the type checking.
+      doTypeCheck({ entrypoint, workPath }).catch((err: Error) => {
+        console.error('Type check for %j failed:', entrypoint, err);
       });
     }
 
@@ -506,4 +454,41 @@ export async function startDevServer({
       `Failed to start dev server for "${entrypoint}" (code=${result[0]}, signal=${result[1]})`
     );
   }
+}
+
+async function doTypeCheck({
+  entrypoint,
+  workPath,
+}: StartDevServerOptions): Promise<void> {
+  // In order to type-check a single file, a temporary tsconfig
+  // file needs to be created that inherits from the base one :(
+  // See: https://stackoverflow.com/a/44748041/376773
+  const id = Math.random()
+    .toString(32)
+    .substring(2);
+  const tempConfigName = `.tsconfig-${id}.json`;
+  const tsconfig = {
+    extends: './tsconfig.json', // TODO: find nested tsconfig relative to entrypoint
+    include: [entrypoint],
+  };
+  await writeJSON(tempConfigName, tsconfig);
+
+  const proc = spawn(
+    process.execPath,
+    [
+      tscPath,
+      '--project',
+      tempConfigName,
+      '--noEmit',
+      '--allowJs',
+      '--jsx',
+      'react',
+    ],
+    {
+      cwd: workPath,
+      stdio: 'inherit',
+    }
+  );
+  await once.spread<[number, string | null]>(proc, 'exit');
+  await remove(tempConfigName);
 }
