@@ -222,28 +222,30 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { expectedCode = 0, __NOW_SKIP_DEV_COMMAND } = {}
+  { expectedCode = 0, skipDeploy } = {}
 ) {
   return async t => {
     const dir = fixture(directory);
-
-    // Deploy fixture
     const token = await fetchTokenWithRetry();
-    const gitignore = join(fixtureAbsolute(directory), '.gitignore');
-    const gitignoreExists = await fs.exists(gitignore);
-    let { stdout, stderr, exitCode } = await execa(
-      binaryPath,
-      [dir, '-t', token, '--confirm', '--public', '--debug'],
-      { reject: false }
-    );
-    console.log({ stdout, stderr, exitCode });
-    if (!gitignoreExists) {
-      await fs.unlink(gitignore);
-    }
-    t.is(exitCode, expectedCode);
     let deploymentUrl;
-    if (expectedCode === 0) {
-      deploymentUrl = new URL(stdout).host;
+
+    // Deploy fixture and link project
+    if (!skipDeploy) {
+      const gitignore = join(fixtureAbsolute(directory), '.gitignore');
+      const gitignoreExists = await fs.exists(gitignore);
+      let { stdout, stderr, exitCode } = await execa(
+        binaryPath,
+        [dir, '-t', token, '--confirm', '--public', '--debug'],
+        { reject: false }
+      );
+      console.log({ stdout, stderr, exitCode });
+      if (!gitignoreExists) {
+        await fs.unlink(gitignore);
+      }
+      t.is(exitCode, expectedCode);
+      if (expectedCode === 0) {
+        deploymentUrl = new URL(stdout).host;
+      }
     }
 
     // Start dev
@@ -261,7 +263,7 @@ function testFixtureStdio(
       let stderr = '';
       let printedOutput = false;
 
-      const env = __NOW_SKIP_DEV_COMMAND ? { __NOW_SKIP_DEV_COMMAND } : {};
+      const env = skipDeploy ? { __NOW_SKIP_DEV_COMMAND: 1 } : {};
       dev = execa(
         binaryPath,
         ['dev', dir, '-l', port, '-t', token, '--debug'],
@@ -323,6 +325,8 @@ function testFixtureStdio(
         await testPath(t, `http://localhost:${port}`, ...args);
       };
       await fn(t, port, helperTestPath);
+    } catch (e) {
+      console.log(e);
     } finally {
       dev.kill('SIGTERM');
       await exitResolver;
@@ -1290,7 +1294,7 @@ test(
       t.regex(await user.text(), new RegExp('runtime'));
       t.regex(await index.text(), new RegExp('buildtime'));
     },
-    { expectedCode: 1, __NOW_SKIP_DEV_COMMAND: 1 }
+    { skipDeploy: true }
   )
 );
 
@@ -1343,6 +1347,6 @@ test(
       t.regex(await extensionless.text(), /Hello, from Bash!/gm);
       t.regex(await extension.text(), /Hello, from Bash!/gm);
     },
-    { expectedCode: 1 /* FIXME */ }
+    { skipDeploy: true /* FIXME: AWS broken so we must skip */ }
   )
 );
