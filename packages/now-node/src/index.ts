@@ -436,7 +436,8 @@ export async function startDevServer({
   if (isPortInfo(result)) {
     // "message" event
 
-    if (extname(entrypoint) === '.ts') {
+    const ext = extname(entrypoint);
+    if (ext === '.ts' || ext === '.tsx') {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
       spawn(process.execPath, [tscPath, '--noEmit', entrypoint], {
