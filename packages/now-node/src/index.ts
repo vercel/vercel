@@ -1,5 +1,12 @@
 import { fork, spawn } from 'child_process';
-import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
+import {
+  readFileSync,
+  writeFile,
+  lstatSync,
+  readlinkSync,
+  statSync,
+  unlink,
+} from 'fs';
 import {
   basename,
   dirname,
@@ -438,11 +445,57 @@ export async function startDevServer({
 
     const ext = extname(entrypoint);
     if (ext === '.ts' || ext === '.tsx') {
-      // Invoke `tsc --noEmit` asynchronously in the background, so
-      // that the HTTP request is not blocked by the type checking.
-      spawn(process.execPath, [tscPath, '--noEmit', entrypoint], {
-        cwd: workPath,
-        stdio: 'inherit',
+      // In order to type-check a single file, a temporary tsconfig
+      // file needs to be created that inherits from the base one :(
+      // See: https://stackoverflow.com/a/44748041/376773
+      const tempConfigName = `.tsconfig-${Math.random()
+        .toString(32)
+        .substring(2)}.json`;
+      const tsconfig = {
+        extends: './tsconfig.json', // TODO: find nested tsconfig relative to entrypoint
+        include: [entrypoint],
+      };
+      writeFile(tempConfigName, JSON.stringify(tsconfig), err => {
+        if (err) {
+          console.error(
+            'Error writing temporary `tsconfig.json` file for %j',
+            entrypoint,
+            err
+          );
+          return;
+        }
+
+        // Invoke `tsc --noEmit` asynchronously in the background, so
+        // that the HTTP request is not blocked by the type checking.
+        spawn(
+          process.execPath,
+          [
+            tscPath,
+            '--project',
+            tempConfigName,
+            '--noEmit',
+            '--allowJs',
+            '--jsx',
+            'react',
+          ],
+          {
+            cwd: workPath,
+            stdio: 'inherit',
+          }
+        ).once('exit', () => {
+          unlink(tempConfigName, err => {
+            if (err) {
+              if (err.code !== 'ENOENT') {
+                console.error(
+                  'Error deleting temporary `tsconfig.json` file for %j',
+                  entrypoint,
+                  err
+                );
+              }
+              return;
+            }
+          });
+        });
       });
     }
 
