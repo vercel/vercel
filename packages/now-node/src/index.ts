@@ -470,7 +470,7 @@ async function doTypeCheck({
   const tempConfigName = `.tsconfig-${id}.json`;
   const projectTsConfig = await walkParentDirs({
     base: workPath,
-    start: dirname(entrypoint),
+    start: join(workPath, dirname(entrypoint)),
     filename: 'tsconfig.json',
   });
   const tsconfig = {
