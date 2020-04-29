@@ -32,6 +32,7 @@ import {
   Config,
   debug,
   isSymbolicLink,
+  walkParentDirs,
 } from '@now/build-utils';
 import once from '@tootallnate/once';
 import nodeFileTrace from '@zeit/node-file-trace';
@@ -467,10 +468,16 @@ async function doTypeCheck({
     .toString(32)
     .substring(2);
   const tempConfigName = `.tsconfig-${id}.json`;
+  const projectTsConfig = await walkParentDirs({
+    base: workPath,
+    start: dirname(entrypoint),
+    filename: 'tsconfig.json',
+  });
   const tsconfig = {
-    extends: './tsconfig.json', // TODO: find nested tsconfig relative to entrypoint
+    extends: projectTsConfig || undefined,
     include: [entrypoint],
   };
+  console.error({ tsconfig });
   await writeJSON(tempConfigName, tsconfig);
 
   const child = spawn(
