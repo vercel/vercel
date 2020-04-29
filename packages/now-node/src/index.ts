@@ -414,8 +414,6 @@ export async function startDevServer({
   workPath,
 }: StartDevServerOptions): Promise<StartDevServerResult> {
   const devServerPath = join(__dirname, 'dev-server.js');
-  console.error({ entrypoint, workPath, devServerPath });
-
   const child = fork(devServerPath, [], {
     cwd: workPath,
     env: {
@@ -427,12 +425,9 @@ export async function startDevServer({
   if (extname(entrypoint) === '.ts') {
     // Invoke `tsc --noEmit` asynchronously in the background, so
     // that the HTTP request is not blocked by the type checking.
-    const typeCheckProcess = spawn('npx', ['tsc', '--noEmit', entrypoint], {
+    spawn('npx', ['tsc', '--noEmit', entrypoint], {
       cwd: workPath,
       stdio: 'inherit',
-    });
-    typeCheckProcess.once('exit', (code, signal) => {
-      console.error({ code, signal });
     });
   }
 
