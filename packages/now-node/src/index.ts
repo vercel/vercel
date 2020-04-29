@@ -473,7 +473,7 @@ async function doTypeCheck({
   };
   await writeJSON(tempConfigName, tsconfig);
 
-  const proc = spawn(
+  const child = spawn(
     process.execPath,
     [
       tscPath,
@@ -489,6 +489,6 @@ async function doTypeCheck({
       stdio: 'inherit',
     }
   );
-  await once.spread<[number, string | null]>(proc, 'exit');
+  await once.spread<[number, string | null]>(child, 'exit');
   await remove(tempConfigName);
 }
