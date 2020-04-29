@@ -404,18 +404,18 @@ test(
 test(
   '[now dev] displays directory listing after miss',
   testFixtureStdio('handle-miss-display-dir-list', async (t, port, testPath) => {
-    await testPath(200, '/post', 'one.html');
+    await testPath(404, '/post', new RegExp('one.html', 'gm'));
   })
 );
+*/
 
 test(
   '[now dev] does not display directory listing after 404',
   testFixtureStdio('handle-miss-hide-dir-list', async (t, port, testPath) => {
     await testPath(404, '/post');
-    await testPath(200, '/post', 'First Post');
+    await testPath(200, '/post/one.html', 'First Post');
   })
 );
-*/
 
 test(
   '[now dev] handles hit after handle: filesystem',
