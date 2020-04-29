@@ -1,6 +1,6 @@
 {
   "name": "@now/cgi",
-  "version": "1.0.4",
+  "version": "1.0.5-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",
