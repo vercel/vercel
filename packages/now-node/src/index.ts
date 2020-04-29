@@ -1,8 +1,9 @@
-import { fork } from 'child_process';
+import { fork, spawn } from 'child_process';
 import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
 import {
   basename,
   dirname,
+  extname,
   join,
   relative,
   resolve,
@@ -413,6 +414,8 @@ export async function startDevServer({
   workPath,
 }: StartDevServerOptions): Promise<StartDevServerResult> {
   const devServerPath = join(__dirname, 'dev-server.js');
+  console.error({ entrypoint, workPath, devServerPath });
+
   const child = fork(devServerPath, [], {
     cwd: workPath,
     env: {
@@ -420,6 +423,19 @@ export async function startDevServer({
       NOW_DEV_ENTRYPOINT: entrypoint,
     },
   });
+
+  if (extname(entrypoint) === '.ts') {
+    // Invoke `tsc --noEmit` asynchronously in the background, so
+    // that the HTTP request is not blocked by the type checking.
+    const typeCheckProcess = spawn('npx', ['tsc', '--noEmit', entrypoint], {
+      cwd: workPath,
+      stdio: 'inherit',
+    });
+    typeCheckProcess.once('exit', (code, signal) => {
+      console.error({ code, signal });
+    });
+  }
+
   const { pid } = child;
   const onMessage = once<{ port: number }>(child, 'message');
   const onExit = once.spread<[number, string | null]>(child, 'exit');
