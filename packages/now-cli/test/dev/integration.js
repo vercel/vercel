@@ -9,7 +9,6 @@ import retry from 'async-retry';
 import { satisfies } from 'semver';
 import { getDistTag } from '../../src/util/get-dist-tag';
 import { version as cliVersion } from '../../package.json';
-import { deployWithNowClient } from '../../../../test/lib/deployment/deploy-with-client';
 import { fetchTokenWithRetry } from '../../../../test/lib/deployment/now-deploy';
 
 const isCanary = () => getDistTag(cliVersion) === 'canary';
@@ -225,39 +224,27 @@ async function testFixture(directory, opts = {}, args = []) {
   };
 }
 
-function testFixtureStdio(directory, fn) {
+function testFixtureStdio(directory, fn, { expectedCode = 0 } = {}) {
   return async t => {
+    const dir = fixture(directory);
+
     // Deploy fixture
     const token = await fetchTokenWithRetry();
-    const clientOpts = { token, path: fixtureAbsolute(directory) };
-    const deploymentOpts = { public: true };
-    let event = await deployWithNowClient(clientOpts, deploymentOpts);
-
-    const { code, projectSettings } = event.payload;
-    if (code === 'missing_project_settings' && projectSettings) {
-      deploymentOpts.projectSettings = projectSettings;
-      event = await deployWithNowClient(clientOpts, deploymentOpts);
+    let { stdout, stderr, exitCode } = await execa(
+      binaryPath,
+      [dir, '-t', token, '--confirm', '--public', '--debug'],
+      { reject: false }
+    );
+    console.log({ stdout, stderr, exitCode });
+    await fs.unlink(join(fixtureAbsolute(directory), '.gitignore'));
+    t.is(exitCode, expectedCode);
+    let deploymentUrl;
+    if (expectedCode === 0) {
+      deploymentUrl = new URL(stdout).host;
     }
-
-    if (event.type === 'error') {
-      throw new Error(event.payload.message);
-    }
-
-    const { url: deploymentUrl, projectId, ownerId: orgId } = event.payload;
-    if (!deploymentUrl) {
-      throw new Error('Expected deploymentUrl');
-    } else {
-      console.log({ deploymentUrl });
-    }
-
-    // Link project
-    const configFile = join(clientOpts.path, '.now', 'project.json');
-    await fs.ensureFile(configFile);
-    await fs.writeFile(configFile, JSON.stringify({ projectId, orgId }));
 
     // Start dev
     let dev;
-    const dir = fixture(directory);
 
     await runNpmInstall(dir);
 
@@ -756,11 +743,15 @@ test(
 
 test(
   '[now dev] throw when invalid builder routes detected',
-  testFixtureStdio('invalid-builder-routes', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-    const body = await response.text();
-    t.regex(body, /Invalid regular expression/gm);
-  })
+  testFixtureStdio(
+    'invalid-builder-routes',
+    async (t, port) => {
+      const response = await fetch(`http://localhost:${port}`);
+      const body = await response.text();
+      t.regex(body, /Invalid regular expression/gm);
+    },
+    { expectedCode: 1 }
+  )
 );
 
 test(
