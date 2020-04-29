@@ -230,13 +230,17 @@ function testFixtureStdio(directory, fn, { expectedCode = 0 } = {}) {
 
     // Deploy fixture
     const token = await fetchTokenWithRetry();
+    const gitignore = join(fixtureAbsolute(directory), '.gitignore');
+    const gitignoreExists = await fs.exists(gitignore);
     let { stdout, stderr, exitCode } = await execa(
       binaryPath,
       [dir, '-t', token, '--confirm', '--public', '--debug'],
       { reject: false }
     );
     console.log({ stdout, stderr, exitCode });
-    await fs.unlink(join(fixtureAbsolute(directory), '.gitignore'));
+    if (!gitignoreExists) {
+      await fs.unlink(gitignore);
+    }
     t.is(exitCode, expectedCode);
     let deploymentUrl;
     if (expectedCode === 0) {
