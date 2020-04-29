@@ -409,7 +409,10 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
-const tscPath = resolve(require.resolve(eval('"typescript"')), '../bin/tsc');
+const tscPath = resolve(
+  dirname(require.resolve(eval('"typescript"'))),
+  '../bin/tsc'
+);
 
 export async function startDevServer({
   entrypoint,
