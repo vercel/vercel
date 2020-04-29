@@ -409,6 +409,8 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
+const tscPath = resolve(require.resolve(eval('"typescript"')), '../bin/tsc');
+
 export async function startDevServer({
   entrypoint,
   workPath,
@@ -425,7 +427,7 @@ export async function startDevServer({
   if (extname(entrypoint) === '.ts') {
     // Invoke `tsc --noEmit` asynchronously in the background, so
     // that the HTTP request is not blocked by the type checking.
-    spawn('npx', ['tsc', '--noEmit', entrypoint], {
+    spawn(process.execPath, [tscPath, '--noEmit', entrypoint], {
       cwd: workPath,
       stdio: 'inherit',
     });
