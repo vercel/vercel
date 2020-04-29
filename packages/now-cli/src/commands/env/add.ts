@@ -5,7 +5,7 @@ import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
-import getEnvVariables from '../../util/env/get-env-records';
+import getEnvVariables, { APIV4Response } from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -77,7 +77,11 @@ export default async function add(
     }
   }
 
-  const envs = await getEnvVariables(output, client, project.id);
+  const envs = (await getEnvVariables(
+    output,
+    client,
+    project.id
+  )) as APIV4Response;
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
