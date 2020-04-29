@@ -488,6 +488,7 @@ async function doTypeCheck({
       tempConfigName,
       '--noEmit',
       '--allowJs',
+      '--esModuleInterop',
       '--jsx',
       'react',
     ],
