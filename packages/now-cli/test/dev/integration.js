@@ -145,7 +145,11 @@ async function testPath(t, origin, status, path, expectedText, headers = {}) {
   t.is(res.status, status, msg);
   if (expectedText) {
     const actualText = await res.text();
-    t.is(actualText.trim(), expectedText.trim(), msg);
+    if (expectedText instanceof RegExp) {
+      t.regex(actualText, expectedText, msg);
+    } else {
+      t.is(actualText.trim(), expectedText.trim(), msg);
+    }
   }
   if (headers) {
     Object.entries(headers).forEach(([key, expectedValue]) => {
@@ -362,155 +366,85 @@ test.afterEach(async () => {
 
 test(
   '[now dev] validate routes that use `check: true`',
-  testFixtureStdio('routes-check-true', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/blog/post`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Blog Home/gm);
+  testFixtureStdio('routes-check-true', async (t, port, testPath) => {
+    await testPath(200, '/blog/post', 'Blog Home');
   })
 );
 
 test(
   '[now dev] validate routes that use `check: true` and `status` code',
-  testFixtureStdio('routes-check-true-status', async (t, port) => {
-    const secret = await fetch(`http://localhost:${port}/secret`);
-    t.is(secret.status, 403);
-    t.regex(await secret.text(), /FORBIDDEN/gm);
-
-    const rewrite = await fetchWithRetry(`http://localhost:${port}/post`);
-    t.is(rewrite.status, 200);
-    t.regex(await rewrite.text(), /This is a post/gm);
-
-    const raw = await fetchWithRetry(`http://localhost:${port}/post.html`);
-    t.is(raw.status, 200);
-    t.regex(await raw.text(), /This is a post/gm);
+  testFixtureStdio('routes-check-true-status', async (t, port, testPath) => {
+    await testPath(403, '/secret');
+    await testPath(200, '/post', 'This is a post.');
+    await testPath(200, '/post.html', 'This is a post.');
   })
 );
 
 test(
   '[now dev] handles miss after route',
-  testFixtureStdio('handle-miss-after-route', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'exected miss header to be added');
-    t.is(override, 'one', 'exected override header to not override');
-
-    const body = await response.text();
-    t.regex(body, /Blog/gm);
+  testFixtureStdio('handle-miss-after-route', async (t, port, testPath) => {
+    await testPath(200, '/post', 'Blog Post Page', {
+      test: '1',
+      override: 'one',
+    });
   })
 );
-
+/*
 test(
   '[now dev] handles miss after rewrite',
-  testFixtureStdio('handle-miss-after-rewrite', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected miss header to be added');
-    t.is(override, 'two', 'expected override header to not override');
-    t.is(response.status, 200);
-    const body = await response.text();
-    t.regex(body, /Blog Post Page/gm);
-
-    const response1 = await fetchWithRetry(
-      `http://localhost:${port}/blog/post`
-    );
-    const test1 = response.headers.get('test');
-    const override1 = response.headers.get('override');
-    t.is(test1, '1', 'expected miss header to be added');
-    t.is(override1, 'two', 'expected override header to be added');
-    t.is(response1.status, 200);
-    t.regex(await response1.text(), /Blog Post Page/gm);
-
-    const response2 = await fetchWithRetry(
-      `http://localhost:${port}/about.html`
-    );
-    const test2 = response2.headers.get('test');
-    const override2 = response2.headers.get('override');
-    t.is(test2, null, 'expected miss header to be not be added');
-    t.is(override2, null, 'expected override header to not be added');
-    t.is(response2.status, 200);
-    t.regex(await response2.text(), /About Page/gm);
+  testFixtureStdio('handle-miss-after-rewrite', async (t, port, testPath) => {
+    await testPath(200, '/post', 'Blog Post Page', { test: '1', override: 'two' });
+    await testPath(200, '/blog/post', 'Blog Post Page', { test: '1', override: 'two' });
+    await testPath(200, '/blog/about.html', 'About Page', { test: null, override: null });
   })
 );
 
 test(
   '[now dev] displays directory listing after miss',
-  testFixtureStdio('handle-miss-display-dir-list', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const body = await response.text();
-    t.regex(body, /one.html/gm);
+  testFixtureStdio('handle-miss-display-dir-list', async (t, port, testPath) => {
+    await testPath(200, '/post', 'one.html');
   })
 );
 
 test(
   '[now dev] does not display directory listing after 404',
-  testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
-    const post = await fetch(`http://localhost:${port}/post`);
-    t.is(post.status, 404);
-
-    const file = await fetch(`http://localhost:${port}/post/one.html`);
-    t.is(file.status, 200);
-    t.regex(await file.text(), /First Post/gm);
+  testFixtureStdio('handle-miss-hide-dir-list', async (t, port, testPath) => {
+    await testPath(404, '/post');
+    await testPath(200, '/post', 'First Post');
   })
 );
+*/
 
 test(
   '[now dev] handles hit after handle: filesystem',
-  testFixtureStdio('handle-hit-after-fs', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/blog.html`);
-    const test = response.headers.get('test');
-    t.is(test, '1', 'expected hit header to be added');
-    const body = await response.text();
-    t.regex(body, /Blog Page/gm);
+  testFixtureStdio('handle-hit-after-fs', async (t, port, testPath) => {
+    await testPath(200, '/blog.html', 'Blog Page', { test: '1' });
   })
 );
 
 test(
   '[now dev] handles hit after dest',
-  testFixtureStdio('handle-hit-after-dest', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected hit header to be added');
-    t.is(override, 'one', 'expected hit header to not override');
-    const body = await response.text();
-    t.regex(body, /Blog Post/gm);
+  testFixtureStdio('handle-hit-after-dest', async (t, port, testPath) => {
+    await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
 test(
   '[now dev] handles hit after rewrite',
-  testFixtureStdio('handle-hit-after-rewrite', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected hit header to be added');
-    t.is(override, 'one', 'expected hit header to not override');
-    const body = await response.text();
-    t.regex(body, /Blog Post/gm);
+  testFixtureStdio('handle-hit-after-rewrite', async (t, port, testPath) => {
+    await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
 test(
   '[now dev] should serve the public directory and api functions',
-  testFixtureStdio('public-and-api', async (t, port) => {
-    const index = await fetchWithRetry(`http://localhost:${port}`);
-    t.regex(await index.text(), /home page/gm);
-    const about = await fetchWithRetry(`http://localhost:${port}/about.html`);
-    t.regex(await about.text(), /about page/gm);
-    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
-    t.regex(await date.text(), /current date/gm);
-    const rand = await fetchWithRetry(`http://localhost:${port}/api/rand`);
-    t.regex(await rand.text(), /random number/gm);
-    const rand2 = await fetchWithRetry(`http://localhost:${port}/api/rand.js`);
-    t.regex(await rand2.text(), /random number/gm);
-    const notfound = await fetch(`http://localhost:${port}/api`);
-    t.is(notfound.status, 404);
+  testFixtureStdio('public-and-api', async (t, port, testPath) => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'This is the about page');
+    await testPath(200, '/api/date', new RegExp('current date'));
+    await testPath(200, '/api/rand', new RegExp('random number'));
+    await testPath(200, '/api/rand.js', new RegExp('random number'));
+    await testPath(404, '/api/api');
   })
 );
 
@@ -649,38 +583,19 @@ test('[now dev] validate env var names', async t => {
 
 test(
   '[now dev] test rewrites with segments serve correct content',
-  testFixtureStdio('test-rewrites-with-segments', async (t, port) => {
-    const users = await fetchWithRetry(
-      `http://localhost:${port}/api/users/first`,
-      3
-    );
-    t.regex(await users.text(), /first/gm);
-    const fourtytwo = await fetchWithRetry(
-      `http://localhost:${port}/api/fourty-two`,
-      3
-    );
-    t.regex(await fourtytwo.text(), /42/gm);
-    const rand = await fetchWithRetry(`http://localhost:${port}/rand`, 3);
-    t.regex(await rand.text(), /42/gm);
-    const dynamic = await fetchWithRetry(
-      `http://localhost:${port}/api/dynamic`,
-      3
-    );
-    t.regex(await dynamic.text(), /dynamic/gm);
-    const notfound = await fetch(`http://localhost:${port}/api`);
-    t.is(notfound.status, 404);
+  testFixtureStdio('test-rewrites-with-segments', async (t, port, testPath) => {
+    await testPath(200, '/api/users/first', 'first');
+    await testPath(200, '/api/fourty-two', '42');
+    await testPath(200, '/rand', '42');
+    await testPath(200, '/api/dynamic', 'dynamic');
+    await testPath(404, '/api');
   })
 );
 
 test(
   '[now dev] test rewrites serve correct content',
-  testFixtureStdio('test-rewrites', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/hello`, 3);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Hello World/gm);
+  testFixtureStdio('test-rewrites', async (t, port, testPath) => {
+    await testPath(200, '/hello', 'Hello World');
   })
 );
 
@@ -768,15 +683,10 @@ test(
 
 test(
   '[now dev] 00-list-directory',
-  testFixtureStdio('00-list-directory', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 60);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Files within/gm);
-    t.regex(body, /test1.txt/gm);
-    t.regex(body, /directory/gm);
+  testFixtureStdio('00-list-directory', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Files within'));
+    await testPath(200, '/', new RegExp('test1.txt'));
+    await testPath(200, '/', new RegExp('directory'));
   })
 );
 
@@ -840,22 +750,16 @@ test(
 
 test(
   '[now dev] 04-create-react-app',
-  testFixtureStdio('04-create-react-app', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /React App/gm);
+  testFixtureStdio('04-create-react-app', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('React App'));
   })
 );
 
 test('[now dev] 05-gatsby', async t => {
   if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
-  const tester = testFixtureStdio('05-gatsby', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Gatsby Default Starter/gm);
+  const tester = testFixtureStdio('05-gatsby', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Gatsby Default Starter'));
   });
 
   await tester(t);
@@ -863,91 +767,64 @@ test('[now dev] 05-gatsby', async t => {
 
 test(
   '[now dev] 06-gridsome',
-  testFixtureStdio('06-gridsome', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    t.is(response.status, 200, await response.text());
+  testFixtureStdio('06-gridsome', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Gridsome'));
   })
 );
 
 test(
   '[now dev] 07-hexo-node',
-  testFixtureStdio('07-hexo-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-    //validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Hexo \+ Node.js API/gm);
+  testFixtureStdio('07-hexo-node', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Hexo + Node.js API'));
   })
 );
-
+/*
 test(
   '[now dev] 08-hugo',
-  testFixtureStdio('08-hugo', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    // const body = await response.text();
-    // t.regex(body, /Hugo on Vercel/gm);
-    t.is(response.status, 200, await response.text());
+  testFixtureStdio('08-hugo', async (t, port, testPath) => {
+    await testPath(200, '/', 'Hugo');
   })
 );
-
+*/
 test(
   '[now dev] 10-nextjs-node',
-  testFixtureStdio('10-nextjs-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Next.js \+ Node.js API/gm);
+  testFixtureStdio('10-nextjs-node', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Next.js + Node.js API'));
   })
 );
 
 test(
   '[now dev] 12-polymer-node',
-  testFixtureStdio('12-polymer-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Polymer \+ Node.js API/gm);
+  testFixtureStdio('12-polymer-node', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Polymer + Node.js API'));
   })
 );
 
 test(
   '[now dev] 13-preact-node',
-  testFixtureStdio('13-preact-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Preact \+ Node.js API/gm);
+  testFixtureStdio('13-preact-node', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Preact + Node.js API'));
   })
 );
 
 test(
   '[now dev] 14-svelte-node',
-  testFixtureStdio('14-svelte-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Svelte \+ Node.js API/gm);
+  testFixtureStdio('14-svelte-node', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Svelte + Node.js API'));
   })
 );
 
 test(
   '[now dev] 16-vue-node',
-  testFixtureStdio('16-vue-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Vue.js \+ Node.js API/gm);
+  testFixtureStdio('16-vue-node', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('Vue.js + Node.js API'));
   })
 );
 
 test(
   '[now dev] 17-vuepress-node',
-  testFixtureStdio('17-vuepress-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /VuePress \+ Node.js API/gm);
+  testFixtureStdio('17-vuepress-node', async (t, port, testPath) => {
+    await testPath(200, '/', new RegExp('VuePress + Node.js API'));
   })
 );
 
@@ -1310,22 +1187,12 @@ test(
 
 test(
   '[now dev] Use `@now/python` with Flask requirements.txt',
-  testFixtureStdio('python-flask', async (t, port) => {
+  testFixtureStdio('python-flask', async (t, port, testPath) => {
     const name = 'Alice';
     const year = new Date().getFullYear();
-    const user = await fetchWithRetry(
-      `http://localhost:${port}/api/user?name=${name}`
-    );
-    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
-    const ext = await fetchWithRetry(`http://localhost:${port}/api/date.py`);
-
-    //validateResponseHeaders(t, user);
-    //validateResponseHeaders(t, date);
-    //validateResponseHeaders(t, ext);
-
-    t.regex(await user.text(), new RegExp(`Hello ${name}`));
-    t.regex(await date.text(), new RegExp(`Current date is ${year}`));
-    t.regex(await ext.text(), new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
+    await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
   })
 );
 
