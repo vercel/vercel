@@ -768,14 +768,14 @@ test('[now dev] 05-gatsby', async t => {
 test(
   '[now dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async (t, port, testPath) => {
-    await testPath(200, '/');
+    await testPath(200, '/', new RegExp('Gridsome', 'gm'));
   })
 );
 
 test(
   '[now dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async (t, port, testPath) => {
-    await testPath(200, '/', new RegExp('Hexo + Node.js API'));
+    await testPath(200, '/', new RegExp('Hexo + Node.js API', 'gm'));
   })
 );
 /*
@@ -789,42 +789,42 @@ test(
 test(
   '[now dev] 10-nextjs-node',
   testFixtureStdio('10-nextjs-node', async (t, port, testPath) => {
-    await testPath(200, '/', new RegExp('Next.js + Node.js API'));
+    await testPath(200, '/', new RegExp('Next.js + Node.js API', 'gm'));
   })
 );
 
 test(
   '[now dev] 12-polymer-node',
   testFixtureStdio('12-polymer-node', async (t, port, testPath) => {
-    await testPath(200, '/', new RegExp('Polymer + Node.js API'));
+    await testPath(200, '/', new RegExp('Polymer + Node.js API', 'gm'));
   })
 );
 
 test(
   '[now dev] 13-preact-node',
   testFixtureStdio('13-preact-node', async (t, port, testPath) => {
-    await testPath(200, '/', new RegExp('Preact + Node.js API'));
+    await testPath(200, '/', new RegExp('Preact + Node.js API', 'gm'));
   })
 );
 
 test(
   '[now dev] 14-svelte-node',
   testFixtureStdio('14-svelte-node', async (t, port, testPath) => {
-    await testPath(200, '/', new RegExp('Svelte + Node.js API'));
+    await testPath(200, '/', new RegExp('Svelte + Node.js API', 'gm'));
   })
 );
 
 test(
   '[now dev] 16-vue-node',
   testFixtureStdio('16-vue-node', async (t, port, testPath) => {
-    await testPath(200, '/', new RegExp('Vue.js + Node.js API'));
+    await testPath(200, '/', new RegExp('Vue.js + Node.js API', 'gm'));
   })
 );
 
 test(
   '[now dev] 17-vuepress-node',
   testFixtureStdio('17-vuepress-node', async (t, port, testPath) => {
-    await testPath(200, '/', new RegExp('VuePress + Node.js API'));
+    await testPath(200, '/', new RegExp('VuePress + Node.js API', 'gm'));
   })
 );
 
