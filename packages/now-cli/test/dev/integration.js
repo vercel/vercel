@@ -768,7 +768,7 @@ test('[now dev] 05-gatsby', async t => {
 test(
   '[now dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async (t, port, testPath) => {
-    await testPath(200, '/', new RegExp('Gridsome'));
+    await testPath(200, '/');
   })
 );
 
@@ -876,7 +876,7 @@ test(
   '[now dev] 18-marko',
   testFixtureStdio('18-marko', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
     const body = await response.text();
     t.regex(body, /Marko Starter/gm);
   })
@@ -886,7 +886,7 @@ test(
   '[now dev] 19-mithril',
   testFixtureStdio('19-mithril', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
     const body = await response.text();
     t.regex(body, /Mithril on Vercel/gm);
   })
@@ -896,7 +896,7 @@ test(
   '[now dev] 20-riot',
   testFixtureStdio('20-riot', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
     const body = await response.text();
     t.regex(body, /Riot on Vercel/gm);
   })
@@ -906,7 +906,7 @@ test(
   '[now dev] 21-charge',
   testFixtureStdio('21-charge', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
     const body = await response.text();
     t.regex(body, /Welcome to my new Charge site/gm);
   })
@@ -916,7 +916,7 @@ test(
   '[now dev] 22-brunch',
   testFixtureStdio('22-brunch', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`, 50);
-    //validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
     const body = await response.text();
     t.regex(body, /Bon Appétit./gm);
   })
@@ -926,7 +926,7 @@ test(
   '[now dev] 23-docusaurus',
   testFixtureStdio('23-docusaurus', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`);
-    //validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
     const body = await response.text();
     t.regex(body, /My Site/gm);
   })
@@ -1151,7 +1151,7 @@ test(
   '[now dev] 25-nextjs-src-dir',
   testFixtureStdio('25-nextjs-src-dir', async (t, port) => {
     const response = await fetchWithRetry(`http://localhost:${port}`, 10);
-    //validateResponseHeaders(t, response);
+    validateResponseHeaders(t, response);
     const body = await response.text();
     t.regex(body, /Next.js \+ Node.js API/gm);
   })
@@ -1165,8 +1165,8 @@ test(
       const user = await fetchWithRetry(`http://localhost:${port}/api/user`);
       const index = await fetchWithRetry(`http://localhost:${port}`);
 
-      //validateResponseHeaders(t, user);
-      //validateResponseHeaders(t, index);
+      validateResponseHeaders(t, user);
+      validateResponseHeaders(t, index);
 
       t.regex(await user.text(), new RegExp('runtime'));
       t.regex(await index.text(), new RegExp('buildtime'));
@@ -1208,8 +1208,8 @@ test(
         `http://localhost:${port}/api/user.sh`
       );
 
-      //validateResponseHeaders(t, extensionless);
-      //validateResponseHeaders(t, extension);
+      validateResponseHeaders(t, extensionless);
+      validateResponseHeaders(t, extension);
 
       t.regex(await extensionless.text(), /Hello, from Bash!/gm);
       t.regex(await extension.text(), /Hello, from Bash!/gm);
