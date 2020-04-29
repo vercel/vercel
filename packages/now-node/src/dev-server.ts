@@ -16,7 +16,7 @@ register({
   compilerOptions: {
     allowJs: true,
     esModuleInterop: true,
-    jsx: true,
+    jsx: 'react',
   },
   transpileOnly: true,
 });
