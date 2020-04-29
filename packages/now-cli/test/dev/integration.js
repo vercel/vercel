@@ -267,7 +267,9 @@ function testFixtureStdio(
       let stderr = '';
       let printedOutput = false;
 
-      const env = skipDeploy ? { __NOW_SKIP_DEV_COMMAND: 1 } : {};
+      const env = skipDeploy
+        ? { ...process.env, __NOW_SKIP_DEV_COMMAND: 1 }
+        : process.env;
       dev = execa(
         binaryPath,
         ['dev', dir, '-l', port, '-t', token, '--debug'],
