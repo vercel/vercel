@@ -477,7 +477,6 @@ async function doTypeCheck({
     extends: projectTsConfig || undefined,
     include: [entrypoint],
   };
-  console.error({ tsconfig });
   await writeJSON(tempConfigName, tsconfig);
 
   const child = spawn(
