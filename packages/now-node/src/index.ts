@@ -427,15 +427,6 @@ export async function startDevServer({
     },
   });
 
-  if (extname(entrypoint) === '.ts') {
-    // Invoke `tsc --noEmit` asynchronously in the background, so
-    // that the HTTP request is not blocked by the type checking.
-    spawn(process.execPath, [tscPath, '--noEmit', entrypoint], {
-      cwd: workPath,
-      stdio: 'inherit',
-    });
-  }
-
   const { pid } = child;
   const onMessage = once<{ port: number }>(child, 'message');
   const onExit = once.spread<[number, string | null]>(child, 'exit');
@@ -444,6 +435,16 @@ export async function startDevServer({
   onMessage.cancel();
   if (isPortInfo(result)) {
     // "message" event
+
+    if (extname(entrypoint) === '.ts') {
+      // Invoke `tsc --noEmit` asynchronously in the background, so
+      // that the HTTP request is not blocked by the type checking.
+      spawn(process.execPath, [tscPath, '--noEmit', entrypoint], {
+        cwd: workPath,
+        stdio: 'inherit',
+      });
+    }
+
     return { port: result.port, pid };
   } else {
     // "exit" event
