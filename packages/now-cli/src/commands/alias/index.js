@@ -67,11 +67,11 @@ const help = () => {
   )} in the URLs are unneeded and ignored.
 
   ${chalk.gray('–')} Add and modify path based aliases for ${chalk.underline(
-    'vercel.com'
+    'example.com'
   )}
 
       ${chalk.cyan(
-        `$ now alias ${chalk.underline('vercel.com')} -r ${chalk.underline(
+        `$ now alias ${chalk.underline('example.com')} -r ${chalk.underline(
           'rules.json'
         )}`
       )}
