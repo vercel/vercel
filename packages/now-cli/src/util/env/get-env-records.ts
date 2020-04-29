@@ -8,7 +8,7 @@ import {
 
 export type APIV5Response = {
   envs: ProjectEnvVariable[];
-  pagination?: PaginationOptions;
+  pagination: PaginationOptions;
 };
 
 export type APIV4Response = ProjectEnvVariable[];
@@ -25,7 +25,7 @@ export default async function getEnvVariables(
     `Fetching Environment Variables of project ${projectId} and target ${target}`
   );
   const qs = target ? `?target=${encodeURIComponent(target)}` : '';
-  let limit = apiVersion >= 5 ? '?limit=20' : '';
+  const limit = apiVersion >= 5 ? '?limit=20' : '';
   let url = `/v${apiVersion}/projects/${projectId}/env${qs}${limit}`;
 
   if (next) {
