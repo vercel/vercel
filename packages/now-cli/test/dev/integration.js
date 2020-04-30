@@ -754,18 +754,14 @@ test(
     await testPath(200, '/', /React App/gm);
   })
 );
-
+/*
 test(
   '[now dev] 05-gatsby',
-  testFixtureStdio(
-    '05-gatsby',
-    async testPath => {
-      await testPath(200, '/', /Gatsby Default Starter/gm);
-    },
-    { skipDeploy: true }
-  )
+  testFixtureStdio('05-gatsby', async testPath => {
+    await testPath(200, '/', /Gatsby Default Starter/gm);
+  })
 );
-
+*/
 test(
   '[now dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async testPath => {
