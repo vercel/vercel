@@ -19,11 +19,6 @@ const binaryPath = resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => join('test', 'dev', 'fixtures', name);
 const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
 
-// For the Hugo executable
-process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
-  process.env.PATH
-}`;
-
 let processCounter = 0;
 const processList = new Map();
 
@@ -143,7 +138,7 @@ async function testPath(t, origin, status, path, expectedText, headers = {}) {
   const msg = `Testing path ${url}`;
   console.log(msg);
   t.is(res.status, status, msg);
-  //validateResponseHeaders(t, res);
+  validateResponseHeaders(t, res);
   if (expectedText) {
     const actualText = await res.text();
     if (expectedText instanceof RegExp) {
@@ -781,15 +776,21 @@ test(
   })
 );
 
-/*
- * Theres something wrong with the path
-test(
-  '[now dev] 08-hugo',
-  testFixtureStdio('08-hugo', async (t, port, testPath) => {
-    await testPath(200, '/', /Hugo/gm);
-  })
-);
-*/
+test('[now dev] 08-hugo', async t => {
+  if (process.platform === 'darwin') {
+    // Update PATH to find the Hugo executable installed via GH Actions
+    process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
+      process.env.PATH
+    }`;
+    const tester = testFixtureStdio('08-hugo', async (t, port, testPath) => {
+      await testPath(200, '/', /Hugo/gm);
+    });
+    await tester(t);
+  } else {
+    console.log(`Skipping 08-hugo on platform ${process.platform}`);
+    t.pass();
+  }
+});
 
 test(
   '[now dev] 10-nextjs-node',
@@ -822,7 +823,7 @@ test(
 test(
   '[now dev] 16-vue-node',
   testFixtureStdio('16-vue-node', async (t, port, testPath) => {
-    await testPath(200, '/', /Vue \+ Node.js API/gm);
+    await testPath(200, '/', /Vue.js \+ Node.js API/gm);
   })
 );
 
@@ -934,7 +935,7 @@ test('[now dev] 24-ember', async t => {
     t.regex(body, /HelloWorld/gm);
   });
 
-  tester(t);
+  await tester(t);
 });
 
 test(
