@@ -757,9 +757,13 @@ test(
 
 test(
   '[now dev] 05-gatsby',
-  testFixtureStdio('05-gatsby', async testPath => {
-    await testPath(200, '/', /Gatsby Default Starter/gm);
-  })
+  testFixtureStdio(
+    '05-gatsby',
+    async testPath => {
+      await testPath(200, '/', /Gatsby Default Starter/gm);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
