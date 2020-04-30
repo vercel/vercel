@@ -14,8 +14,8 @@ export default `.hg
 .DS_Store
 .wafpicke-*
 .lock-wscript
-.env
-.env.*
+.env.local
+.env.*.local
 .venv
 npm-debug.log
 config.gypi
