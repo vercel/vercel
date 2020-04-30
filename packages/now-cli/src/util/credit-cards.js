@@ -22,8 +22,8 @@ export default class CreditCards extends Now {
       method: 'POST',
       body: {
         source,
-        makeDefault: true
-      }
+        makeDefault: true,
+      },
     });
 
     return true;
@@ -32,7 +32,7 @@ export default class CreditCards extends Now {
   async rm(source) {
     await this._fetch(`/stripe/sources/`, {
       method: 'DELETE',
-      body: { source }
+      body: { source },
     });
 
     return true;
@@ -50,7 +50,7 @@ export default class CreditCards extends Now {
       card = {
         name: card.name,
         number: card.cardNumber,
-        cvc: card.ccv
+        cvc: card.ccv,
       };
 
       card.exp_month = expDateParts[0];
@@ -62,15 +62,15 @@ export default class CreditCards extends Now {
         const res = await this._fetch('/stripe/sources/', {
           method: 'POST',
           body: {
-            source: token
-          }
+            source: token,
+          },
         });
 
         const { source, error } = await res.json();
 
         if (source && source.id) {
           resolve({
-            last4: source.last4
+            last4: source.last4,
           });
         } else if (error && error.message) {
           reject(new Error(error.message));

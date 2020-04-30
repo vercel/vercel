@@ -6,6 +6,7 @@ import {
   NowRequestBody,
 } from './types';
 import { Server } from 'http';
+import { Readable } from 'stream';
 import { Bridge } from './bridge';
 
 function getBodyParser(req: NowRequest, body: Buffer) {
@@ -49,16 +50,8 @@ function getBodyParser(req: NowRequest, body: Buffer) {
 function getQueryParser({ url = '/' }: NowRequest) {
   return function parseQuery(): NowRequestQuery {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { URL } = require('url');
-    // we provide a placeholder base url because we only want searchParams
-    const params = new URL(url, 'https://n').searchParams;
-
-    const query: { [key: string]: string | string[] } = {};
-    for (const [key, value] of params) {
-      query[key] = value;
-    }
-
-    return query;
+    const { parse: parseURL } = require('url');
+    return parseURL(url, true).query;
   };
 }
 
@@ -89,6 +82,7 @@ function setCharset(type: string, charset: string) {
   return format(parsed);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createETag(body: any, encoding: 'utf8' | undefined) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const etag = require('etag');
@@ -96,6 +90,7 @@ function createETag(body: any, encoding: 'utf8' | undefined) {
   return etag(buf, { weak: true });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function send(req: NowRequest, res: NowResponse, body: any): NowResponse {
   let chunk: unknown = body;
   let encoding: 'utf8' | undefined;
@@ -193,6 +188,7 @@ function send(req: NowRequest, res: NowResponse, body: any): NowResponse {
   return res;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function json(req: NowRequest, res: NowResponse, jsonBody: any): NowResponse {
   const body = JSON.stringify(jsonBody);
 
@@ -241,9 +237,24 @@ function setLazyProp<T>(req: NowRequest, prop: string, getter: () => T) {
   });
 }
 
+export function rawBody(readable: Readable): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    let bytes = 0;
+    const chunks: Buffer[] = [];
+    readable.on('error', reject);
+    readable.on('data', chunk => {
+      chunks.push(chunk);
+      bytes += chunk.length;
+    });
+    readable.on('end', () => {
+      resolve(Buffer.concat(chunks, bytes));
+    });
+  });
+}
+
 export function createServerWithHelpers(
-  listener: (req: NowRequest, res: NowResponse) => void | Promise<void>,
-  bridge: Bridge
+  handler: (req: NowRequest, res: NowResponse) => void | Promise<void>,
+  bridge?: Bridge
 ) {
   const server = new Server(async (_req, _res) => {
     const req = _req as NowRequest;
@@ -255,21 +266,23 @@ export function createServerWithHelpers(
       // don't expose this header to the client
       delete req.headers['x-now-bridge-request-id'];
 
-      if (typeof reqId !== 'string') {
-        throw new ApiError(500, 'Internal Server Error');
+      let body: Buffer;
+      if (typeof reqId === 'string' && bridge) {
+        const event = bridge.consumeEvent(reqId);
+        body = event.body;
+      } else {
+        body = await rawBody(req);
       }
-
-      const event = bridge.consumeEvent(reqId);
 
       setLazyProp<NowRequestCookies>(req, 'cookies', getCookieParser(req));
       setLazyProp<NowRequestQuery>(req, 'query', getQueryParser(req));
-      setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, event.body));
+      setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, body));
 
       res.status = statusCode => status(res, statusCode);
       res.send = body => send(req, res, body);
       res.json = jsonBody => json(req, res, jsonBody);
 
-      await listener(req, res);
+      await handler(req, res);
     } catch (err) {
       if (err instanceof ApiError) {
         sendError(res, err.statusCode, err.message);

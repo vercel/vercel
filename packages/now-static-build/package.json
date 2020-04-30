@@ -1,9 +1,9 @@
 {
   "name": "@now/static-build",
-  "version": "0.14.12",
+  "version": "0.16.1-canary.2",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/static-builds",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/static-builds",
   "files": [
     "dist"
   ],

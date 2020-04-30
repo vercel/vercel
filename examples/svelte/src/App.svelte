@@ -13,8 +13,8 @@
   <h1>Svelte + Node.js API</h1>
   <h2>
     Deployed with
-    <a href="https://zeit.co/docs" target="_blank" rel="noreferrer noopener">
-      ZEIT Now
+    <a href="https://vercel.com/docs" target="_blank" rel="noreferrer noopener">
+      Vercel
     </a>
     !
   </h2>

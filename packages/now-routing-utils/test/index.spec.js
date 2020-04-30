@@ -58,6 +58,14 @@ describe('normalizeRoutes', () => {
         headers: { 'Cache-Control': 'max-age=10' },
         continue: true,
       },
+      { handle: 'rewrite' },
+      { src: '^.*$', dest: '/somewhere' },
+      { handle: 'error' },
+      {
+        src: '^.*$',
+        dest: '/404',
+        status: 404,
+      },
     ];
 
     assertValid(routes);
@@ -447,6 +455,54 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('fails if redirects permanent is not a boolean', () => {
+    assertError(
+      [
+        {
+          source: '/foo',
+          destination: '/bar',
+          permanent: 301,
+        },
+      ],
+      [
+        {
+          dataPath: '[0].permanent',
+          keyword: 'type',
+          message: 'should be boolean',
+          params: {
+            type: 'boolean',
+          },
+          schemaPath: '#/items/properties/permanent/type',
+        },
+      ],
+      redirectsSchema
+    );
+  });
+
+  test('fails if redirects statusCode is not a number', () => {
+    assertError(
+      [
+        {
+          source: '/foo',
+          destination: '/bar',
+          statusCode: '301',
+        },
+      ],
+      [
+        {
+          dataPath: '[0].statusCode',
+          keyword: 'type',
+          message: 'should be integer',
+          params: {
+            type: 'integer',
+          },
+          schemaPath: '#/items/properties/statusCode/type',
+        },
+      ],
+      redirectsSchema
+    );
+  });
+
   test('fails if routes after `handle: hit` use `dest`', () => {
     const input = [
       {
@@ -588,6 +644,22 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_redirects');
   });
 
+  test('should error when redirects defines both permanent and statusCode', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '^/both$',
+          destination: '/api/both',
+          permanent: false,
+          statusCode: 302,
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.notEqual(actual.error, null);
+    assert.equal(actual.error.code, 'invalid_redirects');
+  });
+
   test('should error when headers is invalid regex', () => {
     const nowConfig = {
       headers: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
@@ -632,6 +704,11 @@ describe('getTransformedRoutes', () => {
       rewrites: [{ source: '/v1', destination: '/v2/api.py' }],
       redirects: [
         { source: '/help', destination: '/support', statusCode: 302 },
+        {
+          source: '/bug',
+          destination: 'https://example.com/bug',
+          statusCode: 308,
+        },
       ],
     };
     const actual = getTransformedRoutes({ nowConfig });
@@ -651,6 +728,11 @@ describe('getTransformedRoutes', () => {
         headers: { Location: '/support' },
         status: 302,
       },
+      {
+        src: '^/bug$',
+        headers: { Location: 'https://example.com/bug' },
+        status: 308,
+      },
       { handle: 'filesystem' },
       { src: '^/v1$', dest: '/v2/api.py', check: true },
     ];
@@ -669,6 +751,7 @@ describe('getTransformedRoutes', () => {
       redirects: [
         { source: '/version1', destination: '/api1.py' },
         { source: '/version2', destination: '/api2.py', statusCode: 302 },
+        { source: '/version3', destination: '/api3.py', permanent: true },
       ],
       headers: [
         {
@@ -707,5 +790,43 @@ describe('getTransformedRoutes', () => {
     const nowConfig = { routes: null };
     const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.routes, null);
+  });
+
+  test('should error when segment is defined in `destination` but not `source`', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/iforgot/:id',
+          destination: '/:another',
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, null);
+    assert.ok(
+      actual.error.message.includes(
+        'in "destination" pattern but not in "source"'
+      ),
+      actual.error.message
+    );
+  });
+
+  test('should error when segment is defined in HTTPS `destination` but not `source`', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/iforgot/:id',
+          destination: 'https://example.com/:another',
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, null);
+    assert.ok(
+      actual.error.message.includes(
+        'in "destination" pattern but not in "source"'
+      ),
+      actual.error.message
+    );
   });
 });

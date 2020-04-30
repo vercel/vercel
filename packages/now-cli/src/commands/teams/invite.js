@@ -76,7 +76,17 @@ export default async function({
 
   const stopUserSpinner = wait('Fetching user information');
   const client = new Client({ apiUrl, token });
-  const user = await getUser(client);
+  let user;
+  try {
+    user = await getUser(client);
+  } catch (err) {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      console.error(error(err.message));
+      return 1;
+    }
+
+    throw err;
+  }
 
   stopUserSpinner();
 

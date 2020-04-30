@@ -1,6 +1,5 @@
 import ms from 'ms';
 import chalk from 'chalk';
-import plural from 'pluralize';
 import table from 'text-table';
 
 import Client from '../../util/client';
@@ -10,9 +9,12 @@ import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
 import { Domain, NowContext } from '../../types';
+import getCommandFlags from '../../util/get-command-flags';
+import cmd from '../../util/output/cmd';
 
 type Options = {
   '--debug': boolean;
+  '--next': number;
 };
 
 export default async function ls(
@@ -21,12 +23,20 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const debug = opts['--debug'];
+  const { '--debug': debug, '--next': nextTimestamp } = opts;
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
+
+  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
+    output.error('Please provide a number for flag --next');
+    return 1;
+  }
 
   try {
     ({ contextName } = await getScope(client));
@@ -48,14 +58,25 @@ export default async function ls(
     return 1;
   }
 
-  const domains = await getDomains(client, contextName);
+  const { domains, pagination } = await getDomains(
+    client,
+    contextName,
+    nextTimestamp
+  );
   output.log(
-    `${plural('domain', domains.length, true)} found under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(lsStamp())}\n`
+    `Domains found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}\n`
   );
   if (domains.length > 0) {
     console.log(`${formatDomainsTable(domains)}\n`);
+  }
+
+  if (pagination && pagination.count === 20) {
+    const flags = getCommandFlags(opts, ['_', '--next']);
+    output.log(
+      `To display the next page run ${cmd(
+        `now domains ls${flags} --next ${pagination.next}`
+      )}`
+    );
   }
 
   return 0;
@@ -71,18 +92,18 @@ function formatDomainsTable(domains: Domain[]) {
         chalk.gray('serviceType'),
         chalk.gray('verified'),
         chalk.gray('cdn'),
-        chalk.gray('age')
+        chalk.gray('age'),
       ].map(s => chalk.dim(s)),
       ...domains.map(domain => {
         const url = chalk.bold(domain.name);
         const time = chalk.gray(ms(current.getTime() - domain.createdAt));
         return ['', url, domain.serviceType, domain.verified, true, time];
-      })
+      }),
     ],
     {
       align: ['l', 'l', 'l', 'l', 'l'],
       hsep: ' '.repeat(4),
-      stringLength: strlen
+      stringLength: strlen,
     }
   );
 }

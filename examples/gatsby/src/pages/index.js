@@ -21,11 +21,11 @@ function Index() {
       <h2>
         Deployed with{' '}
         <a
-          href="https://zeit.co/docs"
+          href="https://vercel.com/docs"
           target="_blank"
           rel="noreferrer noopener"
         >
-          ZEIT Now
+          Vercel
         </a>
         !
       </h2>

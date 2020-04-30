@@ -9,11 +9,11 @@ import { frameworks, Framework } from './frameworks';
 import {
   glob,
   download,
-  execAsync,
   spawnAsync,
   execCommand,
   spawnCommand,
   runNpmInstall,
+  getNodeBinPath,
   runBundleInstall,
   runPipInstall,
   runPackageJsonScript,
@@ -30,6 +30,7 @@ import {
   NowBuildError,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
+import { getNowIgnore } from 'now-client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -55,12 +56,12 @@ function validateDistDir(distDir: string) {
   const isEmpty = () => readdirSync(distDir).length === 0;
 
   const link =
-    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
+    'https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
   if (!exists()) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
-      message: `No Output Directory named "${distDirName}" found after the Build completed.`,
+      message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your project settings.`,
       link,
     });
   }
@@ -230,7 +231,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_BINARY_NOT_FOUND',
       message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
-      link: 'https://zeit.co/docs/v2/build-step#framework-versioning',
+      link: 'https://vercel.com/docs/v2/build-step#framework-versioning',
     });
   }
   await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
@@ -336,24 +337,28 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-    console.log('Installing dependencies...');
-    await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
+    if (meta.isDev) {
+      debug('Skipping dependency installation because dev mode is enabled');
+    } else {
+      const installTime = Date.now();
+      console.log('Installing dependencies...');
+      await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
+      debug(`Install complete [${Date.now() - installTime}ms]`);
+    }
 
     if (pkg && (buildCommand || devCommand)) {
       // We want to add `node_modules/.bin` after `npm install`
-      const { stdout } = await execAsync('yarn', ['bin'], {
-        cwd: entrypointDir,
-      });
+      const nodeBinPath = await getNodeBinPath({ cwd: entrypointDir });
 
       spawnOpts.env = {
         ...spawnOpts.env,
-        PATH: `${stdout.trim()}${path.delimiter}${
+        PATH: `${nodeBinPath}${path.delimiter}${
           spawnOpts.env ? spawnOpts.env.PATH : ''
         }`,
       };
 
       debug(
-        `Added "${stdout.trim()}" to PATH env because a package.json file was found.`
+        `Added "${nodeBinPath}" to PATH env because a package.json file was found.`
       );
     }
 
@@ -420,9 +425,6 @@ export async function build({
     } else {
       if (meta.isDev) {
         debug(`WARN: A dev script is missing.`);
-        debug(
-          'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
-        );
       }
 
       if (buildCommand) {
@@ -477,7 +479,21 @@ export async function build({
         routes.push(...frameworkRoutes);
       }
 
-      output = await glob('**', distPath, mountpoint);
+      let ignore: string[] = [];
+      if (config.zeroConfig) {
+        const result = await getNowIgnore(distPath);
+        ignore = result.ignores
+          .map(file => (file.endsWith('/') ? `${file}**` : file))
+          .concat([
+            '.env',
+            '.env.*',
+            'yarn.lock',
+            'package-lock.json',
+            'package.json',
+          ]);
+        debug(`Using ignore: ${JSON.stringify(ignore)}`);
+      }
+      output = await glob('**', { cwd: distPath, ignore }, mountpoint);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];

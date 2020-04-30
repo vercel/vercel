@@ -1,7 +1,7 @@
 import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
 import readdir from 'recursive-readdir';
-import { relative, join, isAbsolute } from 'path';
+import { relative, join, isAbsolute, basename } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { getNowIgnore, createDebug, parseNowJSON } from './utils';
@@ -126,7 +126,7 @@ export default function buildCreateDeployment(version: number) {
       Array.isArray(nowConfig.files) &&
       nowConfig.files.length > 0
     ) {
-      // See the docs: https://zeit.co/docs/v1/features/configuration/#files-(array)
+      // See the docs: https://vercel.com/docs/v1/features/configuration/#files-(array)
       debug('Filtering file list based on `files` key in now.json');
       const allowedFiles = new Set<string>(['Dockerfile']);
       const allowedDirs = new Set<string>();
@@ -156,14 +156,7 @@ export default function buildCreateDeployment(version: number) {
     // from getting confused about a deployment that renders 404.
     if (
       fileList.length === 0 ||
-      fileList.every(item =>
-        item
-          ? item
-              .split('/')
-              .pop()!
-              .startsWith('.')
-          : true
-      )
+      fileList.every(f => (f ? basename(f).startsWith('.') : true))
     ) {
       debug(
         `Deployment path has no files (or only dotfiles). Yielding a warning event`

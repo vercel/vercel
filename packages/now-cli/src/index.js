@@ -15,7 +15,7 @@ try {
 }
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, lstatSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
@@ -48,7 +48,6 @@ import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getLinkedOrg } from './util/projects/link';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -68,7 +67,7 @@ Sentry.init({
 });
 
 let debug = () => {};
-let apiUrl = 'https://api.zeit.co';
+let apiUrl = 'https://api.vercel.com';
 
 const main = async argv_ => {
   const { isTTY } = process.stdout;
@@ -168,7 +167,7 @@ const main = async argv_ => {
         targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
       }${
         pkg.version.includes('canary') || targetOrSubcommand === 'dev'
-          ? ' — https://zeit.co/feedback'
+          ? ' — https://vercel.com/feedback'
           : ''
       }`
     )}\n`
@@ -177,7 +176,7 @@ const main = async argv_ => {
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
-      console.log(require('../package').version);
+      console.log(pkg.version);
       return 0;
     }
   }
@@ -375,10 +374,30 @@ const main = async argv_ => {
       commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
+      const fileType = lstatSync(targetPath).isDirectory()
+        ? 'subdirectory'
+        : 'file';
+      const plural = targetOrSubcommand + 's';
+      const singular = targetOrSubcommand.endsWith('s')
+        ? targetOrSubcommand.slice(0, -1)
+        : '';
+      let alternative = '';
+      if (commands.has(plural)) {
+        alternative = plural;
+      } else if (commands.has(singular)) {
+        alternative = singular;
+      }
       console.error(
         error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous. ` +
-            'Both a directory and a subcommand are known'
+          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+            `\nIf you wish to deploy the ${fileType} ${param(
+              targetOrSubcommand
+            )}, first run "cd ${targetOrSubcommand}". ` +
+            (alternative
+              ? `\nIf you wish to use the subcommand ${param(
+                  targetOrSubcommand
+                )}, use ${param(alternative)} instead.`
+              : '')
         )
       );
       return 1;
@@ -519,19 +538,6 @@ const main = async argv_ => {
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
-  if (process.env.NOW_ORG_ID || !scope) {
-    const client = new Client({ apiUrl, token });
-    const link = await getLinkedOrg(client, output);
-
-    if (link.status === 'error') {
-      return link.exitCode;
-    }
-
-    if (link.status === 'linked') {
-      scope = link.org.slug;
-    }
-  }
-
   const targetCommand = commands.get(subcommand);
 
   if (
@@ -628,10 +634,10 @@ const main = async argv_ => {
         .send();
     }
   } catch (err) {
-    if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
+    if (err.code === 'ENOTFOUND' && err.hostname === 'api.vercel.com') {
       output.error(
         `The hostname ${highlight(
-          'api.zeit.co'
+          'api.vercel.com'
         )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
       );
       output.debug(err.stack);

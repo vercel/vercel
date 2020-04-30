@@ -92,7 +92,7 @@ export default async function inputProject(
       }
 
       if (project instanceof ProjectNotFound) {
-        output.print(`${chalk.red('Error!')} Project not found\n`);
+        output.error(`Project not found`);
       }
     }
 
@@ -129,7 +129,7 @@ export default async function inputProject(
     }
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
-      output.print(`${chalk.red('Error!')} Project already exists\n`);
+      output.print(`Project already exists`);
       newProjectName = null;
     }
   }

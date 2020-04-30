@@ -7,10 +7,10 @@ cp -v "$bridge_defs" src/now__bridge.ts
 
 tsc
 
-ncc build src/dev-server.ts -o dist/dev
+ncc build src/dev-server.ts -e @now/build-utils -o dist/dev
 mv dist/dev/index.js dist/dev-server.js
 rm -rf dist/dev
 
-ncc build src/index.ts -o dist/main
+ncc build src/index.ts -e @now/build-utils -o dist/main
 mv dist/main/index.js dist/index.js
 rm -rf dist/main

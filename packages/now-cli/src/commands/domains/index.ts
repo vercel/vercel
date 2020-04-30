@@ -28,7 +28,7 @@ const help = () => {
     rm           [name]                 Remove a domain
     buy          [name]                 Buy a domain that you don't yet own
     move         [name] [destination]   Move a domain to another user or team.
-    transfer-in  [name]                 Transfer in a domain to Zeit
+    transfer-in  [name]                 Transfer in a domain to Vercel
     verify       [name]                 Run a verification for a domain
 
   ${chalk.dim('Options:')}
@@ -45,6 +45,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -53,7 +54,7 @@ const help = () => {
       ${chalk.cyan(`$ now domains add ${chalk.underline('domain-name.com')}`)}
 
       Make sure the domain's DNS nameservers are at least 2 of the
-      ones listed on ${chalk.underline('https://zeit.world')}.
+      ones listed on ${chalk.underline('https://vercel.com/edge-network')}.
 
       ${chalk.yellow('NOTE:')} Running ${chalk.dim(
     '`now alias`'
@@ -61,6 +62,12 @@ const help = () => {
       if it's configured with these nameservers (no need to ${chalk.dim(
         '`domain add`'
       )}).
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+      ${chalk.cyan(`$ now domains ls --next 1584722256178`)}
 `);
 };
 
@@ -72,7 +79,7 @@ const COMMAND_CONFIG = {
   move: ['move'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
-  verify: ['verify']
+  verify: ['verify'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -83,7 +90,9 @@ export default async function main(ctx: NowContext) {
       '--cdn': Boolean,
       '--code': String,
       '--no-cdn': Boolean,
-      '--yes': Boolean
+      '--yes': Boolean,
+      '--next': Number,
+      '-N': '--next',
     });
   } catch (error) {
     handleError(error);

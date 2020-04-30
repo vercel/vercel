@@ -156,33 +156,6 @@ RUN mkdir /public
 RUN echo hello > /public/index.html
       `,
     },
-    'build-env': {
-      'now.json': JSON.stringify({
-        version: 1,
-        type: 'static',
-        build: {
-          env: { FOO: 'bar' },
-        },
-      }),
-      Dockerfile: `
-FROM alpine
-ARG FOO
-RUN mkdir /public
-RUN echo $FOO > /public/index.html
-      `,
-    },
-    'build-env-arg': {
-      'now.json': JSON.stringify({
-        version: 1,
-        type: 'static',
-      }),
-      Dockerfile: `
-FROM alpine
-ARG NONCE
-RUN mkdir /public
-RUN echo $NONCE > /public/index.html
-      `,
-    },
     'build-env-debug': {
       'now.json':
         '{ "builds": [ { "src": "index.js", "use": "@now/node" } ], "version": 2 }',
@@ -259,7 +232,7 @@ module.exports = (req, res) => {
     },
     'failing-alias': {
       'now.json': JSON.stringify(
-        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'vercel.com' })
       ),
     },
     'local-config-cloud-v1': {
@@ -311,6 +284,9 @@ CMD ["node", "index.js"]`,
         files: ['.gitignore', 'folder', 'index.js', 'test.html'],
       }),
     },
+    'static-v2-meta': {
+      'index.html': 'Static V2',
+    },
     'redirects-v2': {
       'now.json': JSON.stringify({
         version: 2,
@@ -344,6 +320,35 @@ CMD ["node", "index.js"]`,
       'dir/now.json': JSON.stringify({
         version: 2,
         name: 'nested-level',
+      }),
+    },
+    'subdirectory-secret': {
+      'index.html': 'Home page',
+      'secret/file.txt': 'my secret',
+    },
+    'build-secret': {
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'mkdir public && echo $MY_SECRET > public/index.txt',
+        },
+      }),
+      'now.json': JSON.stringify({
+        build: {
+          env: {
+            MY_SECRET: '@mysecret',
+          },
+        },
+      }),
+    },
+    'api-env': {
+      'api/get-env.js': 'module.exports = (_, res) => res.json(process.env)',
+      'print.js': 'console.log(JSON.stringify(process.env))',
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'mkdir public && node print.js > public/index.json',
+        },
       }),
     },
     'alias-rules': {

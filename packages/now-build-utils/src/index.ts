@@ -12,6 +12,7 @@ import {
   spawnAsync,
   execCommand,
   spawnCommand,
+  walkParentDirs,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
@@ -20,6 +21,7 @@ import {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
+  getNodeBinPath,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -48,6 +50,8 @@ export {
   runPackageJsonScript,
   execCommand,
   spawnCommand,
+  walkParentDirs,
+  getNodeBinPath,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,

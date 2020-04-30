@@ -26,7 +26,7 @@ async function getResult(url) {
 }
 
 module.exports = async (req, res) => {
-  const result = await getResult('https://zeit.co/about');
+  const result = await getResult('https://vercel.com/about');
   if (req && result && result.lhr && result.lhr.categories) {
     res.end('lighthouse:RANDOMNESS_PLACEHOLDER');
   } else {

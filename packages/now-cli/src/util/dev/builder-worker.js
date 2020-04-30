@@ -24,19 +24,19 @@ function onMessage(message) {
 }
 
 async function processMessage(message) {
-  const { builderName, buildParams } = message;
-  const builder = require(builderName);
+  const { requirePath, buildOptions } = message;
+  const builder = require(requirePath);
 
   // Convert the `files` to back into `FileFsRef` instances
-  for (const name of Object.keys(buildParams.files)) {
+  for (const name of Object.keys(buildOptions.files)) {
     const ref = Object.assign(
       Object.create(FileFsRef.prototype),
-      buildParams.files[name]
+      buildOptions.files[name]
     );
-    buildParams.files[name] = ref;
+    buildOptions.files[name] = ref;
   }
 
-  const result = await builder.build(buildParams);
+  const result = await builder.build(buildOptions);
 
   // `@now/next` sets this, but it causes "Converting circular
   // structure to JSON" errors, so delete the property...

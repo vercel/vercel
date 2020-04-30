@@ -1,5 +1,6 @@
 import { basename, extname, join } from 'path';
-import { BuilderParams, BuildResult, ShouldServeParams } from './types';
+import { FileFsRef, BuildOptions, ShouldServeOptions } from '@now/build-utils';
+import { BuildResult } from './types';
 
 export const version = 2;
 
@@ -7,7 +8,7 @@ export function build({
   files,
   entrypoint,
   config,
-}: BuilderParams): BuildResult {
+}: BuildOptions): BuildResult {
   let path = entrypoint;
   const outputDir = config.zeroConfig ? config.outputDirectory : '';
   const outputMatch = outputDir + '/';
@@ -16,7 +17,7 @@ export function build({
     path = path.slice(outputMatch.length);
   }
   const output = {
-    [path]: files[entrypoint],
+    [path]: files[entrypoint] as FileFsRef,
   };
   const watch = [path];
 
@@ -28,7 +29,7 @@ export function shouldServe({
   files,
   requestPath,
   config = {},
-}: ShouldServeParams) {
+}: ShouldServeOptions) {
   let outputPrefix = '';
   const outputDir = config.zeroConfig ? config.outputDirectory : '';
   const outputMatch = outputDir + '/';

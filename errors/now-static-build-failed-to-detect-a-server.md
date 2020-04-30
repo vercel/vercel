@@ -19,7 +19,7 @@ the provided `$PORT` that the builder expects the server to bind to.
 For example, if you are using Gatsby, your `now-dev` script must use the `-p`
 (port) option to bind to the `$PORT` specified from the builder:
 
-> *In Windows environments, reference the `PORT` environment variable with `%PORT%`*
+> _In Windows environments, reference the `PORT` environment variable with `%PORT%`_
 
 ```
 {
@@ -34,7 +34,3 @@ For example, if you are using Gatsby, your `now-dev` script must use the `-p`
 Consult your static builder program's `--help` or documentation to figure out what
 the command line flag to bind to a specific port is (in many cases, it is one of:
 `-p` / `-P` / `--port`).
-
-### Useful Links
-
-- [`@now/static-build` Local Development Documentation](https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build#local-development)

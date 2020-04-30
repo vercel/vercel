@@ -1,6 +1,7 @@
 const assert = require('assert');
 const bufferReplace = require('buffer-replace');
 const fs = require('fs');
+const json5 = require('json5');
 const glob = require('util').promisify(require('glob'));
 const path = require('path');
 const { spawn } = require('child_process');
@@ -52,8 +53,20 @@ async function testDeployment(
     );
   }
 
-  const nowJson = JSON.parse(bodies['now.json']);
-  for (const build of nowJson.builds) {
+  // we use json5 to allow comments for probes
+  const nowJson = json5.parse(bodies['now.json']);
+
+  if (process.env.NOW_BUILDER_DEBUG) {
+    if (!nowJson.build) {
+      nowJson.build = {};
+    }
+    if (!nowJson.build.env) {
+      nowJson.build.env = {};
+    }
+    nowJson.build.env.NOW_BUILDER_DEBUG = process.env.NOW_BUILDER_DEBUG;
+  }
+
+  for (const build of nowJson.builds || []) {
     if (builderUrl) {
       if (builderUrl === '@canary') {
         build.use = `${build.use}@canary`;
@@ -80,7 +93,6 @@ async function testDeployment(
   bodies['now.json'] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
   const { deploymentId, deploymentUrl } = await nowDeploy(bodies, randomness);
-  console.log('deploymentUrl', `https://${deploymentUrl}`);
 
   for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
@@ -147,6 +159,21 @@ async function testDeployment(
 
           throw new Error(
             `Page ${probeUrl} does not have header ${header}.\n\nExpected: ${expected}.\nActual: ${headers}`
+          );
+        }
+      });
+    } else if (probe.notResponseHeaders) {
+      Object.keys(probe.notResponseHeaders).forEach(header => {
+        const headerValue = resp.headers.get(header);
+        const expected = probe.notResponseHeaders[header];
+
+        if (headerValue === expected) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([k, v]) => `  ${k}=${v}`)
+            .join('\n');
+
+          throw new Error(
+            `Page ${probeUrl} invalid page header ${header}.\n\n Did not expect: ${header}=${expected}.\nBut got ${headers}`
           );
         }
       });

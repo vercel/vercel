@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Bug Report
+    url: https://vercel.com/support/request
+    about: Report a bug using the Vercel support form
+  - name: Feature Request
+    url: https://github.com/zeit/now/discussions/new
+    about: Request a feature to be added to the platform
+  - name: Ask a Question
+    url: https://github.com/zeit/now/discussions/new
+    about: Ask questions and discuss with other community members

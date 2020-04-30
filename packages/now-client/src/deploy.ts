@@ -169,6 +169,12 @@ export async function* deploy(
     deploymentOptions.forceNew = clientOptions.force;
   }
 
+  if (clientOptions.withCache) {
+    debug(
+      `'withCache' is provided. Force deploy will be performed with cache retention`
+    );
+  }
+
   let deployment: Deployment | undefined;
 
   try {

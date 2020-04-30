@@ -1,6 +1,6 @@
 {
   "name": "@now/cgi",
-  "version": "1.0.3",
+  "version": "1.0.5-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -8,7 +8,6 @@
     "directory": "packages/now-cgi"
   },
   "scripts": {
-    "test-integration": "best -I test/*.js",
     "prepublish": "./build.sh"
   },
   "files": [
@@ -19,7 +18,6 @@
     "fs-extra": "7.0.0"
   },
   "devDependencies": {
-    "@zeit/best": "0.4.3",
     "rmfr": "2.0.0"
   }
 }

@@ -141,6 +141,14 @@ describe('req.query', () => {
     });
   });
 
+  test('req.query should turn multiple params with same name into an array', async () => {
+    await fetchWithProxyReq(`${url}/?a=2&a=1`);
+
+    expect(mockListener.mock.calls[0][0].query).toMatchObject({
+      a: ['2', '1'],
+    });
+  });
+
   test('req.query should be {} when there is no querystring', async () => {
     await fetchWithProxyReq(url);
     const [{ query }] = mockListener.mock.calls[0];

@@ -8,12 +8,12 @@ export default function getScaleForDC(dc: string, deployment: Deployment) {
   ) {
     return {
       min: deployment.scale[dc].min,
-      max: deployment.scale[dc].max
+      max: deployment.scale[dc].max,
     };
   }
 
   return {
     min: null,
-    max: null
+    max: null,
   };
 }

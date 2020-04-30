@@ -17,7 +17,7 @@ export default async function purchaseDomain(
   try {
     return await client.fetch<Response>(`/v3/domains/buy`, {
       body: { name, expectedPrice },
-      method: 'POST'
+      method: 'POST',
     });
   } catch (error) {
     if (error.code === 'invalid_domain') {

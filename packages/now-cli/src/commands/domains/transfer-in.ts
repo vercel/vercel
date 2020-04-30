@@ -29,7 +29,7 @@ export default async function transferIn(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -40,7 +40,7 @@ export default async function transferIn(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -66,7 +66,7 @@ export default async function transferIn(
   const availableStamp = stamp();
   const [domainPrice, { transferable, transferPolicy }] = await Promise.all([
     getDomainPrice(client, domainName, 'renewal'),
-    checkTransfer(client, domainName)
+    checkTransfer(client, domainName),
   ]);
 
   if (domainPrice instanceof ERRORS.UnsupportedTLD) {
@@ -151,12 +151,12 @@ export default async function transferIn(
   output.warn(
     `Once transferred, your domain ${param(
       domainName
-    )} will be using ZEIT DNS.\n`
+    )} will be using Vercel DNS.\n`
   );
   output.print(
     `  To transfer with previous DNS records, export the zone file from your previous registrar.\n`
   );
-  output.print(`  Then import it to ZEIT DNS by using:\n`);
+  output.print(`  Then import it to Vercel DNS by using:\n`);
   output.print(`    ${cmd(`now dns import ${domainName} <zonefile>`)}\n\n`);
   return 0;
 }

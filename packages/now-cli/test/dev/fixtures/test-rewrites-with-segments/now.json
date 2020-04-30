@@ -1,0 +1,3 @@
+{
+  "rewrites": [{ "source": "/rand", "destination": "/api/fourty-two" }]
+}

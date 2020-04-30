@@ -1,10 +1,10 @@
 {
   "name": "@now/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
-  "version": "1.0.2",
+  "version": "1.1.1-canary.0",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/ruby",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",
   "files": [
     "dist",
     "now_init.rb"
@@ -21,8 +21,10 @@
   },
   "devDependencies": {
     "@types/fs-extra": "8.0.0",
+    "@types/semver": "6.0.0",
     "execa": "2.0.4",
     "fs-extra": "^7.0.1",
+    "semver": "6.1.1",
     "typescript": "3.5.2"
   }
 }

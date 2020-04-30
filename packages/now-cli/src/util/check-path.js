@@ -14,7 +14,7 @@ const checkPath = async dir => {
   const paths = {
     home,
     desktop: path.join(home, 'Desktop'),
-    downloads: path.join(home, 'Downloads')
+    downloads: path.join(home, 'Downloads'),
   };
 
   for (const locationPath in paths) {

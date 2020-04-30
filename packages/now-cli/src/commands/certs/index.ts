@@ -49,6 +49,7 @@ const help = () => {
     --ca ${chalk.bold.underline(
       'FILE'
     )}                      CA certificate chain file
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -61,6 +62,12 @@ const help = () => {
   ${chalk.gray('–')} Remove a certificate
 
       ${chalk.cyan('$ now certs rm id')}
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+      ${chalk.cyan(`$ now certs ls --next 1584722256178`)}
   `);
 };
 
@@ -69,7 +76,7 @@ const COMMAND_CONFIG = {
   issue: ['issue'],
   ls: ['ls', 'list'],
   renew: ['renew'],
-  rm: ['rm', 'remove']
+  rm: ['rm', 'remove'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -80,10 +87,11 @@ export default async function main(ctx: NowContext) {
       '--challenge-only': Boolean,
       '--overwrite': Boolean,
       '--output': String,
-      '--after': String,
       '--crt': String,
       '--key': String,
-      '--ca': String
+      '--ca': String,
+      '--next': Number,
+      '-N': '--next',
     });
   } catch (err) {
     handleError(err);

@@ -25,6 +25,9 @@ export type Source = {
 
 export type Handler = {
   handle: HandleValue;
+  src?: string;
+  dest?: string;
+  status?: number;
 };
 
 export type Route = Source | Handler;
@@ -68,6 +71,7 @@ export interface NowRewrite {
 export interface NowRedirect {
   source: string;
   destination: string;
+  permanent?: boolean;
   statusCode?: number;
 }
 
@@ -79,4 +83,19 @@ export interface NowHeader {
 export interface NowHeaderKeyValue {
   key: string;
   value: string;
+}
+
+export interface AppendRoutesToPhaseProps {
+  /**
+   * All input routes including `handle` phases.
+   */
+  routes: Route[] | null;
+  /**
+   * The routes to append to a specific phase.
+   */
+  newRoutes: Route[] | null;
+  /**
+   * The phase to append the routes such as `filesystem`.
+   */
+  phase: HandleValue;
 }

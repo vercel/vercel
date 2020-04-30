@@ -2,9 +2,10 @@ import { DeploymentFile } from './hashes';
 import { parse as parseUrl } from 'url';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep } from 'path';
+import { join, sep, relative } from 'path';
 import qs from 'querystring';
 import ignore from 'ignore';
+type Ignore = ReturnType<typeof ignore>;
 import { pkgVersion } from '../pkg';
 import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
@@ -29,6 +30,7 @@ const EVENTS_ARRAY = [
   'error',
   'notice',
   'tip',
+  'canceled',
 ] as const;
 
 export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
@@ -73,15 +75,17 @@ const maybeRead = async function<T>(path: string, default_: T) {
   }
 };
 
-export async function getNowIgnore(path: string | string[]): Promise<any> {
-  let ignores: string[] = [
-    '.hg',
-    '.git',
+export async function getNowIgnore(
+  path: string | string[]
+): Promise<{ ig: Ignore; ignores: string[] }> {
+  const ignores: string[] = [
+    '.hg/',
+    '.git/',
     '.gitmodules',
-    '.svn',
+    '.svn/',
     '.cache',
-    '.next',
-    '.now',
+    '.next/',
+    '.now/',
     '.npmignore',
     '.dockerignore',
     '.gitignore',
@@ -89,12 +93,12 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
     '.DS_Store',
     '.wafpicke-*',
     '.lock-wscript',
-    '.env',
-    '.env.*',
+    '.env.local',
+    '.env.*.local',
     '.venv',
     'npm-debug.log',
     'config.gypi',
-    'node_modules',
+    'node_modules/',
     '__pycache__/',
     'venv/',
     'CVS',
@@ -134,7 +138,7 @@ export const fetch = async (
   const debug = createDebug(debugEnabled);
   let time: number;
 
-  url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
+  url = `${opts.apiUrl || 'https://api.vercel.com'}${url}`;
   delete opts.apiUrl;
 
   if (opts.teamId) {
@@ -191,9 +195,10 @@ export const prepareFiles = (
 
         if (clientOptions.isDirectory) {
           // Directory
-          fileName = clientOptions.path
-            ? name.substring(clientOptions.path.length + 1)
-            : name;
+          fileName =
+            typeof clientOptions.path === 'string'
+              ? relative(clientOptions.path, name)
+              : name;
         } else {
           // Array of files or single file
           const segments = name.split(sep);

@@ -34,7 +34,7 @@ function printInspectUrl(
   const deploymentShortId = q.pop();
   const projectName = q.join('-');
 
-  const inspectUrl = `https://zeit.co/${orgSlug}/${projectName}/${deploymentShortId}${
+  const inspectUrl = `https://vercel.com/${orgSlug}/${projectName}/${deploymentShortId}${
     apex !== 'now.sh' ? `/${apex}` : ''
   }`;
 
@@ -66,6 +66,7 @@ export default async function processDeployment({
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
+  withCache?: boolean;
   org: Org;
   projectName: string;
   isSettingUpProject: boolean;
@@ -82,6 +83,7 @@ export default async function processDeployment({
     requestBody,
     deployStamp,
     force,
+    withCache,
     nowConfig,
     quiet,
   } = args;
@@ -99,6 +101,7 @@ export default async function processDeployment({
     userAgent: ua,
     path: paths[0],
     force,
+    withCache,
     skipAutoDetectionConfirmation,
   };
 
@@ -108,7 +111,7 @@ export default async function processDeployment({
 
   let deployingSpinner = output.spinner(
     isSettingUpProject
-      ? `Setting up project`
+      ? 'Setting up project'
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
     0
   );
@@ -139,6 +142,18 @@ export default async function processDeployment({
         .map((sha: string) => event.payload.total.get(sha).data.length)
         .reduce((a: number, b: number) => a + b, 0);
 
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
+      if (buildSpinner) {
+        buildSpinner();
+      }
+      if (deploySpinner) {
+        deploySpinner();
+      }
+      if (deployingSpinner) {
+        deployingSpinner();
+      }
       bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
         width: 20,
         complete: '=',
@@ -178,6 +193,8 @@ export default async function processDeployment({
         org.slug
       );
 
+      now.url = event.payload.url;
+
       printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
       if (quiet) {
@@ -200,6 +217,16 @@ export default async function processDeployment({
       if (buildSpinner === null) {
         buildSpinner = output.spinner('Building', 0);
       }
+    }
+
+    if (event.type === 'canceled') {
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
+      if (buildSpinner) {
+        buildSpinner();
+      }
+      return event.payload;
     }
 
     if (event.type === 'ready') {

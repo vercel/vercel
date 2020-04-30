@@ -101,9 +101,7 @@ const printDeploymentStatus = async (
 
   if (readyState !== 'READY') {
     output.error(
-      `${chalk.red(
-        'Error!'
-      )} Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+      `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
     );
     return 1;
   }
@@ -284,13 +282,22 @@ export default async function main(
       return 0;
     }
 
-    org = await selectOrg(
-      output,
-      'Which scope do you want to deploy to?',
-      client,
-      ctx.config.currentTeam,
-      autoConfirm
-    );
+    try {
+      org = await selectOrg(
+        output,
+        'Which scope do you want to deploy to?',
+        client,
+        ctx.config.currentTeam,
+        autoConfirm
+      );
+    } catch (err) {
+      if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+        output.error(err.message);
+        return 1;
+      }
+
+      throw err;
+    }
 
     // We use `localConfig` here to read the name
     // even though the `now.json` file can change
@@ -343,7 +350,7 @@ export default async function main(
       path,
       sourcePath,
       project
-        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        ? `To change your project settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -497,6 +504,7 @@ export default async function main(
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
+      withCache: argv['--with-cache'],
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       isFile,
@@ -563,6 +571,11 @@ export default async function main(
         `${deployment.message ||
           'An unexpected error occurred while deploying your project'} (http://zeit.ink/P4)`
       );
+      return 1;
+    }
+
+    if (deployment.readyState === 'CANCELED') {
+      output.print('The deployment has been canceled.\n');
       return 1;
     }
 
@@ -651,8 +664,13 @@ export default async function main(
     if (err instanceof BuildError) {
       output.error('Build failed');
       output.error(
-        `Check your logs at ${now.url}/_logs or run ${code(
-          `now logs ${now.url}`
+        `Check your logs at https://${now.url}/_logs or run ${code(
+          `now logs ${now.url}`,
+          {
+            // Backticks are interpreted as part of the URL, causing CMD+Click
+            // behavior to fail in editors like VSCode.
+            backticks: false,
+          }
         )}`
       );
 
@@ -746,7 +764,7 @@ function handleCreateDeployError(output, error) {
       return 1;
     }
 
-    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
+    const link = 'https://vercel.com/docs/configuration';
 
     output.error(
       `Failed to validate ${highlight(

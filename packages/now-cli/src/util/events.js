@@ -28,13 +28,10 @@ async function printEvents(
   const q = qs.stringify({
     direction: findOpts.direction,
     limit: findOpts.limit,
-    q: findOpts.query,
-    types: (findOpts.types || []).join(','),
     since: findOpts.since,
     until: findOpts.until,
-    instanceId: findOpts.instanceId,
     follow: findOpts.follow ? '1' : '',
-    format: 'lines'
+    format: 'lines',
   });
 
   let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${q}`;
@@ -142,7 +139,7 @@ async function printEvents(
 
             const retryFindOpts = {
               ...findOpts,
-              since: latestLogDate
+              since: latestLogDate,
             };
 
             setTimeout(() => {
@@ -153,7 +150,7 @@ async function printEvents(
                 onEvent,
                 quiet,
                 debugEnabled,
-                findOpts: retryFindOpts
+                findOpts: retryFindOpts,
               }).then(resolve, reject);
             }, 2000);
           };
@@ -184,7 +181,7 @@ async function printEvents(
         }
 
         log(`Deployment state polling error: ${err.message}`);
-      }
+      },
     }
   );
 }

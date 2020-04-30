@@ -190,7 +190,10 @@ export default async function main(ctx) {
     }
 
     aliases = await Promise.all(
-      deployments.map(depl => getAliases(client, depl.uid))
+      deployments.map(async depl => {
+        const { aliases } = await getAliases(client, depl.uid);
+        return aliases;
+      })
     );
   } finally {
     cancelWait();

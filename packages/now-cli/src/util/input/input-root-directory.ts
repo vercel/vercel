@@ -13,8 +13,6 @@ export async function inputRootDirectory(
     return null;
   }
 
-  const basename = path.basename(cwd);
-
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const { rootDirectory } = await inquirer.prompt({
@@ -22,7 +20,7 @@ export async function inputRootDirectory(
       name: 'rootDirectory',
       message: `In which directory is your code located?`,
       transformer: (input: string) => {
-        return `${chalk.dim(`${basename}/`)}${input}`;
+        return `${chalk.dim(`./`)}${input}`;
       },
     });
 

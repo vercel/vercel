@@ -11,6 +11,7 @@ import {
   FileFsRef,
   streamToBuffer,
   Lambda,
+  NowBuildError,
   isSymbolicLink,
 } from '@now/build-utils';
 import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
@@ -38,9 +39,11 @@ function validateEntrypoint(entrypoint: string) {
     !/package\.json$/.exec(entrypoint) &&
     !/next\.config\.js$/.exec(entrypoint)
   ) {
-    throw new Error(
-      'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"'
-    );
+    throw new NowBuildError({
+      message:
+        'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"',
+      code: 'NOW_NEXT_INCORRECT_SRC',
+    });
   }
 }
 
@@ -306,6 +309,7 @@ type RoutesManifestRegex = {
 };
 
 export type RoutesManifest = {
+  pages404: boolean;
   basePath: string | undefined;
   redirects: (Redirect & RoutesManifestRegex)[];
   rewrites: (NowRewrite & RoutesManifestRegex)[];
@@ -315,10 +319,12 @@ export type RoutesManifest = {
     regex: string;
   }[];
   version: number;
+  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
 };
 
 export async function getRoutesManifest(
   entryPath: string,
+  outputDirectory: string,
   nextVersion?: string
 ): Promise<RoutesManifest | undefined> {
   const shouldHaveManifest =
@@ -327,7 +333,7 @@ export async function getRoutesManifest(
 
   const pathRoutesManifest = path.join(
     entryPath,
-    '.next',
+    outputDirectory,
     'routes-manifest.json'
   );
   const hasRoutesManifest = await fs
@@ -336,9 +342,11 @@ export async function getRoutesManifest(
     .catch(() => false);
 
   if (shouldHaveManifest && !hasRoutesManifest) {
-    throw new Error(
-      `A routes-manifest.json couldn't be found. This could be due to a failure during the build`
-    );
+    throw new NowBuildError({
+      message: `A "routes-manifest.json" couldn't be found. Is the correct output directory configured? This setting does not need to be changed in most cases`,
+      link: 'https://err.sh/zeit/now/now-next-routes-manifest',
+      code: 'NOW_NEXT_NO_ROUTES_MANIFEST',
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -352,7 +360,8 @@ export async function getDynamicRoutes(
   entryDirectory: string,
   dynamicPages: string[],
   isDev?: boolean,
-  routesManifest?: RoutesManifest
+  routesManifest?: RoutesManifest,
+  omittedRoutes?: Set<string>
 ): Promise<Source[]> {
   if (!dynamicPages.length) {
     return [];
@@ -362,21 +371,26 @@ export async function getDynamicRoutes(
     switch (routesManifest.version) {
       case 1:
       case 2: {
-        return routesManifest.dynamicRoutes.map(
-          ({ page, regex }: { page: string; regex: string }) => {
+        return routesManifest.dynamicRoutes
+          .filter(({ page }) =>
+            omittedRoutes ? !omittedRoutes.has(page) : true
+          )
+          .map(({ page, regex }: { page: string; regex: string }) => {
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              check: true,
             };
-          }
-        );
+          });
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION
-        throw new Error(
-          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-        );
+        throw new NowBuildError({
+          message:
+            'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+          code: 'NOW_NEXT_VERSION_UPGRADE',
+        });
       }
     }
   }
@@ -413,9 +427,11 @@ export async function getDynamicRoutes(
   }
 
   if (!getRouteRegex || !getSortedRoutes) {
-    throw new Error(
-      'Found usage of dynamic routes but not on a new enough version of Next.js.'
-    );
+    throw new NowBuildError({
+      message:
+        'Found usage of dynamic routes but not on a new enough version of Next.js.',
+      code: 'NOW_NEXT_DYNAMIC_ROUTES_OUTDATED',
+    });
   }
 
   const pageMatchers = getSortedRoutes(dynamicPages).map(pageName => ({
@@ -434,6 +450,7 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
+        check: true,
       });
     }
   });
@@ -613,7 +630,9 @@ export async function createLambdaFromPseudoLayers({
 }
 
 export type NextPrerenderedRoutes = {
-  routes: {
+  bypassToken: string | null;
+
+  staticRoutes: {
     [route: string]: {
       initialRevalidate: number | false;
       dataRoute: string;
@@ -621,13 +640,24 @@ export type NextPrerenderedRoutes = {
     };
   };
 
-  lazyRoutes: {
+  legacyBlockingRoutes: {
     [route: string]: {
       routeRegex: string;
       dataRoute: string;
       dataRouteRegex: string;
     };
   };
+
+  fallbackRoutes: {
+    [route: string]: {
+      fallback: string;
+      routeRegex: string;
+      dataRoute: string;
+      dataRouteRegex: string;
+    };
+  };
+
+  omittedRoutes: string[];
 };
 
 export async function getExportIntent(
@@ -712,33 +742,72 @@ export async function getPrerenderManifest(
     .catch(() => false);
 
   if (!hasManifest) {
-    return { routes: {}, lazyRoutes: {} };
+    return {
+      staticRoutes: {},
+      legacyBlockingRoutes: {},
+      fallbackRoutes: {},
+      bypassToken: null,
+      omittedRoutes: [],
+    };
   }
 
-  const manifest: {
-    version: 1;
-    routes: {
-      [key: string]: {
-        initialRevalidateSeconds: number | false;
-        dataRoute: string;
-        srcRoute: string | null;
-      };
-    };
-    dynamicRoutes: {
-      [key: string]: {
-        routeRegex: string;
-        dataRoute: string;
-        dataRouteRegex: string;
-      };
-    };
-  } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
+  const manifest:
+    | {
+        version: 1;
+        routes: {
+          [key: string]: {
+            initialRevalidateSeconds: number | false;
+            dataRoute: string;
+            srcRoute: string | null;
+          };
+        };
+        dynamicRoutes: {
+          [key: string]: {
+            fallback?: string;
+            routeRegex: string;
+            dataRoute: string;
+            dataRouteRegex: string;
+          };
+        };
+        preview?: {
+          previewModeId: string;
+        };
+      }
+    | {
+        version: 2;
+        routes: {
+          [route: string]: {
+            initialRevalidateSeconds: number | false;
+            srcRoute: string | null;
+            dataRoute: string;
+          };
+        };
+        dynamicRoutes: {
+          [route: string]: {
+            routeRegex: string;
+            fallback: string | false;
+            dataRoute: string;
+            dataRouteRegex: string;
+          };
+        };
+        preview: {
+          previewModeId: string;
+        };
+      } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
   switch (manifest.version) {
     case 1: {
       const routes = Object.keys(manifest.routes);
       const lazyRoutes = Object.keys(manifest.dynamicRoutes);
 
-      const ret: NextPrerenderedRoutes = { routes: {}, lazyRoutes: {} };
+      const ret: NextPrerenderedRoutes = {
+        staticRoutes: {},
+        legacyBlockingRoutes: {},
+        fallbackRoutes: {},
+        bypassToken:
+          (manifest.preview && manifest.preview.previewModeId) || null,
+        omittedRoutes: [],
+      };
 
       routes.forEach(route => {
         const {
@@ -746,7 +815,7 @@ export async function getPrerenderManifest(
           dataRoute,
           srcRoute,
         } = manifest.routes[route];
-        ret.routes[route] = {
+        ret.staticRoutes[route] = {
           initialRevalidate:
             initialRevalidateSeconds === false
               ? false
@@ -759,17 +828,90 @@ export async function getPrerenderManifest(
       lazyRoutes.forEach(lazyRoute => {
         const {
           routeRegex,
+          fallback,
           dataRoute,
           dataRouteRegex,
         } = manifest.dynamicRoutes[lazyRoute];
 
-        ret.lazyRoutes[lazyRoute] = { routeRegex, dataRoute, dataRouteRegex };
+        if (fallback) {
+          ret.fallbackRoutes[lazyRoute] = {
+            routeRegex,
+            fallback,
+            dataRoute,
+            dataRouteRegex,
+          };
+        } else {
+          ret.legacyBlockingRoutes[lazyRoute] = {
+            routeRegex,
+            dataRoute,
+            dataRouteRegex,
+          };
+        }
+      });
+
+      return ret;
+    }
+    case 2: {
+      const routes = Object.keys(manifest.routes);
+      const lazyRoutes = Object.keys(manifest.dynamicRoutes);
+
+      const ret: NextPrerenderedRoutes = {
+        staticRoutes: {},
+        legacyBlockingRoutes: {},
+        fallbackRoutes: {},
+        bypassToken: manifest.preview.previewModeId,
+        omittedRoutes: [],
+      };
+
+      routes.forEach(route => {
+        const {
+          initialRevalidateSeconds,
+          dataRoute,
+          srcRoute,
+        } = manifest.routes[route];
+        ret.staticRoutes[route] = {
+          initialRevalidate:
+            initialRevalidateSeconds === false
+              ? false
+              : Math.max(1, initialRevalidateSeconds),
+          dataRoute,
+          srcRoute,
+        };
+      });
+
+      lazyRoutes.forEach(lazyRoute => {
+        const {
+          routeRegex,
+          fallback,
+          dataRoute,
+          dataRouteRegex,
+        } = manifest.dynamicRoutes[lazyRoute];
+
+        if (!fallback) {
+          // Fallback behavior is disabled, all routes would've been provided
+          // in the top-level `routes` key (`staticRoutes`).
+          ret.omittedRoutes.push(lazyRoute);
+          return;
+        }
+
+        ret.fallbackRoutes[lazyRoute] = {
+          routeRegex,
+          fallback,
+          dataRoute,
+          dataRouteRegex,
+        };
       });
 
       return ret;
     }
     default: {
-      return { routes: {}, lazyRoutes: {} };
+      return {
+        staticRoutes: {},
+        legacyBlockingRoutes: {},
+        fallbackRoutes: {},
+        bypassToken: null,
+        omittedRoutes: [],
+      };
     }
   }
 }

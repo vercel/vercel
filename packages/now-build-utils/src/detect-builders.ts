@@ -80,15 +80,13 @@ export async function detectBuilders(
   warnings: ErrorResponse[];
   defaultRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
+  rewriteRoutes: Route[] | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
   const apiBuilders: Builder[] = [];
   let frontendBuilder: Builder | null = null;
-
-  const defaultRoutes: Route[] = [];
-  const redirectRoutes: Route[] = [];
 
   const functionError = validateFunctions(options);
 
@@ -99,6 +97,7 @@ export async function detectBuilders(
       warnings,
       defaultRoutes: null,
       redirectRoutes: null,
+      rewriteRoutes: null,
     };
   }
 
@@ -131,15 +130,15 @@ export async function detectBuilders(
 
   let fallbackEntrypoint: string | null = null;
 
-  const preDefaultRoutes: Source[] = [];
-  const preDynamicRoutes: Source[] = [];
+  const apiRoutes: Source[] = [];
+  const dynamicRoutes: Source[] = [];
 
   // API
   for (const fileName of sortedFiles) {
     const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
-      const { routeError, defaultRoute, dynamicRoute } = getApiRoute(
+      const { routeError, apiRoute, isDynamic } = getApiRoute(
         fileName,
         apiSortedFiles,
         options,
@@ -153,15 +152,15 @@ export async function detectBuilders(
           warnings,
           defaultRoutes: null,
           redirectRoutes: null,
+          rewriteRoutes: null,
         };
       }
 
-      if (dynamicRoute) {
-        preDynamicRoutes.push(dynamicRoute);
-      }
-
-      if (defaultRoute) {
-        preDefaultRoutes.push(defaultRoute);
+      if (apiRoute) {
+        apiRoutes.push(apiRoute);
+        if (isDynamic) {
+          dynamicRoutes.push(apiRoute);
+        }
       }
 
       addToUsedFunctions(apiBuilder);
@@ -191,7 +190,12 @@ export async function detectBuilders(
       hasNextApiFiles = true;
     }
 
-    if (!fallbackEntrypoint && buildCommand && !fileName.includes('/')) {
+    if (
+      !fallbackEntrypoint &&
+      buildCommand &&
+      !fileName.includes('/') &&
+      fileName !== 'now.json'
+    ) {
       fallbackEntrypoint = fileName;
     }
   }
@@ -224,6 +228,7 @@ export async function detectBuilders(
         builders: null,
         redirectRoutes: null,
         defaultRoutes: null,
+        rewriteRoutes: null,
       };
     }
 
@@ -264,6 +269,7 @@ export async function detectBuilders(
       warnings,
       redirectRoutes: null,
       defaultRoutes: null,
+      rewriteRoutes: null,
     };
   }
 
@@ -285,24 +291,22 @@ export async function detectBuilders(
     }
   }
 
-  const routesResult = mergeRoutes(
-    preDefaultRoutes,
-    preDynamicRoutes,
+  const routesResult = getRouteResult(
+    apiRoutes,
+    dynamicRoutes,
     usedOutputDirectory,
     apiBuilders,
     frontendBuilder,
     options
   );
 
-  defaultRoutes.push(...routesResult.defaultRoutes);
-  redirectRoutes.push(...routesResult.redirectRoutes);
-
   return {
     warnings,
     builders: builders.length ? builders : null,
     errors: errors.length ? errors : null,
-    redirectRoutes,
-    defaultRoutes,
+    redirectRoutes: routesResult.redirectRoutes,
+    defaultRoutes: routesResult.defaultRoutes,
+    rewriteRoutes: routesResult.rewriteRoutes,
   };
 }
 
@@ -484,7 +488,7 @@ function getMissingBuildScriptError() {
     code: 'missing_build_script',
     message:
       'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
-      '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-build-script',
+      '\nMore details: https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-build-script',
   };
 }
 
@@ -622,16 +626,16 @@ function getApiRoute(
   options: Options,
   absolutePathCache: Map<string, string>
 ): {
-  defaultRoute: Source | null;
-  dynamicRoute: Source | null;
+  apiRoute: Source | null;
+  isDynamic: boolean;
   routeError: ErrorResponse | null;
 } {
   const conflictingSegment = getConflictingSegment(fileName);
 
   if (conflictingSegment) {
     return {
-      defaultRoute: null,
-      dynamicRoute: null,
+      apiRoute: null,
+      isDynamic: false,
       routeError: {
         code: 'conflicting_path_segment',
         message:
@@ -650,8 +654,8 @@ function getApiRoute(
     );
 
     return {
-      defaultRoute: null,
-      dynamicRoute: null,
+      apiRoute: null,
+      isDynamic: false,
       routeError: {
         code: 'conflicting_file_path',
         message:
@@ -669,8 +673,8 @@ function getApiRoute(
   );
 
   return {
-    defaultRoute: out.route,
-    dynamicRoute: out.isDynamic ? out.route : null,
+    apiRoute: out.route,
+    isDynamic: out.isDynamic,
     routeError: null,
   };
 }
@@ -835,10 +839,10 @@ function createRouteFromPath(
     } else if (isLast) {
       const { name: fileName, ext } = parsePath(segment);
       const isIndex = fileName === 'index';
-      const prefix = isIndex ? '\\/' : '';
+      const prefix = isIndex ? '/' : '';
 
       const names = [
-        isIndex ? prefix : `${fileName}\\/`,
+        isIndex ? prefix : `${fileName}/`,
         prefix + escapeName(fileName),
         featHandleMiss && cleanUrls
           ? ''
@@ -881,9 +885,9 @@ function createRouteFromPath(
   return { route, isDynamic };
 }
 
-function mergeRoutes(
-  preDefaultRoutes: Source[],
-  preDynamicRoutes: Source[],
+function getRouteResult(
+  apiRoutes: Source[],
+  dynamicRoutes: Source[],
   outputDirectory: string,
   apiBuilders: Builder[],
   frontendBuilder: Builder | null,
@@ -891,14 +895,14 @@ function mergeRoutes(
 ): {
   defaultRoutes: Route[];
   redirectRoutes: Route[];
+  rewriteRoutes: Route[];
 } {
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
+  const rewriteRoutes: Route[] = [];
 
-  if (preDefaultRoutes && preDefaultRoutes.length > 0) {
+  if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
-      defaultRoutes.push({ handle: 'miss' });
-
       const extSet = detectApiExtensions(apiBuilders);
 
       if (extSet.size > 0) {
@@ -923,6 +927,7 @@ function mergeRoutes(
             status: 308,
           });
         } else {
+          defaultRoutes.push({ handle: 'miss' });
           defaultRoutes.push({
             src: `^/api/(.+)${extGroup}$`,
             dest: '/api/$1',
@@ -931,21 +936,16 @@ function mergeRoutes(
         }
       }
 
-      if (preDynamicRoutes) {
-        defaultRoutes.push(...preDynamicRoutes);
-      }
-
-      if (preDefaultRoutes.length) {
-        defaultRoutes.push({
-          src: '^/api(/.*)?$',
-          status: 404,
-          continue: true,
-        });
-      }
+      rewriteRoutes.push(...dynamicRoutes);
+      rewriteRoutes.push({
+        src: '^/api(/.*)?$',
+        status: 404,
+        continue: true,
+      });
     } else {
-      defaultRoutes.push(...preDefaultRoutes);
+      defaultRoutes.push(...apiRoutes);
 
-      if (preDefaultRoutes.length) {
+      if (apiRoutes.length) {
         defaultRoutes.push({
           status: 404,
           src: '^/api(/.*)?$',
@@ -969,6 +969,7 @@ function mergeRoutes(
   return {
     defaultRoutes,
     redirectRoutes,
+    rewriteRoutes,
   };
 }
 

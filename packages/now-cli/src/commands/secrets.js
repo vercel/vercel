@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import table from 'text-table';
 import mri from 'mri';
 import ms from 'ms';
-import plural from 'pluralize';
 import strlen from '../util/strlen.ts';
 import { handleError, error } from '../util/error';
 import NowSecrets from '../util/secrets';
@@ -12,6 +11,9 @@ import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import createOutput from '../util/output';
 import confirm from '../util/input/confirm';
+import getCommandFlags from '../util/get-command-flags';
+import cmd from '../util/output/cmd.ts';
+import getPrefixedFlags from '../util/get-prefixed-flags';
 
 const help = () => {
   console.log(`
@@ -38,6 +40,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -60,6 +63,12 @@ const help = () => {
   )} symbol)
 
     ${chalk.cyan(`$ now -e MY_SECRET=${chalk.bold('@my-secret')}`)}
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+  
+    ${chalk.cyan(`$ now secrets ls --next 1584722256178`)}
 `);
 };
 
@@ -68,6 +77,7 @@ let argv;
 let debug;
 let apiUrl;
 let subcommand;
+let nextTimestamp;
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
@@ -76,6 +86,7 @@ const main = async ctx => {
       help: 'h',
       debug: 'd',
       yes: 'y',
+      next: 'N',
     },
   });
 
@@ -84,6 +95,7 @@ const main = async ctx => {
   debug = argv.debug;
   apiUrl = ctx.apiUrl;
   subcommand = argv._[0];
+  nextTimestamp = argv.next;
 
   if (argv.help || !subcommand) {
     help();
@@ -110,7 +122,7 @@ const main = async ctx => {
   }
 
   try {
-    await run({ output, token, contextName, currentTeam });
+    await run({ output, token, contextName, currentTeam, ctx });
   } catch (err) {
     handleError(err);
     exit(1);
@@ -126,13 +138,13 @@ export default async ctx => {
   }
 };
 
-async function run({ output, token, contextName, currentTeam }) {
+async function run({ output, token, contextName, currentTeam, ctx }) {
   const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
 
   if (subcommand === 'ls' || subcommand === 'list') {
-    if (args.length !== 0) {
+    if (args.length > 1) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`
@@ -141,11 +153,11 @@ async function run({ output, token, contextName, currentTeam }) {
       return exit(1);
     }
 
-    const list = await secrets.ls();
-    const elapsed = ms(new Date() - start);
+    const { secrets: list, pagination } = await secrets.ls(nextTimestamp);
+    const elapsed = ms(Date.now() - start);
 
     console.log(
-      `${plural('secret', list.length, true)} found under ${chalk.bold(
+      `${list.length > 0 ? 'Secrets' : 'No secrets'} found under ${chalk.bold(
         contextName
       )} ${chalk.gray(`[${elapsed}]`)}`
     );
@@ -172,6 +184,19 @@ async function run({ output, token, contextName, currentTeam }) {
         console.log(`\n${out}\n`);
       }
     }
+
+    if (pagination && pagination.count === 20) {
+      const prefixedArgs = getPrefixedFlags(argv);
+      const flags = getCommandFlags(prefixedArgs, [
+        '_',
+        '--next',
+        '-N',
+        '-d',
+        '-y',
+      ]);
+      const nextCmd = `now secrets ${subcommand}${flags} --next ${pagination.next}`;
+      output.log(`To display the next page run ${cmd(nextCmd)}`);
+    }
     return secrets.close();
   }
 
@@ -186,8 +211,8 @@ async function run({ output, token, contextName, currentTeam }) {
       );
       return exit(1);
     }
-    const list = await secrets.ls();
-    const theSecret = list.find(secret => secret.name === args[0]);
+
+    const theSecret = await secrets.getSecretByNameOrId(args[0]);
 
     if (theSecret) {
       const yes =
@@ -260,7 +285,28 @@ async function run({ output, token, contextName, currentTeam }) {
       return exit(1);
     }
 
-    const [name, value] = args;
+    const [name, parsedValue] = args;
+    const [originalName, originalValue] = ctx.argv.slice(-2);
+
+    let value = parsedValue;
+    if (
+      name === originalName &&
+      typeof parsedValue === 'boolean' &&
+      parsedValue !== originalValue
+    ) {
+      // Corner case where `mri` transforms the secret value into a boolean because
+      // it starts with a `-` so it thinks its a flag, so we use the original value instead.
+      value = originalValue;
+    }
+
+    if (typeof value === 'boolean') {
+      const example = chalk.cyan(`$ now secret add -- "${name}"`);
+      console.log(
+        `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
+      );
+      return exit(1);
+    }
+
     await secrets.add(name, value);
     const elapsed = ms(new Date() - start);
 

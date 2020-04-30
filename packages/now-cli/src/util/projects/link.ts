@@ -12,6 +12,7 @@ import { Project } from '../../types';
 import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
 import { prependEmoji, emoji } from '../emoji';
+import AJV from 'ajv';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -20,6 +21,21 @@ export const NOW_FOLDER = '.now';
 export const NOW_FOLDER_README = 'README.txt';
 export const NOW_PROJECT_LINK_FILE = 'project.json';
 
+const linkSchema = {
+  type: 'object',
+  required: ['projectId', 'orgId'],
+  properties: {
+    projectId: {
+      type: 'string',
+      minLength: 1,
+    },
+    orgId: {
+      type: 'string',
+      minLength: 1,
+    },
+  },
+};
+
 async function getLink(path?: string): Promise<ProjectLink | null> {
   try {
     const json = await readFile(
@@ -27,7 +43,14 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
       { encoding: 'utf8' }
     );
 
+    const ajv = new AJV();
     const link: ProjectLink = JSON.parse(json);
+
+    if (!ajv.validate(linkSchema, link)) {
+      throw new Error(
+        'Now project settings are invalid. To link your project again, remove the `.now` directory.'
+      );
+    }
 
     return link;
   } catch (error) {
@@ -59,55 +82,6 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
   return { type: 'user', id: orgId, slug: user.username };
 }
 
-export async function getLinkedOrg(
-  client: Client,
-  output: Output,
-  path?: string
-): Promise<
-  | { status: 'linked'; org: Org }
-  | { status: 'not_linked'; org: null }
-  | { status: 'error'; exitCode: number }
-> {
-  const { NOW_ORG_ID } = process.env;
-
-  let orgId: string | null = null;
-  if (NOW_ORG_ID) {
-    orgId = NOW_ORG_ID;
-  } else {
-    const link = await getLink(path);
-
-    if (link) {
-      orgId = link.orgId;
-    }
-  }
-
-  if (!orgId) {
-    return { status: 'not_linked', org: null };
-  }
-
-  const spinner = output.spinner('Retrieving scope…', 1000);
-  try {
-    const org = await getOrgById(client, orgId);
-
-    if (!org && NOW_ORG_ID) {
-      output.print(
-        `${chalk.red('Error!')} Organization not found (${JSON.stringify({
-          NOW_ORG_ID,
-        })})\n`
-      );
-      return { status: 'error', exitCode: 1 };
-    }
-
-    if (!org) {
-      return { status: 'not_linked', org: null };
-    }
-
-    return { status: 'linked', org };
-  } finally {
-    spinner();
-  }
-}
-
 export async function getLinkedProject(
   output: Output,
   client: Client,
@@ -121,8 +95,8 @@ export async function getLinkedProject(
   const shouldUseEnv = Boolean(NOW_ORG_ID && NOW_PROJECT_ID);
 
   if ((NOW_ORG_ID || NOW_PROJECT_ID) && !shouldUseEnv) {
-    output.print(
-      `${chalk.red('Error!')} You specified ${
+    output.error(
+      `You specified ${
         NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
       } but you forgot to specify ${
         NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
@@ -154,8 +128,8 @@ export async function getLinkedProject(
 
   if (!org || !project || project instanceof ProjectNotFound) {
     if (shouldUseEnv) {
-      output.print(
-        `${chalk.red('Error!')} Project not found (${JSON.stringify({
+      output.error(
+        `Project not found (${JSON.stringify({
           NOW_PROJECT_ID,
           NOW_ORG_ID,
         })})\n`
@@ -164,7 +138,7 @@ export async function getLinkedProject(
     } else {
       output.print(
         prependEmoji(
-          'Your project was either removed from ZEIT Now or you’re not a member of it anymore.\n',
+          'Your project was either removed from Vercel or you’re not a member of it anymore.\n',
           emoji('warning')
         )
       );

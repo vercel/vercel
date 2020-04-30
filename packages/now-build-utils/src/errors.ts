@@ -27,7 +27,7 @@ interface Props {
    */
   code: string;
   /**
-   * Optional hyperlink starting with https://zeit.co to
+   * Optional hyperlink starting with https://vercel.com to
    * link to more information about this error.
    */
   link?: string;

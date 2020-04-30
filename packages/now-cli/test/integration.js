@@ -20,6 +20,7 @@ import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
 import prepareFixtures from './helpers/prepare';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 // log command when running `execa`
 function execa(file, args, options) {
@@ -27,7 +28,6 @@ function execa(file, args, options) {
   return _execa(file, args, options);
 }
 
-const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
@@ -70,27 +70,8 @@ const waitForDeployment = async href => {
   }
 };
 
-function fetchTokenWithRetry(url, retries = 3) {
-  return retry(
-    async () => {
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data.token;
-    },
-    { retries, factor: 1 }
-  );
-}
-
 function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.zeit.co/www/user`;
+  const url = `https://api.vercel.com/www/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
   return retry(
@@ -144,7 +125,7 @@ const execute = (args, options) =>
   });
 
 const apiFetch = (url, { headers, ...options } = {}) => {
-  return fetch(`https://api.zeit.co${url}`, {
+  return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       ...(headers || {}),
@@ -154,8 +135,11 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 };
 
 const waitForPrompt = (cp, assertion) =>
-  new Promise(resolve => {
+  new Promise((resolve, reject) => {
+    console.log('Waiting for prompt...');
+    setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
     const listener = chunk => {
+      console.log('> ' + chunk);
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
         cp.stderr.off && cp.stderr.off('data', listener);
@@ -179,8 +163,7 @@ const createUser = async () => {
   await retry(
     async () => {
       const location = getConfigPath();
-      const url = Buffer.from(str, 'base64').toString();
-      token = await fetchTokenWithRetry(url);
+      token = await fetchTokenWithRetry();
 
       if (!fs.existsSync(location)) {
         await createDirectory(location);
@@ -226,6 +209,8 @@ test.after.always(async () => {
 });
 
 test('login', async t => {
+  t.timeout(ms('1m'));
+
   // Delete the current token
   const logoutOutput = await execute(['logout']);
   t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
@@ -264,8 +249,7 @@ test('deploy using only now.json with `redirects` defined', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const i = stdout.lastIndexOf('https://');
-  const url = stdout.slice(i);
+  const url = stdout;
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   t.is(location, 'https://example.com/foo/bar');
@@ -345,6 +329,217 @@ test('deploy using --local-config flag above target', async t => {
   t.regex(host, /root-level/gm, `Expected "root-level" but received "${host}"`);
 });
 
+test('Deploy `api-env` fixture and test `now env` command', async t => {
+  const target = fixture('api-env');
+
+  async function nowDeploy() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [...defaultArgs, '--confirm'],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    console.log({ stdout });
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvLsIsEmpty() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'ls', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /0 Environment Variables found in Project/gm);
+  }
+
+  async function nowEnvAdd() {
+    const now = execa(binaryPath, ['env', 'add', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+    await waitForPrompt(now, chunk =>
+      chunk.includes('What’s the name of the variable?')
+    );
+    now.stdin.write('MY_ENV_VAR\n');
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('What’s the value of') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('MY_VALUE\n');
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvAddFromStdin() {
+    const now = execa(
+      binaryPath,
+      ['env', 'add', 'MY_STDIN_VAR', 'preview', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    now.stdin.end('MY_STDIN_VALUE');
+    const { exitCode, stderr, stdout } = await now;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvLsIncludesVar() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'ls', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /4 Environment Variables found in Project/gm);
+
+    const lines = stdout.split('\n');
+
+    const myEnvVars = lines.filter(line => line.includes('MY_ENV_VAR'));
+    t.is(myEnvVars.length, 3);
+    t.regex(myEnvVars.join('\n'), /development/gm);
+    t.regex(myEnvVars.join('\n'), /preview/gm);
+    t.regex(myEnvVars.join('\n'), /production/gm);
+
+    const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
+    t.is(myStdinVars.length, 1);
+    t.regex(myStdinVars.join('\n'), /preview/gm);
+  }
+
+  async function nowEnvPull() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'pull', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /Created .env file/gm);
+
+    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    t.is(contents, 'MY_ENV_VAR="MY_VALUE"\n');
+  }
+
+  async function nowDeployWithVar() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    const { host } = new URL(stdout);
+
+    const apiUrl = `https://${host}/api/get-env`;
+    console.log({ apiUrl });
+    const apiRes = await fetch(apiUrl);
+    t.is(apiRes.status, 200, formatOutput({ stderr, stdout }));
+    const apiJson = await apiRes.json();
+    t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(apiJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+
+    const homeUrl = `https://${host}`;
+    console.log({ homeUrl });
+    const homeRes = await fetch(homeUrl);
+    t.is(homeRes.status, 200, formatOutput({ stderr, stdout }));
+    const homeJson = await homeRes.json();
+    t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(homeJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+  }
+
+  async function nowEnvRemove() {
+    const now = execa(binaryPath, ['env', 'rm', '-y', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+    await waitForPrompt(now, chunk =>
+      chunk.includes('What’s the name of the variable?')
+    );
+    now.stdin.write('MY_ENV_VAR\n');
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvRemoveWithArgs() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'rm', 'MY_STDIN_VAR', 'preview', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  await nowDeploy();
+  await nowEnvLsIsEmpty();
+  await nowEnvAdd();
+  await nowEnvAddFromStdin();
+  await nowEnvLsIncludesVar();
+  await nowEnvPull();
+  await nowDeployWithVar();
+  await nowEnvRemove();
+  await nowEnvRemoveWithArgs();
+  await nowEnvLsIsEmpty();
+});
+
+test('deploy with metadata containing "=" in the value', async t => {
+  const target = fixture('static-v2-meta');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [target, ...defaultArgs, '--confirm', '--meta', 'someKey=='],
+    { reject: false }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const { host } = new URL(stdout);
+  const res = await fetch(
+    `https://api.vercel.com/v12/now/deployments/get?url=${host}`,
+    { headers: { authorization: `Bearer ${token}` } }
+  );
+  const deployment = await res.json();
+  t.is(deployment.meta.someKey, '=');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -386,6 +581,74 @@ test('output the version', async t => {
   t.is(version, pkg.version);
 });
 
+test('should error with suggestion for secrets subcommand', async t => {
+  const target = fixture('subdirectory-secret');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['secret', 'add', 'key', 'value', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.regex(
+    stderr,
+    /secrets/gm,
+    `Expected "secrets" suggestion but received "${stderr}"`
+  );
+});
+
+test('should add secret with hyphen prefix', async t => {
+  const target = fixture('build-secret');
+  const key = 'mysecret';
+  const value = '-foo_bar';
+
+  let secretCall = await execa(
+    binaryPath,
+    ['secrets', 'add', ...defaultArgs, key, value],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  t.is(
+    secretCall.exitCode,
+    0,
+    formatOutput({ stderr: secretCall.stderr, stdout: secretCall.stdout })
+  );
+
+  let targetCall = await execa(binaryPath, [...defaultArgs, '--confirm'], {
+    cwd: target,
+    reject: false,
+  });
+
+  t.is(
+    targetCall.exitCode,
+    0,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+  const { host } = new URL(targetCall.stdout);
+  const response = await fetch(`https://${host}`);
+  t.is(
+    response.status,
+    200,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+  t.is(
+    await response.text(),
+    `${value}\n`,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+});
+
 test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
@@ -399,7 +662,7 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `Error! Please sign up: https://zeit.co/signup`;
+  const goal = `Error! Please sign up: https://vercel.com/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
@@ -812,6 +1075,8 @@ test('output logs of a 2.0 deployment without annotate', async t => {
   t.is(exitCode, 0);
 });
 
+/*
+ * Disabled 2 tests because these temp users don't have certs
 test('create wildcard alias for deployment', async t => {
   const hosts = {
     deployment: context.deployment,
@@ -875,6 +1140,7 @@ test('remove the wildcard alias', async t => {
   t.is(exitCode, 0);
   t.true(stdout.startsWith(goal));
 });
+*/
 
 test('ensure username in list is right', async t => {
   const { stdout, stderr, exitCode } = await execa(
@@ -896,7 +1162,7 @@ test('ensure username in list is right', async t => {
   const columns = line.split(/\s+/);
 
   // Ensure username column have username
-  t.truthy(columns.pop().includes('now-builders-ci-bot'));
+  t.truthy(columns.pop().includes(contextName));
 });
 
 test('set platform version using `--platform-version` to `2`', async t => {
@@ -1287,7 +1553,7 @@ test('deploying a file should not show prompts and display deprecation', async t
 
   // Ensure the exit code is right
   t.is(exitCode, 0, formatOutput(output));
-  t.true(stderr.includes('Deploying files with ZEIT Now is deprecated'));
+  t.true(stderr.includes('Deploying files with Vercel is deprecated'));
 
   // Ensure `.now` was not created
   t.is(
@@ -1327,80 +1593,6 @@ test('deploying more than 1 path should fail', async t => {
   // Ensure the exit code is right
   t.is(exitCode, 1);
   t.true(stderr.trim().endsWith(`Can't deploy more than one path.`));
-});
-
-test('use build-env', async t => {
-  const directory = fixture('build-env');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--confirm'],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), 'bar');
-});
-
-test('use `--build-env` CLI flag', async t => {
-  const directory = fixture('build-env-arg');
-  const nonce = Math.random()
-    .toString(36)
-    .substring(2);
-
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--build-env',
-      `NONCE=${nonce}`,
-      ...defaultArgs,
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0, `Received:\n"${stderr}"\n"${stdout}"`);
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), nonce);
 });
 
 test('use `--debug` CLI flag', async t => {
@@ -1571,7 +1763,7 @@ test('initialize example to existing directory with "-f"', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 0);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
   t.true(verifyExampleAngular(cwd, 'angular'));
 });
 
@@ -1579,7 +1771,7 @@ test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
+    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
 
   createDirectory(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
@@ -1593,7 +1785,7 @@ test('try to initialize example to existing directory', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async t => {
@@ -1609,7 +1801,7 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize example "example-404"', async t => {
@@ -1627,7 +1819,7 @@ test('try to initialize example "example-404"', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to revert a deployment and assign the automatic aliases', async t => {
@@ -1740,7 +1932,39 @@ test('print correct link in legacy warning', async t => {
   // It is expected to fail,
   // since the package.json does not have a start script
   t.is(exitCode, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
+  t.regex(stderr, /migrate-to-vercel/);
+});
+
+test('`now rm` removes a deployment', async t => {
+  const directory = fixture('builds');
+
+  const { stdout } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      '-V',
+      2,
+      '--force',
+      '--confirm',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  const { host } = new URL(stdout);
+  const { exitCode, stdout: stdoutRemove } = await execute([
+    'rm',
+    host,
+    '--yes',
+  ]);
+
+  t.truthy(stdoutRemove.includes(host));
+  t.is(exitCode, 0);
 });
 
 test('`now rm` 404 exits quickly', async t => {
@@ -1812,19 +2036,15 @@ test('now certs ls', async t => {
   t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
 });
 
-test('now certs ls --after=cert_test', async t => {
-  const output = await execute(['certs', 'ls', '--after=cert_test']);
+test('now certs ls --next=123456', async t => {
+  const output = await execute(['certs', 'ls', '--next=123456']);
 
   console.log(output.stderr);
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /The cert cert_test can't be found\./gm,
-    formatOutput(output)
-  );
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /No certificates found under/gm, formatOutput(output));
 });
 
 test('now hasOwnProperty not a valid subcommand', async t => {
@@ -1899,7 +2119,7 @@ test('now secret ls', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 0, formatOutput(output));
-  t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
+  t.regex(output.stdout, /Secrets found under/gm, formatOutput(output));
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
 
@@ -1953,11 +2173,8 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
   const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /Functions must have a memory value between 128 and 3008 in steps of 64\./gm,
-    formatOutput(output)
-  );
+  t.regex(output.stderr, /steps of 64/gm, formatOutput(output));
+  t.regex(output.stderr, /More details/gm, formatOutput(output));
 });
 
 test('deploy a Lambda with 3 seconds of maxDuration', async t => {
@@ -2033,6 +2250,8 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
 });
 
 test('change user', async t => {
+  t.timeout(ms('1m'));
+
   const { stdout: prevUser } = await execute(['whoami']);
 
   // Delete the current token
@@ -2418,7 +2637,7 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
     detectedNotice =
       detectedNotice ||
       chunk.includes(
-        'Your project was either removed from ZEIT Now or you’re not a member of it anymore'
+        'Your project was either removed from Vercel or you’re not a member of it anymore'
       );
 
     return /Set up and deploy [^?]+\?/.test(chunk);
@@ -2466,28 +2685,37 @@ test('use `rootDirectory` from project when deploying', async t => {
   });
 });
 
-test('whoami with unknown `NOW_ORG_ID` should error', async t => {
-  const output = await execute(['whoami'], {
-    env: { NOW_ORG_ID: 'asdf' },
+test('now deploy with unknown `NOW_ORG_ID` or `NOW_PROJECT_ID` should error', async t => {
+  const output = await execute(['deploy'], {
+    env: { NOW_ORG_ID: 'asdf', NOW_PROJECT_ID: 'asdf' },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.is(
-    output.stderr.includes('Organization not found'),
-    true,
-    formatOutput(output)
-  );
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('whoami with `NOW_ORG_ID`', async t => {
+test('now env with unknown `NOW_ORG_ID` or `NOW_PROJECT_ID` should error', async t => {
+  const output = await execute(['env'], {
+    env: { NOW_ORG_ID: 'asdf', NOW_PROJECT_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test('whoami with `NOW_ORG_ID` should favor `--scope` and should error', async t => {
   const user = await fetchTokenInformation(token);
 
   const output = await execute(['whoami', '--scope', 'asdf'], {
     env: { NOW_ORG_ID: user.uid },
   });
 
-  t.is(output.exitCode, 0, formatOutput(output));
-  t.is(output.stdout.includes(contextName), true, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes('The specified scope does not exist'),
+    true,
+    formatOutput(output)
+  );
 });
 
 test('whoami with local .now scope', async t => {
@@ -2498,7 +2726,7 @@ test('whoami with local .now scope', async t => {
   await ensureDir(path.join(directory, '.now'));
   await fs.writeFile(
     path.join(directory, '.now', 'project.json'),
-    JSON.stringify({ orgId: user.uid })
+    JSON.stringify({ orgId: user.uid, projectId: 'xxx' })
   );
 
   const output = await execute(['whoami'], {

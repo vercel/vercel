@@ -1,0 +1,19 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@now/next",
+      "config": {
+        "buildCommand": "next build",
+        "outputDirectory": "the-output-directory"
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "hello world"
+    }
+  ]
+}

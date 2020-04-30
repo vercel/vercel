@@ -25,7 +25,7 @@ async function rm(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -98,7 +98,7 @@ async function getCertsToDelete(
   contextName: string,
   id: string
 ) {
-  const cert = await getCertById(output, client, id);
+  const cert = await getCertById(client, id);
   if (cert instanceof ERRORS.CertNotFound) {
     const certs = await getCertsForDomain(output, client, contextName, id);
     if (certs instanceof ERRORS.CertsPermissionDenied) {
@@ -115,7 +115,7 @@ function readConfirmation(output: Output, msg: string, certs: Cert[]) {
     output.print(
       `${table(certs.map(formatCertRow), {
         align: ['l', 'r', 'l'],
-        hsep: ' '.repeat(6)
+        hsep: ' '.repeat(6),
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
@@ -141,7 +141,7 @@ function formatCertRow(cert: Cert) {
     chalk.bold(cert.cns ? cert.cns.join(', ') : '–'),
     ...(cert.created
       ? [chalk.gray(`${ms(Date.now() - new Date(cert.created).getTime())} ago`)]
-      : [])
+      : []),
   ];
 }
 

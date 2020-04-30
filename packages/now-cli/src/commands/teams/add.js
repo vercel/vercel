@@ -33,7 +33,7 @@ const gracefulExit = () => {
   return 0;
 };
 
-const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('zeit.co/');
+const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('vercel.com/');
 const teamNamePrefix = rightPad('Team Name', 14);
 
 export default async function({ apiUrl, token, teams, config }) {
@@ -45,7 +45,7 @@ export default async function({ apiUrl, token, teams, config }) {
   console.log(
     info(
       `Pick a team identifier for its url (e.g.: ${chalk.cyan(
-        '`zeit.co/acme`'
+        '`vercel.com/acme`'
       )})`
     )
   );

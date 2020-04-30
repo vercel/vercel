@@ -1,0 +1,26 @@
+{
+  "name": "dojo",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "dojo build --mode dev --watch --serve",
+    "build": "dojo build --mode dist",
+    "build:dev": "dojo build --mode dev",
+    "test": "dojo test",
+    "test:unit": "dojo build --mode unit && dojo test --unit --config local",
+    "test:functional": "dojo build --mode functional && dojo test --functional --config local",
+    "test:all": "dojo build --mode unit && dojo build --mode functional && dojo test --all --config local"
+  },
+  "dependencies": {
+    "@dojo/framework": "^6.0.0",
+    "@dojo/themes": "^6.0.0",
+    "@dojo/widgets": "^6.0.0",
+    "tslib": "~1.9.1"
+  },
+  "devDependencies": {
+    "@dojo/cli": "^6.0.0",
+    "@dojo/cli-build-app": "^6.0.0",
+    "@dojo/cli-test-intern": "^6.0.0",
+    "@types/node": "~9.6.5",
+    "typescript": "~3.4.5"
+  }
+}

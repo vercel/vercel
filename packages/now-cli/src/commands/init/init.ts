@@ -185,7 +185,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
           folder
         )}" already exists and is not an empty directory. You may use ${cmd(
           '--force'
-        )} or ${cmd('--f')} to override it.`
+        )} or ${cmd('-f')} to override it.`
       );
     }
   } else if (dest !== cwd) {

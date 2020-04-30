@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "copee": "1.0.6"
+  },
+  "devDependencies": {
+    "tls-check": "1.0.0"
+  }
+}

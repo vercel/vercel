@@ -2,24 +2,30 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
-import { promisify } from 'util';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import {
+  Builder,
+  BuildOptions,
+  Env,
+  File,
+  Lambda,
+  FileBlob,
+  FileFsRef,
+} from '@now/build-utils';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
-import _treeKill from 'tree-kill';
 
 import { Output } from '../output';
 import highlight from '../output/highlight';
+import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
 import DevServer from './server';
-import { builderModulePathPromise, getBuilder } from './builder-cache';
+import { getBuilder } from './builder-cache';
 import {
-  EnvConfig,
   NowConfig,
   BuildMatch,
   BuildResult,
@@ -27,6 +33,7 @@ import {
   BuilderOutput,
   BuildResultV3,
   BuilderOutputs,
+  EnvConfigs,
 } from './types';
 import { normalizeRoutes } from '@now/routing-utils';
 import getUpdateCommand from '../get-update-command';
@@ -41,38 +48,27 @@ interface BuildMessageResult extends BuildMessage {
   error?: object;
 }
 
-const treeKill = promisify(_treeKill);
-
 async function createBuildProcess(
   match: BuildMatch,
-  buildEnv: EnvConfig,
+  envConfigs: EnvConfigs,
   workPath: string,
-  output: Output,
-  yarnPath?: string
+  output: Output
 ): Promise<ChildProcess> {
-  const { execPath } = process;
-  const modulePath = await builderModulePathPromise;
+  const builderWorkerPath = join(__dirname, 'builder-worker.js');
 
   // Ensure that `node` is in the builder's `PATH`
-  let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
+  let PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
 
-  // Ensure that `yarn` is in the builder's `PATH`
-  if (yarnPath) {
-    PATH = `${yarnPath}${delimiter}${PATH}`;
-  }
-
-  const env: EnvConfig = {
+  const env: Env = {
     ...process.env,
     PATH,
-    ...buildEnv,
+    ...envConfigs.allEnv,
     NOW_REGION: 'dev1',
   };
 
-  const buildProcess = fork(modulePath, [], {
+  const buildProcess = fork(builderWorkerPath, [], {
     cwd: workPath,
     env,
-    execPath,
-    execArgv: [],
   });
   match.buildProcess = buildProcess;
 
@@ -106,10 +102,10 @@ export async function executeBuild(
   filesRemoved?: string[]
 ): Promise<void> {
   const {
-    builderWithPkg: { runInProcess, builder, package: pkg },
+    builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const { env, debug, buildEnv, yarnPath, cwd: workPath } = devServer;
+  const { debug, envConfigs, cwd: workPath } = devServer;
 
   const startTime = Date.now();
   const showBuildTimestamp =
@@ -131,14 +127,13 @@ export async function executeBuild(
     devServer.output.debug(`Creating build process for ${entrypoint}`);
     buildProcess = await createBuildProcess(
       match,
-      buildEnv,
+      envConfigs,
       workPath,
-      devServer.output,
-      yarnPath
+      devServer.output
     );
   }
 
-  const buildParams = {
+  const buildOptions: BuildOptions = {
     files,
     entrypoint,
     workPath,
@@ -148,8 +143,10 @@ export async function executeBuild(
       requestPath,
       filesChanged,
       filesRemoved,
-      env,
-      buildEnv,
+      // This env distiniction is only necessary to maintain
+      // backwards compatibility with the `@now/next` builder.
+      env: envConfigs.runEnv,
+      buildEnv: envConfigs.buildEnv,
     },
   };
 
@@ -157,8 +154,8 @@ export async function executeBuild(
   if (buildProcess) {
     buildProcess.send({
       type: 'build',
-      builderName: pkg.name,
-      buildParams,
+      requirePath,
+      buildOptions,
     });
 
     buildResultOrOutputs = await new Promise((resolve, reject) => {
@@ -189,7 +186,7 @@ export async function executeBuild(
       buildProcess!.on('message', onMessage);
     });
   } else {
-    buildResultOrOutputs = await builder.build(buildParams);
+    buildResultOrOutputs = await builder.build(buildOptions);
   }
 
   // Sort out build result to builder v2 shape
@@ -361,7 +358,7 @@ export async function executeBuild(
             Variables: {
               ...nowConfig.env,
               ...asset.environment,
-              ...env,
+              ...envConfigs.runEnv,
               NOW_REGION: 'dev1',
             },
           },
@@ -386,7 +383,6 @@ export async function executeBuild(
 export async function getBuildMatches(
   nowConfig: NowConfig,
   cwd: string,
-  yarnDir: string,
   output: Output,
   devServer: DevServer,
   fileList: string[]
@@ -438,7 +434,7 @@ export async function getBuildMatches(
 
     for (const file of files) {
       src = relative(cwd, file);
-      const builderWithPkg = await getBuilder(use, yarnDir, output);
+      const builderWithPkg = await getBuilder(use, output);
       matches.push({
         ...buildConfig,
         src,

@@ -1,18 +1,18 @@
-# ZEIT Now Examples
+# Vercel Examples
 
-This is the public list of examples for **ZEIT Now**.
+This is the public list of examples for **Vercel**.
 
 All of these ready to deploy examples feature a frontend framework or static site, created with zero configuration using the CLI tools they provide.
 
 The `+functions` examples feature an `/api` directory as well, highlighting how to use serverless functions on top of a framework, again with zero configuration required.
 
-## What is ZEIT Now?
+## What is Vercel?
 
-ZEIT Now is a cloud platform for static frontends and serverless functions. It enables developers to host websites and web applications that deploy instantly, scale automatically, and require no supervision.
+Vercel is a cloud platform for static frontends and serverless functions. It enables developers to host websites and web applications that deploy instantly, scale automatically, and require no supervision.
 
 ## What Does this Repository Contain?
 
-This repository consists of multiple examples, created for use with the [ZEIT Now](https://zeit.co/now) platform. In addition to this, it also contains:
+This repository consists of multiple examples, created for use with the [Vercel](https://vercel.com) platform. In addition to this, it also contains:
 
 - [Code of Conduct](https://github.com/zeit/now/blob/master/.github/CODE_OF_CONDUCT.md) - our Code of Conduct, adapted from the [Contributor Covenant](http://contributor-covenant.org)
 - [Contributing Guidelines](https://github.com/zeit/now/blob/master/.github/CONTRIBUTING.md) - a guide on how to contribute to the Now Examples repository
@@ -22,7 +22,7 @@ We recommend familiarizing yourself with the above sections, particularly if you
 
 ## Deploying Examples
 
-To get started using any of these examples as your own project, [install Now](https://zeit.co/download) and use either of the following commands in your terminal:
+To get started using any of these examples as your own project, [install Now](https://vercel.com/download) and use either of the following commands in your terminal:
 
 ```sh
 now init                    # Pick an example in the CLI
@@ -54,9 +54,9 @@ For example, the previous `nodejs` example showed a static frontend with a Node.
 
 ## Migrating and Upgrading
 
-If you have an existing project you would like to deploy with ZEIT Now, we recommend reading our guide on [migrating to Now and zero configuration](https://zeit.co/guides/migrate-to-zeit-now/). By combining the guide with this repository, you will quickly be able to understand how to deploy your application.
+If you have an existing project you would like to deploy with Vercel, we recommend reading our guide on [migrating to Vercel and zero configuration](https://vercel.com/guides/migrate-to-vercel). By combining the guide with this repository, you will quickly be able to understand how to deploy your application.
 
-If you would like to upgrade a project to take advantage of zero configuration, you may find the [upgrade guide](https://zeit.co/guides/upgrade-to-zero-configuration/) useful. The upgrade guide covers how to remove configuration from existing projects along with how to use the `/api` directory.
+If you would like to upgrade a project to take advantage of zero configuration, you may find the [upgrade guide](https://vercel.com/guides/upgrade-to-zero-configuration) useful. The upgrade guide covers how to remove configuration from existing projects along with how to use the `/api` directory.
 
 ## How to Contribute
 
@@ -64,7 +64,7 @@ Contributing to Now Examples should be an enjoyable experience, as such we have 
 
 The guidelines cover important information such as the requirements for new examples and where to get help if you have any questions.
 
-We have tried to make contributing to Now Examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [ZEIT Spectrum](https://spectrum.chat/zeit) where we will do our best to help you.
+We have tried to make contributing to Now Examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [GitHub Discussions](https://github.com/zeit/now/discussions) where we will do our best to help you.
 
 ## Reporting Issues
 
@@ -80,6 +80,6 @@ Now Examples is an open source project released under the [MIT License](https://
 
 ## Get In Touch
 
-If you have any questions that are not covered by raising an issue then please get in touch with us on the [ZEIT Spectrum](https://spectrum.chat/zeit). There you will find both members of the community and staff who are happy to help answer questions on anything ZEIT related.
+If you have any questions that are not covered by raising an issue then please get in touch with us on [GitHub Discussions](https://github.com/zeit/now/discussions). There you will find both members of the community and staff who are happy to help answer questions on anything Vercel related.
 
-[![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
+[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)

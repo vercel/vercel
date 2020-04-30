@@ -40,13 +40,23 @@ export default async function({ apiUrl, token, debug, args, config }) {
 
   const stopUserSpinner = wait('Fetching user information');
   const client = new Client({ apiUrl, token });
-  const user = await getUser(client);
+  let user;
+  try {
+    user = await getUser(client);
+  } catch (err) {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      console.error(error(err.message));
+      return 1;
+    }
+
+    throw err;
+  }
 
   stopUserSpinner();
 
   if (accountIsCurrent) {
     currentTeam = {
-      slug: user.username || user.email
+      slug: user.username || user.email,
     };
   } else {
     currentTeam = list.find(team => team.id === currentTeam);

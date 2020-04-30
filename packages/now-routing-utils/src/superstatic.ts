@@ -49,22 +49,38 @@ export function convertRedirects(
 ): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const loc = replaceSegments(segments, r.destination);
-    const route: Route = {
-      src,
-      headers: { Location: loc },
-      status: r.statusCode || defaultStatus,
-    };
-    return route;
+    try {
+      const loc = replaceSegments(segments, r.destination, true);
+      let status: number;
+      if (typeof r.permanent === 'boolean') {
+        status = r.permanent ? 308 : 307;
+      } else if (r.statusCode) {
+        status = r.statusCode;
+      } else {
+        status = defaultStatus;
+      }
+      const route: Route = {
+        src,
+        headers: { Location: loc },
+        status,
+      };
+      return route;
+    } catch (e) {
+      throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
+    }
   });
 }
 
 export function convertRewrites(rewrites: NowRewrite[]): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const dest = replaceSegments(segments, r.destination);
-    const route: Route = { src, dest, check: true };
-    return route;
+    try {
+      const dest = replaceSegments(segments, r.destination);
+      const route: Route = { src, dest, check: true };
+      return route;
+    } catch (e) {
+      throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
+    }
   });
 }
 
@@ -82,12 +98,10 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
     h.headers.forEach(({ key, value }) => {
       if (hasSegments) {
         if (key.includes(':')) {
-          const keyCompiler = compile(key);
-          key = keyCompiler(indexes);
+          key = safelyCompile(key, indexes);
         }
         if (value.includes(':')) {
-          const valueCompiler = compile(value);
-          value = valueCompiler(indexes);
+          value = safelyCompile(value, indexes);
         }
       }
       obj[key] = value;
@@ -137,7 +151,11 @@ export function sourceToRegex(
   return { src: r.source, segments };
 }
 
-function replaceSegments(segments: string[], destination: string): string {
+function replaceSegments(
+  segments: string[],
+  destination: string,
+  isRedirect?: boolean
+): string {
   const parsedDestination = parseUrl(destination, true);
   delete parsedDestination.href;
   delete parsedDestination.path;
@@ -153,24 +171,25 @@ function replaceSegments(segments: string[], destination: string): string {
     });
 
     if (destination.includes(':') && segments.length > 0) {
-      const pathnameCompiler = compile(pathname);
-      const hashCompiler = compile(hash);
-      pathname = pathnameCompiler(indexes);
-      hash = hash ? `${hashCompiler(indexes)}` : null;
+      pathname = safelyCompile(pathname, indexes);
+      hash = hash ? safelyCompile(hash, indexes) : null;
 
       for (const [key, strOrArray] of Object.entries(query)) {
         let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
         if (value) {
-          const queryCompiler = compile(value);
-          value = queryCompiler(indexes);
+          value = safelyCompile(value, indexes);
         }
         query[key] = value;
       }
     }
 
-    for (const [name, value] of Object.entries(indexes)) {
-      if (!(name in query)) {
-        query[name] = value;
+    // We only add path segments to redirect queries if manually
+    // specified
+    if (!isRedirect) {
+      for (const [name, value] of Object.entries(indexes)) {
+        if (!(name in query)) {
+          query[name] = value;
+        }
       }
     }
 
@@ -181,11 +200,25 @@ function replaceSegments(segments: string[], destination: string): string {
       hash,
     });
 
-    // url.format() escapes the query string but we must preserve dollar signs
-    destination = destination.replace(/=%24/g, '=$');
+    // url.format() escapes the dollar sign but it must be preserved for now-proxy
+    destination = destination.replace(/%24/g, '$');
   }
 
   return destination;
+}
+
+function safelyCompile(str: string, indexes: { [k: string]: string }): string {
+  if (!str) {
+    return str;
+  }
+  // path-to-regexp cannot compile question marks
+  return str
+    .split('?')
+    .map(part => {
+      const compiler = compile(part);
+      return compiler(indexes);
+    })
+    .join('?');
 }
 
 function toSegmentDest(index: number): string {

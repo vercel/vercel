@@ -13,6 +13,7 @@ import code from './output/code';
 export class APIError extends Error {
   status: number;
   serverMessage: string;
+  link?: string;
   retryAfter: number | null | 'never';
   [key: string]: any;
 
@@ -1040,7 +1041,7 @@ export class AccountNotFound extends NowError<
 > {
   constructor(
     email: string,
-    message: string = `Please sign up: https://zeit.co/signup`
+    message: string = `Please sign up: https://vercel.com/signup`
   ) {
     super({
       code: 'ACCOUNT_NOT_FOUND',

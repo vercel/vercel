@@ -23,6 +23,7 @@
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
     "husky": "3.0.4",
+    "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.0",
     "prettier": "1.18.2"
@@ -35,11 +36,10 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "node utils/run.js build all",
-    "test-lint": "node utils/run.js test-lint",
     "test-unit": "node utils/run.js test-unit",
-    "test-integration": "node utils/run.js test-integration",
+    "test-integration-cli": "node utils/run.js test-integration-cli",
     "test-integration-once": "node utils/run.js test-integration-once",
-    "test-integration-now-dev": "node utils/run.js test-integration-now-dev",
+    "test-integration-dev": "node utils/run.js test-integration-dev",
     "lint": "eslint . --ext .ts,.js"
   },
   "lint-staged": {
@@ -57,9 +57,6 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
-  },
-  "resolutions": {
-    "signal-exit": "TooTallNate/signal-exit#update/sighub-to-sigint-on-windows"
   },
   "prettier": {
     "trailingComma": "es5",
@@ -91,6 +88,8 @@
       "@typescript-eslint/camelcase": 0,
       "@typescript-eslint/explicit-function-return-type": 0,
       "@typescript-eslint/no-empty-function": 0,
+      "@typescript-eslint/no-explicit-any": 0,
+      "@typescript-eslint/no-non-null-assertion": 0,
       "@typescript-eslint/no-unused-vars": 2,
       "@typescript-eslint/no-use-before-define": 0
     },

@@ -69,9 +69,7 @@ const getStaticFiles = async (dir, isBuilds = false) => {
 const normalizeWindowsPaths = files => {
   if (process.platform === 'win32') {
     const prefix = 'D:/a/now/now/packages/now-cli/test/fixtures/unit/';
-    return files.map(f =>
-      f.replace(/\\/g, '/').slice(prefix.length)
-    );
+    return files.map(f => f.replace(/\\/g, '/').slice(prefix.length));
   }
   return files;
 };
@@ -583,7 +581,7 @@ test('friendly error for malformed JSON', async t => {
 });
 
 test('simple to host', t => {
-  t.is(toHost('zeit.co'), 'zeit.co');
+  t.is(toHost('vercel.com'), 'vercel.com');
 });
 
 test('leading // to host', t => {
@@ -615,7 +613,7 @@ test('leading https:// and path to host', t => {
 });
 
 test('simple and path to host', t => {
-  t.is(toHost('zeit.co/test'), 'zeit.co');
+  t.is(toHost('vercel.com/test'), 'vercel.com');
 });
 
 test('`wait` utility does not invoke spinner before n miliseconds', async t => {

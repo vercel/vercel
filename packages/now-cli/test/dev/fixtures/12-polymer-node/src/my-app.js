@@ -11,7 +11,7 @@
 import { PolymerElement, html } from '@polymer/polymer/polymer-element.js';
 import {
   setPassiveTouchGestures,
-  setRootPath
+  setRootPath,
 } from '@polymer/polymer/lib/utils/settings.js';
 // import '@polymer/app-layout/app-drawer/app-drawer.js';
 // import '@polymer/app-layout/app-drawer-layout/app-drawer-layout.js';
@@ -94,20 +94,14 @@ class MyApp extends PolymerElement {
         <h2>
           Deployed with
           <a
-            href="https://zeit.co/docs"
+            href="https://vercel.com/docs"
             target="_blank"
             rel="noreferrer noopener"
-            >ZEIT Now</a
+            >Vercel</a
           >!
         </h2>
         <p>
-          <a
-            href="https://github.com/zeit/now-examples/blob/master/polymer-node"
-            target="_blank"
-            rel="noreferrer noopener"
-            >This project</a
-          >
-          is a
+          This project is a
           <a href="https://polymer-library.polymer-project.org/3.0/api/"
             >Polymer</a
           >

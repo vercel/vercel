@@ -1,15 +1,14 @@
 {
-  "redirects": [
+  "rewrites": [
     {
       "source": "/",
-      "destination": "https://zeit.co/new",
-      "statusCode": 307
+      "destination": "/api/frameworks"
+    },
+    {
+      "source": "/api/v1/frameworks",
+      "destination": "/api/frameworks"
     }
   ],
-  "env": {
-    "GITHUB_ACCESS_TOKEN": "@now-api-examples-github-token",
-    "SENTRY_DSN": "@sentry-product-dsn"
-  },
   "github": {
     "silent": true,
     "autoJobCancelation": true

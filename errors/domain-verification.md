@@ -12,10 +12,10 @@ You can retrieve both the intended nameservers and TXT verification record for t
 
 When you have added either verification method to your domain, you can run `now domains verify <domain>` again to complete verification for your domain.
 
-ZEIT will also automatically check periodically that your domain has been verified and automatically mark it as such if we detect either verification method on the domain.
+Vercel will also automatically check periodically that your domain has been verified and automatically mark it as such if we detect either verification method on the domain.
 
 If you would not like to verify your domain, you can remove it from your account using `now domains rm <domain>`.
 
 #### Resources
-- [ZEIT Domains Documentation](https://zeit.co/docs/v2/domains-and-aliases/adding-a-domain/)
-- [Zero-Downtime Domain Migration Guide](https://zeit.co/docs/v2/domains-and-aliases/zero-downtime-domain-migration/)
+
+- [Vercel Custom Domains Documentation](https://vercel.com/docs/v2/custom-domains)

@@ -85,7 +85,7 @@ async function main() {
 
   if (process.env.NOW_GITHUB_DEPLOYMENT) {
     execSync(
-      `rm -rf public && mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' > public/index.html`
+      `rm -rf public && mkdir public && echo '<a href="https://vercel.com/import">https://vercel.com/import</a>' > public/output.html`
     );
   }
 }

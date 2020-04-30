@@ -5,5 +5,5 @@ export const REGION_TO_DC = {
   bru: 'bru1',
   gru: 'gru1',
   sfo: 'sfo1',
-  iad: 'iad1'
+  iad: 'iad1',
 };

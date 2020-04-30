@@ -1,9 +1,9 @@
 {
   "name": "@now/next",
-  "version": "2.3.13",
+  "version": "2.5.5-canary.4",
   "license": "MIT",
   "main": "./dist/index",
-  "homepage": "https://zeit.co/docs/runtimes#official-runtimes/next-js",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
   "scripts": {
     "build": "./build.sh",
     "test-integration-once": "jest --env node --verbose --runInBand",

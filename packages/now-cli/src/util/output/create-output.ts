@@ -19,7 +19,11 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     print(`${color(`> ${str}`)}\n`);
   }
 
-  function warn(str: string, slug: string | null = null) {
+  function warn(
+    str: string,
+    slug: string | null = null,
+    link: string | null = null
+  ) {
     const prevTerm = process.env.TERM;
 
     if (!prevTerm) {
@@ -27,11 +31,13 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       process.env.TERM = 'xterm';
     }
 
+    const details = slug ? `https://err.sh/now/${slug}` : link;
+
     print(
       boxen(
         chalk.bold.yellow('WARN! ') +
           str +
-          (slug ? `\nMore details: https://err.sh/now/${slug}` : ''),
+          (details ? `\nMore details: ${details}` : ''),
         {
           padding: {
             top: 0,
@@ -52,10 +58,15 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     log(chalk`{yellow.bold NOTE:} ${str}`);
   }
 
-  function error(str: string, slug: string | null = null) {
+  function error(
+    str: string,
+    slug: string | null = null,
+    link: string | null = null
+  ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
-    if (slug !== null) {
-      print(`More details: https://err.sh/now/${slug}\n`);
+    const details = slug ? `https://err.sh/now/${slug}` : link;
+    if (details) {
+      print(`More details: ${details}\n`);
     }
   }
 
