@@ -940,7 +940,7 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string
   ): Promise<void> {
-    return this.sendError(req, res, nowRequestId, 'FILE_NOT_FOUND', 404);
+    return this.sendError(req, res, nowRequestId, 'NOT_FOUND', 404);
   }
 
   async sendError(
@@ -1165,7 +1165,7 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
-    const nowRequestId = generateRequestId(this.podId);
+    let nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
@@ -1496,6 +1496,10 @@ export default class DevServer {
       }
 
       if (devServerResult) {
+        // When invoking lambda functions, the region where the lambda was invoked
+        // is also included in the request ID. So use the same `dev1` fake region.
+        nowRequestId = generateRequestId(this.podId, true);
+
         const { port, pid } = devServerResult;
         this.devServerPids.add(pid);
 
@@ -1607,6 +1611,10 @@ export default class DevServer {
           );
           return;
         }
+
+        // When invoking lambda functions, the region where the lambda was invoked
+        // is also included in the request ID. So use the same `dev1` fake region.
+        nowRequestId = generateRequestId(this.podId, true);
 
         // Mix the `routes` result dest query params into the req path
         const parsed = url.parse(req.url || '/', true);
@@ -1909,10 +1917,13 @@ function close(server: http.Server): Promise<void> {
  *
  * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */
-function generateRequestId(podId: string): string {
-  return `dev1:${[podId, Date.now(), randomBytes(6).toString('hex')].join(
-    '-'
-  )}`;
+function generateRequestId(podId: string, isInvoke = false): string {
+  const invoke = isInvoke ? 'dev1::' : '';
+  return `dev1::${invoke}${[
+    podId,
+    Date.now(),
+    randomBytes(6).toString('hex'),
+  ].join('-')}`;
 }
 
 function hasOwnProperty(obj: any, prop: string) {
