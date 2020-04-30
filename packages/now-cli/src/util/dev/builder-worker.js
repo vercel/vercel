@@ -24,6 +24,8 @@ function onMessage(message) {
 }
 
 async function processMessage(message) {
+  console.log({ argv: process.argv, message });
+
   const { requirePath, buildOptions } = message;
   const builder = require(requirePath);
 
