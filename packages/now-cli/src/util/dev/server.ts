@@ -1408,6 +1408,7 @@ export default class DevServer {
       // If the dev command is started, then proxy to it
       if (this.devProcessPort) {
         debug('Proxying to frontend dev server');
+        this.setResponseHeaders(res, nowRequestId);
         return proxyPass(
           req,
           res,
@@ -1544,6 +1545,7 @@ export default class DevServer {
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
+      this.setResponseHeaders(res, nowRequestId);
       return proxyPass(
         req,
         res,

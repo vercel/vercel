@@ -1,7 +1,7 @@
 import ms from 'ms';
 import fs from 'fs-extra';
 import test from 'ava';
-import path from 'path';
+import { join, resolve, delimiter } from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
@@ -9,18 +9,15 @@ import retry from 'async-retry';
 import { satisfies } from 'semver';
 import { getDistTag } from '../../src/util/get-dist-tag';
 import { version as cliVersion } from '../../package.json';
+import { fetchTokenWithRetry } from '../../../../test/lib/deployment/now-deploy';
 
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
-const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
-const fixture = name => path.join('test', 'dev', 'fixtures', name);
-
-// For the Hugo executable
-process.env.PATH = `${path.resolve(fixture('08-hugo'))}${path.delimiter}${
-  process.env.PATH
-}`;
+const binaryPath = resolve(__dirname, `../../scripts/start.js`);
+const fixture = name => join('test', 'dev', 'fixtures', name);
+const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
 
 let processCounter = 0;
 const processList = new Map();
@@ -97,13 +94,10 @@ function shouldSkip(t, name, versions) {
 }
 
 function validateResponseHeaders(t, res) {
-  t.is(res.headers.get('x-now-trace'), 'dev1');
-  t.truthy(res.headers.get('cache-control').length > 0);
-  t.truthy(
-    /^dev1:[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
-      res.headers.get('x-now-id')
-    )
-  );
+  if (res.status < 500) {
+    t.truthy(res.headers.get('x-vercel-id'));
+    t.truthy(res.headers.get('cache-control').length > 0);
+  }
 }
 
 async function exec(directory, args = []) {
@@ -115,7 +109,7 @@ async function exec(directory, args = []) {
 }
 
 async function runNpmInstall(fixturePath) {
-  if (await fs.exists(path.join(fixturePath, 'package.json'))) {
+  if (await fs.exists(join(fixturePath, 'package.json'))) {
     await execa('yarn', ['install'], {
       cwd: fixturePath,
       shell: true,
@@ -124,7 +118,7 @@ async function runNpmInstall(fixturePath) {
 }
 
 async function getPackedBuilderPath(builderDirName) {
-  const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
+  const packagePath = join(__dirname, '..', '..', '..', builderDirName);
   const output = await execa('npm', ['pack'], {
     cwd: packagePath,
     shell: true,
@@ -136,17 +130,30 @@ async function getPackedBuilderPath(builderDirName) {
     );
   }
 
-  return path.join(packagePath, output.stdout.trim());
+  return join(packagePath, output.stdout.trim());
 }
 
-async function testPath(t, port, status, path, expectedText, headers = {}) {
+async function testPath(t, origin, status, path, expectedText, headers = {}) {
   const opts = { redirect: 'manual-dont-change' };
-  const res = await fetch(`http://localhost:${port}${path}`, opts);
-  const msg = `Testing path ${path}`;
+  const url = `${origin}${path}`;
+  const res = await fetch(url, opts);
+  const msg = `Testing path ${url}`;
+  console.log(msg);
   t.is(res.status, status, msg);
+  validateResponseHeaders(t, res);
   if (expectedText) {
     const actualText = await res.text();
-    t.is(actualText.trim(), expectedText.trim(), msg);
+    if (expectedText instanceof RegExp) {
+      expectedText.lastIndex = 0; // reset since we test twice
+      const matched = expectedText.test(actualText);
+      if (matched) {
+        t.is(matched, true);
+      } else {
+        t.is(actualText, expectedText.source, msg);
+      }
+    } else {
+      t.is(actualText.trim(), expectedText.trim(), msg);
+    }
   }
   if (headers) {
     Object.entries(headers).forEach(([key, expectedValue]) => {
@@ -220,10 +227,37 @@ async function testFixture(directory, opts = {}, args = []) {
   };
 }
 
-function testFixtureStdio(directory, fn) {
+function testFixtureStdio(
+  directory,
+  fn,
+  { expectedCode = 0, skipDeploy } = {}
+) {
   return async t => {
-    let dev;
     const dir = fixture(directory);
+    const token = await fetchTokenWithRetry();
+    let deploymentUrl;
+
+    // Deploy fixture and link project
+    if (!skipDeploy) {
+      const gitignore = join(fixtureAbsolute(directory), '.gitignore');
+      const gitignoreExists = await fs.exists(gitignore);
+      let { stdout, stderr, exitCode } = await execa(
+        binaryPath,
+        [dir, '-t', token, '--confirm', '--public', '--debug'],
+        { reject: false }
+      );
+      console.log({ stdout, stderr, exitCode });
+      if (!gitignoreExists) {
+        await fs.unlink(gitignore);
+      }
+      t.is(exitCode, expectedCode);
+      if (expectedCode === 0) {
+        deploymentUrl = new URL(stdout).host;
+      }
+    }
+
+    // Start dev
+    let dev;
 
     await runNpmInstall(dir);
 
@@ -237,9 +271,14 @@ function testFixtureStdio(directory, fn) {
       let stderr = '';
       let printedOutput = false;
 
-      dev = execa(binaryPath, ['dev', dir, '-l', port, '--debug'], {
-        env: { __NOW_SKIP_DEV_COMMAND: 1 },
-      });
+      const env = skipDeploy
+        ? { ...process.env, __NOW_SKIP_DEV_COMMAND: 1 }
+        : process.env;
+      dev = execa(
+        binaryPath,
+        ['dev', dir, '-l', port, '-t', token, '--debug'],
+        { env }
+      );
 
       dev.stdout.pipe(process.stdout);
       dev.stderr.pipe(process.stderr);
@@ -290,8 +329,14 @@ function testFixtureStdio(directory, fn) {
       });
 
       await readyResolver;
-      const helperTestPath = (...args) => testPath(t, port, ...args);
-      await fn(t, port, helperTestPath);
+
+      const helperTestPath = async (...args) => {
+        if (!skipDeploy) {
+          await testPath(t, `https://${deploymentUrl}`, ...args);
+        }
+        await testPath(t, `http://localhost:${port}`, ...args);
+      };
+      await fn(helperTestPath, t, port);
     } finally {
       dev.kill('SIGTERM');
       await exitResolver;
@@ -327,161 +372,91 @@ test.afterEach(async () => {
 
 test(
   '[now dev] validate routes that use `check: true`',
-  testFixtureStdio('routes-check-true', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/blog/post`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Blog Home/gm);
+  testFixtureStdio('routes-check-true', async testPath => {
+    await testPath(200, '/blog/post', 'Blog Home');
   })
 );
 
 test(
   '[now dev] validate routes that use `check: true` and `status` code',
-  testFixtureStdio('routes-check-true-status', async (t, port) => {
-    const secret = await fetch(`http://localhost:${port}/secret`);
-    t.is(secret.status, 403);
-    t.regex(await secret.text(), /FORBIDDEN/gm);
-
-    const rewrite = await fetchWithRetry(`http://localhost:${port}/post`);
-    t.is(rewrite.status, 200);
-    t.regex(await rewrite.text(), /This is a post/gm);
-
-    const raw = await fetchWithRetry(`http://localhost:${port}/post.html`);
-    t.is(raw.status, 200);
-    t.regex(await raw.text(), /This is a post/gm);
+  testFixtureStdio('routes-check-true-status', async testPath => {
+    await testPath(403, '/secret');
+    await testPath(200, '/post', 'This is a post.');
+    await testPath(200, '/post.html', 'This is a post.');
   })
 );
 
 test(
   '[now dev] handles miss after route',
-  testFixtureStdio('handle-miss-after-route', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'exected miss header to be added');
-    t.is(override, 'one', 'exected override header to not override');
-
-    const body = await response.text();
-    t.regex(body, /Blog/gm);
+  testFixtureStdio('handle-miss-after-route', async testPath => {
+    await testPath(200, '/post', 'Blog Post Page', {
+      test: '1',
+      override: 'one',
+    });
   })
 );
-
+/*
 test(
   '[now dev] handles miss after rewrite',
-  testFixtureStdio('handle-miss-after-rewrite', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected miss header to be added');
-    t.is(override, 'two', 'expected override header to not override');
-    t.is(response.status, 200);
-    const body = await response.text();
-    t.regex(body, /Blog Post Page/gm);
-
-    const response1 = await fetchWithRetry(
-      `http://localhost:${port}/blog/post`
-    );
-    const test1 = response.headers.get('test');
-    const override1 = response.headers.get('override');
-    t.is(test1, '1', 'expected miss header to be added');
-    t.is(override1, 'two', 'expected override header to be added');
-    t.is(response1.status, 200);
-    t.regex(await response1.text(), /Blog Post Page/gm);
-
-    const response2 = await fetchWithRetry(
-      `http://localhost:${port}/about.html`
-    );
-    const test2 = response2.headers.get('test');
-    const override2 = response2.headers.get('override');
-    t.is(test2, null, 'expected miss header to be not be added');
-    t.is(override2, null, 'expected override header to not be added');
-    t.is(response2.status, 200);
-    t.regex(await response2.text(), /About Page/gm);
+  testFixtureStdio('handle-miss-after-rewrite', async (testPath) => {
+    await testPath(200, '/post', 'Blog Post Page', { test: '1', override: 'two' });
+    await testPath(200, '/blog/post', 'Blog Post Page', { test: '1', override: 'two' });
+    await testPath(200, '/blog/about.html', 'About Page', { test: null, override: null });
   })
 );
 
 test(
   '[now dev] displays directory listing after miss',
-  testFixtureStdio('handle-miss-display-dir-list', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const body = await response.text();
-    t.regex(body, /one.html/gm);
+  testFixtureStdio('handle-miss-display-dir-list', async (testPath) => {
+    await testPath(404, '/post', /one.html/m);
   })
 );
+*/
 
 test(
   '[now dev] does not display directory listing after 404',
-  testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
-    const post = await fetch(`http://localhost:${port}/post`);
-    t.is(post.status, 404);
-
-    const file = await fetch(`http://localhost:${port}/post/one.html`);
-    t.is(file.status, 200);
-    t.regex(await file.text(), /First Post/gm);
+  testFixtureStdio('handle-miss-hide-dir-list', async testPath => {
+    await testPath(404, '/post');
+    await testPath(200, '/post/one.html', 'First Post');
   })
 );
 
 test(
   '[now dev] handles hit after handle: filesystem',
-  testFixtureStdio('handle-hit-after-fs', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/blog.html`);
-    const test = response.headers.get('test');
-    t.is(test, '1', 'expected hit header to be added');
-    const body = await response.text();
-    t.regex(body, /Blog Page/gm);
+  testFixtureStdio('handle-hit-after-fs', async testPath => {
+    await testPath(200, '/blog.html', 'Blog Page', { test: '1' });
   })
 );
 
 test(
   '[now dev] handles hit after dest',
-  testFixtureStdio('handle-hit-after-dest', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected hit header to be added');
-    t.is(override, 'one', 'expected hit header to not override');
-    const body = await response.text();
-    t.regex(body, /Blog Post/gm);
+  testFixtureStdio('handle-hit-after-dest', async testPath => {
+    await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
 test(
   '[now dev] handles hit after rewrite',
-  testFixtureStdio('handle-hit-after-rewrite', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected hit header to be added');
-    t.is(override, 'one', 'expected hit header to not override');
-    const body = await response.text();
-    t.regex(body, /Blog Post/gm);
+  testFixtureStdio('handle-hit-after-rewrite', async testPath => {
+    await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
 test(
   '[now dev] should serve the public directory and api functions',
-  testFixtureStdio('public-and-api', async (t, port) => {
-    const index = await fetchWithRetry(`http://localhost:${port}`);
-    t.regex(await index.text(), /home page/gm);
-    const about = await fetchWithRetry(`http://localhost:${port}/about.html`);
-    t.regex(await about.text(), /about page/gm);
-    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
-    t.regex(await date.text(), /current date/gm);
-    const rand = await fetchWithRetry(`http://localhost:${port}/api/rand`);
-    t.regex(await rand.text(), /random number/gm);
-    const rand2 = await fetchWithRetry(`http://localhost:${port}/api/rand.js`);
-    t.regex(await rand2.text(), /random number/gm);
-    const notfound = await fetch(`http://localhost:${port}/api`);
-    t.is(notfound.status, 404);
+  testFixtureStdio('public-and-api', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'This is the about page');
+    await testPath(200, '/api/date', /current date/);
+    await testPath(200, '/api/rand', /random number/);
+    await testPath(200, '/api/rand.js', /random number/);
+    await testPath(404, '/api/api');
   })
 );
 
 test(
   '[now dev] should allow user rewrites for path segment files',
-  testFixtureStdio('test-zero-config-rewrite', async (t, port, testPath) => {
+  testFixtureStdio('test-zero-config-rewrite', async testPath => {
     await testPath(404, '/');
     await testPath(200, '/echo/1', '{"id":"1"}', {
       'Access-Control-Allow-Origin': '*',
@@ -499,7 +474,7 @@ test('[now dev] validate builds', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `builds` property: \[0\]\.src should be string/gm
+    /Invalid `builds` property: \[0\]\.src should be string/m
   );
 });
 
@@ -510,7 +485,7 @@ test('[now dev] validate routes', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `routes` property: \[0\]\.src should be string/gm
+    /Invalid `routes` property: \[0\]\.src should be string/m
   );
 });
 
@@ -519,7 +494,7 @@ test('[now dev] validate cleanUrls', async t => {
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/gm);
+  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/m);
 });
 
 test('[now dev] validate trailingSlash', async t => {
@@ -529,7 +504,7 @@ test('[now dev] validate trailingSlash', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `trailingSlash` property:\s+should be boolean/gm
+    /Invalid `trailingSlash` property:\s+should be boolean/m
   );
 });
 
@@ -540,7 +515,7 @@ test('[now dev] validate rewrites', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `rewrites` property: \[0\]\.destination should be string/gm
+    /Invalid `rewrites` property: \[0\]\.destination should be string/m
   );
 });
 
@@ -551,7 +526,7 @@ test('[now dev] validate redirects', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `redirects` property: \[0\]\.statusCode should be integer/gm
+    /Invalid `redirects` property: \[0\]\.statusCode should be integer/m
   );
 });
 
@@ -562,7 +537,7 @@ test('[now dev] validate headers', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/gm
+    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/m
   );
 });
 
@@ -571,7 +546,7 @@ test('[now dev] validate mixed routes and rewrites', async t => {
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/gm);
+  t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/m);
 });
 
 // Test seems unstable: It won't return sometimes.
@@ -614,44 +589,25 @@ test('[now dev] validate env var names', async t => {
 
 test(
   '[now dev] test rewrites with segments serve correct content',
-  testFixtureStdio('test-rewrites-with-segments', async (t, port) => {
-    const users = await fetchWithRetry(
-      `http://localhost:${port}/api/users/first`,
-      3
-    );
-    t.regex(await users.text(), /first/gm);
-    const fourtytwo = await fetchWithRetry(
-      `http://localhost:${port}/api/fourty-two`,
-      3
-    );
-    t.regex(await fourtytwo.text(), /42/gm);
-    const rand = await fetchWithRetry(`http://localhost:${port}/rand`, 3);
-    t.regex(await rand.text(), /42/gm);
-    const dynamic = await fetchWithRetry(
-      `http://localhost:${port}/api/dynamic`,
-      3
-    );
-    t.regex(await dynamic.text(), /dynamic/gm);
-    const notfound = await fetch(`http://localhost:${port}/api`);
-    t.is(notfound.status, 404);
+  testFixtureStdio('test-rewrites-with-segments', async testPath => {
+    await testPath(200, '/api/users/first', 'first');
+    await testPath(200, '/api/fourty-two', '42');
+    await testPath(200, '/rand', '42');
+    await testPath(200, '/api/dynamic', 'dynamic');
+    await testPath(404, '/api');
   })
 );
 
 test(
   '[now dev] test rewrites serve correct content',
-  testFixtureStdio('test-rewrites', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/hello`, 3);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Hello World/gm);
+  testFixtureStdio('test-rewrites', async testPath => {
+    await testPath(200, '/hello', 'Hello World');
   })
 );
 
 test(
   '[now dev] test cleanUrls serve correct content',
-  testFixtureStdio('test-clean-urls', async (t, port, testPath) => {
+  testFixtureStdio('test-clean-urls', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/about', 'About Page');
     await testPath(200, '/sub', 'Sub Index Page');
@@ -666,27 +622,24 @@ test(
 
 test(
   '[now dev] test cleanUrls and trailingSlash serve correct content',
-  testFixtureStdio(
-    'test-clean-urls-trailing-slash',
-    async (t, port, testPath) => {
-      await testPath(200, '/', 'Index Page');
-      await testPath(200, '/about/', 'About Page');
-      await testPath(200, '/sub/', 'Sub Index Page');
-      await testPath(200, '/sub/another/', 'Sub Another Page');
-      await testPath(200, '/style.css', 'body { color: green }');
-      await testPath(308, '/index.html', '', { Location: '/' });
-      await testPath(308, '/about.html', '', { Location: '/about/' });
-      await testPath(308, '/sub/index.html', '', { Location: '/sub/' });
-      await testPath(308, '/sub/another.html', '', {
-        Location: '/sub/another/',
-      });
-    }
-  )
+  testFixtureStdio('test-clean-urls-trailing-slash', async testPath => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/about/', 'About Page');
+    await testPath(200, '/sub/', 'Sub Index Page');
+    await testPath(200, '/sub/another/', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(308, '/index.html', '', { Location: '/' });
+    await testPath(308, '/about.html', '', { Location: '/about/' });
+    await testPath(308, '/sub/index.html', '', { Location: '/sub/' });
+    await testPath(308, '/sub/another.html', '', {
+      Location: '/sub/another/',
+    });
+  })
 );
 
 test(
   '[now dev] test trailingSlash true serve correct content',
-  testFixtureStdio('test-trailing-slash', async (t, port, testPath) => {
+  testFixtureStdio('test-trailing-slash', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/index.html', 'Index Page');
     await testPath(200, '/about.html', 'About Page');
@@ -702,7 +655,7 @@ test(
 
 test(
   '[now dev] test trailingSlash false serve correct content',
-  testFixtureStdio('test-trailing-slash-false', async (t, port, testPath) => {
+  testFixtureStdio('test-trailing-slash-false', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/index.html', 'Index Page');
     await testPath(200, '/about.html', 'About Page');
@@ -720,34 +673,27 @@ test(
 
 test(
   '[now dev] throw when invalid builder routes detected',
-  testFixtureStdio('invalid-builder-routes', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-    const body = await response.text();
-    t.regex(body, /Invalid regular expression/gm);
-  })
+  testFixtureStdio(
+    'invalid-builder-routes',
+    async testPath => {
+      await testPath(500, '/', /Invalid regular expression/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 00-list-directory',
-  testFixtureStdio('00-list-directory', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 60);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Files within/gm);
-    t.regex(body, /test1.txt/gm);
-    t.regex(body, /directory/gm);
+  testFixtureStdio('00-list-directory', async testPath => {
+    await testPath(200, '/', /Files within/m);
+    await testPath(200, '/', /test[0-3]\.txt/m);
   })
 );
 
 test(
   '[now dev] 01-node',
-  testFixtureStdio('01-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /A simple deployment with the Now API!/gm);
+  testFixtureStdio('01-node', async testPath => {
+    await testPath(200, '/', /A simple deployment with the Now API!/m);
   })
 );
 
@@ -775,7 +721,7 @@ test('[now dev] 02-angular-node', async t => {
     validateResponseHeaders(t, response);
 
     const body = await response.text();
-    t.regex(body, /Angular \+ Node.js API/gm);
+    t.regex(body, /Angular \+ Node.js API/m);
   } finally {
     dev.kill('SIGTERM');
   }
@@ -791,315 +737,321 @@ test('[now dev] 02-angular-node', async t => {
 
 test(
   '[now dev] 03-aurelia',
-  testFixtureStdio('03-aurelia', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Aurelia Navigation Skeleton/gm);
-  })
+  testFixtureStdio(
+    '03-aurelia',
+    async testPath => {
+      await testPath(200, '/', /Aurelia Navigation Skeleton/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 04-create-react-app',
-  testFixtureStdio('04-create-react-app', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /React App/gm);
+  testFixtureStdio('04-create-react-app', async testPath => {
+    await testPath(200, '/', /React App/m);
   })
 );
-
-test('[now dev] 05-gatsby', async t => {
-  if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
-
-  const tester = testFixtureStdio('05-gatsby', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Gatsby Default Starter/gm);
-  });
-
-  await tester(t);
-});
-
+/*
+test(
+  '[now dev] 05-gatsby',
+  testFixtureStdio('05-gatsby', async testPath => {
+    await testPath(200, '/', /Gatsby Default Starter/m);
+  })
+);
+*/
 test(
   '[now dev] 06-gridsome',
-  testFixtureStdio('06-gridsome', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    t.is(response.status, 200, await response.text());
+  testFixtureStdio('06-gridsome', async testPath => {
+    await testPath(200, '/');
   })
 );
 
 test(
   '[now dev] 07-hexo-node',
-  testFixtureStdio('07-hexo-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Hexo \+ Node.js API/gm);
+  testFixtureStdio('07-hexo-node', async testPath => {
+    await testPath(200, '/', /Hexo \+ Node.js API/m);
   })
 );
 
-test(
-  '[now dev] 08-hugo',
-  testFixtureStdio('08-hugo', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    // const body = await response.text();
-    // t.regex(body, /Hugo on Vercel/gm);
-    t.is(response.status, 200, await response.text());
-  })
-);
+test('[now dev] 08-hugo', async t => {
+  if (process.platform === 'darwin') {
+    // Update PATH to find the Hugo executable installed via GH Actions
+    process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
+      process.env.PATH
+    }`;
+    const tester = testFixtureStdio('08-hugo', async testPath => {
+      await testPath(200, '/', /Hugo/m);
+    });
+    await tester(t);
+  } else {
+    console.log(`Skipping 08-hugo on platform ${process.platform}`);
+    t.pass();
+  }
+});
 
 test(
   '[now dev] 10-nextjs-node',
-  testFixtureStdio('10-nextjs-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Next.js \+ Node.js API/gm);
+  testFixtureStdio('10-nextjs-node', async testPath => {
+    await testPath(200, '/', /Next.js \+ Node.js API/m);
   })
 );
 
 test(
   '[now dev] 12-polymer-node',
-  testFixtureStdio('12-polymer-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Polymer \+ Node.js API/gm);
-  })
+  testFixtureStdio(
+    '12-polymer-node',
+    async testPath => {
+      await testPath(200, '/', /Polymer \+ Node.js API/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 13-preact-node',
-  testFixtureStdio('13-preact-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Preact \+ Node.js API/gm);
-  })
+  testFixtureStdio(
+    '13-preact-node',
+    async testPath => {
+      await testPath(200, '/', /Preact/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 14-svelte-node',
-  testFixtureStdio('14-svelte-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Svelte \+ Node.js API/gm);
-  })
+  testFixtureStdio(
+    '14-svelte-node',
+    async testPath => {
+      await testPath(200, '/', /Svelte/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 16-vue-node',
-  testFixtureStdio('16-vue-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Vue.js \+ Node.js API/gm);
-  })
+  testFixtureStdio(
+    '16-vue-node',
+    async testPath => {
+      await testPath(200, '/', /Vue.js \+ Node.js API/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 17-vuepress-node',
-  testFixtureStdio('17-vuepress-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /VuePress \+ Node.js API/gm);
-  })
+  testFixtureStdio(
+    '17-vuepress-node',
+    async testPath => {
+      await testPath(200, '/', /VuePress \+ Node.js API/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] double slashes redirect',
-  testFixtureStdio('01-node', async (t, port) => {
-    {
-      const res = await fetch(`http://localhost:${port}////?foo=bar`, {
-        redirect: 'manual',
-      });
+  testFixtureStdio(
+    '01-node',
+    async (_testPath, t, port) => {
+      {
+        const res = await fetch(`http://localhost:${port}////?foo=bar`, {
+          redirect: 'manual',
+        });
 
-      validateResponseHeaders(t, res);
+        validateResponseHeaders(t, res);
 
-      const body = await res.text();
-      t.is(res.status, 301);
-      t.is(res.headers.get('location'), `http://localhost:${port}/?foo=bar`);
-      t.is(body, 'Redirecting to /?foo=bar (301)\n');
-    }
+        const body = await res.text();
+        t.is(res.status, 301);
+        t.is(res.headers.get('location'), `http://localhost:${port}/?foo=bar`);
+        t.is(body, 'Redirecting to /?foo=bar (301)\n');
+      }
 
-    {
-      const res = await fetch(`http://localhost:${port}///api////date.js`, {
-        method: 'POST',
-        redirect: 'manual',
-      });
+      {
+        const res = await fetch(`http://localhost:${port}///api////date.js`, {
+          method: 'POST',
+          redirect: 'manual',
+        });
 
-      validateResponseHeaders(t, res);
+        validateResponseHeaders(t, res);
 
-      const body = await res.text();
-      t.is(res.status, 200);
-      t.truthy(
-        body.startsWith('January') ||
-          body.startsWith('February') ||
-          body.startsWith('March') ||
-          body.startsWith('April') ||
-          body.startsWith('May') ||
-          body.startsWith('June') ||
-          body.startsWith('July') ||
-          body.startsWith('August') ||
-          body.startsWith('September') ||
-          body.startsWith('October') ||
-          body.startsWith('November') ||
-          body.startsWith('December')
-      );
-    }
-  })
+        const body = await res.text();
+        t.is(res.status, 200);
+        t.truthy(
+          body.startsWith('January') ||
+            body.startsWith('February') ||
+            body.startsWith('March') ||
+            body.startsWith('April') ||
+            body.startsWith('May') ||
+            body.startsWith('June') ||
+            body.startsWith('July') ||
+            body.startsWith('August') ||
+            body.startsWith('September') ||
+            body.startsWith('October') ||
+            body.startsWith('November') ||
+            body.startsWith('December')
+        );
+      }
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 18-marko',
-  testFixtureStdio('18-marko', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Marko Starter/gm);
-  })
+  testFixtureStdio(
+    '18-marko',
+    async testPath => {
+      await testPath(200, '/', /Marko Starter/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 19-mithril',
-  testFixtureStdio('19-mithril', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Mithril on Vercel/gm);
-  })
+  testFixtureStdio(
+    '19-mithril',
+    async testPath => {
+      await testPath(200, '/', /Mithril on Vercel/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 20-riot',
-  testFixtureStdio('20-riot', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Riot on Vercel/gm);
-  })
+  testFixtureStdio(
+    '20-riot',
+    async testPath => {
+      await testPath(200, '/', /Riot on Vercel/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 21-charge',
-  testFixtureStdio('21-charge', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Welcome to my new Charge site/gm);
-  })
+  testFixtureStdio(
+    '21-charge',
+    async testPath => {
+      await testPath(200, '/', /Welcome to my new Charge site/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 22-brunch',
-  testFixtureStdio('22-brunch', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 50);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Bon Appétit./gm);
-  })
+  testFixtureStdio(
+    '22-brunch',
+    async testPath => {
+      await testPath(200, '/', /Bon Appétit./m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 23-docusaurus',
-  testFixtureStdio('23-docusaurus', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /My Site/gm);
-  })
+  testFixtureStdio(
+    '23-docusaurus',
+    async testPath => {
+      await testPath(200, '/', /My Site/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test('[now dev] 24-ember', async t => {
   if (shouldSkip(t, '24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
-  const tester = await testFixtureStdio('24-ember', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
+  const tester = await testFixtureStdio(
+    '24-ember',
+    async testPath => {
+      await testPath(200, '/', /HelloWorld/m);
+    },
+    { skipDeploy: true }
+  );
 
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /HelloWorld/gm);
-  });
-
-  tester(t);
+  await tester(t);
 });
 
 test(
   '[now dev] temporary directory listing',
-  testFixtureStdio('temporary-directory-listing', async (t, port) => {
-    const directory = fixture('temporary-directory-listing');
-    await fs.unlink(path.join(directory, 'index.txt')).catch(() => null);
+  testFixtureStdio(
+    'temporary-directory-listing',
+    async (_testPath, t, port) => {
+      const directory = fixture('temporary-directory-listing');
+      await fs.unlink(join(directory, 'index.txt')).catch(() => null);
 
-    await sleep(ms('20s'));
+      await sleep(ms('20s'));
 
-    const firstResponse = await fetch(`http://localhost:${port}`);
-    validateResponseHeaders(t, firstResponse);
-    const body = await firstResponse.text();
-    t.is(firstResponse.status, 404, `Received instead: ${body}`);
+      const firstResponse = await fetch(`http://localhost:${port}`);
+      validateResponseHeaders(t, firstResponse);
+      const body = await firstResponse.text();
+      t.is(firstResponse.status, 404, `Received instead: ${body}`);
 
-    await fs.writeFile(path.join(directory, 'index.txt'), 'hello');
+      await fs.writeFile(join(directory, 'index.txt'), 'hello');
 
-    for (let i = 0; i < 20; i++) {
-      const response = await fetch(`http://localhost:${port}`);
-      validateResponseHeaders(t, response);
+      for (let i = 0; i < 20; i++) {
+        const response = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(t, response);
 
-      if (response.status === 200) {
-        const body = await response.text();
-        t.is(body, 'hello');
+        if (response.status === 200) {
+          const body = await response.text();
+          t.is(body, 'hello');
+        }
+
+        await sleep(ms('1s'));
       }
-
-      await sleep(ms('1s'));
-    }
-  })
+    },
+    { skipDeploy: true }
+  )
 );
 
 test('[now dev] add a `package.json` to trigger `@now/static-build`', async t => {
   const directory = fixture('trigger-static-build');
 
-  await fs.unlink(path.join(directory, 'package.json')).catch(() => null);
+  await fs.unlink(join(directory, 'package.json')).catch(() => null);
 
-  await fs
-    .unlink(path.join(directory, 'public', 'index.txt'))
-    .catch(() => null);
+  await fs.unlink(join(directory, 'public', 'index.txt')).catch(() => null);
 
-  await fs.rmdir(path.join(directory, 'public')).catch(() => null);
+  await fs.rmdir(join(directory, 'public')).catch(() => null);
 
-  const tester = testFixtureStdio('trigger-static-build', async (t, port) => {
-    {
-      const response = await fetch(`http://localhost:${port}`);
-      validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), 'hello:index.txt');
-    }
+  const tester = testFixtureStdio(
+    'trigger-static-build',
+    async (_testPath, t, port) => {
+      {
+        const response = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(t, response);
+        const body = await response.text();
+        t.is(body.trim(), 'hello:index.txt');
+      }
 
-    const rnd = Math.random().toString();
-    const pkg = {
-      private: true,
-      scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
-    };
+      const rnd = Math.random().toString();
+      const pkg = {
+        private: true,
+        scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
+      };
 
-    await fs.writeFile(
-      path.join(directory, 'package.json'),
-      JSON.stringify(pkg)
-    );
+      await fs.writeFile(join(directory, 'package.json'), JSON.stringify(pkg));
 
-    // Wait until file events have been processed
-    await sleep(ms('2s'));
+      // Wait until file events have been processed
+      await sleep(ms('2s'));
 
-    {
-      const response = await fetch(`http://localhost:${port}`);
-      validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), rnd);
-    }
-  });
+      {
+        const response = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(t, response);
+        const body = await response.text();
+        t.is(body.trim(), rnd);
+      }
+    },
+    { skipDeploy: true }
+  );
 
   await tester(t);
 });
@@ -1131,19 +1083,9 @@ test('[now dev] no build matches warning', async t => {
 
 test(
   '[now dev] do not recursivly check the path',
-  testFixtureStdio('handle-filesystem-missing', async (t, port) => {
-    {
-      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-      validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), 'hello');
-    }
-
-    {
-      const response = await fetch(`http://localhost:${port}/favicon.txt`);
-      validateResponseHeaders(t, response);
-      t.is(response.status, 404);
-    }
+  testFixtureStdio('handle-filesystem-missing', async testPath => {
+    await testPath(200, '/', /hello/m);
+    await testPath(404, '/favicon.txt');
   })
 );
 
@@ -1187,7 +1129,7 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
   const builder = await getPackedBuilderPath('now-static-build');
 
   await fs.writeFile(
-    path.join(directory, 'now.json'),
+    join(directory, 'now.json'),
     JSON.stringify({
       builds: [
         {
@@ -1224,10 +1166,7 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     const text1 = await resp1.text();
     t.is(text1.trim(), 'hello first', stderr.join(''));
 
-    await fs.writeFile(
-      path.join(directory, 'public', 'index.html'),
-      'hello second'
-    );
+    await fs.writeFile(join(directory, 'public', 'index.html'), 'hello second');
 
     await sleep(ms('3s'));
 
@@ -1241,73 +1180,54 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
 
 test(
   '[now dev] 25-nextjs-src-dir',
-  testFixtureStdio('25-nextjs-src-dir', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 10);
-    validateResponseHeaders(t, response);
-    const body = await response.text();
-    t.regex(body, /Next.js \+ Node.js API/gm);
+  testFixtureStdio('25-nextjs-src-dir', async testPath => {
+    await testPath(200, '/', /Next.js \+ Node.js API/m);
   })
 );
 
 test(
   '[now dev] 26-nextjs-secrets',
-  testFixtureStdio('26-nextjs-secrets', async (t, port) => {
-    const user = await fetchWithRetry(`http://localhost:${port}/api/user`);
-    const index = await fetchWithRetry(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, user);
-    validateResponseHeaders(t, index);
-
-    t.regex(await user.text(), new RegExp('runtime'));
-    t.regex(await index.text(), new RegExp('buildtime'));
-  })
+  testFixtureStdio(
+    '26-nextjs-secrets',
+    async testPath => {
+      await testPath(200, '/api/user', /runtime/m);
+      await testPath(200, '/', /buildtime/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] 27-zero-config-env',
-  testFixtureStdio('27-zero-config-env', async (t, port) => {
-    const api = await fetchWithRetry(`http://localhost:${port}/api/print`);
-    const index = await fetchWithRetry(`http://localhost:${port}`);
-    t.regex(await api.text(), new RegExp('build-and-runtime'));
-    t.regex(await index.text(), new RegExp('build-and-runtime'));
-  })
+  testFixtureStdio(
+    '27-zero-config-env',
+    async testPath => {
+      await testPath(200, '/api/print', /build-and-runtime/m);
+      await testPath(200, '/', /build-and-runtime/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(
   '[now dev] Use `@now/python` with Flask requirements.txt',
-  testFixtureStdio('python-flask', async (t, port) => {
+  testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
     const year = new Date().getFullYear();
-    const user = await fetchWithRetry(
-      `http://localhost:${port}/api/user?name=${name}`
-    );
-    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
-    const ext = await fetchWithRetry(`http://localhost:${port}/api/date.py`);
-
-    validateResponseHeaders(t, user);
-    validateResponseHeaders(t, date);
-    validateResponseHeaders(t, ext);
-
-    t.regex(await user.text(), new RegExp(`Hello ${name}`));
-    t.regex(await date.text(), new RegExp(`Current date is ${year}`));
-    t.regex(await ext.text(), new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
+    await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
   })
 );
 
 test(
   '[now dev] Use runtime from the functions property',
-  testFixtureStdio('custom-runtime', async (t, port) => {
-    const extensionless = await fetchWithRetry(
-      `http://localhost:${port}/api/user`
-    );
-    const extension = await fetchWithRetry(
-      `http://localhost:${port}/api/user.sh`
-    );
-
-    validateResponseHeaders(t, extensionless);
-    validateResponseHeaders(t, extension);
-
-    t.regex(await extensionless.text(), /Hello, from Bash!/gm);
-    t.regex(await extension.text(), /Hello, from Bash!/gm);
-  })
+  testFixtureStdio(
+    'custom-runtime',
+    async testPath => {
+      await testPath(200, `/api/user`, /Hello, from Bash!/m);
+      await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
+    },
+    { skipDeploy: true }
+  )
 );
