@@ -71,7 +71,6 @@ function testFixture(name, fn) {
 }
 
 function validateResponseHeaders(t, res, podId = null) {
-  t.is(res.headers.get('x-vercel-trace'), 'dev1');
   t.is(res.headers.get('server'), 'now');
   t.truthy(res.headers.get('cache-control').length > 0);
   t.truthy(
