@@ -144,9 +144,10 @@ async function testPath(t, origin, status, path, expectedText, headers = {}) {
   if (expectedText) {
     const actualText = await res.text();
     if (expectedText instanceof RegExp) {
+      expectedText.lastIndex = 0; // reset since we test twice
       const matched = expectedText.test(actualText);
       if (matched) {
-        t.ok(matched);
+        t.is(matched, true);
       } else {
         t.is(actualText, expectedText.source, msg);
       }
