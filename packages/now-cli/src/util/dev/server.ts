@@ -1474,9 +1474,10 @@ export default class DevServer {
           entrypoint: match.entrypoint,
           workPath: this.cwd,
           config: match.config || {},
+          env: this.envConfigs.runEnv || {},
         });
       } catch (err) {
-        // `starDevServer()` threw an error. Most likely this means the dev
+        // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
         debug(`Error starting "${builderPkg.name}" dev server: ${err}`);
