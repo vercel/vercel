@@ -6,6 +6,7 @@
 !.yarnrc
 !yarn.lock
 !package.json
+!now.json
 
 # api
 !api/
