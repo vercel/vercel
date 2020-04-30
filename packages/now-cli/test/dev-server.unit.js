@@ -75,7 +75,7 @@ function validateResponseHeaders(t, res, podId = null) {
   t.is(res.headers.get('server'), 'now');
   t.truthy(res.headers.get('cache-control').length > 0);
   t.truthy(
-    /^dev1:[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
+    /^dev1::(dev1::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
       res.headers.get('x-now-id')
     )
   );
