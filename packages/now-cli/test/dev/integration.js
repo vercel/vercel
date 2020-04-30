@@ -336,8 +336,6 @@ function testFixtureStdio(
         await testPath(t, `http://localhost:${port}`, ...args);
       };
       await fn(helperTestPath, t, port);
-    } catch (e) {
-      console.log(e);
     } finally {
       dev.kill('SIGTERM');
       await exitResolver;
