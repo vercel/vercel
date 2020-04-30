@@ -416,11 +416,10 @@ export async function prepareCache({
   return cache;
 }
 
-export async function startDevServer({
-  entrypoint,
-  workPath,
-  config,
-}: StartDevServerOptions): Promise<StartDevServerResult> {
+export async function startDevServer(
+  opts: StartDevServerOptions
+): Promise<StartDevServerResult> {
+  const { entrypoint, workPath, config } = opts;
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
     cwd: workPath,
@@ -445,7 +444,7 @@ export async function startDevServer({
     if (ext === '.ts' || ext === '.tsx') {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck({ entrypoint, workPath, config }).catch((err: Error) => {
+      doTypeCheck(opts).catch((err: Error) => {
         console.error('Type check for %j failed:', entrypoint, err);
       });
     }
