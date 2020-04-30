@@ -130,7 +130,7 @@ export async function devRouter(
                 reqMethod,
                 missRoutes,
                 devServer,
-                previousHeaders,
+                combinedHeaders,
                 [],
                 'miss'
               );
