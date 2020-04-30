@@ -156,7 +156,7 @@ export function register(opts: Options = {}): Register {
       paths: [options.project || cwd, nowNodeBase],
     });
   } catch (e) {
-    compiler = require.resolve(eval('"./typescript"'));
+    compiler = require.resolve(eval('"typescript"'));
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require(compiler);
