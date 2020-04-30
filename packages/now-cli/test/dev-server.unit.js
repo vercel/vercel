@@ -377,7 +377,7 @@ test(
       t.is(res.status, 404);
       const body = await res.text();
       t.is(res.headers.get('content-type'), 'text/plain; charset=utf-8');
-      t.is(body, 'The page could not be found.\n\nFILE_NOT_FOUND\n');
+      t.is(body, 'The page could not be found.\n\nNOT_FOUND\n');
     }
   })
 );
@@ -406,7 +406,7 @@ test(
       const res = await fetch(`${server.address}/does-not-exist`);
       t.is(res.status, 404);
       const body = await res.text();
-      t.is(body, 'The page could not be found.\n\nFILE_NOT_FOUND\n');
+      t.is(body, 'The page could not be found.\n\nNOT_FOUND\n');
     }
   })
 );
