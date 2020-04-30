@@ -71,16 +71,19 @@ function testFixture(name, fn) {
 }
 
 function validateResponseHeaders(t, res, podId = null) {
-  t.is(res.headers.get('x-now-trace'), 'dev1');
+  t.is(res.headers.get('x-vercel-trace'), 'dev1');
   t.is(res.headers.get('server'), 'now');
   t.truthy(res.headers.get('cache-control').length > 0);
   t.truthy(
     /^dev1::(dev1::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
-      res.headers.get('x-now-id')
+      res.headers.get('x-vercel-id')
     )
   );
   if (podId) {
-    t.truthy(res.headers.get('x-now-id').startsWith(`dev1:${podId}`));
+    t.truthy(
+      res.headers.get('x-vercel-id').startsWith(`dev1::${podId}`) ||
+        res.headers.get('x-vercel-id').startsWith(`dev1::dev1::${podId}`)
+    );
   }
 }
 
@@ -224,7 +227,7 @@ test(
     {
       const res = await fetch(`${server.address}/`);
       validateResponseHeaders(t, res);
-      podId = res.headers.get('x-now-id').match(/:(\w+)-/)[1];
+      podId = res.headers.get('x-vercel-id').match(/:(\w+)-/)[1];
       const body = await res.text();
       t.is(body.includes('hello, this is the frontend'), true);
     }
