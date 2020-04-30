@@ -408,7 +408,7 @@ test(
 test(
   '[now dev] displays directory listing after miss',
   testFixtureStdio('handle-miss-display-dir-list', async (testPath) => {
-    await testPath(404, '/post', /one.html/gm);
+    await testPath(404, '/post', /one.html/m);
   })
 );
 */
@@ -447,9 +447,9 @@ test(
   testFixtureStdio('public-and-api', async testPath => {
     await testPath(200, '/', 'This is the home page');
     await testPath(200, '/about.html', 'This is the about page');
-    await testPath(200, '/api/date', /current date/gm);
-    await testPath(200, '/api/rand', /random number/gm);
-    await testPath(200, '/api/rand.js', /random number/gm);
+    await testPath(200, '/api/date', /current date/);
+    await testPath(200, '/api/rand', /random number/);
+    await testPath(200, '/api/rand.js', /random number/);
     await testPath(404, '/api/api');
   })
 );
@@ -474,7 +474,7 @@ test('[now dev] validate builds', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `builds` property: \[0\]\.src should be string/gm
+    /Invalid `builds` property: \[0\]\.src should be string/m
   );
 });
 
@@ -485,7 +485,7 @@ test('[now dev] validate routes', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `routes` property: \[0\]\.src should be string/gm
+    /Invalid `routes` property: \[0\]\.src should be string/m
   );
 });
 
@@ -494,7 +494,7 @@ test('[now dev] validate cleanUrls', async t => {
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/gm);
+  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/m);
 });
 
 test('[now dev] validate trailingSlash', async t => {
@@ -504,7 +504,7 @@ test('[now dev] validate trailingSlash', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `trailingSlash` property:\s+should be boolean/gm
+    /Invalid `trailingSlash` property:\s+should be boolean/m
   );
 });
 
@@ -515,7 +515,7 @@ test('[now dev] validate rewrites', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `rewrites` property: \[0\]\.destination should be string/gm
+    /Invalid `rewrites` property: \[0\]\.destination should be string/m
   );
 });
 
@@ -526,7 +526,7 @@ test('[now dev] validate redirects', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `redirects` property: \[0\]\.statusCode should be integer/gm
+    /Invalid `redirects` property: \[0\]\.statusCode should be integer/m
   );
 });
 
@@ -537,7 +537,7 @@ test('[now dev] validate headers', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/gm
+    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/m
   );
 });
 
@@ -546,7 +546,7 @@ test('[now dev] validate mixed routes and rewrites', async t => {
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/gm);
+  t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/m);
 });
 
 // Test seems unstable: It won't return sometimes.
@@ -676,7 +676,7 @@ test(
   testFixtureStdio(
     'invalid-builder-routes',
     async testPath => {
-      await testPath(500, '/', /Invalid regular expression/gm);
+      await testPath(500, '/', /Invalid regular expression/m);
     },
     { skipDeploy: true }
   )
@@ -685,16 +685,16 @@ test(
 test(
   '[now dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async testPath => {
-    await testPath(200, '/', /Files within/gm);
-    await testPath(200, '/', /test.txt/gm);
-    await testPath(200, '/', /directory/gm);
+    await testPath(200, '/', /Files within/m);
+    await testPath(200, '/', /test.txt/m);
+    await testPath(200, '/', /directory/m);
   })
 );
 
 test(
   '[now dev] 01-node',
   testFixtureStdio('01-node', async testPath => {
-    await testPath(200, '/', /A simple deployment with the Now API!/gm);
+    await testPath(200, '/', /A simple deployment with the Now API!/m);
   })
 );
 
@@ -722,7 +722,7 @@ test('[now dev] 02-angular-node', async t => {
     validateResponseHeaders(t, response);
 
     const body = await response.text();
-    t.regex(body, /Angular \+ Node.js API/gm);
+    t.regex(body, /Angular \+ Node.js API/m);
   } finally {
     dev.kill('SIGTERM');
   }
@@ -741,7 +741,7 @@ test(
   testFixtureStdio(
     '03-aurelia',
     async testPath => {
-      await testPath(200, '/', /Aurelia Navigation Skeleton/gm);
+      await testPath(200, '/', /Aurelia Navigation Skeleton/m);
     },
     { skipDeploy: true }
   )
@@ -750,14 +750,14 @@ test(
 test(
   '[now dev] 04-create-react-app',
   testFixtureStdio('04-create-react-app', async testPath => {
-    await testPath(200, '/', /React App/gm);
+    await testPath(200, '/', /React App/m);
   })
 );
 /*
 test(
   '[now dev] 05-gatsby',
   testFixtureStdio('05-gatsby', async testPath => {
-    await testPath(200, '/', /Gatsby Default Starter/gm);
+    await testPath(200, '/', /Gatsby Default Starter/m);
   })
 );
 */
@@ -771,7 +771,7 @@ test(
 test(
   '[now dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async testPath => {
-    await testPath(200, '/', /Hexo \+ Node.js API/gm);
+    await testPath(200, '/', /Hexo \+ Node.js API/m);
   })
 );
 
@@ -782,7 +782,7 @@ test('[now dev] 08-hugo', async t => {
       process.env.PATH
     }`;
     const tester = testFixtureStdio('08-hugo', async testPath => {
-      await testPath(200, '/', /Hugo/gm);
+      await testPath(200, '/', /Hugo/m);
     });
     await tester(t);
   } else {
@@ -794,7 +794,7 @@ test('[now dev] 08-hugo', async t => {
 test(
   '[now dev] 10-nextjs-node',
   testFixtureStdio('10-nextjs-node', async testPath => {
-    await testPath(200, '/', /Next.js \+ Node.js API/gm);
+    await testPath(200, '/', /Next.js \+ Node.js API/m);
   })
 );
 
@@ -803,7 +803,7 @@ test(
   testFixtureStdio(
     '12-polymer-node',
     async testPath => {
-      await testPath(200, '/', /Polymer \+ Node.js API/gm);
+      await testPath(200, '/', /Polymer \+ Node.js API/m);
     },
     { skipDeploy: true }
   )
@@ -814,7 +814,7 @@ test(
   testFixtureStdio(
     '13-preact-node',
     async testPath => {
-      await testPath(200, '/', /Preact/gm);
+      await testPath(200, '/', /Preact/m);
     },
     { skipDeploy: true }
   )
@@ -825,7 +825,7 @@ test(
   testFixtureStdio(
     '14-svelte-node',
     async testPath => {
-      await testPath(200, '/', /Svelte/gm);
+      await testPath(200, '/', /Svelte/m);
     },
     { skipDeploy: true }
   )
@@ -836,7 +836,7 @@ test(
   testFixtureStdio(
     '16-vue-node',
     async testPath => {
-      await testPath(200, '/', /Vue.js \+ Node.js API/gm);
+      await testPath(200, '/', /Vue.js \+ Node.js API/m);
     },
     { skipDeploy: true }
   )
@@ -847,7 +847,7 @@ test(
   testFixtureStdio(
     '17-vuepress-node',
     async testPath => {
-      await testPath(200, '/', /VuePress \+ Node.js API/gm);
+      await testPath(200, '/', /VuePress \+ Node.js API/m);
     },
     { skipDeploy: true }
   )
@@ -906,7 +906,7 @@ test(
   testFixtureStdio(
     '18-marko',
     async testPath => {
-      await testPath(200, '/', /Marko Starter/gm);
+      await testPath(200, '/', /Marko Starter/m);
     },
     { skipDeploy: true }
   )
@@ -917,7 +917,7 @@ test(
   testFixtureStdio(
     '19-mithril',
     async testPath => {
-      await testPath(200, '/', /Mithril on Vercel/gm);
+      await testPath(200, '/', /Mithril on Vercel/m);
     },
     { skipDeploy: true }
   )
@@ -928,7 +928,7 @@ test(
   testFixtureStdio(
     '20-riot',
     async testPath => {
-      await testPath(200, '/', /Riot on Vercel/gm);
+      await testPath(200, '/', /Riot on Vercel/m);
     },
     { skipDeploy: true }
   )
@@ -939,7 +939,7 @@ test(
   testFixtureStdio(
     '21-charge',
     async testPath => {
-      await testPath(200, '/', /Welcome to my new Charge site/gm);
+      await testPath(200, '/', /Welcome to my new Charge site/m);
     },
     { skipDeploy: true }
   )
@@ -950,7 +950,7 @@ test(
   testFixtureStdio(
     '22-brunch',
     async testPath => {
-      await testPath(200, '/', /Bon Appétit./gm);
+      await testPath(200, '/', /Bon Appétit./m);
     },
     { skipDeploy: true }
   )
@@ -961,7 +961,7 @@ test(
   testFixtureStdio(
     '23-docusaurus',
     async testPath => {
-      await testPath(200, '/', /My Site/gm);
+      await testPath(200, '/', /My Site/m);
     },
     { skipDeploy: true }
   )
@@ -973,7 +973,7 @@ test('[now dev] 24-ember', async t => {
   const tester = await testFixtureStdio(
     '24-ember',
     async testPath => {
-      await testPath(200, '/', /HelloWorld/gm);
+      await testPath(200, '/', /HelloWorld/m);
     },
     { skipDeploy: true }
   );
@@ -1085,7 +1085,7 @@ test('[now dev] no build matches warning', async t => {
 test(
   '[now dev] do not recursivly check the path',
   testFixtureStdio('handle-filesystem-missing', async testPath => {
-    await testPath(200, '/', /hello/gm);
+    await testPath(200, '/', /hello/m);
     await testPath(404, '/favicon.txt');
   })
 );
@@ -1182,7 +1182,7 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
 test(
   '[now dev] 25-nextjs-src-dir',
   testFixtureStdio('25-nextjs-src-dir', async testPath => {
-    await testPath(200, '/', /Next.js \+ Node.js API/gm);
+    await testPath(200, '/', /Next.js \+ Node.js API/m);
   })
 );
 
@@ -1191,8 +1191,8 @@ test(
   testFixtureStdio(
     '26-nextjs-secrets',
     async testPath => {
-      await testPath(200, '/api/user', /runtime/gm);
-      await testPath(200, '/', /buildtime/gm);
+      await testPath(200, '/api/user', /runtime/m);
+      await testPath(200, '/', /buildtime/m);
     },
     { skipDeploy: true }
   )
@@ -1203,8 +1203,8 @@ test(
   testFixtureStdio(
     '27-zero-config-env',
     async testPath => {
-      await testPath(200, '/api/print', /build-and-runtime/gm);
-      await testPath(200, '/', /build-and-runtime/gm);
+      await testPath(200, '/api/print', /build-and-runtime/m);
+      await testPath(200, '/', /build-and-runtime/m);
     },
     { skipDeploy: true }
   )
@@ -1226,8 +1226,8 @@ test(
   testFixtureStdio(
     'custom-runtime',
     async testPath => {
-      await testPath(200, `/api/user`, /Hello, from Bash!/gm);
-      await testPath(200, `/api/user.sh`, /Hello, from Bash!/gm);
+      await testPath(200, `/api/user`, /Hello, from Bash!/m);
+      await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
     },
     { skipDeploy: true }
   )
