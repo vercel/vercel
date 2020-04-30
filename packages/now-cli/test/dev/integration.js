@@ -686,8 +686,7 @@ test(
   '[now dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async testPath => {
     await testPath(200, '/', /Files within/m);
-    await testPath(200, '/', /test.txt/m);
-    await testPath(200, '/', /directory/m);
+    await testPath(200, '/', /test[0-3]\.txt/m);
   })
 );
 
