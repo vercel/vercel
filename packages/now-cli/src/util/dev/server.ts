@@ -651,6 +651,7 @@ export default class DevServer {
     if (config.version === 1) {
       this.output.error('Only `version: 2` is supported by `now dev`');
       await this.exit(1);
+      return;
     }
 
     await this.tryValidateOrExit(config, validateNowConfigBuilds);
@@ -1251,7 +1252,9 @@ export default class DevServer {
       req.url = location;
     }
 
-    await this.updateBuildMatches(nowConfig);
+    if (callLevel === 0) {
+      await this.updateBuildMatches(nowConfig);
+    }
 
     if (this.blockingBuildsPromise) {
       debug('Waiting for builds to complete before handling request');
@@ -1474,9 +1477,10 @@ export default class DevServer {
           entrypoint: match.entrypoint,
           workPath: this.cwd,
           config: match.config || {},
+          env: this.envConfigs.runEnv || {},
         });
       } catch (err) {
-        // `starDevServer()` threw an error. Most likely this means the dev
+        // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
         debug(`Error starting "${builderPkg.name}" dev server: ${err}`);

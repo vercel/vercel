@@ -484,7 +484,13 @@ export async function build({
         const result = await getNowIgnore(distPath);
         ignore = result.ignores
           .map(file => (file.endsWith('/') ? `${file}**` : file))
-          .concat(['yarn.lock', 'package-lock.json', 'package.json']);
+          .concat([
+            '.env',
+            '.env.*',
+            'yarn.lock',
+            'package-lock.json',
+            'package.json',
+          ]);
         debug(`Using ignore: ${JSON.stringify(ignore)}`);
       }
       output = await glob('**', { cwd: distPath, ignore }, mountpoint);

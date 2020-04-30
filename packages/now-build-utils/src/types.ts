@@ -207,6 +207,12 @@ export interface StartDevServerOptions {
    * in `now.json`.
    */
   config: Config;
+
+  /**
+   * Runtime environment variables configuration from the project's `now.json`
+   * and local `.env` file.
+   */
+  env: Env;
 }
 
 export interface StartDevServerSuccess {
