@@ -457,6 +457,9 @@ function detectFrontBuilder(
   if (framework === 'nextjs') {
     return { src: 'package.json', use: `@now/next${withTag}`, config };
   }
+  if (framework === 'blitzjs') {
+    return { src: 'package.json', use: `@now/next${withTag}`, config };
+  }
 
   // Entrypoints for other frameworks
   // TODO - What if just a build script is provided, but no entrypoint.
