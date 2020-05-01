@@ -10,7 +10,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
-import cmd from '../../util/output/cmd';
+import { getCommandName } from '../../util/pkg-name';
 
 import add from './add';
 import pull from './pull';
@@ -34,10 +34,10 @@ const help = () => {
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -113,9 +113,7 @@ export default async function main(ctx: NowContext) {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${cmd(
-        'now'
-      )} to link it.`
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName()} to link it.`
     );
     return 1;
   } else {

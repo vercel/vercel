@@ -300,7 +300,7 @@ export default async function main(
     }
 
     // We use `localConfig` here to read the name
-    // even though the `now.json` file can change
+    // even though the `vercel.json` file can change
     // afterwards, this is fine since the property
     // will be deprecated and can be replaced with
     // user input.
@@ -369,7 +369,7 @@ export default async function main(
       output.print(
         `${prependEmoji(
           `The ${highlight(
-            'now.json'
+            'vercel.json'
           )} file should be inside of the provided root directory.`,
           emoji('warning')
         )}\n`
@@ -383,7 +383,7 @@ export default async function main(
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
-          'now.json'
+          'vercel.json'
         )} is deprecated (https://zeit.ink/5F)`,
         emoji('warning')
       )}\n`
@@ -400,7 +400,7 @@ export default async function main(
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
     error(
       `The ${code('env')} property in ${highlight(
-        'now.json'
+        'vercel.json'
       )} needs to be an object`
     );
     return 1;
@@ -410,7 +410,7 @@ export default async function main(
     if (!isObject(localConfig.build)) {
       error(
         `The ${code('build')} property in ${highlight(
-          'now.json'
+          'vercel.json'
         )} needs to be an object`
       );
       return 1;
@@ -422,7 +422,7 @@ export default async function main(
     ) {
       error(
         `The ${code('build.env')} property in ${highlight(
-          'now.json'
+          'vercel.json'
         )} needs to be an object`
       );
       return 1;
@@ -436,14 +436,14 @@ export default async function main(
     parseMeta(argv['--meta'])
   );
 
-  // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
+  // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
     parseEnv(localConfig.env),
     parseEnv(argv['--env'])
   );
 
-  // Merge build env out of  `build.env` from now.json, and `--build-env` args
+  // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
@@ -732,7 +732,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
-          'now.json'
+          'vercel.json'
         )} when using Now 2.0 – please remove it.`
       );
 
@@ -757,7 +757,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} in ${highlight(
-          'now.json'
+          'vercel.json'
         )} can only be of type ${code(title(params.type))}.`
       );
 
@@ -768,7 +768,7 @@ function handleCreateDeployError(output, error) {
 
     output.error(
       `Failed to validate ${highlight(
-        'now.json'
+        'vercel.json'
       )}: ${message}\nDocumentation: ${link}`
     );
 

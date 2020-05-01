@@ -1,26 +1,30 @@
 import path from 'path';
 import mri from 'mri';
 import { InvalidLocalConfig } from '../errors';
+import { existsSync } from 'fs';
 
-const getLocalPathConfig = (prefix: string) => {
+export default function getLocalPathConfig(prefix: string) {
   const args = mri(process.argv.slice(2), {
     string: ['local-config'],
     alias: {
-      'local-config': 'A'
-    }
+      'local-config': 'A',
+    },
   });
 
   const customPath = args['local-config'];
 
-  if (Array.isArray(customPath)) {
+  if (customPath && typeof customPath !== 'string') {
     throw new InvalidLocalConfig(customPath);
   }
 
-  if (!customPath) {
-    return path.join(prefix, 'now.json');
-  }
+  const possibleConfigFiles = [
+    path.join(prefix, 'vercel.json'),
+    path.join(prefix, 'now.json'),
+  ];
 
-  return path.resolve(prefix, customPath);
-};
-
-export default getLocalPathConfig;
+  return (
+    (customPath && path.resolve(customPath)) ||
+    possibleConfigFiles.find(configFile => existsSync(configFile)) ||
+    possibleConfigFiles[0]
+  );
+}

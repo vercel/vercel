@@ -24,7 +24,7 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import getNowDir from './util/config/global-path';
+import getGlobalPathConfig from './util/config/global-path';
 import {
   getDefaultConfig,
   getDefaultAuthConfig,
@@ -49,9 +49,9 @@ import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 
-const NOW_DIR = getNowDir();
-const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
-const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
+const VERCEL_DIR = getGlobalPathConfig();
+const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
+const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
 
@@ -184,7 +184,7 @@ const main = async argv_ => {
   let nowDirExists;
 
   try {
-    nowDirExists = existsSync(NOW_DIR);
+    nowDirExists = existsSync(VERCEL_DIR);
   } catch (err) {
     console.error(
       error(
@@ -198,12 +198,12 @@ const main = async argv_ => {
 
   if (!nowDirExists) {
     try {
-      await mkdirp(NOW_DIR);
+      await mkdirp(VERCEL_DIR);
     } catch (err) {
       console.error(
         error(
           `${'An unexpected error occurred while trying to create the ' +
-            `now global directory "${hp(NOW_DIR)}" `}${err.message}`
+            `now global directory "${hp(VERCEL_DIR)}" `}${err.message}`
         )
       );
     }
@@ -213,12 +213,12 @@ const main = async argv_ => {
   let configExists;
 
   try {
-    configExists = existsSync(NOW_CONFIG_PATH);
+    configExists = existsSync(VERCEL_CONFIG_PATH);
   } catch (err) {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now config file "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
+          `now config file "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -234,7 +234,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now config in "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
+            `now config in "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -266,7 +266,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
+            `default now config to "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -277,12 +277,12 @@ const main = async argv_ => {
   let authConfigExists;
 
   try {
-    authConfigExists = existsSync(NOW_AUTH_CONFIG_PATH);
+    authConfigExists = existsSync(VERCEL_AUTH_CONFIG_PATH);
   } catch (err) {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" `}${err.message}`
+          `now auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -300,7 +300,9 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" `}${err.message}`
+            `now auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${
+            err.message
+          }`
         )
       );
 
@@ -320,7 +322,7 @@ const main = async argv_ => {
     ) {
       console.error(
         error(
-          `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
+          `The content of "${hp(VERCEL_AUTH_CONFIG_PATH)}" is invalid. ` +
             'No `token` property found inside. Run `now login` to authorize.'
         )
       );
@@ -338,7 +340,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            `default now config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${
             err.message
           }`
         )
@@ -349,7 +351,7 @@ const main = async argv_ => {
 
   // Let the user know we migrated the config
   if (migrated) {
-    const directory = param(hp(NOW_DIR));
+    const directory = param(hp(VERCEL_DIR));
     debug(
       `The credentials and configuration within the ${directory} directory were upgraded`
     );

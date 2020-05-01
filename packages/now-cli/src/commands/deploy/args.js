@@ -41,10 +41,10 @@ export const latestHelp = () => `
     -V, --platform-version         Set the platform version to deploy to
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
-)}   Path to the local ${'`now.json`'} file
+)}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
   'DIR'
-)}    Path to the global ${'`.now`'} directory
+)}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
     --with-cache                   Retain build cache when using "--force"
@@ -237,10 +237,10 @@ export const legacyHelp = () => `
     -n, --name                     Set the project name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
-)}   Path to the local ${'`now.json`'} file
+)}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
   'DIR'
-)}    Path to the global ${'`.now`'} directory
+)}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(

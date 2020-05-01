@@ -77,7 +77,7 @@ export default async function main(ctx: NowContext) {
 
   const [dir = '.'] = args;
 
-  const nowJson = await readConfig(path.join(dir, 'now.json'));
+  const nowJson = await readConfig(dir);
   // @ts-ignore: Because `nowJson` could be one of three different types
   const hasBuilds = nowJson && nowJson.builds && nowJson.builds.length > 0;
 

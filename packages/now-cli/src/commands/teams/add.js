@@ -12,6 +12,7 @@ import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
+import { getPkgName } from '../../util/pkg-name';
 
 const validateSlugKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -26,8 +27,8 @@ const validateNameKeypress = (data, value) =>
 const gracefulExit = () => {
   console.log(); // Blank line
   note(
-    `Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd(
-      'now switch'
+    `Your team is now active for all ${getPkgName()} commands!\n  Run ${cmd(
+      `${getPkgName()} switch`
     )} to change it in the future.`
   );
   return 0;

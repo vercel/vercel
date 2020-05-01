@@ -8,7 +8,7 @@ import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
-import cmd from '../../util/output/cmd';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug'?: boolean;
@@ -45,9 +45,7 @@ export default async function dev(
 
   if (link.status === 'not_linked' && !process.env.__NOW_SKIP_DEV_COMMAND) {
     output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${cmd(
-        'now'
-      )} to link it.`
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName()} to link it.`
     );
     return 1;
   }

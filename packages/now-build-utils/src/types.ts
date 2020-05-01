@@ -81,7 +81,7 @@ export interface AnalyzeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -108,7 +108,7 @@ export interface BuildOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 
@@ -148,7 +148,7 @@ export interface PrepareCacheOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -182,7 +182,7 @@ export interface ShouldServeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -204,12 +204,12 @@ export interface StartDevServerOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 
   /**
-   * Runtime environment variables configuration from the project's `now.json`
+   * Runtime environment variables configuration from the project's `vercel.json`
    * and local `.env` file.
    */
   env: Env;

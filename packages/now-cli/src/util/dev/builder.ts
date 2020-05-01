@@ -454,7 +454,7 @@ export async function getBuildMatches(
         noMatches.length,
         true
       )} that did not match any source files (please ensure they are NOT defined in ${highlight(
-        '.nowignore'
+        '.vercelignore'
       )}):`
     );
     for (const buildConfig of noMatches) {

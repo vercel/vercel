@@ -193,8 +193,12 @@ export async function staticFiles(
     const search = await glob(source, { cwd: path, absolute: true, dot: true });
 
     // Compile list of ignored patterns and files
-    const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
-    const ig = await createIgnore(resolve(path, ignoreName));
+    let ig;
+    if (isBuilds) {
+      ig = await createIgnoreVercel();
+    } else {
+      ig = await createIgnore(resolve(path, '.gitignore'));
+    }
     const filter = ig.createFilter();
 
     const prefixLength = path.length + 1;

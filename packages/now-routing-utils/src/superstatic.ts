@@ -1,5 +1,5 @@
 /**
- * This converts Superstatic configuration to Now.json Routes
+ * This converts Superstatic configuration to vercel.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
 import { isString } from 'util';

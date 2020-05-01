@@ -39,10 +39,11 @@ export const builderDirPromise = prepareBuilderDir();
  * Prepare cache directory for installing now-builders
  */
 export async function prepareCacheDir() {
-  const { NOW_BUILDER_CACHE_DIR } = process.env;
-  const designated = NOW_BUILDER_CACHE_DIR
-    ? resolve(NOW_BUILDER_CACHE_DIR)
-    : XDGAppPaths('co.zeit.now').cache();
+  let { VERCEL_BUILDER_CACHE_DIR, NOW_BUILDER_CACHE_DIR } = process.env;
+  VERCEL_BUILDER_CACHE_DIR = VERCEL_BUILDER_CACHE_DIR || NOW_BUILDER_CACHE_DIR;
+  const designated = VERCEL_BUILDER_CACHE_DIR
+    ? resolve(VERCEL_BUILDER_CACHE_DIR)
+    : XDGAppPaths('vercel').cache();
 
   if (!designated) {
     throw new NoBuilderCacheError();
