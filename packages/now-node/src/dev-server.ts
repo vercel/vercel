@@ -49,8 +49,7 @@ async function main() {
   delete process.env.NOW_DEV_CONFIG;
 
   if (!process.env.NODE_ENV) {
-    process.env.NODE_ENV =
-      process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
+    process.env.NODE_ENV = 'development';
   }
 
   let isServerListening = false;
