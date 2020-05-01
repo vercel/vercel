@@ -52,13 +52,19 @@ async function createBuildProcess(
   match: BuildMatch,
   envConfigs: EnvConfigs,
   workPath: string,
-  output: Output
+  output: Output,
+  yarnPath?: string
 ): Promise<ChildProcess> {
   const { execPath } = process;
   const modulePath = await builderModulePathPromise;
 
   // Ensure that `node` is in the builder's `PATH`
   let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
+
+  // Ensure that `yarn` is in the builder's `PATH`
+  if (yarnPath) {
+    PATH = `${yarnPath}${delimiter}${PATH}`;
+  }
 
   const env: Env = {
     ...process.env,
@@ -108,7 +114,7 @@ export async function executeBuild(
     builderWithPkg: { runInProcess, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const { debug, envConfigs, cwd: workPath } = devServer;
+  const { debug, envConfigs, yarnPath, cwd: workPath } = devServer;
 
   const startTime = Date.now();
   const showBuildTimestamp =
@@ -132,7 +138,8 @@ export async function executeBuild(
       match,
       envConfigs,
       workPath,
-      devServer.output
+      devServer.output,
+      yarnPath
     );
   }
 
@@ -386,6 +393,7 @@ export async function executeBuild(
 export async function getBuildMatches(
   nowConfig: NowConfig,
   cwd: string,
+  yarnDir: string,
   output: Output,
   devServer: DevServer,
   fileList: string[]
@@ -437,7 +445,7 @@ export async function getBuildMatches(
 
     for (const file of files) {
       src = relative(cwd, file);
-      const builderWithPkg = await getBuilder(use, output);
+      const builderWithPkg = await getBuilder(use, yarnDir, output);
       matches.push({
         ...buildConfig,
         src,

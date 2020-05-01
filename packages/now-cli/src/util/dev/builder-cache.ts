@@ -7,7 +7,7 @@ import pluralize from 'pluralize';
 import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
-import { basename, join, resolve } from 'path';
+import { join, resolve } from 'path';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
@@ -213,6 +213,7 @@ export function filterPackage(
  */
 export async function installBuilders(
   packagesSet: Set<string>,
+  yarnDir: string,
   output: Output,
   builderDir?: string
 ): Promise<void> {
@@ -228,12 +229,9 @@ export async function installBuilders(
   if (!builderDir) {
     builderDir = await builderDirPromise;
   }
+  const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
-  const depsBefore = {
-    ...buildersPkgBefore.devDependencies,
-    ...buildersPkgBefore.dependencies,
-  };
 
   packages.push(getBuildUtils(packages));
 
@@ -258,11 +256,13 @@ export async function installBuilders(
     await retry(
       () =>
         execa(
-          'npm',
+          process.execPath,
           [
-            'install',
-            '--save-exact',
-            '--no-package-lock',
+            yarnPath,
+            'add',
+            '--exact',
+            '--no-lockfile',
+            '--non-interactive',
             ...packagesToInstall,
           ],
           {
@@ -277,12 +277,8 @@ export async function installBuilders(
 
   const updatedPackages: string[] = [];
   const buildersPkgAfter = await readJSON(buildersPkgPath);
-  const depsAfter = {
-    ...buildersPkgAfter.devDependencies,
-    ...buildersPkgAfter.dependencies,
-  };
-  for (const [name, version] of Object.entries(depsAfter)) {
-    if (version !== depsBefore[name]) {
+  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
+    if (version !== buildersPkgBefore.dependencies[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);
       updatedPackages.push(name);
     }
@@ -293,6 +289,7 @@ export async function installBuilders(
 
 export async function updateBuilders(
   packagesSet: Set<string>,
+  yarnDir: string,
   output: Output,
   builderDir?: string
 ): Promise<string[]> {
@@ -301,23 +298,22 @@ export async function updateBuilders(
   }
 
   const packages = Array.from(packagesSet);
+  const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
-  const depsBefore = {
-    ...buildersPkgBefore.devDependencies,
-    ...buildersPkgBefore.dependencies,
-  };
 
   packages.push(getBuildUtils(packages));
 
   await retry(
     () =>
       execa(
-        'npm',
+        process.execPath,
         [
-          'install',
-          '--save-exact',
-          '--no-package-lock',
+          yarnPath,
+          'add',
+          '--exact',
+          '--no-lockfile',
+          '--non-interactive',
           ...packages.filter(p => p !== '@now/static'),
         ],
         {
@@ -329,12 +325,8 @@ export async function updateBuilders(
 
   const updatedPackages: string[] = [];
   const buildersPkgAfter = await readJSON(buildersPkgPath);
-  const depsAfter = {
-    ...buildersPkgAfter.devDependencies,
-    ...buildersPkgAfter.dependencies,
-  };
-  for (const [name, version] of Object.entries(depsAfter)) {
-    if (version !== depsBefore[name]) {
+  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
+    if (version !== buildersPkgBefore.dependencies[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);
       updatedPackages.push(name);
     }
@@ -350,6 +342,7 @@ export async function updateBuilders(
  */
 export async function getBuilder(
   builderPkg: string,
+  yarnDir: string,
   output: Output,
   builderDir?: string
 ): Promise<BuilderWithPackage> {
@@ -375,10 +368,10 @@ export async function getBuilder(
           `Attempted to require ${builderPkg}, but it is not installed`
         );
         const pkgSet = new Set([builderPkg]);
-        await installBuilders(pkgSet, output, builderDir);
+        await installBuilders(pkgSet, yarnDir, output, builderDir);
 
         // Run `getBuilder()` again now that the builder has been installed
-        return getBuilder(builderPkg, output, builderDir);
+        return getBuilder(builderPkg, yarnDir, output, builderDir);
       }
       throw err;
     }
@@ -393,12 +386,9 @@ function getPackageName(
   if (registryTypes.has(parsed.type)) {
     return parsed.name;
   }
-  const deps: { [name: string]: string } = {
-    ...buildersPkg.devDependencies,
-    ...buildersPkg.dependencies,
-  };
+  const deps = { ...buildersPkg.devDependencies, ...buildersPkg.dependencies };
   for (const [name, dep] of Object.entries(deps)) {
-    if (dep === parsed.raw || basename(dep) === basename(parsed.raw)) {
+    if (dep === parsed.raw) {
       return name;
     }
   }

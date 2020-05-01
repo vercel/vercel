@@ -63,6 +63,7 @@ import {
 
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
+import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
 import { installBuilders, updateBuilders } from './builder-cache';
@@ -114,6 +115,7 @@ export default class DevServer {
   public envConfigs: EnvConfigs;
   public frameworkSlug: string | null;
   public files: BuilderInputs;
+  public yarnPath: string;
   public address: string;
 
   private cachedNowConfig: NowConfig | null;
@@ -147,6 +149,10 @@ export default class DevServer {
     this.address = '';
     this.devCommand = options.devCommand;
     this.frameworkSlug = options.frameworkSlug;
+
+    // This gets updated when `start()` is invoked
+    this.yarnPath = '/';
+
     this.cachedNowConfig = null;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -356,6 +362,7 @@ export default class DevServer {
     const matches = await getBuildMatches(
       nowConfig,
       this.cwd,
+      this.yarnPath,
       this.output,
       this,
       fileList
@@ -723,6 +730,8 @@ export default class DevServer {
       throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
     }
 
+    this.yarnPath = await getYarnPath(this.output);
+
     const ig = await createIgnore(join(this.cwd, '.nowignore'));
     this.filter = ig.createFilter();
 
@@ -756,12 +765,16 @@ export default class DevServer {
         .map((b: Builder) => b.use)
     );
 
-    await installBuilders(builders, this.output);
+    await installBuilders(builders, this.yarnPath, this.output);
     await this.updateBuildMatches(nowConfig, true);
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
-    this.updateBuildersPromise = updateBuilders(builders, this.output)
+    this.updateBuildersPromise = updateBuilders(
+      builders,
+      this.yarnPath,
+      this.output
+    )
       .then(updatedBuilders => {
         this.updateBuildersPromise = null;
         this.invalidateBuildMatches(nowConfig, updatedBuilders);
@@ -1387,23 +1400,13 @@ export default class DevServer {
     });
 
     if (statusCode) {
-      // Set the `statusCode` as read-only so that `http-proxy`
-      // is not able to modify the value in the future
-      Object.defineProperty(res, 'statusCode', {
-        get() {
-          return statusCode;
-        },
-        /* eslint-disable @typescript-eslint/no-unused-vars */
-        set(_: number) {
-          /* ignore */
-        },
-      });
+      res.statusCode = statusCode;
     }
 
     const requestPath = dest.replace(/^\//, '');
 
     if (!match) {
-      // If the dev command is started, then proxy to it
+      // if the dev command is started, proxy to it
       if (this.devProcessPort) {
         debug('Proxying to frontend dev server');
         this.setResponseHeaders(res, nowRequestId);

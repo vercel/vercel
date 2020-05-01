@@ -39,14 +39,11 @@ async function createBuildersTarball() {
     }
   }
 
-  await execa(
-    'npm',
-    ['install', '--save-exact', '--no-package-lock', ...builders],
-    {
-      cwd: buildersDir,
-      stdio: 'inherit',
-    }
-  );
+  const yarn = join(dirRoot, '../../node_modules/yarn/bin/yarn.js');
+  await execa(process.execPath, [yarn, 'add', '--no-lockfile', ...builders], {
+    cwd: buildersDir,
+    stdio: 'inherit',
+  });
 
   const packer = tar.pack(buildersDir);
   await pipe(
