@@ -1,5 +1,5 @@
 {
-  "name": "@now/go",
+  "name": "@vercel/go",
   "version": "1.0.8-canary.0",
   "license": "MIT",
   "main": "./dist/index",

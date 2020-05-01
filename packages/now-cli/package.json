@@ -1,5 +1,5 @@
 {
-  "name": "now",
+  "name": "vercel",
   "version": "18.0.1-canary.15",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -41,7 +41,8 @@
     "all": true
   },
   "bin": {
-    "now": "./dist/index.js"
+    "now": "./dist/index.js",
+    "vercel": "./dist/index.js"
   },
   "files": [
     "dist",

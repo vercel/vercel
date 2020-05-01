@@ -1,5 +1,5 @@
 {
-  "name": "@now/static-build",
+  "name": "@vercel/static-build",
   "version": "0.16.1-canary.3",
   "license": "MIT",
   "main": "./dist/index",

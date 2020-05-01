@@ -1,5 +1,5 @@
 {
-  "name": "@now/cgi",
+  "name": "@vercel/cgi",
   "version": "1.0.5-canary.0",
   "license": "MIT",
   "repository": {

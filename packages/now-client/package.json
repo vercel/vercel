@@ -1,5 +1,5 @@
 {
-  "name": "now-client",
+  "name": "@vercel/client",
   "version": "7.1.1-canary.2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
