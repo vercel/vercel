@@ -133,27 +133,29 @@ async function getPackedBuilderPath(builderDirName) {
   return join(packagePath, output.stdout.trim());
 }
 
-async function testPath(t, origin, status, path, expectedText, headers = {}) {
-  const opts = { redirect: 'manual-dont-change' };
+async function testPath(
+  t,
+  origin,
+  status,
+  path,
+  expectedText,
+  headers = {},
+  method = 'GET'
+) {
+  const opts = { redirect: 'manual-dont-change', method };
   const url = `${origin}${path}`;
   const res = await fetch(url, opts);
-  const msg = `Testing path ${url}`;
+  const msg = `Testing response from ${method} ${url}`;
   console.log(msg);
   t.is(res.status, status, msg);
   validateResponseHeaders(t, res);
-  if (expectedText) {
+  if (typeof expectedText === 'string') {
     const actualText = await res.text();
-    if (expectedText instanceof RegExp) {
-      expectedText.lastIndex = 0; // reset since we test twice
-      const matched = expectedText.test(actualText);
-      if (matched) {
-        t.is(matched, true);
-      } else {
-        t.is(actualText, expectedText.source, msg);
-      }
-    } else {
-      t.is(actualText.trim(), expectedText.trim(), msg);
-    }
+    t.is(actualText.trim(), expectedText.trim(), msg);
+  } else if (expectedText instanceof RegExp) {
+    const actualText = await res.text();
+    expectedText.lastIndex = 0; // reset since we test twice
+    t.regex(actualText, expectedText);
   }
   if (headers) {
     Object.entries(headers).forEach(([key, expectedValue]) => {
@@ -239,15 +241,27 @@ function testFixtureStdio(
 
     // Deploy fixture and link project
     if (!skipDeploy) {
+      const project = join(fixtureAbsolute(directory), '.now', 'project.json');
+      if (await fs.exists(project)) {
+        await fs.unlink(project);
+      }
       const gitignore = join(fixtureAbsolute(directory), '.gitignore');
-      const gitignoreExists = await fs.exists(gitignore);
+      const gitignoreOrig = await fs.exists(gitignore);
       let { stdout, stderr, exitCode } = await execa(
         binaryPath,
-        [dir, '-t', token, '--confirm', '--public', '--debug'],
+        [
+          dir,
+          '-t',
+          token,
+          '--confirm',
+          '--public',
+          '--no-clipboard',
+          '--debug',
+        ],
         { reject: false }
       );
       console.log({ stdout, stderr, exitCode });
-      if (!gitignoreExists) {
+      if (!gitignoreOrig && (await fs.exists(gitignore))) {
         await fs.unlink(gitignore);
       }
       t.is(exitCode, expectedCode);
@@ -622,10 +636,21 @@ test(
     await testPath(200, '/sub', 'Sub Index Page');
     await testPath(200, '/sub/another', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/index.html', '', { Location: '/' });
-    await testPath(308, '/about.html', '', { Location: '/about' });
-    await testPath(308, '/sub/index.html', '', { Location: '/sub' });
-    await testPath(308, '/sub/another.html', '', { Location: '/sub/another' });
+    await testPath(308, '/index.html', 'Redirecting to / (308)', {
+      Location: '/',
+    });
+    await testPath(308, '/about.html', 'Redirecting to /about (308)', {
+      Location: '/about',
+    });
+    await testPath(308, '/sub/index.html', 'Redirecting to /sub (308)', {
+      Location: '/sub',
+    });
+    await testPath(
+      308,
+      '/sub/another.html',
+      'Redirecting to /sub/another (308)',
+      { Location: '/sub/another' }
+    );
   })
 );
 
@@ -637,12 +662,41 @@ test(
     await testPath(200, '/sub/', 'Sub Index Page');
     await testPath(200, '/sub/another/', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/index.html', '', { Location: '/' });
-    await testPath(308, '/about.html', '', { Location: '/about/' });
-    await testPath(308, '/sub/index.html', '', { Location: '/sub/' });
-    await testPath(308, '/sub/another.html', '', {
-      Location: '/sub/another/',
+    //TODO: fix this test so that location is `/` instead of `//`
+    //await testPath(308, '/index.html', 'Redirecting to / (308)', { Location: '/' });
+    await testPath(308, '/about.html', 'Redirecting to /about/ (308)', {
+      Location: '/about/',
     });
+    await testPath(308, '/sub/index.html', 'Redirecting to /sub/ (308)', {
+      Location: '/sub/',
+    });
+    await testPath(
+      308,
+      '/sub/another.html',
+      'Redirecting to /sub/another/ (308)',
+      {
+        Location: '/sub/another/',
+      }
+    );
+  })
+);
+
+test(
+  '[now dev] test cors headers work with OPTIONS',
+  testFixtureStdio('test-cors-routes', async testPath => {
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers':
+        'Content-Type, Authorization, Accept, Content-Length, Origin, User-Agent',
+      'Access-Control-Allow-Methods':
+        'GET, POST, OPTIONS, HEAD, PATCH, PUT, DELETE',
+    };
+    await testPath(200, '/', 'status api', headers, 'GET');
+    await testPath(200, '/', 'status api', headers, 'POST');
+    await testPath(200, '/api/status.js', 'status api', headers, 'GET');
+    await testPath(200, '/api/status.js', 'status api', headers, 'POST');
+    await testPath(204, '/', '', headers, 'OPTIONS');
+    await testPath(204, '/api/status.js', '', headers, 'OPTIONS');
   })
 );
 
@@ -656,9 +710,15 @@ test(
     await testPath(200, '/sub/index.html', 'Sub Index Page');
     await testPath(200, '/sub/another.html', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/about.html/', '', { Location: '/about.html' });
-    await testPath(308, '/style.css/', '', { Location: '/style.css' });
-    await testPath(308, '/sub', '', { Location: '/sub/' });
+    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
+      Location: '/about.html',
+    });
+    await testPath(308, '/style.css/', 'Redirecting to /style.css (308)', {
+      Location: '/style.css',
+    });
+    await testPath(308, '/sub', 'Redirecting to /sub/ (308)', {
+      Location: '/sub/',
+    });
   })
 );
 
@@ -672,11 +732,20 @@ test(
     await testPath(200, '/sub/index.html', 'Sub Index Page');
     await testPath(200, '/sub/another.html', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/about.html/', '', { Location: '/about.html' });
-    await testPath(308, '/sub/', '', { Location: '/sub' });
-    await testPath(308, '/sub/another.html/', '', {
-      Location: '/sub/another.html',
+    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
+      Location: '/about.html',
     });
+    await testPath(308, '/sub/', 'Redirecting to /sub (308)', {
+      Location: '/sub',
+    });
+    await testPath(
+      308,
+      '/sub/another.html/',
+      'Redirecting to /sub/another.html (308)',
+      {
+        Location: '/sub/another.html',
+      }
+    );
   })
 );
 

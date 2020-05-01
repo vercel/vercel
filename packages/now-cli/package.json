@@ -1,6 +1,6 @@
 {
   "name": "now",
-  "version": "18.0.1-canary.14",
+  "version": "18.0.1-canary.15",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -61,13 +61,13 @@
     "node": ">= 10"
   },
   "dependencies": {
-    "@now/build-utils": "2.2.2-canary.3",
+    "@now/build-utils": "2.2.2-canary.4",
     "@now/go": "1.0.8-canary.0",
-    "@now/next": "2.5.5-canary.4",
-    "@now/node": "1.5.2-canary.5",
+    "@now/next": "2.5.5-canary.5",
+    "@now/node": "1.5.2-canary.6",
     "@now/python": "1.1.7-canary.1",
     "@now/ruby": "1.1.1-canary.0",
-    "@now/static-build": "0.16.1-canary.2"
+    "@now/static-build": "0.16.1-canary.3"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
