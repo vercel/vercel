@@ -25,7 +25,7 @@ export interface NowProxyResponse {
   statusCode: number;
   headers: OutgoingHttpHeaders;
   body: string;
-  encoding: string;
+  encoding: BufferEncoding;
 }
 
 interface ServerLike {
@@ -175,7 +175,7 @@ export class Bridge {
 
   async launcher(
     event: NowProxyEvent | APIGatewayProxyEvent,
-    context: Context
+    context: Pick<Context, 'callbackWaitsForEmptyEventLoop'>
   ): Promise<NowProxyResponse> {
     context.callbackWaitsForEmptyEventLoop = false;
     const { port } = await this.listening;

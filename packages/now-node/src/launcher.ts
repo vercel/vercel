@@ -73,11 +73,10 @@ try {
   if (err.code === 'MODULE_NOT_FOUND') {
     console.error(err.message);
     console.error('Did you forget to add it to "dependencies" in \`package.json\`?');
-    process.exit(1);
   } else {
     console.error(err);
-    process.exit(1);
   }
+  process.exit(1);
 }
 
 exports.launcher = bridge.launcher;`;
@@ -85,7 +84,7 @@ exports.launcher = bridge.launcher;`;
 
 export function makeAwsLauncher({
   entrypointPath,
-  awsLambdaHandler = ''
+  awsLambdaHandler = '',
 }: LauncherConfiguration): string {
   const funcName = awsLambdaHandler.split('.').pop();
   return `const url = require("url");

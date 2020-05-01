@@ -481,23 +481,32 @@ async function doTypeCheck({
   };
   await writeJSON(tempConfigName, tsconfig);
 
-  const child = spawn(
-    process.execPath,
-    [
-      tscPath,
-      '--project',
-      tempConfigName,
-      '--noEmit',
-      '--allowJs',
-      '--esModuleInterop',
-      '--jsx',
-      'react',
-    ],
-    {
-      cwd: workPath,
-      stdio: 'inherit',
+  try {
+    const child = spawn(
+      process.execPath,
+      [
+        tscPath,
+        '--project',
+        tempConfigName,
+        '--noEmit',
+        '--allowJs',
+        '--esModuleInterop',
+        '--jsx',
+        'react',
+      ],
+      {
+        cwd: workPath,
+        stdio: 'inherit',
+      }
+    );
+    await once.spread<[number, string | null]>(child, 'exit');
+  } finally {
+    try {
+      await remove(tempConfigName);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error('Failed to remove %j:', tempConfigName, err);
+      }
     }
-  );
-  await once.spread<[number, string | null]>(child, 'exit');
-  await remove(tempConfigName);
+  }
 }
