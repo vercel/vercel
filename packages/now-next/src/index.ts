@@ -82,6 +82,7 @@ interface BuildParamsType extends BuildOptions {
 export const version = 2;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
+const yarnPreferOffline = true;
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
   process.once(signal as NodeJS.Signals, () => {
@@ -315,7 +316,12 @@ export const build = async ({
   }
 
   console.log('Installing dependencies...');
-  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
+  await runNpmInstall(
+    entryPath,
+    [...(yarnPreferOffline ? ['--prefer-offline'] : [])],
+    spawnOpts,
+    meta
+  );
 
   let realNextVersion: string | undefined;
   try {
@@ -404,17 +410,22 @@ export const build = async ({
             }
 
             dataRoutes.push({
-              src: dataRoute.dataRouteRegex.replace(
-                /^\^/,
-                `^${appMountPrefixNoTrailingSlash}`
-              ),
+              src: (
+                dataRoute.namedDataRouteRegex || dataRoute.dataRouteRegex
+              ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
               dest: path.join(
                 '/',
                 entryDirectory,
                 // make sure to route SSG data route to the data prerender
                 // output, we don't do this for SSP routes since they don't
                 // have a separate data output
-                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
+                `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
+                  dataRoute.routeKeys
+                    ? `?${dataRoute.routeKeys
+                        .map(key => `${key}=$${key}`)
+                        .join('&')}`
+                    : ''
+                }`
               ),
               check: true,
             });
@@ -588,7 +599,7 @@ export const build = async ({
     debug('Running npm install --production...');
     await runNpmInstall(
       entryPath,
-      ['--prefer-offline', '--production'],
+      [...(yarnPreferOffline ? ['--prefer-offline'] : []), '--production'],
       spawnOpts,
       meta
     );
@@ -618,7 +629,10 @@ export const build = async ({
       console.error(
         'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
       );
-      throw new NowBuildError({ code: 'NOW_NEXT_NO_BUILD_ID', message: 'Missing BUILD_ID' });
+      throw new NowBuildError({
+        code: 'NOW_NEXT_NO_BUILD_ID',
+        message: 'Missing BUILD_ID',
+      });
     }
     const dotNextRootFiles = await glob(`${outputDirectory}/*`, entryPath);
     const dotNextServerRootFiles = await glob(
