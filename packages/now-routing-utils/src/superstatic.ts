@@ -28,14 +28,14 @@ export function convertCleanUrls(
 ): Route[] {
   const routes: Route[] = [];
   if (cleanUrls) {
-    const loc = trailingSlash ? '$1/' : '$1';
+    const loc = trailingSlash ? '/$1/' : '/$1';
     routes.push({
-      src: '^(.*)/index(?:\\.html)?/?$',
+      src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
       headers: { Location: loc },
       status,
     });
     routes.push({
-      src: '^(/.*)\\.html/?$',
+      src: '^/(.*)\\.html/?$',
       headers: { Location: loc },
       status,
     });
