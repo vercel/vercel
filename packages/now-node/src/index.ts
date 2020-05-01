@@ -419,13 +419,12 @@ export async function prepareCache({
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, config, env } = opts;
+  const { entrypoint, workPath, config } = opts;
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
     cwd: workPath,
     env: {
       ...process.env,
-      ...env,
       NOW_DEV_ENTRYPOINT: entrypoint,
       NOW_DEV_CONFIG: JSON.stringify(config),
     },
