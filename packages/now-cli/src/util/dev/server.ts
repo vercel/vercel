@@ -917,7 +917,17 @@ export default class DevServer {
     }
 
     for (const pid of this.devServerPids) {
-      ops.push(this.killBuilderDevServer(pid));
+      debug(`Killing builder dev server with PID ${pid}`);
+      ops.push(
+        treeKill(pid).then(
+          () => {
+            debug(`Killed builder dev server with PID ${pid}`);
+          },
+          (err: Error) => {
+            debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
+          }
+        )
+      );
     }
 
     try {
@@ -932,18 +942,6 @@ export default class DevServer {
       } else {
         throw err;
       }
-    }
-  }
-
-  async killBuilderDevServer(pid: number) {
-    const { debug } = this.output;
-    debug(`Killing builder dev server with PID ${pid}`);
-    this.devServerPids.delete(pid);
-    try {
-      await treeKill(pid);
-      debug(`Killed builder dev server with PID ${pid}`);
-    } catch (err) {
-      debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
     }
   }
 
@@ -1503,7 +1501,19 @@ export default class DevServer {
         this.devServerPids.add(pid);
 
         res.once('close', () => {
-          this.killBuilderDevServer(pid);
+          debug(`Killing builder dev server with PID ${pid}`);
+          treeKill(pid).then(
+            () => {
+              this.devServerPids.delete(pid);
+              debug(`Killed builder dev server with PID ${pid}`);
+            },
+            (err: Error) => {
+              this.devServerPids.delete(pid);
+              debug(
+                `Failed to kill builder dev server with PID ${pid}: ${err}`
+              );
+            }
+          );
         });
 
         debug(
