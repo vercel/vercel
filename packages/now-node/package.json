@@ -24,7 +24,7 @@
   "devDependencies": {
     "@babel/core": "7.5.0",
     "@babel/plugin-transform-modules-commonjs": "7.5.0",
-    "@tootallnate/once": "1.1.2",
+    "@tootallnate/once": "1.0.0",
     "@types/aws-lambda": "8.10.19",
     "@types/content-type": "1.1.3",
     "@types/cookie": "0.3.3",

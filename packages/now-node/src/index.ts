@@ -429,7 +429,7 @@ export async function startDevServer({
   });
   const { pid } = child;
   const onMessage = once<{ port: number }>(child, 'message');
-  const onExit = once.spread<[number, string | null]>(child, 'exit');
+  const onExit = once<{ code: number; signal: string | null }>(child, 'exit');
   const result = await Promise.race([onMessage, onExit]);
   onExit.cancel();
   onMessage.cancel();
@@ -439,7 +439,7 @@ export async function startDevServer({
   } else {
     // "exit" event
     throw new Error(
-      `Failed to start dev server for "${entrypoint}" (code=${result[0]}, signal=${result[1]})`
+      `Failed to start dev server for "${entrypoint}" (code=${result.code}, signal=${result.signal})`
     );
   }
 }
