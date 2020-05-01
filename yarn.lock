@@ -11437,6 +11437,11 @@ yargs@^13.3.0:
     y18n "^4.0.0"
     yargs-parser "^13.1.1"
 
+yarn@1.22.0:
+  version "1.22.0"
+  resolved "https://registry.yarnpkg.com/yarn/-/yarn-1.22.0.tgz#acf82906e36bcccd1ccab1cfb73b87509667c881"
+  integrity sha512-KMHP/Jq53jZKTY9iTUt3dIVl/be6UPs2INo96+BnZHLKxYNTfwMmlgHTaMWyGZoO74RI4AIFvnWhYrXq2USJkg==
+
 yauzl-clone@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/yauzl-clone/-/yauzl-clone-1.0.4.tgz#8bc6d293b17cc98802bbbed2e289d18e7697c96c"

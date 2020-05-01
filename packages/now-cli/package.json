@@ -179,6 +179,7 @@
     "which": "2.0.2",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0",
-    "xdg-app-paths": "5.1.0"
+    "xdg-app-paths": "5.1.0",
+    "yarn": "1.22.0"
   }
 }
