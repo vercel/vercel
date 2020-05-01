@@ -180,7 +180,7 @@ export async function installBuilders(
 
   // Filter out any packages that come packaged with `now-cli`
   const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkgBefore, nowCliPkg)
+    filterPackage(p, distTag, buildersPkgBefore)
   );
 
   if (packagesToInstall.length === 0) {
