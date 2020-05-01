@@ -654,7 +654,7 @@ test(
   })
 );
 
-test.only(
+test(
   '[now dev] test cleanUrls and trailingSlash serve correct content',
   testFixtureStdio(
     'test-clean-urls-trailing-slash',
