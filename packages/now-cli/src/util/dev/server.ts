@@ -651,6 +651,7 @@ export default class DevServer {
     if (config.version === 1) {
       this.output.error('Only `version: 2` is supported by `now dev`');
       await this.exit(1);
+      return;
     }
 
     await this.tryValidateOrExit(config, validateNowConfigBuilds);
@@ -939,7 +940,7 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string
   ): Promise<void> {
-    return this.sendError(req, res, nowRequestId, 'FILE_NOT_FOUND', 404);
+    return this.sendError(req, res, nowRequestId, 'NOT_FOUND', 404);
   }
 
   async sendError(
@@ -1164,7 +1165,7 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
-    const nowRequestId = generateRequestId(this.podId);
+    let nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
@@ -1251,7 +1252,9 @@ export default class DevServer {
       req.url = location;
     }
 
-    await this.updateBuildMatches(nowConfig);
+    if (callLevel === 0) {
+      await this.updateBuildMatches(nowConfig);
+    }
 
     if (this.blockingBuildsPromise) {
       debug('Waiting for builds to complete before handling request');
@@ -1405,6 +1408,7 @@ export default class DevServer {
       // If the dev command is started, then proxy to it
       if (this.devProcessPort) {
         debug('Proxying to frontend dev server');
+        this.setResponseHeaders(res, nowRequestId);
         return proxyPass(
           req,
           res,
@@ -1473,9 +1477,11 @@ export default class DevServer {
         devServerResult = await builder.startDevServer({
           entrypoint: match.entrypoint,
           workPath: this.cwd,
+          config: match.config || {},
+          env: this.envConfigs.runEnv || {},
         });
       } catch (err) {
-        // `starDevServer()` threw an error. Most likely this means the dev
+        // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
         debug(`Error starting "${builderPkg.name}" dev server: ${err}`);
@@ -1490,6 +1496,10 @@ export default class DevServer {
       }
 
       if (devServerResult) {
+        // When invoking lambda functions, the region where the lambda was invoked
+        // is also included in the request ID. So use the same `dev1` fake region.
+        nowRequestId = generateRequestId(this.podId, true);
+
         const { port, pid } = devServerResult;
         this.devServerPids.add(pid);
 
@@ -1539,6 +1549,7 @@ export default class DevServer {
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
+      this.setResponseHeaders(res, nowRequestId);
       return proxyPass(
         req,
         res,
@@ -1600,6 +1611,10 @@ export default class DevServer {
           );
           return;
         }
+
+        // When invoking lambda functions, the region where the lambda was invoked
+        // is also included in the request ID. So use the same `dev1` fake region.
+        nowRequestId = generateRequestId(this.podId, true);
 
         // Mix the `routes` result dest query params into the req path
         const parsed = url.parse(req.url || '/', true);
@@ -1902,10 +1917,13 @@ function close(server: http.Server): Promise<void> {
  *
  * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */
-function generateRequestId(podId: string): string {
-  return `dev1:${[podId, Date.now(), randomBytes(6).toString('hex')].join(
-    '-'
-  )}`;
+function generateRequestId(podId: string, isInvoke = false): string {
+  const invoke = isInvoke ? 'dev1::' : '';
+  return `dev1::${invoke}${[
+    podId,
+    Date.now(),
+    randomBytes(6).toString('hex'),
+  ].join('-')}`;
 }
 
 function hasOwnProperty(obj: any, prop: string) {
