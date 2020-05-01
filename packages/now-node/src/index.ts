@@ -33,7 +33,7 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
-} from '@now/build-utils';
+} from '@vercel/build-utils';
 import once from '@tootallnate/once';
 import nodeFileTrace from '@zeit/node-file-trace';
 import { makeNowLauncher, makeAwsLauncher } from './launcher';

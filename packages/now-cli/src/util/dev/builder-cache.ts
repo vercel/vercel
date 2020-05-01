@@ -21,13 +21,16 @@ declare const __non_webpack_require__: typeof require;
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
+const nowStaticBuilder: BuilderWithPackage = {
+  runInProcess: true,
+  requirePath: '@now/static',
+  builder: Object.freeze(staticBuilder),
+  package: Object.freeze({ name: '@now/static', version: '' }),
+};
+
 const localBuilders: { [key: string]: BuilderWithPackage } = {
-  '@now/static': {
-    runInProcess: true,
-    requirePath: '@now/static',
-    builder: Object.freeze(staticBuilder),
-    package: Object.freeze({ name: '@now/static', version: '' }),
-  },
+  '@now/static': nowStaticBuilder,
+  '@vercel/static': nowStaticBuilder,
 };
 
 const distTag = nowCliPkg.version ? getDistTag(nowCliPkg.version) : 'canary';

@@ -1,6 +1,6 @@
 import { relative, basename, resolve, dirname } from 'path';
 import _ts from 'typescript';
-import { NowBuildError } from '@now/build-utils';
+import { NowBuildError } from '@vercel/build-utils';
 
 /*
  * Fork of TS-Node - https://github.com/TypeStrong/ts-node

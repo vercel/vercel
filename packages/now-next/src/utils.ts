@@ -13,8 +13,8 @@ import {
   Lambda,
   NowBuildError,
   isSymbolicLink,
-} from '@now/build-utils';
-import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
+} from '@vercel/build-utils';
+import { Route, Source, NowHeader, NowRewrite } from '@vercel/routing-utils';
 
 type stringMap = { [key: string]: string };
 

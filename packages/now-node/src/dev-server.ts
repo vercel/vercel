@@ -1,7 +1,7 @@
 import { register } from 'ts-node';
 
 // Use the project's version of TypeScript if available,
-// otherwise fall back to using the copy that `@now/node` uses.
+// otherwise fall back to using the copy that `@vercel/node` uses.
 let compiler: string;
 try {
   compiler = require.resolve('typescript', {
