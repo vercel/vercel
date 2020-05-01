@@ -401,14 +401,6 @@ export async function prepareCache({
   return cache;
 }
 
-interface PortInfo {
-  port: number;
-}
-
-function isPortInfo(v: any): v is PortInfo {
-  return v && typeof v.port === 'number';
-}
-
 export async function startDevServer({
   entrypoint,
   workPath,
@@ -428,18 +420,6 @@ export async function startDevServer({
     },
   });
   const { pid } = child;
-  const onMessage = once<{ port: number }>(child, 'message');
-  const onExit = once<{ code: number; signal: string | null }>(child, 'exit');
-  const result = await Promise.race([onMessage, onExit]);
-  onExit.cancel();
-  onMessage.cancel();
-  if (isPortInfo(result)) {
-    // "message" event
-    return { port: result.port, pid };
-  } else {
-    // "exit" event
-    throw new Error(
-      `Failed to start dev server for "${entrypoint}" (code=${result.code}, signal=${result.signal})`
-    );
-  }
+  const { port } = await once<{ port: number }>(child, 'message');
+  return { port, pid };
 }
