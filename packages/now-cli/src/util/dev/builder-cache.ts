@@ -351,8 +351,7 @@ export async function updateBuilders(
 export async function getBuilder(
   builderPkg: string,
   output: Output,
-  builderDir?: string,
-  isRetry = false
+  builderDir?: string
 ): Promise<BuilderWithPackage> {
   let builderWithPkg: BuilderWithPackage = localBuilders[builderPkg];
   if (!builderWithPkg) {
@@ -371,7 +370,7 @@ export async function getBuilder(
         package: Object.freeze(pkg),
       };
     } catch (err) {
-      if (err.code === 'MODULE_NOT_FOUND' && !isRetry) {
+      if (err.code === 'MODULE_NOT_FOUND') {
         output.debug(
           `Attempted to require ${builderPkg}, but it is not installed`
         );
@@ -379,7 +378,7 @@ export async function getBuilder(
         await installBuilders(pkgSet, output, builderDir);
 
         // Run `getBuilder()` again now that the builder has been installed
-        return getBuilder(builderPkg, output, builderDir, true);
+        return getBuilder(builderPkg, output, builderDir);
       }
       throw err;
     }
