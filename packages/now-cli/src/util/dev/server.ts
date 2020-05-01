@@ -1475,7 +1475,6 @@ export default class DevServer {
         devServerResult = await builder.startDevServer({
           entrypoint: match.entrypoint,
           workPath: this.cwd,
-          config: match.config || {},
         });
       } catch (err) {
         // `starDevServer()` threw an error. Most likely this means the dev

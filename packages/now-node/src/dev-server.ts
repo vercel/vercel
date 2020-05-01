@@ -39,23 +39,27 @@ function listen(
 
 async function main() {
   const entrypoint = process.env.NOW_DEV_ENTRYPOINT;
-  delete process.env.NOW_DEV_ENTRYPOINT;
-
   if (!entrypoint) {
     throw new Error('`NOW_DEV_ENTRYPOINT` must be defined');
   }
 
-  const config = JSON.parse(process.env.NOW_DEV_CONFIG || '{}');
-  delete process.env.NOW_DEV_CONFIG;
-
-  const shouldAddHelpers = config.helpers !== false;
+  //const shouldAddHelpers = true;
 
   const entrypointPath = path.join(process.cwd(), entrypoint);
   const handler = await import(entrypointPath);
 
-  const server = shouldAddHelpers
-    ? createServerWithHelpers(handler.default)
-    : http.createServer(handler.default);
+  /*
+  const server = http.createServer((req, res) => {
+    Promise.resolve(true).then(() => handler.default(req, res)).catch(err => {
+      console.error('Caught error from HTTP handler:', err);
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.end('Internal server error\n');
+      }
+    });
+  });
+  */
+  const server = createServerWithHelpers(handler.default);
 
   await listen(server, 0, '127.0.0.1');
 
