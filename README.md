@@ -1,4 +1,4 @@
-![now](https://assets.zeit.co/image/upload/v1581518533/repositories/now-cli/v4.png)
+![now](https://assets.vercel.com/image/upload/v1581518533/repositories/now-cli/v4.png)
 
 [![CI Status](https://badgen.net/github/checks/zeit/now?label=CI)](https://github.com/zeit/now/actions?workflow=CI)
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
