@@ -1,4 +1,4 @@
-import { Source, Route, Handler } from '@now/routing-utils';
+import { Source, Route, Handler } from '@vercel/routing-utils';
 import { detectBuilders } from '../src';
 import {
   detectOutputDirectory,
