@@ -1,15 +1,13 @@
-import { fork } from 'child_process';
-import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
 import {
   basename,
   dirname,
-  extname,
   join,
   relative,
   resolve,
   sep,
   parse as parsePath,
 } from 'path';
+import nodeFileTrace from '@zeit/node-file-trace';
 import {
   glob,
   download,
@@ -25,20 +23,16 @@ import {
   getSpawnOptions,
   PrepareCacheOptions,
   BuildOptions,
-  StartDevServerOptions,
-  StartDevServerResult,
   shouldServe,
   Config,
   debug,
   isSymbolicLink,
 } from '@now/build-utils';
-import once from '@tootallnate/once';
-import nodeFileTrace from '@zeit/node-file-trace';
-import { makeNowLauncher, makeAwsLauncher } from './launcher';
-import { Register, register } from './typescript';
-
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
+import { makeNowLauncher, makeAwsLauncher } from './launcher';
+import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
+import { Register, register } from './typescript';
 
 interface CompilerConfig {
   debug?: boolean;
@@ -320,7 +314,6 @@ export async function build({
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
-
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const {
@@ -399,27 +392,4 @@ export async function prepareCache({
 }: PrepareCacheOptions): Promise<Files> {
   const cache = await glob('node_modules/**', workPath);
   return cache;
-}
-
-export async function startDevServer({
-  entrypoint,
-  workPath,
-}: StartDevServerOptions): Promise<StartDevServerResult> {
-  if (extname(entrypoint) === '.ts') {
-    // TypeScript isn't supported at the moment, so return `null`
-    // for `now dev` to go through the regular `build()` pipeline.
-    return null;
-  }
-
-  const devServerPath = join(__dirname, 'dev-server.js');
-  const child = fork(devServerPath, [], {
-    cwd: workPath,
-    env: {
-      ...process.env,
-      NOW_DEV_ENTRYPOINT: entrypoint,
-    },
-  });
-  const { pid } = child;
-  const { port } = await once<{ port: number }>(child, 'message');
-  return { port, pid };
 }
