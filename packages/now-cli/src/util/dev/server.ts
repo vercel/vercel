@@ -948,10 +948,11 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string,
     errorCode?: string,
-    statusCode: number = 500
+    statusCode: number = 500,
+    headers: HttpHeadersConfig = {}
   ): Promise<void> {
     res.statusCode = statusCode;
-    this.setResponseHeaders(res, nowRequestId);
+    this.setResponseHeaders(res, nowRequestId, headers);
 
     const http_status_description = generateHttpStatusDescription(statusCode);
     const error_code = errorCode || http_status_description;
@@ -1212,7 +1213,7 @@ export default class DevServer {
 
     if (!match && status && phase !== 'miss') {
       this.output.debug(`Route found with with status code ${status}`);
-      await this.sendError(req, res, nowRequestId, '', status);
+      await this.sendError(req, res, nowRequestId, '', status, headers);
       return true;
     }
 
