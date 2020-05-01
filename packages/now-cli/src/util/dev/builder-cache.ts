@@ -100,7 +100,7 @@ export function filterPackage(
   builderSpec: string,
   distTag: string,
   buildersPkg: PackageJson,
-  nowCliPkg: PackageJson
+  nowCliPkg: PackageJson = {}
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
