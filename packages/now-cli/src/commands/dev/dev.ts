@@ -86,7 +86,6 @@ export default async function dev(
   });
 
   process.once('SIGINT', () => devServer.stop());
-  process.once('SIGTERM', () => devServer.stop());
 
   await devServer.start(...listen);
 }
