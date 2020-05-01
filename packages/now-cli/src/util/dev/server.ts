@@ -873,12 +873,6 @@ export default class DevServer {
 
     this.stopping = true;
 
-    if (this.serverUrlPrinted) {
-      // This makes it look cleaner
-      process.stdout.write('\n');
-      this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
-    }
-
     const ops: Promise<any>[] = [];
 
     for (const match of this.buildMatches.values()) {
