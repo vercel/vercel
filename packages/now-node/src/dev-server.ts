@@ -1,26 +1,3 @@
-import { register } from 'ts-node';
-
-// Use the project's version of TypeScript if available,
-// otherwise fall back to using the copy that `@now/node` uses.
-let compiler: string;
-try {
-  compiler = require.resolve('typescript', {
-    paths: [process.cwd(), __dirname],
-  });
-} catch (e) {
-  compiler = 'typescript';
-}
-
-register({
-  compiler,
-  compilerOptions: {
-    allowJs: true,
-    esModuleInterop: true,
-    jsx: 'react',
-  },
-  transpileOnly: true,
-});
-
 import http from 'http';
 import path from 'path';
 import { createServerWithHelpers } from './helpers';
