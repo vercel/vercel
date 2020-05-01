@@ -681,7 +681,7 @@ test(
   })
 );
 
-test.only(
+test(
   '[now dev] test cors headers work with OPTIONS',
   testFixtureStdio('test-cors-routes', async testPath => {
     const headers = {
