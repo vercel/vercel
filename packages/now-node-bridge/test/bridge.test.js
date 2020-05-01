@@ -121,3 +121,40 @@ test('consumeEvent', async () => {
 
   server.close();
 });
+
+test('invalid request headers', async () => {
+  const server = new Server((req, res) =>
+    res.end(
+      JSON.stringify({
+        method: req.method,
+        path: req.url,
+        headers: req.headers,
+      })
+    )
+  );
+  const bridge = new Bridge(server);
+  bridge.listen();
+  const context = { callbackWaitsForEmptyEventLoop: true };
+  const result = await bridge.launcher(
+    {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        method: 'GET',
+        headers: { foo: 'baz\n', ok: 'true' },
+        path: '/nowproxy',
+        body: 'body=1',
+      }),
+    },
+    context
+  );
+  assert.equal(result.encoding, 'base64');
+  assert.equal(result.statusCode, 200);
+  const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
+  assert.equal(body.method, 'GET');
+  assert.equal(body.path, '/nowproxy');
+  assert.equal(body.headers.ok, 'true');
+  assert(!body.headers.foo);
+  assert.equal(context.callbackWaitsForEmptyEventLoop, false);
+
+  server.close();
+});
