@@ -39,6 +39,7 @@ import {
 
 import link from '../output/link';
 import { Output } from '../output';
+import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
@@ -927,7 +928,7 @@ export default class DevServer {
     debug(`Killing builder dev server with PID ${pid}`);
     this.devServerPids.delete(pid);
     try {
-      process.kill(pid, 'SIGTERM');
+      await treeKill(pid);
       debug(`Killed builder dev server with PID ${pid}`);
     } catch (err) {
       debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);

@@ -24,8 +24,8 @@ function onMessage(message) {
 }
 
 async function processMessage(message) {
-  const { requirePath, buildOptions } = message;
-  const builder = require(requirePath);
+  const { builderName, buildOptions } = message;
+  const builder = require(builderName);
 
   // Convert the `files` to back into `FileFsRef` instances
   for (const name of Object.keys(buildOptions.files)) {

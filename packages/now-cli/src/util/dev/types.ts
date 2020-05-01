@@ -121,7 +121,6 @@ export interface BuildResultV4 {
 
 export interface BuilderWithPackage {
   runInProcess?: boolean;
-  requirePath: string;
   builder: Readonly<Builder>;
   package: Readonly<PackageJson>;
 }
