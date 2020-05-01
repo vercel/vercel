@@ -681,7 +681,7 @@ test(
   })
 );
 
-test(
+test.only(
   '[now dev] test cors headers work with OPTIONS',
   testFixtureStdio('test-cors-routes', async testPath => {
     const headers = {
@@ -693,7 +693,10 @@ test(
     };
     await testPath(200, '/', 'status api', headers, 'GET');
     await testPath(200, '/', 'status api', headers, 'POST');
+    await testPath(200, '/api/status.js', 'status api', headers, 'GET');
+    await testPath(200, '/api/status.js', 'status api', headers, 'POST');
     await testPath(204, '/', '', headers, 'OPTIONS');
+    await testPath(204, '/api/status.js', '', headers, 'OPTIONS');
   })
 );
 
