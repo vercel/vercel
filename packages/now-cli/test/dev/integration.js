@@ -395,16 +395,25 @@ test(
     });
   })
 );
-/*
+
 test(
   '[now dev] handles miss after rewrite',
-  testFixtureStdio('handle-miss-after-rewrite', async (testPath) => {
-    await testPath(200, '/post', 'Blog Post Page', { test: '1', override: 'two' });
-    await testPath(200, '/blog/post', 'Blog Post Page', { test: '1', override: 'two' });
-    await testPath(200, '/blog/about.html', 'About Page', { test: null, override: null });
+  testFixtureStdio('handle-miss-after-rewrite', async testPath => {
+    await testPath(200, '/post', 'Blog Post Page', {
+      test: '1',
+      override: 'one',
+    });
+    await testPath(200, '/blog/post', 'Blog Post Page', {
+      test: '1',
+      override: 'two',
+    });
+    await testPath(404, '/blog/about.html', undefined, {
+      test: '1',
+      override: 'two',
+    });
   })
 );
-
+/*
 test(
   '[now dev] displays directory listing after miss',
   testFixtureStdio('handle-miss-display-dir-list', async (testPath) => {

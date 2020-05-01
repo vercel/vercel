@@ -48,7 +48,9 @@ async function main() {
   const config = JSON.parse(process.env.NOW_DEV_CONFIG || '{}');
   delete process.env.NOW_DEV_CONFIG;
 
-  const shouldAddHelpers = config.helpers !== false;
+  const shouldAddHelpers = !(
+    config.helpers === false || process.env.NODEJS_HELPERS === '0'
+  );
 
   const entrypointPath = path.join(process.cwd(), entrypoint);
   const handler = await import(entrypointPath);
