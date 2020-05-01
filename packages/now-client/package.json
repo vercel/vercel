@@ -1,6 +1,6 @@
 {
   "name": "now-client",
-  "version": "7.1.1-canary.1",
+  "version": "7.1.1-canary.2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
