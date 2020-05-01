@@ -29,10 +29,9 @@
   "dependencies": {
     "@prisma/cli": "2.0.0-beta.4",
     "@prisma/client": "2.0.0-beta.4",
-    "blitz": "latest",
+    "blitz": "0.8.0",
     "react": "experimental",
-    "react-dom": "experimental",
-    "typescript": "3.8.3"
+    "react-dom": "experimental"
   },
   "devDependencies": {
     "@types/react": "16.9.34",
@@ -47,9 +46,10 @@
     "eslint-plugin-react": "7.19.0",
     "eslint-plugin-react-hooks": "3.0.0",
     "husky": "4.2.5",
-    "lint-staged": "10.2.1",
+    "lint-staged": "10.2.2",
     "prettier": "2.0.5",
-    "pretty-quick": "2.0.1"
+    "pretty-quick": "2.0.1",
+    "typescript": "3.8.3"
   },
   "private": true
 }

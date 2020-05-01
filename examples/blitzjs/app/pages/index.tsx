@@ -1,5 +1,13 @@
 import {Head, Link} from 'blitz'
 
+const modelSnippet = `model Project {
+  id      Int      @default(autoincrement()) @id
+  name    String
+}`
+
+const migrateSnippet = `$ blitz db migrate
+$ blitz generate all project`
+
 const Home = () => (
   <div className="container">
     <Head>
@@ -16,17 +24,13 @@ const Home = () => (
       </p>
       <pre>
         <code>
-          {`model Project {
-  id      Int      @default(autoincrement()) @id
-  name    String
-}`}
+          {modelSnippet}
         </code>
       </pre>
       <p>2. Run these commands in your terminal:</p>
       <pre>
         <code>
-          {`$ blitz db migrate
-$ blitz generate all project`}
+          {migrateSnippet}
         </code>
       </pre>
 
