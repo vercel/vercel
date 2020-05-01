@@ -227,9 +227,8 @@ export class Bridge {
       for (const [name, value] of Object.entries(headers)) {
         if (value === undefined) {
           console.error(
-            'Skipping HTTP request header %j because value is %j',
-            name,
-            typeof value
+            'Skipping HTTP request header %j because value is undefined',
+            name
           );
           continue;
         }
