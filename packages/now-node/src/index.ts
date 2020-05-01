@@ -1,6 +1,8 @@
+import { tmpdir } from 'os';
+import { createHash } from 'crypto';
 import { fork, spawn } from 'child_process';
 import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
-import { writeJSON, remove } from 'fs-extra';
+import { writeJSON } from 'fs-extra';
 import {
   basename,
   dirname,
@@ -41,6 +43,8 @@ import { Register, register } from './typescript';
 
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
+
+const TMP = tmpdir();
 
 interface CompilerConfig {
   debug?: boolean;
@@ -466,27 +470,46 @@ async function doTypeCheck({
   // In order to type-check a single file, a temporary tsconfig
   // file needs to be created that inherits from the base one :(
   // See: https://stackoverflow.com/a/44748041/376773
-  const id = Math.random()
-    .toString(32)
-    .substring(2);
-  const tempConfigName = `.tsconfig-${id}.json`;
+  const absoluteEntrypoint = join(workPath, entrypoint);
   const projectTsConfig = await walkParentDirs({
     base: workPath,
     start: join(workPath, dirname(entrypoint)),
     filename: 'tsconfig.json',
   });
+  const sha = createHash('sha256')
+    .update(absoluteEntrypoint)
+    .update(projectTsConfig || '')
+    .digest('hex');
+  const tempConfigName = `vercel-node-${sha}.json`;
+  const tempConfigPath = join(TMP, tempConfigName);
   const tsconfig = {
     extends: projectTsConfig || undefined,
-    include: [entrypoint],
+    include: [absoluteEntrypoint],
   };
-  await writeJSON(tempConfigName, tsconfig);
+  console.error({
+    absoluteEntrypoint,
+    sha,
+    tempConfigName,
+    tempConfigPath,
+    tsconfig,
+  });
+
+  try {
+    await writeJSON(tempConfigPath, tsconfig, { flag: 'wx' });
+  } catch (err) {
+    console.error(err);
+    // Don't throw if the file already exists
+    if (err.code !== 'EEXIST') {
+      throw err;
+    }
+  }
 
   const child = spawn(
     process.execPath,
     [
       tscPath,
       '--project',
-      tempConfigName,
+      tempConfigPath,
       '--noEmit',
       '--allowJs',
       '--esModuleInterop',
@@ -499,5 +522,4 @@ async function doTypeCheck({
     }
   );
   await once.spread<[number, string | null]>(child, 'exit');
-  await remove(tempConfigName);
 }
