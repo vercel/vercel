@@ -110,10 +110,7 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(join(fixturePath, 'package.json'))) {
-    await execa('yarn', ['install'], {
-      cwd: fixturePath,
-      shell: true,
-    });
+    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
   }
 }
 
@@ -293,9 +290,6 @@ function testFixtureStdio(
         ['dev', dir, '-l', port, '-t', token, '--debug'],
         { env }
       );
-
-      dev.stdout.pipe(process.stdout);
-      dev.stderr.pipe(process.stderr);
 
       dev.stdout.on('data', data => {
         stdoutList.push(data);

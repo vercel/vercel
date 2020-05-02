@@ -1,13 +1,23 @@
 import execa from 'execa';
 import semver from 'semver';
+import pipe from 'promisepipe';
 import retry from 'async-retry';
 import npa from 'npm-package-arg';
 import pluralize from 'pluralize';
-import { basename, join, resolve } from 'path';
+import { extract } from 'tar-fs';
+import { createHash } from 'crypto';
+import { createGunzip } from 'zlib';
+import { join, resolve } from 'path';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
-import { mkdirp, readJSON, writeJSON } from 'fs-extra';
-import nowCliPkg from '../pkg';
+import {
+  createReadStream,
+  mkdirp,
+  readFile,
+  readJSON,
+  writeFile,
+} from 'fs-extra';
+import pkg from '../../../package.json';
 
 import { NoBuilderCacheError } from '../errors-ts';
 import { Output } from '../output';
@@ -24,16 +34,41 @@ const registryTypes = new Set(['version', 'tag', 'range']);
 const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': {
     runInProcess: true,
-    requirePath: '@now/static',
     builder: Object.freeze(staticBuilder),
     package: Object.freeze({ name: '@now/static', version: '' }),
   },
 };
 
-const distTag = nowCliPkg.version ? getDistTag(nowCliPkg.version) : 'canary';
+const distTag = getDistTag(pkg.version);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
+export const builderModulePathPromise = prepareBuilderModulePath();
+
+function readFileOrNull(
+  filePath: string,
+  encoding?: null
+): Promise<Buffer | null>;
+function readFileOrNull(
+  filePath: string,
+  encoding: string
+): Promise<string | null>;
+async function readFileOrNull(
+  filePath: string,
+  encoding?: string | null
+): Promise<Buffer | string | null> {
+  try {
+    if (encoding) {
+      return await readFile(filePath, encoding);
+    }
+    return await readFile(filePath);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+    throw err;
+  }
+}
 
 /**
  * Prepare cache directory for installing now-builders
@@ -57,17 +92,49 @@ export async function prepareBuilderDir() {
   const builderDir = join(await cacheDirPromise, 'builders');
   await mkdirp(builderDir);
 
-  // Create an empty `package.json` file, only if one does not already exist
-  try {
-    const buildersPkg = join(builderDir, 'package.json');
-    await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
-  } catch (err) {
-    if (err.code !== 'EEXIST') {
-      throw err;
-    }
+  // Extract the bundled `builders.tar.gz` file, if necessary
+  const bundledTarballPath = join(__dirname, '../../../assets/builders.tar.gz');
+
+  const existingPackageJson =
+    (await readFileOrNull(join(builderDir, 'package.json'), 'utf8')) || '{}';
+  const { dependencies = {} } = JSON.parse(existingPackageJson);
+
+  if (!hasBundledBuilders(dependencies)) {
+    const extractor = extract(builderDir);
+    await pipe(
+      createReadStream(bundledTarballPath),
+      createGunzip(),
+      extractor
+    );
   }
 
   return builderDir;
+}
+
+export async function prepareBuilderModulePath() {
+  const [builderDir, builderContents] = await Promise.all([
+    builderDirPromise,
+    readFile(join(__dirname, 'builder-worker.js')),
+  ]);
+  let needsWrite = false;
+  const builderSha = getSha(builderContents);
+  const cachedBuilderPath = join(builderDir, 'builder.js');
+
+  const cachedBuilderContents = await readFileOrNull(cachedBuilderPath);
+  if (cachedBuilderContents) {
+    const cachedBuilderSha = getSha(cachedBuilderContents);
+    if (builderSha !== cachedBuilderSha) {
+      needsWrite = true;
+    }
+  } else {
+    needsWrite = true;
+  }
+
+  if (needsWrite) {
+    await writeFile(cachedBuilderPath, builderContents);
+  }
+
+  return cachedBuilderPath;
 }
 
 function getNpmVersion(use = ''): string {
@@ -99,20 +166,12 @@ function parseVersionSafe(rawSpec: string) {
 export function filterPackage(
   builderSpec: string,
   distTag: string,
-  buildersPkg: PackageJson,
-  nowCliPkg: PackageJson
+  buildersPkg: PackageJson
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
   const parsedVersion = parseVersionSafe(parsed.rawSpec);
-
-  // If it's a builder that is part of Now CLI's `dependencies` then
-  // the builder is already installed into `node_modules`
-  if (isBundledBuilder(parsed, nowCliPkg)) {
-    return false;
-  }
-
-  // Skip install of already installed Runtime
+  // skip install of already installed Runtime
   if (
     parsed.name &&
     parsed.type === 'version' &&
@@ -154,6 +213,7 @@ export function filterPackage(
  */
 export async function installBuilders(
   packagesSet: Set<string>,
+  yarnDir: string,
   output: Output,
   builderDir?: string
 ): Promise<void> {
@@ -169,18 +229,15 @@ export async function installBuilders(
   if (!builderDir) {
     builderDir = await builderDirPromise;
   }
+  const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
-  const depsBefore = {
-    ...buildersPkgBefore.devDependencies,
-    ...buildersPkgBefore.dependencies,
-  };
 
   packages.push(getBuildUtils(packages));
 
   // Filter out any packages that come packaged with `now-cli`
   const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkgBefore, nowCliPkg)
+    filterPackage(p, distTag, buildersPkgBefore)
   );
 
   if (packagesToInstall.length === 0) {
@@ -199,11 +256,13 @@ export async function installBuilders(
     await retry(
       () =>
         execa(
-          'npm',
+          process.execPath,
           [
-            'install',
-            '--save-exact',
-            '--no-package-lock',
+            yarnPath,
+            'add',
+            '--exact',
+            '--no-lockfile',
+            '--non-interactive',
             ...packagesToInstall,
           ],
           {
@@ -218,12 +277,8 @@ export async function installBuilders(
 
   const updatedPackages: string[] = [];
   const buildersPkgAfter = await readJSON(buildersPkgPath);
-  const depsAfter = {
-    ...buildersPkgAfter.devDependencies,
-    ...buildersPkgAfter.dependencies,
-  };
-  for (const [name, version] of Object.entries(depsAfter)) {
-    if (version !== depsBefore[name]) {
+  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
+    if (version !== buildersPkgBefore.dependencies[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);
       updatedPackages.push(name);
     }
@@ -234,6 +289,7 @@ export async function installBuilders(
 
 export async function updateBuilders(
   packagesSet: Set<string>,
+  yarnDir: string,
   output: Output,
   builderDir?: string
 ): Promise<string[]> {
@@ -241,56 +297,42 @@ export async function updateBuilders(
     builderDir = await builderDirPromise;
   }
 
-  const updatedPackages: string[] = [];
   const packages = Array.from(packagesSet);
+  const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
-  const depsBefore = {
-    ...buildersPkgBefore.devDependencies,
-    ...buildersPkgBefore.dependencies,
-  };
 
-  const packagesToUpdate = packages.filter(p => {
-    if (p in localBuilders) return false;
+  packages.push(getBuildUtils(packages));
 
-    // If it's a builder that is part of Now CLI's `dependencies` then
-    // don't update it
-    if (isBundledBuilder(npa(p), nowCliPkg)) {
-      return false;
+  await retry(
+    () =>
+      execa(
+        process.execPath,
+        [
+          yarnPath,
+          'add',
+          '--exact',
+          '--no-lockfile',
+          '--non-interactive',
+          ...packages.filter(p => p !== '@now/static'),
+        ],
+        {
+          cwd: builderDir,
+        }
+      ),
+    { retries: 2 }
+  );
+
+  const updatedPackages: string[] = [];
+  const buildersPkgAfter = await readJSON(buildersPkgPath);
+  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
+    if (version !== buildersPkgBefore.dependencies[name]) {
+      output.debug(`Runtime "${name}" updated to version \`${version}\``);
+      updatedPackages.push(name);
     }
-
-    return true;
-  });
-
-  if (packagesToUpdate.length > 0) {
-    packages.push(getBuildUtils(packages));
-
-    await retry(
-      () =>
-        execa(
-          'npm',
-          ['install', '--save-exact', '--no-package-lock', ...packagesToUpdate],
-          {
-            cwd: builderDir,
-          }
-        ),
-      { retries: 2 }
-    );
-
-    const buildersPkgAfter = await readJSON(buildersPkgPath);
-    const depsAfter = {
-      ...buildersPkgAfter.devDependencies,
-      ...buildersPkgAfter.dependencies,
-    };
-    for (const [name, version] of Object.entries(depsAfter)) {
-      if (version !== depsBefore[name]) {
-        output.debug(`Runtime "${name}" updated to version \`${version}\``);
-        updatedPackages.push(name);
-      }
-    }
-
-    purgeRequireCache(updatedPackages, builderDir, output);
   }
+
+  purgeRequireCache(updatedPackages, builderDir, output);
 
   return updatedPackages;
 }
@@ -300,81 +342,41 @@ export async function updateBuilders(
  */
 export async function getBuilder(
   builderPkg: string,
+  yarnDir: string,
   output: Output,
-  builderDir?: string,
-  isRetry = false
+  builderDir?: string
 ): Promise<BuilderWithPackage> {
   let builderWithPkg: BuilderWithPackage = localBuilders[builderPkg];
   if (!builderWithPkg) {
     if (!builderDir) {
       builderDir = await builderDirPromise;
     }
-    let requirePath: string;
     const parsed = npa(builderPkg);
-
-    // First check if it's a bundled Runtime in Now CLI's `node_modules`
-    const bundledBuilder = isBundledBuilder(parsed, nowCliPkg);
-    if (bundledBuilder && parsed.name) {
-      requirePath = parsed.name;
-    } else {
-      const buildersPkg = await readJSON(join(builderDir, 'package.json'));
-      const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
-      requirePath = join(builderDir, 'node_modules', pkgName);
-    }
-
+    const buildersPkg = await readJSON(join(builderDir, 'package.json'));
+    const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
+    const dest = join(builderDir, 'node_modules', pkgName);
     try {
-      output.debug(`Requiring runtime: "${requirePath}"`);
-      const mod = require(requirePath);
-      const pkg = require(join(requirePath, 'package.json'));
+      const mod = require(dest);
+      const pkg = require(join(dest, 'package.json'));
       builderWithPkg = {
-        requirePath,
         builder: Object.freeze(mod),
         package: Object.freeze(pkg),
       };
     } catch (err) {
-      if (err.code === 'MODULE_NOT_FOUND' && !isRetry) {
+      if (err.code === 'MODULE_NOT_FOUND') {
         output.debug(
-          `Attempted to require ${requirePath}, but it is not installed`
+          `Attempted to require ${builderPkg}, but it is not installed`
         );
         const pkgSet = new Set([builderPkg]);
-        await installBuilders(pkgSet, output, builderDir);
+        await installBuilders(pkgSet, yarnDir, output, builderDir);
 
         // Run `getBuilder()` again now that the builder has been installed
-        return getBuilder(builderPkg, output, builderDir, true);
+        return getBuilder(builderPkg, yarnDir, output, builderDir);
       }
       throw err;
     }
-
-    // If it's a bundled builder, then cache the require call
-    if (bundledBuilder) {
-      localBuilders[builderPkg] = builderWithPkg;
-    }
   }
   return builderWithPkg;
-}
-
-export function isBundledBuilder(
-  parsed: npa.Result,
-  pkg: PackageJson
-): boolean {
-  if (!parsed.name || !pkg.dependencies) {
-    return false;
-  }
-
-  const bundledVersion = pkg.dependencies[parsed.name];
-  if (bundledVersion) {
-    if (parsed.type === 'tag') {
-      if (parsed.fetchSpec === 'canary') {
-        return bundledVersion.includes('canary');
-      } else if (parsed.fetchSpec === 'latest') {
-        return !bundledVersion.includes('canary');
-      }
-    } else if (parsed.type === 'version') {
-      return parsed.fetchSpec === bundledVersion;
-    }
-  }
-
-  return false;
 }
 
 function getPackageName(
@@ -384,16 +386,28 @@ function getPackageName(
   if (registryTypes.has(parsed.type)) {
     return parsed.name;
   }
-  const deps: { [name: string]: string } = {
-    ...buildersPkg.devDependencies,
-    ...buildersPkg.dependencies,
-  };
+  const deps = { ...buildersPkg.devDependencies, ...buildersPkg.dependencies };
   for (const [name, dep] of Object.entries(deps)) {
-    if (dep === parsed.raw || basename(dep) === basename(parsed.raw)) {
+    if (dep === parsed.raw) {
       return name;
     }
   }
   return null;
+}
+
+function getSha(buffer: Buffer): string {
+  const hash = createHash('sha256');
+  hash.update(buffer);
+  return hash.digest('hex');
+}
+
+function hasBundledBuilders(dependencies: { [name: string]: string }): boolean {
+  for (const name of getBundledBuilders()) {
+    if (!(name in dependencies)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function purgeRequireCache(
