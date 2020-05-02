@@ -106,15 +106,17 @@ export async function getVercelIgnore(
 
   const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
-  const ignoreFile = cwds
-    .map(async cwd => {
+  const files = await Promise.all(
+    cwds.map(async cwd => {
       let str = await maybeRead(join(cwd, '.vercelignore'), '');
       if (!str) {
         str = await maybeRead(join(cwd, '.nowignore'), '');
       }
       return str;
     })
-    .join('\n');
+  );
+
+  const ignoreFile = files.join('\n');
 
   const ig = ignore().add(
     `${ignores.join('\n')}\n${clearRelative(ignoreFile)}`
