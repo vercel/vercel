@@ -37,6 +37,7 @@ const testv1 = async (...args) => {
     // Only run v1 tests on Node 12
     return;
   }
+  // eslint-disable-next-line
   await test(...args);
 };
 
