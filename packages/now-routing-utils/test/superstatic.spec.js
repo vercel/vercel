@@ -56,13 +56,13 @@ test('convertCleanUrls true', () => {
   const actual = convertCleanUrls(true);
   const expected = [
     {
-      src: '^(.*)/index(?:\\.html)?/?$',
-      headers: { Location: '$1' },
+      src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
+      headers: { Location: '/$1' },
       status: 308,
     },
     {
-      src: '^(/.*)\\.html/?$',
-      headers: { Location: '$1' },
+      src: '^/(.*)\\.html/?$',
+      headers: { Location: '/$1' },
       status: 308,
     },
   ];
@@ -92,13 +92,13 @@ test('convertCleanUrls true, trailingSlash true', () => {
   const actual = convertCleanUrls(true, true);
   const expected = [
     {
-      src: '^(.*)/index(?:\\.html)?/?$',
-      headers: { Location: '$1/' },
+      src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
+      headers: { Location: '/$1/' },
       status: 308,
     },
     {
-      src: '^(/.*)\\.html/?$',
-      headers: { Location: '$1/' },
+      src: '^/(.*)\\.html/?$',
+      headers: { Location: '/$1/' },
       status: 308,
     },
   ];
