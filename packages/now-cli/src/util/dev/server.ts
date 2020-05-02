@@ -24,6 +24,7 @@ import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import which from 'which';
+import { getVercelIgnore } from 'now-client';
 
 import {
   Builder,
@@ -44,11 +45,7 @@ import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
 import { version as cliVersion } from '../../../package.json';
-import {
-  createIgnoreVercel,
-  staticFiles as getFiles,
-  getAllProjectFiles,
-} from '../get-files';
+import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
 import {
   validateNowConfigBuilds,
   validateNowConfigRoutes,
@@ -728,7 +725,7 @@ export default class DevServer {
       throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
     }
 
-    const ig = await createIgnoreVercel(this.cwd);
+    const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module

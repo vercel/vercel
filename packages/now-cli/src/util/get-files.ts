@@ -3,6 +3,7 @@ import ignore from 'ignore';
 import dockerignore from '@zeit/dockerignore';
 import _glob, { IOptions } from 'glob';
 import fs from 'fs-extra';
+import { getVercelIgnore } from 'now-client';
 import IGNORED from './ignored';
 import uniqueStrings from './unique-strings';
 import getLocalConfigPath from './config/local-path';
@@ -193,12 +194,9 @@ export async function staticFiles(
     const search = await glob(source, { cwd: path, absolute: true, dot: true });
 
     // Compile list of ignored patterns and files
-    let ig;
-    if (isBuilds) {
-      ig = await createIgnoreVercel();
-    } else {
-      ig = await createIgnore(resolve(path, '.gitignore'));
-    }
+    const ig = isBuilds
+      ? (await getVercelIgnore(path)).ig
+      : await createIgnore(resolve(path, '.gitignore'));
     const filter = ig.createFilter();
 
     const prefixLength = path.length + 1;

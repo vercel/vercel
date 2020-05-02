@@ -76,7 +76,7 @@ const maybeRead = async function<T>(path: string, default_: T) {
 };
 
 export async function getVercelIgnore(
-  cwd: string
+  cwd: string | string[]
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ignores: string[] = [
     '.hg/',
@@ -104,13 +104,22 @@ export async function getVercelIgnore(
     'CVS',
   ];
 
-  let ignoreFile = await maybeRead(join(cwd, '.vercelignore'), '');
-  if (!ignoreFile) {
-    ignoreFile = await maybeRead(join(cwd, '.nowignore'), '');
-  }
+  const cwds = Array.isArray(cwd) ? cwd : [cwd];
+
+  const ignoreFile = cwds
+    .map(async cwd => {
+      let str = await maybeRead(join(cwd, '.vercelignore'), '');
+      if (!str) {
+        str = await maybeRead(join(cwd, '.nowignore'), '');
+      }
+      return str;
+    })
+    .join('\n');
+
   const ig = ignore().add(
     `${ignores.join('\n')}\n${clearRelative(ignoreFile)}`
   );
+
   return { ig, ignores };
 }
 
