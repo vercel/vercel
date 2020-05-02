@@ -1240,45 +1240,6 @@
     "@nodelib/fs.scandir" "2.1.1"
     fastq "^1.6.0"
 
-"@now/build-utils@2.2.2-canary.4":
-  version "2.2.2-canary.4"
-  resolved "https://registry.yarnpkg.com/@now/build-utils/-/build-utils-2.2.2-canary.4.tgz#8c1882e25bf3615f4ba06468170e5d5274b10bb8"
-  integrity sha512-lDLOcP7YmTs+S3snj8wb4DQ2cplObb8Gn2WuMWs3+7p6Cq5AyAtMnuTsoUX7RMEZCQP8bup2hALgmNc9+vz53Q==
-
-"@now/go@1.0.8-canary.0":
-  version "1.0.8-canary.0"
-  resolved "https://registry.yarnpkg.com/@now/go/-/go-1.0.8-canary.0.tgz#552fcd27114cec4e99419cae57329d4154225106"
-  integrity sha512-VKwbmumFAq0tKiAFl51q7bniHfoOWyrkuvXKFnOzQx1n93U/B3jKPMWvBQbVg/jkq8ASv3liEpqNuPExpvUahw==
-
-"@now/next@2.5.5-canary.5":
-  version "2.5.5-canary.5"
-  resolved "https://registry.yarnpkg.com/@now/next/-/next-2.5.5-canary.5.tgz#ad35cd5cc018bfda36db30b36dd972e743d54bfe"
-  integrity sha512-VUGfhaOpC4gAuFbo9SG4Eiqffy9RWcJqzVrTsB53asUrLWo60OLGpU1luBKqtHn9haLGTVW40wGv4AVwM7PKOg==
-
-"@now/node@1.5.2-canary.6":
-  version "1.5.2-canary.6"
-  resolved "https://registry.yarnpkg.com/@now/node/-/node-1.5.2-canary.6.tgz#09a1942cb26da28f3df0aa2ace523abf5fbf297b"
-  integrity sha512-v0AX9CvfFNfpguO4RcMCGJ449TfnEfgt3NEuC1SNbev1fQ+vVWY6TIc0mjTpBR7Z4Fo6IopNhzf7Tq6pxVrwUg==
-  dependencies:
-    "@types/node" "*"
-    ts-node "8.9.1"
-    typescript "3.8.3"
-
-"@now/python@1.1.7-canary.1":
-  version "1.1.7-canary.1"
-  resolved "https://registry.yarnpkg.com/@now/python/-/python-1.1.7-canary.1.tgz#5a13f9b210b566c1eeb814101b8b40992bbb890b"
-  integrity sha512-29aYAc9yN7CiyhLOcWH5fuGnIdqW7I0R8uJy5bo+tFgJBv9Y7Z300vncjXOCGpqOGmSaB4/d8SVqwskxnsUyeA==
-
-"@now/ruby@1.1.1-canary.0":
-  version "1.1.1-canary.0"
-  resolved "https://registry.yarnpkg.com/@now/ruby/-/ruby-1.1.1-canary.0.tgz#dd2bf7da533803938d1dbaa96ff51261b0f4e7a8"
-  integrity sha512-8UmvpQDz8+jsDm49noilUkweD/KAZxLN2adyQxe1MWDBPsEXNFG8Cv1seAfkQXAXegSXCCw8FC5YI+1Wpxe4tQ==
-
-"@now/static-build@0.16.1-canary.3":
-  version "0.16.1-canary.3"
-  resolved "https://registry.yarnpkg.com/@now/static-build/-/static-build-0.16.1-canary.3.tgz#7057ab423d9338e40eebea8b60e54db17aff91c1"
-  integrity sha512-fWP3k8Hm53exK5jaZp3OzCyxZQZUVCLQhjJBlIH+GzxIo/dNkUjBcikED1p0Ee8bc50iSgypLlTqz1QvMOcYNg==
-
 "@octokit/endpoint@^5.1.0":
   version "5.3.2"
   resolved "https://registry.yarnpkg.com/@octokit/endpoint/-/endpoint-5.3.2.tgz#2deda2d869cac9ba7f370287d55667be2a808d4b"
