@@ -119,6 +119,7 @@ export default class DevServer {
   private cachedNowConfig: NowConfig | null;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
+  private proxy: httpProxy;
   private server: http.Server;
   private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
@@ -153,6 +154,11 @@ export default class DevServer {
     this.cachedNowConfig = null;
     this.apiDir = null;
     this.apiExtensions = new Set<string>();
+    this.proxy = httpProxy.createProxyServer({
+      changeOrigin: true,
+      ws: true,
+      xfwd: true,
+    });
     this.server = http.createServer(this.devServerHandler);
     this.server.timeout = 0; // Disable timeout
     this.stopping = false;
@@ -826,6 +832,13 @@ export default class DevServer {
     // Wait for "ready" event of the watcher
     await once(this.watcher, 'ready');
 
+    // Configure the server to forward WebSocket "upgrade" events to the proxy.
+    this.server.on('upgrade', (req, socket, head) => {
+      this.proxy.ws(req, socket, head, {
+        target: `http://localhost:${this.devProcessPort}`,
+      });
+    });
+
     const devCommandPromise = this.runDevCommand();
 
     let address: string | null = null;
@@ -1287,7 +1300,7 @@ export default class DevServer {
 
         this.output.debug(`ProxyPass: ${destUrl}`);
         this.setResponseHeaders(res, nowRequestId);
-        return proxyPass(req, res, destUrl, this.output);
+        return proxyPass(req, res, destUrl, this.proxy, this.output);
       }
 
       match = await findBuildMatch(
@@ -1390,6 +1403,7 @@ export default class DevServer {
           req,
           res,
           `http://localhost:${this.devProcessPort}`,
+          this.proxy,
           this.output,
           false
         );
@@ -1464,6 +1478,7 @@ export default class DevServer {
         req,
         res,
         `http://localhost:${this.devProcessPort}`,
+        this.proxy,
         this.output,
         false
       );
@@ -1767,30 +1782,26 @@ function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   dest: string,
+  proxy: httpProxy,
   output: Output,
   ignorePath: boolean = true
 ): void {
-  const proxy = httpProxy.createProxyServer({
-    changeOrigin: true,
-    ws: true,
-    xfwd: true,
-    ignorePath,
-    target: dest,
-  });
+  return proxy.web(
+    req,
+    res,
+    { target: dest, ignorePath },
+    (error: NodeJS.ErrnoException) => {
+      // If the client hangs up a socket, we do not
+      // want to do anything, as the client just expects
+      // the connection to be closed.
+      if (error.code === 'ECONNRESET') {
+        res.end();
+        return;
+      }
 
-  proxy.on('error', (error: NodeJS.ErrnoException) => {
-    // If the client hangs up a socket, we do not
-    // want to do anything, as the client just expects
-    // the connection to be closed.
-    if (error.code === 'ECONNRESET') {
-      res.end();
-      return;
+      output.error(`Failed to complete request to ${req.url}: ${error}`);
     }
-
-    output.error(`Failed to complete request to ${req.url}: ${error}`);
-  });
-
-  return proxy.web(req, res);
+  );
 }
 
 /**
