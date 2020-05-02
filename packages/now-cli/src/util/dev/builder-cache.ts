@@ -8,7 +8,7 @@ import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
 import { join, resolve } from 'path';
-import { PackageJson } from '@now/build-utils';
+import { PackageJson } from '@vercel/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
   createReadStream,
