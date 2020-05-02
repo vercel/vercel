@@ -30,6 +30,14 @@ ncc build ../../node_modules/source-map-support/register -e @now/build-utils -o 
 mv dist/source-map-support/index.js dist/source-map-support.js
 rm -rf dist/source-map-support
 
-ncc build src/index.ts -e @now/build-utils -e typescript -o dist/main
+# build typescript
+ncc build ../../node_modules/typescript/lib/typescript -e @now/build-utils -o dist/typescript
+mv dist/typescript/index.js dist/typescript.js
+mkdir -p dist/typescript/lib
+mv dist/typescript/typescript/lib/*.js dist/typescript/lib/
+mv dist/typescript/typescript/lib/*.d.ts dist/typescript/lib/
+rm -r dist/typescript/typescript
+
+ncc build src/index.ts -e @now/build-utils -o dist/main
 mv dist/main/index.js dist/index.js
 rm -rf dist/main
