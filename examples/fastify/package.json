@@ -1,0 +1,24 @@
+{
+  "name": "fastify",
+  "version": "1.0.0",
+  "description": "Deploy a Fastify server to Vercel now",
+  "main": "api/index.js",
+  "scripts": {
+    "lint": "standard",
+    "now:login": "now login",
+    "now": "now",
+    "test": "npm run lint && tap test/**/*.test.js"
+  },
+  "author": "Manuel Spigolon <behemoth89@gmail.com> (https://github.com/Eomm)",
+  "engines": {
+    "node": "12.x"
+  },
+  "devDependencies": {
+    "now": "^18.0.0",
+    "standard": "^14.3.3",
+    "tap": "^14.10.7"
+  },
+  "dependencies": {
+    "fastify": "^2.14.0"
+  }
+}
