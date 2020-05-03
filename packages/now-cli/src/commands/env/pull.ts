@@ -4,7 +4,7 @@ import { Output } from '../../util/output';
 import promptBool from '../../util/prompt-bool';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
-import getEnvVariables, { APIV4Response } from '../../util/env/get-env-records';
+import getEnvVariables from '../../util/env/get-env-records';
 import getDecryptedSecret from '../../util/env/get-decrypted-secret';
 import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
@@ -59,12 +59,7 @@ export default async function pull(
 
   const records = await withSpinner('Downloading', async () => {
     const dev = ProjectEnvTarget.Development;
-    const envs = (await getEnvVariables(
-      output,
-      client,
-      project.id,
-      dev
-    )) as APIV4Response;
+    const envs = await getEnvVariables(output, client, project.id, 4, dev);
     const values = await Promise.all(
       envs.map(env => getDecryptedSecret(output, client, env.value))
     );

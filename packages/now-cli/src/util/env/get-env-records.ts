@@ -6,20 +6,40 @@ import {
   PaginationOptions,
 } from '../../types';
 
-export type APIV5Response = {
-  envs: ProjectEnvVariable[];
-  pagination: PaginationOptions;
-};
+type ApiVersion = 4 | 5;
 
-export type APIV4Response = ProjectEnvVariable[];
+type APIV4Response = ProjectEnvVariable[];
+
+interface APIV5Response {
+  pagination: PaginationOptions;
+  envs: ProjectEnvVariable[];
+}
 
 export default async function getEnvVariables(
   output: Output,
   client: Client,
   projectId: string,
+  apiVersion: 4,
   target?: ProjectEnvTarget,
-  next?: number,
-  apiVersion: number = 4
+  next?: number
+): Promise<APIV4Response>;
+
+export default async function getEnvVariables(
+  output: Output,
+  client: Client,
+  projectId: string,
+  apiVersion: 5,
+  target?: ProjectEnvTarget,
+  next?: number
+): Promise<APIV5Response>;
+
+export default async function getEnvVariables<V extends ApiVersion>(
+  output: Output,
+  client: Client,
+  projectId: string,
+  apiVersion: V,
+  target?: ProjectEnvTarget,
+  next?: number
 ) {
   output.debug(
     `Fetching Environment Variables of project ${projectId} and target ${target}`
@@ -32,11 +52,11 @@ export default async function getEnvVariables(
     url += `&until=${next}`;
   }
 
-  const data = await client.fetch<APIV4Response | APIV5Response>(url);
-
-  if (apiVersion >= 5) {
-    const { envs, pagination } = data as APIV5Response;
-    return { envs, pagination };
+  if (apiVersion === 5) {
+    return client.fetch<APIV5Response>(url);
+  } else if (apiVersion === 4) {
+    return client.fetch<APIV4Response>(url);
+  } else {
+    throw new Error('Unknown version: ' + apiVersion);
   }
-  return data;
 }

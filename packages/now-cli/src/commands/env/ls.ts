@@ -4,7 +4,7 @@ import { Output } from '../../util/output';
 import { ProjectEnvVariable, ProjectEnvTarget, Project } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import getEnvVariables, { APIV5Response } from '../../util/env/get-env-records';
+import getEnvVariables from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -59,11 +59,11 @@ export default async function ls(
     output,
     client,
     project.id,
+    5,
     envTarget,
-    nextTimestamp,
-    5
+    nextTimestamp
   );
-  const { envs: records, pagination } = data as APIV5Response;
+  const { envs: records, pagination } = data;
   output.log(
     `${
       records.length > 0 ? 'Environment Variables' : 'No Environment Variables'

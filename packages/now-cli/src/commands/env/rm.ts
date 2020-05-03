@@ -4,7 +4,7 @@ import { ProjectEnvTarget, Project } from '../../types';
 import { Output } from '../../util/output';
 import promptBool from '../../util/prompt-bool';
 import removeEnvRecord from '../../util/env/remove-env-record';
-import getEnvVariables, { APIV4Response } from '../../util/env/get-env-records';
+import getEnvVariables from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -69,11 +69,7 @@ export default async function rm(
     envName = inputName;
   }
 
-  const envs = (await getEnvVariables(
-    output,
-    client,
-    project.id
-  )) as APIV4Response;
+  const envs = await getEnvVariables(output, client, project.id, 4);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
