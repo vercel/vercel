@@ -22,6 +22,7 @@
     "buffer-replace": "1.0.0",
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
+    "eslint-plugin-jest": "23.8.2",
     "husky": "3.0.4",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
@@ -36,6 +37,7 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "node utils/run.js build all",
+    "now-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
     "test-unit": "node utils/run.js test-unit",
     "test-integration-cli": "node utils/run.js test-integration-cli",
     "test-integration-once": "node utils/run.js test-integration-once",
@@ -70,6 +72,9 @@
       "sourceType": "module",
       "modules": true
     },
+    "plugins": [
+      "jest"
+    ],
     "extends": [
       "eslint:recommended",
       "plugin:@typescript-eslint/eslint-recommended",
@@ -91,7 +96,9 @@
       "@typescript-eslint/no-explicit-any": 0,
       "@typescript-eslint/no-non-null-assertion": 0,
       "@typescript-eslint/no-unused-vars": 2,
-      "@typescript-eslint/no-use-before-define": 0
+      "@typescript-eslint/no-use-before-define": 0,
+      "jest/no-disabled-tests": 2,
+      "jest/no-focused-tests": 2
     },
     "overrides": [
       {
