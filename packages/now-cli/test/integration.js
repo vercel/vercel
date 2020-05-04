@@ -42,7 +42,7 @@ const pickUrl = stdout => {
 };
 
 const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
-const createDirectory = dest => fs.mkdirSync(dest);
+const createDirectory = dest => fs.mkdirSync(dest, { recursive: true });
 
 const waitForDeployment = async href => {
   console.log(`waiting for ${href} to become ready...`);
@@ -125,6 +125,11 @@ if (!process.env.CI) {
     'No CI detected, adding defaultArgs to avoid polluting user settings',
     defaultArgs
   );
+}
+
+if (!fs.existsSync(globalDir)) {
+  console.log('Creating global config directory ', globalDir);
+  createDirectory(globalDir);
 }
 
 const execute = (args, options) =>
