@@ -115,7 +115,8 @@ if (!process.env.CI) {
     unsafeCleanup: true,
   });
 
-  defaultArgs.push('-Q', path.join(tmpDir.name, '.now'));
+  defaultArgs.push('-Q', path.join(tmpDir.name, '.vercel'));
+  console.log('Detected CI, adding defaultArgs', defaultArgs);
 }
 
 const execute = (args, options) =>
@@ -163,10 +164,14 @@ const createUser = async () => {
   await retry(
     async () => {
       const location = getConfigPath();
+
       token = await fetchTokenWithRetry();
 
       if (!fs.existsSync(location)) {
-        await createDirectory(location);
+        console.log('Creating global config directory ', location);
+        createDirectory(location);
+      } else {
+        console.log('Found global config directory ', location);
       }
 
       await fs.writeJSON(getConfigAuthPath(), { token });
@@ -183,7 +188,8 @@ const createUser = async () => {
   );
 };
 
-const getConfigPath = () => path.join(tmpDir ? tmpDir.name : homedir(), '.now');
+const getConfigPath = () =>
+  path.join(tmpDir ? tmpDir.name : homedir(), '.vercel');
 const getConfigAuthPath = () => path.join(getConfigPath(), 'auth.json');
 
 test.before(async () => {
@@ -1555,11 +1561,11 @@ test('deploying a file should not show prompts and display deprecation', async t
   t.is(exitCode, 0, formatOutput(output));
   t.true(stderr.includes('Deploying files with Vercel is deprecated'));
 
-  // Ensure `.now` was not created
+  // Ensure `.vercel` was not created
   t.is(
-    await exists(path.join(path.dirname(file), '.now')),
+    await exists(path.join(path.dirname(file), '.vercel')),
     false,
-    '.now should not exists'
+    '.vercel should not exists'
   );
 
   // Test if the output is really a URL
@@ -2286,7 +2292,7 @@ test('should show prompts to set up project', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
 
   const now = execa(binaryPath, [directory, ...defaultArgs]);
 
@@ -2348,16 +2354,19 @@ test('should show prompts to set up project', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(directory, '.gitignore'))).toString(), '.now');
-
-  // Ensure .now/project.json and .now/README.txt are created
   t.is(
-    await exists(path.join(directory, '.now', 'project.json')),
+    (await readFile(path.join(directory, '.gitignore'))).toString(),
+    '.vercel'
+  );
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(directory, '.vercel', 'project.json')),
     true,
     'project.json should be created'
   );
   t.is(
-    await exists(path.join(directory, '.now', 'README.txt')),
+    await exists(path.join(directory, '.vercel', 'README.txt')),
     true,
     'README.txt should be created'
   );
@@ -2378,7 +2387,7 @@ test('should prefill "project name" prompt with folder name', async t => {
   const src = fixture('static-deployment');
 
   // remove previously linked project if it exists
-  await remove(path.join(src, '.now'));
+  await remove(path.join(src, '.vercel'));
 
   const directory = path.join(src, '../', projectName);
   await copy(src, directory);
@@ -2426,7 +2435,7 @@ test('should prefill "project name" prompt with --name', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
 
   const now = execa(binaryPath, [
     directory,
@@ -2486,7 +2495,7 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
   await fs.writeFile(
     path.join(directory, 'now.json'),
     JSON.stringify({
@@ -2598,11 +2607,11 @@ test('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async 
 test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
   const directory = fixture('static-deployment');
 
-  // generate `.now`
+  // generate `.vercel`
   await execute([directory, '--confirm']);
 
-  const link = require(path.join(directory, '.now/project.json'));
-  await remove(path.join(directory, '.now'));
+  const link = require(path.join(directory, '.vercel/project.json'));
+  await remove(path.join(directory, '.vercel'));
 
   const output = await execute([directory], {
     env: {
@@ -2615,13 +2624,13 @@ test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
   t.is(output.stdout.includes('Linked to'), false);
 });
 
-test('deploy shows notice when project in `.now` does not exists', async t => {
+test('deploy shows notice when project in `.vercel` does not exists', async t => {
   const directory = fixture('static-deployment');
 
-  // overwrite .now with unexisting project
-  await ensureDir(path.join(directory, '.now'));
+  // overwrite .vercel with unexisting project
+  await ensureDir(path.join(directory, '.vercel'));
   await writeFile(
-    path.join(directory, '.now/project.json'),
+    path.join(directory, '.vercel/project.json'),
     JSON.stringify({
       orgId: 'asdf',
       projectId: 'asdf',
@@ -2718,14 +2727,14 @@ test('whoami with `NOW_ORG_ID` should favor `--scope` and should error', async t
   );
 });
 
-test('whoami with local .now scope', async t => {
+test('whoami with local .vercel scope', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
-  // create local .now
-  await ensureDir(path.join(directory, '.now'));
+  // create local .vercel
+  await ensureDir(path.join(directory, '.vercel'));
   await fs.writeFile(
-    path.join(directory, '.now', 'project.json'),
+    path.join(directory, '.vercel', 'project.json'),
     JSON.stringify({ orgId: user.uid, projectId: 'xxx' })
   );
 
@@ -2737,5 +2746,5 @@ test('whoami with local .now scope', async t => {
   t.is(output.stdout.includes(contextName), true, formatOutput(output));
 
   // clean up
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
 });
