@@ -1,8 +1,8 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.go", "use": "@now/go" },
-    { "src": "subdirectory/index.go", "use": "@now/go" }
+    { "src": "index.go", "use": "@vercel/go" },
+    { "src": "subdirectory/index.go", "use": "@vercel/go" }
   ],
   "probes": [
     { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },

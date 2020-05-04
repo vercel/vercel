@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "index.go", "use": "@now/go" }],
+  "builds": [{ "src": "index.go", "use": "@vercel/go" }],
   "build": { "env": { "GO_BUILD_FLAGS": "-tags first -ldflags '-s -w'" } },
   "probes": [{ "path": "/", "mustContain": "first:RANDOMNESS_PLACEHOLDER" }]
 }
