@@ -259,6 +259,7 @@ test(
   testFixture('now-dev-static-routes', async (t, server) => {
     {
       const res = await fetch(`${server.address}/`);
+      t.is(res.status, 200);
       const body = await res.text();
       t.is(body, '<body>Hello!</body>\n');
     }
@@ -270,6 +271,7 @@ test(
   testFixture('now-dev-static-build-routing', async (t, server) => {
     {
       const res = await fetch(`${server.address}/api/date`);
+      t.is(res.status, 200);
       const body = await res.text();
       t.is(body.startsWith('The current date:'), true);
     }
