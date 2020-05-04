@@ -1391,7 +1391,7 @@ test('try to create a builds deployments with wrong config', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
+      'Error! The property `builder` is not allowed in vercel.json – please remove it.'
     )
   );
 });
