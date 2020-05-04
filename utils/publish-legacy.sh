@@ -16,7 +16,7 @@ for tag in $tags; do
 
   npm_tag=""
   if [[ "$tag" =~ -canary ]]; then
-    npm_tag="--npm-tag canary"
+    npm_tag="--tag canary"
   fi
 
   npm publish $npm_tag
