@@ -42,7 +42,6 @@ const pickUrl = stdout => {
 };
 
 const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
-const createDirectory = dest => fs.mkdirSync(dest, { recursive: true });
 
 const waitForDeployment = async href => {
   console.log(`waiting for ${href} to become ready...`);
@@ -127,11 +126,6 @@ if (!process.env.CI) {
   );
 }
 
-if (!fs.existsSync(globalDir)) {
-  console.log('Creating global config directory ', globalDir);
-  createDirectory(globalDir);
-}
-
 const execute = (args, options) =>
   execa(binaryPath, [...defaultArgs, ...args], {
     ...defaultOptions,
@@ -176,16 +170,14 @@ const getDeploymentBuildsByUrl = async url => {
 const createUser = async () => {
   await retry(
     async () => {
-      const location = getConfigPath();
+      if (!fs.existsSync(globalDir)) {
+        console.log('Creating global config directory ', globalDir);
+        await ensureDir(globalDir);
+      } else {
+        console.log('Found global config directory ', globalDir);
+      }
 
       token = await fetchTokenWithRetry();
-
-      if (!fs.existsSync(location)) {
-        console.log('Creating global config directory ', location);
-        createDirectory(location);
-      } else {
-        console.log('Found global config directory ', location);
-      }
 
       await fs.writeJSON(getConfigAuthPath(), { token });
 
@@ -201,8 +193,7 @@ const createUser = async () => {
   );
 };
 
-const getConfigPath = () => globalDir;
-const getConfigAuthPath = () => path.join(getConfigPath(), 'auth.json');
+const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
 
 test.before(async () => {
   try {
@@ -1767,7 +1758,7 @@ test('initialize example to existing directory with "-f"', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  createDirectory(path.join(cwd, 'angular'));
+  await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
   const { stdout, stderr, exitCode } = await execute(
     ['init', 'angular', '-f'],
@@ -1791,7 +1782,7 @@ test('try to initialize example to existing directory', async t => {
   const goal =
     'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
 
-  createDirectory(path.join(cwd, 'angular'));
+  await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
   const { stdout, stderr, exitCode } = await execute(['init', 'angular'], {
     cwd,
