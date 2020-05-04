@@ -59,7 +59,7 @@ export default async function pull(
 
   const records = await withSpinner('Downloading', async () => {
     const dev = ProjectEnvTarget.Development;
-    const envs = await getEnvVariables(output, client, project.id, dev);
+    const envs = await getEnvVariables(output, client, project.id, 4, dev);
     const values = await Promise.all(
       envs.map(env => getDecryptedSecret(output, client, env.value))
     );
