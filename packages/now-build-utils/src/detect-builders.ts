@@ -56,7 +56,7 @@ export function detectApiDirectory(builders: Builder[]): string | null {
 function getPublicBuilder(builders: Builder[]): Builder | null {
   const builder = builders.find(
     builder =>
-      isOfficialRuntime(builder.use, 'static') &&
+      isOfficialRuntime('static', builder.use) &&
       /^.*\/\*\*\/\*$/.test(builder.src) &&
       builder.config &&
       builder.config.zeroConfig === true
@@ -594,7 +594,7 @@ function checkUnusedFunctions(
   }
 
   // Next.js can use functions only for `src/pages` or `pages`
-  if (frontendBuilder && isOfficialRuntime(frontendBuilder.use, 'next')) {
+  if (frontendBuilder && isOfficialRuntime('next', frontendBuilder.use)) {
     for (const fnKey of unusedFunctions.values()) {
       if (fnKey.startsWith('pages/') || fnKey.startsWith('src/pages')) {
         unusedFunctions.delete(fnKey);
@@ -959,7 +959,7 @@ function getRouteResult(
     outputDirectory &&
     frontendBuilder &&
     !options.featHandleMiss &&
-    isOfficialRuntime(frontendBuilder.use, 'static')
+    isOfficialRuntime('static', frontendBuilder.use)
   ) {
     defaultRoutes.push({
       src: '/(.*)',
