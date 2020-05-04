@@ -1800,7 +1800,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     const files = ['server/hello.ts', 'public/index.html'];
     const functions = {
       'server/**/*.ts': {
-        runtime: '@now/node@1.3.1',
+        runtime: '@vercel/node@1.3.1',
       },
     };
 
