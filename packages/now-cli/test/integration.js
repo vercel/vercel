@@ -2354,7 +2354,7 @@ test('should show prompts to set up project', async t => {
     '.vercel'
   );
 
-  // Ensure .now/project.json and .now/README.txt are created
+  // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
     await exists(path.join(directory, '.vercel', 'project.json')),
     true,
