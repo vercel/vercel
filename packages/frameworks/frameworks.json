@@ -320,7 +320,7 @@
       "every": [
         {
           "path": "package.json",
-          "matchContent": "\"scripts\":\s*{[^}]*build-storybook\s*\".+?\"[^}]*}"
+          "matchContent": "\"scripts\":\\s*{[^}]*build-storybook\\s*\".+?\"[^}]*}"
         }
       ]
     },
