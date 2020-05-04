@@ -7,7 +7,7 @@ import pluralize from 'pluralize';
 import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { PackageJson } from '@now/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
@@ -74,11 +74,7 @@ async function readFileOrNull(
  * Prepare cache directory for installing now-builders
  */
 export async function prepareCacheDir() {
-  let { VERCEL_BUILDER_CACHE_DIR, NOW_BUILDER_CACHE_DIR } = process.env;
-  VERCEL_BUILDER_CACHE_DIR = VERCEL_BUILDER_CACHE_DIR || NOW_BUILDER_CACHE_DIR;
-  const designated = VERCEL_BUILDER_CACHE_DIR
-    ? resolve(VERCEL_BUILDER_CACHE_DIR)
-    : XDGAppPaths('vercel').cache();
+  const designated = XDGAppPaths('com.vercel.cli').cache();
 
   if (!designated) {
     throw new NoBuilderCacheError();

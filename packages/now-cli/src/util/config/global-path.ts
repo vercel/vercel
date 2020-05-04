@@ -28,7 +28,7 @@ const getGlobalPathConfig = (): string => {
   });
 
   const customPath = args['global-config'];
-  const vercelDirectories = XDGAppPaths('vercel').dataDirs();
+  const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
 
   const possibleConfigPaths = [
     ...vercelDirectories, // latest vercel directory
