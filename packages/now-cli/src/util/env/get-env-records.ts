@@ -51,7 +51,7 @@ export default async function getEnvVariables<V extends ApiVersion>(
   }
 
   if (target) {
-    query.set('target', encodeURIComponent(target));
+    query.set('target', target);
   }
 
   if (next) {
