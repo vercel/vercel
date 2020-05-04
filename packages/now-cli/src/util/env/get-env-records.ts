@@ -5,6 +5,7 @@ import {
   ProjectEnvTarget,
   PaginationOptions,
 } from '../../types';
+import { URLSearchParams } from 'url';
 
 type ApiVersion = 4 | 5;
 
@@ -44,13 +45,20 @@ export default async function getEnvVariables<V extends ApiVersion>(
   output.debug(
     `Fetching Environment Variables of project ${projectId} and target ${target}`
   );
-  const qs = target ? `?target=${encodeURIComponent(target)}` : '';
-  const limit = apiVersion >= 5 ? '?limit=20' : '';
-  let url = `/v${apiVersion}/projects/${projectId}/env${qs}${limit}`;
+  const query = new URLSearchParams();
+  if (apiVersion >= 5) {
+    query.set('limit', String(20));
+  }
+
+  if (target) {
+    query.set('target', encodeURIComponent(target));
+  }
 
   if (next) {
-    url += `&until=${next}`;
+    query.set('until', String(next));
   }
+
+  const url = `/v${apiVersion}/projects/${projectId}/env?${query}`;
 
   if (apiVersion === 5) {
     return client.fetch<APIV5Response>(url);
