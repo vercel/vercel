@@ -733,7 +733,7 @@ function handleCreateDeployError(output, error) {
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
           'vercel.json'
-        )} when using Now 2.0 – please remove it.`
+        )} – please remove it.`
       );
 
       if (prop === 'build.env' || prop === 'builds.env') {
