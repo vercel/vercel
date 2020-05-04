@@ -48,5 +48,3 @@ Thumbs.db
 # Environment Variables
 .env
 .env.build
-
-.now
