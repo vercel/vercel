@@ -70,3 +70,4 @@ yarn-error.log
 .yarn-integrity
 
 .now
+.vercel

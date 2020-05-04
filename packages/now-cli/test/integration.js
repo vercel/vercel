@@ -116,6 +116,7 @@ if (!process.env.CI) {
   });
 
   defaultArgs.push('-Q', path.join(tmpDir.name, '.vercel'));
+  console.log('Detected CI, adding defaultArgs', defaultArgs);
 }
 
 const execute = (args, options) =>
@@ -163,10 +164,14 @@ const createUser = async () => {
   await retry(
     async () => {
       const location = getConfigPath();
+
       token = await fetchTokenWithRetry();
 
       if (!fs.existsSync(location)) {
-        await createDirectory(location);
+        console.log('Creating global config directory ', location);
+        createDirectory(location);
+      } else {
+        console.log('Found global config directory ', location);
       }
 
       await fs.writeJSON(getConfigAuthPath(), { token });
@@ -1556,11 +1561,11 @@ test('deploying a file should not show prompts and display deprecation', async t
   t.is(exitCode, 0, formatOutput(output));
   t.true(stderr.includes('Deploying files with Vercel is deprecated'));
 
-  // Ensure `.now` was not created
+  // Ensure `.vercel` was not created
   t.is(
     await exists(path.join(path.dirname(file), '.vercel')),
     false,
-    '.now should not exists'
+    '.vercel should not exists'
   );
 
   // Test if the output is really a URL
@@ -2602,10 +2607,10 @@ test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', 
 test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async t => {
   const directory = fixture('static-deployment');
 
-  // generate `.now`
+  // generate `.vercel`
   await execute([directory, '--confirm']);
 
-  const link = require(path.join(directory, '.now/project.json'));
+  const link = require(path.join(directory, '.vercel/project.json'));
   await remove(path.join(directory, '.vercel'));
 
   const output = await execute([directory], {
@@ -2619,13 +2624,14 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async t => {
   t.is(output.stdout.includes('Linked to'), false);
 });
 
-test('deploy shows notice when project in `.now` does not exists', async t => {
+test('deploy shows notice when project in `.vercel` does not exists', async t => {
   const directory = fixture('static-deployment');
 
-  // overwrite .now with unexisting project
+
+  // overwrite .vercel with unexisting project
   await ensureDir(path.join(directory, '.vercel'));
   await writeFile(
-    path.join(directory, '.now/project.json'),
+    path.join(directory, '.vercel/project.json'),
     JSON.stringify({
       orgId: 'asdf',
       projectId: 'asdf',
@@ -2722,11 +2728,12 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
   );
 });
 
-test('whoami with local .now scope', async t => {
+test('whoami with local .vercel scope', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
-  // create local .now
+
+  // create local .vercel
   await ensureDir(path.join(directory, '.vercel'));
   await fs.writeFile(
     path.join(directory, '.vercel', 'project.json'),
