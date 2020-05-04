@@ -54,6 +54,7 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { readLocalConfig } from '../../util/config/files';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -258,7 +259,7 @@ export default async function main(
     debug: debugEnabled,
   });
 
-  // retrieve `project` and `org` from .now
+  // retrieve `project` and `org` from .vercel
   const link = await getLinkedProject(output, client, path);
 
   if (link.status === 'error') {
@@ -665,7 +666,7 @@ export default async function main(
       output.error('Build failed');
       output.error(
         `Check your logs at https://${now.url}/_logs or run ${code(
-          `now logs ${now.url}`,
+          `${getPkgName()} logs ${now.url}`,
           {
             // Backticks are interpreted as part of the URL, causing CMD+Click
             // behavior to fail in editors like VSCode.
@@ -795,7 +796,9 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
-    output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
+    output.note(
+      `Run ${code(`${getPkgName()} upgrade`)} to increase your builds limit.`
+    );
     return 1;
   }
   if (

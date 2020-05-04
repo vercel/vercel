@@ -2,9 +2,10 @@ import chalk from 'chalk';
 import logo from '../../util/output/logo';
 import code from '../../util/output/code';
 import note from '../../util/output/note';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 export const latestHelp = () => `
-  ${chalk.bold(`${logo} now`)} [options] <command | path>
+  ${chalk.bold(`${logo} ${getPkgName()}`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
 
@@ -71,7 +72,7 @@ export const latestHelp = () => `
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
-      'now help deploy-v1'
+      `${getPkgName()} help deploy-v1`
     )}`
   )}
 
@@ -79,21 +80,23 @@ export const latestHelp = () => `
 
   ${chalk.gray('–')} Deploy the current directory
 
-    ${chalk.cyan('$ now')}
+    ${chalk.cyan(`$ ${getPkgName()}`)}
 
   ${chalk.gray('–')} Deploy a custom path
 
-    ${chalk.cyan('$ now /usr/src/project')}
+    ${chalk.cyan(`$ ${getPkgName()} /usr/src/project`)}
 
   ${chalk.gray('–')} Deploy with Environment Variables
 
-    ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
+    ${chalk.cyan(
+      `$ ${getPkgName()} -e NODE_ENV=production -e SECRET=@mysql-secret`
+    )}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
   '`list`'
 )}
 
-    ${chalk.cyan('$ now help list')}
+    ${chalk.cyan(`$ ${getPkgName()} help list`)}
 
 `;
 

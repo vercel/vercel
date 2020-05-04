@@ -15,10 +15,11 @@ import exit from '../../util/exit';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now billing`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} billing`)} [options] <command>
 
   ${chalk.dim('Options:')}
 
@@ -46,7 +47,7 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new credit card (interactively)
 
-      ${chalk.cyan(`$ now billing add`)}
+      ${chalk.cyan(`$ ${getPkgName()} billing add`)}
   `);
 };
 

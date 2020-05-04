@@ -12,7 +12,7 @@ import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
-import { getPkgName } from '../../util/pkg-name';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 const validateSlugKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -153,7 +153,7 @@ export default async function({ apiUrl, token, teams, config }) {
     config,
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${cmd(
-      'now teams invite'
+      `${getPkgName()} teams invite`
     )}`,
   });
 
