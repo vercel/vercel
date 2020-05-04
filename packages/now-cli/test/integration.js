@@ -2500,7 +2500,7 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
   await fs.writeFile(
-    path.join(directory, 'now.json'),
+    path.join(directory, 'vercel.json'),
     JSON.stringify({
       name: projectName,
     })
@@ -2512,7 +2512,9 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   now.stderr.on('data', data => {
     if (
-      data.toString().includes('The `name` property in now.json is deprecated')
+      data
+        .toString()
+        .includes('The `name` property in vercel.json is deprecated')
     ) {
       isDeprecated = true;
     }
@@ -2554,7 +2556,7 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   t.is(isDeprecated, true);
 
   // clean up
-  await remove(path.join(directory, 'now.json'));
+  await remove(path.join(directory, 'vercel.json'));
 });
 
 test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async t => {
