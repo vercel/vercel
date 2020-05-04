@@ -2264,13 +2264,11 @@ test('change user', async t => {
   const { stdout: prevUser } = await execute(['whoami']);
 
   // Delete the current token
-  const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
+  await execute(['logout', '--debug'], { stdio: 'inherit' });
 
   await createUser();
 
-  const loginOutput = await execute(['login', email]);
-  t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
+  await execute(['login', email, '--debug'], { stdio: 'inherit' });
 
   const auth = await fs.readJSON(getConfigAuthPath());
 
