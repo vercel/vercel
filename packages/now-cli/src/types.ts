@@ -187,6 +187,9 @@ export type DNSRecord = {
   value: string;
   created: number;
   updated: number;
+  createdAt: number;
+  updatedAt: number;
+  domain: string;
 };
 
 type SRVRecordData = {
