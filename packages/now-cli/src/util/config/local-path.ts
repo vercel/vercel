@@ -23,7 +23,7 @@ export default function getLocalPathConfig(prefix: string) {
   ];
 
   return (
-    (customPath && path.resolve(customPath)) ||
+    (customPath && path.resolve(prefix, customPath)) ||
     possibleConfigFiles.find(configFile => existsSync(configFile)) ||
     possibleConfigFiles[0]
   );
