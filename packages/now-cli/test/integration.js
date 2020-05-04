@@ -5,6 +5,7 @@ import test from 'ava';
 import semVer from 'semver';
 import { homedir } from 'os';
 import _execa from 'execa';
+import XDGAppPaths from 'xdg-app-paths';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
@@ -108,6 +109,8 @@ let contextName;
 
 let tmpDir;
 
+let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
+
 if (!process.env.CI) {
   tmpDir = tmp.dirSync({
     // This ensures the directory gets
@@ -115,8 +118,13 @@ if (!process.env.CI) {
     unsafeCleanup: true,
   });
 
-  defaultArgs.push('-Q', path.join(tmpDir.name, '.vercel'));
-  console.log('Detected CI, adding defaultArgs', defaultArgs);
+  globalDir = path.join(tmpDir.name, 'com.vercel.tests');
+
+  defaultArgs.push('-Q', globalDir);
+  console.log(
+    'No CI detected, adding defaultArgs to avoid polluting user settings',
+    defaultArgs
+  );
 }
 
 const execute = (args, options) =>
@@ -188,8 +196,7 @@ const createUser = async () => {
   );
 };
 
-const getConfigPath = () =>
-  path.join(tmpDir ? tmpDir.name : homedir(), '.vercel');
+const getConfigPath = () => globalDir;
 const getConfigAuthPath = () => path.join(getConfigPath(), 'auth.json');
 
 test.before(async () => {
@@ -2627,7 +2634,6 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async t => {
 test('deploy shows notice when project in `.vercel` does not exists', async t => {
   const directory = fixture('static-deployment');
 
-
   // overwrite .vercel with unexisting project
   await ensureDir(path.join(directory, '.vercel'));
   await writeFile(
@@ -2731,7 +2737,6 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
 test('whoami with local .vercel scope', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
-
 
   // create local .vercel
   await ensureDir(path.join(directory, '.vercel'));
