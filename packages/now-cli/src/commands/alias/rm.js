@@ -11,7 +11,7 @@ import strlen from '../../util/strlen.ts';
 import promptBool from '../../util/prompt-bool';
 import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
-import { getPkgName } from '../util/pkg-name.ts';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 export default async function rm(ctx, opts, args, output) {
   const {
