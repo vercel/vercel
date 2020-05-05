@@ -13,6 +13,7 @@ import stamp from '../../util/output/stamp';
 import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import getCommandFlags from '../../util/get-command-flags';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -31,7 +32,7 @@ export default async function ls(
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${cmd(
-        `now env ls ${getEnvTargetPlaceholder()}`
+        `${getPkgName()} env ls ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
@@ -75,7 +76,7 @@ export default async function ls(
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${cmd(
-        `now env ls${flags} --next ${pagination.next}`
+        `${getPkgName()} env ls${flags} --next ${pagination.next}`
       )}`
     );
   }

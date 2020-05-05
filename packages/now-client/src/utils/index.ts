@@ -75,8 +75,8 @@ const maybeRead = async function<T>(path: string, default_: T) {
   }
 };
 
-export async function getNowIgnore(
-  path: string | string[]
+export async function getVercelIgnore(
+  cwd: string | string[]
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ignores: string[] = [
     '.hg/',
@@ -86,6 +86,7 @@ export async function getNowIgnore(
     '.cache',
     '.next/',
     '.now/',
+    '.vercel/',
     '.npmignore',
     '.dockerignore',
     '.gitignore',
@@ -104,19 +105,33 @@ export async function getNowIgnore(
     'CVS',
   ];
 
-  const nowIgnore = Array.isArray(path)
-    ? await maybeRead(
-        join(
-          path.find(fileName => fileName.includes('.nowignore'), '') || '',
-          '.nowignore'
-        ),
-        ''
-      )
-    : await maybeRead(join(path, '.nowignore'), '');
+  const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
-  const ig = ignore().add(`${ignores.join('\n')}\n${nowIgnore}`);
+  const files = await Promise.all(
+    cwds.map(async cwd => {
+      let str = await maybeRead(join(cwd, '.vercelignore'), '');
+      if (!str) {
+        str = await maybeRead(join(cwd, '.nowignore'), '');
+      }
+      return str;
+    })
+  );
+
+  const ignoreFile = files.join('\n');
+
+  const ig = ignore().add(
+    `${ignores.join('\n')}\n${clearRelative(ignoreFile)}`
+  );
 
   return { ig, ignores };
+}
+
+/**
+ * Remove leading `./` from the beginning of ignores
+ * because ignore doesn't like them :|
+ */
+function clearRelative(str: string) {
+  return str.replace(/(\n|^)\.\//g, '$1');
 }
 
 interface FetchOpts extends FetchOptions {

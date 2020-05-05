@@ -81,7 +81,7 @@ export interface AnalyzeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -108,7 +108,7 @@ export interface BuildOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 
@@ -148,7 +148,7 @@ export interface PrepareCacheOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -182,10 +182,30 @@ export interface ShouldServeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
+
+export interface StartDevServerSuccess {
+  /**
+   * Port number where the dev server can be connected to, assumed to be running
+   * on `localhost`.
+   */
+  port: number;
+
+  /**
+   * Process ID number of the dev server. Useful for the `now dev` server to
+   * shut down the dev server once an HTTP request has been fulfilled.
+   */
+  pid: number;
+}
+
+/**
+ * `startDevServer()` may return `null` to opt-out of spawning a dev server for
+ * a given `entrypoint`.
+ */
+export type StartDevServerResult = StartDevServerSuccess | null;
 
 /**
  * Credit to Iain Reid, MIT license.

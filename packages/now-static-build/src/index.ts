@@ -30,7 +30,7 @@ import {
   NowBuildError,
 } from '@now/build-utils';
 import { Route, Source } from '@now/routing-utils';
-import { getNowIgnore } from 'now-client';
+import { getVercelIgnore } from 'now-client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -481,7 +481,7 @@ export async function build({
 
       let ignore: string[] = [];
       if (config.zeroConfig) {
-        const result = await getNowIgnore(distPath);
+        const result = await getVercelIgnore(distPath);
         ignore = result.ignores
           .map(file => (file.endsWith('/') ? `${file}**` : file))
           .concat([

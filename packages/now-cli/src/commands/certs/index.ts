@@ -13,13 +13,14 @@ import issue from './issue';
 import ls from './ls';
 import rm from './rm';
 import { NowContext } from '../../types';
+import { getPkgName } from '../../util/pkg-name';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now certs`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} certs`)} [options] <command>
 
   ${chalk.yellow('NOTE:')} This command is intended for advanced use only.
-  By default, Now manages your certificates automatically.
+  By default, Vercel manages your certificates automatically.
 
   ${chalk.dim('Commands:')}
 
@@ -32,10 +33,10 @@ const help = () => {
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -57,17 +58,17 @@ const help = () => {
     '–'
   )} Generate a certificate with the cnames "acme.com" and "www.acme.com"
 
-      ${chalk.cyan('$ now certs issue acme.com www.acme.com')}
+      ${chalk.cyan(`$ ${getPkgName()} certs issue acme.com www.acme.com`)}
 
   ${chalk.gray('–')} Remove a certificate
 
-      ${chalk.cyan('$ now certs rm id')}
+      ${chalk.cyan(`$ ${getPkgName()} certs rm id`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-      ${chalk.cyan(`$ now certs ls --next 1584722256178`)}
+      ${chalk.cyan(`$ ${getPkgName()} certs ls --next 1584722256178`)}
   `);
 };
 

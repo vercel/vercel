@@ -8,14 +8,15 @@ import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import error from '../../util/output/error';
 import init from './init';
+import { getPkgName } from '../../util/pkg-name';
 
 const COMMAND_CONFIG = {
-  init: ['init']
+  init: ['init'],
 };
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now init`)} [example] [dir] [-f | --force]
+  ${chalk.bold(`${logo} ${getPkgName()} init`)} [example] [dir] [-f | --force]
 
   ${chalk.dim('Options:')}
 
@@ -27,19 +28,19 @@ const help = () => {
 
   ${chalk.gray('–')}  Choose from all available examples
 
-      ${chalk.cyan(`$ now init`)}
+      ${chalk.cyan(`$ ${getPkgName()} init`)}
 
   ${chalk.gray('–')}  Initialize example project into a new directory
 
-      ${chalk.cyan(`$ now init <example>`)}
+      ${chalk.cyan(`$ ${getPkgName()} init <example>`)}
 
   ${chalk.gray('–')}  Initialize example project into specified directory
 
-      ${chalk.cyan(`$ now init <example> <dir>`)}
+      ${chalk.cyan(`$ ${getPkgName()} init <example> <dir>`)}
 
   ${chalk.gray('–')}  Initialize example project without checking
 
-      ${chalk.cyan(`$ now init <example> --force`)}
+      ${chalk.cyan(`$ ${getPkgName()} init <example> --force`)}
   `);
 };
 
@@ -51,7 +52,7 @@ export default async function main(ctx: NowContext) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--force': Boolean,
-      '-f': Boolean
+      '-f': Boolean,
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
     output = createOutput({ debug: argv['--debug'] });

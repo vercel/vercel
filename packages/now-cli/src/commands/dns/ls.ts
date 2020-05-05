@@ -12,6 +12,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
+import { getPkgName } from '../../util/pkg-name';
 
 type DNSRecords = ThenArg<ReturnType<typeof getDNSRecords>>;
 
@@ -53,7 +54,7 @@ export default async function ls(
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now dns ls [domain]`'
+        `${getPkgName()} dns ls [domain]`
       )}`
     );
     return 1;
@@ -94,7 +95,9 @@ export default async function ls(
       const flags = getCommandFlags(opts, ['_', '--next']);
       output.log(
         `To display the next page run ${cmd(
-          `now dns ls ${domainName}${flags} --next ${pagination.next}`
+          `${getPkgName()} dns ls ${domainName}${flags} --next ${
+            pagination.next
+          }`
         )}`
       );
     }
