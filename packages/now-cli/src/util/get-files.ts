@@ -3,7 +3,7 @@ import ignore from 'ignore';
 import dockerignore from '@zeit/dockerignore';
 import _glob, { IOptions } from 'glob';
 import fs from 'fs-extra';
-import { getVercelIgnore } from 'now-client';
+import { getVercelIgnore } from '@vercel/client';
 import IGNORED from './ignored';
 import uniqueStrings from './unique-strings';
 import getLocalConfigPath from './config/local-path';

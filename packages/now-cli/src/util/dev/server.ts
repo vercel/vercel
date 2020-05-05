@@ -12,18 +12,18 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import {
-  getTransformedRoutes,
-  appendRoutesToPhase,
-  HandleValue,
-} from '@vercel/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import which from 'which';
-import { getVercelIgnore } from 'now-client';
 
+import { getVercelIgnore } from '@vercel/client';
+import {
+  getTransformedRoutes,
+  appendRoutesToPhase,
+  HandleValue,
+} from '@vercel/routing-utils';
 import {
   Builder,
   FileFsRef,
