@@ -12,7 +12,7 @@ const parsed = npa(process.argv[2]);
 // Find the correct directory for this package
 const packagesDir = join(__dirname, '..', 'packages');
 const packageDir = fs.readdirSync(packagesDir).find(p => {
-  if (p === '.DS_Store') return false;
+  if (p.startsWith('.')) return false;
   try {
     const pkg = JSON.parse(
       fs.readFileSync(join(packagesDir, p, 'package.json'), 'utf8')
