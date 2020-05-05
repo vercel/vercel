@@ -35,10 +35,11 @@ import {
 } from '../util/errors-ts';
 import { InvalidAllForScale, InvalidRegionOrDCForScale } from '../util/errors';
 import handleCertError from '../util/certs/handle-cert-error';
+import { getPkgName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now scale`)} <url> <dc> [min] [max]
+  ${chalk.bold(`${logo} ${getPkgName()} scale`)} <url> <dc> [min] [max]
 
   ${chalk.dim('Options:')}
 
@@ -63,25 +64,25 @@ const help = () => {
     '–'
   )} Enable your deployment in all datacenters (min: 0, max: auto)
 
-    ${chalk.cyan('$ now scale my-deployment-123.now.sh all')}
+    ${chalk.cyan(`$ ${getPkgName()} scale my-deployment-123.now.sh all`)}
 
   ${chalk.gray(
     '-'
   )} Enable your deployment in the SFO datacenter (min: 0, max: auto)
 
-    ${chalk.cyan('$ now scale my-deployment-123.now.sh sfo')}
+    ${chalk.cyan(`$ ${getPkgName()} scale my-deployment-123.now.sh sfo`)}
 
   ${chalk.gray(
     '–'
   )} Scale a deployment in all datacenters to 3 instances at all times (no sleep)
 
-    ${chalk.cyan('$ now scale my-deployment-123.now.sh all 3')}
+    ${chalk.cyan(`$ ${getPkgName()} scale my-deployment-123.now.sh all 3`)}
 
   ${chalk.gray(
     '–'
   )} Enable your deployment in all datacenters, with auto-scaling
 
-    ${chalk.cyan('$ now scale my-deployment-123.now.sh all auto')}
+    ${chalk.cyan(`$ ${getPkgName()} scale my-deployment-123.now.sh all auto`)}
   `);
 };
 
@@ -133,9 +134,9 @@ export default async function main(ctx) {
   // Fail if the user is providing an old command
   if (argv._[1] === 'ls') {
     output.error(
-      `${cmd('now scale ls')} has been deprecated. Use ${cmd(
+      `${cmd(`${getPkgName()} scale ls`)} has been deprecated. Use ${cmd(
         'now ls'
-      )} and ${cmd('now inspect <url>')}`
+      )} and ${cmd(`${getPkgName()} inspect <url>`)}`
     );
     now.close();
     return 1;
@@ -145,7 +146,7 @@ export default async function main(ctx) {
   if (argv._.length < 3 || argv._.length > 5) {
     output.error(
       `${cmd(
-        'now scale <url> <dc> [min] [max]'
+        `${getPkgName()} scale <url> <dc> [min] [max]`
       )} expects at least two arguments`
     );
     help();

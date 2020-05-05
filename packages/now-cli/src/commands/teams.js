@@ -9,10 +9,11 @@ import list from './teams/list';
 import add from './teams/add';
 import change from './teams/switch';
 import invite from './teams/invite';
+import { getPkgName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now teams`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} teams`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -36,7 +37,7 @@ const help = () => {
 
   ${chalk.gray('–')} Switch to a team
 
-      ${chalk.cyan(`$ now switch <slug>`)}
+      ${chalk.cyan(`$ ${getPkgName()} switch <slug>`)}
 
       ${chalk.gray(
         '–'
@@ -49,7 +50,7 @@ const help = () => {
 
   ${chalk.gray('–')} Invite new members (interactively)
 
-      ${chalk.cyan(`$ now teams invite`)}
+      ${chalk.cyan(`$ ${getPkgName()} teams invite`)}
   `);
 };
 

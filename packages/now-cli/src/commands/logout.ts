@@ -12,10 +12,11 @@ import {
 import getArgs from '../util/get-args';
 import { NowContext } from '../types';
 import createOutput, { Output } from '../util/output';
+import { getPkgName } from '../util/pkg-name';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now logout`)}
+  ${chalk.bold(`${logo} ${getPkgName()} logout`)}
 
   ${chalk.dim('Options:')}
 
@@ -31,7 +32,7 @@ const help = () => {
 
   ${chalk.gray('–')} Logout from the CLI:
 
-    ${chalk.cyan('$ now logout')}
+    ${chalk.cyan(`$ ${getPkgName()} logout`)}
 `);
 };
 

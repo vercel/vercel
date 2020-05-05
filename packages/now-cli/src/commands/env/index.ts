@@ -10,7 +10,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getPkgName } from '../../util/pkg-name';
 
 import add from './add';
 import pull from './pull';
@@ -20,7 +20,7 @@ import rm from './rm';
 const help = () => {
   const placeholder = getEnvTargetPlaceholder();
   console.log(`
-  ${chalk.bold(`${logo} now env`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} env`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -48,35 +48,37 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new variable to multiple Environments
 
-      ${chalk.cyan('$ now env add <name>')}
-      ${chalk.cyan('$ now env add API_TOKEN')}
+      ${chalk.cyan(`$ ${getPkgName()} env add <name>`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add API_TOKEN`)}
 
   ${chalk.gray('–')} Add a new variable for a specific Environment
 
-      ${chalk.cyan(`$ now env add <name> ${placeholder}`)}
-      ${chalk.cyan('$ now env add DB_CONNECTION production')}
+      ${chalk.cyan(`$ ${getPkgName()} env add <name> ${placeholder}`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add DB_CONNECTION production`)}
 
   ${chalk.gray('–')} Add a new Environment Variable from stdin
 
-      ${chalk.cyan(`$ cat <file> | now env add <name> ${placeholder}`)}
-      ${chalk.cyan('$ cat ~/.npmrc | now env add NPM_RC preview')}
-      ${chalk.cyan('$ now env add DB_PASS production < secret.txt')}
+      ${chalk.cyan(
+        `$ cat <file> | ${getPkgName()} env add <name> ${placeholder}`
+      )}
+      ${chalk.cyan(`$ cat ~/.npmrc | ${getPkgName()} env add NPM_RC preview`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add DB_PASS production < secret.txt`)}
 
   ${chalk.gray('–')} Remove an variable from multiple Environments
 
-      ${chalk.cyan('$ now env rm <name>')}
-      ${chalk.cyan('$ now env rm API_TOKEN')}
+      ${chalk.cyan(`$ ${getPkgName()} env rm <name>`)}
+      ${chalk.cyan(`$ ${getPkgName()} env rm API_TOKEN`)}
 
   ${chalk.gray('–')} Remove a variable from a specific Environment
 
-      ${chalk.cyan(`$ now env rm <name> ${placeholder}`)}
-      ${chalk.cyan('$ now env rm NPM_RC preview')}
+      ${chalk.cyan(`$ ${getPkgName()} env rm <name> ${placeholder}`)}
+      ${chalk.cyan(`$ ${getPkgName()} env rm NPM_RC preview`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-      ${chalk.cyan(`$ now env ls --next 1584722256178`)}
+      ${chalk.cyan(`$ ${getPkgName()} env ls --next 1584722256178`)}
 `);
 };
 

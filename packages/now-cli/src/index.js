@@ -48,6 +48,7 @@ import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
+import { getPkgName } from './util/pkg-name.ts';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -62,7 +63,7 @@ sourceMap.install();
 // Configure the error reporting system
 Sentry.init({
   dsn: SENTRY_DSN,
-  release: `now-cli@${pkg.version}`,
+  release: `vercel-cli@${pkg.version}`,
   environment: pkg.version.includes('canary') ? 'canary' : 'stable',
 });
 
@@ -121,8 +122,8 @@ const main = async argv_ => {
   }
 
   // the second argument to the command can be a path
-  // (as in: `now path/`) or a subcommand / provider
-  // (as in: `now ls`)
+  // (as in: `vercel path/`) or a subcommand / provider
+  // (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
   let update = null;
@@ -148,9 +149,9 @@ const main = async argv_ => {
     console.log(
       info(
         `${chalk.bgRed('UPDATE AVAILABLE')} ` +
-          `Run ${cmd(await getUpdateCommand())} to install Now CLI ${
-            update.latest
-          }`
+          `Run ${cmd(
+            await getUpdateCommand()
+          )} to install ${getPkgName()} CLI ${update.latest}`
       )
     );
 
@@ -163,7 +164,7 @@ const main = async argv_ => {
 
   output.print(
     `${chalk.grey(
-      `Now CLI ${pkg.version}${
+      `${getPkgName()} CLI ${pkg.version}${
         targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
       }${
         pkg.version.includes('canary') || targetOrSubcommand === 'dev'
@@ -189,7 +190,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          'now global directory: '}${err.message}`
+          'global directory: '}${err.message}`
       )
     );
 
@@ -203,7 +204,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to create the ' +
-            `now global directory "${hp(VERCEL_DIR)}" `}${err.message}`
+            `global directory "${hp(VERCEL_DIR)}" `}${err.message}`
         )
       );
     }
@@ -218,7 +219,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now config file "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+          `config file "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -234,14 +235,14 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now config in "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+            `config in "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
       return 1;
     }
 
-    // This is from when Now CLI supported
+    // This is from when Vercel CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
     if (
@@ -266,7 +267,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+            `default config to "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -282,7 +283,7 @@ const main = async argv_ => {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
+          `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -300,16 +301,14 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${
-            err.message
-          }`
+            `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
       return 1;
     }
 
-    // This is from when Now CLI supported
+    // This is from when Vercel CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
     if (authConfig.credentials) {
@@ -323,7 +322,7 @@ const main = async argv_ => {
       console.error(
         error(
           `The content of "${hp(VERCEL_AUTH_CONFIG_PATH)}" is invalid. ` +
-            'No `token` property found inside. Run `now login` to authorize.'
+            `No \`token\` property found inside. Run \`${getPkgName()} login\` to authorize.`
         )
       );
       return 1;
@@ -340,7 +339,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${
+            `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${
             err.message
           }`
         )
@@ -465,7 +464,7 @@ const main = async argv_ => {
         error({
           message:
             'No existing credentials found. Please run ' +
-            `${param('now login')} or pass ${param('--token')}`,
+            `${param(`${getPkgName()} login`)} or pass ${param('--token')}`,
           slug: 'no-credentials-found',
         })
       );

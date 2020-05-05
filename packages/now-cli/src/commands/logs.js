@@ -8,10 +8,11 @@ import { maybeURL, normalizeURL } from '../util/url';
 import printEvents from '../util/events';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
+import { getPkgName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now logs`)} <url|deploymentId>
+  ${chalk.bold(`${logo} ${getPkgName()} logs`)} <url|deploymentId>
 
   ${chalk.dim('Options:')}
 
@@ -49,7 +50,7 @@ const help = () => {
     '`deploymentId`'
   )}
 
-    ${chalk.cyan('$ now logs deploymentId')}
+    ${chalk.cyan(`$ ${getPkgName()} logs deploymentId`)}
 `);
 };
 

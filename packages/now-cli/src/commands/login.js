@@ -23,13 +23,13 @@ import exit from '../util/exit';
 import createOutput from '../util/output';
 import executeLogin from '../util/login/login.ts';
 import { prependEmoji, emoji } from '../util/emoji';
-import { getCommandName } from '../util/pkg-name.ts';
+import { getCommandName, getPkgName } from '../util/pkg-name.ts';
 
-const debug = debugFactory('now:sh:login');
+const debug = debugFactory(`${getPkgName()}:login`);
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now login`)} <email>
+  ${chalk.bold(`${logo} ${getPkgName()} login`)} <email>
 
   ${chalk.dim('Options:')}
 
@@ -43,13 +43,13 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Log into the Now platform
+  ${chalk.gray('–')} Log into the Vercel platform
 
-    ${chalk.cyan('$ now login')}
+    ${chalk.cyan(`$ ${getPkgName()} login`)}
 
   ${chalk.gray('–')} Log in using a specific email address
 
-    ${chalk.cyan('$ now login john@doe.com')}
+    ${chalk.cyan(`$ ${getPkgName()} login john@doe.com`)}
 `);
 };
 
@@ -116,7 +116,7 @@ const readEmail = async () => {
       throw new Error(
         error(
           `Interactive mode not supported – please run ${cmd(
-            'now login you@domain.com'
+            `${getPkgName()} login you@domain.com`
           )}`
         )
       );

@@ -5,10 +5,11 @@ import { handleError } from '../util/error';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import createOutput from '../util/output';
+import { getPkgName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now whoami`)}
+  ${chalk.bold(`${logo} ${getPkgName()} whoami`)}
 
   ${chalk.dim('Options:')}
 
@@ -28,7 +29,7 @@ const help = () => {
 
   ${chalk.gray('–')} Shows the username of the currently logged in user
 
-    ${chalk.cyan('$ now whoami')}
+    ${chalk.cyan(`$ ${getPkgName()} whoami`)}
 `);
 };
 
