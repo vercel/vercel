@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "builds": [{ "src": "api/**/*.js", "use": "@now/node" }],
+  "probes": [
+    { "path": "/offset.js", "mustContain": "RANDOMNESS_PLACEHOLDER:offset:0" }
+  ]
+}
