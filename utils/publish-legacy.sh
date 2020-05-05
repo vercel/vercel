@@ -19,5 +19,6 @@ for tag in $tags; do
     npm_tag="--tag canary"
   fi
 
+  echo "Running \`npm publish $npm_tag\` in \"$(pwd)\""
   npm publish $npm_tag
 done
