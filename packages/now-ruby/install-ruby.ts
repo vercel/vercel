@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { intersects } from 'semver';
 import execa from 'execa';
-import { debug, Meta, NowBuildError, NodeVersion } from '@now/build-utils';
+import { debug, Meta, NowBuildError, NodeVersion } from '@vercel/build-utils';
 
 interface RubyVersion extends NodeVersion {
   minor: number;

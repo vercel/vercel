@@ -28,9 +28,9 @@ import {
   PackageJson,
   PrepareCacheOptions,
   NowBuildError,
-} from '@now/build-utils';
-import { Route, Source } from '@now/routing-utils';
-import { getVercelIgnore } from 'now-client';
+} from '@vercel/build-utils';
+import { Route, Source } from '@vercel/routing-utils';
+import { getVercelIgnore } from '@vercel/client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 

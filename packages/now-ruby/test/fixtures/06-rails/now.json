@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "app/config.ru",
-      "use": "@now/ruby"
+      "use": "@vercel/ruby"
     }
   ],
   "routes": [{ "src": "/", "dest": "app/config.ru" }],

@@ -27,7 +27,7 @@ import {
   Config,
   debug,
   isSymbolicLink,
-} from '@now/build-utils';
+} from '@vercel/build-utils';
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
 import { makeNowLauncher, makeAwsLauncher } from './launcher';

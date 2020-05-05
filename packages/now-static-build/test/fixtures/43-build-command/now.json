@@ -2,7 +2,7 @@
   "builds": [
     {
       "src": "build.js",
-      "use": "@now/static-build",
+      "use": "@vercel/static-build",
       "config": {
         "zeroConfig": true,
         "buildCommand": "node build.js"

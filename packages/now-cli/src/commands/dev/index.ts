@@ -1,6 +1,6 @@
 import path from 'path';
 import chalk from 'chalk';
-import { PackageJson } from '@now/build-utils';
+import { PackageJson } from '@vercel/build-utils';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';

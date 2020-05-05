@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "./website/package.json",
-      "use": "@now/static-build",
+      "use": "@vercel/static-build",
       "config": { "zeroConfig": true }
     }
   ],

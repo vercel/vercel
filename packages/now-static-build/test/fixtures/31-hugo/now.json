@@ -3,13 +3,16 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@now/static-build",
+      "use": "@vercel/static-build",
       "config": { "zeroConfig": true }
     }
   ],
   "probes": [
     { "path": "/", "mustContain": "My New Hugo Site" },
     { "path": "/", "mustContain": "read more" },
-    { "path": "/posts/my-first-post/", "mustContain": "This is my first hugo post" }
+    {
+      "path": "/posts/my-first-post/",
+      "mustContain": "This is my first hugo post"
+    }
   ]
 }
