@@ -17,7 +17,7 @@
     "prepublishOnly": "tsc",
     "build": "tsc",
     "watch": "tsc --watch",
-    "test-unit": "jest --env node --verbose --runInBand"
+    "test-unit": "jest --env node --verbose --runInBand --bail"
   },
   "dependencies": {
     "path-to-regexp": "6.1.0"

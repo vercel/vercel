@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --verbose --runInBand"
+    "test-integration-once": "jest --verbose --runInBand --bail"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",

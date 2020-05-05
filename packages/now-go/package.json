@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-integration-once": "jest --env node --verbose --runInBand",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail",
     "prepublish": "./build.sh",
     "now-postinstall": "node dist/install.js"
   },
