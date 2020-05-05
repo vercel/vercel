@@ -195,7 +195,8 @@ export async function detectBuilders(
       !fallbackEntrypoint &&
       buildCommand &&
       !fileName.includes('/') &&
-      fileName !== 'now.json'
+      fileName !== 'now.json' &&
+      fileName !== 'vercel.json'
     ) {
       fallbackEntrypoint = fileName;
     }

@@ -17,6 +17,7 @@ import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -33,7 +34,7 @@ export default async function rm(
   if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${cmd(
-        `now env rm <name> ${getEnvTargetPlaceholder()}`
+        `${getPkgName()} env rm <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;

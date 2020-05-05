@@ -47,6 +47,18 @@ export default async function getConfig(
     }
   }
 
+  // Then try with vercel.json in the same directory
+  const vercelFilePath = path.resolve(localPath, 'vercel.json');
+  const vercelConfig = await readJSONFile(vercelFilePath);
+  if (vercelConfig instanceof CantParseJSONFile) {
+    return vercelConfig;
+  }
+  if (vercelConfig !== null) {
+    output.debug(`Found config in file ${vercelFilePath}`);
+    config = vercelConfig;
+    return config;
+  }
+
   // Then try with now.json in the same directory
   const nowFilePath = path.resolve(localPath, 'now.json');
   const mainConfig = await readJSONFile(nowFilePath);
@@ -55,8 +67,7 @@ export default async function getConfig(
   }
   if (mainConfig !== null) {
     output.debug(`Found config in file ${nowFilePath}`);
-    const castedConfig = mainConfig;
-    config = castedConfig;
+    config = mainConfig;
     return config;
   }
 
@@ -68,8 +79,7 @@ export default async function getConfig(
   }
   if (pkgConfig) {
     output.debug(`Found config in package ${nowFilePath}`);
-    const castedConfig = pkgConfig;
-    config = castedConfig;
+    config = pkgConfig;
     return config;
   }
 

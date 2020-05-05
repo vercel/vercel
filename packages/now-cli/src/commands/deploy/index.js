@@ -112,7 +112,7 @@ export default async ctx => {
     }
   }
 
-  const file = highlight('now.json');
+  const file = highlight('vercel.json');
   const prop = code('version');
 
   if (localConfig) {

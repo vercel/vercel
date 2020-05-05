@@ -235,6 +235,21 @@ test('discover files for builds deployment', async t => {
   t.is(base(files[3]), `${path}/package.json`);
 });
 
+test('should observe .vercelignore file', async t => {
+  const path = 'vercelignore';
+  let files = await getStaticFiles(fixture(path), true);
+  files = files.sort(alpha);
+
+  t.is(files.length, 6);
+
+  t.is(base(files[0]), `${path}/.vercelignore`);
+  t.is(base(files[1]), `${path}/a.js`);
+  t.is(base(files[2]), `${path}/build/sub/a.js`);
+  t.is(base(files[3]), `${path}/build/sub/c.js`);
+  t.is(base(files[4]), `${path}/c.js`);
+  t.is(base(files[5]), `${path}/package.json`);
+});
+
 test('`now.files` overrides `.npmignore`', async t => {
   let files = await getNpmFiles(fixture('now-files-overrides-npmignore'));
   files = files.sort(alpha);

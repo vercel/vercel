@@ -15,6 +15,7 @@ import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
 import promptBool from '../../util/input/prompt-bool';
 import isRootDomain from '../../util/is-root-domain';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -50,14 +51,16 @@ export default async function transferIn(
 
   const [domainName] = args;
   if (!domainName) {
-    output.error(`Missing domain name. Run ${cmd('now domains --help')}`);
+    output.error(
+      `Missing domain name. Run ${cmd(`${getPkgName()} domains --help`)}`
+    );
     return 1;
   }
 
   if (!isRootDomain(domainName)) {
     output.error(
       `Invalid domain name ${param(domainName)}. Run ${cmd(
-        'now domains --help'
+        `${getPkgName()} domains --help`
       )}`
     );
     return 1;
@@ -128,7 +131,7 @@ export default async function transferIn(
   if (transferInResult instanceof ERRORS.SourceNotFound) {
     output.error(
       `Could not purchase domain. Please add a payment method using ${cmd(
-        'now billing add'
+        `${getPkgName()} billing add`
       )}.`
     );
     return 1;
@@ -157,6 +160,8 @@ export default async function transferIn(
     `  To transfer with previous DNS records, export the zone file from your previous registrar.\n`
   );
   output.print(`  Then import it to Vercel DNS by using:\n`);
-  output.print(`    ${cmd(`now dns import ${domainName} <zonefile>`)}\n\n`);
+  output.print(
+    `    ${cmd(`${getPkgName()} dns import ${domainName} <zonefile>`)}\n\n`
+  );
   return 0;
 }

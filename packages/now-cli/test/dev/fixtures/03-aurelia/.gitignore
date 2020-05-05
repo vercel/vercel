@@ -38,3 +38,4 @@ node_modules
 !yarn.lock
 
 .now
+.vercel
