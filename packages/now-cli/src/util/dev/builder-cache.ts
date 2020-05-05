@@ -31,15 +31,17 @@ declare const __non_webpack_require__: typeof require;
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
-const nowStaticBuilder: BuilderWithPackage = {
-  runInProcess: true,
-  builder: Object.freeze(staticBuilder),
-  package: Object.freeze({ name: '@now/static', version: '' }),
+const createStaticBuilder = (scope: string): BuilderWithPackage => {
+  return {
+    runInProcess: true,
+    builder: Object.freeze(staticBuilder),
+    package: Object.freeze({ name: `@${scope}/static`, version: '' }),
+  };
 };
 
 const localBuilders: { [key: string]: BuilderWithPackage } = {
-  '@now/static': nowStaticBuilder,
-  '@vercel/static': nowStaticBuilder,
+  '@now/static': createStaticBuilder('now'),
+  '@vercel/static': createStaticBuilder('vercel'),
 };
 
 const distTag = getDistTag(pkg.version);
