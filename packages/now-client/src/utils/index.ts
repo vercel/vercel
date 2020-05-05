@@ -86,6 +86,7 @@ export async function getVercelIgnore(
     '.cache',
     '.next/',
     '.now/',
+    '.vercel/',
     '.npmignore',
     '.dockerignore',
     '.gitignore',

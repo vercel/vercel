@@ -19,6 +19,7 @@ const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 export const VERCEL_DIR = '.vercel';
+export const VERCEL_DIR_FALLBACK = '.now';
 export const VERCEL_DIR_README = 'README.txt';
 export const VERCEL_DIR_PROJECT = 'project.json';
 
@@ -39,7 +40,7 @@ const linkSchema = {
 
 async function getLink(path?: string): Promise<ProjectLink | null> {
   const cwd = path || process.cwd();
-  const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, '.now')];
+  const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
 
   const dir = possibleDirs.find(d => isDirectory(d)) || possibleDirs[0];
   return getLinkFromDir(dir);
