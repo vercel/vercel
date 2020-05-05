@@ -1,7 +1,7 @@
 {
   "name": "@now/routing-utils",
-  "version": "1.8.2-canary.0",
-  "description": "ZEIT Now routing utilities",
+  "version": "1.8.2-canary.3",
+  "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [

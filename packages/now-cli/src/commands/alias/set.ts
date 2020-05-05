@@ -125,7 +125,7 @@ export default async function set(
   if (args.length === 0 && !rules) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
-        'https://zeit.co/docs/v2/custom-domains/'
+        'https://vercel.com/docs/v2/custom-domains'
       )}) and run ${cmd('now --prod')}.`
     );
     return 1;

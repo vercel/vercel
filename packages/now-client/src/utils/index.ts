@@ -93,8 +93,8 @@ export async function getNowIgnore(
     '.DS_Store',
     '.wafpicke-*',
     '.lock-wscript',
-    '.env',
-    '.env.*',
+    '.env.local',
+    '.env.*.local',
     '.venv',
     'npm-debug.log',
     'config.gypi',
@@ -138,7 +138,7 @@ export const fetch = async (
   const debug = createDebug(debugEnabled);
   let time: number;
 
-  url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
+  url = `${opts.apiUrl || 'https://api.vercel.com'}${url}`;
   delete opts.apiUrl;
 
   if (opts.teamId) {

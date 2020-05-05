@@ -34,7 +34,7 @@ function printInspectUrl(
   const deploymentShortId = q.pop();
   const projectName = q.join('-');
 
-  const inspectUrl = `https://zeit.co/${orgSlug}/${projectName}/${deploymentShortId}${
+  const inspectUrl = `https://vercel.com/${orgSlug}/${projectName}/${deploymentShortId}${
     apex !== 'now.sh' ? `/${apex}` : ''
   }`;
 
@@ -111,7 +111,7 @@ export default async function processDeployment({
 
   let deployingSpinner = output.spinner(
     isSettingUpProject
-      ? `Setting up project`
+      ? 'Setting up project'
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
     0
   );
@@ -142,6 +142,18 @@ export default async function processDeployment({
         .map((sha: string) => event.payload.total.get(sha).data.length)
         .reduce((a: number, b: number) => a + b, 0);
 
+      if (queuedSpinner) {
+        queuedSpinner();
+      }
+      if (buildSpinner) {
+        buildSpinner();
+      }
+      if (deploySpinner) {
+        deploySpinner();
+      }
+      if (deployingSpinner) {
+        deployingSpinner();
+      }
       bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
         width: 20,
         complete: '=',

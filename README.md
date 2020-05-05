@@ -5,11 +5,11 @@
 
 ## Usage
 
-Get started by [Importing a Git Project](https://zeit.co/import) and use `git push` to deploy. Alternatively, you can [install Now CLI](https://zeit.co/download).
+Get started by [Importing a Git Project](https://vercel.com/import) and use `git push` to deploy. Alternatively, you can [install Now CLI](https://vercel.com/download).
 
 ## Documentation
 
-For details on how to use ZEIT Now, check out our [documentation](https://zeit.co/docs).
+For details on how to use Vercel, check out our [documentation](https://vercel.com/docs).
 
 ## Caught a Bug?
 

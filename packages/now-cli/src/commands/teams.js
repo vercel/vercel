@@ -40,7 +40,7 @@ const help = () => {
 
       ${chalk.gray(
         '–'
-      )} If your team's url is 'zeit.co/teams/name', 'name' is the slug
+      )} If your team's url is 'vercel.com/teams/name', 'name' is the slug
       ${chalk.gray('–')} If the slug is omitted, you can choose interactively
 
       ${chalk.yellow(
@@ -64,8 +64,8 @@ const main = async ctx => {
     alias: {
       help: 'h',
       debug: 'd',
-      switch: 'change'
-    }
+      switch: 'change',
+    },
   });
 
   debug = argv.debug;
@@ -86,7 +86,10 @@ const main = async ctx => {
     await exit(0);
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
 
   return run({ token, config });
 };
@@ -113,7 +116,7 @@ async function run({ token, config }) {
         teams,
         config,
         apiUrl,
-        token
+        token,
       });
       break;
     }
@@ -124,7 +127,7 @@ async function run({ token, config }) {
         config,
         apiUrl,
         token,
-        debug
+        debug,
       });
       break;
     }
@@ -140,7 +143,7 @@ async function run({ token, config }) {
         args,
         config,
         apiUrl,
-        token
+        token,
       });
       break;
     }

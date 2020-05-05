@@ -10,8 +10,8 @@ export default function parseMeta(meta) {
   const parsed = {};
 
   meta.forEach(item => {
-    const [key, value] = item.split('=');
-    parsed[key] = value || '';
+    const [key, ...rest] = item.split('=');
+    parsed[key] = rest.join('=');
   });
 
   return parsed;

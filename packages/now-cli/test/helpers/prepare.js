@@ -232,7 +232,7 @@ module.exports = (req, res) => {
     },
     'failing-alias': {
       'now.json': JSON.stringify(
-        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'vercel.com' })
       ),
     },
     'local-config-cloud-v1': {
@@ -283,6 +283,9 @@ CMD ["node", "index.js"]`,
         },
         files: ['.gitignore', 'folder', 'index.js', 'test.html'],
       }),
+    },
+    'static-v2-meta': {
+      'index.html': 'Static V2',
     },
     'redirects-v2': {
       'now.json': JSON.stringify({

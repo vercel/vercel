@@ -3,7 +3,11 @@ import { devRouter } from '../src/util/dev/router';
 
 test('[dev-router] 301 redirection', async t => {
   const routesConfig = [
-    { src: '/redirect', status: 301, headers: { Location: 'https://zeit.co' } },
+    {
+      src: '/redirect',
+      status: 301,
+      headers: { Location: 'https://vercel.com' },
+    },
   ];
   const result = await devRouter('/redirect', 'GET', routesConfig);
 
@@ -12,7 +16,7 @@ test('[dev-router] 301 redirection', async t => {
     dest: '/redirect',
     continue: false,
     status: 301,
-    headers: { location: 'https://zeit.co' },
+    headers: { location: 'https://vercel.com' },
     uri_args: {},
     matched_route: routesConfig[0],
     matched_route_idx: 0,
@@ -85,13 +89,13 @@ test('[dev-router] optional named groups', async t => {
 });
 
 test('[dev-router] proxy_pass', async t => {
-  const routesConfig = [{ src: '/proxy', dest: 'https://zeit.co' }];
+  const routesConfig = [{ src: '/proxy', dest: 'https://vercel.com' }];
 
   const result = await devRouter('/proxy', 'GET', routesConfig);
 
   t.deepEqual(result, {
     found: true,
-    dest: 'https://zeit.co',
+    dest: 'https://vercel.com',
     continue: false,
     status: undefined,
     headers: {},

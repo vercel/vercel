@@ -82,12 +82,6 @@ async function main() {
   for (const pkgName of matches) {
     await runScript(pkgName, script);
   }
-
-  if (process.env.NOW_GITHUB_DEPLOYMENT) {
-    execSync(
-      `rm -rf public && mkdir public && echo '<a href="https://zeit.co/import">https://zeit.co/import</a>' > public/output.html`
-    );
-  }
 }
 
 function runScript(pkgName, script) {

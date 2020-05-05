@@ -71,6 +71,7 @@ export interface NowRewrite {
 export interface NowRedirect {
   source: string;
   destination: string;
+  permanent?: boolean;
   statusCode?: number;
 }
 

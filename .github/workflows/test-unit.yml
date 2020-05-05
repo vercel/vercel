@@ -25,9 +25,10 @@ jobs:
       - uses: actions/setup-node@v1
       - run: yarn install
       - run: yarn run build
-      - run: yarn run test-lint
+      - run: yarn run lint
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run lint once
       - run: yarn run test-unit --clean false
       - run: yarn workspace now run coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run once
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run coverage once
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

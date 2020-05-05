@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "gem-install-rmagick.sh", "use": "@now/static-build" },
+    { "src": "gem-install-ruby-vips.sh", "use": "@now/static-build" }
+  ],
+  "probes": [
+    { "path": "/rmagick.html", "mustContain": "RMagick 3.1.0" },
+    { "path": "/ruby-vips.html", "mustContain": "2.0.17" }
+  ]
+}

@@ -47,7 +47,7 @@ Unit tests are run locally with `jest` and execute quickly because they are test
 
 ### Integration tests
 
-Integration tests create deployments to your ZEIT account using the `test` project name. After each test is deployed, the `probes` key is used to check if the response is the expected value. If the value doesn't match, you'll see a message explaining the difference. If the deployment failed to build, you'll see a more generic message like the following:
+Integration tests create deployments to your Vercel account using the `test` project name. After each test is deployed, the `probes` key is used to check if the response is the expected value. If the value doesn't match, you'll see a message explaining the difference. If the deployment failed to build, you'll see a more generic message like the following:
 
 ```
 [Error: Fetched page https://test-8ashcdlew.now.sh/root.js does not contain hello Root!. Instead it contains An error occurred with this application.
@@ -102,4 +102,4 @@ You can add support for a new Framework by creating a Pull Request for this repo
 1. Add the Framework to the `@now/frameworks` package: The file is located in `packages/frameworks/frameworks.json`. You can copy the structure of an existing one and adjust the required fields. Note that the `settings` property either contains a `value` or a `placeholder`. The `value` property is used when something is not configurable, the `placeholder` is used when something is configurable and can be changed with configuration. An example would be the Output Directory for Hugo, it's `public` by default but can be changed through its config file, so we use `placeholder` with an explanation of what can be used.
 2. Add an example to the `examples/` directory: The name of the directory should equal the slug of the framework used in `@now/frameworks`. The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a `README.md` file for the example.
 3. Update the `@now/static-build` package: The file `packages/now-static-build/src/frameworks.ts` has to be extended. You can add default routes that will always be applied to projects that use this Framework or specify some paths that will be cached to speed up the build process.
-4. After your Pull Request has been merged and released, other users can select the example on the ZEIT Now dashboard and deploy it.
+4. After your Pull Request has been merged and released, other users can select the example on the Vercel dashboard and deploy it.

@@ -82,63 +82,6 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
   return { type: 'user', id: orgId, slug: user.username };
 }
 
-export async function getLinkedOrg(
-  client: Client,
-  output: Output,
-  path?: string
-): Promise<
-  | { status: 'linked'; org: Org }
-  | { status: 'not_linked'; org: null }
-  | { status: 'error'; exitCode: number }
-> {
-  const spinner = output.spinner('Retrieving scope…', 1000);
-  try {
-    const { NOW_ORG_ID } = process.env;
-
-    let orgId: string | null = null;
-    if (NOW_ORG_ID) {
-      orgId = NOW_ORG_ID;
-    } else {
-      const link = await getLink(path);
-
-      if (link) {
-        orgId = link.orgId;
-      }
-    }
-
-    if (!orgId) {
-      return { status: 'not_linked', org: null };
-    }
-
-    const org = await getOrgById(client, orgId);
-
-    if (!org && NOW_ORG_ID) {
-      output.error(`Organization not found (${JSON.stringify({ NOW_ORG_ID })}`);
-      return { status: 'error', exitCode: 1 };
-    }
-
-    if (!org) {
-      return { status: 'not_linked', org: null };
-    }
-
-    return { status: 'linked', org };
-  } catch (error) {
-    if (
-      error.status === 403 ||
-      error.code === 'NOT_AUTHORIZED' ||
-      error.code === 'TEAM_DELETED'
-    ) {
-      output.error(error.message);
-      return { status: 'error', exitCode: 1 };
-    }
-    throw error;
-  } finally {
-    if (spinner) {
-      spinner();
-    }
-  }
-}
-
 export async function getLinkedProject(
   output: Output,
   client: Client,
@@ -195,7 +138,7 @@ export async function getLinkedProject(
     } else {
       output.print(
         prependEmoji(
-          'Your project was either removed from ZEIT Now or you’re not a member of it anymore.\n',
+          'Your project was either removed from Vercel or you’re not a member of it anymore.\n',
           emoji('warning')
         )
       );

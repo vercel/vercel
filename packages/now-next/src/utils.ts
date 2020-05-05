@@ -11,6 +11,7 @@ import {
   FileFsRef,
   streamToBuffer,
   Lambda,
+  NowBuildError,
   isSymbolicLink,
 } from '@now/build-utils';
 import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
@@ -38,9 +39,11 @@ function validateEntrypoint(entrypoint: string) {
     !/package\.json$/.exec(entrypoint) &&
     !/next\.config\.js$/.exec(entrypoint)
   ) {
-    throw new Error(
-      'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"'
-    );
+    throw new NowBuildError({
+      message:
+        'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"',
+      code: 'NOW_NEXT_INCORRECT_SRC',
+    });
   }
 }
 
@@ -314,9 +317,16 @@ export type RoutesManifest = {
   dynamicRoutes: {
     page: string;
     regex: string;
+    namedRegex?: string;
+    routeKeys?: string[];
   }[];
   version: number;
-  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
+  dataRoutes?: Array<{
+    page: string;
+    routeKeys?: string[];
+    dataRouteRegex: string;
+    namedDataRouteRegex?: string;
+  }>;
 };
 
 export async function getRoutesManifest(
@@ -339,9 +349,11 @@ export async function getRoutesManifest(
     .catch(() => false);
 
   if (shouldHaveManifest && !hasRoutesManifest) {
-    throw new Error(
-      `A routes-manifest.json couldn't be found. This could be due to a failure during the build`
-    );
+    throw new NowBuildError({
+      message: `A "routes-manifest.json" couldn't be found. Is the correct output directory configured? This setting does not need to be changed in most cases`,
+      link: 'https://err.sh/zeit/now/now-next-routes-manifest',
+      code: 'NOW_NEXT_NO_ROUTES_MANIFEST',
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -370,20 +382,26 @@ export async function getDynamicRoutes(
           .filter(({ page }) =>
             omittedRoutes ? !omittedRoutes.has(page) : true
           )
-          .map(({ page, regex }: { page: string; regex: string }) => {
+          .map(({ page, regex, namedRegex, routeKeys }) => {
             return {
-              src: regex,
-              dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              src: namedRegex || regex,
+              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
+                routeKeys
+                  ? `?${routeKeys.map(key => `${key}=$${key}`).join('&')}`
+                  : ''
+              }`,
               check: true,
             };
           });
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION
-        throw new Error(
-          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-        );
+        throw new NowBuildError({
+          message:
+            'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+          code: 'NOW_NEXT_VERSION_UPGRADE',
+        });
       }
     }
   }
@@ -420,9 +438,11 @@ export async function getDynamicRoutes(
   }
 
   if (!getRouteRegex || !getSortedRoutes) {
-    throw new Error(
-      'Found usage of dynamic routes but not on a new enough version of Next.js.'
-    );
+    throw new NowBuildError({
+      message:
+        'Found usage of dynamic routes but not on a new enough version of Next.js.',
+      code: 'NOW_NEXT_DYNAMIC_ROUTES_OUTDATED',
+    });
   }
 
   const pageMatchers = getSortedRoutes(dynamicPages).map(pageName => ({

@@ -51,14 +51,22 @@ export function convertRedirects(
     const { src, segments } = sourceToRegex(r.source);
     try {
       const loc = replaceSegments(segments, r.destination, true);
+      let status: number;
+      if (typeof r.permanent === 'boolean') {
+        status = r.permanent ? 308 : 307;
+      } else if (r.statusCode) {
+        status = r.statusCode;
+      } else {
+        status = defaultStatus;
+      }
       const route: Route = {
         src,
         headers: { Location: loc },
-        status: r.statusCode || defaultStatus,
+        status,
       };
       return route;
     } catch (e) {
-      throw new Error('Failed to parse destination: ' + r.destination);
+      throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
     }
   });
 }
@@ -71,7 +79,7 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
       const route: Route = { src, dest, check: true };
       return route;
     } catch (e) {
-      throw new Error('Failed to parse destination: ' + r.destination);
+      throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
     }
   });
 }

@@ -8,4 +8,4 @@ The `--token` flag was specified, but its contents are invalid.
 
 The `--token` flag must only contain numbers (0-9) and letters from the alphabet (a-z and A-Z). This needs to be the token of the user account as which you'd like to act.
 
-You can either get the token from the `./now/auth.json` file located in your user directory or [from the dashboard](https://zeit.co/account/tokens).
+You can either get the token from the `./now/auth.json` file located in your user directory or [from the dashboard](https://vercel.com/account/tokens).

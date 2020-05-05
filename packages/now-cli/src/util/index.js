@@ -223,7 +223,7 @@ export default class Now extends EventEmitter {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
         log(
           `Please upgrade your plan here: ${chalk.cyan(
-            'https://zeit.co/account/plan'
+            'https://vercel.com/account/plan'
           )}`
         );
       }
@@ -340,9 +340,15 @@ export default class Now extends EventEmitter {
     return new Error(error.message);
   }
 
-  async listSecrets() {
-    const { secrets } = await this.retry(async bail => {
-      const res = await this._fetch('/now/secrets');
+  async listSecrets(next) {
+    const payload = await this.retry(async bail => {
+      let secretsUrl = '/v3/now/secrets?limit=20';
+
+      if (next) {
+        secretsUrl += `&until=${next}`;
+      }
+
+      const res = await this._fetch(secretsUrl);
 
       if (res.status === 200) {
         // What we want
@@ -356,7 +362,7 @@ export default class Now extends EventEmitter {
       throw await responseError(res, 'Failed to list secrets');
     });
 
-    return secrets;
+    return payload;
   }
 
   async list(app, { version = 4, meta = {}, nextTimestamp } = {}) {

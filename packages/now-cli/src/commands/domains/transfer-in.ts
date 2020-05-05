@@ -151,12 +151,12 @@ export default async function transferIn(
   output.warn(
     `Once transferred, your domain ${param(
       domainName
-    )} will be using ZEIT DNS.\n`
+    )} will be using Vercel DNS.\n`
   );
   output.print(
     `  To transfer with previous DNS records, export the zone file from your previous registrar.\n`
   );
-  output.print(`  Then import it to ZEIT DNS by using:\n`);
+  output.print(`  Then import it to Vercel DNS by using:\n`);
   output.print(`    ${cmd(`now dns import ${domainName} <zonefile>`)}\n\n`);
   return 0;
 }

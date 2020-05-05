@@ -123,7 +123,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
   if (!analyzed) {
     const err = new Error(
       `Could not find an exported function in "${entrypoint}"
-Learn more: https://zeit.co/docs/v2/advanced/builders/#go
+Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
       `
     );
     console.log(err.message);

@@ -50,7 +50,7 @@ export interface Config {
 export interface Meta {
   isDev?: boolean;
   skipDownload?: boolean;
-  requestPath?: string | null;
+  requestPath?: string;
   filesChanged?: string[];
   filesRemoved?: string[];
   env?: Env;
@@ -187,42 +187,6 @@ export interface ShouldServeOptions {
   config: Config;
 }
 
-export interface StartDevServerOptions {
-  /**
-   * Name of entrypoint file for this particular build job. Value
-   * `files[entrypoint]` is guaranteed to exist and be a valid File reference.
-   * `entrypoint` is always a discrete file and never a glob, since globs are
-   * expanded into separate builds at deployment time.
-   */
-  entrypoint: string;
-
-  /**
-   * A writable temporary directory where you are encouraged to perform your
-   * build process. This directory will be populated with the restored cache.
-   */
-  workPath: string;
-}
-
-export interface StartDevServerSuccess {
-  /**
-   * Port number where the dev server can be connected to, assumed to be running
-   * on `localhost`.
-   */
-  port: number;
-
-  /**
-   * Process ID number of the dev server. Useful for the `now dev` server to
-   * shut down the dev server once an HTTP request has been fulfilled.
-   */
-  pid: number;
-}
-
-/**
- * `startDevServer()` may return `null` to opt-out of spawning a dev server for
- * a given `entrypoint`.
- */
-export type StartDevServerResult = StartDevServerSuccess | null;
-
 /**
  * Credit to Iain Reid, MIT license.
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
@@ -350,25 +314,4 @@ export interface BuilderFunctions {
     includeFiles?: string;
     excludeFiles?: string;
   };
-}
-
-export interface NowRewrite {
-  source: string;
-  destination: string;
-}
-
-export interface NowRedirect {
-  source: string;
-  destination: string;
-  statusCode?: number;
-}
-
-export interface NowHeader {
-  source: string;
-  headers: NowHeaderKeyValue[];
-}
-
-export interface NowHeaderKeyValue {
-  key: string;
-  value: string;
 }

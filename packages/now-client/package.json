@@ -1,9 +1,9 @@
 {
   "name": "now-client",
-  "version": "7.1.0",
+  "version": "7.1.1-canary.2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
-  "homepage": "https://zeit.co",
+  "homepage": "https://vercel.com",
   "license": "MIT",
   "files": [
     "dist"
@@ -15,8 +15,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --verbose --runInBand",
-    "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
+    "test-integration-once": "jest --verbose --runInBand"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",

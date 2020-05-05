@@ -3,7 +3,7 @@
 
 ## Usages
 
-To install the latest version of Now CLI, visit [zeit.co/download](https://zeit.co/download) or run this command:
+To install the latest version of Now CLI, visit [vercel.com/download](https://vercel.com/download) or run this command:
 
 ```sh
 npm i -g now
@@ -19,4 +19,4 @@ now             # Deploy to the cloud
 
 ## Documentation
 
-For details on how to use Now CLI, check out our [documentation](https://zeit.co/docs).
+For details on how to use Now CLI, check out our [documentation](https://vercel.com/docs).

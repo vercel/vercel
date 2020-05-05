@@ -27,7 +27,11 @@ export default async function getDNSRecords(
 
 function createGetDomainRecords(output: Output, client: Client) {
   return async (domainName: string) => {
-    return getDomainDNSRecords(output, client, domainName);
+    const data = await getDomainDNSRecords(output, client, domainName);
+    if (data instanceof DomainNotFound) {
+      return [];
+    }
+    return data.records;
   };
 }
 

@@ -48,7 +48,6 @@ import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getLinkedOrg } from './util/projects/link';
 
 const NOW_DIR = getNowDir();
 const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -68,7 +67,7 @@ Sentry.init({
 });
 
 let debug = () => {};
-let apiUrl = 'https://api.zeit.co';
+let apiUrl = 'https://api.vercel.com';
 
 const main = async argv_ => {
   const { isTTY } = process.stdout;
@@ -168,7 +167,7 @@ const main = async argv_ => {
         targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
       }${
         pkg.version.includes('canary') || targetOrSubcommand === 'dev'
-          ? ' — https://zeit.co/feedback'
+          ? ' — https://vercel.com/feedback'
           : ''
       }`
     )}\n`
@@ -177,7 +176,7 @@ const main = async argv_ => {
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
-      console.log(require('../package').version);
+      console.log(pkg.version);
       return 0;
     }
   }
@@ -542,22 +541,6 @@ const main = async argv_ => {
   const targetCommand = commands.get(subcommand);
 
   if (
-    !['login', 'logout'].includes(targetCommand) &&
-    (process.env.NOW_ORG_ID || !scope)
-  ) {
-    const client = new Client({ apiUrl, token });
-    const link = await getLinkedOrg(client, output);
-
-    if (link.status === 'error') {
-      return link.exitCode;
-    }
-
-    if (link.status === 'linked') {
-      scope = link.org.slug;
-    }
-  }
-
-  if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'dev' &&
@@ -651,10 +634,10 @@ const main = async argv_ => {
         .send();
     }
   } catch (err) {
-    if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
+    if (err.code === 'ENOTFOUND' && err.hostname === 'api.vercel.com') {
       output.error(
         `The hostname ${highlight(
-          'api.zeit.co'
+          'api.vercel.com'
         )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
       );
       output.debug(err.stack);

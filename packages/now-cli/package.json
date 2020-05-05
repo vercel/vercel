@@ -1,10 +1,10 @@
 {
   "name": "now",
-  "version": "18.0.1-canary.4",
+  "version": "18.0.1-canary.17",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
-  "homepage": "https://zeit.co",
+  "homepage": "https://vercel.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeit/now.git",
@@ -19,8 +19,7 @@
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "build": "ts-node ./scripts/build.ts",
-    "build-dev": "ts-node ./scripts/build.ts --dev",
-    "test-lint": "eslint . --ext .ts,.js --ignore-path ../../.eslintignore"
+    "build-dev": "ts-node ./scripts/build.ts --dev"
   },
   "nyc": {
     "include": [
@@ -64,7 +63,6 @@
   "devDependencies": {
     "@sentry/node": "5.5.0",
     "@sindresorhus/slugify": "0.11.0",
-    "@tootallnate/once": "1.0.0",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",
     "@types/async-retry": "1.2.1",
@@ -108,7 +106,7 @@
     "ava": "2.2.0",
     "bytes": "3.0.0",
     "chalk": "2.4.2",
-    "chokidar": "2.1.6",
+    "chokidar": "3.3.1",
     "clipboardy": "2.1.0",
     "codecov": "3.6.5",
     "cpy": "7.2.0",

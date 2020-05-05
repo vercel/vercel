@@ -1,8 +1,4 @@
-const {
-  getLatestNodeVersion,
-  glob,
-  getWriteableDirectory,
-} = require('@now/build-utils');
+const { glob, getWriteableDirectory } = require('@now/build-utils');
 
 function runAnalyze(wrapper, context) {
   if (wrapper.analyze) {

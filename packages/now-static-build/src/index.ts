@@ -56,7 +56,7 @@ function validateDistDir(distDir: string) {
   const isEmpty = () => readdirSync(distDir).length === 0;
 
   const link =
-    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
+    'https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
   if (!exists()) {
     throw new NowBuildError({
@@ -231,7 +231,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
     throw new NowBuildError({
       code: 'NOW_STATIC_BUILD_BINARY_NOT_FOUND',
       message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
-      link: 'https://zeit.co/docs/v2/build-step#framework-versioning',
+      link: 'https://vercel.com/docs/v2/build-step#framework-versioning',
     });
   }
   await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
@@ -425,9 +425,6 @@ export async function build({
     } else {
       if (meta.isDev) {
         debug(`WARN: A dev script is missing.`);
-        debug(
-          'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
-        );
       }
 
       if (buildCommand) {
@@ -487,7 +484,13 @@ export async function build({
         const result = await getNowIgnore(distPath);
         ignore = result.ignores
           .map(file => (file.endsWith('/') ? `${file}**` : file))
-          .concat(['yarn.lock', 'package-lock.json', 'package.json']);
+          .concat([
+            '.env',
+            '.env.*',
+            'yarn.lock',
+            'package-lock.json',
+            'package.json',
+          ]);
         debug(`Using ignore: ${JSON.stringify(ignore)}`);
       }
       output = await glob('**', { cwd: distPath, ignore }, mountpoint);

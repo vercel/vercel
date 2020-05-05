@@ -10,11 +10,14 @@ import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
+import getCommandFlags from '../../util/get-command-flags';
+import cmd from '../../util/output/cmd';
 
 type DNSRecords = ThenArg<ReturnType<typeof getDNSRecords>>;
 
 type Options = {
   '--debug': boolean;
+  '--next'?: number;
 };
 
 export default async function ls(
@@ -29,7 +32,7 @@ export default async function ls(
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const debug = opts['--debug'];
+  const { '--debug': debug, '--next': nextTimestamp } = opts;
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
@@ -56,9 +59,20 @@ export default async function ls(
     return 1;
   }
 
+  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
+    output.error('Please provide a number for flag --next');
+    return 1;
+  }
+
   if (domainName) {
-    const records = await getDomainDNSRecords(output, client, domainName);
-    if (records instanceof DomainNotFound) {
+    const data = await getDomainDNSRecords(
+      output,
+      client,
+      domainName,
+      nextTimestamp,
+      4
+    );
+    if (data instanceof DomainNotFound) {
       output.error(
         `The domain ${domainName} can't be found under ${chalk.bold(
           contextName
@@ -67,12 +81,24 @@ export default async function ls(
       return 1;
     }
 
+    const { records, pagination } = data;
+
     output.log(
-      `${plural('Record', records.length, true)} found under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(lsStamp())}`
+      `${
+        records.length > 0 ? 'Records' : 'No records'
+      } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
     );
     console.log(getDNSRecordsTable([{ domainName, records }]));
+
+    if (pagination && pagination.count === 20) {
+      const flags = getCommandFlags(opts, ['_', '--next']);
+      output.log(
+        `To display the next page run ${cmd(
+          `now dns ls ${domainName}${flags} --next ${pagination.next}`
+        )}`
+      );
+    }
+
     return 0;
   }
 

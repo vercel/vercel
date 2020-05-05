@@ -7,6 +7,7 @@ import {
   GetRoutesProps,
   NowError,
   NowErrorNested,
+  NowRedirect,
 } from './types';
 import {
   convertCleanUrls,
@@ -157,13 +158,60 @@ function checkRegexSyntax(src: string): NowErrorNested | null {
   return null;
 }
 
-function checkPatternSyntax(src: string): NowErrorNested | null {
+function checkPatternSyntax({
+  source,
+  destination,
+}: {
+  source: string;
+  destination?: string;
+}): NowErrorNested | null {
+  let sourceSegments = new Set<string>();
+  let destinationSegments = new Set<string>();
   try {
-    sourceToRegex(src);
+    sourceSegments = new Set(sourceToRegex(source).segments);
   } catch (err) {
     return {
-      message: `Invalid pattern: "${src}"`,
-      src,
+      message: `Invalid source pattern: "${source}"`,
+      src: source,
+    };
+  }
+
+  if (destination) {
+    if (destination.startsWith('http://')) {
+      destination = destination.slice(7);
+    }
+    if (destination.startsWith('https://')) {
+      destination = destination.slice(8);
+    }
+    try {
+      destinationSegments = new Set(sourceToRegex(destination).segments);
+    } catch (err) {
+      // Since checkPatternSyntax() is a validation helper, we don't want to
+      // replicate all possible URL parsing here so we consume the error.
+      // If this really is an error, we'll throw later in convertRedirects().
+    }
+
+    for (const segment of destinationSegments) {
+      if (!sourceSegments.has(segment)) {
+        return {
+          message: `Found segment ":${segment}" in "destination" pattern but not in "source" pattern.`,
+          src: segment,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function checkRedirect(r: NowRedirect) {
+  if (
+    typeof r.permanent !== 'undefined' &&
+    typeof r.statusCode !== 'undefined'
+  ) {
+    return {
+      message: `Redirect "${r.source}" cannot define both "permanent" and "statusCode".`,
+      src: r.source,
     };
   }
   return null;
@@ -272,7 +320,7 @@ export function getTransformedRoutes({
       };
     }
     const errorsPattern = redirects
-      .map(r => checkPatternSyntax(r.source))
+      .map(r => checkPatternSyntax(r))
       .filter(notEmpty);
     if (errorsPattern.length > 0) {
       return {
@@ -282,6 +330,13 @@ export function getTransformedRoutes({
           'Redirect `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
           errorsPattern
         ),
+      };
+    }
+    const errorProps = redirects.map(r => checkRedirect(r)).filter(notEmpty);
+    if (errorProps.length > 0) {
+      return {
+        routes,
+        error: createNowError(code, 'Invalid redirects', errorProps),
       };
     }
     const normalized = normalizeRoutes(convertRedirects(redirects));
@@ -309,7 +364,7 @@ export function getTransformedRoutes({
       };
     }
     const errorsPattern = headers
-      .map(r => checkPatternSyntax(r.source))
+      .map(r => checkPatternSyntax(r))
       .filter(notEmpty);
     if (errorsPattern.length > 0) {
       return {
@@ -346,7 +401,7 @@ export function getTransformedRoutes({
       };
     }
     const errorsPattern = rewrites
-      .map(r => checkPatternSyntax(r.source))
+      .map(r => checkPatternSyntax(r))
       .filter(notEmpty);
     if (errorsPattern.length > 0) {
       return {

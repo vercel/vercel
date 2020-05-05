@@ -186,7 +186,8 @@ export async function getNodeVersion(
 async function scanParentDirs(destPath: string, readPackageJson = false) {
   assert(path.isAbsolute(destPath));
 
-  let hasPackageLockJson = false;
+  type CliType = 'yarn' | 'npm';
+  let cliType: CliType = 'yarn';
   let packageJson: PackageJson | undefined;
   let currentDestPath = destPath;
 
@@ -200,9 +201,13 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
         packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
       }
       // eslint-disable-next-line no-await-in-loop
-      hasPackageLockJson = await fs.pathExists(
-        path.join(currentDestPath, 'package-lock.json')
-      );
+      const [hasPackageLockJson, hasYarnLock] = await Promise.all([
+        fs.pathExists(path.join(currentDestPath, 'package-lock.json')),
+        fs.pathExists(path.join(currentDestPath, 'yarn.lock')),
+      ]);
+      if (hasPackageLockJson && !hasYarnLock) {
+        cliType = 'npm';
+      }
       break;
     }
 
@@ -211,7 +216,7 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
     currentDestPath = newDestPath;
   }
 
-  return { hasPackageLockJson, packageJson };
+  return { cliType, packageJson };
 }
 
 interface WalkParentDirsProps {
@@ -268,7 +273,7 @@ export async function runNpmInstall(
   assert(path.isAbsolute(destPath));
   debug(`Installing to ${destPath}`);
 
-  const { hasPackageLockJson } = await scanParentDirs(destPath);
+  const { cliType } = await scanParentDirs(destPath);
   const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
   const env = opts.env ? { ...opts.env } : { ...process.env };
   delete env.NODE_ENV;
@@ -277,7 +282,7 @@ export async function runNpmInstall(
   let command: 'npm' | 'yarn';
   let commandArgs: string[];
 
-  if (hasPackageLockJson) {
+  if (cliType === 'npm') {
     opts.prettyCommand = 'npm install';
     command = 'npm';
     commandArgs = args
@@ -350,10 +355,7 @@ export async function runPackageJsonScript(
   spawnOpts?: SpawnOptions
 ) {
   assert(path.isAbsolute(destPath));
-  const { packageJson, hasPackageLockJson } = await scanParentDirs(
-    destPath,
-    true
-  );
+  const { packageJson, cliType } = await scanParentDirs(destPath, true);
   const hasScript = Boolean(
     packageJson &&
       packageJson.scripts &&
@@ -362,7 +364,7 @@ export async function runPackageJsonScript(
   );
   if (!hasScript) return false;
 
-  if (hasPackageLockJson) {
+  if (cliType === 'npm') {
     const prettyCommand = `npm run ${scriptName}`;
     console.log(`Running "${prettyCommand}"`);
     await spawnAsync('npm', ['run', scriptName], {

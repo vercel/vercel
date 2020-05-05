@@ -71,7 +71,7 @@ const waitForDeployment = async href => {
 };
 
 function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.zeit.co/www/user`;
+  const url = `https://api.vercel.com/www/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
   return retry(
@@ -125,7 +125,7 @@ const execute = (args, options) =>
   });
 
 const apiFetch = (url, { headers, ...options } = {}) => {
-  return fetch(`https://api.zeit.co${url}`, {
+  return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       ...(headers || {}),
@@ -209,6 +209,8 @@ test.after.always(async () => {
 });
 
 test('login', async t => {
+  t.timeout(ms('1m'));
+
   // Delete the current token
   const logoutOutput = await execute(['logout']);
   t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
@@ -247,8 +249,7 @@ test('deploy using only now.json with `redirects` defined', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const i = stdout.lastIndexOf('https://');
-  const url = stdout.slice(i);
+  const url = stdout;
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   t.is(location, 'https://example.com/foo/bar');
@@ -355,7 +356,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-    t.regex(stderr, /0 Environment Variables found in Project/gm);
+    t.regex(stderr, /No Environment Variables found in Project/gm);
   }
 
   async function nowEnvAdd() {
@@ -411,7 +412,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-    t.regex(stderr, /4 Environment Variables found in Project/gm);
+    t.regex(stderr, /Environment Variables found in Project/gm);
 
     const lines = stdout.split('\n');
 
@@ -517,6 +518,26 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
   await nowEnvLsIsEmpty();
+});
+
+test('deploy with metadata containing "=" in the value', async t => {
+  const target = fixture('static-v2-meta');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [target, ...defaultArgs, '--confirm', '--meta', 'someKey=='],
+    { reject: false }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const { host } = new URL(stdout);
+  const res = await fetch(
+    `https://api.vercel.com/v12/now/deployments/get?url=${host}`,
+    { headers: { authorization: `Bearer ${token}` } }
+  );
+  const deployment = await res.json();
+  t.is(deployment.meta.someKey, '=');
 });
 
 test('print the deploy help message', async t => {
@@ -641,7 +662,7 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `Error! Please sign up: https://zeit.co/signup`;
+  const goal = `Error! Please sign up: https://vercel.com/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
@@ -1532,7 +1553,7 @@ test('deploying a file should not show prompts and display deprecation', async t
 
   // Ensure the exit code is right
   t.is(exitCode, 0, formatOutput(output));
-  t.true(stderr.includes('Deploying files with ZEIT Now is deprecated'));
+  t.true(stderr.includes('Deploying files with Vercel is deprecated'));
 
   // Ensure `.now` was not created
   t.is(
@@ -1911,7 +1932,7 @@ test('print correct link in legacy warning', async t => {
   // It is expected to fail,
   // since the package.json does not have a start script
   t.is(exitCode, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
+  t.regex(stderr, /migrate-to-vercel/);
 });
 
 test('`now rm` removes a deployment', async t => {
@@ -2098,7 +2119,7 @@ test('now secret ls', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 0, formatOutput(output));
-  t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
+  t.regex(output.stdout, /Secrets found under/gm, formatOutput(output));
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
 
@@ -2229,6 +2250,8 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
 });
 
 test('change user', async t => {
+  t.timeout(ms('1m'));
+
   const { stdout: prevUser } = await execute(['whoami']);
 
   // Delete the current token
@@ -2614,7 +2637,7 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
     detectedNotice =
       detectedNotice ||
       chunk.includes(
-        'Your project was either removed from ZEIT Now or you’re not a member of it anymore'
+        'Your project was either removed from Vercel or you’re not a member of it anymore'
       );
 
     return /Set up and deploy [^?]+\?/.test(chunk);
@@ -2662,28 +2685,37 @@ test('use `rootDirectory` from project when deploying', async t => {
   });
 });
 
-test('whoami with unknown `NOW_ORG_ID` should error', async t => {
-  const output = await execute(['whoami'], {
-    env: { NOW_ORG_ID: 'asdf' },
+test('now deploy with unknown `NOW_ORG_ID` or `NOW_PROJECT_ID` should error', async t => {
+  const output = await execute(['deploy'], {
+    env: { NOW_ORG_ID: 'asdf', NOW_PROJECT_ID: 'asdf' },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.is(
-    output.stderr.includes('Organization not found'),
-    true,
-    formatOutput(output)
-  );
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('whoami with `NOW_ORG_ID`', async t => {
+test('now env with unknown `NOW_ORG_ID` or `NOW_PROJECT_ID` should error', async t => {
+  const output = await execute(['env'], {
+    env: { NOW_ORG_ID: 'asdf', NOW_PROJECT_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test('whoami with `NOW_ORG_ID` should favor `--scope` and should error', async t => {
   const user = await fetchTokenInformation(token);
 
   const output = await execute(['whoami', '--scope', 'asdf'], {
     env: { NOW_ORG_ID: user.uid },
   });
 
-  t.is(output.exitCode, 0, formatOutput(output));
-  t.is(output.stdout.includes(contextName), true, formatOutput(output));
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(
+    output.stderr.includes('The specified scope does not exist'),
+    true,
+    formatOutput(output)
+  );
 });
 
 test('whoami with local .now scope', async t => {

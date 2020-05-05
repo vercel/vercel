@@ -94,7 +94,7 @@ export default async function add(
       `The domain ${chalk.underline(
         addedDomain.meta.domain
       )} is already registered by a different account.\n` +
-        `  If this seems like a mistake, please contact us at support@zeit.co`
+        `  If this seems like a mistake, please contact us at support@vercel.com`
     );
     return 1;
   }

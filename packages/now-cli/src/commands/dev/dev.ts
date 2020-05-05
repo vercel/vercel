@@ -1,5 +1,4 @@
-import path from 'path';
-import chalk from 'chalk';
+import { resolve, join } from 'path';
 
 import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
@@ -23,7 +22,7 @@ export default async function dev(
   output: Output
 ) {
   const [dir = '.'] = args;
-  let cwd = path.resolve(dir);
+  let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
   const debug = opts['--debug'] || false;
 
@@ -45,12 +44,10 @@ export default async function dev(
   }
 
   if (link.status === 'not_linked' && !process.env.__NOW_SKIP_DEV_COMMAND) {
-    output.print(
-      `${chalk.red(
-        'Error!'
-      )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${cmd(
         'now'
-      )} to link it.\n`
+      )} to link it.`
     );
     return 1;
   }
@@ -58,7 +55,8 @@ export default async function dev(
   let devCommand: undefined | string;
   let frameworkSlug: null | string = null;
   if (link.status === 'linked') {
-    const { project } = link;
+    const { project, org } = link;
+    client.currentTeam = org.type === 'team' ? org.id : undefined;
 
     if (project.devCommand) {
       devCommand = project.devCommand;
@@ -76,7 +74,7 @@ export default async function dev(
     }
 
     if (project.rootDirectory) {
-      cwd = path.join(cwd, project.rootDirectory);
+      cwd = join(cwd, project.rootDirectory);
     }
   }
 

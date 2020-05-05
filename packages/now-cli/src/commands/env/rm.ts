@@ -1,9 +1,8 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { NowContext, ProjectEnvTarget } from '../../types';
+import { ProjectEnvTarget, Project } from '../../types';
 import { Output } from '../../util/output';
 import promptBool from '../../util/prompt-bool';
-import { getLinkedProject } from '../../util/projects/link';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvVariables from '../../util/env/get-env-records';
 import {
@@ -25,144 +24,119 @@ type Options = {
 };
 
 export default async function rm(
-  ctx: NowContext,
+  client: Client,
+  project: Project,
   opts: Options,
   args: string[],
   output: Output
 ) {
-  const {
-    authConfig: { token },
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
-  const link = await getLinkedProject(output, client);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    output.print(
-      `${chalk.red(
-        'Error!'
-      )} Your codebase isn’t linked to a project on ZEIT Now. Run ${cmd(
-        'now'
-      )} to link it.\n`
+  if (args.length > 2) {
+    output.error(
+      `Invalid number of arguments. Usage: ${cmd(
+        `now env rm <name> ${getEnvTargetPlaceholder()}`
+      )}`
     );
     return 1;
-  } else {
-    if (args.length > 2) {
+  }
+
+  let [envName, envTarget] = args;
+  let envTargets: ProjectEnvTarget[] = [];
+
+  if (envTarget) {
+    if (!isValidEnvTarget(envTarget)) {
       output.error(
-        `Invalid number of arguments. Usage: ${cmd(
-          `now env rm <name> ${getEnvTargetPlaceholder()}`
-        )}`
+        `The Environment ${param(
+          envTarget
+        )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
       );
       return 1;
     }
+    envTargets.push(envTarget);
+  }
 
-    const { project } = link;
-    let [envName, envTarget] = args;
-    let envTargets: ProjectEnvTarget[] = [];
+  while (!envName) {
+    const { inputName } = await inquirer.prompt({
+      type: 'input',
+      name: 'inputName',
+      message: `What’s the name of the variable?`,
+    });
 
-    if (envTarget) {
-      if (!isValidEnvTarget(envTarget)) {
-        output.error(
-          `The Environment ${param(
-            envTarget
-          )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
-        );
-        return 1;
-      }
-      envTargets.push(envTarget);
+    if (!inputName) {
+      output.error(`Name cannot be empty`);
+      continue;
     }
 
-    while (!envName) {
-      const { inputName } = await inquirer.prompt({
-        type: 'input',
-        name: 'inputName',
-        message: `What’s the name of the variable?`,
-      });
+    envName = inputName;
+  }
 
-      if (!inputName) {
-        output.error(`Name cannot be empty`);
-        continue;
-      }
+  const envs = await getEnvVariables(output, client, project.id, 4);
+  const existing = new Set(
+    envs.filter(r => r.key === envName).map(r => r.target)
+  );
 
-      envName = inputName;
-    }
+  if (existing.size === 0) {
+    output.error(`The Environment Variable ${param(envName)} was not found.\n`);
+    return 1;
+  }
 
-    const envs = await getEnvVariables(output, client, project.id);
-    const existing = new Set(
-      envs.filter(r => r.key === envName).map(r => r.target)
-    );
-
-    if (existing.size === 0) {
+  if (envTargets.length === 0) {
+    const choices = getEnvTargetChoices().filter(c => existing.has(c.value));
+    if (choices.length === 0) {
       output.error(
-        `The Environment Variable ${param(envName)} was not found.\n`
-      );
-      return 1;
-    }
-
-    if (envTargets.length === 0) {
-      const choices = getEnvTargetChoices().filter(c => existing.has(c.value));
-      if (choices.length === 0) {
-        output.error(
-          `The Environment Variable ${param(
-            envName
-          )} was found but it is not assigned to any Environments.\n`
-        );
-        return 1;
-      } else if (choices.length === 1) {
-        envTargets = [choices[0].value];
-      } else {
-        const { inputTargets } = await inquirer.prompt({
-          name: 'inputTargets',
-          type: 'checkbox',
-          message: `Remove ${envName} from which Environments (select multiple)?`,
-          choices,
-        });
-        envTargets = inputTargets;
-      }
-    }
-
-    const skipConfirmation = opts['--yes'];
-    if (
-      !skipConfirmation &&
-      !(await promptBool(
-        output,
-        `Removing Environment Variable ${param(
+        `The Environment Variable ${param(
           envName
-        )} from Project ${chalk.bold(project.name)}. Are you sure?`
-      ))
-    ) {
-      output.log('Aborted');
-      return 0;
-    }
-
-    const rmStamp = stamp();
-
-    try {
-      await withSpinner('Removing', async () => {
-        for (const target of envTargets) {
-          await removeEnvRecord(output, client, project.id, envName, target);
-        }
+        )} was found but it is not assigned to any Environments.\n`
+      );
+      return 1;
+    } else if (choices.length === 1) {
+      envTargets = [choices[0].value];
+    } else {
+      const { inputTargets } = await inquirer.prompt({
+        name: 'inputTargets',
+        type: 'checkbox',
+        message: `Remove ${envName} from which Environments (select multiple)?`,
+        choices,
       });
-    } catch (error) {
-      if (isKnownError(error) && error.serverMessage) {
-        output.error(error.serverMessage);
-        return 1;
-      }
-      throw error;
+      envTargets = inputTargets;
     }
+  }
 
-    output.print(
-      `${prependEmoji(
-        `Removed Environment Variable ${chalk.gray(rmStamp())}`,
-        emoji('success')
-      )}\n`
-    );
-
+  const skipConfirmation = opts['--yes'];
+  if (
+    !skipConfirmation &&
+    !(await promptBool(
+      output,
+      `Removing Environment Variable ${param(
+        envName
+      )} from Project ${chalk.bold(project.name)}. Are you sure?`
+    ))
+  ) {
+    output.log('Aborted');
     return 0;
   }
+
+  const rmStamp = stamp();
+
+  try {
+    await withSpinner('Removing', async () => {
+      for (const target of envTargets) {
+        await removeEnvRecord(output, client, project.id, envName, target);
+      }
+    });
+  } catch (error) {
+    if (isKnownError(error) && error.serverMessage) {
+      output.error(error.serverMessage);
+      return 1;
+    }
+    throw error;
+  }
+
+  output.print(
+    `${prependEmoji(
+      `Removed Environment Variable ${chalk.gray(rmStamp())}`,
+      emoji('success')
+    )}\n`
+  );
+
+  return 0;
 }

@@ -101,13 +101,12 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
-  const args = [ncc, 'build', '--source-map'];
+  const args = ['@zeit/ncc', 'build', '--source-map'];
   if (!isDev) {
     args.push('--minify');
   }
   args.push(src);
-  await execa(process.execPath, args, { stdio: 'inherit' });
+  await execa('npx', args, { stdio: 'inherit' });
 
   // `ncc` has some issues with `@zeit/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
