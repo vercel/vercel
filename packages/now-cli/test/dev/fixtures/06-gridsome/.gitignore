@@ -9,3 +9,4 @@ dist
 !yarn.lock
 
 .now
+.vercel

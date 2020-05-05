@@ -11,6 +11,7 @@ import { Output } from '../../util/output';
 import { Domain, NowContext } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -53,7 +54,9 @@ export default async function ls(
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan('`now domains ls`')}`
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        `${getPkgName()} domains ls`
+      )}`
     );
     return 1;
   }
@@ -74,7 +77,7 @@ export default async function ls(
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${cmd(
-        `now domains ls${flags} --next ${pagination.next}`
+        `${getPkgName()} domains ls${flags} --next ${pagination.next}`
       )}`
     );
   }

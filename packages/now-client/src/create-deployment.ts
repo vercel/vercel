@@ -4,7 +4,7 @@ import readdir from 'recursive-readdir';
 import { relative, join, isAbsolute, basename } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
-import { getNowIgnore, createDebug, parseNowJSON } from './utils';
+import { getVercelIgnore, createDebug, parseNowJSON } from './utils';
 import { DeploymentError } from './errors';
 import {
   NowConfig,
@@ -82,7 +82,7 @@ export default function buildCreateDeployment(version: number) {
     }
 
     // Get .nowignore
-    let { ig, ignores } = await getNowIgnore(path);
+    let { ig, ignores } = await getVercelIgnore(path);
 
     debug(`Found ${ig.ignores.length} rules in .nowignore`);
 
@@ -112,12 +112,11 @@ export default function buildCreateDeployment(version: number) {
     }
 
     if (!nowConfig) {
-      // If the user did not provide a nowConfig,
-      // then use the now.json file in the root.
-      const fileName = 'now.json';
-      const absolutePath = fileList.find(f => relative(cwd, f) === fileName);
-      debug(absolutePath ? `Found ${fileName}` : `Missing ${fileName}`);
-      nowConfig = await parseNowJSON(absolutePath);
+      // If the user did not provide a config file, use the one in the root directory.
+      const configPath = fileList
+        .map(f => relative(cwd, f))
+        .find(f => f === 'vercel.json' || f === 'now.json');
+      nowConfig = await parseNowJSON(configPath);
     }
 
     if (
@@ -127,7 +126,7 @@ export default function buildCreateDeployment(version: number) {
       nowConfig.files.length > 0
     ) {
       // See the docs: https://vercel.com/docs/v1/features/configuration/#files-(array)
-      debug('Filtering file list based on `files` key in now.json');
+      debug('Filtering file list based on `files` key in vercel.json');
       const allowedFiles = new Set<string>(['Dockerfile']);
       const allowedDirs = new Set<string>();
       nowConfig.files.forEach(relPath => {

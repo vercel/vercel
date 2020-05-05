@@ -11,6 +11,7 @@ import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import getDomainPrice from '../../util/domains/get-domain-price';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -48,14 +49,16 @@ export default async function inspect(
   const inspectStamp = stamp();
 
   if (!domainName) {
-    output.error(`${cmd('now domains inspect <domain>')} expects one argument`);
+    output.error(
+      `${cmd(`${getPkgName()} domains inspect <domain>`)} expects one argument`
+    );
     return 1;
   }
 
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now domains inspect <domain>`'
+        `${getPkgName()} domains inspect <domain>`
       )}`
     );
     return 1;
@@ -72,7 +75,7 @@ export default async function inspect(
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${cmd(`${getPkgName()} domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -82,7 +85,7 @@ export default async function inspect(
         contextName
       )}`
     );
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${cmd(`${getPkgName()} domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -170,7 +173,7 @@ export default async function inspect(
     );
     output.print(
       `  If you want to force running a verification, you can run ${cmd(
-        'now domains verify <domain>'
+        `${getPkgName()} domains verify <domain>`
       )}\n`
     );
     output.print('  Read more: https://err.sh/now/domain-verification\n\n');
