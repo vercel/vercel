@@ -31,7 +31,7 @@ function execa(file, args, options) {
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
-const deployHelpMessage = `${logo} now [options] <command | path>`;
+const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
 const isCanary = pkg.version.includes('canary');
