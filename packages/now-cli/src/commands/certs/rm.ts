@@ -12,6 +12,7 @@ import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -49,7 +50,7 @@ async function rm(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now certs rm <id or cn>`'
+        `${getPkgName()} certs rm <id or cn>`
       )}`
     );
     return 1;

@@ -27,7 +27,7 @@ const { createLegacyDeployment } = require('now-client');
 Then call inside a `for...of` loop to follow the progress with the following arguments:
 
 - `<path>` - a directory path / file path / array of file paths (must be on the same level)
-- `<options>` - An object containing `token`, an optional `teamId` and any `now.json`-valid [fields](https://vercel.com/docs/api#endpoints/deployments/create-a-new-deployment)
+- `<options>` - An object containing `token`, an optional `teamId` and any `vercel.json`-valid [fields](https://vercel.com/docs/api#endpoints/deployments/create-a-new-deployment)
 
 ```js
 async function deploy() {

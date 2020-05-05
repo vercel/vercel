@@ -22,6 +22,7 @@ import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import which from 'which';
+import { getVercelIgnore } from 'now-client';
 
 import {
   Builder,
@@ -41,11 +42,7 @@ import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
 import { version as cliVersion } from '../../../package.json';
-import {
-  createIgnore,
-  staticFiles as getFiles,
-  getAllProjectFiles,
-} from '../get-files';
+import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
 import {
   validateNowConfigBuilds,
   validateNowConfigRoutes,
@@ -501,8 +498,8 @@ export default class DevServer {
 
     const pkg = await this.getPackageJson();
 
-    // The default empty `now.json` is used to serve all files as static
-    // when no `now.json` is present
+    // The default empty `vercel.json` is used to serve all files as static
+    // when no `vercel.json` is present
     let config: NowConfig = this.cachedNowConfig || { version: 2 };
 
     // We need to delete these properties for zero config to work
@@ -512,16 +509,17 @@ export default class DevServer {
       delete this.cachedNowConfig.routes;
     }
 
+    let configPath = 'vercel.json';
     try {
-      this.output.debug('Reading `now.json` file');
-      const nowConfigPath = getNowConfigPath(this.cwd);
-      config = JSON.parse(await fs.readFile(nowConfigPath, 'utf8'));
+      configPath = getNowConfigPath(this.cwd);
+      this.output.debug(`Reading ${configPath}`);
+      config = JSON.parse(await fs.readFile(configPath, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.debug('No `now.json` file present');
+        this.output.debug(err.toString());
       } else if (err.name === 'SyntaxError') {
         this.output.warn(
-          `There is a syntax error in the \`now.json\` file: ${err.message}`
+          `There is a syntax error in ${configPath}: ${err.message}`
         );
       } else {
         throw err;
@@ -673,7 +671,8 @@ export default class DevServer {
     env: EnvConfig = {},
     localEnv: EnvConfig = {}
   ): EnvConfig {
-    // Validate if there are any missing env vars defined in `now.json`,
+    // Validate if there are any missing env vars defined in `vercel.json`,
+
     // but not in the `.env` / `.build.env` file
     const missing: string[] = Object.entries(env)
       .filter(
@@ -735,9 +734,8 @@ export default class DevServer {
       throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
     }
 
+    const { ig } = await getVercelIgnore(this.cwd);
     this.yarnPath = await getYarnPath(this.output);
-
-    const ig = await createIgnore(join(this.cwd, '.nowignore'));
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
@@ -1615,7 +1613,9 @@ export default class DevServer {
         const base = basename(p);
         if (
           base === 'now.json' ||
+          base === 'vercel.json' ||
           base === '.nowignore' ||
+          base === '.vercelignore' ||
           !p.startsWith(prefix)
         ) {
           return false;

@@ -2,15 +2,15 @@ import { join as joinPath } from 'path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
 import { existsSync } from 'fs';
-import getNowDir from './global-path';
+import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
 import error from '../output/error';
 import highlight from '../output/highlight';
 
-const NOW_DIR = getNowDir();
-const CONFIG_FILE_PATH = joinPath(NOW_DIR, 'config.json');
-const AUTH_CONFIG_FILE_PATH = joinPath(NOW_DIR, 'auth.json');
+const VERCEL_DIR = getGlobalPathConfig();
+const CONFIG_FILE_PATH = joinPath(VERCEL_DIR, 'config.json');
+const AUTH_CONFIG_FILE_PATH = joinPath(VERCEL_DIR, 'auth.json');
 
 // reads `CONFIG_FILE_PATH` atomically
 export const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
@@ -52,7 +52,7 @@ export const writeToAuthConfigFile = (stuff: object) => {
   try {
     return writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, {
       indent: 2,
-      mode: 0o600
+      mode: 0o600,
     });
   } catch (err) {
     if (err.code === 'EPERM') {
@@ -91,7 +91,7 @@ export function readLocalConfig(prefix: string = process.cwd()) {
   let target = '';
 
   try {
-    target = getLocalPathConfig(prefix || process.cwd());
+    target = getLocalPathConfig(prefix);
   } catch (err) {
     if (err instanceof NowError) {
       console.error(error(err.message));
@@ -110,7 +110,7 @@ export function readLocalConfig(prefix: string = process.cwd()) {
   try {
     localConfigExists = existsSync(target);
   } catch (err) {
-    console.error(error('Failed to check if `now.json` exists'));
+    console.error(error(`Config file does not exist: ${target}`));
     process.exit(1);
   }
 
@@ -122,7 +122,7 @@ export function readLocalConfig(prefix: string = process.cwd()) {
         console.log(error(err.message));
       } else {
         const code = err.code ? `(${err.code})` : '';
-        console.error(error(`Failed to read the \`now.json\` file ${code}`));
+        console.error(error(`Failed to read config file: ${target} (${code})`));
       }
 
       process.exit(1);

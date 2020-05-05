@@ -13,6 +13,7 @@ import getScope from '../../util/get-scope';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import stamp from '../../util/output/stamp';
 import getDNSData from '../../util/dns/get-dns-data';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -49,7 +50,7 @@ export default async function add(
   if (!parsedParams) {
     output.error(
       `Invalid number of arguments. See: ${chalk.cyan(
-        '`now dns --help`'
+        `${getPkgName()} dns --help`
       )} for usage.`
     );
     return 1;

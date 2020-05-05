@@ -1,15 +1,4 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const { promisify } = require('util');
-const { join, delimiter } = require('path');
-const { homedir } = require('os');
-
-const stat = promisify(fs.stat);
-const unlink = promisify(fs.unlink);
-
-function cmd(command) {
-  return `\`${command}\``;
-}
 
 function error(command) {
   console.error('> Error!', command);
@@ -34,51 +23,6 @@ function isGlobal() {
   return isYarn()
     ? cmd.original.includes('global')
     : Boolean(process.env.npm_config_global);
-}
-
-// Logic is from Now Desktop
-// See: https://git.io/fj4jD
-function getNowPath() {
-  if (process.platform === 'win32') {
-    const { LOCALAPPDATA, USERPROFILE, HOMEPATH } = process.env;
-    const home = homedir() || USERPROFILE || HOMEPATH;
-    let path;
-    if (LOCALAPPDATA) {
-      path = join(LOCALAPPDATA, 'now-cli', 'now.exe');
-    } else if (home) {
-      path = join(home, 'AppData', 'Local', 'now-cli', 'now.exe');
-    } else {
-      path = '';
-    }
-    return fs.existsSync(path) ? path : null;
-  }
-
-  const pathEnv = (process.env.PATH || '').split(delimiter);
-
-  const paths = [
-    join(process.env.HOME || '/', 'bin'),
-    '/usr/local/bin',
-    '/usr/bin',
-  ];
-
-  for (const basePath of paths) {
-    if (!pathEnv.includes(basePath)) {
-      continue;
-    }
-
-    const nowPath = join(basePath, 'now');
-
-    if (fs.existsSync(nowPath)) {
-      return nowPath;
-    }
-  }
-
-  return null;
-}
-
-async function isBinary(nowPath) {
-  const stats = await stat(nowPath);
-  return !stats.isDirectory();
 }
 
 function validateNodeVersion() {
@@ -111,46 +55,6 @@ async function main() {
         `Expected "${ver.expected}" but found "${ver.actual}".\n` +
         `Please update to the latest Node.js LTS version to install Now CLI.`
     );
-    process.exit(1);
-  }
-
-  const nowPath = getNowPath();
-
-  if (nowPath === null) {
-    debug(`No now binary found`);
-    return;
-  }
-
-  debug(`Located now binary at ${nowPath}`);
-
-  try {
-    if ((await isBinary(nowPath)) === false) {
-      debug(
-        'Found file or directory named now but will not delete, ' +
-          'as it seems unrelated to Now CLI'
-      );
-      return;
-    }
-
-    await unlink(nowPath);
-
-    debug(`Removed ${nowPath}`);
-  } catch (err) {
-    if (process.platform !== 'win32') {
-      error(
-        `Could not remove your previous Now CLI installation.\n` +
-          `Please use this command to remove it: ${cmd(
-            `sudo rm ${nowPath}`
-          )}.\n` +
-          `Then try to install it again.`
-      );
-    } else {
-      error(
-        `Could not remove your previous Now CLI installation.\n` +
-          `Please remove ${cmd(nowPath)} manually and try to install it again.`
-      );
-    }
-
     process.exit(1);
   }
 }
