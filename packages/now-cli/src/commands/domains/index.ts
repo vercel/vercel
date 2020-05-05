@@ -28,7 +28,7 @@ const help = () => {
     rm           [name]                 Remove a domain
     buy          [name]                 Buy a domain that you don't yet own
     move         [name] [destination]   Move a domain to another user or team.
-    transfer-in  [name]                 Transfer in a domain to Zeit
+    transfer-in  [name]                 Transfer in a domain to Vercel
     verify       [name]                 Run a verification for a domain
 
   ${chalk.dim('Options:')}
@@ -54,7 +54,7 @@ const help = () => {
       ${chalk.cyan(`$ now domains add ${chalk.underline('domain-name.com')}`)}
 
       Make sure the domain's DNS nameservers are at least 2 of the
-      ones listed on ${chalk.underline('https://zeit.world')}.
+      ones listed on ${chalk.underline('https://vercel.com/edge-network')}.
 
       ${chalk.yellow('NOTE:')} Running ${chalk.dim(
     '`now alias`'

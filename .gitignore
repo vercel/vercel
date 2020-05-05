@@ -9,6 +9,8 @@ coverage
 *.swp
 *.bak
 *.tgz
+packages/now-cli/.builders
+packages/now-cli/assets
 packages/now-cli/src/util/dev/templates/*.ts
 packages/now-cli/src/util/constants.ts
 packages/now-cli/test/**/yarn.lock
@@ -17,6 +19,7 @@ packages/now-cli/test/**/node_modules
 packages/now-cli/test/dev/fixtures/08-hugo/hugo
 packages/now-cli/test/dev/fixtures/**/dist
 packages/now-cli/test/dev/fixtures/**/public
+packages/now-cli/test/dev/fixtures/**/.now
 packages/now-cli/test/fixtures/integration
 test/lib/deployment/failed-page.txt
 .DS_Store

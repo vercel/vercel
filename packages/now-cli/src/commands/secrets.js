@@ -13,6 +13,7 @@ import createOutput from '../util/output';
 import confirm from '../util/input/confirm';
 import getCommandFlags from '../util/get-command-flags';
 import cmd from '../util/output/cmd.ts';
+import getPrefixedFlags from '../util/get-prefixed-flags';
 
 const help = () => {
   console.log(`
@@ -348,29 +349,4 @@ async function readConfirmation(output, secret, contextName) {
   output.print(`  ${tbl}\n`);
 
   return confirm(`${chalk.bold.red('Are you sure?')}`, false);
-}
-
-/**
- * This function adds a prefix `-` or `--` to the flags
- * passed from the command line, because the package `mri`
- * used to extract the args removes them for some reason.
- */
-function getPrefixedFlags(args) {
-  const prefixedArgs = {};
-
-  for (const arg in args) {
-    if (arg === '_') {
-      prefixedArgs[arg] = argv[arg];
-    } else {
-      let prefix = '-';
-      // Full form flags need two dashes, whereas one letter
-      // flags need only one.
-      if (arg.length > 1) {
-        prefix = '--';
-      }
-      prefixedArgs[`${prefix}${arg}`] = argv[arg];
-    }
-  }
-
-  return prefixedArgs;
 }
