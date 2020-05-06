@@ -51,7 +51,7 @@
         "value": "blitz start"
       },
       "outputDirectory": {
-        "value": ".next"
+        "placeholder": "Next.js default"
       }
     }
   },
