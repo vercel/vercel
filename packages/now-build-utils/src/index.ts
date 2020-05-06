@@ -80,3 +80,14 @@ export { readConfigFile } from './fs/read-config-file';
 export * from './schemas';
 export * from './types';
 export * from './errors';
+
+/**
+ * Helper function to support both `@vercel` and legacy `@now` official Runtimes.
+ */
+export const isOfficialRuntime = (desired: string, name?: string): boolean => {
+  return (
+    typeof name === 'string' &&
+    (name.startsWith(`@vercel/${desired}`) ||
+      name.startsWith(`@now/${desired}`))
+  );
+};

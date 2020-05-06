@@ -1,6 +1,6 @@
 {
-  "name": "@now/frameworks",
-  "version": "0.0.13",
+  "name": "@vercel/frameworks",
+  "version": "0.0.14-canary.0",
   "main": "frameworks.json",
   "license": "UNLICENSED"
 }

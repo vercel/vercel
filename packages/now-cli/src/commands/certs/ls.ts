@@ -12,6 +12,7 @@ import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
 import { NowContext, Cert } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
+import { getPkgName } from '../../util/pkg-name';
 
 interface Options {
   '--debug'?: boolean;
@@ -53,7 +54,9 @@ async function ls(
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        `${getPkgName()} certs ls`
+      )}`
     );
     return 1;
   }
@@ -77,7 +80,7 @@ async function ls(
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${cmd(
-        `now certs ls${flags} --next ${pagination.next}`
+        `${getPkgName()} certs ls${flags} --next ${pagination.next}`
       )}`
     );
   }

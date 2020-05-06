@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "*.py", "use": "@now/python" }],
+  "builds": [{ "src": "*.py", "use": "@vercel/python" }],
   "routes": [{ "src": "/%E6%82%A8%E5%A5%BD", "dest": "custom.py" }],
   "probes": [
     {

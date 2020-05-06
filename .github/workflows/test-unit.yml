@@ -28,7 +28,7 @@ jobs:
       - run: yarn run lint
         if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run lint once
       - run: yarn run test-unit --clean false
-      - run: yarn workspace now run coverage
+      - run: yarn workspace vercel run coverage
         if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run coverage once
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

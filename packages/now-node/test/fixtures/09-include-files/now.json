@@ -3,21 +3,21 @@
   "builds": [
     {
       "src": "index.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": {
         "includeFiles": ["templates/**"]
       }
     },
     {
       "src": "root.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": {
         "includeFiles": ["root.edge"]
       }
     },
     {
       "src": "accepts-string.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": {
         "includeFiles": "templates/accepts-string.edge"
       }

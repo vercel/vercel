@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { exists } from 'fs-extra';
-import { PackageJson } from '@now/build-utils';
+import { PackageJson } from '@vercel/build-utils';
 
 import Client from './client';
 import { Config } from '../types';

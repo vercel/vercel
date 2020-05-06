@@ -1,4 +1,4 @@
 {
   "version": 2,
-  "builds": [{ "src": "build.sh", "use": "@now/static-build" }]
+  "builds": [{ "src": "build.sh", "use": "@vercel/static-build" }]
 }

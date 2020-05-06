@@ -7,6 +7,7 @@ export default `.hg
 .cache
 .next
 .now
+.vercel
 .npmignore
 .dockerignore
 .gitignore
