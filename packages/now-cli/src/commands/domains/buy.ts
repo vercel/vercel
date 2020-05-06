@@ -13,6 +13,7 @@ import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -47,7 +48,9 @@ export default async function buy(
 
   const [domainName] = args;
   if (!domainName) {
-    output.error(`Missing domain name. Run ${cmd('now domains --help')}`);
+    output.error(
+      `Missing domain name. Run ${cmd(`${getPkgName()} domains --help`)}`
+    );
     return 1;
   }
 
@@ -60,7 +63,9 @@ export default async function buy(
   const { domain: rootDomain, subdomain } = parsedDomain;
   if (subdomain || !rootDomain) {
     output.error(
-      `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
+      `Invalid domain name "${domainName}". Run ${cmd(
+        `${getPkgName()} domains --help`
+      )}`
     );
     return 1;
   }
@@ -117,7 +122,7 @@ export default async function buy(
   if (buyResult instanceof ERRORS.SourceNotFound) {
     output.error(
       `Could not purchase domain. Please add a payment method using ${cmd(
-        'now billing add'
+        `${getPkgName()} billing add`
       )}.`
     );
     return 1;
@@ -185,7 +190,7 @@ export default async function buy(
     } else {
       output.note(
         `You may now use your domain as an alias to your deployments. Run ${cmd(
-          'now alias --help'
+          `${getPkgName()} alias --help`
         )}`
       );
     }

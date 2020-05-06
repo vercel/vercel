@@ -1,12 +1,12 @@
 import { readdir, stat, readFile, unlink } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
-import { readConfigFile } from '@now/build-utils';
-import { Route } from '@now/routing-utils';
+import { readConfigFile } from '@vercel/build-utils';
+import { Route } from '@vercel/routing-utils';
 import NowFrameworks, {
   Framework as NowFramework,
   SettingValue,
-} from '@now/frameworks';
+} from '@vercel/frameworks';
 
 const readirPromise = promisify(readdir);
 const readFilePromise = promisify(readFile);

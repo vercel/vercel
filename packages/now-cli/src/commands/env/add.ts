@@ -17,6 +17,7 @@ import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -35,7 +36,7 @@ export default async function add(
   if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${cmd(
-        `now env add <name> ${getEnvTargetPlaceholder()}`
+        `${getPkgName()} env add <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
@@ -44,7 +45,7 @@ export default async function add(
   if (stdInput && (!envName || !envTarget)) {
     output.error(
       `Invalid number of arguments. Usage: ${cmd(
-        `now env add <name> <target> < <file>`
+        `${getPkgName()} env add <name> <target> < <file>`
       )}`
     );
     return 1;
@@ -77,7 +78,7 @@ export default async function add(
     }
   }
 
-  const envs = await getEnvVariables(output, client, project.id);
+  const envs = await getEnvVariables(output, client, project.id, 4);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
@@ -88,7 +89,7 @@ export default async function add(
       `The variable ${param(
         envName
       )} has already been added to all Environments. To remove, run ${cmd(
-        `now env rm ${envName}`
+        `${getPkgName()} env rm ${envName}`
       )}.`
     );
     return 1;

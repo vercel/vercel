@@ -20,13 +20,13 @@ import {
   execCommand,
   getNodeBinPath,
   NowBuildError,
-} from '@now/build-utils';
-import { Route, Handler } from '@now/routing-utils';
+} from '@vercel/build-utils';
+import { Route, Handler } from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
   convertRewrites,
-} from '@now/routing-utils/dist/superstatic';
+} from '@vercel/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import {
@@ -165,7 +165,7 @@ function isLegacyNext(nextVersion: string) {
   return true;
 }
 
-const name = '[@now/next]';
+const name = '[@vercel/next]';
 const urls: stringMap = {};
 
 function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
@@ -283,7 +283,7 @@ export const build = async ({
     }
 
     console.warn(
-      "WARNING: your application is being deployed in @now/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
+      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
     );
 
     debug('Normalizing package.json');
@@ -443,14 +443,14 @@ export const build = async ({
             throw new NowBuildError({
               code: 'NOW_NEXT_BASEPATH_STARTING_SLASH',
               message:
-                'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+                'basePath must start with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
             });
           }
           if (nextBasePath.endsWith('/')) {
             throw new NowBuildError({
               code: 'NOW_NEXT_BASEPATH_TRAILING_SLASH',
               message:
-                'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+                'basePath must not end with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
             });
           }
 
@@ -463,8 +463,8 @@ export const build = async ({
         throw new NowBuildError({
           code: 'NOW_NEXT_VERSION_OUTDATED',
           message:
-            'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+            'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
         });
       }
     }

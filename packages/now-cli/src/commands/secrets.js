@@ -14,10 +14,11 @@ import confirm from '../util/input/confirm';
 import getCommandFlags from '../util/get-command-flags';
 import cmd from '../util/output/cmd.ts';
 import getPrefixedFlags from '../util/get-prefixed-flags';
+import { getPkgName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now secrets`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} secrets`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -31,10 +32,10 @@ const help = () => {
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -46,7 +47,7 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new secret
 
-    ${chalk.cyan('$ now secrets add my-secret "my value"')}
+    ${chalk.cyan(`$ ${getPkgName()} secrets add my-secret "my value"`)}
 
     ${chalk.gray(
       '–'
@@ -62,13 +63,13 @@ const help = () => {
     '`@`'
   )} symbol)
 
-    ${chalk.cyan(`$ now -e MY_SECRET=${chalk.bold('@my-secret')}`)}
+    ${chalk.cyan(`$ ${getPkgName()} -e MY_SECRET=${chalk.bold('@my-secret')}`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
-  
-    ${chalk.cyan(`$ now secrets ls --next 1584722256178`)}
+
+    ${chalk.cyan(`$ ${getPkgName()} secrets ls --next 1584722256178`)}
 `);
 };
 
@@ -147,7 +148,9 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
     if (args.length > 1) {
       console.error(
         error(
-          `Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            `${getPkgName()} secret ls`
+          )}`
         )
       );
       return exit(1);
@@ -194,7 +197,9 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
         '-d',
         '-y',
       ]);
-      const nextCmd = `now secrets ${subcommand}${flags} --next ${pagination.next}`;
+      const nextCmd = `${getPkgName()} secrets ${subcommand}${flags} --next ${
+        pagination.next
+      }`;
       output.log(`To display the next page run ${cmd(nextCmd)}`);
     }
     return secrets.close();
@@ -205,7 +210,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now secret rm <name>`'
+            `${getPkgName()} secret rm <name>`
           )}`
         )
       );
@@ -247,7 +252,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now secret rename <old-name> <new-name>`'
+            `${getPkgName()} secret rename <old-name> <new-name>`
           )}`
         )
       );
@@ -270,13 +275,15 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now secret add <name> <value>`'
+            `${getPkgName()} secret add <name> <value>`
           )}`
         )
       );
 
       if (args.length > 2) {
-        const example = chalk.cyan(`$ now secret add -- "${args[0]}"`);
+        const example = chalk.cyan(
+          `$ ${getPkgName()} secret add -- "${args[0]}"`
+        );
         console.log(
           `If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
         );
@@ -300,7 +307,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
     }
 
     if (typeof value === 'boolean') {
-      const example = chalk.cyan(`$ now secret add -- "${name}"`);
+      const example = chalk.cyan(`$ ${getPkgName()} secret add -- "${name}"`);
       console.log(
         `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
       );
