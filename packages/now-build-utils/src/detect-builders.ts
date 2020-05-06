@@ -1,8 +1,9 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
-import { Route, Source } from '@now/routing-utils';
+import { Route, Source } from '@vercel/routing-utils';
 import { PackageJson, Builder, Config, BuilderFunctions } from './types';
+import { isOfficialRuntime } from './';
 
 interface ErrorResponse {
   code: string;
@@ -55,7 +56,7 @@ export function detectApiDirectory(builders: Builder[]): string | null {
 function getPublicBuilder(builders: Builder[]): Builder | null {
   const builder = builders.find(
     builder =>
-      builder.use === '@now/static' &&
+      isOfficialRuntime('static', builder.use) &&
       /^.*\/\*\*\/\*$/.test(builder.src) &&
       builder.config &&
       builder.config.zeroConfig === true
@@ -194,7 +195,8 @@ export async function detectBuilders(
       !fallbackEntrypoint &&
       buildCommand &&
       !fileName.includes('/') &&
-      fileName !== 'now.json'
+      fileName !== 'now.json' &&
+      fileName !== 'vercel.json'
     ) {
       fallbackEntrypoint = fileName;
     }
@@ -389,11 +391,11 @@ function getApiMatches({ tag }: Options = {}) {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'api/**/*.js', use: `@now/node${withTag}`, config },
-    { src: 'api/**/*.ts', use: `@now/node${withTag}`, config },
-    { src: 'api/**/!(*_test).go', use: `@now/go${withTag}`, config },
-    { src: 'api/**/*.py', use: `@now/python${withTag}`, config },
-    { src: 'api/**/*.rb', use: `@now/ruby${withTag}`, config },
+    { src: 'api/**/*.js', use: `@vercel/node${withTag}`, config },
+    { src: 'api/**/*.ts', use: `@vercel/node${withTag}`, config },
+    { src: 'api/**/!(*_test).go', use: `@vercel/go${withTag}`, config },
+    { src: 'api/**/*.py', use: `@vercel/python${withTag}`, config },
+    { src: 'api/**/*.rb', use: `@vercel/ruby${withTag}`, config },
   ];
 }
 
@@ -455,7 +457,7 @@ function detectFrontBuilder(
   }
 
   if (framework === 'nextjs') {
-    return { src: 'package.json', use: `@now/next${withTag}`, config };
+    return { src: 'package.json', use: `@vercel/next${withTag}`, config };
   }
   if (framework === 'blitzjs') {
     return { src: 'package.json', use: `@now/next${withTag}`, config };
@@ -481,7 +483,7 @@ function detectFrontBuilder(
 
   return {
     src: source || 'package.json',
-    use: `@now/static-build${withTag}`,
+    use: `@vercel/static-build${withTag}`,
     config,
   };
 }
@@ -596,7 +598,7 @@ function checkUnusedFunctions(
   }
 
   // Next.js can use functions only for `src/pages` or `pages`
-  if (frontendBuilder && frontendBuilder.use.startsWith('@now/next')) {
+  if (frontendBuilder && isOfficialRuntime('next', frontendBuilder.use)) {
     for (const fnKey of unusedFunctions.values()) {
       if (fnKey.startsWith('pages/') || fnKey.startsWith('src/pages')) {
         unusedFunctions.delete(fnKey);
@@ -961,7 +963,7 @@ function getRouteResult(
     outputDirectory &&
     frontendBuilder &&
     !options.featHandleMiss &&
-    frontendBuilder.use === '@now/static'
+    isOfficialRuntime('static', frontendBuilder.use)
   ) {
     defaultRoutes.push({
       src: '/(.*)',

@@ -4,8 +4,8 @@ const {
   validateEntrypoint,
   normalizePackageJson,
   getNextConfig,
-} = require('@now/next/dist/utils');
-const { FileRef } = require('@now/build-utils');
+} = require('@vercel/next/dist/utils');
+const { FileRef } = require('@vercel/build-utils');
 
 describe('getNextConfig', () => {
   const workPath = path.join(__dirname, 'fixtures');

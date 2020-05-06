@@ -9,6 +9,7 @@ import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
+import { getPkgName } from '../../util/pkg-name';
 
 interface Options {
   '--overwrite'?: boolean;
@@ -61,7 +62,6 @@ async function add(
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
 
   if (overwite) {
@@ -77,7 +77,7 @@ async function add(
       );
       output.print(
         `  ${chalk.cyan(
-          `now certs add --crt <domain.crt> --key <domain.key> --ca <ca.crt>`
+          `${getPkgName()} certs add --crt <domain.crt> --key <domain.key> --ca <ca.crt>`
         )}\n`
       );
       now.close();
@@ -89,9 +89,9 @@ async function add(
   } else {
     output.warn(
       `${chalk.cyan(
-        'now certs add'
+        `${getPkgName()} certs add`
       )} will be soon deprecated. Please use ${chalk.cyan(
-        'now certs issue <cn> <cns>'
+        `${getPkgName()} certs issue <cn> <cns>`
       )} instead`
     );
 
@@ -99,7 +99,9 @@ async function add(
       output.error(
         `Invalid number of arguments to create a custom certificate entry. Usage:`
       );
-      output.print(`  ${chalk.cyan(`now certs add <cn>[, <cn>]`)}\n`);
+      output.print(
+        `  ${chalk.cyan(`${getPkgName()} certs add <cn>[, <cn>]`)}\n`
+      );
       now.close();
       return 1;
     }

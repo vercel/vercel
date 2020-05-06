@@ -1,12 +1,12 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.js", "use": "@now/node" },
-    { "src": "ts/index.ts", "use": "@now/node" },
-    { "src": "micro-compat/index.js", "use": "@now/node" },
+    { "src": "index.js", "use": "@vercel/node" },
+    { "src": "ts/index.ts", "use": "@vercel/node" },
+    { "src": "micro-compat/index.js", "use": "@vercel/node" },
     {
       "src": "no-helpers/index.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": { "helpers": false }
     }
   ],

@@ -2,30 +2,31 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
+import { promisify } from 'util';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
 import {
   Builder,
-  BuildOptions,
-  Env,
   File,
   Lambda,
   FileBlob,
   FileFsRef,
-} from '@now/build-utils';
+} from '@vercel/build-utils';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
+import _treeKill from 'tree-kill';
 
+import { isOfficialRuntime } from '../is-official-runtime';
 import { Output } from '../output';
 import highlight from '../output/highlight';
-import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
 import DevServer from './server';
-import { getBuilder } from './builder-cache';
+import { builderModulePathPromise, getBuilder } from './builder-cache';
 import {
+  EnvConfig,
   NowConfig,
   BuildMatch,
   BuildResult,
@@ -33,9 +34,10 @@ import {
   BuilderOutput,
   BuildResultV3,
   BuilderOutputs,
+  BuilderParams,
   EnvConfigs,
 } from './types';
-import { normalizeRoutes } from '@now/routing-utils';
+import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
 
 interface BuildMessage {
@@ -48,27 +50,38 @@ interface BuildMessageResult extends BuildMessage {
   error?: object;
 }
 
+const treeKill = promisify(_treeKill);
+
 async function createBuildProcess(
   match: BuildMatch,
   envConfigs: EnvConfigs,
   workPath: string,
-  output: Output
+  output: Output,
+  yarnPath?: string
 ): Promise<ChildProcess> {
-  const builderWorkerPath = join(__dirname, 'builder-worker.js');
+  const { execPath } = process;
+  const modulePath = await builderModulePathPromise;
 
   // Ensure that `node` is in the builder's `PATH`
-  let PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
+  let PATH = `${dirname(execPath)}${delimiter}${process.env.PATH}`;
 
-  const env: Env = {
+  // Ensure that `yarn` is in the builder's `PATH`
+  if (yarnPath) {
+    PATH = `${yarnPath}${delimiter}${PATH}`;
+  }
+
+  const env: EnvConfig = {
     ...process.env,
     PATH,
     ...envConfigs.allEnv,
     NOW_REGION: 'dev1',
   };
 
-  const buildProcess = fork(builderWorkerPath, [], {
+  const buildProcess = fork(modulePath, [], {
     cwd: workPath,
     env,
+    execPath,
+    execArgv: [],
   });
   match.buildProcess = buildProcess;
 
@@ -102,14 +115,14 @@ export async function executeBuild(
   filesRemoved?: string[]
 ): Promise<void> {
   const {
-    builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
+    builderWithPkg: { runInProcess, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const { debug, envConfigs, cwd: workPath } = devServer;
+  const { debug, envConfigs, yarnPath, cwd: workPath } = devServer;
 
   const startTime = Date.now();
   const showBuildTimestamp =
-    match.use !== '@now/static' && (!isInitialBuild || debug);
+    !isOfficialRuntime('static', match.use) && (!isInitialBuild || debug);
 
   if (showBuildTimestamp) {
     devServer.output.log(`Building ${match.use}:${entrypoint}`);
@@ -129,11 +142,12 @@ export async function executeBuild(
       match,
       envConfigs,
       workPath,
-      devServer.output
+      devServer.output,
+      yarnPath
     );
   }
 
-  const buildOptions: BuildOptions = {
+  const buildParams: BuilderParams = {
     files,
     entrypoint,
     workPath,
@@ -144,7 +158,7 @@ export async function executeBuild(
       filesChanged,
       filesRemoved,
       // This env distiniction is only necessary to maintain
-      // backwards compatibility with the `@now/next` builder.
+      // backwards compatibility with the `@vercel/next` builder.
       env: envConfigs.runEnv,
       buildEnv: envConfigs.buildEnv,
     },
@@ -154,8 +168,8 @@ export async function executeBuild(
   if (buildProcess) {
     buildProcess.send({
       type: 'build',
-      requirePath,
-      buildOptions,
+      builderName: pkg.name,
+      buildParams,
     });
 
     buildResultOrOutputs = await new Promise((resolve, reject) => {
@@ -186,7 +200,7 @@ export async function executeBuild(
       buildProcess!.on('message', onMessage);
     });
   } else {
-    buildResultOrOutputs = await builder.build(buildOptions);
+    buildResultOrOutputs = await builder.build(buildParams);
   }
 
   // Sort out build result to builder v2 shape
@@ -383,6 +397,7 @@ export async function executeBuild(
 export async function getBuildMatches(
   nowConfig: NowConfig,
   cwd: string,
+  yarnDir: string,
   output: Output,
   devServer: DevServer,
   fileList: string[]
@@ -396,7 +411,7 @@ export async function getBuildMatches(
   }
 
   const noMatches: Builder[] = [];
-  const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
+  const builds = nowConfig.builds || [{ src: '**', use: '@vercel/static' }];
 
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;
@@ -434,7 +449,7 @@ export async function getBuildMatches(
 
     for (const file of files) {
       src = relative(cwd, file);
-      const builderWithPkg = await getBuilder(use, output);
+      const builderWithPkg = await getBuilder(use, yarnDir, output);
       matches.push({
         ...buildConfig,
         src,
@@ -454,7 +469,7 @@ export async function getBuildMatches(
         noMatches.length,
         true
       )} that did not match any source files (please ensure they are NOT defined in ${highlight(
-        '.nowignore'
+        '.vercelignore'
       )}):`
     );
     for (const buildConfig of noMatches) {

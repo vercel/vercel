@@ -8,11 +8,8 @@ import path from 'path';
 import mri from 'mri';
 import XDGAppPaths from 'xdg-app-paths';
 
-// The `homeConfigPath` is the legacy configuration path located in the users home directory.
-const homeConfigPath: string = path.join(homedir(), '.now');
-
 // Returns whether a directory exists
-const isDirectory = (path: string): boolean => {
+export const isDirectory = (path: string): boolean => {
   try {
     return fs.lstatSync(path).isDirectory();
   } catch (_) {
@@ -22,27 +19,32 @@ const isDirectory = (path: string): boolean => {
 };
 
 // Returns in which directory the config should be present
-const getNowDir = (): string => {
+const getGlobalPathConfig = (): string => {
   const args = mri(process.argv.slice(2), {
     string: ['global-config'],
     alias: {
-      'global-config': 'Q'
-    }
+      'global-config': 'Q',
+    },
   });
 
   const customPath = args['global-config'];
-  const xdgConfigPaths = XDGAppPaths('now').dataDirs();
-  const possibleConfigPaths = [homeConfigPath, ...xdgConfigPaths];
+  const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
 
-  // customPath is the preferred location
-  // the legacy home directory config path is the second most wanted location
-  // otherwise the first matching xdg-config-path is used which already exists
-  // at last the first best xdg-config-path is used
+  const possibleConfigPaths = [
+    ...vercelDirectories, // latest vercel directory
+    ...XDGAppPaths('now').dataDirs(), // legacy now directory
+    path.join(homedir(), '.now'), // legacy config in user's home directory.
+  ];
+
+  // The customPath flag is the preferred location,
+  // followed by the the vercel directory,
+  // followed by the now directory.
+  // If none of those exist, use the vercel directory.
   return (
     (customPath && path.resolve(customPath)) ||
     possibleConfigPaths.find(configPath => isDirectory(configPath)) ||
-    xdgConfigPaths[0]
+    vercelDirectories[0]
   );
 };
 
-export default getNowDir;
+export default getGlobalPathConfig;

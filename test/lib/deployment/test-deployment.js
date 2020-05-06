@@ -78,8 +78,8 @@ async function testDeployment(
       build.config = build.config || {};
       const { config } = build;
       if (buildUtilsUrl === '@canary') {
-        config.useBuildUtils = config.useBuildUtils || '@now/build-utils';
-        config.useBuildUtils = `${config.useBuildUtils}@canary`;
+        const buildUtils = config.useBuildUtils || '@vercel/build-utils';
+        config.useBuildUtils = `${buildUtils}@canary`;
       } else {
         config.useBuildUtils = `https://${buildUtilsUrl}`;
       }

@@ -16,7 +16,7 @@ import {
   BuildOptions,
   debug,
   walkParentDirs,
-} from '@now/build-utils';
+} from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
 async function matchPaths(

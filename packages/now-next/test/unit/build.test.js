@@ -1,8 +1,8 @@
 const path = require('path');
 const os = require('os');
 const execa = require('execa');
-const { build } = require('@now/next');
-const { download, FileBlob } = require('@now/build-utils');
+const { build } = require('@vercel/next');
+const { download, FileBlob } = require('@vercel/build-utils');
 
 jest.setTimeout(45000);
 

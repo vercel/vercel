@@ -4,8 +4,8 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { HttpHeadersConfig, RouteResult } from './types';
-import { isHandler, Route, HandleValue } from '@now/routing-utils';
+import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
+import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
@@ -48,10 +48,10 @@ export function getRoutesTypes(routes: Route[] = []) {
 export async function devRouter(
   reqUrl: string = '/',
   reqMethod?: string,
-  routes?: Route[],
+  routes?: RouteConfig[],
   devServer?: DevServer,
   previousHeaders?: HttpHeadersConfig,
-  missRoutes?: Route[],
+  missRoutes?: RouteConfig[],
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;

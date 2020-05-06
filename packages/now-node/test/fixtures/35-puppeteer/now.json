@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "**/*.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": {
         "functions": {
           "**/*.js": {

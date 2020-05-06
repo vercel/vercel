@@ -3,17 +3,17 @@
   "builds": [
     {
       "src": "index.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": { "awsLambdaHandler": "index.handler" }
     },
     {
       "src": "callback/index.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": { "awsLambdaHandler": "callback/index.handler" }
     },
     {
       "src": "graphql/index.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": { "awsLambdaHandler": "graphql/index.handler" }
     }
   ],

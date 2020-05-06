@@ -6,9 +6,9 @@ import {
   redirectsSchema,
   rewritesSchema,
   trailingSlashSchema,
-} from '@now/routing-utils';
+} from '@vercel/routing-utils';
 import { NowConfig } from './types';
-import { functionsSchema, buildsSchema } from '@now/build-utils';
+import { functionsSchema, buildsSchema } from '@vercel/build-utils';
 
 const ajv = new Ajv();
 

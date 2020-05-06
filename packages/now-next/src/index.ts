@@ -20,13 +20,13 @@ import {
   execCommand,
   getNodeBinPath,
   NowBuildError,
-} from '@now/build-utils';
-import { Route, Handler } from '@now/routing-utils';
+} from '@vercel/build-utils';
+import { Route, Handler } from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
   convertRewrites,
-} from '@now/routing-utils/dist/superstatic';
+} from '@vercel/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import {
@@ -82,6 +82,7 @@ interface BuildParamsType extends BuildOptions {
 export const version = 2;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
+const yarnPreferOffline = true;
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
   process.once(signal as NodeJS.Signals, () => {
@@ -164,7 +165,7 @@ function isLegacyNext(nextVersion: string) {
   return true;
 }
 
-const name = '[@now/next]';
+const name = '[@vercel/next]';
 const urls: stringMap = {};
 
 function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
@@ -282,7 +283,7 @@ export const build = async ({
     }
 
     console.warn(
-      "WARNING: your application is being deployed in @now/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
+      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
     );
 
     debug('Normalizing package.json');
@@ -315,7 +316,12 @@ export const build = async ({
   }
 
   console.log('Installing dependencies...');
-  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
+  await runNpmInstall(
+    entryPath,
+    [...(yarnPreferOffline ? ['--prefer-offline'] : [])],
+    spawnOpts,
+    meta
+  );
 
   let realNextVersion: string | undefined;
   try {
@@ -406,17 +412,22 @@ export const build = async ({
             }
 
             dataRoutes.push({
-              src: dataRoute.dataRouteRegex.replace(
-                /^\^/,
-                `^${appMountPrefixNoTrailingSlash}`
-              ),
+              src: (
+                dataRoute.namedDataRouteRegex || dataRoute.dataRouteRegex
+              ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
               dest: path.join(
                 '/',
                 entryDirectory,
                 // make sure to route SSG data route to the data prerender
                 // output, we don't do this for SSP routes since they don't
                 // have a separate data output
-                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
+                `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
+                  dataRoute.routeKeys
+                    ? `?${dataRoute.routeKeys
+                        .map(key => `${key}=$${key}`)
+                        .join('&')}`
+                    : ''
+                }`
               ),
               check: true,
             });
@@ -434,14 +445,14 @@ export const build = async ({
             throw new NowBuildError({
               code: 'NOW_NEXT_BASEPATH_STARTING_SLASH',
               message:
-                'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+                'basePath must start with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
             });
           }
           if (nextBasePath.endsWith('/')) {
             throw new NowBuildError({
               code: 'NOW_NEXT_BASEPATH_TRAILING_SLASH',
               message:
-                'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+                'basePath must not end with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
             });
           }
 
@@ -458,8 +469,8 @@ export const build = async ({
         throw new NowBuildError({
           code: 'NOW_NEXT_VERSION_OUTDATED',
           message:
-            'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+            'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
         });
       }
     }
@@ -597,7 +608,7 @@ export const build = async ({
     debug('Running npm install --production...');
     await runNpmInstall(
       entryPath,
-      ['--prefer-offline', '--production'],
+      [...(yarnPreferOffline ? ['--prefer-offline'] : []), '--production'],
       spawnOpts,
       meta
     );
@@ -627,7 +638,10 @@ export const build = async ({
       console.error(
         'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
       );
-      throw new NowBuildError({ code: 'NOW_NEXT_NO_BUILD_ID', message: 'Missing BUILD_ID' });
+      throw new NowBuildError({
+        code: 'NOW_NEXT_NO_BUILD_ID',
+        message: 'Missing BUILD_ID',
+      });
     }
     const dotNextRootFiles = await glob(`${outputDirectory}/*`, entryPath);
     const dotNextServerRootFiles = await glob(

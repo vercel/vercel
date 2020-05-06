@@ -50,7 +50,7 @@ export interface Config {
 export interface Meta {
   isDev?: boolean;
   skipDownload?: boolean;
-  requestPath?: string | null;
+  requestPath?: string;
   filesChanged?: string[];
   filesRemoved?: string[];
   env?: Env;
@@ -81,7 +81,7 @@ export interface AnalyzeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -108,7 +108,7 @@ export interface BuildOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 
@@ -148,7 +148,7 @@ export interface PrepareCacheOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -182,37 +182,9 @@ export interface ShouldServeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
-}
-
-export interface StartDevServerOptions {
-  /**
-   * Name of entrypoint file for this particular build job. Value
-   * `files[entrypoint]` is guaranteed to exist and be a valid File reference.
-   * `entrypoint` is always a discrete file and never a glob, since globs are
-   * expanded into separate builds at deployment time.
-   */
-  entrypoint: string;
-
-  /**
-   * A writable temporary directory where you are encouraged to perform your
-   * build process. This directory will be populated with the restored cache.
-   */
-  workPath: string;
-
-  /**
-   * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
-   */
-  config: Config;
-
-  /**
-   * Runtime environment variables configuration from the project's `now.json`
-   * and local `.env` file.
-   */
-  env: Env;
 }
 
 export interface StartDevServerSuccess {
@@ -240,7 +212,7 @@ export type StartDevServerResult = StartDevServerSuccess | null;
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
 // eslint-disable-next-line @typescript-eslint/no-namespace
-export namespace PackageJson {
+namespace PackageJson {
   /**
    * An author or contributor
    */

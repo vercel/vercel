@@ -13,8 +13,8 @@ import {
   Lambda,
   NowBuildError,
   isSymbolicLink,
-} from '@now/build-utils';
-import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
+} from '@vercel/build-utils';
+import { Route, Source, NowHeader, NowRewrite } from '@vercel/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -41,7 +41,7 @@ function validateEntrypoint(entrypoint: string) {
   ) {
     throw new NowBuildError({
       message:
-        'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"',
+        'Specified "src" for "@vercel/next" has to be "package.json" or "next.config.js"',
       code: 'NOW_NEXT_INCORRECT_SRC',
     });
   }
@@ -296,7 +296,7 @@ async function getRoutes(
   return routes;
 }
 
-// TODO: update to use type from @now/routing-utils after
+// TODO: update to use type from `@vercel/routing-utils` after
 // adding permanent: true/false handling
 export type Redirect = NowRewrite & {
   statusCode?: number;
@@ -317,9 +317,16 @@ export type RoutesManifest = {
   dynamicRoutes: {
     page: string;
     regex: string;
+    namedRegex?: string;
+    routeKeys?: string[];
   }[];
   version: number;
-  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
+  dataRoutes?: Array<{
+    page: string;
+    routeKeys?: string[];
+    dataRouteRegex: string;
+    namedDataRouteRegex?: string;
+  }>;
 };
 
 export async function getRoutesManifest(
@@ -375,10 +382,14 @@ export async function getDynamicRoutes(
           .filter(({ page }) =>
             omittedRoutes ? !omittedRoutes.has(page) : true
           )
-          .map(({ page, regex }: { page: string; regex: string }) => {
+          .map(({ page, regex, namedRegex, routeKeys }) => {
             return {
-              src: regex,
-              dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              src: namedRegex || regex,
+              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
+                routeKeys
+                  ? `?${routeKeys.map(key => `${key}=$${key}`).join('&')}`
+                  : ''
+              }`,
               check: true,
             };
           });
@@ -387,8 +398,8 @@ export async function getDynamicRoutes(
         // update MIN_ROUTES_MANIFEST_VERSION
         throw new NowBuildError({
           message:
-            'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+            'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
           code: 'NOW_NEXT_VERSION_UPGRADE',
         });
       }

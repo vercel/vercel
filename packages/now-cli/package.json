@@ -1,6 +1,6 @@
 {
-  "name": "now",
-  "version": "18.0.1-canary.14",
+  "name": "vercel",
+  "version": "18.0.1-canary.19",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -41,7 +41,8 @@
     "all": true
   },
   "bin": {
-    "now": "./dist/index.js"
+    "now": "./dist/index.js",
+    "vercel": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -60,19 +61,9 @@
   "engines": {
     "node": ">= 10"
   },
-  "dependencies": {
-    "@now/build-utils": "2.2.2-canary.3",
-    "@now/go": "1.0.8-canary.0",
-    "@now/next": "2.5.5-canary.4",
-    "@now/node": "1.5.2-canary.5",
-    "@now/python": "1.1.7-canary.1",
-    "@now/ruby": "1.1.1-canary.0",
-    "@now/static-build": "0.16.1-canary.2"
-  },
   "devDependencies": {
     "@sentry/node": "5.5.0",
     "@sindresorhus/slugify": "0.11.0",
-    "@tootallnate/once": "1.1.2",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",
     "@types/async-retry": "1.2.1",
@@ -188,6 +179,7 @@
     "which": "2.0.2",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0",
-    "xdg-app-paths": "5.1.0"
+    "xdg-app-paths": "5.1.0",
+    "yarn": "1.22.0"
   }
 }
