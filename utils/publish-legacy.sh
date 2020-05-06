@@ -6,6 +6,7 @@ set -euo pipefail
 echo "Publishing legacy \"@now\" packages"
 
 __dirname="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+echo "__dirname: ${__dirname}"
 
 echo "Logged in to npm as: $(npm whoami)"
 

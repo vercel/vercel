@@ -2,6 +2,7 @@
 set -euo pipefail
 
 __dirname="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+echo "__dirname: ${__dirname}"
 
 if [ -z "$NPM_TOKEN" ]; then
   echo "NPM_TOKEN not found. Did you forget to assign the GitHub Action secret?"
