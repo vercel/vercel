@@ -1,4 +1,4 @@
-import { getPlatformEnv } from './index';
+import { getPlatformEnv } from './';
 
 export default function debug(message: string, ...additional: any[]) {
   if (getPlatformEnv('BUILDER_DEBUG')) {

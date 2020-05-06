@@ -146,11 +146,9 @@ async function fetchWithAuth(url, opts = {}) {
     currentCount += 1;
     if (!token || currentCount === MAX_COUNT) {
       currentCount = 0;
-      if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
-        // used for health checks
-        token = process.env.NOW_TOKEN;
-        token = process.env.VERCEL_TOKEN;
-      } else {
+      // used for health checks
+      token = process.env.VERCEL_TOKEN || process.env.NOW_TOKEN;
+      if (!token) {
         // used by GH Actions
         token = await fetchTokenWithRetry();
       }
