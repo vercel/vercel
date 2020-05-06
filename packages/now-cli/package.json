@@ -41,6 +41,7 @@
     "all": true
   },
   "bin": {
+    "now": "./dist/index.js",
     "vercel": "./dist/index.js"
   },
   "files": [
