@@ -9,10 +9,10 @@ import {
   createLambda,
   getWriteableDirectory,
   BuildOptions,
+  Meta,
   shouldServe,
   Files,
   debug,
-  Meta,
 } from '@vercel/build-utils';
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
@@ -134,13 +134,12 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
 
   if (meta.isDev) {
     // Create cache so Go rebuilds fast with `now dev`
-    goPath = join(
-      workPath,
-      '.now',
-      'cache',
-      'now-go',
-      basename(entrypoint, '.go')
-    );
+    let { devCacheDir } = meta;
+    if (!devCacheDir) {
+      // Old versions of the CLI don't assign this property
+      devCacheDir = join(workPath, '.now', 'cache');
+    }
+    goPath = join(devCacheDir, 'now-go', basename(entrypoint, '.go'));
     const destNow = join(goPath, 'src', 'lambda');
     await download(downloadedFiles, destNow);
     downloadedFiles = await glob('**', destNow);

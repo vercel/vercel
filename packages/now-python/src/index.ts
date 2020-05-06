@@ -40,12 +40,12 @@ export async function downloadFilesInWorkPath({
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
   if (meta.isDev) {
-    const destNow = join(
-      workPath,
-      '.now',
-      'cache',
-      basename(entrypoint, '.py')
-    );
+    let { devCacheDir } = meta;
+    if (!devCacheDir) {
+      // Old versions of the CLI don't assign this property
+      devCacheDir = join(workPath, '.now', 'cache');
+    }
+    const destNow = join(devCacheDir, basename(entrypoint, '.py'));
     await download(downloadedFiles, destNow);
     downloadedFiles = await glob('**', destNow);
     workPath = destNow;
