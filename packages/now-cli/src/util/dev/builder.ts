@@ -39,6 +39,7 @@ import {
 } from './types';
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
+import { getVercelDirectory } from '../projects/link';
 
 interface BuildMessage {
   type: string;
@@ -147,6 +148,9 @@ export async function executeBuild(
     );
   }
 
+  const vercelDir = getVercelDirectory(workPath);
+  const devCacheDir = join(vercelDir, 'cache');
+
   const buildParams: BuilderParams = {
     files,
     entrypoint,
@@ -155,6 +159,7 @@ export async function executeBuild(
     meta: {
       isDev: true,
       requestPath,
+      devCacheDir,
       filesChanged,
       filesRemoved,
       // This env distiniction is only necessary to maintain
