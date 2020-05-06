@@ -36,6 +36,10 @@ if (pkg.name === '@vercel/client') {
   pkg.name = 'now-client';
 } else {
   pkg.name = pkg.name.replace('vercel', 'now');
+  if (pkg.bin && pkg.bin.vercel) {
+    // The legacy "bin" for Now CLI is "now"
+    pkg.bin = { now: pkg.bin.vercel };
+  }
 }
 
 console.error(`Updated package name: "${originalName}" -> "${pkg.name}"`);
