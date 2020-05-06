@@ -148,8 +148,8 @@ export async function executeBuild(
     );
   }
 
-  const dir = getProjectDirectory();
-  const devCacheDir = join(dir, 'cache');
+  const projectDir = getProjectDirectory(workPath);
+  const devCacheDir = join(projectDir, 'cache');
 
   const buildParams: BuilderParams = {
     files,
