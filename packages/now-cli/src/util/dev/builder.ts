@@ -39,7 +39,7 @@ import {
 } from './types';
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
-import { getProjectDirectory } from '../projects/link';
+import { getVercelDirectory } from '../projects/link';
 
 interface BuildMessage {
   type: string;
@@ -148,8 +148,8 @@ export async function executeBuild(
     );
   }
 
-  const projectDir = getProjectDirectory(workPath);
-  const devCacheDir = join(projectDir, 'cache');
+  const vercelDir = getVercelDirectory(workPath);
+  const devCacheDir = join(vercelDir, 'cache');
 
   const buildParams: BuilderParams = {
     files,
