@@ -42,7 +42,7 @@ function validateEntrypoint(entrypoint: string) {
     throw new NowBuildError({
       message:
         'Specified "src" for "@vercel/next" has to be "package.json" or "next.config.js"',
-      code: 'NOW_NEXT_INCORRECT_SRC',
+      code: 'NEXT_INCORRECT_SRC',
     });
   }
 }
@@ -352,7 +352,7 @@ export async function getRoutesManifest(
     throw new NowBuildError({
       message: `A "routes-manifest.json" couldn't be found. Is the correct output directory configured? This setting does not need to be changed in most cases`,
       link: 'https://err.sh/zeit/now/now-next-routes-manifest',
-      code: 'NOW_NEXT_NO_ROUTES_MANIFEST',
+      code: 'NEXT_NO_ROUTES_MANIFEST',
     });
   }
 
@@ -400,7 +400,7 @@ export async function getDynamicRoutes(
           message:
             'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
             'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
-          code: 'NOW_NEXT_VERSION_UPGRADE',
+          code: 'NEXT_VERSION_UPGRADE',
         });
       }
     }
@@ -441,7 +441,7 @@ export async function getDynamicRoutes(
     throw new NowBuildError({
       message:
         'Found usage of dynamic routes but not on a new enough version of Next.js.',
-      code: 'NOW_NEXT_DYNAMIC_ROUTES_OUTDATED',
+      code: 'NEXT_DYNAMIC_ROUTES_OUTDATED',
     });
   }
 

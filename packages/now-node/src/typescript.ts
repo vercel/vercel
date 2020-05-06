@@ -182,7 +182,7 @@ export function register(opts: Options = {}): Register {
 
   function createTSError(diagnostics: ReadonlyArray<_ts.Diagnostic>) {
     const message = formatDiagnostics(diagnostics, diagnosticHost);
-    return new NowBuildError({ code: 'NOW_NODE_TYPESCRIPT_ERROR', message });
+    return new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
   }
 
   function reportTSError(

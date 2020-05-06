@@ -76,6 +76,7 @@ async function createBuildProcess(
     PATH,
     ...envConfigs.allEnv,
     NOW_REGION: 'dev1',
+    VERCEL_REGION: 'dev1',
   };
 
   const buildProcess = fork(modulePath, [], {
@@ -379,6 +380,7 @@ export async function executeBuild(
               ...asset.environment,
               ...envConfigs.runEnv,
               NOW_REGION: 'dev1',
+              VERCEL_REGION: 'dev1',
             },
           },
         });

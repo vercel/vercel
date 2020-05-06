@@ -14,6 +14,7 @@ import chalk from 'chalk';
 import { prependEmoji, emoji } from '../emoji';
 import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
+import { getPlatformEnv } from '@vercel/build-utils';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -104,7 +105,8 @@ export async function getLinkedProject(
   | { status: 'not_linked'; org: null; project: null }
   | { status: 'error'; exitCode: number }
 > {
-  const { VERCEL_ORG_ID, VERCEL_PROJECT_ID } = getFlags();
+  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
 
   if ((VERCEL_ORG_ID || VERCEL_PROJECT_ID) && !shouldUseEnv) {
@@ -163,20 +165,6 @@ export async function getLinkedProject(
   return { status: 'linked', org, project };
 }
 
-export function getFlags() {
-  let {
-    VERCEL_ORG_ID,
-    VERCEL_PROJECT_ID,
-    NOW_ORG_ID,
-    NOW_PROJECT_ID,
-  } = process.env;
-
-  // Fallback to old NOW env vars if available
-  VERCEL_ORG_ID = VERCEL_ORG_ID || NOW_ORG_ID;
-  VERCEL_PROJECT_ID = VERCEL_PROJECT_ID || NOW_PROJECT_ID;
-  return { VERCEL_ORG_ID, VERCEL_PROJECT_ID };
-}
-
 export async function linkFolderToProject(
   output: Output,
   path: string,
@@ -184,7 +172,8 @@ export async function linkFolderToProject(
   projectName: string,
   orgSlug: string
 ) {
-  const { VERCEL_ORG_ID, VERCEL_PROJECT_ID } = getFlags();
+  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
 
   // if defined, skip linking
   if (VERCEL_ORG_ID || VERCEL_PROJECT_ID) {
