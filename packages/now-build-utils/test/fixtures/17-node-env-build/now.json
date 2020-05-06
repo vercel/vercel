@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/static-build" }],
+  "builds": [{ "src": "package.json", "use": "@vercel/static-build" }],
   "build": { "env": { "NODE_ENV": "custom-value:RANDOMNESS_PLACEHOLDER" } },
   "probes": [
     { "path": "/", "mustContain": "custom-value:RANDOMNESS_PLACEHOLDER" }

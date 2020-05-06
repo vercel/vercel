@@ -1,1 +1,1 @@
-ncc build src/index.ts -e @now/build-utils -o dist
+ncc build src/index.ts -e @vercel/build-utils -o dist

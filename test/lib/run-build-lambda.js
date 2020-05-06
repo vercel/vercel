@@ -1,7 +1,4 @@
-const {
-  glob,
-  getWriteableDirectory,
-} = require('@now/build-utils');
+const { glob, getWriteableDirectory } = require('@vercel/build-utils');
 
 function runAnalyze(wrapper, context) {
   if (wrapper.analyze) {

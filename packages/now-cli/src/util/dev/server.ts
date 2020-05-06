@@ -12,18 +12,18 @@ import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import { basename, dirname, extname, join } from 'path';
-import {
-  getTransformedRoutes,
-  appendRoutesToPhase,
-  HandleValue,
-} from '@now/routing-utils';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import which from 'which';
-import { getVercelIgnore } from 'now-client';
 
+import { getVercelIgnore } from '@vercel/client';
+import {
+  getTransformedRoutes,
+  appendRoutesToPhase,
+  HandleValue,
+} from '@vercel/routing-utils';
 import {
   Builder,
   FileFsRef,
@@ -32,7 +32,7 @@ import {
   detectApiDirectory,
   detectApiExtensions,
   spawnCommand,
-} from '@now/build-utils';
+} from '@vercel/build-utils';
 
 import { once } from '../once';
 import link from '../output/link';
@@ -41,6 +41,7 @@ import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
+import { isOfficialRuntime } from '../is-official-runtime';
 import { version as cliVersion } from '../../../package.json';
 import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
 import {
@@ -92,11 +93,11 @@ interface FSEvent {
 }
 
 function sortBuilders(buildA: Builder, buildB: Builder) {
-  if (buildA && buildA.use && buildA.use.startsWith('@now/static-build')) {
+  if (buildA && buildA.use && isOfficialRuntime('static-build', buildA.use)) {
     return 1;
   }
 
-  if (buildB && buildB.use && buildB.use.startsWith('@now/static-build')) {
+  if (buildB && buildB.use && isOfficialRuntime('static-build', buildB.use)) {
     return -1;
   }
 
@@ -411,7 +412,7 @@ export default class DevServer {
         .catch(cleanup);
     }
 
-    // Sort build matches to make sure `@now/static-build` is always last
+    // Sort build matches to make sure `@vercel/static-build` is always last
     this.buildMatches = new Map(
       [...this.buildMatches.entries()].sort((matchA, matchB) => {
         return sortBuilders(matchA[1] as Builder, matchB[1] as Builder);
@@ -434,7 +435,7 @@ export default class DevServer {
         src,
         builderWithPkg: { package: pkg },
       } = buildMatch;
-      if (pkg.name === '@now/static') continue;
+      if (isOfficialRuntime('static', pkg.name)) continue;
       if (pkg.name && updatedBuilders.includes(pkg.name)) {
         shutdownBuilder(buildMatch, this.output);
         this.buildMatches.delete(src);
@@ -596,7 +597,7 @@ export default class DevServer {
         config.builds = config.builds.filter(filterFrontendBuilds);
       }
 
-      // `@now/static-build` needs to be the last builder
+      // `@vercel/static-build` needs to be the last builder
       // since it might catch all other requests
       config.builds.sort(sortBuilders);
     }
@@ -2036,7 +2037,7 @@ async function checkForPort(
 
 function filterFrontendBuilds(build: Builder) {
   return (
-    !build.use.startsWith('@now/static-build') &&
-    !build.use.startsWith('@now/next')
+    !isOfficialRuntime('static-build', build.use) &&
+    !isOfficialRuntime('next', build.use)
   );
 }

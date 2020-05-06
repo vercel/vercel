@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "config.toml",
-      "use": "@now/static-build",
+      "use": "@vercel/static-build",
       "config": {
         "zeroConfig": true,
         "framework": "zola"

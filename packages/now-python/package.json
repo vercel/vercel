@@ -1,6 +1,6 @@
 {
-  "name": "@now/python",
-  "version": "1.1.7-canary.1",
+  "name": "@vercel/python",
+  "version": "1.1.7-canary.2",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-integration-once": "jest --env node --verbose --runInBand",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail",
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {

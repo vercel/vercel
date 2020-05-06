@@ -1,4 +1,4 @@
-import { Framework } from '@now/frameworks';
+import { Framework } from '@vercel/frameworks';
 import Client from './client';
 
 export async function getFrameworks(client: Client) {
