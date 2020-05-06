@@ -42,8 +42,7 @@ const linkSchema = {
  * Returns the `<cwd>/.vercel` directory for the current project
  * with a fallback to <cwd>/.now` if it exists.
  */
-export function getVercelDirectory(path?: string) {
-  const cwd = path || process.cwd();
+export function getVercelDirectory(cwd: string = process.cwd()) {
   const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
   return possibleDirs.find(d => isDirectory(d)) || possibleDirs[0];
 }
