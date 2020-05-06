@@ -1,8 +1,8 @@
 {
   "version": 2,
   "builds": [
-    { "src": "gem-install-rmagick.sh", "use": "@now/static-build" },
-    { "src": "gem-install-ruby-vips.sh", "use": "@now/static-build" }
+    { "src": "gem-install-rmagick.sh", "use": "@vercel/static-build" },
+    { "src": "gem-install-ruby-vips.sh", "use": "@vercel/static-build" }
   ],
   "probes": [
     { "path": "/rmagick.html", "mustContain": "RMagick 3.1.0" },

@@ -13,7 +13,7 @@ import {
   shouldServe,
   BuildOptions,
   debug,
-} from '@now/build-utils';
+} from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
@@ -40,12 +40,9 @@ export async function downloadFilesInWorkPath({
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
   if (meta.isDev) {
-    const destNow = join(
-      workPath,
-      '.now',
-      'cache',
-      basename(entrypoint, '.py')
-    );
+    // Old versions of the CLI don't assign this property
+    const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
+    const destNow = join(devCacheDir, basename(entrypoint, '.py'));
     await download(downloadedFiles, destNow);
     downloadedFiles = await glob('**', destNow);
     workPath = destNow;

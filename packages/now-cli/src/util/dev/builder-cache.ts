@@ -8,7 +8,7 @@ import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
 import { join } from 'path';
-import { PackageJson } from '@now/build-utils';
+import { PackageJson } from '@vercel/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import {
   createReadStream,
@@ -31,12 +31,17 @@ declare const __non_webpack_require__: typeof require;
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
-const localBuilders: { [key: string]: BuilderWithPackage } = {
-  '@now/static': {
+const createStaticBuilder = (scope: string): BuilderWithPackage => {
+  return {
     runInProcess: true,
     builder: Object.freeze(staticBuilder),
-    package: Object.freeze({ name: '@now/static', version: '' }),
-  },
+    package: Object.freeze({ name: `@${scope}/static`, version: '' }),
+  };
+};
+
+const localBuilders: { [key: string]: BuilderWithPackage } = {
+  '@now/static': createStaticBuilder('now'),
+  '@vercel/static': createStaticBuilder('vercel'),
 };
 
 const distTag = getDistTag(pkg.version);
@@ -142,14 +147,14 @@ function getNpmVersion(use = ''): string {
   return '';
 }
 
-export function getBuildUtils(packages: string[]): string {
+export function getBuildUtils(packages: string[], org: string): string {
   const version = packages
     .map(getNpmVersion)
     .some(ver => ver.includes('canary'))
     ? 'canary'
     : 'latest';
 
-  return `@now/build-utils@${version}`;
+  return `@${org}/build-utils@${version}`;
 }
 
 function parseVersionSafe(rawSpec: string) {
@@ -230,7 +235,10 @@ export async function installBuilders(
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
 
-  packages.push(getBuildUtils(packages));
+  packages.push(
+    getBuildUtils(packages, 'vercel'),
+    getBuildUtils(packages, 'now')
+  );
 
   // Filter out any packages that come packaged with `now-cli`
   const packagesToInstall = packages.filter(p =>
@@ -299,7 +307,10 @@ export async function updateBuilders(
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
 
-  packages.push(getBuildUtils(packages));
+  packages.push(
+    getBuildUtils(packages, 'vercel'),
+    getBuildUtils(packages, 'now')
+  );
 
   await retry(
     () =>

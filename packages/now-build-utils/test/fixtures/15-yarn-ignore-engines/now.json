@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "index.js",
-      "use": "@now/node"
+      "use": "@vercel/node"
     }
   ],
   "probes": [{ "path": "/", "mustContain": "found:RANDOMNESS_PLACEHOLDER" }]

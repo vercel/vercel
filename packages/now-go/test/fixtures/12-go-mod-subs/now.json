@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "**/*.go", "use": "@now/go" }],
+  "builds": [{ "src": "**/*.go", "use": "@vercel/go" }],
   "probes": [
     { "path": "/sub-1", "mustContain": "RANDOMNESS_PLACEHOLDER" },
     { "path": "/sub-2", "mustContain": "RANDOMNESS_PLACEHOLDER" }

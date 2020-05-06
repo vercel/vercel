@@ -38,11 +38,17 @@ const linkSchema = {
   },
 };
 
-async function getLink(path?: string): Promise<ProjectLink | null> {
-  const cwd = path || process.cwd();
+/**
+ * Returns the `<cwd>/.vercel` directory for the current project
+ * with a fallback to <cwd>/.now` if it exists.
+ */
+export function getVercelDirectory(cwd: string = process.cwd()) {
   const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
+  return possibleDirs.find(d => isDirectory(d)) || possibleDirs[0];
+}
 
-  const dir = possibleDirs.find(d => isDirectory(d)) || possibleDirs[0];
+async function getLink(path?: string): Promise<ProjectLink | null> {
+  const dir = getVercelDirectory(path);
   return getLinkFromDir(dir);
 }
 
