@@ -15,6 +15,8 @@ if [ ! -e ~/.npmrc ]; then
   exit 0
 fi
 
+echo "Logged in to npm as: $(npm whoami)"
+
 npm_tag=""
 tag="$(git describe --tags --exact-match 2> /dev/null || :)"
 

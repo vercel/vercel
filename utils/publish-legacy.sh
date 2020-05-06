@@ -3,8 +3,11 @@ set -euo pipefail
 
 # Modifies the tagged packages to contain the legacy `now` name.
 # This file will be deleted on Jan 1, 2021.
+echo "Publishing legacy \"@now\" packages"
 
 __dirname="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+echo "Logged in to npm as: $(npm whoami)"
 
 commit="$(git log --format="%H" -n 1)"
 
