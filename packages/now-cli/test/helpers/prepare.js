@@ -172,7 +172,8 @@ fs.writeFileSync(
   'index.js',
   fs
     .readFileSync('index.js', 'utf8')
-    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
+    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off')
+    .replace('BUILD_ENV_DEBUG', process.env.VERCEL_BUILDER_DEBUG ? 'on' : 'off'),
 );
       `,
       'index.js': `

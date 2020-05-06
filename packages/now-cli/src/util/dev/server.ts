@@ -1696,6 +1696,7 @@ export default class DevServer {
       ...process.env,
       ...this.envConfigs.allEnv,
       NOW_REGION: 'dev1',
+      VERCEL_REGION: 'dev1',
       PORT: `${port}`,
     };
 

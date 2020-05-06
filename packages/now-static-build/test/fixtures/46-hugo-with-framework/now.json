@@ -11,7 +11,7 @@
   ],
   "build": {
     "env": {
-      "NOW_BUILDER_DEBUG": "1"
+      "VERCEL_BUILDER_DEBUG": "1"
     }
   },
   "probes": [{ "path": "/", "mustContain": "My First Post" }]
