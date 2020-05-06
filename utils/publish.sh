@@ -2,6 +2,7 @@
 set -euo pipefail
 
 __dirname="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+echo "__dirname: ${__dirname}"
 
 if [ -z "$NPM_TOKEN" ]; then
   echo "NPM_TOKEN not found. Did you forget to assign the GitHub Action secret?"
@@ -14,6 +15,8 @@ if [ ! -e ~/.npmrc ]; then
   echo "~/.npmrc file does not exist, skipping publish"
   exit 0
 fi
+
+echo "Logged in to npm as: $(npm whoami)"
 
 npm_tag=""
 tag="$(git describe --tags --exact-match 2> /dev/null || :)"
