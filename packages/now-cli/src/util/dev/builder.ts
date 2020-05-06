@@ -375,7 +375,7 @@ export async function executeBuild(
               ...asset.environment,
               ...envConfigs.runEnv,
               NOW_REGION: 'dev1',
-              VERCEL_REGION: 'dev',
+              VERCEL_REGION: 'dev1',
             },
           },
         });
