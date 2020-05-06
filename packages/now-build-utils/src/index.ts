@@ -91,3 +91,10 @@ export const isOfficialRuntime = (desired: string, name?: string): boolean => {
       name.startsWith(`@now/${desired}`))
   );
 };
+
+/**
+ * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.
+ */
+export const getPlatformEnv = (name: string): string | undefined => {
+  return process.env[`VERCEL_${name}`] || process.env[`NOW_${name}`];
+};

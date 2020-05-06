@@ -56,14 +56,13 @@ async function testDeployment(
   // we use json5 to allow comments for probes
   const nowJson = json5.parse(bodies['vercel.json'] || bodies['now.json']);
 
-  if (process.env.VERCEL_BUILDER_DEBUG || process.env.NOW_BUILDER_DEBUG) {
+  if (process.env.VERCEL_BUILDER_DEBUG) {
     if (!nowJson.build) {
       nowJson.build = {};
     }
     if (!nowJson.build.env) {
       nowJson.build.env = {};
     }
-    nowJson.build.env.NOW_BUILDER_DEBUG = process.env.NOW_BUILDER_DEBUG;
     nowJson.build.env.VERCEL_BUILDER_DEBUG = process.env.VERCEL_BUILDER_DEBUG;
   }
 

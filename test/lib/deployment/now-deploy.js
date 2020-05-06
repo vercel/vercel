@@ -146,10 +146,9 @@ async function fetchWithAuth(url, opts = {}) {
     currentCount += 1;
     if (!token || currentCount === MAX_COUNT) {
       currentCount = 0;
-      if (process.env.NOW_TOKEN) {
+      if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
         // used for health checks
         token = process.env.NOW_TOKEN;
-      } else if (process.env.VERCEL_TOKEN) {
         token = process.env.VERCEL_TOKEN;
       } else {
         // used by GH Actions
@@ -170,19 +169,15 @@ async function fetchTokenWithRetry(retries = 5) {
     ZEIT_TEAM_TOKEN,
     ZEIT_REGISTRATION_URL,
   } = process.env;
-  if (NOW_TOKEN) {
-    console.log('Using NOW_TOKEN for test deployment');
-    return NOW_TOKEN;
-  }
-  if (VERCEL_TOKEN) {
-    console.log('Using VERCEL_TOKEN for test deployment');
-    return VERCEL_TOKEN;
+  if (VERCEL_TOKEN || NOW_TOKEN) {
+    console.log('Your personal token will be used to make test deployments.');
+    return VERCEL_TOKEN || NOW_TOKEN;
   }
   if (!ZEIT_TEAM_TOKEN || !ZEIT_REGISTRATION_URL) {
     throw new Error(
       process.env.CI
-        ? 'Failed to create test deployment. This is expected for git forks. Please run tests locally.'
-        : 'Failed to create test deployment. Please set VERCEL_TOKEN environment variable and run again.'
+        ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
+        : 'Failed to create test deployment. Please set `VERCEL_TOKEN` environment variable and run again.'
     );
   }
   try {

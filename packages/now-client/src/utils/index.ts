@@ -237,9 +237,7 @@ export const prepareFiles = (
 };
 
 export function createDebug(debug?: boolean) {
-  const isDebug = debug || process.env.NOW_CLIENT_DEBUG;
-
-  if (isDebug) {
+  if (debug) {
     return (...logs: string[]) => {
       process.stderr.write(
         [`[now-client-debug] ${new Date().toISOString()}`, ...logs].join(' ') +
