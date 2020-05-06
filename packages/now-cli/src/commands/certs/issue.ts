@@ -14,6 +14,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--ca': string;
@@ -80,7 +81,7 @@ export default async function issue(
       );
       output.print(
         `  ${chalk.cyan(
-          `now certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>`
+          `${getPkgName()} certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>`
         )}\n`
       );
       return 1;
@@ -107,7 +108,9 @@ export default async function issue(
     output.error(
       `Invalid number of arguments to create a custom certificate entry. Usage:`
     );
-    output.print(`  ${chalk.cyan(`now certs issue <cn>[, <cn>]`)}\n`);
+    output.print(
+      `  ${chalk.cyan(`${getPkgName()} certs issue <cn>[, <cn>]`)}\n`
+    );
     return 1;
   }
 
@@ -189,7 +192,9 @@ async function runStartOrder(
     output.print(
       `  There are no pending challenges. Finish the issuance by running: \n`
     );
-    output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
+    output.print(
+      `  ${chalk.cyan(`${getPkgName()} certs issue ${cns.join(' ')}`)}\n`
+    );
     return 0;
   }
 
@@ -220,7 +225,9 @@ async function runStartOrder(
   output.print(`${header}\n`);
   process.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
-  output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
+  output.print(
+    `  ${chalk.cyan(`${getPkgName()} certs issue ${cns.join(' ')}`)}\n`
+  );
   output.print('  Read more: https://err.sh/now/solve-challenges-manually\n');
   return 0;
 }

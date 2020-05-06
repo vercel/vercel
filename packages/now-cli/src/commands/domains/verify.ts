@@ -10,6 +10,7 @@ import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import verifyDomain from '../../util/domains/verify-domain';
+import { getPkgName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -46,14 +47,16 @@ export default async function verify(
   const [domainName] = args;
 
   if (!domainName) {
-    output.error(`${cmd('now domains verify <domain>')} expects one argument`);
+    output.error(
+      `${cmd(`${getPkgName()} domains verify <domain>`)} expects one argument`
+    );
     return 1;
   }
 
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now domains verify <domain>`'
+        `${getPkgName()} domains verify <domain>`
       )}`
     );
     return 1;
@@ -64,7 +67,7 @@ export default async function verify(
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${cmd(`${getPkgName()} domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -74,7 +77,7 @@ export default async function verify(
         contextName
       )}`
     );
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${cmd(`${getPkgName()} domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -112,7 +115,7 @@ export default async function verify(
     );
     output.print(
       `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${cmd(
-        'now domains verify <domain>'
+        `${getPkgName()} domains verify <domain>`
       )}.\n`
     );
     output.print(
@@ -138,7 +141,7 @@ export default async function verify(
   );
   output.print(
     `  You can verify with nameservers too. Run ${cmd(
-      `now domains inspect ${domain.name}`
+      `${getPkgName()} domains inspect ${domain.name}`
     )} to find out the intended set.\n`
   );
   return 0;

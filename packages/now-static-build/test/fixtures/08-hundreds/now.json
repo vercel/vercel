@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/static-build" }],
+  "builds": [{ "src": "package.json", "use": "@vercel/static-build" }],
   "probes": [
     { "path": "/100.html", "mustContain": "100:RANDOMNESS_PLACEHOLDER" },
     { "path": "/242.html", "mustContain": "242:RANDOMNESS_PLACEHOLDER" },

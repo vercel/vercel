@@ -1,5 +1,5 @@
 {
-  "name": "@now/node",
+  "name": "@vercel/node",
   "version": "1.5.2-canary.7",
   "license": "MIT",
   "main": "./dist/index",
@@ -11,8 +11,8 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-unit": "jest --env node --verbose --runInBand test/helpers.test.js",
-    "test-integration-once": "jest --env node --verbose --runInBand test/integration.test.js",
+    "test-unit": "jest --env node --verbose --runInBand --bail test/helpers.test.js",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
     "prepublishOnly": "npm run build"
   },
   "files": [

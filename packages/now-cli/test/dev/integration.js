@@ -238,7 +238,11 @@ function testFixtureStdio(
 
     // Deploy fixture and link project
     if (!skipDeploy) {
-      const project = join(fixtureAbsolute(directory), '.now', 'project.json');
+      const project = join(
+        fixtureAbsolute(directory),
+        '.vercel',
+        'project.json'
+      );
       if (await fs.exists(project)) {
         await fs.unlink(project);
       }

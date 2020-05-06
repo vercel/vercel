@@ -7,10 +7,11 @@ import getArgs from '../util/get-args';
 import { NowContext } from '../types';
 import createOutput from '../util/output';
 import getUpdateCommand from '../util/get-update-command';
+import { getPkgName } from '../util/pkg-name';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now update`)} [options]
+  ${chalk.bold(`${logo} ${getPkgName()} update`)} [options]
 
   ${chalk.dim('Options:')}
 
@@ -26,9 +27,9 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Update Now CLI to the latest "canary" version
+  ${chalk.gray('–')} Update ${getPkgName()} CLI to the latest "canary" version
 
-      ${chalk.cyan(`$ now update --channel=canary`)}
+      ${chalk.cyan(`$ ${getPkgName()} update --channel=canary`)}
   `);
 };
 
@@ -42,7 +43,7 @@ export default async function main(ctx: NowContext): Promise<number> {
       '--release': String,
       '-V': '--release',
       '--yes': Boolean,
-      '-y': '--yes'
+      '-y': '--yes',
     });
   } catch (err) {
     handleError(err);
@@ -56,6 +57,8 @@ export default async function main(ctx: NowContext): Promise<number> {
 
   const debugEnabled = argv['--debug'];
   const output = createOutput({ debug: debugEnabled });
-  output.log(`Please run ${cmd(await getUpdateCommand())} to update Now CLI`);
+  output.log(
+    `Please run ${cmd(await getUpdateCommand())} to update ${getPkgName()} CLI`
+  );
   return 0;
 }

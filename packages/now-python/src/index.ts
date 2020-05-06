@@ -13,7 +13,7 @@ import {
   shouldServe,
   BuildOptions,
   debug,
-} from '@now/build-utils';
+} from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 
 async function pipenvConvert(cmd: string, srcDir: string) {

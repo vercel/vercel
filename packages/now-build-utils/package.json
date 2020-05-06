@@ -1,6 +1,6 @@
 {
-  "name": "@now/build-utils",
-  "version": "2.2.2-canary.5",
+  "name": "@vercel/build-utils",
+  "version": "2.2.2-canary.6",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
@@ -12,8 +12,8 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-unit": "jest --env node --verbose --runInBand test/unit.*test.*",
-    "test-integration-once": "jest --env node --verbose --runInBand test/integration.test.js",
+    "test-unit": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {

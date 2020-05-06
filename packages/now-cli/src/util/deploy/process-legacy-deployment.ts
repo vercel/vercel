@@ -6,7 +6,7 @@ import {
   createLegacyDeployment,
   DeploymentOptions,
   NowClientOptions,
-} from 'now-client';
+} from '@vercel/client';
 import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';

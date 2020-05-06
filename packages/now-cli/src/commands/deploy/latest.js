@@ -54,6 +54,7 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { readLocalConfig } from '../../util/config/files';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -258,7 +259,7 @@ export default async function main(
     debug: debugEnabled,
   });
 
-  // retrieve `project` and `org` from .now
+  // retrieve `project` and `org` from .vercel
   const link = await getLinkedProject(output, client, path);
 
   if (link.status === 'error') {
@@ -300,7 +301,7 @@ export default async function main(
     }
 
     // We use `localConfig` here to read the name
-    // even though the `now.json` file can change
+    // even though the `vercel.json` file can change
     // afterwards, this is fine since the property
     // will be deprecated and can be replaced with
     // user input.
@@ -369,7 +370,7 @@ export default async function main(
       output.print(
         `${prependEmoji(
           `The ${highlight(
-            'now.json'
+            'vercel.json'
           )} file should be inside of the provided root directory.`,
           emoji('warning')
         )}\n`
@@ -383,7 +384,7 @@ export default async function main(
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
-          'now.json'
+          'vercel.json'
         )} is deprecated (https://zeit.ink/5F)`,
         emoji('warning')
       )}\n`
@@ -400,7 +401,7 @@ export default async function main(
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
     error(
       `The ${code('env')} property in ${highlight(
-        'now.json'
+        'vercel.json'
       )} needs to be an object`
     );
     return 1;
@@ -410,7 +411,7 @@ export default async function main(
     if (!isObject(localConfig.build)) {
       error(
         `The ${code('build')} property in ${highlight(
-          'now.json'
+          'vercel.json'
         )} needs to be an object`
       );
       return 1;
@@ -422,7 +423,7 @@ export default async function main(
     ) {
       error(
         `The ${code('build.env')} property in ${highlight(
-          'now.json'
+          'vercel.json'
         )} needs to be an object`
       );
       return 1;
@@ -436,14 +437,14 @@ export default async function main(
     parseMeta(argv['--meta'])
   );
 
-  // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
+  // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
     parseEnv(localConfig.env),
     parseEnv(argv['--env'])
   );
 
-  // Merge build env out of  `build.env` from now.json, and `--build-env` args
+  // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
@@ -665,7 +666,7 @@ export default async function main(
       output.error('Build failed');
       output.error(
         `Check your logs at https://${now.url}/_logs or run ${code(
-          `now logs ${now.url}`,
+          `${getPkgName()} logs ${now.url}`,
           {
             // Backticks are interpreted as part of the URL, causing CMD+Click
             // behavior to fail in editors like VSCode.
@@ -732,8 +733,8 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
-          'now.json'
-        )} when using Now 2.0 – please remove it.`
+          'vercel.json'
+        )} – please remove it.`
       );
 
       if (prop === 'build.env' || prop === 'builds.env') {
@@ -757,7 +758,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} in ${highlight(
-          'now.json'
+          'vercel.json'
         )} can only be of type ${code(title(params.type))}.`
       );
 
@@ -768,7 +769,7 @@ function handleCreateDeployError(output, error) {
 
     output.error(
       `Failed to validate ${highlight(
-        'now.json'
+        'vercel.json'
       )}: ${message}\nDocumentation: ${link}`
     );
 
@@ -795,7 +796,9 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
-    output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
+    output.note(
+      `Run ${code(`${getPkgName()} upgrade`)} to increase your builds limit.`
+    );
     return 1;
   }
   if (
