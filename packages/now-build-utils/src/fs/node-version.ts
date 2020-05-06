@@ -54,7 +54,7 @@ export async function getSupportedNodeVersion(
             engineRange +
             '".';
       throw new NowBuildError({
-        code: 'NOW_BUILD_UTILS_NODE_VERSION_INVALID',
+        code: 'BUILD_UTILS_NODE_VERSION_INVALID',
         link:
           'https://vercel.com/docs/runtimes#official-runtimes/node-js/node-js-version',
         message: intro + '\n' + pleaseSet,
@@ -72,7 +72,7 @@ export async function getSupportedNodeVersion(
           engineRange +
           '".';
     throw new NowBuildError({
-      code: 'NOW_BUILD_UTILS_NODE_VERSION_DISCONTINUED',
+      code: 'BUILD_UTILS_NODE_VERSION_DISCONTINUED',
       link:
         'https://vercel.com/docs/runtimes#official-runtimes/node-js/node-js-version',
       message: intro + '\n' + pleaseSet + '\n' + upstreamProvider,

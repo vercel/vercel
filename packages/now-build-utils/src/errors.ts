@@ -23,7 +23,7 @@ interface Props {
   message: string;
   /**
    * A unique error code for this particular error.
-   * Should start with the builder name such as `NOW_NODE_`.
+   * Should start with the builder name such as `NODE_`.
    */
   code: string;
   /**
