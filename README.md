@@ -5,7 +5,7 @@
 
 ## Usage
 
-Get started by [Importing a Git Project](https://vercel.com/import) and use `git push` to deploy. Alternatively, you can [install Now CLI](https://vercel.com/download).
+Get started by [Importing a Git Project](https://vercel.com/import) and use `git push` to deploy. Alternatively, you can [install Vercel CLI](https://vercel.com/download).
 
 ## Documentation
 
@@ -17,12 +17,10 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 2. Install dependencies with `yarn install`
 3. Compile the code: `yarn build`
 4. Link the package to the global module directory: `cd ./packages/now-cli && yarn link`
-5. You can now start using `now` anywhere inside the command line
+5. You can start using `vercel` anywhere inside the command line
 
 As always, you should use `yarn test-unit` to run the tests and see if your changes have broken anything.
 
 ## How to Create a Release
 
 If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/zeit/now/wiki/Creating-a-Release).
-
-
