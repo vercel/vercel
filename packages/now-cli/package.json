@@ -40,10 +40,7 @@
     "instrument": true,
     "all": true
   },
-  "bin": {
-    "now": "./dist/index.js",
-    "vercel": "./dist/index.js"
-  },
+  "bin": "./dist/index.js",
   "files": [
     "dist",
     "scripts/preinstall.js"
