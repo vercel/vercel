@@ -8,6 +8,7 @@ import {
   Lambda,
   PackageJson,
   Config,
+  Meta,
 } from '@vercel/build-utils';
 import { NowConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
@@ -82,14 +83,7 @@ export interface BuilderParamsBase {
   files: BuilderInputs;
   entrypoint: string;
   config: Config;
-  meta?: {
-    isDev?: boolean;
-    requestPath?: string | null;
-    filesChanged?: string[];
-    filesRemoved?: string[];
-    env?: EnvConfig;
-    buildEnv?: EnvConfig;
-  };
+  meta?: Meta;
 }
 
 export interface BuilderParams extends BuilderParamsBase {
