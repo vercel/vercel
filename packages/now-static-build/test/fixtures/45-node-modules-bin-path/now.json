@@ -2,7 +2,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@now/static-build",
+      "use": "@vercel/static-build",
       "config": {
         "zeroConfig": true,
         "buildCommand": "next build && next export",

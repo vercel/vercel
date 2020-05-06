@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 import { mkdirp, pathExists } from 'fs-extra';
 import { dirname, join } from 'path';
 import { homedir } from 'os';
-import { debug } from '@now/build-utils';
+import { debug } from '@vercel/build-utils';
 import stringArgv from 'string-argv';
 
 const archMap = new Map([['x64', 'amd64'], ['x86', '386']]);

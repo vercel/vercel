@@ -27,7 +27,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   }
 
   // eslint-disable-next-line no-loop-func
-  it(`should build ${fixture}`, async () => {
+  it(`Should build "${fixture}"`, async () => {
     await expect(
       testDeployment(
         { builderUrl, buildUtilsUrl },
@@ -53,7 +53,7 @@ for (const builder of buildersToTestWith) {
     // don't run all foreign fixtures, just some
     if (['01-cowsay', '01-cache-headers', '03-env-vars'].includes(fixture)) {
       // eslint-disable-next-line no-loop-func
-      it(`should build ${builder}/${fixture}`, async () => {
+      it(`Should build "${builder}/${fixture}"`, async () => {
         await expect(
           testDeployment(
             { builderUrl, buildUtilsUrl },
@@ -113,6 +113,7 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
   const { builders, defaultRoutes } = await detectBuilders(files, pkg);
 
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };
+
   await fs.writeFile(
     path.join(fixture, 'now.json'),
     JSON.stringify(nowConfig, null, 2)

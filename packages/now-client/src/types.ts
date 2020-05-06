@@ -1,5 +1,10 @@
-import { Builder, BuilderFunctions } from '@now/build-utils';
-import { NowHeader, Route, NowRedirect, NowRewrite } from '@now/routing-utils';
+import { Builder, BuilderFunctions } from '@vercel/build-utils';
+import {
+  NowHeader,
+  Route,
+  NowRedirect,
+  NowRewrite,
+} from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 

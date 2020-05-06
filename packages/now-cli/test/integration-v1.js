@@ -18,7 +18,7 @@ import prepareFixtures from './helpers/prepare';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
-const deployHelpMessage = `${logo} now [options] <command | path>`;
+const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 const session = Math.random()
   .toString(36)
   .split('.')[1];

@@ -1,8 +1,8 @@
 {
   "version": 2,
   "builds": [
-    { "src": "functions/*.ts", "use": "@now/node" },
-    { "src": "index.ts", "use": "@now/node" }
+    { "src": "functions/*.ts", "use": "@vercel/node" },
+    { "src": "index.ts", "use": "@vercel/node" }
   ],
   "routes": [
     {

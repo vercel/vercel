@@ -13,7 +13,7 @@ import {
   Files,
   debug,
   Meta,
-} from '@now/build-utils';
+} from '@vercel/build-utils';
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
 const handlerFileName = `handler${OUT_EXTENSION}`;

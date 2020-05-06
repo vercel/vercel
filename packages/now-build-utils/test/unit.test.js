@@ -134,21 +134,21 @@ it('should throw for discontinued versions', async () => {
 });
 
 it('should support require by path for legacy builders', () => {
-  const index = require('@now/build-utils');
+  const index = require('@vercel/build-utils');
 
-  const download2 = require('@now/build-utils/fs/download.js');
-  const getWriteableDirectory2 = require('@now/build-utils/fs/get-writable-directory.js');
-  const glob2 = require('@now/build-utils/fs/glob.js');
-  const rename2 = require('@now/build-utils/fs/rename.js');
+  const download2 = require('@vercel/build-utils/fs/download.js');
+  const getWriteableDirectory2 = require('@vercel/build-utils/fs/get-writable-directory.js');
+  const glob2 = require('@vercel/build-utils/fs/glob.js');
+  const rename2 = require('@vercel/build-utils/fs/rename.js');
   const {
     runNpmInstall: runNpmInstall2,
-  } = require('@now/build-utils/fs/run-user-scripts.js');
-  const streamToBuffer2 = require('@now/build-utils/fs/stream-to-buffer.js');
+  } = require('@vercel/build-utils/fs/run-user-scripts.js');
+  const streamToBuffer2 = require('@vercel/build-utils/fs/stream-to-buffer.js');
 
-  const FileBlob2 = require('@now/build-utils/file-blob.js');
-  const FileFsRef2 = require('@now/build-utils/file-fs-ref.js');
-  const FileRef2 = require('@now/build-utils/file-ref.js');
-  const { Lambda: Lambda2 } = require('@now/build-utils/lambda.js');
+  const FileBlob2 = require('@vercel/build-utils/file-blob.js');
+  const FileFsRef2 = require('@vercel/build-utils/file-fs-ref.js');
+  const FileRef2 = require('@vercel/build-utils/file-ref.js');
+  const { Lambda: Lambda2 } = require('@vercel/build-utils/lambda.js');
 
   expect(download2).toBe(index.download);
   expect(getWriteableDirectory2).toBe(index.getWriteableDirectory);

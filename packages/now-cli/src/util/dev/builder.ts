@@ -6,11 +6,18 @@ import { promisify } from 'util';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import { createFunction } from '@zeit/fun';
-import { Builder, File, Lambda, FileBlob, FileFsRef } from '@now/build-utils';
+import {
+  Builder,
+  File,
+  Lambda,
+  FileBlob,
+  FileFsRef,
+} from '@vercel/build-utils';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 import _treeKill from 'tree-kill';
 
+import { isOfficialRuntime } from '../is-official-runtime';
 import { Output } from '../output';
 import highlight from '../output/highlight';
 import { relative } from '../path-helpers';
@@ -30,7 +37,7 @@ import {
   BuilderParams,
   EnvConfigs,
 } from './types';
-import { normalizeRoutes } from '@now/routing-utils';
+import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
 
 interface BuildMessage {
@@ -115,7 +122,7 @@ export async function executeBuild(
 
   const startTime = Date.now();
   const showBuildTimestamp =
-    match.use !== '@now/static' && (!isInitialBuild || debug);
+    !isOfficialRuntime('static', match.use) && (!isInitialBuild || debug);
 
   if (showBuildTimestamp) {
     devServer.output.log(`Building ${match.use}:${entrypoint}`);
@@ -151,7 +158,7 @@ export async function executeBuild(
       filesChanged,
       filesRemoved,
       // This env distiniction is only necessary to maintain
-      // backwards compatibility with the `@now/next` builder.
+      // backwards compatibility with the `@vercel/next` builder.
       env: envConfigs.runEnv,
       buildEnv: envConfigs.buildEnv,
     },
@@ -404,7 +411,7 @@ export async function getBuildMatches(
   }
 
   const noMatches: Builder[] = [];
-  const builds = nowConfig.builds || [{ src: '**', use: '@now/static' }];
+  const builds = nowConfig.builds || [{ src: '**', use: '@vercel/static' }];
 
   for (const buildConfig of builds) {
     let { src, use } = buildConfig;

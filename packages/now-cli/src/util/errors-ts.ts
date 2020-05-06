@@ -4,6 +4,7 @@ import { NowError } from './now-error';
 import param from './output/param';
 import cmd from './output/cmd';
 import code from './output/code';
+import { getPkgName } from './pkg-name';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -52,7 +53,7 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
     super({
       code: 'TEAM_DELETED',
       message: `Your team was deleted. You can switch to a different one using ${param(
-        'now switch'
+        `${getPkgName()} switch`
       )}.`,
       meta: {},
     });
@@ -143,7 +144,7 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
       code: 'SOURCE_NOT_FOUND',
       meta: {},
       message: `Not able to purchase. Please add a payment method using ${cmd(
-        'now billing add'
+        `${getPkgName()} billing add`
       )}.`,
     });
   }

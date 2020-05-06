@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "**/*.ts", "use": "@now/node" }],
+  "builds": [{ "src": "**/*.ts", "use": "@vercel/node" }],
   "probes": [
     {
       "path": "/backend",
