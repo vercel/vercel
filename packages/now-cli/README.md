@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
-  <h1 align="center">Vercel</h1>
+  <h3 align="center">Vercel</h3>
   <p align="center">Develop. Preview. Ship.</p>
 </p>
 
