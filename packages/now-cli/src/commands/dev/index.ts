@@ -13,7 +13,7 @@ import cmd from '../../util/output/cmd';
 import dev from './dev';
 import readPackage from '../../util/read-package';
 import readConfig from '../../util/config/read-config';
-import { getPkgName } from '../../util/pkg-name';
+import { getPkgName, getCommandName } from '../../util/pkg-name';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -110,9 +110,7 @@ export default async function main(ctx: NowContext) {
   }
 
   if (argv._.length > 2) {
-    output.error(
-      `${cmd(`${getPkgName()} dev [dir]`)} accepts at most one argument`
-    );
+    output.error(`${getCommandName(`dev [dir]`)} accepts at most one argument`);
     return 1;
   }
 

@@ -54,7 +54,7 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { readLocalConfig } from '../../util/config/files';
-import { getPkgName } from '../../util/pkg-name.ts';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -668,8 +668,8 @@ export default async function main(
     if (err instanceof BuildError) {
       output.error('Build failed');
       output.error(
-        `Check your logs at https://${now.url}/_logs or run ${code(
-          `${getPkgName()} logs ${now.url}`,
+        `Check your logs at https://${now.url}/_logs or run ${getCommandName(
+          `logs ${now.url}`,
           {
             // Backticks are interpreted as part of the URL, causing CMD+Click
             // behavior to fail in editors like VSCode.
@@ -800,7 +800,7 @@ function handleCreateDeployError(output, error) {
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
     output.note(
-      `Run ${code(`${getPkgName()} upgrade`)} to increase your builds limit.`
+      `Run ${getCommandName('upgrade')} to increase your builds limit.`
     );
     return 1;
   }

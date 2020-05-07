@@ -10,10 +10,9 @@ import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import createOutput from '../util/output';
 import getCommandFlags from '../util/get-command-flags';
-import cmd from '../util/output/cmd.ts';
 import wait from '../util/output/wait';
 import getPrefixedFlags from '../util/get-prefixed-flags';
-import { getPkgName } from '../util/pkg-name.ts';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const e = encodeURIComponent;
 
@@ -123,7 +122,7 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getPkgName()} projects ls`
+            `${getCommandName('projects ls')}`
           )}`
         )
       );
@@ -184,10 +183,8 @@ async function run({ client, contextName }) {
           '-d',
           '-y',
         ]);
-        const nextCmd = `${getPkgName()} projects ls${flags} --next ${
-          pagination.next
-        }`;
-        console.log(`To display the next page run ${cmd(nextCmd)}`);
+        const nextCmd = `projects ls${flags} --next ${pagination.next}`;
+        console.log(`To display the next page run ${getCommandName(nextCmd)}`);
       }
     }
     return;
@@ -198,7 +195,7 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getPkgName()} project rm <name>`
+            `${getCommandName('project rm <name>')}`
           )}`
         )
       );
@@ -240,14 +237,14 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getPkgName()} projects add <name>`
+            `${getCommandName('projects add <name>')}`
           )}`
         )
       );
 
       if (args.length > 1) {
         const example = chalk.cyan(
-          `$ ${getPkgName()} projects add "${args.join(' ')}"`
+          `${getCommandName(`projects add "${args.join(' ')}"`)}`
         );
         console.log(
           `> If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
