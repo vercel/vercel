@@ -32,8 +32,8 @@ const getGlobalPathConfig = (): string => {
 
   const possibleConfigPaths = [
     ...vercelDirectories, // latest vercel directory
-    ...XDGAppPaths('now').dataDirs(), // legacy now directory
-    path.join(homedir(), '.now'), // legacy config in user's home directory.
+    path.join(homedir(), '.now'), // legacy config in user's home directory
+    ...XDGAppPaths('now').dataDirs(), // legacy XDG directory
   ];
 
   // The customPath flag is the preferred location,
