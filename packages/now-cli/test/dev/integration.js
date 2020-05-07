@@ -246,16 +246,7 @@ function testFixtureStdio(
       const gitignoreOrig = await fs.exists(gitignore);
       let { stdout, stderr, exitCode } = await execa(
         binaryPath,
-        [
-          '-t',
-          token,
-          '--confirm',
-          '--public',
-          '--no-clipboard',
-          '--debug',
-          '-b',
-          'FORCE_BUILD_IN_REGION=bru1',
-        ],
+        ['-t', token, '--confirm', '--public', '--no-clipboard', '--debug'],
         { cwd, reject: false }
       );
       console.log({ stdout, stderr, exitCode });
