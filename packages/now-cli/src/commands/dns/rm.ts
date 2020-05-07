@@ -28,10 +28,9 @@ export default async function rm(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-  let contextName = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    await getScope(client);
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
@@ -51,19 +50,14 @@ export default async function rm(
     return 1;
   }
 
-  const domainRecord = await getDNSRecordById(
-    output,
-    client,
-    contextName,
-    recordId
-  );
+  const record = await getDNSRecordById(client, recordId);
 
-  if (!domainRecord) {
+  if (!record) {
     output.error('DNS record not found');
     return 1;
   }
 
-  const { domainName, record } = domainRecord;
+  const { domain: domainName } = record;
   const yes = await readConfirmation(
     output,
     'The following record will be removed permanently',
@@ -127,7 +121,7 @@ function getDeleteTableRow(domainName: string, record: DNSRecord) {
       `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
     ),
     chalk.gray(
-      `${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`
+      `${ms(Date.now() - new Date(Number(record.createdAt)).getTime())} ago`
     ),
   ];
 }

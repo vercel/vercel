@@ -1,20 +1,19 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import plural from 'pluralize';
 import { Output } from '../../util/output';
 import { DomainNotFound } from '../../util/errors-ts';
-import { ThenArg, DNSRecord, NowContext } from '../../types';
+import { DNSRecord, NowContext } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import getDNSRecords from '../../util/dns/get-dns-records';
+import getDNSRecords, {
+  DomainRecordsItem,
+} from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
 import { getPkgName } from '../../util/pkg-name';
-
-type DNSRecords = ThenArg<ReturnType<typeof getDNSRecords>>;
 
 type Options = {
   '--debug': boolean;
@@ -105,18 +104,31 @@ export default async function ls(
     return 0;
   }
 
-  const dnsRecords = await getDNSRecords(output, client, contextName);
+  const { records: dnsRecords, pagination } = await getDNSRecords(
+    output,
+    client,
+    contextName,
+    nextTimestamp
+  );
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(
-    `${plural('Record', nRecords, true)} found under ${chalk.bold(
+    `${nRecords > 0 ? 'Records' : 'No records'} found under ${chalk.bold(
       contextName
     )} ${chalk.gray(lsStamp())}`
   );
   console.log(getDNSRecordsTable(dnsRecords));
+  if (pagination && pagination.count === 20) {
+    const flags = getCommandFlags(opts, ['_', '--next']);
+    output.log(
+      `To display the next page run ${cmd(
+        `now dns ls${flags} --next ${pagination.next}`
+      )}`
+    );
+  }
   return 0;
 }
 
-function getDNSRecordsTable(dnsRecords: DNSRecords) {
+function getDNSRecordsTable(dnsRecords: DomainRecordsItem[]) {
   return formatTable(
     ['', 'id', 'name', 'type', 'value', 'created'],
     ['l', 'r', 'l', 'l', 'l', 'l'],
@@ -130,7 +142,7 @@ function getDNSRecordsTable(dnsRecords: DNSRecords) {
 function getDNSRecordRow(record: DNSRecord) {
   const isSystemRecord = record.creator === 'system';
   const createdAt = `${ms(
-    Date.now() - new Date(Number(record.created)).getTime()
+    Date.now() - new Date(Number(record.createdAt)).getTime()
   )} ago`;
   const priority = record.mxPriority || record.priority || null;
   return [
