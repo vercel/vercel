@@ -96,6 +96,10 @@ export const isOfficialRuntime = (desired: string, name?: string): boolean => {
   );
 };
 
+export const isStaticRuntime = (name?: string): boolean => {
+  return isOfficialRuntime('static', name);
+};
+
 /**
  * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.
  */
