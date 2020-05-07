@@ -85,9 +85,24 @@ export * from './errors';
  * Helper function to support both `@vercel` and legacy `@now` official Runtimes.
  */
 export const isOfficialRuntime = (desired: string, name?: string): boolean => {
+  if (typeof name !== 'string') {
+    return false;
+  }
   return (
-    typeof name === 'string' &&
-    (name.startsWith(`@vercel/${desired}`) ||
-      name.startsWith(`@now/${desired}`))
+    name === `@vercel/${desired}` ||
+    name === `@now/${desired}` ||
+    name.startsWith(`@vercel/${desired}@`) ||
+    name.startsWith(`@now/${desired}@`)
   );
+};
+
+export const isStaticRuntime = (name?: string): boolean => {
+  return isOfficialRuntime('static', name);
+};
+
+/**
+ * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.
+ */
+export const getPlatformEnv = (name: string): string | undefined => {
+  return process.env[`VERCEL_${name}`] || process.env[`NOW_${name}`];
 };

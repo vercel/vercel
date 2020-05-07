@@ -40,7 +40,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       });
       if (!found) {
         throw new NowBuildError({
-          code: 'NOW_RUBY_INVALID_VERSION',
+          code: 'RUBY_INVALID_VERSION',
           message: 'Found `Gemfile` with invalid Ruby version: `' + line + '`.',
           link:
             'https://vercel.com/docs/runtimes#official-runtimes/ruby/ruby-version',

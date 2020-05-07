@@ -15,7 +15,7 @@ async function nowDeploy(bodies, randomness) {
       mode: path.extname(n) === '.sh' ? 0o100755 : 0o100644,
     }));
 
-  const { FORCE_BUILD_IN_REGION, NOW_DEBUG } = process.env;
+  const { FORCE_BUILD_IN_REGION, NOW_DEBUG, VERCEL_DEBUG } = process.env;
   const nowJson = JSON.parse(bodies['now.json']);
 
   const nowDeployPayload = {
@@ -28,6 +28,7 @@ async function nowDeploy(bodies, randomness) {
         RANDOMNESS_BUILD_ENV_VAR: randomness,
         FORCE_BUILD_IN_REGION,
         NOW_DEBUG,
+        VERCEL_DEBUG,
       },
     },
     name: 'test2020',
@@ -145,10 +146,9 @@ async function fetchWithAuth(url, opts = {}) {
     currentCount += 1;
     if (!token || currentCount === MAX_COUNT) {
       currentCount = 0;
-      if (process.env.NOW_TOKEN) {
-        // used for health checks
-        token = process.env.NOW_TOKEN;
-      } else {
+      // used for health checks
+      token = process.env.VERCEL_TOKEN || process.env.NOW_TOKEN;
+      if (!token) {
         // used by GH Actions
         token = await fetchTokenWithRetry();
       }
@@ -161,14 +161,21 @@ async function fetchWithAuth(url, opts = {}) {
 }
 
 async function fetchTokenWithRetry(retries = 5) {
-  const { NOW_TOKEN, ZEIT_TEAM_TOKEN, ZEIT_REGISTRATION_URL } = process.env;
-  if (NOW_TOKEN) {
-    console.log('Using NOW_TOKEN for test deployment');
-    return NOW_TOKEN;
+  const {
+    NOW_TOKEN,
+    VERCEL_TOKEN,
+    ZEIT_TEAM_TOKEN,
+    ZEIT_REGISTRATION_URL,
+  } = process.env;
+  if (VERCEL_TOKEN || NOW_TOKEN) {
+    console.log('Your personal token will be used to make test deployments.');
+    return VERCEL_TOKEN || NOW_TOKEN;
   }
   if (!ZEIT_TEAM_TOKEN || !ZEIT_REGISTRATION_URL) {
     throw new Error(
-      'Failed to create test deployment. Did you forget to set NOW_TOKEN?'
+      process.env.CI
+        ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
+        : 'Failed to create test deployment. Please set `VERCEL_TOKEN` environment variable and run again.'
     );
   }
   try {

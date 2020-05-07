@@ -43,7 +43,7 @@ export default async function dev(
     return link.exitCode;
   }
 
-  if (link.status === 'not_linked' && !process.env.__NOW_SKIP_DEV_COMMAND) {
+  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     output.error(
       `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName()} to link it.`
     );

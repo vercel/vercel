@@ -14,8 +14,6 @@ import setupDomain from '../domains/setup-domain';
 import stamp from '../output/stamp';
 import waitForScale from '../scale/wait-verify-deployment-scale';
 
-const NOW_SH_REGEX = /\.now\.sh$/;
-
 export default async function assignAlias(
   output: Output,
   client: Client,
@@ -87,7 +85,11 @@ export default async function assignAlias(
 
   // Check if the alias is a custom domain and if case we have a positive
   // we have to configure the DNS records and certificate
-  if (alias.indexOf('.') !== -1 && !NOW_SH_REGEX.test(alias)) {
+  if (
+    alias.indexOf('.') !== -1 &&
+    !alias.endsWith('.now.sh') &&
+    !alias.endsWith('.vercel.app')
+  ) {
     // Now the domain shouldn't be available and it might or might not belong to the user
     const result = await setupDomain(output, client, alias, contextName);
     if (result instanceof Error) {
