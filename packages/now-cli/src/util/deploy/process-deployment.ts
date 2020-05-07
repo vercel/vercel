@@ -35,7 +35,7 @@ function printInspectUrl(
   const projectName = q.join('-');
 
   const inspectUrl = `https://vercel.com/${orgSlug}/${projectName}/${deploymentShortId}${
-    apex !== 'now.sh' ? `/${apex}` : ''
+    apex !== 'now.sh' && apex !== 'vercel.app' ? `/${apex}` : ''
   }`;
 
   output.print(
