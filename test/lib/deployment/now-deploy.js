@@ -7,7 +7,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function nowDeploy(bodies, randomness) {
   const files = Object.keys(bodies)
-    .filter(n => n !== 'now.json')
+    .filter(n => n !== 'vercel.json' && n !== 'now.json')
     .map(n => ({
       sha: digestOfFile(bodies[n]),
       size: bodies[n].length,
@@ -16,7 +16,7 @@ async function nowDeploy(bodies, randomness) {
     }));
 
   const { FORCE_BUILD_IN_REGION, NOW_DEBUG, VERCEL_DEBUG } = process.env;
-  const nowJson = JSON.parse(bodies['now.json']);
+  const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
 
   const nowDeployPayload = {
     version: 2,
