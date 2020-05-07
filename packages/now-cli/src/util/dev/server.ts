@@ -32,6 +32,7 @@ import {
   detectApiDirectory,
   detectApiExtensions,
   spawnCommand,
+  isOfficialRuntime,
 } from '@vercel/build-utils';
 
 import { once } from '../once';
@@ -41,7 +42,6 @@ import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import { isOfficialRuntime } from '../is-official-runtime';
 import { version as cliVersion } from '../../../package.json';
 import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
 import {

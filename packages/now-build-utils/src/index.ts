@@ -85,10 +85,14 @@ export * from './errors';
  * Helper function to support both `@vercel` and legacy `@now` official Runtimes.
  */
 export const isOfficialRuntime = (desired: string, name?: string): boolean => {
+  if (typeof name !== 'string') {
+    return false;
+  }
   return (
-    typeof name === 'string' &&
-    (name.startsWith(`@vercel/${desired}`) ||
-      name.startsWith(`@now/${desired}`))
+    name === `@vercel/${desired}` ||
+    name === `@now/${desired}` ||
+    name.startsWith(`@vercel/${desired}@`) ||
+    name.startsWith(`@now/${desired}@`)
   );
 };
 

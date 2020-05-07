@@ -12,12 +12,12 @@ import {
   Lambda,
   FileBlob,
   FileFsRef,
+  isOfficialRuntime,
 } from '@vercel/build-utils';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 import _treeKill from 'tree-kill';
 
-import { isOfficialRuntime } from '../is-official-runtime';
 import { Output } from '../output';
 import highlight from '../output/highlight';
 import { relative } from '../path-helpers';
