@@ -12,12 +12,11 @@ import {
   getEnvTargetChoices,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
-import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
-import { getPkgName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -35,8 +34,8 @@ export default async function add(
 
   if (args.length > 2) {
     output.error(
-      `Invalid number of arguments. Usage: ${cmd(
-        `${getPkgName()} env add <name> ${getEnvTargetPlaceholder()}`
+      `Invalid number of arguments. Usage: ${getCommandName(
+        `env add <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
@@ -44,8 +43,8 @@ export default async function add(
 
   if (stdInput && (!envName || !envTarget)) {
     output.error(
-      `Invalid number of arguments. Usage: ${cmd(
-        `${getPkgName()} env add <name> <target> < <file>`
+      `Invalid number of arguments. Usage: ${getCommandName(
+        `env add <name> <target> < <file>`
       )}`
     );
     return 1;
@@ -88,8 +87,8 @@ export default async function add(
     output.error(
       `The variable ${param(
         envName
-      )} has already been added to all Environments. To remove, run ${cmd(
-        `${getPkgName()} env rm ${envName}`
+      )} has already been added to all Environments. To remove, run ${getCommandName(
+        `env rm ${envName}`
       )}.`
     );
     return 1;

@@ -1,10 +1,8 @@
 import bytes from 'bytes';
 import { Response } from 'node-fetch';
 import { NowError } from './now-error';
-import param from './output/param';
-import cmd from './output/cmd';
 import code from './output/code';
-import { getPkgName } from './pkg-name';
+import { getCommandName } from './pkg-name';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -52,8 +50,8 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
   constructor() {
     super({
       code: 'TEAM_DELETED',
-      message: `Your team was deleted. You can switch to a different one using ${param(
-        `${getPkgName()} switch`
+      message: `Your team was deleted. You can switch to a different one using ${getCommandName(
+        `switch`
       )}.`,
       meta: {},
     });
@@ -143,8 +141,8 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
     super({
       code: 'SOURCE_NOT_FOUND',
       meta: {},
-      message: `Not able to purchase. Please add a payment method using ${cmd(
-        `${getPkgName()} billing add`
+      message: `Not able to purchase. Please add a payment method using ${getCommandName(
+        `billing add`
       )}.`,
     });
   }

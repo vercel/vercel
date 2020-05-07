@@ -14,7 +14,7 @@ import eraseLines from '../../util/output/erase-lines';
 import success from '../../util/output/success';
 import getUser from '../../util/get-user.ts';
 import Client from '../../util/client.ts';
-import { getPkgName } from '../../util/pkg-name.ts';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 
@@ -97,8 +97,8 @@ export default async function({
     // We specifically need a team scope here
     let err = `You can't run this command under ${param(
       user.username || user.email
-    )}.\nPlease select a team scope using ${cmd(
-      `${getPkgName()} switch`
+    )}.\nPlease select a team scope using ${getCommandName(
+      `switch`
     )} or use ${cmd('--scope')}`;
     return fatalError(err);
   }
