@@ -232,34 +232,22 @@ function testFixtureStdio(
   { expectedCode = 0, skipDeploy } = {}
 ) {
   return async t => {
-    const dir = fixture(directory);
+    const cwd = fixtureAbsolute(directory);
     const token = await fetchTokenWithRetry();
     let deploymentUrl;
 
     // Deploy fixture and link project
     if (!skipDeploy) {
-      const project = join(
-        fixtureAbsolute(directory),
-        '.vercel',
-        'project.json'
-      );
+      const project = join(cwd, '.vercel', 'project.json');
       if (await fs.exists(project)) {
         await fs.unlink(project);
       }
-      const gitignore = join(fixtureAbsolute(directory), '.gitignore');
+      const gitignore = join(cwd, '.gitignore');
       const gitignoreOrig = await fs.exists(gitignore);
       let { stdout, stderr, exitCode } = await execa(
         binaryPath,
-        [
-          dir,
-          '-t',
-          token,
-          '--confirm',
-          '--public',
-          '--no-clipboard',
-          '--debug',
-        ],
-        { reject: false }
+        ['-t', token, '--confirm', '--public', '--no-clipboard', '--debug'],
+        { cwd, reject: false }
       );
       console.log({ stdout, stderr, exitCode });
       if (!gitignoreOrig && (await fs.exists(gitignore))) {
@@ -274,7 +262,7 @@ function testFixtureStdio(
     // Start dev
     let dev;
 
-    await runNpmInstall(dir);
+    await runNpmInstall(cwd);
 
     const stdoutList = [];
     const stderrList = [];
@@ -289,11 +277,10 @@ function testFixtureStdio(
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
-      dev = execa(
-        binaryPath,
-        ['dev', dir, '-l', port, '-t', token, '--debug'],
-        { env }
-      );
+      dev = execa(binaryPath, ['dev', '-l', port, '-t', token, '--debug'], {
+        cwd,
+        env,
+      });
 
       dev.stdout.on('data', data => {
         stdoutList.push(data);

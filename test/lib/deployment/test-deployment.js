@@ -53,8 +53,10 @@ async function testDeployment(
     );
   }
 
+  const configName = 'vercel.json' in bodies ? 'vercel.json' : 'now.json';
+
   // we use json5 to allow comments for probes
-  const nowJson = json5.parse(bodies['vercel.json'] || bodies['now.json']);
+  const nowJson = json5.parse(bodies[configName]);
 
   if (process.env.VERCEL_BUILDER_DEBUG) {
     if (!nowJson.build) {
@@ -90,7 +92,7 @@ async function testDeployment(
     }
   }
 
-  bodies['now.json'] = Buffer.from(JSON.stringify(nowJson));
+  bodies[configName] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
   const { deploymentId, deploymentUrl } = await nowDeploy(bodies, randomness);
 
