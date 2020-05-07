@@ -1167,7 +1167,9 @@ test('ensure username in list is right', async t => {
   // Ensure the exit code is right
   t.is(exitCode, 0);
 
-  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
+  const line = stdout
+    .split('\n')
+    .find(line => line.includes('.now.sh') || line.includes('.vercel.app'));
   const columns = line.split(/\s+/);
 
   // Ensure username column have username

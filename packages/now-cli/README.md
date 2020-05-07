@@ -8,20 +8,20 @@
 
 ## Usages
 
-To install the latest version of Now CLI, visit [vercel.com/download](https://vercel.com/download) or run this command:
+To install the latest version of Vercel CLI, visit [vercel.com/download](https://vercel.com/download) or run this command:
 
 ```sh
-npm i -g now
+npm i -g vercel
 ```
 
 To quickly start a new project, run the following commands:
 
 ```
-now init        # Pick an example project
+vercel init     # Pick an example project
 cd <PROJECT>    # Change directory to the new project
-now             # Deploy to the cloud
+vercel          # Deploy to the cloud
 ```
 
 ## Documentation
 
-For details on how to use Now CLI, check out our [documentation](https://vercel.com/docs).
+For details on how to use Vercel CLI, check out our [documentation](https://vercel.com/docs).
