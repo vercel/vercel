@@ -32,6 +32,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -51,6 +52,12 @@ const help = () => {
   ${chalk.gray('–')} Invite new members (interactively)
 
       ${chalk.cyan(`$ ${getPkgName()} teams invite`)}
+  
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+      ${chalk.cyan(`$ ${getPkgName()} teams ls --next 1584722256178`)}
   `);
 };
 
@@ -66,6 +73,7 @@ const main = async ctx => {
       help: 'h',
       debug: 'd',
       switch: 'change',
+      next: 'N',
     },
   });
 
@@ -118,6 +126,7 @@ async function run({ token, config }) {
         config,
         apiUrl,
         token,
+        argv,
       });
       break;
     }
