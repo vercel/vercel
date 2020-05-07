@@ -24,5 +24,5 @@ for tag in $tags; do
   fi
 
   echo "Running \`npm publish $npm_tag\` in \"$(pwd)\""
-  echo "DRY: npm publish $npm_tag"
+  npm publish $npm_tag
 done
