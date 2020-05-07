@@ -102,7 +102,7 @@ export default class Teams extends Now {
     });
   }
 
-  async ls({ next, apiVersion = 1 }) {
+  async ls({ next, apiVersion = 1 } = {}) {
     return this.retry(async bail => {
       const query = new URLSearchParams();
 
