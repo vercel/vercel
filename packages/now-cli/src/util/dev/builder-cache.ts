@@ -8,8 +8,8 @@ import { extract } from 'tar-fs';
 import { createHash } from 'crypto';
 import { createGunzip } from 'zlib';
 import { join } from 'path';
-import { PackageJson } from '@vercel/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
+import { PackageJson, isStaticRuntime } from '@vercel/build-utils';
 import {
   createReadStream,
   mkdirp,
@@ -322,7 +322,7 @@ export async function updateBuilders(
           '--exact',
           '--no-lockfile',
           '--non-interactive',
-          ...packages.filter(p => p !== '@now/static'),
+          ...packages.filter(p => !isStaticRuntime(p)),
         ],
         {
           cwd: builderDir,
