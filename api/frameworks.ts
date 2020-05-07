@@ -19,5 +19,8 @@ export default withApiHandler(async function(
   req: NowRequest,
   res: NowResponse
 ) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Accept, Content-Type');
   return res.status(200).json(frameworks);
 });
