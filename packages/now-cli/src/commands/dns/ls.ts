@@ -12,8 +12,7 @@ import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd';
-import { getPkgName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -53,7 +52,7 @@ export default async function ls(
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getPkgName()} dns ls [domain]`
+        `${getCommandName('dns ls [domain]')}`
       )}`
     );
     return 1;
@@ -93,10 +92,8 @@ export default async function ls(
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(opts, ['_', '--next']);
       output.log(
-        `To display the next page run ${cmd(
-          `${getPkgName()} dns ls ${domainName}${flags} --next ${
-            pagination.next
-          }`
+        `To display the next page run ${getCommandName(
+          `dns ls ${domainName}${flags} --next ${pagination.next}`
         )}`
       );
     }
@@ -120,8 +117,8 @@ export default async function ls(
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
-      `To display the next page run ${cmd(
-        `${getPkgName()} dns ls${flags} --next ${pagination.next}`
+      `To display the next page run ${getCommandName(
+        `dns ls${flags} --next ${pagination.next}`
       )}`
     );
   }

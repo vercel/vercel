@@ -12,9 +12,8 @@ import getScope from '../util/get-scope.ts';
 import createOutput from '../util/output';
 import confirm from '../util/input/confirm';
 import getCommandFlags from '../util/get-command-flags';
-import cmd from '../util/output/cmd.ts';
 import getPrefixedFlags from '../util/get-prefixed-flags';
-import { getPkgName } from '../util/pkg-name.ts';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
@@ -149,7 +148,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getPkgName()} secret ls`
+            `${getCommandName('secret ls')}`
           )}`
         )
       );
@@ -197,10 +196,8 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
         '-d',
         '-y',
       ]);
-      const nextCmd = `${getPkgName()} secrets ${subcommand}${flags} --next ${
-        pagination.next
-      }`;
-      output.log(`To display the next page run ${cmd(nextCmd)}`);
+      const nextCmd = `secrets ${subcommand}${flags} --next ${pagination.next}`;
+      output.log(`To display the next page run ${getCommandName(nextCmd)}`);
     }
     return secrets.close();
   }
@@ -210,7 +207,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getPkgName()} secret rm <name>`
+            `${getCommandName('secret rm <name>')}`
           )}`
         )
       );
@@ -252,7 +249,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getPkgName()} secret rename <old-name> <new-name>`
+            `${getCommandName('secret rename <old-name> <new-name>')}`
           )}`
         )
       );
@@ -275,14 +272,14 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getPkgName()} secret add <name> <value>`
+            `${getCommandName('secret add <name> <value>')}`
           )}`
         )
       );
 
       if (args.length > 2) {
         const example = chalk.cyan(
-          `$ ${getPkgName()} secret add -- "${args[0]}"`
+          `$ ${getCommandName('secret add -- "${args[0]}"')}`
         );
         console.log(
           `If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
@@ -307,7 +304,9 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
     }
 
     if (typeof value === 'boolean') {
-      const example = chalk.cyan(`$ ${getPkgName()} secret add -- "${name}"`);
+      const example = chalk.cyan(
+        `$ ${getCommandName('secret add -- "${name}"')}`
+      );
       console.log(
         `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
       );

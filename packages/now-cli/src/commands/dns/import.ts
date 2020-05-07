@@ -6,7 +6,7 @@ import getScope from '../../util/get-scope';
 import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
-import { getPkgName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -42,7 +42,7 @@ export default async function add(
   if (args.length !== 2) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getPkgName()} dns import <domain> <zonefile>`
+        `${getCommandName('dns import <domain> <zonefile>')}`
       )}`
     );
     return 1;

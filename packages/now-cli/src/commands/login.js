@@ -10,7 +10,6 @@ import getArgs from '../util/get-args';
 import error from '../util/output/error';
 import highlight from '../util/output/highlight';
 import ok from '../util/output/ok';
-import cmd from '../util/output/cmd.ts';
 import param from '../util/output/param.ts';
 import eraseLines from '../util/output/erase-lines';
 import sleep from '../util/sleep';
@@ -115,8 +114,8 @@ const readEmail = async () => {
     if (err.message === 'stdin lacks setRawMode support') {
       throw new Error(
         error(
-          `Interactive mode not supported – please run ${cmd(
-            `${getPkgName()} login you@domain.com`
+          `Interactive mode not supported – please run ${getCommandName(
+            `login you@domain.com`
           )}`
         )
       );
