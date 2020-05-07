@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+# `yarn` overwrites this value to use the yarn registry, which we
+# can't publish to. Unset so that the default npm registry is used.
+unset npm_config_registry
+
 __dirname="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "__dirname: ${__dirname}"
 
