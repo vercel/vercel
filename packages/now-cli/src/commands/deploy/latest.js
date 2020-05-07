@@ -122,7 +122,10 @@ const printDeploymentStatus = async (
       // but fallback to the first alias in the list
       const mainAlias =
         aliasList.find(
-          alias => !alias.endsWith('.now.sh') && !isWildcardAlias(alias)
+          alias =>
+            !alias.endsWith('.now.sh') &&
+            !alias.endsWith('.vercel.app') &&
+            !isWildcardAlias(alias)
         ) || aliasList[0];
 
       isWildcard = isWildcardAlias(mainAlias);

@@ -163,12 +163,12 @@ export default async function main(ctx) {
 
   // Some people are using entire domains as app names, so
   // we need to account for this here
-  if (app && toHost(app).endsWith('.now.sh')) {
+  const asHost = app ? toHost(app) : '';
+  if (asHost.endsWith('.now.sh') || asHost.endsWith('.vercel.app')) {
     note(
       `We suggest using \`${getPkgName()} inspect <deployment>\` for retrieving details about a single deployment`
     );
 
-    const asHost = toHost(app);
     const hostParts = asHost.split('-');
 
     if (hostParts < 2) {
