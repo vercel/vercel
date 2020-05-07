@@ -121,7 +121,7 @@ export default async function ls(
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${cmd(
-        `now dns ls${flags} --next ${pagination.next}`
+        `${getPkgName()} dns ls${flags} --next ${pagination.next}`
       )}`
     );
   }
