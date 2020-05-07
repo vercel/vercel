@@ -1286,6 +1286,15 @@ test(
 );
 
 test(
+  '[now dev] 28-vercel-json-and-ignore',
+  testFixtureStdio('28-vercel-json-and-ignore', async testPath => {
+    await testPath(200, '/api/one', 'One');
+    await testPath(404, '/api/two');
+    await testPath(200, '/api/three', 'One');
+  })
+);
+
+test(
   '[now dev] Use `@now/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
