@@ -85,8 +85,8 @@ const help = () => {
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
+      ${chalk.cyan(`$ ${getPkgName()} dns ls --next 1584722256178`)}
       ${chalk.cyan(`$ ${getPkgName()} dns ls zeit.rocks --next 1584722256178`)}
-
 `);
 };
 

@@ -10,7 +10,7 @@ function runAnalyze(wrapper, context) {
 
 async function runBuildLambda(inputPath) {
   const inputFiles = await glob('**', inputPath);
-  const nowJsonRef = inputFiles['now.json'];
+  const nowJsonRef = inputFiles['vercel.json'] || inputFiles['now.json'];
   expect(nowJsonRef).toBeDefined();
   const nowJson = require(nowJsonRef.fsPath);
   expect(nowJson.builds.length).toBe(1);

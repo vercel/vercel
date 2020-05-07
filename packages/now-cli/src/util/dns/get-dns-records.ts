@@ -5,7 +5,7 @@ import Client from '../client';
 import getDomainDNSRecords from './get-domain-dns-records';
 import getDomains from '../domains/get-domains';
 
-type DomainRecordsItem = {
+export type DomainRecordsItem = {
   domainName: string;
   records: DNSRecord[];
 };
@@ -13,16 +13,24 @@ type DomainRecordsItem = {
 export default async function getDNSRecords(
   output: Output,
   client: Client,
-  contextName: string
+  contextName: string,
+  next?: number
 ) {
-  const domainNames = await getDomainNames(client, contextName);
+  const { domainNames, pagination } = await getDomainNames(
+    client,
+    contextName,
+    next
+  );
   const domainsRecords = await Promise.all(
     domainNames.map(createGetDomainRecords(output, client))
   );
   const onlyRecords = domainsRecords.map(item =>
     item instanceof DomainNotFound ? [] : item
   ) as DNSRecord[][];
-  return onlyRecords.reduce(getAddDomainName(domainNames), []);
+  return {
+    records: onlyRecords.reduce(getAddDomainName(domainNames), []),
+    pagination,
+  };
 }
 
 function createGetDomainRecords(output: Output, client: Client) {
@@ -40,12 +48,16 @@ function getAddDomainName(domainNames: string[]) {
     ...prev,
     {
       domainName: domainNames[idx],
-      records: item.sort((a, b) => a.slug.localeCompare(b.slug)),
+      records: item,
     },
   ];
 }
 
-async function getDomainNames(client: Client, contextName: string) {
-  const { domains } = await getDomains(client, contextName);
-  return domains.map(domain => domain.name).sort((a, b) => a.localeCompare(b));
+async function getDomainNames(
+  client: Client,
+  contextName: string,
+  next?: number
+) {
+  const { domains, pagination } = await getDomains(client, contextName, next);
+  return { domainNames: domains.map(domain => domain.name), pagination };
 }
