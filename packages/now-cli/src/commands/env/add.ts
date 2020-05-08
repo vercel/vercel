@@ -96,10 +96,10 @@ export default async function add(
 
   let envValue: string;
 
-  if (isSystemEnvVariable(envName)) {
-    envValue = '';
-  } else if (stdInput) {
+  if (stdInput) {
     envValue = stdInput;
+  } else if (isSystemEnvVariable(envName)) {
+    envValue = '';
   } else {
     const { inputValue } = await inquirer.prompt({
       type: 'password',
