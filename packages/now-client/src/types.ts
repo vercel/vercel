@@ -107,6 +107,7 @@ interface LegacyNowConfig {
 }
 
 export interface NowConfig extends LegacyNowConfig {
+  _fileName?: string;
   name?: string;
   version?: number;
   env?: Dictionary<string>;
