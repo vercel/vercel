@@ -1446,7 +1446,7 @@ test('try to create a builds deployments with wrong now.json', async t => {
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
-  const directory = fixture('builds-wrong');
+  const directory = fixture('builds-wrong-vercel');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
