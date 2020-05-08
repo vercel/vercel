@@ -1421,20 +1421,12 @@ test('ensure the `scope` property works with username', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('try to create a builds deployments with wrong config', async t => {
+test('try to create a builds deployments with wrong now.json', async t => {
   const directory = fixture('builds-wrong');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--confirm',
-    ],
+    [directory, '--public', ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1448,7 +1440,30 @@ test('try to create a builds deployments with wrong config', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in vercel.json – please remove it.'
+      'Error! The property `builder` is not allowed in now.json – please remove it.'
+    )
+  );
+});
+
+test('try to create a builds deployments with wrong vercel.json', async t => {
+  const directory = fixture('builds-wrong');
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    [directory, '--public', ...defaultArgs, '--confirm'],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.true(
+    stderr.includes(
+      'Error! The property `fake` is not allowed in vercel.json – please remove it.'
     )
   );
 });
