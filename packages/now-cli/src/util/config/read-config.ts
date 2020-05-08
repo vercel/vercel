@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
-import { Config } from '../../types';
+import { NowConfig } from '../dev/types';
 import getLocalConfigPath from './local-path';
 
 export default async function readConfig(dir: string) {
@@ -13,7 +13,7 @@ export default async function readConfig(dir: string) {
   }
 
   if (result) {
-    return result as Config;
+    return result as NowConfig;
   }
 
   return null;
