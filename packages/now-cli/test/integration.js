@@ -549,6 +549,26 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  async function nowEnvRemoveWithNameOnly() {
+    const now = execa(binaryPath, ['env', 'rm', 'VERCEL_URL', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
+    );
+    now.stdin.write('a\n'); // select all
+
+    await waitForPrompt(now, chunk => chunk.includes('you sure?'));
+    now.stdin.write('y\n'); // yes
+
+    const { exitCode, stderr, stdout } = await now;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
   await nowDeploy();
   await nowEnvLsIsEmpty();
   await nowEnvAdd();
@@ -559,6 +579,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowDeployWithVar();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
+  await nowEnvRemoveWithNameOnly();
   await nowEnvLsIsEmpty();
 });
 
