@@ -106,29 +106,27 @@ export function readLocalConfig(
   }
 
   if (!target) {
-    // No config found so don't attempt to read it
-  } else if (existsSync(target)) {
-    try {
-      config = loadJSON.sync(target);
-    } catch (err) {
-      if (err.name === 'JSONError') {
-        console.log(error(err.message));
-      } else {
-        const code = err.code ? `(${err.code})` : '';
-        console.error(error(`Failed to read config file: ${target} (${code})`));
-      }
+    return null;
+  }
 
-      process.exit(1);
+  try {
+    if (existsSync(target)) {
+      config = loadJSON.sync(target);
     }
-  } else {
-    console.error(error(`Config file does not exist: ${target}`));
+  } catch (err) {
+    if (err.name === 'JSONError') {
+      console.log(error(err.message));
+    } else {
+      const code = err.code ? `(${err.code})` : '';
+      console.error(error(`Failed to read config file: ${target} (${code})`));
+    }
     process.exit(1);
   }
 
-  if (!config || !target) {
+  if (!config) {
     return null;
-  } else {
-    config._fileName = basename(target);
-    return config;
   }
+
+  config._fileName = basename(target);
+  return config;
 }
