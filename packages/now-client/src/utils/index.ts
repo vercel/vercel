@@ -109,11 +109,16 @@ export async function getVercelIgnore(
 
   const files = await Promise.all(
     cwds.map(async cwd => {
-      let str = await maybeRead(join(cwd, '.vercelignore'), '');
-      if (!str) {
-        str = await maybeRead(join(cwd, '.nowignore'), '');
+      const [vercelignore, nowignore] = await Promise.all([
+        maybeRead(join(cwd, '.vercelignore'), ''),
+        maybeRead(join(cwd, '.nowignore'), ''),
+      ]);
+      if (vercelignore && nowignore) {
+        throw new Error(
+          'Can not have both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.'
+        );
       }
-      return str;
+      return vercelignore || nowignore;
     })
   );
 
