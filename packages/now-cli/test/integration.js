@@ -478,7 +478,9 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
-    t.is(contents, 'MY_ENV_VAR="MY_VALUE"\nVERCEL_URL=""\n');
+    const lines = new Set(contents.split('\n'));
+    t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
+    t.true(lines.has('VERCEL_URL=""'));
   }
 
   async function nowDeployWithVar() {
