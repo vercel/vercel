@@ -96,7 +96,9 @@ export default async function add(
 
   let envValue: string;
 
-  if (stdInput) {
+  if (isSystemEnvVariable(envName)) {
+    envValue = '';
+  } else if (stdInput) {
     envValue = stdInput;
   } else {
     const { inputValue } = await inquirer.prompt({
@@ -145,4 +147,8 @@ export default async function add(
   );
 
   return 0;
+}
+
+function isSystemEnvVariable(envName: string) {
+  return envName.startsWith('VERCEL_') || envName.startsWith('NOW_');
 }
