@@ -102,7 +102,20 @@ export const isStaticRuntime = (name?: string): boolean => {
 
 /**
  * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.
+ * Throws an error if *both* env vars are defined.
  */
 export const getPlatformEnv = (name: string): string | undefined => {
-  return process.env[`VERCEL_${name}`] || process.env[`NOW_${name}`];
+  const vName = `VERCEL_${name}`;
+  const nName = `NOW_${name}`;
+  const v = process.env[vName];
+  const n = process.env[nName];
+  if (typeof v === 'string') {
+    if (typeof n === 'string') {
+      throw new Error(
+        `Both "${vName}" and "${nName}" env vars are defined. Please only define the "${vName}" env var`
+      );
+    }
+    return v;
+  }
+  return n;
 };
