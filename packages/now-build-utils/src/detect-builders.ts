@@ -391,11 +391,11 @@ function getApiMatches({ tag }: Options = {}) {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'api/**/*.js', use: `@now/node${withTag}`, config },
-    { src: 'api/**/*.ts', use: `@now/node${withTag}`, config },
-    { src: 'api/**/!(*_test).go', use: `@now/go${withTag}`, config },
-    { src: 'api/**/*.py', use: `@now/python${withTag}`, config },
-    { src: 'api/**/*.rb', use: `@now/ruby${withTag}`, config },
+    { src: 'api/**/*.js', use: `@vercel/node${withTag}`, config },
+    { src: 'api/**/*.ts', use: `@vercel/node${withTag}`, config },
+    { src: 'api/**/!(*_test).go', use: `@vercel/go${withTag}`, config },
+    { src: 'api/**/*.py', use: `@vercel/python${withTag}`, config },
+    { src: 'api/**/*.rb', use: `@vercel/ruby${withTag}`, config },
   ];
 }
 
@@ -457,7 +457,7 @@ function detectFrontBuilder(
   }
 
   if (framework === 'nextjs') {
-    return { src: 'package.json', use: `@now/next${withTag}`, config };
+    return { src: 'package.json', use: `@vercel/next${withTag}`, config };
   }
 
   // Entrypoints for other frameworks
@@ -480,7 +480,7 @@ function detectFrontBuilder(
 
   return {
     src: source || 'package.json',
-    use: `@now/static-build${withTag}`,
+    use: `@vercel/static-build${withTag}`,
     config,
   };
 }
