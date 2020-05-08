@@ -150,5 +150,5 @@ export default async function add(
 }
 
 function isSystemEnvVariable(envName: string) {
-  return envName.startsWith('VERCEL_') || envName.startsWith('NOW_');
+  return envName.startsWith('VERCEL_');
 }
