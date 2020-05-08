@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { join } from 'path';
-import { getVercelIgnore } from '../src/utils';
+import { getVercelIgnore } from '../src';
 
 describe('Test `getVercelIgnore()`', () => {
   it('Should read `.nowignore`', async () => {
