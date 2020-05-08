@@ -98,6 +98,8 @@ export default async function add(
 
   if (stdInput) {
     envValue = stdInput;
+  } else if (isSystemEnvVariable(envName)) {
+    envValue = '';
   } else {
     const { inputValue } = await inquirer.prompt({
       type: 'password',
@@ -145,4 +147,8 @@ export default async function add(
   );
 
   return 0;
+}
+
+function isSystemEnvVariable(envName: string) {
+  return envName.startsWith('VERCEL_');
 }
