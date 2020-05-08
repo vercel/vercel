@@ -178,7 +178,7 @@ interface StaticFilesOptions {
 
 export async function staticFiles(
   path: string,
-  nowConfig: NowConfig,
+  nowConfig: NowConfig = {},
   { output, isBuilds, src }: StaticFilesOptions
 ) {
   const { debug, time } = output;
