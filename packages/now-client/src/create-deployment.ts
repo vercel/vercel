@@ -127,7 +127,7 @@ export default function buildCreateDeployment(version: number) {
       nowConfig.files.length > 0
     ) {
       // See the docs: https://vercel.com/docs/v1/features/configuration/#files-(array)
-      debug(`Filtering file list based on \`files\` key in ${configPath}`);
+      debug(`Filtering file list based on \`files\` key in "${configPath}"`);
       const allowedFiles = new Set<string>(['Dockerfile']);
       const allowedDirs = new Set<string>();
       nowConfig.files.forEach(relPath => {

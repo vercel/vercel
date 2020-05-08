@@ -116,10 +116,10 @@ export function readLocalConfig(
     }
   } catch (err) {
     if (err.name === 'JSONError') {
-      console.log(error(err.message));
+      console.error(error(err.message));
     } else {
-      const code = err.code ? `(${err.code})` : '';
-      console.error(error(`Failed to read config file: ${target} (${code})`));
+      const code = err.code ? ` (${err.code})` : '';
+      console.error(error(`Failed to read config file: ${target}${code}`));
     }
     process.exit(1);
   }
