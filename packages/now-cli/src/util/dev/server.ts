@@ -495,7 +495,11 @@ export default class DevServer {
 
     // The default empty `vercel.json` is used to serve all files as static
     // when no `vercel.json` is present
-    let config: NowConfig = this.cachedNowConfig || { version: 2 };
+    let configPath = 'vercel.json';
+    let config: NowConfig = this.cachedNowConfig || {
+      version: 2,
+      _fileName: configPath,
+    };
 
     // We need to delete these properties for zero config to work
     // with file changes
@@ -504,11 +508,11 @@ export default class DevServer {
       delete this.cachedNowConfig.routes;
     }
 
-    let configPath = 'vercel.json';
     try {
       configPath = getNowConfigPath(this.cwd);
       this.output.debug(`Reading ${configPath}`);
       config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+      config._fileName = configPath;
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(err.toString());

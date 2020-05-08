@@ -112,11 +112,10 @@ export default async ctx => {
     }
   }
 
-  const file = highlight('vercel.json');
-  const prop = code('version');
-
   if (localConfig) {
     const { version } = localConfig;
+    const file = highlight(localConfig._fileName);
+    const prop = code('version');
 
     if (version) {
       if (typeof version === 'number') {

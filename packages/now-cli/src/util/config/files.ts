@@ -1,4 +1,4 @@
-import { join as joinPath } from 'path';
+import { join, basename } from 'path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
 import { existsSync } from 'fs';
@@ -7,10 +7,11 @@ import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
 import error from '../output/error';
 import highlight from '../output/highlight';
+import { NowConfig } from '../dev/types';
 
 const VERCEL_DIR = getGlobalPathConfig();
-const CONFIG_FILE_PATH = joinPath(VERCEL_DIR, 'config.json');
-const AUTH_CONFIG_FILE_PATH = joinPath(VERCEL_DIR, 'auth.json');
+const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
+const AUTH_CONFIG_FILE_PATH = join(VERCEL_DIR, 'auth.json');
 
 // reads `CONFIG_FILE_PATH` atomically
 export const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
@@ -87,7 +88,10 @@ export function getAuthConfigFilePath() {
   return AUTH_CONFIG_FILE_PATH;
 }
 
-export function readLocalConfig(prefix: string = process.cwd()) {
+export function readLocalConfig(
+  prefix: string = process.cwd()
+): NowConfig | null {
+  let config: NowConfig | null = null;
   let target = '';
 
   try {
@@ -102,21 +106,10 @@ export function readLocalConfig(prefix: string = process.cwd()) {
   }
 
   if (!target) {
-    return null;
-  }
-
-  let localConfigExists;
-
-  try {
-    localConfigExists = existsSync(target);
-  } catch (err) {
-    console.error(error(`Config file does not exist: ${target}`));
-    process.exit(1);
-  }
-
-  if (localConfigExists) {
+    // No config found so don't attempt to read it
+  } else if (existsSync(target)) {
     try {
-      return loadJSON.sync(target);
+      config = loadJSON.sync(target);
     } catch (err) {
       if (err.name === 'JSONError') {
         console.log(error(err.message));
@@ -127,7 +120,15 @@ export function readLocalConfig(prefix: string = process.cwd()) {
 
       process.exit(1);
     }
+  } else {
+    console.error(error(`Config file does not exist: ${target}`));
+    process.exit(1);
   }
 
-  return null;
+  if (!config || !target) {
+    return null;
+  } else {
+    config._fileName = basename(target);
+    return config;
+  }
 }

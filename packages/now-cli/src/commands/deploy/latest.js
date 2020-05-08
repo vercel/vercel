@@ -373,7 +373,7 @@ export default async function main(
       output.print(
         `${prependEmoji(
           `The ${highlight(
-            'vercel.json'
+            localConfig._fileName
           )} file should be inside of the provided root directory.`,
           emoji('warning')
         )}\n`
@@ -387,7 +387,7 @@ export default async function main(
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
-          'vercel.json'
+          localConfig._fileName
         )} is deprecated (https://zeit.ink/5F)`,
         emoji('warning')
       )}\n`
@@ -404,7 +404,7 @@ export default async function main(
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
     error(
       `The ${code('env')} property in ${highlight(
-        'vercel.json'
+        localConfig._fileName
       )} needs to be an object`
     );
     return 1;
@@ -414,7 +414,7 @@ export default async function main(
     if (!isObject(localConfig.build)) {
       error(
         `The ${code('build')} property in ${highlight(
-          'vercel.json'
+          localConfig._fileName
         )} needs to be an object`
       );
       return 1;
@@ -426,7 +426,7 @@ export default async function main(
     ) {
       error(
         `The ${code('build.env')} property in ${highlight(
-          'vercel.json'
+          localConfig._fileName
         )} needs to be an object`
       );
       return 1;
@@ -637,11 +637,11 @@ export default async function main(
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment);
+        handleCreateDeployError(output, deployment, localConfig);
         return 1;
       }
 
-      handleCreateDeployError(output, purchase);
+      handleCreateDeployError(output, purchase, localConfig);
       return 1;
     }
 
@@ -661,7 +661,7 @@ export default async function main(
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, err);
+      handleCreateDeployError(output, err, localConfig);
       return 1;
     }
 
@@ -707,7 +707,7 @@ export default async function main(
   );
 }
 
-function handleCreateDeployError(output, error) {
+function handleCreateDeployError(output, error, localConfig) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
     return 1;
@@ -736,7 +736,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
-          'vercel.json'
+          localConfig._fileName
         )} – please remove it.`
       );
 
@@ -761,7 +761,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} in ${highlight(
-          'vercel.json'
+          localConfig._fileName
         )} can only be of type ${code(title(params.type))}.`
       );
 
@@ -772,7 +772,7 @@ function handleCreateDeployError(output, error) {
 
     output.error(
       `Failed to validate ${highlight(
-        'vercel.json'
+        localConfig._fileName
       )}: ${message}\nDocumentation: ${link}`
     );
 
