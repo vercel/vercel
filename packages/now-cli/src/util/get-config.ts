@@ -1,4 +1,5 @@
 import path from 'path';
+import { fileNameSymbol } from '@vercel/client';
 import {
   CantParseJSONFile,
   CantFindConfig,
@@ -43,7 +44,7 @@ export default async function getConfig(
     }
     if (localConfig !== null) {
       config = localConfig as NowConfig;
-      config._fileName = configFile;
+      config[fileNameSymbol] = configFile;
       return config;
     }
   }
@@ -57,7 +58,7 @@ export default async function getConfig(
   if (vercelConfig !== null) {
     output.debug(`Found config in file ${vercelFilePath}`);
     config = vercelConfig as NowConfig;
-    config._fileName = 'vercel.json';
+    config[fileNameSymbol] = 'vercel.json';
     return config;
   }
 
@@ -70,7 +71,7 @@ export default async function getConfig(
   if (mainConfig !== null) {
     output.debug(`Found config in file ${nowFilePath}`);
     config = mainConfig as NowConfig;
-    config._fileName = 'now.json';
+    config[fileNameSymbol] = 'now.json';
     return config;
   }
 
@@ -83,7 +84,7 @@ export default async function getConfig(
   if (pkgConfig) {
     output.debug(`Found config in package ${pkgFilePath}`);
     config = pkgConfig as NowConfig;
-    config._fileName = 'package.json';
+    config[fileNameSymbol] = 'package.json';
     return config;
   }
 

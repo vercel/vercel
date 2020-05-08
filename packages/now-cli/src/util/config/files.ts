@@ -2,6 +2,7 @@ import { join, basename } from 'path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
 import { existsSync } from 'fs';
+import { fileNameSymbol } from '@vercel/client';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
@@ -127,6 +128,6 @@ export function readLocalConfig(
     return null;
   }
 
-  config._fileName = basename(target);
+  config[fileNameSymbol] = basename(target);
   return config;
 }

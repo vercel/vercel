@@ -18,7 +18,7 @@ import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import which from 'which';
 
-import { getVercelIgnore } from '@vercel/client';
+import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
   getTransformedRoutes,
   appendRoutesToPhase,
@@ -498,7 +498,7 @@ export default class DevServer {
     let configPath = 'vercel.json';
     let config: NowConfig = this.cachedNowConfig || {
       version: 2,
-      _fileName: configPath,
+      [fileNameSymbol]: configPath,
     };
 
     // We need to delete these properties for zero config to work
@@ -512,7 +512,7 @@ export default class DevServer {
       configPath = getNowConfigPath(this.cwd);
       this.output.debug(`Reading ${configPath}`);
       config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-      config._fileName = configPath;
+      config[fileNameSymbol] = configPath;
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(err.toString());

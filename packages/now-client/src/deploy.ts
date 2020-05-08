@@ -25,9 +25,6 @@ async function* createDeployment(
   const preparedFiles = prepareFiles(files, clientOptions);
   const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
 
-  // @ts-ignore
-  delete deploymentOptions._fileName;
-
   debug('Sending deployment creation API request');
   try {
     const dpl = await fetch(
