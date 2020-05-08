@@ -157,7 +157,7 @@ const main = async argv_ => {
 
     console.log(
       info(
-        `Changelog: https://github.com/zeit/now/releases/tag/now@${update.latest}`
+        `Changelog: https://github.com/zeit/now/releases/tag/vercel@${update.latest}`
       )
     );
   }
