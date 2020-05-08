@@ -268,6 +268,7 @@ export async function installBuilders(
             '--exact',
             '--no-lockfile',
             '--non-interactive',
+            '--ignore-workspace-root-check',
             ...packagesToInstall,
           ],
           {
@@ -322,6 +323,7 @@ export async function updateBuilders(
           '--exact',
           '--no-lockfile',
           '--non-interactive',
+          '--ignore-workspace-root-check',
           ...packages.filter(p => !isStaticRuntime(p)),
         ],
         {
