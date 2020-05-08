@@ -25,7 +25,7 @@ import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 // log command when running `execa`
 function execa(file, args, options) {
-  console.log(`$ now ${args.join(' ')}`);
+  console.log(`$ vercel ${args.join(' ')}`);
   return _execa(file, args, options);
 }
 
@@ -550,22 +550,23 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   }
 
   async function nowEnvRemoveWithNameOnly() {
-    const now = execa(binaryPath, ['env', 'rm', 'VERCEL_URL', ...defaultArgs], {
-      reject: false,
-      cwd: target,
-    });
+    const vc = execa(
+      binaryPath,
+      ['env', 'rm', 'VERCEL_URL', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
 
     await waitForPrompt(
-      now,
+      vc,
       chunk =>
         chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
     );
-    now.stdin.write('a\n'); // select all
+    vc.stdin.write('a\n'); // select all
 
-    await waitForPrompt(now, chunk => chunk.includes('you sure?'));
-    now.stdin.write('y\n'); // yes
-
-    const { exitCode, stderr, stdout } = await now;
+    const { exitCode, stderr, stdout } = await vc;
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
