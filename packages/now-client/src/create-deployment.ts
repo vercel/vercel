@@ -123,7 +123,7 @@ export default function buildCreateDeployment(version: number) {
           throw new DeploymentError({
             code: 'conflicting_config',
             message:
-              'Both "vercel.json" and "now.json" exist. Please delete the "now.json" file',
+              'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
           });
         }
         configPath = 'vercel.json';
