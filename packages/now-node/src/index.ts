@@ -8,26 +8,29 @@ import {
   parse as parsePath,
 } from 'path';
 import nodeFileTrace from '@zeit/node-file-trace';
+import buildUtils from '@vercel/build-utils';
 import {
-  glob,
-  download,
   File,
-  FileBlob,
-  FileFsRef,
   Files,
   Meta,
+  PrepareCacheOptions,
+  BuildOptions,
+  Config,
+} from '@vercel/build-utils';
+const {
+  glob,
+  download,
+  FileBlob,
+  FileFsRef,
   createLambda,
   runNpmInstall,
   runPackageJsonScript,
   getNodeVersion,
   getSpawnOptions,
-  PrepareCacheOptions,
-  BuildOptions,
   shouldServe,
-  Config,
   debug,
   isSymbolicLink,
-} from '@vercel/build-utils';
+} = buildUtils;
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
 import { makeNowLauncher, makeAwsLauncher } from './launcher';
@@ -120,7 +123,7 @@ async function compile(
       const files = await glob(pattern, workPath);
       await Promise.all(
         Object.keys(files).map(async file => {
-          const entry: FileFsRef = files[file];
+          const entry = files[file];
           fsCache.set(file, entry);
           const stream = entry.toStream();
           const { data } = await FileBlob.fromStream({ stream });

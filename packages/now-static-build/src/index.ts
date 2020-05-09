@@ -6,7 +6,16 @@ import isPortReachable from 'is-port-reachable';
 import { ChildProcess, SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { frameworks, Framework } from './frameworks';
+import buildUtils from './build-utils';
 import {
+  Files,
+  FileFsRef,
+  BuildOptions,
+  Config,
+  PackageJson,
+  PrepareCacheOptions,
+} from '@vercel/build-utils';
+const {
   glob,
   download,
   spawnAsync,
@@ -20,15 +29,9 @@ import {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
-  Files,
-  FileFsRef,
-  BuildOptions,
-  Config,
   debug,
-  PackageJson,
-  PrepareCacheOptions,
   NowBuildError,
-} from '@vercel/build-utils';
+} = buildUtils;
 import { Route, Source } from '@vercel/routing-utils';
 import { getVercelIgnore } from '@vercel/client';
 

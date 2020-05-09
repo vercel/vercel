@@ -1,24 +1,28 @@
-import {
-  BuildOptions,
-  Config,
+import buildUtils from './build-utils';
+const {
   createLambda,
   debug,
   download,
-  FileBlob,
-  FileFsRef,
-  Files,
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getSpawnOptions,
   glob,
-  Lambda,
-  PackageJson,
-  PrepareCacheOptions,
-  Prerender,
   runNpmInstall,
   runPackageJsonScript,
   execCommand,
   getNodeBinPath,
+} = buildUtils;
+
+import {
+  Lambda,
+  BuildOptions,
+  Config,
+  FileBlob,
+  FileFsRef,
+  Files,
+  PackageJson,
+  PrepareCacheOptions,
+  Prerender,
   NowBuildError,
 } from '@vercel/build-utils';
 import { Route, Handler } from '@vercel/routing-utils';

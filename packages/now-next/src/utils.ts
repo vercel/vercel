@@ -6,14 +6,9 @@ import { ZipFile } from 'yazl';
 import crc32 from 'buffer-crc32';
 import { Sema } from 'async-sema';
 import resolveFrom from 'resolve-from';
-import {
-  Files,
-  FileFsRef,
-  streamToBuffer,
-  Lambda,
-  NowBuildError,
-  isSymbolicLink,
-} from '@vercel/build-utils';
+import buildUtils from './build-utils';
+const { streamToBuffer, Lambda, NowBuildError, isSymbolicLink } = buildUtils;
+import { Files, FileFsRef } from '@vercel/build-utils';
 import { Route, Source, NowHeader, NowRewrite } from '@vercel/routing-utils';
 
 type stringMap = { [key: string]: string };
