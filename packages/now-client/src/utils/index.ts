@@ -115,7 +115,7 @@ export async function getVercelIgnore(
       ]);
       if (vercelignore && nowignore) {
         throw new Error(
-          'Can not have both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file'
+          'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.'
         );
       }
       return vercelignore || nowignore;
