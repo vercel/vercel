@@ -4,6 +4,7 @@ import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
+import { fileNameSymbol } from '@vercel/client';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
@@ -373,7 +374,7 @@ export default async function main(
       output.print(
         `${prependEmoji(
           `The ${highlight(
-            'vercel.json'
+            localConfig[fileNameSymbol]
           )} file should be inside of the provided root directory.`,
           emoji('warning')
         )}\n`
@@ -387,7 +388,7 @@ export default async function main(
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} is deprecated (https://zeit.ink/5F)`,
         emoji('warning')
       )}\n`
@@ -404,7 +405,7 @@ export default async function main(
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
     error(
       `The ${code('env')} property in ${highlight(
-        'vercel.json'
+        localConfig[fileNameSymbol]
       )} needs to be an object`
     );
     return 1;
@@ -414,7 +415,7 @@ export default async function main(
     if (!isObject(localConfig.build)) {
       error(
         `The ${code('build')} property in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} needs to be an object`
       );
       return 1;
@@ -426,7 +427,7 @@ export default async function main(
     ) {
       error(
         `The ${code('build.env')} property in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} needs to be an object`
       );
       return 1;
@@ -637,11 +638,11 @@ export default async function main(
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment);
+        handleCreateDeployError(output, deployment, localConfig);
         return 1;
       }
 
-      handleCreateDeployError(output, purchase);
+      handleCreateDeployError(output, purchase, localConfig);
       return 1;
     }
 
@@ -661,7 +662,7 @@ export default async function main(
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, err);
+      handleCreateDeployError(output, err, localConfig);
       return 1;
     }
 
@@ -707,7 +708,7 @@ export default async function main(
   );
 }
 
-function handleCreateDeployError(output, error) {
+function handleCreateDeployError(output, error, localConfig) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
     return 1;
@@ -736,7 +737,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} – please remove it.`
       );
 
@@ -761,7 +762,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} can only be of type ${code(title(params.type))}.`
       );
 
@@ -772,7 +773,7 @@ function handleCreateDeployError(output, error) {
 
     output.error(
       `Failed to validate ${highlight(
-        'vercel.json'
+        localConfig[fileNameSymbol]
       )}: ${message}\nDocumentation: ${link}`
     );
 

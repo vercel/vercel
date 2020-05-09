@@ -2,18 +2,17 @@ import { join, sep, dirname, basename, normalize } from 'path';
 import { readFile, writeFile, pathExists, move } from 'fs-extra';
 import { homedir } from 'os';
 import execa from 'execa';
+import { BuildOptions, Meta, Files } from '@vercel/build-utils';
+import buildUtils from './build-utils';
 
-import {
+const {
   glob,
   download,
   createLambda,
   getWriteableDirectory,
-  BuildOptions,
-  Meta,
   shouldServe,
-  Files,
   debug,
-} from '@vercel/build-utils';
+} = buildUtils;
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
 const handlerFileName = `handler${OUT_EXTENSION}`;

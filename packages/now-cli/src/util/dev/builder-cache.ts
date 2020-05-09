@@ -268,6 +268,7 @@ export async function installBuilders(
             '--exact',
             '--no-lockfile',
             '--non-interactive',
+            '--ignore-workspace-root-check',
             ...packagesToInstall,
           ],
           {
@@ -322,6 +323,7 @@ export async function updateBuilders(
           '--exact',
           '--no-lockfile',
           '--non-interactive',
+          '--ignore-workspace-root-check',
           ...packages.filter(p => !isStaticRuntime(p)),
         ],
         {
@@ -352,7 +354,8 @@ export async function getBuilder(
   builderPkg: string,
   yarnDir: string,
   output: Output,
-  builderDir?: string
+  builderDir?: string,
+  isRetry = false
 ): Promise<BuilderWithPackage> {
   let builderWithPkg: BuilderWithPackage = localBuilders[builderPkg];
   if (!builderWithPkg) {
@@ -371,7 +374,7 @@ export async function getBuilder(
         package: Object.freeze(pkg),
       };
     } catch (err) {
-      if (err.code === 'MODULE_NOT_FOUND') {
+      if (err.code === 'MODULE_NOT_FOUND' && !isRetry) {
         output.debug(
           `Attempted to require ${builderPkg}, but it is not installed`
         );
@@ -379,7 +382,7 @@ export async function getBuilder(
         await installBuilders(pkgSet, yarnDir, output, builderDir);
 
         // Run `getBuilder()` again now that the builder has been installed
-        return getBuilder(builderPkg, yarnDir, output, builderDir);
+        return getBuilder(builderPkg, yarnDir, output, builderDir, true);
       }
       throw err;
     }

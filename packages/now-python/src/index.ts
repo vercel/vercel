@@ -4,16 +4,16 @@ import fs from 'fs';
 import { promisify } from 'util';
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
-import {
+import buildUtils from './build-utils';
+import { GlobOptions, BuildOptions } from '@vercel/build-utils';
+const {
   getWriteableDirectory,
   download,
   glob,
-  GlobOptions,
   createLambda,
   shouldServe,
-  BuildOptions,
   debug,
-} from '@vercel/build-utils';
+} = buildUtils;
 import { installRequirement, installRequirementsFile } from './install';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
