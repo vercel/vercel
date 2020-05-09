@@ -1,16 +1,18 @@
-import { join as joinPath } from 'path';
+import { join, basename } from 'path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
 import { existsSync } from 'fs';
+import { fileNameSymbol } from '@vercel/client';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
 import error from '../output/error';
 import highlight from '../output/highlight';
+import { NowConfig } from '../dev/types';
 
 const VERCEL_DIR = getGlobalPathConfig();
-const CONFIG_FILE_PATH = joinPath(VERCEL_DIR, 'config.json');
-const AUTH_CONFIG_FILE_PATH = joinPath(VERCEL_DIR, 'auth.json');
+const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
+const AUTH_CONFIG_FILE_PATH = join(VERCEL_DIR, 'auth.json');
 
 // reads `CONFIG_FILE_PATH` atomically
 export const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
@@ -87,7 +89,10 @@ export function getAuthConfigFilePath() {
   return AUTH_CONFIG_FILE_PATH;
 }
 
-export function readLocalConfig(prefix: string = process.cwd()) {
+export function readLocalConfig(
+  prefix: string = process.cwd()
+): NowConfig | null {
+  let config: NowConfig | null = null;
   let target = '';
 
   try {
@@ -105,29 +110,24 @@ export function readLocalConfig(prefix: string = process.cwd()) {
     return null;
   }
 
-  let localConfigExists;
-
   try {
-    localConfigExists = existsSync(target);
+    if (existsSync(target)) {
+      config = loadJSON.sync(target);
+    }
   } catch (err) {
-    console.error(error(`Config file does not exist: ${target}`));
+    if (err.name === 'JSONError') {
+      console.error(error(err.message));
+    } else {
+      const code = err.code ? ` (${err.code})` : '';
+      console.error(error(`Failed to read config file: ${target}${code}`));
+    }
     process.exit(1);
   }
 
-  if (localConfigExists) {
-    try {
-      return loadJSON.sync(target);
-    } catch (err) {
-      if (err.name === 'JSONError') {
-        console.log(error(err.message));
-      } else {
-        const code = err.code ? `(${err.code})` : '';
-        console.error(error(`Failed to read config file: ${target} (${code})`));
-      }
-
-      process.exit(1);
-    }
+  if (!config) {
+    return null;
   }
 
-  return null;
+  config[fileNameSymbol] = basename(target);
+  return config;
 }

@@ -106,7 +106,10 @@ interface LegacyNowConfig {
   aliases?: string | string[];
 }
 
+export const fileNameSymbol = Symbol('fileName');
+
 export interface NowConfig extends LegacyNowConfig {
+  [fileNameSymbol]?: string;
   name?: string;
   version?: number;
   env?: Dictionary<string>;

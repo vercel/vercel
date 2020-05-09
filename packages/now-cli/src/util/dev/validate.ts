@@ -70,7 +70,9 @@ function validateKey(
 
     const error = validate.errors[0];
 
-    return `Invalid \`${key}\` property: ${error.dataPath} ${error.message}`;
+    return `Invalid \`${String(key)}\` property: ${error.dataPath} ${
+      error.message
+    }`;
   }
 
   return null;
