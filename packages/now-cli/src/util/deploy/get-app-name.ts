@@ -1,12 +1,12 @@
 import path from 'path';
 import { NowError } from '../now-error';
 import { Output } from '../output';
-import { Config } from '../../types';
+import { NowConfig } from '../dev/types';
 import readPackage from '../read-package';
 
 export default async function getAppName(
   output: Output,
-  config: Config,
+  config: NowConfig,
   localConfigPath?: string
 ) {
   // If the name is in the configuration, return it
