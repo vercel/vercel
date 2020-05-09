@@ -81,7 +81,13 @@ export async function readdirRelative(
   ignores: string[],
   cwd: string
 ): Promise<string[]> {
-  const dirContents = await readdir(path, ignores);
+  const preprocessedIgnores = ignores.map(ignore => {
+    if (ignore.endsWith('/')) {
+      return ignore.slice(0, -1);
+    }
+    return ignore;
+  });
+  const dirContents = await readdir(path, preprocessedIgnores);
   return dirContents.map(filePath => relative(cwd, filePath));
 }
 
