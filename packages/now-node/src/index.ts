@@ -8,7 +8,7 @@ import {
   parse as parsePath,
 } from 'path';
 import nodeFileTrace from '@zeit/node-file-trace';
-import buildUtils from '@vercel/build-utils';
+import buildUtils from './build-utils';
 import {
   File,
   Files,
