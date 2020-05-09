@@ -21,7 +21,7 @@ describe('Test `getVercelIgnore()`', () => {
     assert(err);
     assert.equal(
       err!.message,
-      'Can not have both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file'
+      'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.'
     );
   });
 });
