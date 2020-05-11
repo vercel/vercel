@@ -31,7 +31,7 @@
     "@types/content-type": "1.1.3",
     "@types/cookie": "0.3.3",
     "@types/etag": "1.8.0",
-    "@types/fs-extra": "^5.0.5",
+    "@types/fs-extra": "5.0.5",
     "@types/test-listen": "1.1.0",
     "@zeit/ncc": "0.20.4",
     "@zeit/node-file-trace": "0.5.1",

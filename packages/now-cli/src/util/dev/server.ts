@@ -911,7 +911,7 @@ export default class DevServer {
       ops.push(this.killBuilderDevServer(pid));
     }
 
-    // Ensure that the `builders.tar.gz` file has finished extracting
+    // Ensure that the builders module cache is created
     ops.push(builderDirPromise);
 
     try {
