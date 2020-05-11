@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const { existsSync } = require('fs');
+const { basename, join, delimiter, resolve } = require('path');
 
 function error(command) {
   console.error('> Error!', command);
@@ -25,6 +27,10 @@ function isGlobal() {
     : Boolean(process.env.npm_config_global);
 }
 
+function isVercel() {
+  return basename(join(__dirname, '..')) === 'vercel';
+}
+
 function validateNodeVersion() {
   let semver = '>= 0';
   let major = '1';
@@ -41,14 +47,25 @@ function validateNodeVersion() {
   return { isValid, expected: semver, actual: process.versions.node };
 }
 
+function isInPath(name) {
+  const { HOME, PATH } = process.env;
+  for (const rawPath of new Set(PATH.split(delimiter))) {
+    const path = resolve(rawPath.replace(/^~/, HOME));
+    if (existsSync(join(path, name)) || existsSync(join(path, `${name}.cmd`))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function main() {
   if (!isGlobal()) {
     debug('Skip preinstall since now is being installed locally');
     return;
   }
 
-  // Compare Node.js version against `package.json` "engines" field
   const ver = validateNodeVersion();
+
   if (!ver.isValid) {
     error(
       `Detected unsupported Node.js version.\n` +
@@ -56,6 +73,11 @@ async function main() {
         `Please update to the latest Node.js LTS version to install Now CLI.`
     );
     process.exit(1);
+  }
+
+  if (isVercel() && isInPath('now')) {
+    const uninstall = isYarn() ? 'yarn global remove now' : 'npm remove -g now';
+    console.error(`NOTE: Run \`${uninstall}\` to uninstall \`now\`\n`);
   }
 }
 
@@ -71,9 +93,7 @@ process.on('uncaughtException', err => {
   process.exit(1);
 });
 
-main()
-  .then(() => process.exit(0))
-  .catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

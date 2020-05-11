@@ -38,7 +38,6 @@ if (pkg.name === '@vercel/client') {
   // Set the "bin" for Now CLI to legacy "now", and remove `postinstall` script
   pkg.name = pkg.name.replace('vercel', 'now');
   pkg.bin = { now: pkg.bin.vercel };
-  delete pkg.scripts.postinstall;
 } else {
   // Adjust the org scope to legacy `@now` for Runtimes
   pkg.name = pkg.name.replace('@vercel', '@now');
