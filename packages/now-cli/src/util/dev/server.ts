@@ -115,6 +115,7 @@ export default class DevServer {
   public address: string;
 
   private cachedNowConfig: NowConfig | null;
+  private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
   private server: http.Server;
@@ -149,6 +150,7 @@ export default class DevServer {
     this.yarnPath = '/';
 
     this.cachedNowConfig = null;
+    this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set<string>();
     this.server = http.createServer(this.devServerHandler);
@@ -609,6 +611,7 @@ export default class DevServer {
     await this.validateNowConfig(config);
 
     this.cachedNowConfig = config;
+    this.caseSensitive = hasNewRoutingProperties(config);
     this.apiDir = detectApiDirectory(config.builds || []);
     this.apiExtensions = detectApiExtensions(config.builds || []);
     return config;
@@ -1679,6 +1682,10 @@ export default class DevServer {
     return false;
   }
 
+  isCaseSensitive(): boolean {
+    return this.caseSensitive;
+  }
+
   async runDevCommand() {
     const { devCommand, cwd } = this;
 
@@ -2044,5 +2051,15 @@ function filterFrontendBuilds(build: Builder) {
   return (
     !isOfficialRuntime('static-build', build.use) &&
     !isOfficialRuntime('next', build.use)
+  );
+}
+
+function hasNewRoutingProperties(nowConfig: NowConfig) {
+  return (
+    typeof nowConfig.cleanUrls !== undefined ||
+    typeof nowConfig.headers !== undefined ||
+    typeof nowConfig.redirects !== undefined ||
+    typeof nowConfig.rewrites !== undefined ||
+    typeof nowConfig.trailingSlash !== undefined
   );
 }
