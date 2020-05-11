@@ -34,13 +34,12 @@ const originalName = pkg.name;
 if (pkg.name === '@vercel/client') {
   // The legacy name for `@vercel/client` is `now-client` (global scope)
   pkg.name = 'now-client';
-} else if (pkg.name === 'vercel') {
-  // Set the "bin" for Now CLI to legacy "now", and remove `postinstall` script
-  pkg.name = pkg.name.replace('vercel', 'now');
-  pkg.bin = { now: pkg.bin.vercel };
 } else {
-  // Adjust the org scope to legacy `@now` for Runtimes
-  pkg.name = pkg.name.replace('@vercel', '@now');
+  pkg.name = pkg.name.replace('vercel', 'now');
+  if (pkg.bin && pkg.bin.vercel) {
+    // The legacy "bin" for Now CLI is "now"
+    pkg.bin = { now: pkg.bin.vercel };
+  }
 }
 
 console.error(`Updated package name: "${originalName}" -> "${pkg.name}"`);
