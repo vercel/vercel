@@ -79,7 +79,8 @@ export async function devRouter(
       }
 
       const keys: string[] = [];
-      const matcher = PCRE(`%${src}%i`, keys);
+      const flags = devServer && devServer.isCaseSensitive() ? '' : 'i';
+      const matcher = PCRE(`%${src}%${flags}`, keys);
       const match =
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 
