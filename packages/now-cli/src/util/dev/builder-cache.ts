@@ -24,7 +24,7 @@ const registryTypes = new Set(['version', 'tag', 'range']);
 const createStaticBuilder = (scope: string): BuilderWithPackage => {
   return {
     runInProcess: true,
-    requirePath: '@now/static',
+    requirePath: `${scope}/static`,
     builder: Object.freeze(staticBuilder),
     package: Object.freeze({ name: `@${scope}/static`, version: '' }),
   };
