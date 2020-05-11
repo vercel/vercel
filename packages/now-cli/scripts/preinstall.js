@@ -47,8 +47,8 @@ async function main() {
     return;
   }
 
+  // Compare Node.js version against `package.json` "engines" field
   const ver = validateNodeVersion();
-
   if (!ver.isValid) {
     error(
       `Detected unsupported Node.js version.\n` +
