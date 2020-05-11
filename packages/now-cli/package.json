@@ -62,13 +62,13 @@
     "node": ">= 10"
   },
   "dependencies": {
-    "@now/build-utils": "2.2.2-canary.4",
-    "@now/go": "1.0.8-canary.0",
-    "@now/next": "2.5.5-canary.5",
-    "@now/node": "1.5.2-canary.6",
-    "@now/python": "1.1.7-canary.1",
-    "@now/ruby": "1.1.1-canary.0",
-    "@now/static-build": "0.16.1-canary.3"
+    "@vercel/build-utils": "2.3.1",
+    "@vercel/go": "1.1.1",
+    "@vercel/next": "2.6.1",
+    "@vercel/node": "1.6.1",
+    "@vercel/python": "1.2.1",
+    "@vercel/ruby": "1.2.1",
+    "@vercel/static-build": "0.17.1"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
