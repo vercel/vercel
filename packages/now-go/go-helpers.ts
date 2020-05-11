@@ -4,9 +4,9 @@ import fetch from 'node-fetch';
 import { mkdirp, pathExists } from 'fs-extra';
 import { dirname, join } from 'path';
 import { homedir } from 'os';
-import { debug } from '@vercel/build-utils';
+import buildUtils from './build-utils';
 import stringArgv from 'string-argv';
-
+const { debug } = buildUtils;
 const archMap = new Map([['x64', 'amd64'], ['x86', '386']]);
 const platformMap = new Map([['win32', 'windows']]);
 

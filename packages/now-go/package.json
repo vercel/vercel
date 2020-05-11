@@ -1,6 +1,6 @@
 {
   "name": "@vercel/go",
-  "version": "1.0.8-canary.1",
+  "version": "1.1.1-canary.0",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/go",

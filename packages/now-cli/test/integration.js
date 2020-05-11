@@ -25,7 +25,7 @@ import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 // log command when running `execa`
 function execa(file, args, options) {
-  console.log(`$ now ${args.join(' ')}`);
+  console.log(`$ vercel ${args.join(' ')}`);
   return _execa(file, args, options);
 }
 
@@ -410,6 +410,28 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  async function nowEnvAddSystemEnv() {
+    const now = execa(
+      binaryPath,
+      ['env', 'add', 'VERCEL_URL', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
   async function nowEnvLsIncludesVar() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
@@ -434,6 +456,12 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
     t.is(myStdinVars.length, 1);
     t.regex(myStdinVars.join('\n'), /preview/gm);
+
+    const vercelVars = lines.filter(line => line.includes('VERCEL_URL'));
+    t.is(vercelVars.length, 3);
+    t.regex(vercelVars.join('\n'), /development/gm);
+    t.regex(vercelVars.join('\n'), /preview/gm);
+    t.regex(vercelVars.join('\n'), /production/gm);
   }
 
   async function nowEnvPull() {
@@ -450,7 +478,9 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
-    t.is(contents, 'MY_ENV_VAR="MY_VALUE"\n');
+    const lines = new Set(contents.split('\n'));
+    t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
+    t.true(lines.has('VERCEL_URL=""'));
   }
 
   async function nowDeployWithVar() {
@@ -472,6 +502,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const apiJson = await apiRes.json();
     t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
     t.is(apiJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+    t.is(apiJson['VERCEL_URL'], host);
 
     const homeUrl = `https://${host}`;
     console.log({ homeUrl });
@@ -480,6 +511,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
     t.is(homeJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+    t.is(apiJson['VERCEL_URL'], host);
   }
 
   async function nowEnvRemove() {
@@ -517,15 +549,38 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  async function nowEnvRemoveWithNameOnly() {
+    const vc = execa(
+      binaryPath,
+      ['env', 'rm', 'VERCEL_URL', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    await waitForPrompt(
+      vc,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
+    );
+    vc.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
   await nowDeploy();
   await nowEnvLsIsEmpty();
   await nowEnvAdd();
   await nowEnvAddFromStdin();
+  await nowEnvAddSystemEnv();
   await nowEnvLsIncludesVar();
   await nowEnvPull();
   await nowDeployWithVar();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
+  await nowEnvRemoveWithNameOnly();
   await nowEnvLsIsEmpty();
 });
 
@@ -1167,7 +1222,9 @@ test('ensure username in list is right', async t => {
   // Ensure the exit code is right
   t.is(exitCode, 0);
 
-  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
+  const line = stdout
+    .split('\n')
+    .find(line => line.includes('.now.sh') || line.includes('.vercel.app'));
   const columns = line.split(/\s+/);
 
   // Ensure username column have username
@@ -1364,20 +1421,12 @@ test('ensure the `scope` property works with username', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('try to create a builds deployments with wrong config', async t => {
+test('try to create a builds deployments with wrong now.json', async t => {
   const directory = fixture('builds-wrong');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--confirm',
-    ],
+    [directory, '--public', ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1391,7 +1440,30 @@ test('try to create a builds deployments with wrong config', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in vercel.json – please remove it.'
+      'Error! The property `builder` is not allowed in now.json – please remove it.'
+    )
+  );
+});
+
+test('try to create a builds deployments with wrong vercel.json', async t => {
+  const directory = fixture('builds-wrong-vercel');
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    [directory, '--public', ...defaultArgs, '--confirm'],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.true(
+    stderr.includes(
+      'Error! The property `fake` is not allowed in vercel.json – please remove it.'
     )
   );
 });

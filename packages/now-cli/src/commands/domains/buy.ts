@@ -5,7 +5,6 @@ import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
 import getScope from '../../util/get-scope';
@@ -13,7 +12,7 @@ import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
-import { getPkgName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -49,7 +48,7 @@ export default async function buy(
   const [domainName] = args;
   if (!domainName) {
     output.error(
-      `Missing domain name. Run ${cmd(`${getPkgName()} domains --help`)}`
+      `Missing domain name. Run ${getCommandName(`domains --help`)}`
     );
     return 1;
   }
@@ -63,8 +62,8 @@ export default async function buy(
   const { domain: rootDomain, subdomain } = parsedDomain;
   if (subdomain || !rootDomain) {
     output.error(
-      `Invalid domain name "${domainName}". Run ${cmd(
-        `${getPkgName()} domains --help`
+      `Invalid domain name "${domainName}". Run ${getCommandName(
+        `domains --help`
       )}`
     );
     return 1;
@@ -121,8 +120,8 @@ export default async function buy(
 
   if (buyResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using ${cmd(
-        `${getPkgName()} billing add`
+      `Could not purchase domain. Please add a payment method using ${getCommandName(
+        `billing add`
       )}.`
     );
     return 1;
@@ -189,8 +188,8 @@ export default async function buy(
       );
     } else {
       output.note(
-        `You may now use your domain as an alias to your deployments. Run ${cmd(
-          `${getPkgName()} alias --help`
+        `You may now use your domain as an alias to your deployments. Run ${getCommandName(
+          `alias --help`
         )}`
       );
     }

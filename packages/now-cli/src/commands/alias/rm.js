@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import Now from '../../util';
-import cmd from '../../util/output/cmd.ts';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
@@ -11,7 +10,7 @@ import strlen from '../../util/strlen.ts';
 import promptBool from '../../util/prompt-bool';
 import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
-import { getPkgName } from '../../util/pkg-name.ts';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 export default async function rm(ctx, opts, args, output) {
   const {
@@ -47,16 +46,14 @@ export default async function rm(ctx, opts, args, output) {
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getPkgName()} alias rm <alias>`
+        `${getCommandName('alias rm <alias>')}`
       )}`
     );
     return 1;
   }
 
   if (!aliasOrId) {
-    output.error(
-      `${cmd(`${getPkgName()} alias rm <alias>`)} expects one argument`
-    );
+    output.error(`${getCommandName('alias rm <alias>')} expects one argument`);
     return 1;
   }
 
@@ -71,7 +68,7 @@ export default async function rm(ctx, opts, args, output) {
     output.error(
       `Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`
     );
-    output.log(`Run ${cmd(`${getPkgName} alias ls`)} to see your aliases.`);
+    output.log(`Run ${getCommandName('alias ls')} to see your aliases.`);
     return 1;
   }
 

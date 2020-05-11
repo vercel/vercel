@@ -6,13 +6,12 @@ import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import getEnvVariables from '../../util/env/get-env-records';
 import getDecryptedSecret from '../../util/env/get-decrypted-secret';
-import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { join } from 'path';
 import { promises, existsSync } from 'fs';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { getPkgName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 const { writeFile } = promises;
 
 type Options = {
@@ -29,9 +28,7 @@ export default async function pull(
 ) {
   if (args.length > 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${cmd(
-        `${getPkgName()} env pull <file>`
-      )}`
+      `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
     );
     return 1;
   }
