@@ -2,6 +2,7 @@
   <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
   <h3 align="center">Vercel</h3>
   <p align="center">Develop. Preview. Ship.</p>
+  <p align="center"><a href="https://vercel.com">vercel.com</a></p>
 </p>
 
 [![CI Status](https://badgen.net/github/checks/zeit/now?label=CI)](https://github.com/zeit/now/actions?workflow=CI)
