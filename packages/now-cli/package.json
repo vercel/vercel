@@ -46,8 +46,7 @@
   },
   "files": [
     "dist",
-    "scripts/preinstall.js",
-    "scripts/postinstall.js"
+    "scripts/preinstall.js"
   ],
   "ava": {
     "compileEnhancements": false,
