@@ -614,6 +614,20 @@ test(
 );
 
 test(
+  '[now dev] test rewrites and redirects is case sensitive',
+  testFixtureStdio('test-routing-case-sensitive', async testPath => {
+    await testPath(200, '/Path', 'UPPERCASE');
+    await testPath(200, '/path', 'lowercase');
+    await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
+      Location: '/upper.html',
+    });
+    await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
+      Location: '/lower.html',
+    });
+  })
+);
+
+test(
   '[now dev] test cleanUrls serve correct content',
   testFixtureStdio('test-clean-urls', async testPath => {
     await testPath(200, '/', 'Index Page');
