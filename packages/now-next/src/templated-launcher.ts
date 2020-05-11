@@ -1,6 +1,6 @@
 if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV =
-    process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
+  const region = process.env.VERCEL_REGION || process.env.NOW_REGION;
+  process.env.NODE_ENV = region === 'dev1' ? 'development' : 'production';
 }
 
 import { Server } from 'http';

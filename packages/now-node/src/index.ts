@@ -11,31 +11,34 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
+import once from '@tootallnate/once';
+import nodeFileTrace from '@zeit/node-file-trace';
+import buildUtils from './build-utils';
 import {
-  glob,
-  download,
   File,
-  FileBlob,
-  FileFsRef,
   Files,
   Meta,
+  PrepareCacheOptions,
+  BuildOptions,
+  Config,
+  StartDevServerOptions,
+  StartDevServerResult,
+} from '@vercel/build-utils';
+const {
+  glob,
+  download,
+  FileBlob,
+  FileFsRef,
   createLambda,
   runNpmInstall,
   runPackageJsonScript,
   getNodeVersion,
   getSpawnOptions,
-  PrepareCacheOptions,
-  BuildOptions,
-  StartDevServerOptions,
-  StartDevServerResult,
   shouldServe,
-  Config,
   debug,
   isSymbolicLink,
   walkParentDirs,
-} from '@now/build-utils';
-import once from '@tootallnate/once';
-import nodeFileTrace from '@zeit/node-file-trace';
+} = buildUtils;
 import { makeNowLauncher, makeAwsLauncher } from './launcher';
 import { Register, register } from './typescript';
 
@@ -141,7 +144,7 @@ async function compile(
       const files = await glob(pattern, workPath);
       await Promise.all(
         Object.keys(files).map(async file => {
-          const entry: FileFsRef = files[file];
+          const entry = files[file];
           fsCache.set(file, entry);
           const stream = entry.toStream();
           const { data } = await FileBlob.fromStream({ stream });

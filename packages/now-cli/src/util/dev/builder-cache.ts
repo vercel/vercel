@@ -3,8 +3,8 @@ import semver from 'semver';
 import retry from 'async-retry';
 import npa from 'npm-package-arg';
 import pluralize from 'pluralize';
-import { basename, join, resolve } from 'path';
-import { PackageJson } from '@now/build-utils';
+import { basename, join } from 'path';
+import { PackageJson } from '@vercel/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
 import nowCliPkg from '../pkg';
@@ -21,13 +21,18 @@ declare const __non_webpack_require__: typeof require;
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
-const localBuilders: { [key: string]: BuilderWithPackage } = {
-  '@now/static': {
+const createStaticBuilder = (scope: string): BuilderWithPackage => {
+  return {
     runInProcess: true,
     requirePath: '@now/static',
     builder: Object.freeze(staticBuilder),
-    package: Object.freeze({ name: '@now/static', version: '' }),
-  },
+    package: Object.freeze({ name: `@${scope}/static`, version: '' }),
+  };
+};
+
+const localBuilders: { [key: string]: BuilderWithPackage } = {
+  '@now/static': createStaticBuilder('now'),
+  '@vercel/static': createStaticBuilder('vercel'),
 };
 
 const distTag = nowCliPkg.version ? getDistTag(nowCliPkg.version) : 'canary';
@@ -39,10 +44,7 @@ export const builderDirPromise = prepareBuilderDir();
  * Prepare cache directory for installing now-builders
  */
 export async function prepareCacheDir() {
-  const { NOW_BUILDER_CACHE_DIR } = process.env;
-  const designated = NOW_BUILDER_CACHE_DIR
-    ? resolve(NOW_BUILDER_CACHE_DIR)
-    : XDGAppPaths('co.zeit.now').cache();
+  const designated = XDGAppPaths('com.vercel.cli').cache();
 
   if (!designated) {
     throw new NoBuilderCacheError();
@@ -78,14 +80,14 @@ function getNpmVersion(use = ''): string {
   return '';
 }
 
-export function getBuildUtils(packages: string[]): string {
+export function getBuildUtils(packages: string[], org: string): string {
   const version = packages
     .map(getNpmVersion)
     .some(ver => ver.includes('canary'))
     ? 'canary'
     : 'latest';
 
-  return `@now/build-utils@${version}`;
+  return `@${org}/build-utils@${version}`;
 }
 
 function parseVersionSafe(rawSpec: string) {
@@ -176,7 +178,10 @@ export async function installBuilders(
     ...buildersPkgBefore.dependencies,
   };
 
-  packages.push(getBuildUtils(packages));
+  packages.push(
+    getBuildUtils(packages, 'vercel'),
+    getBuildUtils(packages, 'now')
+  );
 
   // Filter out any packages that come packaged with `now-cli`
   const packagesToInstall = packages.filter(p =>
@@ -263,7 +268,10 @@ export async function updateBuilders(
   });
 
   if (packagesToUpdate.length > 0) {
-    packages.push(getBuildUtils(packages));
+    packages.push(
+      getBuildUtils(packages, 'vercel'),
+      getBuildUtils(packages, 'now')
+    );
 
     await retry(
       () =>

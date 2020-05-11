@@ -13,9 +13,9 @@ import {
   FileFsRef,
   Lambda,
   PackageJson,
-} from '@now/build-utils';
-import { NowConfig } from 'now-client';
-import { HandleValue, Route } from '@now/routing-utils';
+} from '@vercel/build-utils';
+import { NowConfig } from '@vercel/client';
+import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
 
 export { NowConfig };

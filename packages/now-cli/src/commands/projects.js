@@ -10,15 +10,15 @@ import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import createOutput from '../util/output';
 import getCommandFlags from '../util/get-command-flags';
-import cmd from '../util/output/cmd.ts';
 import wait from '../util/output/wait';
 import getPrefixedFlags from '../util/get-prefixed-flags';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const e = encodeURIComponent;
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now projects`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} projects`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -39,13 +39,13 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new project
 
-    ${chalk.cyan('$ now projects add my-project')}
+    ${chalk.cyan(`$ ${getPkgName()} projects add my-project`)}
 
   ${chalk.gray('–')} Paginate projects, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-    ${chalk.cyan(`$ now projects ls --next 1584722256178`)}
+    ${chalk.cyan(`$ ${getPkgName()} projects ls --next 1584722256178`)}
 `);
 };
 
@@ -122,7 +122,7 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now projects ls`'
+            `${getCommandName('projects ls')}`
           )}`
         )
       );
@@ -183,8 +183,8 @@ async function run({ client, contextName }) {
           '-d',
           '-y',
         ]);
-        const nextCmd = `now projects ls${flags} --next ${pagination.next}`;
-        console.log(`To display the next page run ${cmd(nextCmd)}`);
+        const nextCmd = `projects ls${flags} --next ${pagination.next}`;
+        console.log(`To display the next page run ${getCommandName(nextCmd)}`);
       }
     }
     return;
@@ -195,7 +195,7 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now project  rm <name>`'
+            `${getCommandName('project rm <name>')}`
           )}`
         )
       );
@@ -237,13 +237,15 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now projects add <name>`'
+            `${getCommandName('projects add <name>')}`
           )}`
         )
       );
 
       if (args.length > 1) {
-        const example = chalk.cyan(`$ now projects add "${args.join(' ')}"`);
+        const example = chalk.cyan(
+          `${getCommandName(`projects add "${args.join(' ')}"`)}`
+        );
         console.log(
           `> If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
         );

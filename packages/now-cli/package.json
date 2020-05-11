@@ -1,6 +1,6 @@
 {
-  "name": "now",
-  "version": "18.0.1-canary.15",
+  "name": "vercel",
+  "version": "19.0.2-canary.0",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -41,7 +41,8 @@
     "all": true
   },
   "bin": {
-    "now": "./dist/index.js"
+    "vc": "./dist/index.js",
+    "vercel": "./dist/index.js"
   },
   "files": [
     "dist",

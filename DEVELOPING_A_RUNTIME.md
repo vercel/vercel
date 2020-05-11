@@ -3,7 +3,7 @@
 The following page is a reference for how to create a Runtime using the available Runtime API.
 
 A Runtime is an npm module that exposes a `build` function and optionally an `analyze` function and `prepareCache` function.
-Official Runtimes are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `now.json` configuration file.
+Official Runtimes are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `vercel.json` configuration file.
 However, the `use` property will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo url which is useful for testing your Runtime.
 
 See the [Runtimes Documentation](https://vercel.com/docs/runtimes) to view example usage.
@@ -143,7 +143,7 @@ The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCa
 - `entrypoint`: Name of entrypoint file for this particular build job. Value `files[entrypoint]` is guaranteed to exist and be a valid [File](#files) reference. `entrypoint` is always a discrete file and never a glob, since globs are expanded into separate builds at deployment time.
 - `workPath`: A writable temporary directory where you are encouraged to perform your build process. This directory will be populated with the restored cache from the previous run (if any) for [`analyze`](#analyze) and [`build`](#build).
 - `cachePath`: A writable temporary directory where you can build a cache for the next run. This is only passed to `prepareCache`.
-- `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `now.json`.
+- `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `vercel.json`.
 
 ## Examples
 
