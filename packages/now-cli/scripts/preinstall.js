@@ -60,7 +60,7 @@ function isInPath(name) {
 
 async function main() {
   if (!isGlobal()) {
-    debug('Skip preinstall since now is being installed locally');
+    debug('Skipping preinstall since Vercel CLI is being installed locally');
     return;
   }
 
@@ -76,7 +76,7 @@ async function main() {
   }
 
   if (isVercel() && isInPath('now')) {
-    const uninstall = isYarn() ? 'yarn global remove now' : 'npm remove -g now';
+    const uninstall = isYarn() ? 'yarn global remove now' : 'npm uninstall -g now';
     console.error(`NOTE: Run \`${uninstall}\` to uninstall \`now\`\n`);
   }
 }
