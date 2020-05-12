@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-const { existsSync } = require('fs');
-const { basename, join, delimiter, resolve } = require('path');
+const { join } = require('path');
+const { statSync } = require('fs');
+const pkg = require('../package');
 
 function error(command) {
   console.error('> Error!', command);
@@ -28,7 +29,7 @@ function isGlobal() {
 }
 
 function isVercel() {
-  return basename(join(__dirname, '..')) === 'vercel';
+  return pkg.name === 'vercel';
 }
 
 function validateNodeVersion() {
@@ -47,15 +48,14 @@ function validateNodeVersion() {
   return { isValid, expected: semver, actual: process.versions.node };
 }
 
-function isInPath(name) {
-  const { HOME, PATH } = process.env;
-  for (const rawPath of new Set(PATH.split(delimiter))) {
-    const path = resolve(rawPath.replace(/^~/, HOME));
-    if (existsSync(join(path, name)) || existsSync(join(path, `${name}.cmd`))) {
-      return true;
-    }
+function isInNodeModules(name) {
+  try {
+    const nodeModules = join(__dirname, '..', '..');
+    const stat = statSync(join(nodeModules, name));
+    return stat.isDirectory();
+  } catch (err) {
+    return false;
   }
-  return false;
 }
 
 async function main() {
@@ -75,7 +75,7 @@ async function main() {
     process.exit(1);
   }
 
-  if (isVercel() && isInPath('now')) {
+  if (isVercel() && isInNodeModules('now')) {
     const uninstall = isYarn()
       ? 'yarn global remove now'
       : 'npm uninstall -g now';
