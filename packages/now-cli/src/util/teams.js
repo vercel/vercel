@@ -1,4 +1,5 @@
 import Now from './index';
+import { URLSearchParams } from 'url';
 
 export default class Teams extends Now {
   async create({ slug }) {
@@ -101,9 +102,16 @@ export default class Teams extends Now {
     });
   }
 
-  async ls() {
+  async ls({ next, apiVersion = 1 } = {}) {
     return this.retry(async bail => {
-      const res = await this._fetch(`/teams`);
+      const query = new URLSearchParams();
+
+      if (next) {
+        query.set('limit', 20);
+        query.set('until', next);
+      }
+
+      const res = await this._fetch(`/v${apiVersion}/teams?${query}`);
 
       if (res.status === 403) {
         const error = new Error('Unauthorized');

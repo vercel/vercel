@@ -18,7 +18,7 @@ import prepareFixtures from './helpers/prepare';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
-const deployHelpMessage = `${logo} now [options] <command | path>`;
+const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 const session = Math.random()
   .toString(36)
   .split('.')[1];
@@ -37,6 +37,7 @@ const testv1 = async (...args) => {
     // Only run v1 tests on Node 12
     return;
   }
+  // eslint-disable-next-line
   await test(...args);
 };
 
@@ -330,7 +331,7 @@ test('output the version', async t => {
 test('detect update command', async t => {
   {
     const { stderr } = await execute(['update']);
-    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
+    t.regex(stderr, /yarn add vercel@/gm, `Received: "${stderr}"`);
   }
 
   {

@@ -1,7 +1,9 @@
 import { join } from 'path';
 import { intersects } from 'semver';
 import execa from 'execa';
-import { debug, Meta, NowBuildError, NodeVersion } from '@now/build-utils';
+import buildUtils from './build-utils';
+import { Meta, NodeVersion } from '@vercel/build-utils';
+const { debug, NowBuildError } = buildUtils;
 
 interface RubyVersion extends NodeVersion {
   minor: number;
@@ -40,7 +42,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       });
       if (!found) {
         throw new NowBuildError({
-          code: 'NOW_RUBY_INVALID_VERSION',
+          code: 'RUBY_INVALID_VERSION',
           message: 'Found `Gemfile` with invalid Ruby version: `' + line + '`.',
           link:
             'https://vercel.com/docs/runtimes#official-runtimes/ruby/ruby-version',

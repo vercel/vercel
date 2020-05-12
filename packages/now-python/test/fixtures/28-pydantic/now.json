@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "api/hello.py", "use": "@now/python" }],
+  "builds": [{ "src": "api/hello.py", "use": "@vercel/python" }],
   "routes": [{ "src": "/", "dest": "/api/hello.py" }],
   "probes": [
     {

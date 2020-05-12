@@ -39,7 +39,7 @@ export function spawnAsync(
         : 'Command';
       reject(
         new NowBuildError({
-          code: `NOW_BUILD_UTILS_SPAWN_${code || signal}`,
+          code: `BUILD_UTILS_SPAWN_${code || signal}`,
           message:
             opts.stdio === 'inherit'
               ? `${cmd} exited with ${code || signal}`
@@ -81,7 +81,7 @@ export function execAsync(
 
           return reject(
             new NowBuildError({
-              code: `NOW_BUILD_UTILS_EXEC_${code || signal}`,
+              code: `BUILD_UTILS_EXEC_${code || signal}`,
               message: `${cmd} exited with ${code || signal}`,
             })
           );

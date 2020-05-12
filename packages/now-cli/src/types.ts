@@ -2,8 +2,6 @@ import { NowConfig } from './util/dev/types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
-export type Config = NowConfig;
-
 export interface NowContext {
   argv: string[];
   apiUrl: string;
@@ -14,7 +12,7 @@ export interface NowContext {
     currentTeam: string;
     updateChannel: string;
   };
-  localConfig: Config;
+  localConfig: NowConfig;
 }
 
 type Billing = {
@@ -187,6 +185,9 @@ export type DNSRecord = {
   value: string;
   created: number;
   updated: number;
+  createdAt: number;
+  updatedAt: number;
+  domain: string;
 };
 
 type SRVRecordData = {

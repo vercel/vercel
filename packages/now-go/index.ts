@@ -2,18 +2,17 @@ import { join, sep, dirname, basename, normalize } from 'path';
 import { readFile, writeFile, pathExists, move } from 'fs-extra';
 import { homedir } from 'os';
 import execa from 'execa';
+import { BuildOptions, Meta, Files } from '@vercel/build-utils';
+import buildUtils from './build-utils';
 
-import {
+const {
   glob,
   download,
   createLambda,
   getWriteableDirectory,
-  BuildOptions,
   shouldServe,
-  Files,
   debug,
-  Meta,
-} from '@now/build-utils';
+} = buildUtils;
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
 const handlerFileName = `handler${OUT_EXTENSION}`;
@@ -134,13 +133,9 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
 
   if (meta.isDev) {
     // Create cache so Go rebuilds fast with `now dev`
-    goPath = join(
-      workPath,
-      '.now',
-      'cache',
-      'now-go',
-      basename(entrypoint, '.go')
-    );
+    // Old versions of the CLI don't assign this property
+    const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
+    goPath = join(devCacheDir, 'now-go', basename(entrypoint, '.go'));
     const destNow = join(goPath, 'src', 'lambda');
     await download(downloadedFiles, destNow);
     downloadedFiles = await glob('**', destNow);

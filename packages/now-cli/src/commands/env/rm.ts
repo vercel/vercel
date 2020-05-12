@@ -12,11 +12,11 @@ import {
 } from '../../util/env/env-target';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
-import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -32,8 +32,8 @@ export default async function rm(
 ) {
   if (args.length > 2) {
     output.error(
-      `Invalid number of arguments. Usage: ${cmd(
-        `now env rm <name> ${getEnvTargetPlaceholder()}`
+      `Invalid number of arguments. Usage: ${getCommandName(
+        `env rm <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
@@ -69,7 +69,7 @@ export default async function rm(
     envName = inputName;
   }
 
-  const envs = await getEnvVariables(output, client, project.id);
+  const envs = await getEnvVariables(output, client, project.id, 4);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );

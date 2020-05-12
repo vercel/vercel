@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "*.py",
-      "use": "@now/python"
+      "use": "@vercel/python"
     }
   ],
   "probes": [

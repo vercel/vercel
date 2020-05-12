@@ -9,7 +9,7 @@ import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen.ts';
 import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd.ts';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 export default async function ls(ctx, opts, args, output) {
   const {
@@ -55,7 +55,7 @@ export default async function ls(ctx, opts, args, output) {
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now alias ls [alias]`'
+        `${getCommandName('alias ls [alias]')}`
       )}`
     );
     return 1;
@@ -106,8 +106,8 @@ export default async function ls(ctx, opts, args, output) {
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
-      `To display the next page run ${cmd(
-        `now alias ls${flags} --next ${pagination.next}`
+      `To display the next page run ${getCommandName(
+        `alias ls${flags} --next ${pagination.next}`
       )}`
     );
   }

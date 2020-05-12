@@ -1,4 +1,4 @@
 {
   "version": 2,
-  "builds": [{ "src": "www/package.json", "use": "@now/next" }]
+  "builds": [{ "src": "www/package.json", "use": "@vercel/next" }]
 }

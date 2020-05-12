@@ -5,6 +5,7 @@ import test from 'ava';
 import semVer from 'semver';
 import { homedir } from 'os';
 import _execa from 'execa';
+import XDGAppPaths from 'xdg-app-paths';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
@@ -24,13 +25,13 @@ import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 // log command when running `execa`
 function execa(file, args, options) {
-  console.log(`$ now ${args.join(' ')}`);
+  console.log(`$ vercel ${args.join(' ')}`);
   return _execa(file, args, options);
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
-const deployHelpMessage = `${logo} now [options] <command | path>`;
+const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
 const isCanary = pkg.version.includes('canary');
@@ -41,7 +42,6 @@ const pickUrl = stdout => {
 };
 
 const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
-const createDirectory = dest => fs.mkdirSync(dest);
 
 const waitForDeployment = async href => {
   console.log(`waiting for ${href} to become ready...`);
@@ -108,6 +108,8 @@ let contextName;
 
 let tmpDir;
 
+let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
+
 if (!process.env.CI) {
   tmpDir = tmp.dirSync({
     // This ensures the directory gets
@@ -115,7 +117,13 @@ if (!process.env.CI) {
     unsafeCleanup: true,
   });
 
-  defaultArgs.push('-Q', path.join(tmpDir.name, '.now'));
+  globalDir = path.join(tmpDir.name, 'com.vercel.tests');
+
+  defaultArgs.push('-Q', globalDir);
+  console.log(
+    'No CI detected, adding defaultArgs to avoid polluting user settings',
+    defaultArgs
+  );
 }
 
 const execute = (args, options) =>
@@ -162,12 +170,14 @@ const getDeploymentBuildsByUrl = async url => {
 const createUser = async () => {
   await retry(
     async () => {
-      const location = getConfigPath();
-      token = await fetchTokenWithRetry();
-
-      if (!fs.existsSync(location)) {
-        await createDirectory(location);
+      if (!fs.existsSync(globalDir)) {
+        console.log('Creating global config directory ', globalDir);
+        await ensureDir(globalDir);
+      } else {
+        console.log('Found global config directory ', globalDir);
       }
+
+      token = await fetchTokenWithRetry();
 
       await fs.writeJSON(getConfigAuthPath(), { token });
 
@@ -183,8 +193,7 @@ const createUser = async () => {
   );
 };
 
-const getConfigPath = () => path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-const getConfigAuthPath = () => path.join(getConfigPath(), 'auth.json');
+const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
 
 test.before(async () => {
   try {
@@ -356,7 +365,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-    t.regex(stderr, /0 Environment Variables found in Project/gm);
+    t.regex(stderr, /No Environment Variables found in Project/gm);
   }
 
   async function nowEnvAdd() {
@@ -401,6 +410,28 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  async function nowEnvAddSystemEnv() {
+    const now = execa(
+      binaryPath,
+      ['env', 'add', 'VERCEL_URL', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
   async function nowEnvLsIncludesVar() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
@@ -412,7 +443,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     );
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-    t.regex(stderr, /4 Environment Variables found in Project/gm);
+    t.regex(stderr, /Environment Variables found in Project/gm);
 
     const lines = stdout.split('\n');
 
@@ -425,6 +456,12 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
     t.is(myStdinVars.length, 1);
     t.regex(myStdinVars.join('\n'), /preview/gm);
+
+    const vercelVars = lines.filter(line => line.includes('VERCEL_URL'));
+    t.is(vercelVars.length, 3);
+    t.regex(vercelVars.join('\n'), /development/gm);
+    t.regex(vercelVars.join('\n'), /preview/gm);
+    t.regex(vercelVars.join('\n'), /production/gm);
   }
 
   async function nowEnvPull() {
@@ -441,7 +478,9 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
-    t.is(contents, 'MY_ENV_VAR="MY_VALUE"\n');
+    const lines = new Set(contents.split('\n'));
+    t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
+    t.true(lines.has('VERCEL_URL=""'));
   }
 
   async function nowDeployWithVar() {
@@ -463,6 +502,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const apiJson = await apiRes.json();
     t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
     t.is(apiJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+    t.is(apiJson['VERCEL_URL'], host);
 
     const homeUrl = `https://${host}`;
     console.log({ homeUrl });
@@ -471,6 +511,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
     t.is(homeJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+    t.is(apiJson['VERCEL_URL'], host);
   }
 
   async function nowEnvRemove() {
@@ -508,15 +549,38 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  async function nowEnvRemoveWithNameOnly() {
+    const vc = execa(
+      binaryPath,
+      ['env', 'rm', 'VERCEL_URL', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    await waitForPrompt(
+      vc,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
+    );
+    vc.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
   await nowDeploy();
   await nowEnvLsIsEmpty();
   await nowEnvAdd();
   await nowEnvAddFromStdin();
+  await nowEnvAddSystemEnv();
   await nowEnvLsIncludesVar();
   await nowEnvPull();
   await nowDeployWithVar();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
+  await nowEnvRemoveWithNameOnly();
   await nowEnvLsIsEmpty();
 });
 
@@ -841,7 +905,7 @@ test('try to purchase a domain', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      `Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`
+      `Error! Could not purchase domain. Please add a payment method using \`vercel billing add\`.`
     )
   );
 });
@@ -1158,7 +1222,9 @@ test('ensure username in list is right', async t => {
   // Ensure the exit code is right
   t.is(exitCode, 0);
 
-  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
+  const line = stdout
+    .split('\n')
+    .find(line => line.includes('.now.sh') || line.includes('.vercel.app'));
   const columns = line.split(/\s+/);
 
   // Ensure username column have username
@@ -1355,20 +1421,12 @@ test('ensure the `scope` property works with username', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('try to create a builds deployments with wrong config', async t => {
+test('try to create a builds deployments with wrong now.json', async t => {
   const directory = fixture('builds-wrong');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--confirm',
-    ],
+    [directory, '--public', ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1382,7 +1440,30 @@ test('try to create a builds deployments with wrong config', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
+      'Error! The property `builder` is not allowed in now.json – please remove it.'
+    )
+  );
+});
+
+test('try to create a builds deployments with wrong vercel.json', async t => {
+  const directory = fixture('builds-wrong-vercel');
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    [directory, '--public', ...defaultArgs, '--confirm'],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.true(
+    stderr.includes(
+      'Error! The property `fake` is not allowed in vercel.json – please remove it.'
     )
   );
 });
@@ -1555,11 +1636,11 @@ test('deploying a file should not show prompts and display deprecation', async t
   t.is(exitCode, 0, formatOutput(output));
   t.true(stderr.includes('Deploying files with Vercel is deprecated'));
 
-  // Ensure `.now` was not created
+  // Ensure `.vercel` was not created
   t.is(
-    await exists(path.join(path.dirname(file), '.now')),
+    await exists(path.join(path.dirname(file), '.vercel')),
     false,
-    '.now should not exists'
+    '.vercel should not exists'
   );
 
   // Test if the output is really a URL
@@ -1749,7 +1830,7 @@ test('initialize example to existing directory with "-f"', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  createDirectory(path.join(cwd, 'angular'));
+  await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
   const { stdout, stderr, exitCode } = await execute(
     ['init', 'angular', '-f'],
@@ -1773,7 +1854,7 @@ test('try to initialize example to existing directory', async t => {
   const goal =
     'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
 
-  createDirectory(path.join(cwd, 'angular'));
+  await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
   const { stdout, stderr, exitCode } = await execute(['init', 'angular'], {
     cwd,
@@ -1792,7 +1873,7 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! No example found for noce, run `now init` to see the list of available examples.';
+    'Error! No example found for noce, run `vercel init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'noce'], { cwd });
 
@@ -1808,7 +1889,7 @@ test('try to initialize example "example-404"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! No example found for example-404, run `now init` to see the list of available examples.';
+    'Error! No example found for example-404, run `vercel init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'example-404'], {
     cwd,
@@ -2255,13 +2336,11 @@ test('change user', async t => {
   const { stdout: prevUser } = await execute(['whoami']);
 
   // Delete the current token
-  const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
+  await execute(['logout', '--debug'], { stdio: 'inherit' });
 
   await createUser();
 
-  const loginOutput = await execute(['login', email]);
-  t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
+  await execute(['login', email, '--debug'], { stdio: 'inherit' });
 
   const auth = await fs.readJSON(getConfigAuthPath());
 
@@ -2286,7 +2365,7 @@ test('should show prompts to set up project', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
 
   const now = execa(binaryPath, [directory, ...defaultArgs]);
 
@@ -2348,16 +2427,19 @@ test('should show prompts to set up project', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(directory, '.gitignore'))).toString(), '.now');
-
-  // Ensure .now/project.json and .now/README.txt are created
   t.is(
-    await exists(path.join(directory, '.now', 'project.json')),
+    (await readFile(path.join(directory, '.gitignore'))).toString(),
+    '.vercel'
+  );
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(directory, '.vercel', 'project.json')),
     true,
     'project.json should be created'
   );
   t.is(
-    await exists(path.join(directory, '.now', 'README.txt')),
+    await exists(path.join(directory, '.vercel', 'README.txt')),
     true,
     'README.txt should be created'
   );
@@ -2378,7 +2460,7 @@ test('should prefill "project name" prompt with folder name', async t => {
   const src = fixture('static-deployment');
 
   // remove previously linked project if it exists
-  await remove(path.join(src, '.now'));
+  await remove(path.join(src, '.vercel'));
 
   const directory = path.join(src, '../', projectName);
   await copy(src, directory);
@@ -2426,7 +2508,7 @@ test('should prefill "project name" prompt with --name', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
 
   const now = execa(binaryPath, [
     directory,
@@ -2486,9 +2568,9 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
   await fs.writeFile(
-    path.join(directory, 'now.json'),
+    path.join(directory, 'vercel.json'),
     JSON.stringify({
       name: projectName,
     })
@@ -2500,7 +2582,9 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   now.stderr.on('data', data => {
     if (
-      data.toString().includes('The `name` property in now.json is deprecated')
+      data
+        .toString()
+        .includes('The `name` property in vercel.json is deprecated')
     ) {
       isDeprecated = true;
     }
@@ -2542,17 +2626,17 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   t.is(isDeprecated, true);
 
   // clean up
-  await remove(path.join(directory, 'now.json'));
+  await remove(path.join(directory, 'vercel.json'));
 });
 
-test('deploy with unknown `NOW_PROJECT_ID` should fail', async t => {
+test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
     env: {
-      NOW_ORG_ID: user.uid,
-      NOW_PROJECT_ID: 'asdf',
+      VERCEL_ORG_ID: user.uid,
+      VERCEL_PROJECT_ID: 'asdf',
     },
   });
 
@@ -2560,54 +2644,54 @@ test('deploy with unknown `NOW_PROJECT_ID` should fail', async t => {
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
+test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
-    env: { NOW_ORG_ID: user.uid },
+    env: { VERCEL_ORG_ID: user.uid },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(
     output.stderr.includes(
-      'You specified `NOW_ORG_ID` but you forgot to specify `NOW_PROJECT_ID`. You need to specify both to deploy to a custom project.'
+      'You specified `VERCEL_ORG_ID` but you forgot to specify `VERCEL_PROJECT_ID`. You need to specify both to deploy to a custom project.'
     ),
     true,
     formatOutput(output)
   );
 });
 
-test('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async t => {
+test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', async t => {
   const directory = fixture('static-deployment');
 
   const output = await execute([directory], {
-    env: { NOW_PROJECT_ID: 'asdf' },
+    env: { VERCEL_PROJECT_ID: 'asdf' },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(
     output.stderr.includes(
-      'You specified `NOW_PROJECT_ID` but you forgot to specify `NOW_ORG_ID`. You need to specify both to deploy to a custom project.'
+      'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_ORG_ID`. You need to specify both to deploy to a custom project.'
     ),
     true,
     formatOutput(output)
   );
 });
 
-test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async t => {
   const directory = fixture('static-deployment');
 
-  // generate `.now`
+  // generate `.vercel`
   await execute([directory, '--confirm']);
 
-  const link = require(path.join(directory, '.now/project.json'));
-  await remove(path.join(directory, '.now'));
+  const link = require(path.join(directory, '.vercel/project.json'));
+  await remove(path.join(directory, '.vercel'));
 
   const output = await execute([directory], {
     env: {
-      NOW_ORG_ID: link.orgId,
-      NOW_PROJECT_ID: link.projectId,
+      VERCEL_ORG_ID: link.orgId,
+      VERCEL_PROJECT_ID: link.projectId,
     },
   });
 
@@ -2615,13 +2699,13 @@ test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
   t.is(output.stdout.includes('Linked to'), false);
 });
 
-test('deploy shows notice when project in `.now` does not exists', async t => {
+test('deploy shows notice when project in `.vercel` does not exists', async t => {
   const directory = fixture('static-deployment');
 
-  // overwrite .now with unexisting project
-  await ensureDir(path.join(directory, '.now'));
+  // overwrite .vercel with unexisting project
+  await ensureDir(path.join(directory, '.vercel'));
   await writeFile(
-    path.join(directory, '.now/project.json'),
+    path.join(directory, '.vercel/project.json'),
     JSON.stringify({
       orgId: 'asdf',
       projectId: 'asdf',
@@ -2685,29 +2769,29 @@ test('use `rootDirectory` from project when deploying', async t => {
   });
 });
 
-test('now deploy with unknown `NOW_ORG_ID` or `NOW_PROJECT_ID` should error', async t => {
+test('now deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
   const output = await execute(['deploy'], {
-    env: { NOW_ORG_ID: 'asdf', NOW_PROJECT_ID: 'asdf' },
+    env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('now env with unknown `NOW_ORG_ID` or `NOW_PROJECT_ID` should error', async t => {
+test('now env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
   const output = await execute(['env'], {
-    env: { NOW_ORG_ID: 'asdf', NOW_PROJECT_ID: 'asdf' },
+    env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('whoami with `NOW_ORG_ID` should favor `--scope` and should error', async t => {
+test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async t => {
   const user = await fetchTokenInformation(token);
 
   const output = await execute(['whoami', '--scope', 'asdf'], {
-    env: { NOW_ORG_ID: user.uid },
+    env: { VERCEL_ORG_ID: user.uid },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
@@ -2718,14 +2802,14 @@ test('whoami with `NOW_ORG_ID` should favor `--scope` and should error', async t
   );
 });
 
-test('whoami with local .now scope', async t => {
+test('whoami with local .vercel scope', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
-  // create local .now
-  await ensureDir(path.join(directory, '.now'));
+  // create local .vercel
+  await ensureDir(path.join(directory, '.vercel'));
   await fs.writeFile(
-    path.join(directory, '.now', 'project.json'),
+    path.join(directory, '.vercel', 'project.json'),
     JSON.stringify({ orgId: user.uid, projectId: 'xxx' })
   );
 
@@ -2737,5 +2821,5 @@ test('whoami with local .now scope', async t => {
   t.is(output.stdout.includes(contextName), true, formatOutput(output));
 
   // clean up
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
 });
