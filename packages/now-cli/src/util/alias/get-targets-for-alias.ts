@@ -1,8 +1,8 @@
 import toHost from '../to-host';
-import { Config } from '../../types';
+import { NowConfig } from '../dev/types';
 import * as ERRORS from '../errors-ts';
 
-export function getTargetsForAlias(args: string[], { alias }: Config) {
+export function getTargetsForAlias(args: string[], { alias }: NowConfig) {
   if (args.length) {
     return targetsToHosts([args[args.length - 1]]);
   }

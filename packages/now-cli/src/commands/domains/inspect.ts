@@ -3,7 +3,6 @@ import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
 import dnsTable from '../../util/format-dns-table';
 import formatDate from '../../util/format-date';
@@ -11,7 +10,7 @@ import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import getDomainPrice from '../../util/domains/get-domain-price';
-import { getPkgName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -50,7 +49,7 @@ export default async function inspect(
 
   if (!domainName) {
     output.error(
-      `${cmd(`${getPkgName()} domains inspect <domain>`)} expects one argument`
+      `${getCommandName(`domains inspect <domain>`)} expects one argument`
     );
     return 1;
   }
@@ -58,7 +57,7 @@ export default async function inspect(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getPkgName()} domains inspect <domain>`
+        `${getCommandName('domains inspect <domain>')}`
       )}`
     );
     return 1;
@@ -75,7 +74,7 @@ export default async function inspect(
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
-    output.log(`Run ${cmd(`${getPkgName()} domains ls`)} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -85,7 +84,7 @@ export default async function inspect(
         contextName
       )}`
     );
-    output.log(`Run ${cmd(`${getPkgName()} domains ls`)} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -172,8 +171,8 @@ export default async function inspect(
       `  We will run a verification for you and you will receive an email upon completion.\n`
     );
     output.print(
-      `  If you want to force running a verification, you can run ${cmd(
-        `${getPkgName()} domains verify <domain>`
+      `  If you want to force running a verification, you can run ${getCommandName(
+        `domains verify <domain>`
       )}\n`
     );
     output.print('  Read more: https://err.sh/now/domain-verification\n\n');

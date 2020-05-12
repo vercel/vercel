@@ -18,7 +18,7 @@ import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
 import getCommandFlags from '../util/get-command-flags';
-import { getPkgName } from '../util/pkg-name.ts';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
@@ -98,7 +98,7 @@ export default async function main(ctx) {
   });
 
   if (argv._.length > 2) {
-    error(`${cmd(`${getPkgName()} ls [app]`)} accepts at most one argument`);
+    error(`${getCommandName('ls [app]')} accepts at most one argument`);
     return 1;
   }
 
@@ -163,12 +163,14 @@ export default async function main(ctx) {
 
   // Some people are using entire domains as app names, so
   // we need to account for this here
-  if (app && toHost(app).endsWith('.now.sh')) {
+  const asHost = app ? toHost(app) : '';
+  if (asHost.endsWith('.now.sh') || asHost.endsWith('.vercel.app')) {
     note(
-      `We suggest using \`${getPkgName()} inspect <deployment>\` for retrieving details about a single deployment`
+      `We suggest using ${getCommandName(
+        'inspect <deployment>'
+      )} for retrieving details about a single deployment`
     );
 
-    const asHost = toHost(app);
     const hostParts = asHost.split('-');
 
     if (hostParts < 2) {
@@ -234,9 +236,7 @@ export default async function main(ctx) {
         now.close();
         stopSpinner();
         log(`Found matching path alias: ${chalk.cyan(item.alias)}`);
-        log(
-          `Please run ${cmd(`${getPkgName()} alias ls ${item.alias}`)} instead`
-        );
+        log(`Please run ${getCommandName(`alias ls ${item.alias}`)} instead`);
         return 0;
       }
 
@@ -287,13 +287,13 @@ export default async function main(ctx) {
   if (app == null) {
     log(
       `To list more deployments for a project run ${cmd(
-        `${getPkgName()} ls [project]`
+        `${getCommandName('ls [project]')}`
       )}`
     );
   } else if (!argv['--all']) {
     log(
       `To list deployment instances run ${cmd(
-        `${getPkgName()} ls --all [project]`
+        `${getCommandName('ls --all [project]')}`
       )}`
     );
   }
@@ -348,10 +348,8 @@ export default async function main(ctx) {
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);
     log(
-      `To display the next page run ${cmd(
-        `${getPkgName()} ls${app ? ' ' + app : ''}${flags} --next ${
-          pagination.next
-        }`
+      `To display the next page run ${getCommandName(
+        `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
       )}`
     );
   }

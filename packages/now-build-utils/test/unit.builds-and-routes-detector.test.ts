@@ -68,7 +68,7 @@ describe('Test `detectBuilders`', () => {
   it('no package.json + public', async () => {
     const files = ['api/users.js', 'public/index.html'];
     const { builders, errors } = await detectBuilders(files);
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(errors).toBe(null);
   });
 
@@ -77,7 +77,7 @@ describe('Test `detectBuilders`', () => {
     const { builders, errors } = await detectBuilders(files);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/users.js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
@@ -88,7 +88,7 @@ describe('Test `detectBuilders`', () => {
     const { builders, errors } = await detectBuilders(files);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/[endpoint].js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
@@ -143,7 +143,7 @@ describe('Test `detectBuilders`', () => {
     const { builders } = await detectBuilders(files);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
     expect(builders!.length).toBe(2);
   });
@@ -159,7 +159,7 @@ describe('Test `detectBuilders`', () => {
     const { builders } = await detectBuilders(files);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('public/**/*');
     expect(builders!.length).toBe(2);
   });
@@ -346,7 +346,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(2);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/index.ts');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
   });
 
@@ -667,7 +667,7 @@ describe('Test `detectBuilders`', () => {
 
     expect(builders!.length).toBe(1);
     expect(builders![0].src).toBe('dist/**/*');
-    expect(builders![0].use).toBe('@now/static');
+    expect(builders![0].use).toBe('@vercel/static');
 
     expect(defaultRoutes!.length).toBe(1);
     expect((defaultRoutes![0] as any).src).toBe('/(.*)');
@@ -687,7 +687,7 @@ describe('Test `detectBuilders`', () => {
 
     expect(builders!.length).toBe(2);
     expect(builders![1].src).toBe('output/**/*');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
 
     expect(defaultRoutes!.length).toBe(3);
     expect((defaultRoutes![1] as any).status).toBe(404);
@@ -807,7 +807,7 @@ describe('Test `detectBuilders`', () => {
       projectSettings,
     });
     expect(errors).toBe(null);
-    expect(builders![0]!.use).toBe('@now/static');
+    expect(builders![0]!.use).toBe('@vercel/static');
     expect(builders![0]!.src).toBe('out/**/*');
   });
 
@@ -930,7 +930,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       redirectRoutes,
       rewriteRoutes,
     } = await detectBuilders(files, null, { featHandleMiss });
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(errors).toBe(null);
 
     expect(defaultRoutes!.length).toBe(2);
@@ -952,7 +952,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     } = await detectBuilders(files, null, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/users.js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
@@ -972,7 +972,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/[endpoint].js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
@@ -1069,7 +1069,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     } = await detectBuilders(files, null, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
     expect(builders!.length).toBe(2);
 
@@ -1096,7 +1096,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     } = await detectBuilders(files, pkg, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/version.js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
     expect(builders!.length).toBe(2);
 
@@ -1121,7 +1121,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('public/**/*');
     expect(builders!.length).toBe(2);
   });
@@ -1334,7 +1334,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders!.length).toBe(2);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/index.ts');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
   });
 
@@ -1688,7 +1688,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     expect(builders!.length).toBe(1);
     expect(builders![0].src).toBe('dist/**/*');
-    expect(builders![0].use).toBe('@now/static');
+    expect(builders![0].use).toBe('@vercel/static');
 
     expect(defaultRoutes).toStrictEqual([]);
     expect(redirectRoutes).toStrictEqual([]);
@@ -1714,7 +1714,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     expect(builders!.length).toBe(2);
     expect(builders![1].src).toBe('output/**/*');
-    expect(builders![1].use).toBe('@now/static');
+    expect(builders![1].use).toBe('@vercel/static');
 
     expect(defaultRoutes!.length).toBe(2);
     expect((defaultRoutes![0] as Handler).handle).toBe('miss');
@@ -1848,7 +1848,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       featHandleMiss,
     });
     expect(errors).toBe(null);
-    expect(builders![0]!.use).toBe('@now/static');
+    expect(builders![0]!.use).toBe('@vercel/static');
     expect(builders![0]!.src).toBe('out/**/*');
   });
 
@@ -2843,7 +2843,7 @@ describe('Test `detectOutputDirectory`', () => {
   it('should be `null` with no config', async () => {
     const builders = [
       {
-        use: '@now/static',
+        use: '@vercel/static',
         src: 'public/**/*',
       },
     ];
@@ -2854,7 +2854,7 @@ describe('Test `detectOutputDirectory`', () => {
   it('should be `null` with no zero config builds', async () => {
     const builders = [
       {
-        use: '@now/static',
+        use: '@vercel/static',
         src: 'public/**/*',
         config: {},
       },
@@ -2866,7 +2866,7 @@ describe('Test `detectOutputDirectory`', () => {
   it('should be `public` with one zero config', async () => {
     const builders = [
       {
-        use: '@now/static',
+        use: '@vercel/static',
         src: 'public/**/*',
         config: { zeroConfig: true },
       },
@@ -2878,7 +2878,7 @@ describe('Test `detectOutputDirectory`', () => {
   it('should be `public` with one zero config and one without config', async () => {
     const builders = [
       {
-        use: '@now/static',
+        use: '@vercel/static',
         src: 'public/**/*',
         config: { zeroConfig: true },
       },

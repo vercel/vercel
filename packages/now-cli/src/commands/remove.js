@@ -7,7 +7,6 @@ import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
 import createOutput from '../util/output';
 import logo from '../util/output/logo';
-import cmd from '../util/output/cmd.ts';
 import elapsed from '../util/output/elapsed.ts';
 import { normalizeURL } from '../util/url';
 import Client from '../util/client.ts';
@@ -18,7 +17,7 @@ import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
 import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
-import { getPkgName } from '../util/pkg-name.ts';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
@@ -94,7 +93,7 @@ export default async function main(ctx) {
   }
 
   if (ids.length < 1) {
-    error(`${cmd(`${getPkgName()} rm`)} expects at least one argument`);
+    error(`${getCommandName('rm')} expects at least one argument`);
     help();
     return 1;
   }
@@ -215,9 +214,9 @@ export default async function main(ctx) {
     log(
       `Could not find ${argv.safe ? 'unaliased' : 'any'} deployments ` +
         `or projects matching ` +
-        `${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${cmd(
-          `${getPkgName()} ls`
-        )} to list.`
+        `${ids
+          .map(id => chalk.bold(`"${id}"`))
+          .join(', ')}. Run ${getCommandName('ls')} to list.`
     );
     client.close();
     return 1;

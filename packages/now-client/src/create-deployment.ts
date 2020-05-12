@@ -111,9 +111,10 @@ export default function buildCreateDeployment(version: number) {
       debug(`Deploying the provided path as single file`);
     }
 
+    let configPath: string | undefined;
     if (!nowConfig) {
       // If the user did not provide a config file, use the one in the root directory.
-      const configPath = fileList
+      configPath = fileList
         .map(f => relative(cwd, f))
         .find(f => f === 'vercel.json' || f === 'now.json');
       nowConfig = await parseNowJSON(configPath);
@@ -126,7 +127,7 @@ export default function buildCreateDeployment(version: number) {
       nowConfig.files.length > 0
     ) {
       // See the docs: https://vercel.com/docs/v1/features/configuration/#files-(array)
-      debug('Filtering file list based on `files` key in vercel.json');
+      debug(`Filtering file list based on \`files\` key in "${configPath}"`);
       const allowedFiles = new Set<string>(['Dockerfile']);
       const allowedDirs = new Set<string>();
       nowConfig.files.forEach(relPath => {

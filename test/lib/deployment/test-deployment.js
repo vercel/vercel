@@ -53,17 +53,19 @@ async function testDeployment(
     );
   }
 
-  // we use json5 to allow comments for probes
-  const nowJson = json5.parse(bodies['now.json']);
+  const configName = 'vercel.json' in bodies ? 'vercel.json' : 'now.json';
 
-  if (process.env.NOW_BUILDER_DEBUG) {
+  // we use json5 to allow comments for probes
+  const nowJson = json5.parse(bodies[configName]);
+
+  if (process.env.VERCEL_BUILDER_DEBUG) {
     if (!nowJson.build) {
       nowJson.build = {};
     }
     if (!nowJson.build.env) {
       nowJson.build.env = {};
     }
-    nowJson.build.env.NOW_BUILDER_DEBUG = process.env.NOW_BUILDER_DEBUG;
+    nowJson.build.env.VERCEL_BUILDER_DEBUG = process.env.VERCEL_BUILDER_DEBUG;
   }
 
   for (const build of nowJson.builds || []) {
@@ -90,7 +92,7 @@ async function testDeployment(
     }
   }
 
-  bodies['now.json'] = Buffer.from(JSON.stringify(nowJson));
+  bodies[configName] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
   const { deploymentId, deploymentUrl } = await nowDeploy(bodies, randomness);
 

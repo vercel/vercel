@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "main": "frameworks.json",
   "license": "UNLICENSED"
 }
