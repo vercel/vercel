@@ -1,6 +1,11 @@
 import { fork, spawn } from 'child_process';
-import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
-import { writeJSON, remove } from 'fs-extra';
+import {
+  readFileSync,
+  lstatSync,
+  readlinkSync,
+  statSync,
+  promises as fsp,
+} from 'fs';
 import {
   basename,
   dirname,
@@ -482,7 +487,7 @@ async function doTypeCheck({
     extends: projectTsConfig || undefined,
     include: [entrypoint],
   };
-  await writeJSON(tempConfigName, tsconfig);
+  await fsp.writeFile(tempConfigName, JSON.stringify(tsconfig));
 
   const child = spawn(
     process.execPath,
@@ -502,5 +507,5 @@ async function doTypeCheck({
     }
   );
   await once.spread<[number, string | null]>(child, 'exit');
-  await remove(tempConfigName);
+  await fsp.unlink(tempConfigName);
 }
