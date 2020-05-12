@@ -1,5 +1,9 @@
 import { basename, extname, join } from 'path';
-import { FileFsRef, BuildOptions, ShouldServeOptions } from '@now/build-utils';
+import {
+  FileFsRef,
+  BuildOptions,
+  ShouldServeOptions,
+} from '@vercel/build-utils';
 import { BuildResult } from './types';
 
 export const version = 2;

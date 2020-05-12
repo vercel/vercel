@@ -1,6 +1,6 @@
 {
-  "name": "@now/routing-utils",
-  "version": "1.8.2-canary.3",
+  "name": "@vercel/routing-utils",
+  "version": "1.8.2",
   "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,7 +17,7 @@
     "prepublishOnly": "tsc",
     "build": "tsc",
     "watch": "tsc --watch",
-    "test-unit": "jest --env node --verbose --runInBand"
+    "test-unit": "jest --env node --verbose --runInBand --bail"
   },
   "dependencies": {
     "path-to-regexp": "6.1.0"

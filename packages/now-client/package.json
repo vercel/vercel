@@ -1,6 +1,6 @@
 {
-  "name": "now-client",
-  "version": "7.1.1-canary.1",
+  "name": "@vercel/client",
+  "version": "8.0.1",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --verbose --runInBand"
+    "test-integration-once": "jest --verbose --runInBand --bail"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",

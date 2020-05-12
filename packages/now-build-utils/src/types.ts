@@ -49,6 +49,7 @@ export interface Config {
 
 export interface Meta {
   isDev?: boolean;
+  devCacheDir?: string;
   skipDownload?: boolean;
   requestPath?: string | null;
   filesChanged?: string[];
@@ -81,7 +82,7 @@ export interface AnalyzeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -108,7 +109,7 @@ export interface BuildOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 
@@ -148,7 +149,7 @@ export interface PrepareCacheOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -182,7 +183,7 @@ export interface ShouldServeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -201,6 +202,18 @@ export interface StartDevServerOptions {
    * build process. This directory will be populated with the restored cache.
    */
   workPath: string;
+
+  /**
+   * An arbitrary object passed by the user in the build definition defined
+   * in `now.json`.
+   */
+  config: Config;
+
+  /**
+   * Runtime environment variables configuration from the project's `now.json`
+   * and local `.env` file.
+   */
+  env: Env;
 }
 
 export interface StartDevServerSuccess {

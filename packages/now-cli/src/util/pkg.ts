@@ -1,5 +1,5 @@
 import _pkg from '../../package.json';
-import { PackageJson } from '@now/build-utils';
+import { PackageJson } from '@vercel/build-utils';
 
 const pkg: PackageJson = _pkg;
 

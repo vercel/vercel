@@ -31,8 +31,8 @@ Server.prototype.listen = function listen() {
 };
 
 if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV =
-    process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
+  const region = process.env.VERCEL_REGION || process.env.NOW_REGION;
+  process.env.NODE_ENV = region === 'dev1' ? 'development' : 'production';
 }
 
 try {
@@ -85,7 +85,7 @@ exports.launcher = bridge.launcher;`;
 
 export function makeAwsLauncher({
   entrypointPath,
-  awsLambdaHandler = ''
+  awsLambdaHandler = '',
 }: LauncherConfiguration): string {
   const funcName = awsLambdaHandler.split('.').pop();
   return `const url = require("url");

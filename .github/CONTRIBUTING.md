@@ -92,7 +92,7 @@ Sometimes you want to test changes to a Builder against an existing project, may
 2. Run `yarn build` to compile typescript and other build steps
 3. Run `npm pack` to create a tarball file
 4. Run `now *.tgz` to upload the tarball file and get a URL
-5. Edit any existing `now.json` project and replace `use` with the URL
+5. Edit any existing `vercel.json` project and replace `use` with the URL
 6. Run `now` or `now dev` to deploy with the experimental Builder
 
 ## Add a New Framework

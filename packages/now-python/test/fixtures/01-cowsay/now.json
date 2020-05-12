@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "**/**.py", "use": "@now/python" }],
+  "builds": [{ "src": "**/**.py", "use": "@vercel/python" }],
   "probes": [
     { "path": "/", "mustContain": "pip:RANDOMNESS_PLACEHOLDER" },
     { "path": "/another", "mustContain": "upper:RANDOMNESS_PLACEHOLDER" }

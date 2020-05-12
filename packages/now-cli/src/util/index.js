@@ -147,7 +147,7 @@ export default class Now extends EventEmitter {
       projectSettings,
     };
 
-    // Ignore specific items from Now.json
+    // Ignore specific items from vercel.json
     delete requestBody.scope;
     delete requestBody.github;
 
@@ -309,7 +309,7 @@ export default class Now extends EventEmitter {
 
         err.message =
           `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
-            '.nowignore'
+            '.vercelignore'
           )}):` +
           `\n- ${unreferencedBuildSpecs
             .map(item => JSON.stringify(item))

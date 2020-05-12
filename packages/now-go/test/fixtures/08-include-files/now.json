@@ -3,14 +3,14 @@
   "builds": [
     {
       "src": "index.go",
-      "use": "@now/go",
+      "use": "@vercel/go",
       "config": {
         "includeFiles": ["templates/**"]
       }
     },
     {
       "src": "another.go",
-      "use": "@now/go",
+      "use": "@vercel/go",
       "config": {
         "includeFiles": "templates/**"
       }

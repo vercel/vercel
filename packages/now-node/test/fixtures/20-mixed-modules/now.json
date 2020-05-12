@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "entrypoint**", "use": "@now/node" }],
+  "builds": [{ "src": "entrypoint**", "use": "@vercel/node" }],
   "probes": [
     {
       "path": "/entrypoint.js",

@@ -15,10 +15,11 @@ import ls from './ls';
 import rm from './rm';
 import verify from './verify';
 import move from './move';
+import { getPkgName } from '../../util/pkg-name';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now domains`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} domains`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -37,10 +38,10 @@ const help = () => {
     -d, --debug                    Debug mode [off]
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -51,13 +52,15 @@ const help = () => {
 
   ${chalk.gray('–')} Add a domain that you already own
 
-      ${chalk.cyan(`$ now domains add ${chalk.underline('domain-name.com')}`)}
+      ${chalk.cyan(
+        `$ ${getPkgName()} domains add ${chalk.underline('domain-name.com')}`
+      )}
 
       Make sure the domain's DNS nameservers are at least 2 of the
       ones listed on ${chalk.underline('https://vercel.com/edge-network')}.
 
       ${chalk.yellow('NOTE:')} Running ${chalk.dim(
-    '`now alias`'
+    `${getPkgName()} alias`
   )} will automatically register your domain
       if it's configured with these nameservers (no need to ${chalk.dim(
         '`domain add`'
@@ -67,7 +70,7 @@ const help = () => {
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-      ${chalk.cyan(`$ now domains ls --next 1584722256178`)}
+      ${chalk.cyan(`$ ${getPkgName()} domains ls --next 1584722256178`)}
 `);
 };
 
