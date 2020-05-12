@@ -151,10 +151,6 @@ module.exports = async session => {
     }
   ]
 }`,
-      'deploy-with-only-readme': {
-        'now.json': '{ "version": 2 }',
-        'README.md': 'readme contents',
-      },
     },
     'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
@@ -302,6 +298,10 @@ CMD ["node", "index.js"]`,
         name: 'redirects-v2',
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
+    },
+    'deploy-with-only-readme': {
+      'now.json': JSON.stringify({ version: 2 }),
+      'README.md': 'readme contents',
     },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',

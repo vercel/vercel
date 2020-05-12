@@ -245,6 +245,25 @@ test('login', async t => {
   t.is(typeof token, 'string');
 });
 
+test('deploys with only now.json and README.md', async t => {
+  const directory = fixture('deploy-with-only-readme');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  const { host } = new URL(stdout);
+  const res = await fetch(`https://${host}/README.md`);
+  const text = await res.text();
+  t.regex(text, /readme contents/);
+});
+
 test('deploy using only now.json with `redirects` defined', async t => {
   const target = fixture('redirects-v2');
 
@@ -2822,20 +2841,4 @@ test('whoami with local .vercel scope', async t => {
 
   // clean up
   await remove(path.join(directory, '.vercel'));
-});
-
-test('deploys with only now.json and README.md', async t => {
-  const directory = fixture('deploy-with-only-readme');
-
-  const { exitCode, stdout, stderr } = await execute(['--public'], {
-    cwd: directory,
-  });
-
-  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
-
-  const { host } = new URL(stdout);
-
-  const testRes = await fetch(`https://${host}/README.md`);
-  const testText = await testRes.text();
-  t.regex(testText, /readme contents/);
 });
