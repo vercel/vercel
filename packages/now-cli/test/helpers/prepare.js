@@ -299,6 +299,14 @@ CMD ["node", "index.js"]`,
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
     },
+    'deploy-with-only-readme-now-json': {
+      'now.json': JSON.stringify({ version: 2 }),
+      'README.md': 'readme contents',
+    },
+    'deploy-with-only-readme-vercel-json': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      'README.md': 'readme contents',
+    },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',
