@@ -427,8 +427,8 @@ export const build = async ({
                 // have a separate data output
                 `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
                   dataRoute.routeKeys
-                    ? `?${dataRoute.routeKeys
-                        .map(key => `${key}=$${key}`)
+                    ? `?${Object.keys(dataRoute.routeKeys)
+                        .map(key => `${dataRoute.routeKeys![key]}=$${key}`)
                         .join('&')}`
                     : ''
                 }`
