@@ -2823,3 +2823,19 @@ test('whoami with local .vercel scope', async t => {
   // clean up
   await remove(path.join(directory, '.vercel'));
 });
+
+test('deploys with only now.json and README.md', async t => {
+  const directory = fixture('deploy-with-only-readme');
+
+  const { exitCode, stdout, stderr } = await execute(['--public'], {
+    cwd: directory,
+  });
+
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+
+  const { host } = new URL(stdout);
+
+  const testRes = await fetch(`https://${host}/README.md`);
+  const testText = await testRes.text();
+  t.regex(testText, /readme contents/);
+});

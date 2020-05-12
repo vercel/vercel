@@ -151,6 +151,10 @@ module.exports = async session => {
     }
   ]
 }`,
+      'deploy-with-only-readme': {
+        'now.json': '{ "version": 2 }',
+        'README.md': 'readme contents',
+      },
     },
     'now-static-build': {
       'now.json': '{"version": 1, "type": "static"}',
