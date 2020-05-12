@@ -331,7 +331,7 @@ test('output the version', async t => {
 test('detect update command', async t => {
   {
     const { stderr } = await execute(['update']);
-    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
+    t.regex(stderr, /yarn add vercel@/gm, `Received: "${stderr}"`);
   }
 
   {
