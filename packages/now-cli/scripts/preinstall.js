@@ -70,13 +70,15 @@ async function main() {
     error(
       `Detected unsupported Node.js version.\n` +
         `Expected "${ver.expected}" but found "${ver.actual}".\n` +
-        `Please update to the latest Node.js LTS version to install Now CLI.`
+        `Please update to the latest Node.js LTS version to install Vercel CLI.`
     );
     process.exit(1);
   }
 
   if (isVercel() && isInPath('now')) {
-    const uninstall = isYarn() ? 'yarn global remove now' : 'npm uninstall -g now';
+    const uninstall = isYarn()
+      ? 'yarn global remove now'
+      : 'npm uninstall -g now';
     console.error(`NOTE: Run \`${uninstall}\` to uninstall \`now\`\n`);
   }
 }
