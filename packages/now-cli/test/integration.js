@@ -246,7 +246,26 @@ test('login', async t => {
 });
 
 test('deploys with only now.json and README.md', async t => {
-  const directory = fixture('deploy-with-only-readme');
+  const directory = fixture('deploy-with-only-readme-now-json');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  const { host } = new URL(stdout);
+  const res = await fetch(`https://${host}/README.md`);
+  const text = await res.text();
+  t.regex(text, /readme contents/);
+});
+
+test('deploys with only vercel.json and README.md', async t => {
+  const directory = fixture('deploy-with-only-readme-vercel-json');
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
