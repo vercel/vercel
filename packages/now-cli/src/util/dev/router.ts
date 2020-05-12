@@ -171,16 +171,17 @@ export async function devRouter(
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
-          const { pathname, query } = url.parse(destPath, true);
+          const destParsed = url.parse(destPath, true);
+          Object.assign(destParsed.query, query);
           result = {
             found: true,
-            dest: pathname || '/',
+            dest: destParsed.pathname || '/',
             continue: isContinue,
             userDest: Boolean(routeConfig.dest),
             isDestUrl,
             status: routeConfig.status || status,
             headers: combinedHeaders,
-            uri_args: query,
+            uri_args: destParsed.query,
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
