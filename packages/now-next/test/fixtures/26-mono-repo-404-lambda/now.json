@@ -1,8 +1,7 @@
 {
   "version": 2,
   "routes": [
-    { "src": "(.*)", "dest": "/packages/webapp$1", "continue": true },
-    { "src": "/", "dest": "/packages/webapp", "continue": true }
+    { "src": "/(.*)", "dest": "/packages/webapp/$1", "continue": true }
   ],
   "builds": [
     {
