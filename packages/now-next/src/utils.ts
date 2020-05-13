@@ -312,16 +312,9 @@ export type RoutesManifest = {
   dynamicRoutes: {
     page: string;
     regex: string;
-    namedRegex?: string;
-    routeKeys?: string[];
   }[];
   version: number;
-  dataRoutes?: Array<{
-    page: string;
-    routeKeys?: string[];
-    dataRouteRegex: string;
-    namedDataRouteRegex?: string;
-  }>;
+  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
 };
 
 export async function getRoutesManifest(
@@ -377,14 +370,10 @@ export async function getDynamicRoutes(
           .filter(({ page }) =>
             omittedRoutes ? !omittedRoutes.has(page) : true
           )
-          .map(({ page, regex, namedRegex, routeKeys }) => {
+          .map(({ page, regex }: { page: string; regex: string }) => {
             return {
-              src: namedRegex || regex,
-              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
-                routeKeys
-                  ? `?${routeKeys.map(key => `${key}=$${key}`).join('&')}`
-                  : ''
-              }`,
+              src: regex,
+              dest: !isDev ? path.join('/', entryDirectory, page) : page,
               check: true,
             };
           });

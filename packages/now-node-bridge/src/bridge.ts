@@ -189,10 +189,9 @@ export class Bridge {
       headers['x-now-bridge-request-id'] = reqId;
     }
 
-    const opts = { hostname: '127.0.0.1', port, path, method, headers };
-
     // eslint-disable-next-line consistent-return
     return new Promise((resolve, reject) => {
+      const opts = { hostname: '127.0.0.1', port, path, method };
       const req = request(opts, res => {
         const response = res;
         const respBodyChunks: Buffer[] = [];
@@ -224,6 +223,25 @@ export class Bridge {
           reject(error);
         }, 2);
       });
+
+      for (const [name, value] of Object.entries(headers)) {
+        if (value === undefined) {
+          console.error(
+            'Skipping HTTP request header %j because value is undefined',
+            name
+          );
+          continue;
+        }
+        try {
+          req.setHeader(name, value);
+        } catch (err) {
+          console.error(
+            'Skipping HTTP request header: %j',
+            `${name}: ${value}`
+          );
+          console.error(err.message);
+        }
+      }
 
       if (body) req.write(body);
       req.end();
