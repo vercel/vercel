@@ -17,6 +17,7 @@ describe('frameworks', () => {
       .map(f => f.slug)
       .filter(isString)
       .filter(f => existsSync(getExample(f)) === false);
+
     expect(result).toEqual([]);
   });
 });
