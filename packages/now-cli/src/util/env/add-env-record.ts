@@ -19,10 +19,9 @@ export default async function addEnvRecord(
   let values: string[] | undefined;
 
   if (envValue) {
-    const urlSecret = `/v2/now/secrets/${encodeURIComponent(envName)}`;
     const secrets = await Promise.all(
       targets.map(target =>
-        client.fetch<Secret>(urlSecret, {
+        client.fetch<Secret>('/v2/now/secrets', {
           method: 'POST',
           body: JSON.stringify({
             name: generateSecretName(envName, target),
