@@ -13,13 +13,16 @@ import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
 import { prependEmoji, emoji } from '../emoji';
 import AJV from 'ajv';
+import { isDirectory } from '../config/global-path';
+import { getPlatformEnv } from '@vercel/build-utils';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
-export const NOW_FOLDER = '.now';
-export const NOW_FOLDER_README = 'README.txt';
-export const NOW_PROJECT_LINK_FILE = 'project.json';
+export const VERCEL_DIR = '.vercel';
+export const VERCEL_DIR_FALLBACK = '.now';
+export const VERCEL_DIR_README = 'README.txt';
+export const VERCEL_DIR_PROJECT = 'project.json';
 
 const linkSchema = {
   type: 'object',
@@ -36,19 +39,30 @@ const linkSchema = {
   },
 };
 
+/**
+ * Returns the `<cwd>/.vercel` directory for the current project
+ * with a fallback to <cwd>/.now` if it exists.
+ */
+export function getVercelDirectory(cwd: string = process.cwd()) {
+  const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
+  return possibleDirs.find(d => isDirectory(d)) || possibleDirs[0];
+}
+
 async function getLink(path?: string): Promise<ProjectLink | null> {
+  const dir = getVercelDirectory(path);
+  return getLinkFromDir(dir);
+}
+
+async function getLinkFromDir(dir: string): Promise<ProjectLink | null> {
   try {
-    const json = await readFile(
-      join(path || process.cwd(), NOW_FOLDER, NOW_PROJECT_LINK_FILE),
-      { encoding: 'utf8' }
-    );
+    const json = await readFile(join(dir, VERCEL_DIR_PROJECT), 'utf8');
 
     const ajv = new AJV();
     const link: ProjectLink = JSON.parse(json);
 
     if (!ajv.validate(linkSchema, link)) {
       throw new Error(
-        'Now project settings are invalid. To link your project again, remove the `.now` directory.'
+        `Project settings are invalid. To link your project again, remove the ${dir} directory.`
       );
     }
 
@@ -62,7 +76,7 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
     // link file can't be read
     if (error.name === 'SyntaxError') {
       throw new Error(
-        'Now project settings could not be retrieved. To link your project again, remove the `.now` directory.'
+        `Project settings could not be retrieved. To link your project again, remove the ${dir} directory.`
       );
     }
 
@@ -91,23 +105,24 @@ export async function getLinkedProject(
   | { status: 'not_linked'; org: null; project: null }
   | { status: 'error'; exitCode: number }
 > {
-  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
-  const shouldUseEnv = Boolean(NOW_ORG_ID && NOW_PROJECT_ID);
+  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
+  const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
 
-  if ((NOW_ORG_ID || NOW_PROJECT_ID) && !shouldUseEnv) {
+  if ((VERCEL_ORG_ID || VERCEL_PROJECT_ID) && !shouldUseEnv) {
     output.error(
       `You specified ${
-        NOW_ORG_ID ? '`NOW_ORG_ID`' : '`NOW_PROJECT_ID`'
+        VERCEL_ORG_ID ? '`VERCEL_ORG_ID`' : '`VERCEL_PROJECT_ID`'
       } but you forgot to specify ${
-        NOW_ORG_ID ? '`NOW_PROJECT_ID`' : '`NOW_ORG_ID`'
+        VERCEL_ORG_ID ? '`VERCEL_PROJECT_ID`' : '`VERCEL_ORG_ID`'
       }. You need to specify both to deploy to a custom project.\n`
     );
     return { status: 'error', exitCode: 1 };
   }
 
   const link =
-    NOW_ORG_ID && NOW_PROJECT_ID
-      ? { orgId: NOW_ORG_ID, projectId: NOW_PROJECT_ID }
+    VERCEL_ORG_ID && VERCEL_PROJECT_ID
+      ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
       : await getLink(path);
 
   if (!link) {
@@ -130,8 +145,8 @@ export async function getLinkedProject(
     if (shouldUseEnv) {
       output.error(
         `Project not found (${JSON.stringify({
-          NOW_PROJECT_ID,
-          NOW_ORG_ID,
+          VERCEL_PROJECT_ID,
+          VERCEL_ORG_ID,
         })})\n`
       );
       return { status: 'error', exitCode: 1 };
@@ -157,9 +172,11 @@ export async function linkFolderToProject(
   projectName: string,
   orgSlug: string
 ) {
-  // if NOW_ORG_ID or NOW_PROJECT_ID are used, we skip linking
-  const { NOW_ORG_ID, NOW_PROJECT_ID } = process.env;
-  if (NOW_ORG_ID || NOW_PROJECT_ID) {
+  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
+
+  // if defined, skip linking
+  if (VERCEL_ORG_ID || VERCEL_PROJECT_ID) {
     return;
   }
 
@@ -174,7 +191,7 @@ export async function linkFolderToProject(
   }
 
   try {
-    await ensureDir(join(path, NOW_FOLDER));
+    await ensureDir(join(path, VERCEL_DIR));
   } catch (error) {
     if (error.code === 'ENOTDIR') {
       // folder couldn't be created because
@@ -185,14 +202,14 @@ export async function linkFolderToProject(
   }
 
   await writeFile(
-    join(path, NOW_FOLDER, NOW_PROJECT_LINK_FILE),
+    join(path, VERCEL_DIR, VERCEL_DIR_PROJECT),
     JSON.stringify(projectLink),
     { encoding: 'utf8' }
   );
 
   await writeFile(
-    join(path, NOW_FOLDER, NOW_FOLDER_README),
-    await readFile(join(__dirname, 'NOW_DIR_README.txt'), 'utf-8'),
+    join(path, VERCEL_DIR, VERCEL_DIR_README),
+    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf-8'),
     { encoding: 'utf-8' }
   );
 
@@ -205,8 +222,11 @@ export async function linkFolderToProject(
       .then(buf => buf.toString())
       .catch(() => null);
 
-    if (!gitIgnore || !gitIgnore.split('\n').includes('.now')) {
-      await writeFile(gitIgnorePath, gitIgnore ? `${gitIgnore}\n.now` : '.now');
+    if (!gitIgnore || !gitIgnore.split('\n').includes(VERCEL_DIR)) {
+      await writeFile(
+        gitIgnorePath,
+        gitIgnore ? `${gitIgnore}\n${VERCEL_DIR}` : VERCEL_DIR
+      );
       isGitIgnoreUpdated = true;
     }
   } catch (error) {
@@ -215,7 +235,9 @@ export async function linkFolderToProject(
 
   output.print(
     prependEmoji(
-      `Linked to ${chalk.bold(`${orgSlug}/${projectName}`)} (created .now${
+      `Linked to ${chalk.bold(
+        `${orgSlug}/${projectName}`
+      )} (created ${VERCEL_DIR}${
         isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
       })`,
       emoji('link')

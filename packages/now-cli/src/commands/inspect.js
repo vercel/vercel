@@ -4,7 +4,6 @@ import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
 import routesList from '../util/output/routes';
 import indent from '../util/output/indent';
-import cmd from '../util/output/cmd.ts';
 import createOutput from '../util/output';
 import Now from '../util';
 import logo from '../util/output/logo';
@@ -13,22 +12,23 @@ import { handleError } from '../util/error';
 import strlen from '../util/strlen.ts';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const STATIC = 'STATIC';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now inspect`)} <url>
+  ${chalk.bold(`${logo} ${getPkgName()} inspect`)} <url>
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -39,11 +39,11 @@ const help = () => {
 
   ${chalk.gray('–')} Get information about a deployment by its unique URL
 
-    ${chalk.cyan('$ now inspect my-deployment-ji2fjij2.now.sh')}
+    ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment-ji2fjij2.now.sh`)}
 
   ${chalk.gray('-')} Get information about the deployment an alias points to
 
-    ${chalk.cyan('$ now inspect my-deployment.now.sh')}
+    ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment.now.sh`)}
   `);
 };
 
@@ -73,7 +73,7 @@ export default async function main(ctx) {
   id = argv._[1];
 
   if (argv._.length !== 2) {
-    error(`${cmd('now inspect <url>')} expects exactly one argument`);
+    error(`${getCommandName('inspect <url>')} expects exactly one argument`);
     help();
     return 1;
   }

@@ -1,6 +1,7 @@
 import { relative, basename, resolve, dirname } from 'path';
 import _ts from 'typescript';
-import { NowBuildError } from '@now/build-utils';
+import buildUtils from './build-utils';
+const { NowBuildError } = buildUtils;
 
 /*
  * Fork of TS-Node - https://github.com/TypeStrong/ts-node
@@ -182,7 +183,7 @@ export function register(opts: Options = {}): Register {
 
   function createTSError(diagnostics: ReadonlyArray<_ts.Diagnostic>) {
     const message = formatDiagnostics(diagnostics, diagnosticHost);
-    return new NowBuildError({ code: 'NOW_NODE_TYPESCRIPT_ERROR', message });
+    return new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
   }
 
   function reportTSError(

@@ -2,7 +2,7 @@
   "builds": [
     {
       "src": "_config.yml",
-      "use": "@now/static-build",
+      "use": "@vercel/static-build",
       "config": {
         "zeroConfig": true,
         "framework": "jekyll"

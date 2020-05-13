@@ -192,30 +192,60 @@ test('[DevServer] Does not install builders if there are no builds', async t => 
 
 test('[DevServer] Installs canary build-utils if one more more builders is canary', t => {
   t.is(
-    getBuildUtils(['@now/static', '@now/node@canary']),
-    '@now/build-utils@canary'
+    getBuildUtils(['@vercel/static', '@vercel/node@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
   );
   t.is(
-    getBuildUtils(['@now/static', '@now/node@0.7.4-canary.0']),
-    '@now/build-utils@canary'
+    getBuildUtils(['@vercel/static', '@vercel/node@0.7.4-canary.0'], 'vercel'),
+    '@vercel/build-utils@canary'
   );
   t.is(
-    getBuildUtils(['@now/static', '@now/node@0.8.0']),
-    '@now/build-utils@latest'
+    getBuildUtils(['@vercel/static', '@vercel/node@0.8.0'], 'vercel'),
+    '@vercel/build-utils@latest'
   );
-  t.is(getBuildUtils(['@now/static', '@now/node']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['@now/static']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['@now/md@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['custom-builder']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['custom-builder@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['canary-bird']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['canary-bird@4.0.0']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['canary-bird@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['@canary/bird']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['@canary/bird@0.1.0']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['@canary/bird@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['https://example.com']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['']), '@now/build-utils@latest');
+  t.is(
+    getBuildUtils(['@vercel/static', '@vercel/node'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['@vercel/static'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['@vercel/md@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
+  );
+  t.is(
+    getBuildUtils(['custom-builder'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['custom-builder@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
+  );
+  t.is(getBuildUtils(['canary-bird'], 'vercel'), '@vercel/build-utils@latest');
+  t.is(
+    getBuildUtils(['canary-bird@4.0.0'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['canary-bird@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
+  );
+  t.is(getBuildUtils(['@canary/bird'], 'vercel'), '@vercel/build-utils@latest');
+  t.is(
+    getBuildUtils(['@canary/bird@0.1.0'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['@canary/bird@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
+  );
+  t.is(
+    getBuildUtils(['https://example.com'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(getBuildUtils([''], 'vercel'), '@vercel/build-utils@latest');
 });
 
 test(
@@ -255,7 +285,7 @@ test(
 );
 
 test(
-  '[DevServer] Test `@now/static` routing',
+  '[DevServer] Test `@vercel/static` routing',
   testFixture('now-dev-static-routes', async (t, server) => {
     {
       const res = await fetch(`${server.address}/`);
@@ -267,7 +297,7 @@ test(
 );
 
 test(
-  '[DevServer] Test `@now/static-build` routing',
+  '[DevServer] Test `@vercel/static-build` routing',
   testFixture('now-dev-static-build-routing', async (t, server) => {
     {
       const res = await fetch(`${server.address}/api/date`);

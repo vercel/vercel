@@ -1,32 +1,36 @@
-import {
-  BuildOptions,
-  Config,
+import buildUtils from './build-utils';
+const {
   createLambda,
   debug,
   download,
-  FileBlob,
-  FileFsRef,
-  Files,
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getSpawnOptions,
   glob,
-  Lambda,
-  PackageJson,
-  PrepareCacheOptions,
-  Prerender,
   runNpmInstall,
   runPackageJsonScript,
   execCommand,
   getNodeBinPath,
+} = buildUtils;
+
+import {
+  Lambda,
+  BuildOptions,
+  Config,
+  FileBlob,
+  FileFsRef,
+  Files,
+  PackageJson,
+  PrepareCacheOptions,
+  Prerender,
   NowBuildError,
-} from '@now/build-utils';
-import { Route, Handler } from '@now/routing-utils';
+} from '@vercel/build-utils';
+import { Route, Handler } from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
   convertRewrites,
-} from '@now/routing-utils/dist/superstatic';
+} from '@vercel/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import {
@@ -82,7 +86,6 @@ interface BuildParamsType extends BuildOptions {
 export const version = 2;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
-const yarnPreferOffline = true;
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
   process.once(signal as NodeJS.Signals, () => {
@@ -165,7 +168,7 @@ function isLegacyNext(nextVersion: string) {
   return true;
 }
 
-const name = '[@now/next]';
+const name = '[@vercel/next]';
 const urls: stringMap = {};
 
 function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
@@ -215,7 +218,7 @@ export const build = async ({
 
   if (!nextVersion) {
     throw new NowBuildError({
-      code: 'NOW_NEXT_NO_VERSION',
+      code: 'NEXT_NO_VERSION',
       message:
         'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"',
     });
@@ -283,7 +286,7 @@ export const build = async ({
     }
 
     console.warn(
-      "WARNING: your application is being deployed in @now/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
+      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
     );
 
     debug('Normalizing package.json');
@@ -316,12 +319,7 @@ export const build = async ({
   }
 
   console.log('Installing dependencies...');
-  await runNpmInstall(
-    entryPath,
-    [...(yarnPreferOffline ? ['--prefer-offline'] : [])],
-    spawnOpts,
-    meta
-  );
+  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
   let realNextVersion: string | undefined;
   try {
@@ -412,22 +410,17 @@ export const build = async ({
             }
 
             dataRoutes.push({
-              src: (
-                dataRoute.namedDataRouteRegex || dataRoute.dataRouteRegex
-              ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
+              src: dataRoute.dataRouteRegex.replace(
+                /^\^/,
+                `^${appMountPrefixNoTrailingSlash}`
+              ),
               dest: path.join(
                 '/',
                 entryDirectory,
                 // make sure to route SSG data route to the data prerender
                 // output, we don't do this for SSP routes since they don't
                 // have a separate data output
-                `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
-                  dataRoute.routeKeys
-                    ? `?${dataRoute.routeKeys
-                        .map(key => `${key}=$${key}`)
-                        .join('&')}`
-                    : ''
-                }`
+                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
               ),
               check: true,
             });
@@ -443,16 +436,16 @@ export const build = async ({
 
           if (!nextBasePath.startsWith('/')) {
             throw new NowBuildError({
-              code: 'NOW_NEXT_BASEPATH_STARTING_SLASH',
+              code: 'NEXT_BASEPATH_STARTING_SLASH',
               message:
-                'basePath must start with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+                'basePath must start with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
             });
           }
           if (nextBasePath.endsWith('/')) {
             throw new NowBuildError({
-              code: 'NOW_NEXT_BASEPATH_TRAILING_SLASH',
+              code: 'NEXT_BASEPATH_TRAILING_SLASH',
               message:
-                'basePath must not end with `/`. Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+                'basePath must not end with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
             });
           }
 
@@ -467,10 +460,10 @@ export const build = async ({
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION in ./utils.ts
         throw new NowBuildError({
-          code: 'NOW_NEXT_VERSION_OUTDATED',
+          code: 'NEXT_VERSION_OUTDATED',
           message:
-            'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
+            'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
         });
       }
     }
@@ -485,7 +478,7 @@ export const build = async ({
     const resultingExport = await getExportStatus(entryPath);
     if (!resultingExport) {
       throw new NowBuildError({
-        code: 'NOW_NEXT_EXPORT_FAILED',
+        code: 'NEXT_EXPORT_FAILED',
         message:
           'Exporting Next.js app failed. Please check your build logs and contact us if this continues.',
       });
@@ -493,7 +486,7 @@ export const build = async ({
 
     if (resultingExport.success !== true) {
       throw new NowBuildError({
-        code: 'NOW_NEXT_EXPORT_FAILED',
+        code: 'NEXT_EXPORT_FAILED',
         message: 'Export of Next.js app failed. Please check your build logs.',
       });
     }
@@ -608,7 +601,7 @@ export const build = async ({
     debug('Running npm install --production...');
     await runNpmInstall(
       entryPath,
-      [...(yarnPreferOffline ? ['--prefer-offline'] : []), '--production'],
+      ['--prefer-offline', '--production'],
       spawnOpts,
       meta
     );
@@ -786,7 +779,7 @@ export const build = async ({
       }
 
       throw new NowBuildError({
-        code: 'NOW_NEXT_NO_SERVERLESS_PAGES',
+        code: 'NEXT_NO_SERVERLESS_PAGES',
         message: 'No serverless pages were built',
         link: 'https://err.sh/zeit/now/now-next-no-serverless-pages-built',
       });
@@ -997,7 +990,7 @@ export const build = async ({
     ) => {
       if (isBlocking && isFallback) {
         throw new NowBuildError({
-          code: 'NOW_NEXT_ISBLOCKING_ISFALLBACK',
+          code: 'NEXT_ISBLOCKING_ISFALLBACK',
           message: 'invariant: isBlocking and isFallback cannot both be true',
         });
       }
@@ -1040,7 +1033,7 @@ export const build = async ({
         if (initialRevalidate === false) {
           // Lazy routes cannot be "snapshotted" in time.
           throw new NowBuildError({
-            code: 'NOW_NEXT_ISLAZY_INITIALREVALIDATE',
+            code: 'NEXT_ISLAZY_INITIALREVALIDATE',
             message: 'invariant isLazy: initialRevalidate !== false',
           });
         }
@@ -1064,7 +1057,7 @@ export const build = async ({
       const lambda = lambdas[outputSrcPathPage];
       if (lambda == null) {
         throw new NowBuildError({
-          code: 'NOW_NEXT_MISSING_LAMBDA',
+          code: 'NEXT_MISSING_LAMBDA',
           message: `Unable to find lambda for route: ${routeFileNoExt}`,
         });
       }
@@ -1072,7 +1065,7 @@ export const build = async ({
       if (initialRevalidate === false) {
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new NowBuildError({
-            code: 'NOW_NEXT_HTMLFSREF_JSONFSREF',
+            code: 'NEXT_HTMLFSREF_JSONFSREF',
             message: 'invariant: htmlFsRef != null && jsonFsRef != null',
           });
         }
@@ -1189,7 +1182,7 @@ export const build = async ({
     );
     if (typeof lambdas[routeFileNoExt] === undefined) {
       throw new NowBuildError({
-        code: 'NOW_NEXT__UNKNOWN_ROUTE_KEY',
+        code: 'NEXT__UNKNOWN_ROUTE_KEY',
         message: `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`,
       });
     }
@@ -1328,7 +1321,7 @@ export const prepareCache = async ({
   const nextVersion = getNextVersion(pkg);
   if (!nextVersion)
     throw new NowBuildError({
-      code: 'NOW_NEXT_VERSION_PARSE_FAILED',
+      code: 'NEXT_VERSION_PARSE_FAILED',
       message: 'Could not parse Next.js version',
     });
   const isLegacy = isLegacyNext(nextVersion);

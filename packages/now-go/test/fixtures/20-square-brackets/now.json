@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "api/**/*.go", "use": "@now/go" }],
+  "builds": [{ "src": "api/**/*.go", "use": "@vercel/go" }],
   "probes": [
     {
       "path": "/api/[hello].go",

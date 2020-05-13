@@ -7,11 +7,11 @@ import rightPad from '../../util/output/right-pad';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 import success from '../../util/output/success';
-import cmd from '../../util/output/cmd.ts';
 import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
+import { getPkgName, getCommandName } from '../../util/pkg-name.ts';
 
 const validateSlugKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -26,8 +26,8 @@ const validateNameKeypress = (data, value) =>
 const gracefulExit = () => {
   console.log(); // Blank line
   note(
-    `Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd(
-      'now switch'
+    `Your team is now active for all ${getPkgName()} commands!\n  Run ${getCommandName(
+      `switch`
     )} to change it in the future.`
   );
   return 0;
@@ -151,8 +151,8 @@ export default async function({ apiUrl, token, teams, config }) {
     apiUrl,
     config,
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
-    noopMsg: `You can invite teammates later by running ${cmd(
-      'now teams invite'
+    noopMsg: `You can invite teammates later by running ${getCommandName(
+      `teams invite`
     )}`,
   });
 

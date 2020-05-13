@@ -12,11 +12,11 @@ import {
   getEnvTargetChoices,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
-import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -34,8 +34,8 @@ export default async function add(
 
   if (args.length > 2) {
     output.error(
-      `Invalid number of arguments. Usage: ${cmd(
-        `now env add <name> ${getEnvTargetPlaceholder()}`
+      `Invalid number of arguments. Usage: ${getCommandName(
+        `env add <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
@@ -43,8 +43,8 @@ export default async function add(
 
   if (stdInput && (!envName || !envTarget)) {
     output.error(
-      `Invalid number of arguments. Usage: ${cmd(
-        `now env add <name> <target> < <file>`
+      `Invalid number of arguments. Usage: ${getCommandName(
+        `env add <name> <target> < <file>`
       )}`
     );
     return 1;
@@ -77,7 +77,7 @@ export default async function add(
     }
   }
 
-  const envs = await getEnvVariables(output, client, project.id);
+  const envs = await getEnvVariables(output, client, project.id, 4);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
@@ -87,8 +87,8 @@ export default async function add(
     output.error(
       `The variable ${param(
         envName
-      )} has already been added to all Environments. To remove, run ${cmd(
-        `now env rm ${envName}`
+      )} has already been added to all Environments. To remove, run ${getCommandName(
+        `env rm ${envName}`
       )}.`
     );
     return 1;
@@ -98,6 +98,8 @@ export default async function add(
 
   if (stdInput) {
     envValue = stdInput;
+  } else if (isSystemEnvVariable(envName)) {
+    envValue = '';
   } else {
     const { inputValue } = await inquirer.prompt({
       type: 'password',
@@ -145,4 +147,8 @@ export default async function add(
   );
 
   return 0;
+}
+
+function isSystemEnvVariable(envName: string) {
+  return envName.startsWith('VERCEL_');
 }

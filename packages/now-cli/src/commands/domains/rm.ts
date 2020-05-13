@@ -5,7 +5,6 @@ import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import { NowContext, Domain } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
@@ -16,6 +15,7 @@ import * as ERRORS from '../../util/errors-ts';
 import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import setCustomSuffix from '../../util/domains/set-custom-suffix';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -51,14 +51,16 @@ export default async function rm(
   }
 
   if (!domainName) {
-    output.error(`${cmd('now domains rm <domain>')} expects one argument`);
+    output.error(
+      `${getCommandName(`domains rm <domain>`)} expects one argument`
+    );
     return 1;
   }
 
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now domains rm <domain>`'
+        `${getCommandName('domains rm <domain>')}`
       )}`
     );
     return 1;
@@ -69,7 +71,7 @@ export default async function rm(
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -79,7 +81,7 @@ export default async function rm(
         contextName
       )}`
     );
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -146,7 +148,7 @@ async function removeDomain(
 
   if (removeResult instanceof ERRORS.DomainNotFound) {
     output.error(`Domain not found under ${chalk.bold(contextName)}`);
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -204,7 +206,7 @@ async function removeDomain(
       output.warn(
         `This domain's ${chalk.bold(
           plural('alias', aliases.length, true)
-        )} will be removed. Run ${chalk.dim('`now alias ls`')} to list them.`
+        )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`
       );
     }
 
@@ -212,7 +214,7 @@ async function removeDomain(
       output.warn(
         `This domain's ${chalk.bold(
           plural('certificate', certs.length, true)
-        )} will be removed. Run ${chalk.dim('`now cert ls`')} to list them.`
+        )} will be removed. Run ${getCommandName(`cert ls`)} to list them.`
       );
     }
 

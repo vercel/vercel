@@ -6,15 +6,10 @@ import { ZipFile } from 'yazl';
 import crc32 from 'buffer-crc32';
 import { Sema } from 'async-sema';
 import resolveFrom from 'resolve-from';
-import {
-  Files,
-  FileFsRef,
-  streamToBuffer,
-  Lambda,
-  NowBuildError,
-  isSymbolicLink,
-} from '@now/build-utils';
-import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
+import buildUtils from './build-utils';
+const { streamToBuffer, Lambda, NowBuildError, isSymbolicLink } = buildUtils;
+import { Files, FileFsRef } from '@vercel/build-utils';
+import { Route, Source, NowHeader, NowRewrite } from '@vercel/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -41,8 +36,8 @@ function validateEntrypoint(entrypoint: string) {
   ) {
     throw new NowBuildError({
       message:
-        'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"',
-      code: 'NOW_NEXT_INCORRECT_SRC',
+        'Specified "src" for "@vercel/next" has to be "package.json" or "next.config.js"',
+      code: 'NEXT_INCORRECT_SRC',
     });
   }
 }
@@ -296,7 +291,7 @@ async function getRoutes(
   return routes;
 }
 
-// TODO: update to use type from @now/routing-utils after
+// TODO: update to use type from `@vercel/routing-utils` after
 // adding permanent: true/false handling
 export type Redirect = NowRewrite & {
   statusCode?: number;
@@ -317,16 +312,9 @@ export type RoutesManifest = {
   dynamicRoutes: {
     page: string;
     regex: string;
-    namedRegex?: string;
-    routeKeys?: string[];
   }[];
   version: number;
-  dataRoutes?: Array<{
-    page: string;
-    routeKeys?: string[];
-    dataRouteRegex: string;
-    namedDataRouteRegex?: string;
-  }>;
+  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
 };
 
 export async function getRoutesManifest(
@@ -352,7 +340,7 @@ export async function getRoutesManifest(
     throw new NowBuildError({
       message: `A "routes-manifest.json" couldn't be found. Is the correct output directory configured? This setting does not need to be changed in most cases`,
       link: 'https://err.sh/zeit/now/now-next-routes-manifest',
-      code: 'NOW_NEXT_NO_ROUTES_MANIFEST',
+      code: 'NEXT_NO_ROUTES_MANIFEST',
     });
   }
 
@@ -382,14 +370,10 @@ export async function getDynamicRoutes(
           .filter(({ page }) =>
             omittedRoutes ? !omittedRoutes.has(page) : true
           )
-          .map(({ page, regex, namedRegex, routeKeys }) => {
+          .map(({ page, regex }: { page: string; regex: string }) => {
             return {
-              src: namedRegex || regex,
-              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
-                routeKeys
-                  ? `?${routeKeys.map(key => `${key}=$${key}`).join('&')}`
-                  : ''
-              }`,
+              src: regex,
+              dest: !isDev ? path.join('/', entryDirectory, page) : page,
               check: true,
             };
           });
@@ -398,9 +382,9 @@ export async function getDynamicRoutes(
         // update MIN_ROUTES_MANIFEST_VERSION
         throw new NowBuildError({
           message:
-            'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.',
-          code: 'NOW_NEXT_VERSION_UPGRADE',
+            'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
+          code: 'NEXT_VERSION_UPGRADE',
         });
       }
     }
@@ -441,7 +425,7 @@ export async function getDynamicRoutes(
     throw new NowBuildError({
       message:
         'Found usage of dynamic routes but not on a new enough version of Next.js.',
-      code: 'NOW_NEXT_DYNAMIC_ROUTES_OUTDATED',
+      code: 'NEXT_DYNAMIC_ROUTES_OUTDATED',
     });
   }
 

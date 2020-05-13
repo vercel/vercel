@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import plural from 'pluralize';
 import { Output } from '../../util/output';
 import { ProjectEnvVariable, ProjectEnvTarget, Project } from '../../types';
 import Client from '../../util/client';
@@ -11,11 +10,13 @@ import {
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
-import cmd from '../../util/output/cmd';
 import param from '../../util/output/param';
+import getCommandFlags from '../../util/get-command-flags';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
+  '--next'?: number;
 };
 
 export default async function ls(
@@ -25,10 +26,12 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
+  const { '--next': nextTimestamp } = opts;
+
   if (args.length > 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${cmd(
-        `now env ls ${getEnvTargetPlaceholder()}`
+      `Invalid number of arguments. Usage: ${getCommandName(
+        `env ls ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
@@ -47,15 +50,36 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  const records = await getEnvVariables(output, client, project.id, envTarget);
+  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
+    output.error('Please provide a number for flag --next');
+    return 1;
+  }
+
+  const data = await getEnvVariables(
+    output,
+    client,
+    project.id,
+    5,
+    envTarget,
+    nextTimestamp
+  );
+  const { envs: records, pagination } = data;
   output.log(
-    `${plural(
-      'Environment Variable',
-      records.length,
-      true
-    )} found in Project ${chalk.bold(project.name)} ${chalk.gray(lsStamp())}`
+    `${
+      records.length > 0 ? 'Environment Variables' : 'No Environment Variables'
+    } found in Project ${chalk.bold(project.name)} ${chalk.gray(lsStamp())}`
   );
   console.log(getTable(records));
+
+  if (pagination && pagination.count === 20) {
+    const flags = getCommandFlags(opts, ['_', '--next']);
+    output.log(
+      `To display the next page run ${getCommandName(
+        `env ls${flags} --next ${pagination.next}`
+      )}`
+    );
+  }
+
   return 0;
 }
 

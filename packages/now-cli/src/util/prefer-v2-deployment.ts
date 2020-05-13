@@ -1,9 +1,9 @@
 import { join } from 'path';
 import { exists } from 'fs-extra';
-import { PackageJson } from '@now/build-utils';
+import { PackageJson } from '@vercel/build-utils';
 
 import Client from './client';
-import { Config } from '../types';
+import { NowConfig } from './dev/types';
 import { CantParseJSONFile, ProjectNotFound } from './errors-ts';
 import getProjectByIdOrName from './projects/get-project-by-id-or-name';
 
@@ -33,7 +33,7 @@ export default async function preferV2Deployment({
   hasDockerfile: boolean;
   hasServerfile: boolean;
   pkg: PackageJson | CantParseJSONFile | null;
-  localConfig: Config | undefined;
+  localConfig: NowConfig | undefined;
   projectName?: string;
 }): Promise<null | string> {
   if (localConfig && localConfig.version) {

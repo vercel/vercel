@@ -1,4 +1,4 @@
-import { Framework, FrameworkDetectionItem } from '@now/frameworks';
+import { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
 import { DetectorFilesystem } from './detectors/filesystem';
 
 export interface DetectFrameworkOptions {

@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import { resolve, basename, parse, join } from 'path';
+import { fileNameSymbol } from '@vercel/client';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
@@ -112,11 +113,10 @@ export default async ctx => {
     }
   }
 
-  const file = highlight('now.json');
-  const prop = code('version');
-
   if (localConfig) {
     const { version } = localConfig;
+    const file = highlight(localConfig[fileNameSymbol]);
+    const prop = code('version');
 
     if (version) {
       if (typeof version === 'number') {

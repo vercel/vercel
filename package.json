@@ -1,5 +1,5 @@
 {
-  "name": "now-builders",
+  "name": "vercel-monorepo",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -22,10 +22,12 @@
     "buffer-replace": "1.0.0",
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
+    "eslint-plugin-jest": "23.8.2",
     "husky": "3.0.4",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.0",
+    "npm-package-arg": "6.1.0",
     "prettier": "1.18.2"
   },
   "scripts": {
@@ -71,6 +73,9 @@
       "sourceType": "module",
       "modules": true
     },
+    "plugins": [
+      "jest"
+    ],
     "extends": [
       "eslint:recommended",
       "plugin:@typescript-eslint/eslint-recommended",
@@ -92,7 +97,9 @@
       "@typescript-eslint/no-explicit-any": 0,
       "@typescript-eslint/no-non-null-assertion": 0,
       "@typescript-eslint/no-unused-vars": 2,
-      "@typescript-eslint/no-use-before-define": 0
+      "@typescript-eslint/no-use-before-define": 0,
+      "jest/no-disabled-tests": 2,
+      "jest/no-focused-tests": 2
     },
     "overrides": [
       {

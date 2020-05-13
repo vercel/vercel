@@ -5,7 +5,7 @@ import isURL from './is-url';
 import DevServer from './server';
 
 import { HttpHeadersConfig, RouteResult } from './types';
-import { isHandler, Route, HandleValue } from '@now/routing-utils';
+import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
@@ -79,7 +79,8 @@ export async function devRouter(
       }
 
       const keys: string[] = [];
-      const matcher = PCRE(`%${src}%i`, keys);
+      const flags = devServer && devServer.isCaseSensitive() ? '' : 'i';
+      const matcher = PCRE(`%${src}%${flags}`, keys);
       const match =
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 

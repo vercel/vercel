@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "*.py", "use": "@now/python" }],
+  "builds": [{ "src": "*.py", "use": "@vercel/python" }],
   "routes": [{ "src": "/another", "dest": "custom.py" }],
   "probes": [
     { "path": "/?hello=/", "mustContain": "path:  query: {'hello': '/'}" },

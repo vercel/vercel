@@ -1,6 +1,6 @@
 import path from 'path';
 import { readFileSync } from 'fs-extra';
-import { Framework } from '@now/frameworks';
+import { Framework } from '@vercel/frameworks';
 import { detectFramework, DetectorFilesystem } from '../src';
 
 const frameworkList = JSON.parse(

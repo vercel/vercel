@@ -5,21 +5,26 @@ import { filterPackage, isBundledBuilder } from '../src/util/dev/builder-cache';
 test('[dev-builder] filter install "latest", cached canary', t => {
   const buildersPkg = {
     dependencies: {
-      '@now/build-utils': '0.0.1-canary.0',
+      '@vercel/build-utils': '0.0.1-canary.0',
     },
   };
-  const result = filterPackage('@now/build-utils', 'canary', buildersPkg, {});
+  const result = filterPackage(
+    '@vercel/build-utils',
+    'canary',
+    buildersPkg,
+    {}
+  );
   t.is(result, true);
 });
 
 test('[dev-builder] filter install "canary", cached stable', t => {
   const buildersPkg = {
     dependencies: {
-      '@now/build-utils': '0.0.1',
+      '@vercel/build-utils': '0.0.1',
     },
   };
   const result = filterPackage(
-    '@now/build-utils@canary',
+    '@vercel/build-utils@canary',
     'latest',
     buildersPkg,
     {}
@@ -30,21 +35,26 @@ test('[dev-builder] filter install "canary", cached stable', t => {
 test('[dev-builder] filter install "latest", cached stable', t => {
   const buildersPkg = {
     dependencies: {
-      '@now/build-utils': '0.0.1',
+      '@vercel/build-utils': '0.0.1',
     },
   };
-  const result = filterPackage('@now/build-utils', 'latest', buildersPkg, {});
+  const result = filterPackage(
+    '@vercel/build-utils',
+    'latest',
+    buildersPkg,
+    {}
+  );
   t.is(result, false);
 });
 
 test('[dev-builder] filter install "canary", cached canary', t => {
   const buildersPkg = {
     dependencies: {
-      '@now/build-utils': '0.0.1-canary.0',
+      '@vercel/build-utils': '0.0.1-canary.0',
     },
   };
   const result = filterPackage(
-    '@now/build-utils@canary',
+    '@vercel/build-utils@canary',
     'canary',
     buildersPkg,
     {}
@@ -55,7 +65,7 @@ test('[dev-builder] filter install "canary", cached canary', t => {
 test('[dev-builder] filter install URL, cached stable', t => {
   const buildersPkg = {
     dependencies: {
-      '@now/build-utils': '0.0.1',
+      '@vercel/build-utils': '0.0.1',
     },
   };
   const result = filterPackage(
@@ -70,7 +80,7 @@ test('[dev-builder] filter install URL, cached stable', t => {
 test('[dev-builder] filter install URL, cached canary', t => {
   const buildersPkg = {
     dependencies: {
-      '@now/build-utils': '0.0.1-canary.0',
+      '@vercel/build-utils': '0.0.1-canary.0',
     },
   };
   const result = filterPackage(
@@ -85,20 +95,30 @@ test('[dev-builder] filter install URL, cached canary', t => {
 test('[dev-builder] filter install "latest", cached URL - stable', t => {
   const buildersPkg = {
     dependencies: {
-      '@now/build-utils': 'https://tarball.now.sh',
+      '@vercel/build-utils': 'https://tarball.now.sh',
     },
   };
-  const result = filterPackage('@now/build-utils', 'latest', buildersPkg, {});
+  const result = filterPackage(
+    '@vercel/build-utils',
+    'latest',
+    buildersPkg,
+    {}
+  );
   t.is(result, true);
 });
 
 test('[dev-builder] filter install "latest", cached URL - canary', t => {
   const buildersPkg = {
     dependencies: {
-      '@now/build-utils': 'https://tarball.now.sh',
+      '@vercel/build-utils': 'https://tarball.now.sh',
     },
   };
-  const result = filterPackage('@now/build-utils', 'canary', buildersPkg, {});
+  const result = filterPackage(
+    '@vercel/build-utils',
+    'canary',
+    buildersPkg,
+    {}
+  );
   t.is(result, true);
 });
 

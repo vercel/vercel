@@ -1,7 +1,7 @@
 {
-  "name": "@now/ruby",
+  "name": "@vercel/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
-  "version": "1.1.1-canary.0",
+  "version": "1.2.1",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",
@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "test-integration-once": "jest --env node --verbose --runInBand",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail",
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {

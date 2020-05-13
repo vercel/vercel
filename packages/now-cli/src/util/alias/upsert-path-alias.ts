@@ -5,8 +5,6 @@ import Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
 import setupDomain from '../domains/setup-domain';
 
-const NOW_SH_REGEX = /\.now\.sh$/;
-
 type AliasRecord = {
   uid: string;
   alias: string;
@@ -23,7 +21,7 @@ export default async function upsertPathAlias(
 ) {
   let externalDomain = false;
 
-  if (!NOW_SH_REGEX.test(alias)) {
+  if (!alias.endsWith('.now.sh') && !alias.endsWith('.vercel.app')) {
     const domainInfo = await setupDomain(output, client, alias, contextName);
     if (domainInfo instanceof Error) {
       return domainInfo;

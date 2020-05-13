@@ -1,10 +1,9 @@
 import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
-import readdir from 'recursive-readdir';
-import { relative, join, isAbsolute, basename } from 'path';
+import { relative, isAbsolute, basename } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
-import { getNowIgnore, createDebug, parseNowJSON } from './utils';
+import { buildFileTree, createDebug, parseNowJSON } from './utils';
 import { DeploymentError } from './errors';
 import {
   NowConfig,
@@ -81,43 +80,15 @@ export default function buildCreateDeployment(version: number) {
       rootFiles = [path];
     }
 
-    // Get .nowignore
-    let { ig, ignores } = await getNowIgnore(path);
+    let fileList = await buildFileTree(path, clientOptions.isDirectory, debug);
 
-    debug(`Found ${ig.ignores.length} rules in .nowignore`);
-
-    let fileList: string[];
-
-    debug('Building file tree...');
-
-    if (clientOptions.isDirectory && !Array.isArray(path)) {
-      // Directory path
-      const dirContents = await readdir(path, ignores);
-      const relativeFileList = dirContents.map(filePath =>
-        relative(process.cwd(), filePath)
-      );
-      fileList = ig
-        .filter(relativeFileList)
-        .map((relativePath: string) => join(process.cwd(), relativePath));
-
-      debug(`Read ${fileList.length} files in the specified directory`);
-    } else if (Array.isArray(path)) {
-      // Array of file paths
-      fileList = path;
-      debug(`Assigned ${fileList.length} files provided explicitly`);
-    } else {
-      // Single file
-      fileList = [path];
-      debug(`Deploying the provided path as single file`);
-    }
-
+    let configPath: string | undefined;
     if (!nowConfig) {
-      // If the user did not provide a nowConfig,
-      // then use the now.json file in the root.
-      const fileName = 'now.json';
-      const absolutePath = fileList.find(f => relative(cwd, f) === fileName);
-      debug(absolutePath ? `Found ${fileName}` : `Missing ${fileName}`);
-      nowConfig = await parseNowJSON(absolutePath);
+      // If the user did not provide a config file, use the one in the root directory.
+      configPath = fileList
+        .map(f => relative(cwd, f))
+        .find(f => f === 'vercel.json' || f === 'now.json');
+      nowConfig = await parseNowJSON(configPath);
     }
 
     if (
@@ -127,7 +98,7 @@ export default function buildCreateDeployment(version: number) {
       nowConfig.files.length > 0
     ) {
       // See the docs: https://vercel.com/docs/v1/features/configuration/#files-(array)
-      debug('Filtering file list based on `files` key in now.json');
+      debug(`Filtering file list based on \`files\` key in "${configPath}"`);
       const allowedFiles = new Set<string>(['Dockerfile']);
       const allowedDirs = new Set<string>();
       nowConfig.files.forEach(relPath => {
