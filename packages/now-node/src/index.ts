@@ -475,7 +475,7 @@ async function doTypeCheck({
 }: StartDevServerOptions): Promise<void> {
   const { devCacheDir = join(workPath, '.vercel/cache') } = meta;
 
-  // In order to type-check a single file, a standalong tsconfig
+  // In order to type-check a single file, a standalone tsconfig
   // file needs to be created that inherits from the base one :(
   // See: https://stackoverflow.com/a/44748041/376773
   const projectTsConfig = await walkParentDirs({
