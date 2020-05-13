@@ -365,13 +365,13 @@ export async function getBuilder(
 
 export function isBundledBuilder(
   parsed: npa.Result,
-  cliPkg: CliPackageJson
+  { dependencies = {} }: CliPackageJson
 ): boolean {
   if (!parsed.name) {
     return false;
   }
 
-  const bundledVersion = cliPkg.dependencies[parsed.name];
+  const bundledVersion = dependencies[parsed.name];
   if (bundledVersion) {
     if (parsed.type === 'tag') {
       if (parsed.fetchSpec === 'canary') {
