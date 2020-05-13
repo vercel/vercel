@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+const { join } = require('path');
+const { statSync } = require('fs');
+const pkg = require('../package');
 
 function error(command) {
   console.error('> Error!', command);
@@ -25,6 +28,10 @@ function isGlobal() {
     : Boolean(process.env.npm_config_global);
 }
 
+function isVercel() {
+  return pkg.name === 'vercel';
+}
+
 function validateNodeVersion() {
   let semver = '>= 0';
   let major = '1';
@@ -41,9 +48,19 @@ function validateNodeVersion() {
   return { isValid, expected: semver, actual: process.versions.node };
 }
 
+function isInNodeModules(name) {
+  try {
+    const nodeModules = join(__dirname, '..', '..');
+    const stat = statSync(join(nodeModules, name));
+    return stat.isDirectory();
+  } catch (err) {
+    return false;
+  }
+}
+
 async function main() {
   if (!isGlobal()) {
-    debug('Skip preinstall since now is being installed locally');
+    debug('Skipping preinstall since Vercel CLI is being installed locally');
     return;
   }
 
@@ -53,9 +70,16 @@ async function main() {
     error(
       `Detected unsupported Node.js version.\n` +
         `Expected "${ver.expected}" but found "${ver.actual}".\n` +
-        `Please update to the latest Node.js LTS version to install Now CLI.`
+        `Please update to the latest Node.js LTS version to install Vercel CLI.`
     );
     process.exit(1);
+  }
+
+  if (isVercel() && isInNodeModules('now')) {
+    const uninstall = isYarn()
+      ? 'yarn global remove now'
+      : 'npm uninstall -g now';
+    console.error(`NOTE: Run \`${uninstall}\` to uninstall \`now\`\n`);
   }
 }
 
@@ -71,9 +95,7 @@ process.on('uncaughtException', err => {
   process.exit(1);
 });
 
-main()
-  .then(() => process.exit(0))
-  .catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
