@@ -286,6 +286,7 @@
     "name": "Scully",
     "slug": "scully",
     "demo": "https://scully.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/scullyio-logo.png",
     "tagline": "Scully is a static site generator for Angular.",
     "description": "The Static Site Generator for Angular apps.",
     "website": "https://github.com/scullyio/scully",
