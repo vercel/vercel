@@ -3,7 +3,6 @@ import ms from 'ms';
 import table from 'text-table';
 // @ts-ignore
 import Now from '../../util';
-import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -12,6 +11,7 @@ import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
 import { NowContext, Cert } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
+import { getCommandName } from '../../util/pkg-name';
 
 interface Options {
   '--debug'?: boolean;
@@ -53,7 +53,9 @@ async function ls(
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        `${getCommandName('certs ls')}`
+      )}`
     );
     return 1;
   }
@@ -76,8 +78,8 @@ async function ls(
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
-      `To display the next page run ${cmd(
-        `now certs ls${flags} --next ${pagination.next}`
+      `To display the next page run ${getCommandName(
+        `certs ls${flags} --next ${pagination.next}`
       )}`
     );
   }

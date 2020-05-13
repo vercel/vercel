@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import ua from 'universal-analytics';
 import { platform, release, userInfo } from 'os';
+import { getPlatformEnv } from '@vercel/build-utils';
 
 import userAgent from './ua-browser';
 import { GA_TRACKING_ID } from './constants';
@@ -10,7 +11,7 @@ const config: any = configFiles.getConfigFilePath();
 
 export const shouldCollectMetrics =
   (config.collectMetrics === undefined || config.collectMetrics === true) &&
-  process.env.NOW_CLI_COLLECT_METRICS !== '0' &&
+  getPlatformEnv('CLI_COLLECT_METRICS') !== '0' &&
   GA_TRACKING_ID;
 
 export const metrics = (): ua.Visitor => {

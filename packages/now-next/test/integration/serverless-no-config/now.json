@@ -1,4 +1,10 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/next", "config": { "zeroConfig": true } }]
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": { "zeroConfig": true }
+    }
+  ]
 }

@@ -1,5 +1,5 @@
 {
   "version": 2,
-  "builds": [{ "src": "index.rb", "use": "@now/ruby" }],
+  "builds": [{ "src": "index.rb", "use": "@vercel/ruby" }],
   "probes": [{ "path": "/", "mustContain": "gem:RANDOMNESS_PLACEHOLDER" }]
 }

@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "api/v1/**/*.go",
-      "use": "@now/go",
+      "use": "@vercel/go",
       "config": { "zeroConfig": true }
     }
   ],

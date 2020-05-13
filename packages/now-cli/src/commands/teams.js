@@ -9,10 +9,11 @@ import list from './teams/list';
 import add from './teams/add';
 import change from './teams/switch';
 import invite from './teams/invite';
+import { getPkgName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now teams`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} teams`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -26,17 +27,18 @@ const help = () => {
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Switch to a team
 
-      ${chalk.cyan(`$ now switch <slug>`)}
+      ${chalk.cyan(`$ ${getPkgName()} switch <slug>`)}
 
       ${chalk.gray(
         '–'
@@ -49,7 +51,13 @@ const help = () => {
 
   ${chalk.gray('–')} Invite new members (interactively)
 
-      ${chalk.cyan(`$ now teams invite`)}
+      ${chalk.cyan(`$ ${getPkgName()} teams invite`)}
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+      ${chalk.cyan(`$ ${getPkgName()} teams ls --next 1584722256178`)}
   `);
 };
 
@@ -65,6 +73,7 @@ const main = async ctx => {
       help: 'h',
       debug: 'd',
       switch: 'change',
+      next: 'N',
     },
   });
 
@@ -117,6 +126,7 @@ async function run({ token, config }) {
         config,
         apiUrl,
         token,
+        argv,
       });
       break;
     }

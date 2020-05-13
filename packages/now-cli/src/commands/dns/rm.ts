@@ -8,6 +8,7 @@ import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -19,15 +20,17 @@ export default async function rm(
   args: string[],
   output: Output
 ) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
-  let contextName = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    await getScope(client);
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
@@ -40,24 +43,21 @@ export default async function rm(
   const [recordId] = args;
   if (args.length !== 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan('`now dns rm <id>`')}`
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        `${getCommandName('dns rm <id>')}`
+      )}`
     );
     return 1;
   }
 
-  const domainRecord = await getDNSRecordById(
-    output,
-    client,
-    contextName,
-    recordId
-  );
+  const record = await getDNSRecordById(client, recordId);
 
-  if (!domainRecord) {
+  if (!record) {
     output.error('DNS record not found');
     return 1;
   }
 
-  const { domainName, record } = domainRecord;
+  const { domain: domainName } = record;
   const yes = await readConfirmation(
     output,
     'The following record will be removed permanently',
@@ -91,7 +91,7 @@ function readConfirmation(
     output.print(
       `${table([getDeleteTableRow(domainName, record)], {
         align: ['l', 'r', 'l'],
-        hsep: ' '.repeat(6)
+        hsep: ' '.repeat(6),
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
@@ -112,12 +112,16 @@ function readConfirmation(
 }
 
 function getDeleteTableRow(domainName: string, record: DNSRecord) {
-  const recordName = `${record.name.length > 0
-    ? `${record.name}.`
-    : ''}${domainName}`;
+  const recordName = `${
+    record.name.length > 0 ? `${record.name}.` : ''
+  }${domainName}`;
   return [
     record.id,
-    chalk.bold(`${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`),
-    chalk.gray(`${ms(Date.now() - new Date(Number(record.created)).getTime())} ago`)
+    chalk.bold(
+      `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
+    ),
+    chalk.gray(
+      `${ms(Date.now() - new Date(Number(record.createdAt)).getTime())} ago`
+    ),
   ];
 }

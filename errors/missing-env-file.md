@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-You ran `now dev` inside a project that contains a `now.json` file with `env` or `build.env` properties that use [Now Secrets](https://vercel.com/docs/v2/build-step#environment-variables).
+You ran `now dev` inside a project that contains a `vercel.json` file with `env` or `build.env` properties that use [Now Secrets](https://vercel.com/docs/v2/build-step#environment-variables).
 
 In order to use environment variables in your project locally that have values defined using the Now Secrets format (e.g. `@my-secret-value`), you will need to provide the value as an environment variable using a `.env` or `.env.build` file.
 

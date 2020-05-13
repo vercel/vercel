@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs-extra');
-const assert = require('assert');
+const assert = require('assert').strict;
 const { createZip } = require('../dist/lambda');
 const { glob, spawnAsync, download } = require('../');
 const { getSupportedNodeVersion } = require('../dist/fs/node-version');
@@ -9,6 +9,20 @@ const {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
 } = require('../dist');
+
+async function expectBuilderError(promise, pattern) {
+  let result;
+  try {
+    result = await promise;
+  } catch (error) {
+    result = error;
+  }
+  assert('message' in result, `Expected error message but found ${result}`);
+  assert(
+    pattern.test(result.message),
+    `Expected ${pattern} but found "${result.message}"`
+  );
+}
 
 it('should re-create symlinks properly', async () => {
   if (process.platform === 'win32') {
@@ -72,6 +86,16 @@ it('should only match supported node versions', async () => {
   expect(getSupportedNodeVersion('999.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('foo', false)).rejects.toThrow();
 
+  const autoMessage = /This project is using an invalid version of Node.js and must be changed/;
+  await expectBuilderError(
+    getSupportedNodeVersion('8.11.x', true),
+    autoMessage
+  );
+  await expectBuilderError(getSupportedNodeVersion('6.x', true), autoMessage);
+  await expectBuilderError(getSupportedNodeVersion('999.x', true), autoMessage);
+  await expectBuilderError(getSupportedNodeVersion('foo', true), autoMessage);
+  await expectBuilderError(getSupportedNodeVersion('=> 10', true), autoMessage);
+
   expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
     'major',
     10
@@ -80,10 +104,21 @@ it('should only match supported node versions', async () => {
     'major',
     12
   );
-  expect(getSupportedNodeVersion('8.11.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('6.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('999.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('foo', true)).rejects.toThrow();
+  const foundMessage = /Found `engines` in `package\.json` with an invalid Node\.js version range/;
+  await expectBuilderError(
+    getSupportedNodeVersion('8.11.x', false),
+    foundMessage
+  );
+  await expectBuilderError(getSupportedNodeVersion('6.x', false), foundMessage);
+  await expectBuilderError(
+    getSupportedNodeVersion('999.x', false),
+    foundMessage
+  );
+  await expectBuilderError(getSupportedNodeVersion('foo', false), foundMessage);
+  await expectBuilderError(
+    getSupportedNodeVersion('=> 10', false),
+    foundMessage
+  );
 });
 
 it('should match all semver ranges', async () => {
@@ -134,21 +169,21 @@ it('should throw for discontinued versions', async () => {
 });
 
 it('should support require by path for legacy builders', () => {
-  const index = require('@now/build-utils');
+  const index = require('@vercel/build-utils');
 
-  const download2 = require('@now/build-utils/fs/download.js');
-  const getWriteableDirectory2 = require('@now/build-utils/fs/get-writable-directory.js');
-  const glob2 = require('@now/build-utils/fs/glob.js');
-  const rename2 = require('@now/build-utils/fs/rename.js');
+  const download2 = require('@vercel/build-utils/fs/download.js');
+  const getWriteableDirectory2 = require('@vercel/build-utils/fs/get-writable-directory.js');
+  const glob2 = require('@vercel/build-utils/fs/glob.js');
+  const rename2 = require('@vercel/build-utils/fs/rename.js');
   const {
     runNpmInstall: runNpmInstall2,
-  } = require('@now/build-utils/fs/run-user-scripts.js');
-  const streamToBuffer2 = require('@now/build-utils/fs/stream-to-buffer.js');
+  } = require('@vercel/build-utils/fs/run-user-scripts.js');
+  const streamToBuffer2 = require('@vercel/build-utils/fs/stream-to-buffer.js');
 
-  const FileBlob2 = require('@now/build-utils/file-blob.js');
-  const FileFsRef2 = require('@now/build-utils/file-fs-ref.js');
-  const FileRef2 = require('@now/build-utils/file-ref.js');
-  const { Lambda: Lambda2 } = require('@now/build-utils/lambda.js');
+  const FileBlob2 = require('@vercel/build-utils/file-blob.js');
+  const FileFsRef2 = require('@vercel/build-utils/file-fs-ref.js');
+  const FileRef2 = require('@vercel/build-utils/file-ref.js');
+  const { Lambda: Lambda2 } = require('@vercel/build-utils/lambda.js');
 
   expect(download2).toBe(index.download);
   expect(getWriteableDirectory2).toBe(index.getWriteableDirectory);

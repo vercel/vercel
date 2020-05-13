@@ -4,16 +4,16 @@ import fs from 'fs';
 import { promisify } from 'util';
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
-import {
+import buildUtils from './build-utils';
+import { GlobOptions, BuildOptions } from '@vercel/build-utils';
+const {
   getWriteableDirectory,
   download,
   glob,
-  GlobOptions,
   createLambda,
   shouldServe,
-  BuildOptions,
   debug,
-} from '@now/build-utils';
+} = buildUtils;
 import { installRequirement, installRequirementsFile } from './install';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
@@ -40,12 +40,9 @@ export async function downloadFilesInWorkPath({
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
   if (meta.isDev) {
-    const destNow = join(
-      workPath,
-      '.now',
-      'cache',
-      basename(entrypoint, '.py')
-    );
+    // Old versions of the CLI don't assign this property
+    const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
+    const destNow = join(devCacheDir, basename(entrypoint, '.py'));
     await download(downloadedFiles, destNow);
     downloadedFiles = await glob('**', destNow);
     workPath = destNow;

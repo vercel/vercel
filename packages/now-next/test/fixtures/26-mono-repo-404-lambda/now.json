@@ -7,7 +7,7 @@
   "builds": [
     {
       "src": "packages/webapp/next.config.js",
-      "use": "@now/next"
+      "use": "@vercel/next"
     }
   ],
   "probes": [

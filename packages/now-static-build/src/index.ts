@@ -6,7 +6,16 @@ import isPortReachable from 'is-port-reachable';
 import { ChildProcess, SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { frameworks, Framework } from './frameworks';
+import buildUtils from './build-utils';
 import {
+  Files,
+  FileFsRef,
+  BuildOptions,
+  Config,
+  PackageJson,
+  PrepareCacheOptions,
+} from '@vercel/build-utils';
+const {
   glob,
   download,
   spawnAsync,
@@ -20,17 +29,11 @@ import {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
-  Files,
-  FileFsRef,
-  BuildOptions,
-  Config,
   debug,
-  PackageJson,
-  PrepareCacheOptions,
   NowBuildError,
-} from '@now/build-utils';
-import { Route, Source } from '@now/routing-utils';
-import { getNowIgnore } from 'now-client';
+} = buildUtils;
+import { Route, Source } from '@vercel/routing-utils';
+import { getVercelIgnore } from '@vercel/client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -60,7 +63,7 @@ function validateDistDir(distDir: string) {
 
   if (!exists()) {
     throw new NowBuildError({
-      code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
+      code: 'STATIC_BUILD_NO_OUT_DIR',
       message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your project settings.`,
       link,
     });
@@ -68,7 +71,7 @@ function validateDistDir(distDir: string) {
 
   if (!isDirectory()) {
     throw new NowBuildError({
-      code: 'NOW_STATIC_BUILD_NOT_A_DIR',
+      code: 'STATIC_BUILD_NOT_A_DIR',
       message: `The path specified as Output Directory ("${distDirName}") is not actually a directory.`,
       link,
     });
@@ -76,7 +79,7 @@ function validateDistDir(distDir: string) {
 
   if (isEmpty()) {
     throw new NowBuildError({
-      code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
+      code: 'STATIC_BUILD_EMPTY_OUT_DIR',
       message: `The Output Directory "${distDirName}" is empty.`,
       link,
     });
@@ -229,7 +232,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
   const res = await fetch(url);
   if (res.status === 404) {
     throw new NowBuildError({
-      code: 'NOW_STATIC_BUILD_BINARY_NOT_FOUND',
+      code: 'STATIC_BUILD_BINARY_NOT_FOUND',
       message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
       link: 'https://vercel.com/docs/v2/build-step#framework-versioning',
     });
@@ -481,7 +484,7 @@ export async function build({
 
       let ignore: string[] = [];
       if (config.zeroConfig) {
-        const result = await getNowIgnore(distPath);
+        const result = await getVercelIgnore(distPath);
         ignore = result.ignores
           .map(file => (file.endsWith('/') ? `${file}**` : file))
           .concat([
