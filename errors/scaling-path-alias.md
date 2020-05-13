@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-You tried to use `now scale` on a path alias (`now alias -r rules.json`).
+You tried to use `now scale` on a path alias (`now alias -r rules.json`). 
 
 #### Possible Ways to Fix It
 

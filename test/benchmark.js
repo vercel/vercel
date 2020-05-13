@@ -39,7 +39,9 @@ function createRandomProject(dir, fileCount) {
   writeFileSync(join(dir, 'now.json'), nowJson, 'utf8');
   const publicDir = join(dir, 'public');
   mkdirSync(publicDir);
-  Array.from({ length: fileCount }).forEach(() => createRandomFile(publicDir));
+  Array.from({ length: fileCount }).forEach(() =>
+    createRandomFile(publicDir)
+  );
 }
 
 function main(fileCount = 1000) {
