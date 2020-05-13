@@ -1,10 +1,9 @@
 import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
-import readdir from 'recursive-readdir';
-import { relative, join, isAbsolute, basename } from 'path';
+import { relative, isAbsolute, basename } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
-import { getVercelIgnore, createDebug, parseNowJSON } from './utils';
+import { buildFileTree, createDebug, parseNowJSON } from './utils';
 import { DeploymentError } from './errors';
 import {
   NowConfig,
@@ -81,35 +80,7 @@ export default function buildCreateDeployment(version: number) {
       rootFiles = [path];
     }
 
-    // Get .nowignore
-    let { ig, ignores } = await getVercelIgnore(path);
-
-    debug(`Found ${ig.ignores.length} rules in .nowignore`);
-
-    let fileList: string[];
-
-    debug('Building file tree...');
-
-    if (clientOptions.isDirectory && !Array.isArray(path)) {
-      // Directory path
-      const dirContents = await readdir(path, ignores);
-      const relativeFileList = dirContents.map(filePath =>
-        relative(process.cwd(), filePath)
-      );
-      fileList = ig
-        .filter(relativeFileList)
-        .map((relativePath: string) => join(process.cwd(), relativePath));
-
-      debug(`Read ${fileList.length} files in the specified directory`);
-    } else if (Array.isArray(path)) {
-      // Array of file paths
-      fileList = path;
-      debug(`Assigned ${fileList.length} files provided explicitly`);
-    } else {
-      // Single file
-      fileList = [path];
-      debug(`Deploying the provided path as single file`);
-    }
+    let fileList = await buildFileTree(path, clientOptions.isDirectory, debug);
 
     let configPath: string | undefined;
     if (!nowConfig) {

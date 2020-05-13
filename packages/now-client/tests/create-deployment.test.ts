@@ -163,5 +163,10 @@ describe('create v2 deployment', () => {
 
     const ignore2 = await fetch_(`https://${deployment.url}/folder/ignore.txt`);
     expect(ignore2.status).toBe(404);
+
+    const ignore3 = await fetch_(
+      `https://${deployment.url}/node_modules/ignore.txt`
+    );
+    expect(ignore3.status).toBe(404);
   });
 });

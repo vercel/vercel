@@ -10,6 +10,7 @@ import { pkgVersion } from '../pkg';
 import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
+import readdir from 'recursive-readdir';
 const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/now/files';
@@ -74,6 +75,57 @@ const maybeRead = async function<T>(path: string, default_: T) {
     return default_;
   }
 };
+
+export async function readdirRelative(
+  path: string,
+  ignores: string[],
+  cwd: string
+): Promise<string[]> {
+  const preprocessedIgnores = ignores.map(ignore => {
+    if (ignore.endsWith('/')) {
+      return ignore.slice(0, -1);
+    }
+    return ignore;
+  });
+  const dirContents = await readdir(path, preprocessedIgnores);
+  return dirContents.map(filePath => relative(cwd, filePath));
+}
+
+export async function buildFileTree(
+  path: string | string[],
+  isDirectory: boolean,
+  debug: Debug
+): Promise<string[]> {
+  // Get .nowignore
+  let { ig, ignores } = await getVercelIgnore(path);
+
+  debug(`Found ${ig.ignores.length} rules in .nowignore`);
+
+  let fileList: string[];
+
+  debug('Building file tree...');
+
+  if (isDirectory && !Array.isArray(path)) {
+    // Directory path
+    const cwd = process.cwd();
+    const relativeFileList = await readdirRelative(path, ignores, cwd);
+    fileList = ig
+      .filter(relativeFileList)
+      .map((relativePath: string) => join(cwd, relativePath));
+
+    debug(`Read ${fileList.length} files in the specified directory`);
+  } else if (Array.isArray(path)) {
+    // Array of file paths
+    fileList = path;
+    debug(`Assigned ${fileList.length} files provided explicitly`);
+  } else {
+    // Single file
+    fileList = [path];
+    debug(`Deploying the provided path as single file`);
+  }
+
+  return fileList;
+}
 
 export async function getVercelIgnore(
   cwd: string | string[]
@@ -253,3 +305,4 @@ export function createDebug(debug?: boolean) {
 
   return () => {};
 }
+type Debug = ReturnType<typeof createDebug>;
