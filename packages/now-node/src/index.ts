@@ -1,4 +1,3 @@
-import { createHash } from 'crypto';
 import { fork, spawn } from 'child_process';
 import {
   readFileSync,
@@ -17,6 +16,8 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
+// @ts-ignore - `@types/mkdirp-promise` is broken
+import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import nodeFileTrace from '@zeit/node-file-trace';
 import buildUtils from './build-utils';
@@ -474,6 +475,7 @@ async function doTypeCheck({
   meta = {},
 }: StartDevServerOptions): Promise<void> {
   const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
+  const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
 
   // In order to type-check a single file, a standalone tsconfig
   // file needs to be created that inherits from the base one :(
@@ -483,20 +485,18 @@ async function doTypeCheck({
     start: join(workPath, dirname(entrypoint)),
     filename: 'tsconfig.json',
   });
-  const sha = createHash('sha256')
-    .update(entrypoint)
-    .update(projectTsConfig || '')
-    .digest('hex');
-  const tempConfigPath = join(devCacheDir, `tsconfig-${sha}.json`);
+
+  const tsconfigPath = join(entrypointCacheDir, 'tsconfig.json');
   const tsconfig = {
     extends: projectTsConfig
-      ? relative(devCacheDir, projectTsConfig)
+      ? relative(entrypointCacheDir, projectTsConfig)
       : undefined,
-    include: [relative(devCacheDir, entrypoint)],
+    include: [relative(entrypointCacheDir, join(workPath, entrypoint))],
   };
 
   try {
-    await fsp.writeFile(tempConfigPath, JSON.stringify(tsconfig), {
+    await mkdirp(entrypointCacheDir);
+    await fsp.writeFile(tsconfigPath, JSON.stringify(tsconfig), {
       flag: 'wx',
     });
   } catch (err) {
@@ -511,7 +511,7 @@ async function doTypeCheck({
     [
       tscPath,
       '--project',
-      tempConfigPath,
+      tsconfigPath,
       '--noEmit',
       '--allowJs',
       '--esModuleInterop',
