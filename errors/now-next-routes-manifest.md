@@ -12,5 +12,5 @@ In the Vercel dashboard, open your "Project Settings" and draw attention to "Bui
 2. Ensure that the "Output Directory" setting is not changed. This value almost never needs to be configured, and is only necessary if you override `distDir` in `next.config.js`.
 3. For `next export` users: **do not override the "Output Directory"**. Next.js automatically detects what folder you outputted `next export` to.
 
-In rare scenarios, this error message can also be caused by a Next.js build failure (if your "Build Command" accidentially returns a exit code 0).
+In rare scenarios, this error message can also be caused by a Next.js build failure (if your "Build Command" accidentally returns an exit code that is not 0).
 Double check for any error messages above the Routes Manifest error, which may provide additional details.
