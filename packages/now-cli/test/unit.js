@@ -1089,5 +1089,5 @@ test('check valid name', async t => {
 
 test('detect update command', async t => {
   const updateCommand = await getUpdateCommand();
-  t.is(updateCommand, `yarn add now@${isCanary() ? 'canary' : 'latest'}`);
+  t.is(updateCommand, `yarn add vercel@${isCanary() ? 'canary' : 'latest'}`);
 });

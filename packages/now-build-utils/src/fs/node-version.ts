@@ -1,4 +1,4 @@
-import { intersects } from 'semver';
+import { intersects, validRange } from 'semver';
 import boxen from 'boxen';
 import { NodeVersion } from '../types';
 import { NowBuildError } from '../errors';
@@ -40,12 +40,14 @@ export async function getSupportedNodeVersion(
   let selection = getLatestNodeVersion();
 
   if (engineRange) {
-    const found = allOptions.some(o => {
-      // the array is already in order so return the first
-      // match which will be the newest version of node
-      selection = o;
-      return intersects(o.range, engineRange);
-    });
+    const found =
+      validRange(engineRange) &&
+      allOptions.some(o => {
+        // the array is already in order so return the first
+        // match which will be the newest version of node
+        selection = o;
+        return intersects(o.range, engineRange);
+      });
     if (!found) {
       const intro =
         isAuto || !engineRange
