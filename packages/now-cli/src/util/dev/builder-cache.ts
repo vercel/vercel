@@ -365,7 +365,7 @@ export async function getBuilder(
 
 export function isBundledBuilder(
   parsed: npa.Result,
-  { dependencies = {} }: CliPackageJson
+  { dependencies = {} }: PackageJson
 ): boolean {
   if (!parsed.name) {
     return false;
