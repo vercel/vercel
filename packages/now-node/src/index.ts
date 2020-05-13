@@ -486,7 +486,14 @@ async function doTypeCheck({
     filename: 'tsconfig.json',
   });
 
-  const tsconfigPath = join(entrypointCacheDir, 'tsconfig.json');
+  // A different filename needs to be used for different `extends` tsconfig.json
+  const tsconfigName = projectTsConfig
+    ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
+        /[\\/.]/g,
+        '-'
+      )}.json`
+    : 'tsconfig.json';
+  const tsconfigPath = join(entrypointCacheDir, tsconfigName);
   const tsconfig = {
     extends: projectTsConfig
       ? relative(entrypointCacheDir, projectTsConfig)
@@ -495,10 +502,9 @@ async function doTypeCheck({
   };
 
   try {
+    const json = JSON.stringify(tsconfig, null, '\t');
     await mkdirp(entrypointCacheDir);
-    await fsp.writeFile(tsconfigPath, JSON.stringify(tsconfig), {
-      flag: 'wx',
-    });
+    await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
   } catch (err) {
     // Don't throw if the file already exists
     if (err.code !== 'EEXIST') {
