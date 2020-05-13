@@ -196,7 +196,7 @@ export const build = async ({
   files,
   workPath,
   entrypoint,
-  config = {} as Config,
+  config = {} as (Config & { sharedLambdas?: boolean }),
   meta = {} as BuildParamsMeta,
 }: BuildParamsType): Promise<{
   routes: Route[];
@@ -1005,9 +1005,19 @@ export const build = async ({
             : pseudoLayerBytes,
           lambdaIdentifier: path.join(
             entryDirectory,
-            `__NEXT_${routeIsApi ? 'API' : 'PAGE'}_LAMBDA_${lambdaGroupIndex}`
+            config.sharedLambdas
+              ? `__NEXT_${
+                  routeIsApi ? 'API' : 'PAGE'
+                }_LAMBDA_${lambdaGroupIndex}`
+              : pathname
           ),
         };
+      }
+
+      // shared lambdas isn't enabled so default to previous behavior of
+      // one page per lambda with the pathname being the lambda identifier
+      if (!config.sharedLambdas) {
+        currentLambdaGroup.lambdaCombinedBytes = lambdaCompressedByteLimit;
       }
 
       let dynamicPrefix = path.join('/', entryDirectory);
@@ -1039,10 +1049,14 @@ export const build = async ({
         check: true,
       };
 
-      if (routeIsDynamic) {
-        dynamicPageLambdaRoutes.push(pageLambdaRoute);
-      } else {
-        pageLambdaRoutes.push(pageLambdaRoute);
+      // we only need to add the additional routes if shared lambdas
+      // is enabled
+      if (config.sharedLambdas) {
+        if (routeIsDynamic) {
+          dynamicPageLambdaRoutes.push(pageLambdaRoute);
+        } else {
+          pageLambdaRoutes.push(pageLambdaRoute);
+        }
       }
 
       if (page === '_error.js' || (hasPages404 && page === '404.js')) {
@@ -1104,96 +1118,106 @@ export const build = async ({
         return lambdaOptions;
       };
 
-      const mergedPageLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => !page.startsWith('api/'))
-      );
-      const mergedApiLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => page.startsWith('api/'))
-      );
+      let mergedPageLambdaOptions: undefined | { [key: string]: any };
+      let mergedApiLambdaOptions: undefined | { [key: string]: any };
+
+      if (config.sharedLambdas) {
+        mergedPageLambdaOptions = await getMergedLambdaOptions(
+          pageKeys.filter(page => !page.startsWith('api/'))
+        );
+        mergedApiLambdaOptions = await getMergedLambdaOptions(
+          pageKeys.filter(page => page.startsWith('api/'))
+        );
+      }
 
       await Promise.all(
         [...apiLambdaGroups, ...pageLambdaGroups].map(
           async function buildLambdaGroup(group: LambdaGroup) {
             const groupPageKeys = Object.keys(group.pages);
+            const firstPageKey = groupPageKeys[0];
 
             const launcher = launcherData.replace(
               /\/\/ __LAUNCHER_PAGE_HANDLER__/g,
-              `
-              const url = require('url');
-              page = function(req, res) {
-                const pages = {
-                  ${groupPageKeys
-                    .map(
-                      page =>
-                        `'${page}': require('./${path.join(
-                          './',
-                          group.pages[page].pageFileName
-                        )}')`
-                    )
-                    .join(',\n')}
-                  ${
-                    '' /*
-                    creates a mapping of the page and the page's module e.g.
-                    '/about': require('./.next/serverless/pages/about.js')
-                  */
+              config.sharedLambdas
+                ? `
+                const url = require('url');
+                page = function(req, res) {
+                  const pages = {
+                    ${groupPageKeys
+                      .map(
+                        page =>
+                          `'${page}': require('./${path.join(
+                            './',
+                            group.pages[page].pageFileName
+                          )}')`
+                      )
+                      .join(',\n')}
+                    ${
+                      '' /*
+                      creates a mapping of the page and the page's module e.g.
+                      '/about': require('./.next/serverless/pages/about.js')
+                    */
+                    }
                   }
-                }
-                let toRender = req.headers['x-nextjs-page']
+                  let toRender = req.headers['x-nextjs-page']
 
-                if (!toRender) {
-                  try {
-                    const { pathname } = url.parse(req.url)
-                    toRender = pathname
-                  } catch (_) {
-                    // handle failing to parse url
-                    res.statusCode = 400
-                    return res.end('Bad Request')
+                  if (!toRender) {
+                    try {
+                      const { pathname } = url.parse(req.url)
+                      toRender = pathname
+                    } catch (_) {
+                      // handle failing to parse url
+                      res.statusCode = 400
+                      return res.end('Bad Request')
+                    }
                   }
-                }
 
-                let currentPage = pages[toRender]
+                  let currentPage = pages[toRender]
 
-                if (
-                  toRender &&
-                  !currentPage &&
-                  toRender.includes('/_next/data')
-                ) {
-                  toRender = toRender
-                    .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
-                    .replace(/\\.json$/, '')
+                  if (
+                    toRender &&
+                    !currentPage &&
+                    toRender.includes('/_next/data')
+                  ) {
+                    toRender = toRender
+                      .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
+                      .replace(/\\.json$/, '')
 
-                  currentPage = pages[toRender]
+                    currentPage = pages[toRender]
 
-                  if (!currentPage) {
-                    // for prerendered dynamic routes (/blog/post-1) we need to
-                    // find the match since it won't match the page directly
-                    const dynamicRoutes = ${JSON.stringify(
-                      dynamicRoutes.map(route => ({
-                        src: route.src,
-                        dest: route.dest,
-                      }))
-                    )}
+                    if (!currentPage) {
+                      // for prerendered dynamic routes (/blog/post-1) we need to
+                      // find the match since it won't match the page directly
+                      const dynamicRoutes = ${JSON.stringify(
+                        dynamicRoutes.map(route => ({
+                          src: route.src,
+                          dest: route.dest,
+                        }))
+                      )}
 
-                    for (const route of dynamicRoutes) {
-                      const matcher = new RegExp(route.src)
+                      for (const route of dynamicRoutes) {
+                        const matcher = new RegExp(route.src)
 
-                      if (matcher.test(toRender)) {
-                        toRender = route.dest
-                        currentPage = pages[toRender]
-                        break
+                        if (matcher.test(toRender)) {
+                          toRender = route.dest
+                          currentPage = pages[toRender]
+                          break
+                        }
                       }
                     }
                   }
-                }
 
-                if (!currentPage) {
-                  res.statusCode = 500
-                  return res.end('internal server error')
+                  if (!currentPage) {
+                    res.statusCode = 500
+                    return res.end('internal server error')
+                  }
+                  const method = currentPage.render || currentPage.default || currentPage
+                  return method(req, res)
                 }
-                const method = currentPage.render || currentPage.default || currentPage
-                return method(req, res)
-              }
-            `
+              `
+                : `
+                page = require("${group.pages[firstPageKey].pageFileName}")
+              `
             );
             const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
               'now__bridge.js': new FileFsRef({
@@ -1210,6 +1234,19 @@ export const build = async ({
               pageLayers.push(pageLayer);
             }
 
+            let lambdaOptions: undefined | { [key: string]: any };
+
+            if (!config.sharedLambdas) {
+              const sourceFile = await getSourceFilePathFromPage({
+                workPath,
+                page: group.pages[firstPageKey].pageName,
+              });
+              lambdaOptions = await getLambdaOptionsFromFunction({
+                sourceFile,
+                config,
+              });
+            }
+
             if (requiresTracing) {
               lambdas[
                 group.lambdaIdentifier
@@ -1223,6 +1260,7 @@ export const build = async ({
                 ],
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
+                ...lambdaOptions,
                 ...(group.isApiLambda
                   ? mergedApiLambdaOptions
                   : mergedPageLambdaOptions),
@@ -1238,6 +1276,7 @@ export const build = async ({
                 layers: pageLayers,
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
+                ...lambdaOptions,
                 ...(group.isApiLambda
                   ? mergedApiLambdaOptions
                   : mergedPageLambdaOptions),
@@ -1387,7 +1426,6 @@ export const build = async ({
       });
     }
   }
-
   const nextStaticFiles = await glob(
     '**',
     path.join(entryPath, outputDirectory, 'static')
@@ -1554,10 +1592,16 @@ export const build = async ({
               dest: path.join('/', (static404Page
                 ? static404Page
                 : pageLambdaMap[page404Path]) as string),
-              headers: {
-                'x-nextjs-page': page404Path,
-              },
+
               status: 404,
+
+              ...(config.sharedLambdas
+                ? {
+                    headers: {
+                      'x-nextjs-page': page404Path,
+                    },
+                  }
+                : {}),
             },
           ]),
     ],
