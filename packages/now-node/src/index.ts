@@ -1,4 +1,3 @@
-import { tmpdir } from 'os';
 import { createHash } from 'crypto';
 import { fork, spawn } from 'child_process';
 import {
@@ -51,8 +50,6 @@ import { Register, register } from './typescript';
 
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
-
-const TMP = tmpdir();
 
 interface CompilerConfig {
   debug?: boolean;
@@ -431,13 +428,13 @@ export async function prepareCache({
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, config, env } = opts;
+  const { entrypoint, workPath, config, meta = {} } = opts;
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
     cwd: workPath,
     env: {
       ...process.env,
-      ...env,
+      ...meta.env,
       NOW_DEV_ENTRYPOINT: entrypoint,
       NOW_DEV_CONFIG: JSON.stringify(config),
     },
@@ -474,41 +471,35 @@ export async function startDevServer(
 async function doTypeCheck({
   entrypoint,
   workPath,
+  meta = {},
 }: StartDevServerOptions): Promise<void> {
-  // In order to type-check a single file, a temporary tsconfig
+  const { devCacheDir = join(workPath, '.vercel/cache') } = meta;
+
+  // In order to type-check a single file, a standalong tsconfig
   // file needs to be created that inherits from the base one :(
   // See: https://stackoverflow.com/a/44748041/376773
-  const absoluteEntrypoint = join(workPath, entrypoint);
   const projectTsConfig = await walkParentDirs({
     base: workPath,
     start: join(workPath, dirname(entrypoint)),
     filename: 'tsconfig.json',
   });
   const sha = createHash('sha256')
-    .update(absoluteEntrypoint)
+    .update(entrypoint)
     .update(projectTsConfig || '')
     .digest('hex');
-  const tempConfigName = `vercel-node-${sha}.json`;
-  const tempConfigPath = join(TMP, tempConfigName);
+  const tempConfigPath = join(devCacheDir, `tsconfig-${sha}.json`);
   const tsconfig = {
-    extends: projectTsConfig || undefined,
-    include: [absoluteEntrypoint],
+    extends: projectTsConfig
+      ? relative(devCacheDir, projectTsConfig)
+      : undefined,
+    include: [relative(devCacheDir, entrypoint)],
   };
 
-  console.error({
-    absoluteEntrypoint,
-    sha,
-    tempConfigName,
-    tempConfigPath,
-    tsconfig,
-  });
-
   try {
-    await fsp.writeFile(tempConfigName, JSON.stringify(tsconfig), {
+    await fsp.writeFile(tempConfigPath, JSON.stringify(tsconfig), {
       flag: 'wx',
     });
   } catch (err) {
-    console.error(err);
     // Don't throw if the file already exists
     if (err.code !== 'EEXIST') {
       throw err;
