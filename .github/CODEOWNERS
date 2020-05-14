@@ -1,15 +1,15 @@
 # Documentation
 # https://help.github.com/en/articles/about-code-owners
 
-*                                        @tootallnate @leo
+*                                        @tootallnate
 /.github/workflows                       @AndyBitz @styfle
 /packages/frameworks                     @AndyBitz
-/packages/now-cli/src/commands/dev/      @tootallnate @leo @styfle @AndyBitz
-/packages/now-cli/src/util/dev/          @tootallnate @leo @styfle @AndyBitz
+/packages/now-cli/src/commands/dev/      @tootallnate @styfle @AndyBitz
+/packages/now-cli/src/util/dev/          @tootallnate @styfle @AndyBitz
 /packages/now-cli/src/commands/domains/  @javivelasco @mglagola @anatrajkovska
 /packages/now-cli/src/commands/certs/    @javivelasco @mglagola @anatrajkovska
 /packages/now-cli/src/commands/env       @styfle @lucleray
-/packages/now-client                     @leo @rdev
+/packages/now-client                     @rdev
 /packages/now-build-utils                @styfle @AndyBitz
 /packages/now-node                       @styfle @tootallnate @lucleray
 /packages/now-node-bridge                @styfle @tootallnate @lucleray
@@ -19,7 +19,6 @@
 /packages/now-ruby                       @styfle @coetry @nathancahill
 /packages/now-static-build               @styfle @AndyBitz
 /packages/now-routing-utils              @styfle @dav-is @ijjk
-
 /examples                                @msweeneydev @timothyis
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens

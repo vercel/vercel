@@ -16,6 +16,8 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
+// @ts-ignore - `@types/mkdirp-promise` is broken
+import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import nodeFileTrace from '@zeit/node-file-trace';
 import buildUtils from './build-utils';
@@ -427,13 +429,13 @@ export async function prepareCache({
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, config, env } = opts;
+  const { entrypoint, workPath, config, meta = {} } = opts;
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
     cwd: workPath,
     env: {
       ...process.env,
-      ...env,
+      ...meta.env,
       NOW_DEV_ENTRYPOINT: entrypoint,
       NOW_DEV_CONFIG: JSON.stringify(config),
     },
@@ -470,51 +472,62 @@ export async function startDevServer(
 async function doTypeCheck({
   entrypoint,
   workPath,
+  meta = {},
 }: StartDevServerOptions): Promise<void> {
-  // In order to type-check a single file, a temporary tsconfig
+  const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
+  const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
+
+  // In order to type-check a single file, a standalone tsconfig
   // file needs to be created that inherits from the base one :(
   // See: https://stackoverflow.com/a/44748041/376773
-  const id = Math.random()
-    .toString(32)
-    .substring(2);
-  const tempConfigName = `.tsconfig-${id}.json`;
   const projectTsConfig = await walkParentDirs({
     base: workPath,
     start: join(workPath, dirname(entrypoint)),
     filename: 'tsconfig.json',
   });
+
+  // A different filename needs to be used for different `extends` tsconfig.json
+  const tsconfigName = projectTsConfig
+    ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
+        /[\\/.]/g,
+        '-'
+      )}.json`
+    : 'tsconfig.json';
+  const tsconfigPath = join(entrypointCacheDir, tsconfigName);
   const tsconfig = {
-    extends: projectTsConfig || undefined,
-    include: [entrypoint],
+    extends: projectTsConfig
+      ? relative(entrypointCacheDir, projectTsConfig)
+      : undefined,
+    include: [relative(entrypointCacheDir, join(workPath, entrypoint))],
   };
-  await fsp.writeFile(tempConfigName, JSON.stringify(tsconfig));
 
   try {
-    const child = spawn(
-      process.execPath,
-      [
-        tscPath,
-        '--project',
-        tempConfigName,
-        '--noEmit',
-        '--allowJs',
-        '--esModuleInterop',
-        '--jsx',
-        'react',
-      ],
-      {
-        cwd: workPath,
-        stdio: 'inherit',
-      }
-    );
-    await once.spread<[number, string | null]>(child, 'exit');
-  } finally {
-    try {
-      await fsp.unlink(tempConfigName);
-    } catch (err) {
-      if (err.code !== 'ENOENT') {
-        console.error('Failed to remove %j:', tempConfigName, err);
-      }
+    const json = JSON.stringify(tsconfig, null, '\t');
+    await mkdirp(entrypointCacheDir);
+    await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
+  } catch (err) {
+    // Don't throw if the file already exists
+    if (err.code !== 'EEXIST') {
+      throw err;
     }
   }
+
+  const child = spawn(
+    process.execPath,
+    [
+      tscPath,
+      '--project',
+      tsconfigPath,
+      '--noEmit',
+      '--allowJs',
+      '--esModuleInterop',
+      '--jsx',
+      'react',
+    ],
+    {
+      cwd: workPath,
+      stdio: 'inherit',
+    }
+  );
+  await once.spread<[number, string | null]>(child, 'exit');
 }

@@ -38,7 +38,6 @@ import {
 } from './types';
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
-import { getVercelDirectory } from '../projects/link';
 
 interface BuildMessage {
   type: string;
@@ -108,7 +107,7 @@ export async function executeBuild(
     builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const { debug, envConfigs, cwd: workPath } = devServer;
+  const { debug, envConfigs, cwd: workPath, devCacheDir } = devServer;
 
   const startTime = Date.now();
   const showBuildTimestamp =
@@ -135,9 +134,6 @@ export async function executeBuild(
       devServer.output
     );
   }
-
-  const vercelDir = getVercelDirectory(workPath);
-  const devCacheDir = join(vercelDir, 'cache');
 
   const buildOptions: BuildOptions = {
     files,
