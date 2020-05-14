@@ -199,7 +199,7 @@
     "name": "Dojo",
     "slug": "dojo",
     "demo": "https://dojo.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/dojo.svg",
+    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/dojo.png",
     "tagline": "Dojo is a modern progressive, TypeScript first framework.",
     "description": "A Dojo app, created with the Dojo CLI's cli-create-app command.",
     "website": "https://dojo.io",
