@@ -164,14 +164,14 @@ async function fetchTokenWithRetry(retries = 5) {
   const {
     NOW_TOKEN,
     VERCEL_TOKEN,
-    ZEIT_TEAM_TOKEN,
-    ZEIT_REGISTRATION_URL,
+    VERCEL_TEAM_TOKEN,
+    VERCEL_REGISTRATION_URL,
   } = process.env;
   if (VERCEL_TOKEN || NOW_TOKEN) {
     console.log('Your personal token will be used to make test deployments.');
     return VERCEL_TOKEN || NOW_TOKEN;
   }
-  if (!ZEIT_TEAM_TOKEN || !ZEIT_REGISTRATION_URL) {
+  if (!VERCEL_TEAM_TOKEN || !VERCEL_REGISTRATION_URL) {
     throw new Error(
       process.env.CI
         ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
@@ -179,10 +179,10 @@ async function fetchTokenWithRetry(retries = 5) {
     );
   }
   try {
-    const res = await _fetch(ZEIT_REGISTRATION_URL, {
+    const res = await _fetch(VERCEL_REGISTRATION_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${ZEIT_TEAM_TOKEN}`,
+        Authorization: `Bearer ${VERCEL_TEAM_TOKEN}`,
       },
     });
     if (!res.ok) {
