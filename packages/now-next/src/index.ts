@@ -636,7 +636,10 @@ export const build = async ({
     console.error(
       'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
     );
-    throw new Error('Missing BUILD_ID');
+    throw new NowBuildError({
+      code: 'NOW_NEXT_NO_BUILD_ID',
+      message: 'Missing BUILD_ID',
+    });
   }
   const escapedBuildId = escapeStringRegexp(buildId);
 
