@@ -19,9 +19,9 @@
 /packages/now-ruby                       @styfle @coetry @nathancahill
 /packages/now-static-build               @styfle @AndyBitz
 /packages/now-routing-utils              @styfle @dav-is @ijjk
-/examples                                @msweeneydev @timothyis
+/examples                                @mcsdevv @timothyis
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens
-/examples/hugo                           @msweeneydev @timothyis @styfle
-/examples/jekyll                         @msweeneydev @timothyis @sarupbanskota
-/examples/zola                           @msweeneydev @timothyis @styfle
+/examples/hugo                           @mcsdevv @timothyis @styfle
+/examples/jekyll                         @mcsdevv @timothyis @sarupbanskota
+/examples/zola                           @mcsdevv @timothyis @styfle
