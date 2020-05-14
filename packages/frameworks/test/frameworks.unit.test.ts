@@ -114,4 +114,19 @@ describe('frameworks', () => {
 
     expect(result).toBe(true);
   });
+
+  it('ensure logo', async () => {
+    const frameworks = require('../frameworks.json') as Framework[];
+
+    const missing = frameworks
+      .map(f => f.logo)
+      .filter(url => {
+        const prefix =
+          'https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/';
+        const name = url.replace(prefix, '');
+        return existsSync(path.join(__dirname, '..', 'logos', name)) === false;
+      });
+
+    expect(missing).toEqual([]);
+  });
 });
