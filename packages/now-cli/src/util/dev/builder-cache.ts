@@ -7,7 +7,7 @@ import { basename, join } from 'path';
 import { PackageJson } from '@vercel/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
-import nowCliPkg from '../pkg';
+import cliPkg from '../pkg';
 
 import { NoBuilderCacheError } from '../errors-ts';
 import { Output } from '../output';
@@ -16,6 +16,8 @@ import { getDistTag } from '../get-dist-tag';
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
 import { getBundledBuilders } from './get-bundled-builders';
+
+type CliPackageJson = typeof cliPkg;
 
 declare const __non_webpack_require__: typeof require;
 
@@ -35,13 +37,13 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@vercel/static': createStaticBuilder('vercel'),
 };
 
-const distTag = nowCliPkg.version ? getDistTag(nowCliPkg.version) : 'canary';
+const distTag = getDistTag(cliPkg.version);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
 
 /**
- * Prepare cache directory for installing now-builders
+ * Prepare cache directory for installing Vercel runtimes.
  */
 export async function prepareCacheDir() {
   const designated = XDGAppPaths('com.vercel.cli').cache();
@@ -102,15 +104,15 @@ export function filterPackage(
   builderSpec: string,
   distTag: string,
   buildersPkg: PackageJson,
-  nowCliPkg: PackageJson
+  cliPkg: CliPackageJson
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
   const parsedVersion = parseVersionSafe(parsed.rawSpec);
 
-  // If it's a builder that is part of Now CLI's `dependencies` then
-  // the builder is already installed into `node_modules`
-  if (isBundledBuilder(parsed, nowCliPkg)) {
+  // If it's a builder that is part of Vercel CLI's `dependencies`
+  // then the builder is already installed into `node_modules`
+  if (isBundledBuilder(parsed, cliPkg)) {
     return false;
   }
 
@@ -183,9 +185,9 @@ export async function installBuilders(
     getBuildUtils(packages, 'now')
   );
 
-  // Filter out any packages that come packaged with `now-cli`
+  // Filter out any packages that come packaged with Vercel CLI
   const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkgBefore, nowCliPkg)
+    filterPackage(p, distTag, buildersPkgBefore, cliPkg)
   );
 
   if (packagesToInstall.length === 0) {
@@ -258,9 +260,9 @@ export async function updateBuilders(
   const packagesToUpdate = packages.filter(p => {
     if (p in localBuilders) return false;
 
-    // If it's a builder that is part of Now CLI's `dependencies` then
-    // don't update it
-    if (isBundledBuilder(npa(p), nowCliPkg)) {
+    // If it's a builder that is part of Vercel CLI's
+    // `dependencies` then don't update it
+    if (isBundledBuilder(npa(p), cliPkg)) {
       return false;
     }
 
@@ -320,8 +322,8 @@ export async function getBuilder(
     let requirePath: string;
     const parsed = npa(builderPkg);
 
-    // First check if it's a bundled Runtime in Now CLI's `node_modules`
-    const bundledBuilder = isBundledBuilder(parsed, nowCliPkg);
+    // First check if it's a bundled Runtime in Vercel CLI's `node_modules`
+    const bundledBuilder = isBundledBuilder(parsed, cliPkg);
     if (bundledBuilder && parsed.name) {
       requirePath = parsed.name;
     } else {
@@ -363,13 +365,13 @@ export async function getBuilder(
 
 export function isBundledBuilder(
   parsed: npa.Result,
-  pkg: PackageJson
+  { dependencies = {} }: PackageJson
 ): boolean {
-  if (!parsed.name || !pkg.dependencies) {
+  if (!parsed.name) {
     return false;
   }
 
-  const bundledVersion = pkg.dependencies[parsed.name];
+  const bundledVersion = dependencies[parsed.name];
   if (bundledVersion) {
     if (parsed.type === 'tag') {
       if (parsed.fetchSpec === 'canary') {
@@ -392,7 +394,7 @@ function getPackageName(
   if (registryTypes.has(parsed.type)) {
     return parsed.name;
   }
-  const deps: { [name: string]: string } = {
+  const deps: PackageJson.DependencyMap = {
     ...buildersPkg.devDependencies,
     ...buildersPkg.dependencies,
   };

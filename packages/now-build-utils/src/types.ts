@@ -188,33 +188,10 @@ export interface ShouldServeOptions {
   config: Config;
 }
 
-export interface StartDevServerOptions {
-  /**
-   * Name of entrypoint file for this particular build job. Value
-   * `files[entrypoint]` is guaranteed to exist and be a valid File reference.
-   * `entrypoint` is always a discrete file and never a glob, since globs are
-   * expanded into separate builds at deployment time.
-   */
-  entrypoint: string;
-
-  /**
-   * A writable temporary directory where you are encouraged to perform your
-   * build process. This directory will be populated with the restored cache.
-   */
-  workPath: string;
-
-  /**
-   * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
-   */
-  config: Config;
-
-  /**
-   * Runtime environment variables configuration from the project's `now.json`
-   * and local `.env` file.
-   */
-  env: Env;
-}
+/**
+ * `startDevServer()` is given the same parameters as `build()`.
+ */
+export type StartDevServerOptions = BuildOptions;
 
 export interface StartDevServerSuccess {
   /**
