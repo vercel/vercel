@@ -45,7 +45,8 @@ import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import { version as cliVersion } from '../../../package.json';
+import cliPkg from '../pkg';
+import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
 import {
   validateNowConfigBuilds,
@@ -116,6 +117,7 @@ export default class DevServer {
   public frameworkSlug: string | null;
   public files: BuilderInputs;
   public address: string;
+  public devCacheDir: string;
 
   private cachedNowConfig: NowConfig | null;
   private caseSensitive: boolean;
@@ -158,6 +160,7 @@ export default class DevServer {
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
+    this.devCacheDir = join(getVercelDirectory(cwd), 'cache');
 
     this.getNowConfigPromise = null;
     this.blockingBuildsPromise = null;
@@ -559,7 +562,7 @@ export default class DevServer {
         redirectRoutes,
         rewriteRoutes,
       } = await detectBuilders(files, pkg, {
-        tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
+        tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
         ...(projectSettings ? { projectSettings } : {}),
         featHandleMiss,
@@ -799,6 +802,10 @@ export default class DevServer {
 
       this.output.success('Build completed');
     }
+
+    // Ensure that the dev cache directory exists so that runtimes
+    // don't need to create it themselves.
+    await fs.mkdirp(this.devCacheDir);
 
     // Start the filesystem watcher
     this.watcher = watch(this.cwd, {
@@ -1481,11 +1488,19 @@ export default class DevServer {
     if (typeof builder.startDevServer === 'function') {
       let devServerResult: StartDevServerResult = null;
       try {
+        const { envConfigs, files, devCacheDir, cwd: workPath } = this;
         devServerResult = await builder.startDevServer({
+          files,
           entrypoint: match.entrypoint,
-          workPath: this.cwd,
+          workPath,
           config: match.config || {},
-          env: this.envConfigs.runEnv || {},
+          meta: {
+            isDev: true,
+            requestPath,
+            devCacheDir,
+            env: envConfigs.runEnv,
+            buildEnv: envConfigs.buildEnv,
+          },
         });
       } catch (err) {
         // `startDevServer()` threw an error. Most likely this means the dev
