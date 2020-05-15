@@ -7,6 +7,10 @@ import wait from './wait';
 export type Output = ReturnType<typeof createOutput>;
 
 export default function createOutput({ debug: debugEnabled = false } = {}) {
+  function isDebugEnabled() {
+    return debugEnabled;
+  }
+
   function print(str: string) {
     process.stderr.write(str);
   }
@@ -125,6 +129,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   return {
+    isDebugEnabled,
     print,
     log,
     warn,

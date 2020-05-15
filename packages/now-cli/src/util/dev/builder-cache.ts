@@ -1,6 +1,5 @@
 import execa from 'execa';
 import semver from 'semver';
-import retry from 'async-retry';
 import npa from 'npm-package-arg';
 import pluralize from 'pluralize';
 import { basename, join } from 'path';
@@ -202,22 +201,16 @@ export async function installBuilders(
     )}: ${packagesToInstall.sort().join(', ')}`
   );
 
+  output.debug(`Running npm install in ${builderDir}`);
+
   try {
-    await retry(
-      () =>
-        execa(
-          'npm',
-          [
-            'install',
-            '--save-exact',
-            '--no-package-lock',
-            ...packagesToInstall,
-          ],
-          {
-            cwd: builderDir,
-          }
-        ),
-      { retries: 2 }
+    await execa(
+      'npm',
+      ['install', '--save-exact', '--no-package-lock', ...packagesToInstall],
+      {
+        cwd: builderDir,
+        stdio: output.isDebugEnabled() ? 'inherit' : undefined,
+      }
     );
   } finally {
     stopSpinner();
@@ -275,16 +268,12 @@ export async function updateBuilders(
       getBuildUtils(packages, 'now')
     );
 
-    await retry(
-      () =>
-        execa(
-          'npm',
-          ['install', '--save-exact', '--no-package-lock', ...packagesToUpdate],
-          {
-            cwd: builderDir,
-          }
-        ),
-      { retries: 2 }
+    execa(
+      'npm',
+      ['install', '--save-exact', '--no-package-lock', ...packagesToUpdate],
+      {
+        cwd: builderDir,
+      }
     );
 
     const buildersPkgAfter = await readJSON(buildersPkgPath);
