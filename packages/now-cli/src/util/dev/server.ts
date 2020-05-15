@@ -412,6 +412,9 @@ export default class DevServer {
     }
 
     if (blockingBuilds.length > 0) {
+      this.output.debug(
+        `Waiting for ${blockingBuilds.length} "blocking builds"`
+      );
       this.blockingBuildsPromise = Promise.all(blockingBuilds)
         .then(() => {
           this.output.debug(
