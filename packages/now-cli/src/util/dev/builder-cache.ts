@@ -1,6 +1,5 @@
 import execa from 'execa';
 import semver from 'semver';
-import retry from 'async-retry';
 import npa from 'npm-package-arg';
 import pluralize from 'pluralize';
 import { basename, join } from 'path';
@@ -195,33 +194,7 @@ export async function installBuilders(
     return;
   }
 
-  const stopSpinner = output.spinner(
-    `Installing ${pluralize(
-      'Runtime',
-      packagesToInstall.length
-    )}: ${packagesToInstall.sort().join(', ')}`
-  );
-
-  try {
-    await retry(
-      () =>
-        execa(
-          'npm',
-          [
-            'install',
-            '--save-exact',
-            '--no-package-lock',
-            ...packagesToInstall,
-          ],
-          {
-            cwd: builderDir,
-          }
-        ),
-      { retries: 2 }
-    );
-  } finally {
-    stopSpinner();
-  }
+  await npmInstall(builderDir, output, packagesToInstall, false);
 
   const updatedPackages: string[] = [];
   const buildersPkgAfter = await readJSON(buildersPkgPath);
@@ -237,6 +210,39 @@ export async function installBuilders(
   }
 
   purgeRequireCache(updatedPackages, builderDir, output);
+}
+
+async function npmInstall(
+  cwd: string,
+  output: Output,
+  packagesToInstall: string[],
+  silent: boolean
+) {
+  const sortedPackages = packagesToInstall.sort();
+
+  const stopSpinner = silent
+    ? () => {}
+    : output.spinner(
+        `Installing ${pluralize(
+          'Runtime',
+          sortedPackages.length
+        )}: ${sortedPackages.join(', ')}`
+      );
+
+  output.debug(`Running npm install in ${cwd}`);
+
+  try {
+    await execa(
+      'npm',
+      ['install', '--save-exact', '--no-package-lock', ...sortedPackages],
+      {
+        cwd,
+        stdio: output.isDebugEnabled() ? 'inherit' : undefined,
+      }
+    );
+  } finally {
+    stopSpinner();
+  }
 }
 
 export async function updateBuilders(
@@ -275,17 +281,7 @@ export async function updateBuilders(
       getBuildUtils(packages, 'now')
     );
 
-    await retry(
-      () =>
-        execa(
-          'npm',
-          ['install', '--save-exact', '--no-package-lock', ...packagesToUpdate],
-          {
-            cwd: builderDir,
-          }
-        ),
-      { retries: 2 }
-    );
+    await npmInstall(builderDir, output, packagesToUpdate, true);
 
     const buildersPkgAfter = await readJSON(buildersPkgPath);
     const depsAfter = {
