@@ -1,12 +1,16 @@
 <p align="center">
-  <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
-  <h3 align="center">Vercel</h3>
+  <a href="https://vercel.com">
+    <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
+    <h3 align="center">Vercel</h3>
+  </a>
   <p align="center">Develop. Preview. Ship.</p>
 </p>
 
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
 
-## Usages
+## Usage
+
+Vercel is the optimal workflow for frontend teams. All-in-one: Static and Jamstack deployment, Serverless Functions, and Global CDN.
 
 To install the latest version of Vercel CLI, visit [vercel.com/download](https://vercel.com/download) or run this command:
 

@@ -338,7 +338,12 @@ export async function getRoutesManifest(
 
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new NowBuildError({
-      message: `A "routes-manifest.json" couldn't be found. Is the correct output directory configured? This setting does not need to be changed in most cases`,
+      message:
+        `A "routes-manifest.json" couldn't be found. This is normally caused by a misconfiguration in your project.\n` +
+        'Please check the following, and reach out to support if you cannot resolve the problem:\n' +
+        '  1. If present, be sure your `build` script in "package.json" calls `next build`.' +
+        '  2. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Build Command" is not overridden, or that it calls `next build`.' +
+        '  3. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Output Directory" is not overridden. `next export` does **not** require you change this setting, even if you customize the `next export` output directory.',
       link: 'https://err.sh/zeit/now/now-next-routes-manifest',
       code: 'NEXT_NO_ROUTES_MANIFEST',
     });
