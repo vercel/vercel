@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "8.0.1-canary.0",
+  "version": "8.0.2-canary.0",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -15,7 +15,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --verbose --runInBand --bail"
+    "test-integration-once": "jest --verbose --runInBand --bail tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
+    "test-unit": "jest --verbose --runInBand --bail tests/unit.*test.*"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",

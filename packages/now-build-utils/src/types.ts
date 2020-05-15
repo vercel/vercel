@@ -188,6 +188,11 @@ export interface ShouldServeOptions {
   config: Config;
 }
 
+/**
+ * `startDevServer()` is given the same parameters as `build()`.
+ */
+export type StartDevServerOptions = BuildOptions;
+
 export interface StartDevServerSuccess {
   /**
    * Port number where the dev server can be connected to, assumed to be running
@@ -213,7 +218,7 @@ export type StartDevServerResult = StartDevServerSuccess | null;
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
 // eslint-disable-next-line @typescript-eslint/no-namespace
-namespace PackageJson {
+export namespace PackageJson {
   /**
    * An author or contributor
    */

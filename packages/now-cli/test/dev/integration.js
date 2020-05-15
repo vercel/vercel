@@ -110,7 +110,10 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
+    await execa('yarn', ['install'], {
+      cwd: fixturePath,
+      shell: true,
+    });
   }
 }
 
@@ -281,6 +284,9 @@ function testFixtureStdio(
         cwd,
         env,
       });
+
+      dev.stdout.pipe(process.stdout);
+      dev.stderr.pipe(process.stderr);
 
       dev.stdout.on('data', data => {
         stdoutList.push(data);
@@ -610,6 +616,20 @@ test(
   '[now dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async testPath => {
     await testPath(200, '/hello', 'Hello World');
+  })
+);
+
+test(
+  '[now dev] test rewrites and redirects is case sensitive',
+  testFixtureStdio('test-routing-case-sensitive', async testPath => {
+    await testPath(200, '/Path', 'UPPERCASE');
+    await testPath(200, '/path', 'lowercase');
+    await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
+      Location: '/upper.html',
+    });
+    await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
+      Location: '/lower.html',
+    });
   })
 );
 

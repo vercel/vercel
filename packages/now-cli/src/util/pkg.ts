@@ -1,13 +1,6 @@
-import path from 'path';
-import pkg from '../../package.json';
+import _pkg from '../../package.json';
+import { PackageJson } from '@vercel/build-utils';
 
-try {
-  const distDir = path.dirname(process.execPath);
-  // @ts-ignore
-  pkg._npmPkg = require(`${path.join(distDir, '../../package.json')}`);
-} catch (err) {
-  // @ts-ignore
-  pkg._npmPkg = null;
-}
+const pkg: PackageJson & typeof _pkg = _pkg;
 
 export default pkg;
