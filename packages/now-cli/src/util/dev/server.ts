@@ -1179,6 +1179,8 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
+    req.pause();
+
     let nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
