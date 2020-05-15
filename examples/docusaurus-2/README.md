@@ -18,8 +18,8 @@ $ npx @docusaurus/init@next init my-website classic
 
 ### Deploying From Your Terminal
 
-Once initialized, you can deploy the Docusaurus example with just a single command:
+You can deploy your new Docusaurus project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

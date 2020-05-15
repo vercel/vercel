@@ -12,16 +12,16 @@ _Live Example: https://amp.now-examples.now.sh_
 
 ### How We Created This Example
 
-To get started deploying AMP with Vercel, you can use the [Now CLI](https://vercel.com/download) to initialize the project:
+To get started deploying AMP with Vercel, you can use the [Vercel CLI](https://vercel.com/download) to initialize the project:
 
 ```shell
-$ now init amp
+$ vercel init amp
 ```
 
 ### Deploying From Your Terminal
 
-You can deploy your new AMP project with a single command from your terminal using Now CLI:
+You can deploy your new AMP project with a single command from your terminal using Vercel CLI:
 
 ```shell
-$ now
+$ vercel
 ```

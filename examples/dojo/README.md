@@ -13,13 +13,13 @@ Deploy your own Dojo project with Vercel.
 To get started with Dojo on Vercel, you can use the [Dojo CLI](https://github.com/dojo/cli) to initialize the project:
 
 ```shell
-$ now init dojo
+$ vercel init dojo
 ```
 
 ### Deploying From Your Terminal
 
-Once initialized, you can deploy the Dojo example with just a single command:
+You can deploy your new Dojo project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```
