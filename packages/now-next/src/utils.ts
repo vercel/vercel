@@ -523,7 +523,7 @@ export async function createPseudoLayer(files: {
       pseudoLayer[fileName] = {
         file,
         isSymlink: true,
-        symlinkTarget: symlinkTarget,
+        symlinkTarget,
       };
     } else {
       const origBuffer = await streamToBuffer(file.toStream());

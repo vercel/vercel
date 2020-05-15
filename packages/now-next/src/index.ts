@@ -85,8 +85,6 @@ interface BuildParamsType extends BuildOptions {
 }
 
 export const version = 2;
-// Limit for max size each lambda can be, currently 45 MB
-const lambdaCompressedByteLimit = 45 * 1000 * 1000;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
 
@@ -207,6 +205,9 @@ export const build = async ({
   validateEntrypoint(entrypoint);
 
   const isSharedLambdas = config.sharedLambdas;
+  // Limit for max size each lambda can be, 50 MB if no custom limit
+  const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
+
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
