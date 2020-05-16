@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "19.0.2-canary.2",
+  "version": "19.0.2-canary.3",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -62,10 +62,10 @@
     "node": ">= 10"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.3.2-canary.0",
+    "@vercel/build-utils": "2.3.2-canary.1",
     "@vercel/go": "1.1.1",
-    "@vercel/next": "2.6.2",
-    "@vercel/node": "1.6.2-canary.0",
+    "@vercel/next": "2.6.3-canary.0",
+    "@vercel/node": "1.6.2-canary.1",
     "@vercel/python": "1.2.1",
     "@vercel/ruby": "1.2.1",
     "@vercel/static-build": "0.17.1"
