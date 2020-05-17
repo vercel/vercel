@@ -1,6 +1,6 @@
 import ms from 'ms';
 import path from 'path';
-import { URL } from 'url';
+import { URL, parse as parseUrl } from 'url';
 import test from 'ava';
 import semVer from 'semver';
 import { homedir } from 'os';
@@ -126,6 +126,36 @@ if (!process.env.CI) {
   );
 }
 
+function mockLoginApi(req, res) {
+  const { url = '/', method } = req;
+  let { pathname = '/', query = {} } = parseUrl(url, true);
+  console.log(`[mock-login-server] ${method} ${pathname}`);
+  const securityCode = 'Bears Beets Battlestar Galactica';
+  if (
+    method === 'POST' &&
+    pathname === '/now/registration' &&
+    query.mode === 'login'
+  ) {
+    res.end(JSON.stringify({ token, securityCode }));
+  } else if (
+    method === 'GET' &&
+    pathname === '/now/registration/verify' &&
+    query.email === email
+  ) {
+    res.end(JSON.stringify({ token }));
+  } else {
+    res.statusCode = 405;
+    res.end(JSON.stringify({ code: 'method_not_allowed' }));
+  }
+}
+
+const LOGIN_API_PORT = 2999;
+const LOGIN_API_URL = `http://localhost:${LOGIN_API_PORT}`;
+require('http')
+  .createServer(mockLoginApi)
+  .listen(LOGIN_API_PORT);
+console.log(`[mock-login-server] Listening on ${LOGIN_API_URL}`);
+
 const execute = (args, options) =>
   execa(binaryPath, [...defaultArgs, ...args], {
     ...defaultOptions,
@@ -184,7 +214,7 @@ const createUser = async () => {
       const user = await fetchTokenInformation(token);
 
       email = user.email;
-      contextName = user.email.split('@')[0];
+      contextName = user.username;
       session = Math.random()
         .toString(36)
         .split('.')[1];
@@ -224,7 +254,13 @@ test('login', async t => {
   const logoutOutput = await execute(['logout']);
   t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
 
-  const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
+  const loginOutput = await execa(binaryPath, [
+    'login',
+    email,
+    '--api',
+    LOGIN_API_URL,
+    ...defaultArgs,
+  ]);
 
   console.log(loginOutput.stderr);
   console.log(loginOutput.stdout);
@@ -237,12 +273,8 @@ test('login', async t => {
     formatOutput(loginOutput)
   );
 
-  // Save the new token
   const auth = await fs.readJSON(getConfigAuthPath());
-
-  token = auth.token;
-
-  t.is(typeof token, 'string');
+  t.is(auth.token, token);
 });
 
 test('deploy using only now.json with `redirects` defined', async t => {
@@ -2340,11 +2372,12 @@ test('change user', async t => {
 
   await createUser();
 
-  await execute(['login', email, '--debug'], { stdio: 'inherit' });
+  await execute(['login', email, '--api', LOGIN_API_URL, '--debug'], {
+    stdio: 'inherit',
+  });
 
   const auth = await fs.readJSON(getConfigAuthPath());
-
-  token = auth.token;
+  t.is(auth.token, token);
 
   const { stdout: nextUser } = await execute(['whoami']);
 
