@@ -839,9 +839,9 @@ export default class DevServer {
 
     // Configure the server to forward WebSocket "upgrade" events to the proxy.
     this.server.on('upgrade', (req, socket, head) => {
-      this.proxy.ws(req, socket, head, {
-        target: `http://localhost:${this.devProcessPort}`,
-      });
+      const target = `http://localhost:${this.devProcessPort}`;
+      this.output.debug(`Detected upgrade event, proxying to ${target}`);
+      this.proxy.ws(req, socket, head, { target });
     });
 
     const devCommandPromise = this.runDevCommand();
@@ -916,6 +916,7 @@ export default class DevServer {
     }
 
     ops.push(close(this.server));
+    ops.push(close(this.proxy));
 
     if (this.watcher) {
       debug(`Closing file watcher`);
@@ -1560,6 +1561,7 @@ export default class DevServer {
           req,
           res,
           `http://localhost:${port}`,
+          this.proxy,
           this.output,
           false
         );
@@ -1940,7 +1942,7 @@ function serveStaticFile(
   });
 }
 
-function close(server: http.Server): Promise<void> {
+function close(server: http.Server | httpProxy): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((err?: Error) => {
       if (err) {
