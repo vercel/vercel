@@ -1096,7 +1096,7 @@ test(
   )
 );
 
-test('[vercel dev] add a `package.json` to trigger `@now/static-build`', async t => {
+test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async t => {
   const directory = fixture('trigger-static-build');
 
   await fs.unlink(join(directory, 'package.json')).catch(() => null);
@@ -1208,11 +1208,11 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
 test('[vercel dev] do not rebuild for changes in the output directory', async t => {
   const directory = fixture('output-is-source');
 
-  // Pack the builder and set it in the now.json
+  // Pack the builder and set it in the `vercel.json`
   const builder = await getPackedBuilderPath('now-static-build');
 
   await fs.writeFile(
-    join(directory, 'now.json'),
+    join(directory, 'vercel.json'),
     JSON.stringify({
       builds: [
         {
@@ -1302,7 +1302,7 @@ test(
 );
 
 test(
-  '[vercel dev] Use `@now/python` with Flask requirements.txt',
+  '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
     const year = new Date().getFullYear();
