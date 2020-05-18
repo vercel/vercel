@@ -432,7 +432,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   async function nowEnvAddFromStdin() {
     const now = execa(
       binaryPath,
-      ['env', 'add', 'MY_STDIN_VAR', 'preview', ...defaultArgs],
+      ['env', 'add', 'MY_STDIN_VAR', 'development', ...defaultArgs],
       {
         reject: false,
         cwd: target,
