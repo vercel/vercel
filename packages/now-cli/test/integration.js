@@ -149,12 +149,14 @@ function mockLoginApi(req, res) {
   }
 }
 
-const LOGIN_API_PORT = 2999;
-const LOGIN_API_URL = `http://localhost:${LOGIN_API_PORT}`;
-const LOGIN_API_SERVER = require('http')
+let loginApiUrl = '';
+const loginApiServer = require('http')
   .createServer(mockLoginApi)
-  .listen(LOGIN_API_PORT);
-console.log(`[mock-login-server] Listening on ${LOGIN_API_URL}`);
+  .listen(0, () => {
+    const { port } = loginApiServer.address();
+    loginApiUrl = `http://localhost:${port}`;
+    console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
+  });
 
 const execute = (args, options) =>
   execa(binaryPath, [...defaultArgs, ...args], {
@@ -236,9 +238,9 @@ test.before(async () => {
 });
 
 test.after.always(async () => {
-  if (LOGIN_API_SERVER) {
+  if (loginApiServer) {
     // Stop mock server
-    LOGIN_API_SERVER.close();
+    loginApiServer.close();
   }
 
   // Make sure the token gets revoked
@@ -257,7 +259,7 @@ test('login', async t => {
     'login',
     email,
     '--api',
-    LOGIN_API_URL,
+    loginApiUrl,
     ...defaultArgs,
   ]);
 
@@ -2371,7 +2373,7 @@ test('change user', async t => {
 
   await createUser();
 
-  await execute(['login', email, '--api', LOGIN_API_URL, '--debug'], {
+  await execute(['login', email, '--api', loginApiUrl, '--debug'], {
     stdio: 'inherit',
   });
 
