@@ -250,10 +250,6 @@ test.after.always(async () => {
 test('login', async t => {
   t.timeout(ms('1m'));
 
-  // Delete the current token
-  const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
-
   const loginOutput = await execa(binaryPath, [
     'login',
     email,
