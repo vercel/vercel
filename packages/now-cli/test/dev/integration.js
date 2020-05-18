@@ -376,14 +376,14 @@ test.afterEach(async () => {
 });
 
 test(
-  '[now dev] validate routes that use `check: true`',
+  '[vercel dev] validate routes that use `check: true`',
   testFixtureStdio('routes-check-true', async testPath => {
     await testPath(200, '/blog/post', 'Blog Home');
   })
 );
 
 test(
-  '[now dev] validate routes that use `check: true` and `status` code',
+  '[vercel dev] validate routes that use `check: true` and `status` code',
   testFixtureStdio('routes-check-true-status', async testPath => {
     await testPath(403, '/secret');
     await testPath(200, '/post', 'This is a post.');
@@ -392,7 +392,7 @@ test(
 );
 
 test(
-  '[now dev] handles miss after route',
+  '[vercel dev] handles miss after route',
   testFixtureStdio('handle-miss-after-route', async testPath => {
     await testPath(200, '/post', 'Blog Post Page', {
       test: '1',
@@ -402,7 +402,7 @@ test(
 );
 
 test(
-  '[now dev] handles miss after rewrite',
+  '[vercel dev] handles miss after rewrite',
   testFixtureStdio('handle-miss-after-rewrite', async testPath => {
     await testPath(200, '/post', 'Blog Post Page', {
       test: '1',
@@ -420,7 +420,7 @@ test(
 );
 /*
 test(
-  '[now dev] displays directory listing after miss',
+  '[vercel dev] displays directory listing after miss',
   testFixtureStdio('handle-miss-display-dir-list', async (testPath) => {
     await testPath(404, '/post', /one.html/m);
   })
@@ -428,7 +428,7 @@ test(
 */
 
 test(
-  '[now dev] does not display directory listing after 404',
+  '[vercel dev] does not display directory listing after 404',
   testFixtureStdio('handle-miss-hide-dir-list', async testPath => {
     await testPath(404, '/post');
     await testPath(200, '/post/one.html', 'First Post');
@@ -436,7 +436,7 @@ test(
 );
 
 test(
-  '[now dev] should preserve query string even after miss phase',
+  '[vercel dev] should preserve query string even after miss phase',
   testFixtureStdio('handle-miss-querystring', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/echo/first/second', 'a=first,b=second');
@@ -445,28 +445,28 @@ test(
 );
 
 test(
-  '[now dev] handles hit after handle: filesystem',
+  '[vercel dev] handles hit after handle: filesystem',
   testFixtureStdio('handle-hit-after-fs', async testPath => {
     await testPath(200, '/blog.html', 'Blog Page', { test: '1' });
   })
 );
 
 test(
-  '[now dev] handles hit after dest',
+  '[vercel dev] handles hit after dest',
   testFixtureStdio('handle-hit-after-dest', async testPath => {
     await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
 test(
-  '[now dev] handles hit after rewrite',
+  '[vercel dev] handles hit after rewrite',
   testFixtureStdio('handle-hit-after-rewrite', async testPath => {
     await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
 test(
-  '[now dev] should serve the public directory and api functions',
+  '[vercel dev] should serve the public directory and api functions',
   testFixtureStdio('public-and-api', async testPath => {
     await testPath(200, '/', 'This is the home page');
     await testPath(200, '/about.html', 'This is the about page');
@@ -478,7 +478,7 @@ test(
 );
 
 test(
-  '[now dev] should allow user rewrites for path segment files',
+  '[vercel dev] should allow user rewrites for path segment files',
   testFixtureStdio('test-zero-config-rewrite', async testPath => {
     await testPath(404, '/');
     await testPath(200, '/echo/1', '{"id":"1"}', {
@@ -490,7 +490,7 @@ test(
   })
 );
 
-test('[now dev] validate builds', async t => {
+test('[vercel dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);
 
@@ -501,7 +501,7 @@ test('[now dev] validate builds', async t => {
   );
 });
 
-test('[now dev] validate routes', async t => {
+test('[vercel dev] validate routes', async t => {
   const directory = fixture('invalid-routes');
   const output = await exec(directory);
 
@@ -512,7 +512,7 @@ test('[now dev] validate routes', async t => {
   );
 });
 
-test('[now dev] validate cleanUrls', async t => {
+test('[vercel dev] validate cleanUrls', async t => {
   const directory = fixture('invalid-clean-urls');
   const output = await exec(directory);
 
@@ -520,7 +520,7 @@ test('[now dev] validate cleanUrls', async t => {
   t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/m);
 });
 
-test('[now dev] validate trailingSlash', async t => {
+test('[vercel dev] validate trailingSlash', async t => {
   const directory = fixture('invalid-trailing-slash');
   const output = await exec(directory);
 
@@ -531,7 +531,7 @@ test('[now dev] validate trailingSlash', async t => {
   );
 });
 
-test('[now dev] validate rewrites', async t => {
+test('[vercel dev] validate rewrites', async t => {
   const directory = fixture('invalid-rewrites');
   const output = await exec(directory);
 
@@ -542,7 +542,7 @@ test('[now dev] validate rewrites', async t => {
   );
 });
 
-test('[now dev] validate redirects', async t => {
+test('[vercel dev] validate redirects', async t => {
   const directory = fixture('invalid-redirects');
   const output = await exec(directory);
 
@@ -553,7 +553,7 @@ test('[now dev] validate redirects', async t => {
   );
 });
 
-test('[now dev] validate headers', async t => {
+test('[vercel dev] validate headers', async t => {
   const directory = fixture('invalid-headers');
   const output = await exec(directory);
 
@@ -564,7 +564,7 @@ test('[now dev] validate headers', async t => {
   );
 });
 
-test('[now dev] validate mixed routes and rewrites', async t => {
+test('[vercel dev] validate mixed routes and rewrites', async t => {
   const directory = fixture('invalid-mixed-routes-rewrites');
   const output = await exec(directory);
 
@@ -573,7 +573,7 @@ test('[now dev] validate mixed routes and rewrites', async t => {
 });
 
 // Test seems unstable: It won't return sometimes.
-test('[now dev] validate env var names', async t => {
+test('[vercel dev] validate env var names', async t => {
   const directory = fixture('invalid-env-var-name');
   const { dev } = await testFixture(directory, { stdio: 'pipe' });
 
@@ -611,7 +611,7 @@ test('[now dev] validate env var names', async t => {
 });
 
 test(
-  '[now dev] test rewrites with segments serve correct content',
+  '[vercel dev] test rewrites with segments serve correct content',
   testFixtureStdio('test-rewrites-with-segments', async testPath => {
     await testPath(200, '/api/users/first', 'first');
     await testPath(200, '/api/fourty-two', '42');
@@ -622,14 +622,14 @@ test(
 );
 
 test(
-  '[now dev] test rewrites serve correct content',
+  '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async testPath => {
     await testPath(200, '/hello', 'Hello World');
   })
 );
 
 test(
-  '[now dev] test rewrites and redirects is case sensitive',
+  '[vercel dev] test rewrites and redirects is case sensitive',
   testFixtureStdio('test-routing-case-sensitive', async testPath => {
     await testPath(200, '/Path', 'UPPERCASE');
     await testPath(200, '/path', 'lowercase');
@@ -643,7 +643,7 @@ test(
 );
 
 test(
-  '[now dev] test cleanUrls serve correct content',
+  '[vercel dev] test cleanUrls serve correct content',
   testFixtureStdio('test-clean-urls', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/about', 'About Page');
@@ -669,7 +669,7 @@ test(
 );
 
 test(
-  '[now dev] test cleanUrls and trailingSlash serve correct content',
+  '[vercel dev] test cleanUrls and trailingSlash serve correct content',
   testFixtureStdio('test-clean-urls-trailing-slash', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/about/', 'About Page');
@@ -696,7 +696,7 @@ test(
 );
 
 test(
-  '[now dev] test cors headers work with OPTIONS',
+  '[vercel dev] test cors headers work with OPTIONS',
   testFixtureStdio('test-cors-routes', async testPath => {
     const headers = {
       'Access-Control-Allow-Origin': '*',
@@ -715,7 +715,7 @@ test(
 );
 
 test(
-  '[now dev] test trailingSlash true serve correct content',
+  '[vercel dev] test trailingSlash true serve correct content',
   testFixtureStdio('test-trailing-slash', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/index.html', 'Index Page');
@@ -737,7 +737,7 @@ test(
 );
 
 test(
-  '[now dev] test trailingSlash false serve correct content',
+  '[vercel dev] test trailingSlash false serve correct content',
   testFixtureStdio('test-trailing-slash-false', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/index.html', 'Index Page');
@@ -764,7 +764,7 @@ test(
 );
 
 test(
-  '[now dev] throw when invalid builder routes detected',
+  '[vercel dev] throw when invalid builder routes detected',
   testFixtureStdio(
     'invalid-builder-routes',
     async testPath => {
@@ -775,7 +775,7 @@ test(
 );
 
 test(
-  '[now dev] 00-list-directory',
+  '[vercel dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async testPath => {
     await testPath(200, '/', /Files within/m);
     await testPath(200, '/', /test[0-3]\.txt/m);
@@ -783,14 +783,14 @@ test(
 );
 
 test(
-  '[now dev] 01-node',
+  '[vercel dev] 01-node',
   testFixtureStdio('01-node', async testPath => {
     await testPath(200, '/', /A simple deployment with the Now API!/m);
   })
 );
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
-test('[now dev] 02-angular-node', async t => {
+test('[vercel dev] 02-angular-node', async t => {
   if (shouldSkip(t, '02-angular-node', '10.x')) return;
 
   const directory = fixture('02-angular-node');
@@ -805,7 +805,7 @@ test('[now dev] 02-angular-node', async t => {
       stderr += data.toString();
     });
 
-    // start `now dev` detached in child_process
+    // start `vercel dev` detached in child_process
     dev.unref();
 
     const response = await fetchWithRetry(`http://localhost:${port}`, 180);
@@ -828,7 +828,7 @@ test('[now dev] 02-angular-node', async t => {
 });
 
 test(
-  '[now dev] 03-aurelia',
+  '[vercel dev] 03-aurelia',
   testFixtureStdio(
     '03-aurelia',
     async testPath => {
@@ -839,34 +839,34 @@ test(
 );
 
 test(
-  '[now dev] 04-create-react-app',
+  '[vercel dev] 04-create-react-app',
   testFixtureStdio('04-create-react-app', async testPath => {
     await testPath(200, '/', /React App/m);
   })
 );
 /*
 test(
-  '[now dev] 05-gatsby',
+  '[vercel dev] 05-gatsby',
   testFixtureStdio('05-gatsby', async testPath => {
     await testPath(200, '/', /Gatsby Default Starter/m);
   })
 );
 */
 test(
-  '[now dev] 06-gridsome',
+  '[vercel dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async testPath => {
     await testPath(200, '/');
   })
 );
 
 test(
-  '[now dev] 07-hexo-node',
+  '[vercel dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async testPath => {
     await testPath(200, '/', /Hexo \+ Node.js API/m);
   })
 );
 
-test('[now dev] 08-hugo', async t => {
+test('[vercel dev] 08-hugo', async t => {
   if (process.platform === 'darwin') {
     // Update PATH to find the Hugo executable installed via GH Actions
     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
@@ -883,14 +883,14 @@ test('[now dev] 08-hugo', async t => {
 });
 
 test(
-  '[now dev] 10-nextjs-node',
+  '[vercel dev] 10-nextjs-node',
   testFixtureStdio('10-nextjs-node', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
   })
 );
 
 test(
-  '[now dev] 12-polymer-node',
+  '[vercel dev] 12-polymer-node',
   testFixtureStdio(
     '12-polymer-node',
     async testPath => {
@@ -901,7 +901,7 @@ test(
 );
 
 test(
-  '[now dev] 13-preact-node',
+  '[vercel dev] 13-preact-node',
   testFixtureStdio(
     '13-preact-node',
     async testPath => {
@@ -912,7 +912,7 @@ test(
 );
 
 test(
-  '[now dev] 14-svelte-node',
+  '[vercel dev] 14-svelte-node',
   testFixtureStdio(
     '14-svelte-node',
     async testPath => {
@@ -923,7 +923,7 @@ test(
 );
 
 test(
-  '[now dev] 16-vue-node',
+  '[vercel dev] 16-vue-node',
   testFixtureStdio(
     '16-vue-node',
     async testPath => {
@@ -934,7 +934,7 @@ test(
 );
 
 test(
-  '[now dev] 17-vuepress-node',
+  '[vercel dev] 17-vuepress-node',
   testFixtureStdio(
     '17-vuepress-node',
     async testPath => {
@@ -945,7 +945,7 @@ test(
 );
 
 test(
-  '[now dev] double slashes redirect',
+  '[vercel dev] double slashes redirect',
   testFixtureStdio(
     '01-node',
     async (_testPath, t, port) => {
@@ -993,7 +993,7 @@ test(
 );
 
 test(
-  '[now dev] 18-marko',
+  '[vercel dev] 18-marko',
   testFixtureStdio(
     '18-marko',
     async testPath => {
@@ -1004,7 +1004,7 @@ test(
 );
 
 test(
-  '[now dev] 19-mithril',
+  '[vercel dev] 19-mithril',
   testFixtureStdio(
     '19-mithril',
     async testPath => {
@@ -1015,7 +1015,7 @@ test(
 );
 
 test(
-  '[now dev] 20-riot',
+  '[vercel dev] 20-riot',
   testFixtureStdio(
     '20-riot',
     async testPath => {
@@ -1026,7 +1026,7 @@ test(
 );
 
 test(
-  '[now dev] 21-charge',
+  '[vercel dev] 21-charge',
   testFixtureStdio(
     '21-charge',
     async testPath => {
@@ -1037,7 +1037,7 @@ test(
 );
 
 test(
-  '[now dev] 22-brunch',
+  '[vercel dev] 22-brunch',
   testFixtureStdio(
     '22-brunch',
     async testPath => {
@@ -1048,7 +1048,7 @@ test(
 );
 
 test(
-  '[now dev] 23-docusaurus',
+  '[vercel dev] 23-docusaurus',
   testFixtureStdio(
     '23-docusaurus',
     async testPath => {
@@ -1058,7 +1058,7 @@ test(
   )
 );
 
-test('[now dev] 24-ember', async t => {
+test('[vercel dev] 24-ember', async t => {
   if (shouldSkip(t, '24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
   const tester = await testFixtureStdio(
@@ -1073,7 +1073,7 @@ test('[now dev] 24-ember', async t => {
 });
 
 test(
-  '[now dev] temporary directory listing',
+  '[vercel dev] temporary directory listing',
   testFixtureStdio(
     'temporary-directory-listing',
     async (_testPath, t, port) => {
@@ -1105,7 +1105,7 @@ test(
   )
 );
 
-test('[now dev] add a `package.json` to trigger `@now/static-build`', async t => {
+test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async t => {
   const directory = fixture('trigger-static-build');
 
   await fs.unlink(join(directory, 'package.json')).catch(() => null);
@@ -1148,14 +1148,14 @@ test('[now dev] add a `package.json` to trigger `@now/static-build`', async t =>
   await tester(t);
 });
 
-test('[now dev] no build matches warning', async t => {
+test('[vercel dev] no build matches warning', async t => {
   const directory = fixture('no-build-matches');
   const { dev } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   try {
-    // start `now dev` detached in child_process
+    // start `vercel dev` detached in child_process
     dev.unref();
 
     dev.stderr.setEncoding('utf8');
@@ -1174,14 +1174,14 @@ test('[now dev] no build matches warning', async t => {
 });
 
 test(
-  '[now dev] do not recursivly check the path',
+  '[vercel dev] do not recursivly check the path',
   testFixtureStdio('handle-filesystem-missing', async testPath => {
     await testPath(200, '/', /hello/m);
     await testPath(404, '/favicon.txt');
   })
 );
 
-test('[now dev] render warning for empty cwd dir', async t => {
+test('[vercel dev] render warning for empty cwd dir', async t => {
   const directory = fixture('empty');
   const { dev, port } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -1214,14 +1214,14 @@ test('[now dev] render warning for empty cwd dir', async t => {
   }
 });
 
-test('[now dev] do not rebuild for changes in the output directory', async t => {
+test('[vercel dev] do not rebuild for changes in the output directory', async t => {
   const directory = fixture('output-is-source');
 
-  // Pack the builder and set it in the now.json
+  // Pack the builder and set it in the `vercel.json`
   const builder = await getPackedBuilderPath('now-static-build');
 
   await fs.writeFile(
-    join(directory, 'now.json'),
+    join(directory, 'vercel.json'),
     JSON.stringify({
       builds: [
         {
@@ -1271,14 +1271,14 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
 });
 
 test(
-  '[now dev] 25-nextjs-src-dir',
+  '[vercel dev] 25-nextjs-src-dir',
   testFixtureStdio('25-nextjs-src-dir', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
   })
 );
 
 test(
-  '[now dev] 26-nextjs-secrets',
+  '[vercel dev] 26-nextjs-secrets',
   testFixtureStdio(
     '26-nextjs-secrets',
     async testPath => {
@@ -1290,7 +1290,7 @@ test(
 );
 
 test(
-  '[now dev] 27-zero-config-env',
+  '[vercel dev] 27-zero-config-env',
   testFixtureStdio(
     '27-zero-config-env',
     async testPath => {
@@ -1302,7 +1302,7 @@ test(
 );
 
 test(
-  '[now dev] 28-vercel-json-and-ignore',
+  '[vercel dev] 28-vercel-json-and-ignore',
   testFixtureStdio('28-vercel-json-and-ignore', async testPath => {
     await testPath(200, '/api/one', 'One');
     await testPath(404, '/api/two');
@@ -1311,7 +1311,7 @@ test(
 );
 
 test(
-  '[now dev] Use `@now/python` with Flask requirements.txt',
+  '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
     const year = new Date().getFullYear();
@@ -1322,13 +1322,9 @@ test(
 );
 
 test(
-  '[now dev] Use runtime from the functions property',
-  testFixtureStdio(
-    'custom-runtime',
-    async testPath => {
-      await testPath(200, `/api/user`, /Hello, from Bash!/m);
-      await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
-    },
-    { skipDeploy: true }
-  )
+  '[vercel dev] Use custom runtime from the "functions" property',
+  testFixtureStdio('custom-runtime', async testPath => {
+    await testPath(200, `/api/user`, /Hello, from Bash!/m);
+    await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
+  })
 );
