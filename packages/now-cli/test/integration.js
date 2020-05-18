@@ -438,7 +438,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
         cwd: target,
       }
     );
-    now.stdin.end('MY_STDIN_VALUE');
+    now.stdin.end('{"expect":"quotes"}');
     const { exitCode, stderr, stdout } = await now;
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
@@ -488,7 +488,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
 
     const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
     t.is(myStdinVars.length, 1);
-    t.regex(myStdinVars.join('\n'), /preview/gm);
+    t.regex(myStdinVars.join('\n'), /development/gm);
 
     const vercelVars = lines.filter(line => line.includes('VERCEL_URL'));
     t.is(vercelVars.length, 3);
@@ -513,6 +513,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
     const lines = new Set(contents.split('\n'));
     t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
+    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
     t.true(lines.has('VERCEL_URL=""'));
   }
 
@@ -534,7 +535,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(apiRes.status, 200, formatOutput({ stderr, stdout }));
     const apiJson = await apiRes.json();
     t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
-    t.is(apiJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+    t.is(apiJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
     t.is(apiJson['VERCEL_URL'], host);
 
     const homeUrl = `https://${host}`;
@@ -543,7 +544,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(homeRes.status, 200, formatOutput({ stderr, stdout }));
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
-    t.is(homeJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
+    t.is(homeJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
     t.is(apiJson['VERCEL_URL'], host);
   }
 
@@ -572,7 +573,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   async function nowEnvRemoveWithArgs() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
-      ['env', 'rm', 'MY_STDIN_VAR', 'preview', '-y', ...defaultArgs],
+      ['env', 'rm', 'MY_STDIN_VAR', 'development', '-y', ...defaultArgs],
       {
         reject: false,
         cwd: target,
