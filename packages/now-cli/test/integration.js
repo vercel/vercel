@@ -151,7 +151,7 @@ function mockLoginApi(req, res) {
 
 const LOGIN_API_PORT = 2999;
 const LOGIN_API_URL = `http://localhost:${LOGIN_API_PORT}`;
-require('http')
+const LOGIN_API_SERVER = require('http')
   .createServer(mockLoginApi)
   .listen(LOGIN_API_PORT);
 console.log(`[mock-login-server] Listening on ${LOGIN_API_URL}`);
@@ -236,15 +236,18 @@ test.before(async () => {
 });
 
 test.after.always(async () => {
+  if (LOGIN_API_SERVER) {
+    // Stop mock server
+    LOGIN_API_SERVER.close();
+  }
+
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
 
-  if (!tmpDir) {
-    return;
+  if (tmpDir) {
+    // Remove config directory entirely
+    tmpDir.removeCallback();
   }
-
-  // Remove config directory entirely
-  tmpDir.removeCallback();
 });
 
 test('login', async t => {
