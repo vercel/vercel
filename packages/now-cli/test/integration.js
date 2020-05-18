@@ -535,7 +535,6 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(apiRes.status, 200, formatOutput({ stderr, stdout }));
     const apiJson = await apiRes.json();
     t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
-    t.is(apiJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
     t.is(apiJson['VERCEL_URL'], host);
 
     const homeUrl = `https://${host}`;
