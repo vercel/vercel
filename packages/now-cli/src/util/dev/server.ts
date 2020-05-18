@@ -916,7 +916,6 @@ export default class DevServer {
     }
 
     ops.push(close(this.server));
-    ops.push(close(this.proxy));
 
     if (this.watcher) {
       debug(`Closing file watcher`);
