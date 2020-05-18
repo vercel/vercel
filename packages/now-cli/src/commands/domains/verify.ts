@@ -3,14 +3,13 @@ import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
 import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import verifyDomain from '../../util/domains/verify-domain';
-import { getPkgName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -48,7 +47,7 @@ export default async function verify(
 
   if (!domainName) {
     output.error(
-      `${cmd(`${getPkgName()} domains verify <domain>`)} expects one argument`
+      `${getCommandName(`domains verify <domain>`)} expects one argument`
     );
     return 1;
   }
@@ -56,7 +55,7 @@ export default async function verify(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getPkgName()} domains verify <domain>`
+        `${getCommandName('domains verify <domain>')}`
       )}`
     );
     return 1;
@@ -67,7 +66,7 @@ export default async function verify(
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
-    output.log(`Run ${cmd(`${getPkgName()} domains ls`)} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -77,7 +76,7 @@ export default async function verify(
         contextName
       )}`
     );
-    output.log(`Run ${cmd(`${getPkgName()} domains ls`)} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
 
@@ -114,8 +113,8 @@ export default async function verify(
       )}\n\n`
     );
     output.print(
-      `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${cmd(
-        `${getPkgName()} domains verify <domain>`
+      `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${getCommandName(
+        `domains verify <domain>`
       )}.\n`
     );
     output.print(
@@ -140,8 +139,8 @@ export default async function verify(
     )} was verified using DNS TXT record. ${verifyStamp()}`
   );
   output.print(
-    `  You can verify with nameservers too. Run ${cmd(
-      `${getPkgName()} domains inspect ${domain.name}`
+    `  You can verify with nameservers too. Run ${getCommandName(
+      `domains inspect ${domain.name}`
     )} to find out the intended set.\n`
   );
   return 0;

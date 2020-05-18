@@ -3,12 +3,12 @@
   "builds": [
     {
       "src": "/api/go-one/one.go",
-      "use": "@now/go",
+      "use": "@vercel/go",
       "config": { "parallel": true }
     },
     {
       "src": "/api/go-two/two.go",
-      "use": "@now/go",
+      "use": "@vercel/go",
       "config": { "parallel": true }
     }
   ],

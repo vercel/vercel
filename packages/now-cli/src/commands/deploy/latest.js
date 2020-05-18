@@ -4,6 +4,7 @@ import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
+import { fileNameSymbol } from '@vercel/client';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
@@ -54,7 +55,7 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { readLocalConfig } from '../../util/config/files';
-import { getPkgName } from '../../util/pkg-name.ts';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -122,7 +123,10 @@ const printDeploymentStatus = async (
       // but fallback to the first alias in the list
       const mainAlias =
         aliasList.find(
-          alias => !alias.endsWith('.now.sh') && !isWildcardAlias(alias)
+          alias =>
+            !alias.endsWith('.now.sh') &&
+            !alias.endsWith('.vercel.app') &&
+            !isWildcardAlias(alias)
         ) || aliasList[0];
 
       isWildcard = isWildcardAlias(mainAlias);
@@ -370,7 +374,7 @@ export default async function main(
       output.print(
         `${prependEmoji(
           `The ${highlight(
-            'vercel.json'
+            localConfig[fileNameSymbol]
           )} file should be inside of the provided root directory.`,
           emoji('warning')
         )}\n`
@@ -384,7 +388,7 @@ export default async function main(
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} is deprecated (https://zeit.ink/5F)`,
         emoji('warning')
       )}\n`
@@ -401,7 +405,7 @@ export default async function main(
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
     error(
       `The ${code('env')} property in ${highlight(
-        'vercel.json'
+        localConfig[fileNameSymbol]
       )} needs to be an object`
     );
     return 1;
@@ -411,7 +415,7 @@ export default async function main(
     if (!isObject(localConfig.build)) {
       error(
         `The ${code('build')} property in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} needs to be an object`
       );
       return 1;
@@ -423,7 +427,7 @@ export default async function main(
     ) {
       error(
         `The ${code('build.env')} property in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} needs to be an object`
       );
       return 1;
@@ -634,11 +638,11 @@ export default async function main(
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment);
+        handleCreateDeployError(output, deployment, localConfig);
         return 1;
       }
 
-      handleCreateDeployError(output, purchase);
+      handleCreateDeployError(output, purchase, localConfig);
       return 1;
     }
 
@@ -658,15 +662,15 @@ export default async function main(
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, err);
+      handleCreateDeployError(output, err, localConfig);
       return 1;
     }
 
     if (err instanceof BuildError) {
       output.error('Build failed');
       output.error(
-        `Check your logs at https://${now.url}/_logs or run ${code(
-          `${getPkgName()} logs ${now.url}`,
+        `Check your logs at https://${now.url}/_logs or run ${getCommandName(
+          `logs ${now.url}`,
           {
             // Backticks are interpreted as part of the URL, causing CMD+Click
             // behavior to fail in editors like VSCode.
@@ -704,7 +708,7 @@ export default async function main(
   );
 }
 
-function handleCreateDeployError(output, error) {
+function handleCreateDeployError(output, error, localConfig) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
     return 1;
@@ -733,7 +737,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} – please remove it.`
       );
 
@@ -758,7 +762,7 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} in ${highlight(
-          'vercel.json'
+          localConfig[fileNameSymbol]
         )} can only be of type ${code(title(params.type))}.`
       );
 
@@ -769,7 +773,7 @@ function handleCreateDeployError(output, error) {
 
     output.error(
       `Failed to validate ${highlight(
-        'vercel.json'
+        localConfig[fileNameSymbol]
       )}: ${message}\nDocumentation: ${link}`
     );
 
@@ -797,7 +801,7 @@ function handleCreateDeployError(output, error) {
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
     output.note(
-      `Run ${code(`${getPkgName()} upgrade`)} to increase your builds limit.`
+      `Run ${getCommandName('upgrade')} to increase your builds limit.`
     );
     return 1;
   }

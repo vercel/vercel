@@ -1,10 +1,10 @@
 {
   "version": 2,
   "builds": [
-    { "src": "some-build.sh", "use": "@now/static-build" },
-    { "src": "node10sh/build.sh", "use": "@now/static-build" },
-    { "src": "node12sh/build.sh", "use": "@now/static-build" },
-    { "src": "subdirectory/some-build.sh", "use": "@now/static-build" }
+    { "src": "some-build.sh", "use": "@vercel/static-build" },
+    { "src": "node10sh/build.sh", "use": "@vercel/static-build" },
+    { "src": "node12sh/build.sh", "use": "@vercel/static-build" },
+    { "src": "subdirectory/some-build.sh", "use": "@vercel/static-build" }
   ],
   "probes": [
     { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },

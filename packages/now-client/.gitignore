@@ -2,3 +2,5 @@ lib
 *.html
 node_modules
 *.log
+
+!tests/fixtures/nowignore/node_modules

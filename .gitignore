@@ -6,11 +6,10 @@ npm-debug.log
 yarn-error.log
 .nyc_output
 coverage
+coverage.lcov
 *.swp
 *.bak
 *.tgz
-packages/now-cli/.builders
-packages/now-cli/assets
 packages/now-cli/src/util/dev/templates/*.ts
 packages/now-cli/src/util/constants.ts
 packages/now-cli/test/**/yarn.lock

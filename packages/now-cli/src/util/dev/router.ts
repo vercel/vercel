@@ -4,8 +4,8 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
-import { isHandler, Route, HandleValue } from '@now/routing-utils';
+import { HttpHeadersConfig, RouteResult } from './types';
+import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
@@ -48,10 +48,10 @@ export function getRoutesTypes(routes: Route[] = []) {
 export async function devRouter(
   reqUrl: string = '/',
   reqMethod?: string,
-  routes?: RouteConfig[],
+  routes?: Route[],
   devServer?: DevServer,
   previousHeaders?: HttpHeadersConfig,
-  missRoutes?: RouteConfig[],
+  missRoutes?: Route[],
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
@@ -79,7 +79,8 @@ export async function devRouter(
       }
 
       const keys: string[] = [];
-      const matcher = PCRE(`%${src}%i`, keys);
+      const flags = devServer && devServer.isCaseSensitive() ? '' : 'i';
+      const matcher = PCRE(`%${src}%${flags}`, keys);
       const match =
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 

@@ -2,7 +2,7 @@ import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
 import { Output } from '../output';
-import { Framework } from '@now/frameworks';
+import { Framework } from '@vercel/frameworks';
 import { isSettingValue } from '../is-setting-value';
 
 export interface ProjectSettings {
