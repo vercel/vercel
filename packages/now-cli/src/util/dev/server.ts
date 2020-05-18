@@ -919,7 +919,7 @@ export default class DevServer {
 
     if (this.watcher) {
       debug(`Closing file watcher`);
-      this.watcher.close();
+      ops.push(this.watcher.close());
     }
 
     if (this.updateBuildersPromise) {
