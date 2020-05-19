@@ -14,7 +14,6 @@ import { getDistTag } from '../get-dist-tag';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
-import { getBundledBuilders } from './get-bundled-builders';
 
 type CliPackageJson = typeof cliPkg;
 
@@ -109,13 +108,12 @@ export function filterPackage(
   const parsed = npa(builderSpec);
   const parsedVersion = parseVersionSafe(parsed.rawSpec);
 
-  // If it's a builder that is part of Vercel CLI's `dependencies`
-  // then the builder is already installed into `node_modules`
+  // Skip install of Runtimes that are part of Vercel CLI's `dependencies`
   if (isBundledBuilder(parsed, cliPkg)) {
     return false;
   }
 
-  // Skip install of already installed Runtime
+  // Skip install of already installed Runtime with exact version match
   if (
     parsed.name &&
     parsed.type === 'version' &&
@@ -125,11 +123,12 @@ export function filterPackage(
   ) {
     return false;
   }
+
+  // Skip install of already installed Runtime with tag compatible match
   if (
     parsed.name &&
     parsed.type === 'tag' &&
     parsed.fetchSpec === distTag &&
-    getBundledBuilders().includes(parsed.name) &&
     buildersPkg.dependencies
   ) {
     const parsedInstalled = npa(
@@ -149,6 +148,7 @@ export function filterPackage(
       return false;
     }
   }
+
   return true;
 }
 
@@ -179,11 +179,6 @@ export async function installBuilders(
     ...buildersPkgBefore.dependencies,
   };
 
-  packages.push(
-    getBuildUtils(packages, 'vercel'),
-    getBuildUtils(packages, 'now')
-  );
-
   // Filter out any packages that come packaged with Vercel CLI
   const packagesToInstall = packages.filter(p =>
     filterPackage(p, distTag, buildersPkgBefore, cliPkg)
@@ -193,6 +188,11 @@ export async function installBuilders(
     output.debug('No Runtimes need to be installed');
     return;
   }
+
+  packagesToInstall.push(
+    getBuildUtils(packages, 'vercel'),
+    getBuildUtils(packages, 'now')
+  );
 
   await npmInstall(builderDir, output, packagesToInstall, false);
 
@@ -276,7 +276,7 @@ export async function updateBuilders(
   });
 
   if (packagesToUpdate.length > 0) {
-    packages.push(
+    packagesToUpdate.push(
       getBuildUtils(packages, 'vercel'),
       getBuildUtils(packages, 'now')
     );
