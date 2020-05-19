@@ -112,7 +112,6 @@ export default async function pull(
 
 function escapeValue(value: string) {
   return value
-    .replace(new RegExp('\\"', 'g'), '\\"') // escape quotes
     .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
     .replace(new RegExp('\r', 'g'), '\\r'); // combine newlines (windows) into one line
 }
