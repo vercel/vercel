@@ -48,7 +48,7 @@ import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getPkgName } from './util/pkg-name.ts';
+import { getCommandName, getTitleName } from './util/pkg-name.ts';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -151,20 +151,20 @@ const main = async argv_ => {
         `${chalk.bgRed('UPDATE AVAILABLE')} ` +
           `Run ${cmd(
             await getUpdateCommand()
-          )} to install ${getPkgName()} CLI ${update.latest}`
+          )} to install ${getTitleName()} CLI ${update.latest}`
       )
     );
 
     console.log(
       info(
-        `Changelog: https://github.com/zeit/now/releases/tag/now@${update.latest}`
+        `Changelog: https://github.com/zeit/now/releases/tag/vercel@${update.latest}`
       )
     );
   }
 
   output.print(
     `${chalk.grey(
-      `${getPkgName()} CLI ${pkg.version}${
+      `${getTitleName()} CLI ${pkg.version}${
         targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
       }${
         pkg.version.includes('canary') || targetOrSubcommand === 'dev'
@@ -322,7 +322,9 @@ const main = async argv_ => {
       console.error(
         error(
           `The content of "${hp(VERCEL_AUTH_CONFIG_PATH)}" is invalid. ` +
-            `No \`token\` property found inside. Run \`${getPkgName()} login\` to authorize.`
+            `No \`token\` property found inside. Run ${getCommandName(
+              'login'
+            )} to authorize.`
         )
       );
       return 1;
@@ -464,7 +466,7 @@ const main = async argv_ => {
         error({
           message:
             'No existing credentials found. Please run ' +
-            `${param(`${getPkgName()} login`)} or pass ${param('--token')}`,
+            `${getCommandName('login')} or pass ${param('--token')}`,
           slug: 'no-credentials-found',
         })
       );

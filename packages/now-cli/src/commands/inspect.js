@@ -4,7 +4,6 @@ import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
 import routesList from '../util/output/routes';
 import indent from '../util/output/indent';
-import cmd from '../util/output/cmd.ts';
 import createOutput from '../util/output';
 import Now from '../util';
 import logo from '../util/output/logo';
@@ -13,7 +12,7 @@ import { handleError } from '../util/error';
 import strlen from '../util/strlen.ts';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
-import { getPkgName } from '../util/pkg-name.ts';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const STATIC = 'STATIC';
 
@@ -74,9 +73,7 @@ export default async function main(ctx) {
   id = argv._[1];
 
   if (argv._.length !== 2) {
-    error(
-      `${cmd(`${getPkgName()} inspect <url>`)} expects exactly one argument`
-    );
+    error(`${getCommandName('inspect <url>')} expects exactly one argument`);
     help();
     return 1;
   }

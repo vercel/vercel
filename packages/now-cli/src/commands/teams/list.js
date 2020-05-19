@@ -8,12 +8,28 @@ import info from '../../util/output/info';
 import error from '../../util/output/error';
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
+import createOutput from '../../util/output';
 import getUser from '../../util/get-user.ts';
 import Client from '../../util/client.ts';
+import getPrefixedFlags from '../../util/get-prefixed-flags';
+import { getPkgName } from '../../util/pkg-name.ts';
+import getCommandFlags from '../../util/get-command-flags';
+import cmd from '../../util/output/cmd.ts';
 
-export default async function({ teams, config, apiUrl, token }) {
+export default async function({ teams, config, apiUrl, token, argv }) {
+  const { next } = argv;
+  const output = createOutput({ debug: argv['--debug'] });
+
+  if (typeof next !== 'undefined' && !Number.isInteger(next)) {
+    output.error('Please provide a number for flag --next');
+    return 1;
+  }
+
   const stopSpinner = wait('Fetching teams');
-  const list = (await teams.ls()).teams;
+  const { teams: list, pagination } = await teams.ls({
+    next,
+    apiVersion: 2,
+  });
   let { currentTeam } = config;
   const accountIsCurrent = !currentTeam;
 
@@ -78,4 +94,14 @@ export default async function({ teams, config, apiUrl, token }) {
     teamList.map(team => [team.current, team.value, team.name]),
     [1, 5]
   );
+
+  if (pagination && pagination.count === 20) {
+    const prefixedArgs = getPrefixedFlags(argv);
+    const flags = getCommandFlags(prefixedArgs, ['_', '--next', '-N', '-d']);
+    const nextCmd = `${getPkgName()} teams ls${flags} --next ${
+      pagination.next
+    }`;
+    console.log(); // empty line
+    output.log(`To display the next page run ${cmd(nextCmd)}`);
+  }
 }

@@ -22,8 +22,8 @@ $ npx degit "sveltejs/sapper-template#webpack" my-sapper-app
 
 ### Deploying From Your Terminal
 
-You can deploy your new Sapper project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Sapper project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

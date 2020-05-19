@@ -1,11 +1,19 @@
-![now](https://assets.zeit.co/image/upload/v1581518533/repositories/now-cli/v4.png)
+<p align="center">
+  <a href="https://vercel.com">
+    <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
+    <h3 align="center">Vercel</h3>
+  </a>
+  <p align="center">Develop. Preview. Ship.</p>
+</p>
 
 [![CI Status](https://badgen.net/github/checks/zeit/now?label=CI)](https://github.com/zeit/now/actions?workflow=CI)
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
 
 ## Usage
 
-Get started by [Importing a Git Project](https://vercel.com/import) and use `git push` to deploy. Alternatively, you can [install Now CLI](https://vercel.com/download).
+Vercel is the optimal workflow for frontend teams. All-in-one: Static and Jamstack deployment, Serverless Functions, and Global CDN.
+
+Get started by [Importing a Git Project](https://vercel.com/import) and use `git push` to deploy. Alternatively, you can [install Vercel CLI](https://vercel.com/download).
 
 ## Documentation
 
@@ -17,12 +25,10 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 2. Install dependencies with `yarn install`
 3. Compile the code: `yarn build`
 4. Link the package to the global module directory: `cd ./packages/now-cli && yarn link`
-5. You can now start using `now` anywhere inside the command line
+5. You can start using `vercel` anywhere inside the command line
 
 As always, you should use `yarn test-unit` to run the tests and see if your changes have broken anything.
 
 ## How to Create a Release
 
 If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/zeit/now/wiki/Creating-a-Release).
-
-

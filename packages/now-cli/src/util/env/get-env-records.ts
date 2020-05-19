@@ -21,8 +21,7 @@ export default async function getEnvVariables(
   client: Client,
   projectId: string,
   apiVersion: 4,
-  target?: ProjectEnvTarget,
-  next?: number
+  target?: ProjectEnvTarget
 ): Promise<APIV4Response>;
 
 export default async function getEnvVariables(

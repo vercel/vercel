@@ -12,7 +12,7 @@ import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
-import { getPkgName } from '../../util/pkg-name';
+import { getCommandName, getTitleName } from '../../util/pkg-name';
 
 type Options = {
   '--cdn': boolean;
@@ -48,13 +48,13 @@ export default async function add(
   }
 
   if (opts['--cdn'] !== undefined || opts['--no-cdn'] !== undefined) {
-    output.error(`Toggling CF from ${getPkgName()} CLI is deprecated.`);
+    output.error(`Toggling CF from ${getTitleName()} CLI is deprecated.`);
     return 1;
   }
 
   if (args.length !== 1) {
     output.error(
-      `${cmd(`${getPkgName()} domains add <domain>`)} expects one argument`
+      `${getCommandName('domains add <domain>')} expects one argument`
     );
     return 1;
   }
@@ -76,7 +76,7 @@ export default async function add(
     output.error(
       `You are adding '${domainName}' as a domain name containing a subdomain part '${subdomain}'\n` +
         `  This feature is deprecated, please add just the root domain: ${chalk.cyan(
-          `${getPkgName()} domain add ${domain}`
+          `${getCommandName(`domain add ${domain}`)}`
         )}`
     );
     return 1;
@@ -142,7 +142,7 @@ export default async function add(
     );
     output.print(
       `  If you want to force running a verification, you can run ${cmd(
-        `${getPkgName()} domains verify <domain>`
+        `${getCommandName('domains verify <domain>')}`
       )}\n`
     );
     output.print('  Read more: https://err.sh/now/domain-verification\n\n');

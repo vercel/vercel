@@ -4,16 +4,16 @@ This directory is a realtime serverless whiteboard powered by Pusher. The fronte
 
 ## Creating This Example
 
-To get started with a realtime whiteboard on Vercel, you can use [Now CLI](https://vercel.com/download) to initialize the project:
+To get started with a realtime whiteboard on Vercel, you can use [Vercel CLI](https://vercel.com/download) to initialize the project:
 
 ```shell
-$ now init vanilla-pusher-functions
+$ vercel init vanilla-pusher-functions
 ```
 
-## Deploying This Example
+### Deploying From Your Terminal
 
-Once initialized, you can deploy the example with just a single command:
+You can deploy your new project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```
