@@ -138,10 +138,11 @@ export default class DevServer {
   private devProcess?: ChildProcess;
   private devProcessPort?: number;
   private devServerPids: Set<number>;
+  private updateRuntimes: boolean;
 
   private getNowConfigPromise: Promise<NowConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
-  private updateBuildersPromise: Promise<void> | null;
+  private updateRuntimesPromise: Promise<void> | null;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -167,10 +168,14 @@ export default class DevServer {
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
     this.devCacheDir = join(getVercelDirectory(cwd), 'cache');
+    this.updateRuntimes =
+      typeof options.updateRuntimes !== 'undefined'
+        ? options.updateRuntimes
+        : true;
 
     this.getNowConfigPromise = null;
     this.blockingBuildsPromise = null;
-    this.updateBuildersPromise = null;
+    this.updateRuntimesPromise = null;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -778,18 +783,20 @@ export default class DevServer {
     await installBuilders(builders, this.output);
     await this.updateBuildMatches(nowConfig, true);
 
-    // Updating builders happens lazily, and any builders that were updated
-    // get their "build matches" invalidated so that the new version is used.
-    this.updateBuildersPromise = updateBuilders(builders, this.output)
-      .then(updatedBuilders => {
-        this.updateBuildersPromise = null;
-        this.invalidateBuildMatches(nowConfig, updatedBuilders);
-      })
-      .catch(err => {
-        this.updateBuildersPromise = null;
-        this.output.error(`Failed to update builders: ${err.message}`);
-        this.output.debug(err.stack);
-      });
+    if (this.updateRuntimes) {
+      // Updating builders happens lazily, and any builders that were updated
+      // get their "build matches" invalidated so that the new version is used.
+      this.updateRuntimesPromise = updateBuilders(builders, this.output)
+        .then(updatedBuilders => {
+          this.updateRuntimesPromise = null;
+          this.invalidateBuildMatches(nowConfig, updatedBuilders);
+        })
+        .catch(err => {
+          this.updateRuntimesPromise = null;
+          this.output.error(`Failed to update builders: ${err.message}`);
+          this.output.debug(err.stack);
+        });
+    }
 
     // Now Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
@@ -922,9 +929,9 @@ export default class DevServer {
       ops.push(this.watcher.close());
     }
 
-    if (this.updateBuildersPromise) {
+    if (this.updateRuntimesPromise) {
       debug(`Waiting for builders update to complete`);
-      ops.push(this.updateBuildersPromise);
+      ops.push(this.updateRuntimesPromise);
     }
 
     for (const pid of this.devServerPids) {

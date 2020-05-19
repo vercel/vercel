@@ -13,6 +13,7 @@ import { getCommandName } from '../../util/pkg-name';
 type Options = {
   '--debug'?: boolean;
   '--listen'?: string;
+  '--update-runtimes'?: boolean;
 };
 
 export default async function dev(
@@ -25,6 +26,10 @@ export default async function dev(
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
   const debug = opts['--debug'] || false;
+  const updateRuntimes =
+    typeof opts['--update-runtimes'] !== 'undefined'
+      ? opts['--update-runtimes']
+      : true;
 
   const client = new Client({
     apiUrl: ctx.apiUrl,
@@ -81,6 +86,7 @@ export default async function dev(
     debug,
     devCommand,
     frameworkSlug,
+    updateRuntimes,
   });
 
   process.once('SIGINT', () => devServer.stop());

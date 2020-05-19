@@ -58,7 +58,11 @@ function testFixture(name, fn) {
         origReady(msg);
       };
 
-      server = new DevServer(fixturePath, { output, debug });
+      server = new DevServer(fixturePath, {
+        output,
+        debug,
+        updateRuntimes: false,
+      });
 
       await server.start(0);
       await readyPromise;

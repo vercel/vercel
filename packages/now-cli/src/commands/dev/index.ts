@@ -1,3 +1,4 @@
+import yn from 'yn';
 import path from 'path';
 import chalk from 'chalk';
 import { PackageJson } from '@vercel/build-utils';
@@ -53,6 +54,8 @@ export default async function main(ctx: NowContext) {
     argv = getArgs(ctx.argv.slice(2), {
       '--listen': String,
       '-l': '--listen',
+
+      '--update-runtimes': yn,
 
       // Deprecated
       '--port': Number,

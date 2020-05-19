@@ -280,10 +280,14 @@ function testFixtureStdio(
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
-      dev = execa(binaryPath, ['dev', '-l', port, '-t', token, '--debug'], {
-        cwd,
-        env,
-      });
+      dev = execa(
+        binaryPath,
+        ['dev', '-l', port, '-t', token, '--debug', '--update-runtimes=no'],
+        {
+          cwd,
+          env,
+        }
+      );
 
       dev.stdout.pipe(process.stdout);
       dev.stderr.pipe(process.stderr);

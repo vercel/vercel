@@ -25,6 +25,7 @@ export interface DevServerOptions {
   debug: boolean;
   devCommand: string | undefined;
   frameworkSlug: string | null;
+  updateRuntimes: boolean;
 }
 
 export interface EnvConfigs {
