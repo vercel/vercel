@@ -246,6 +246,13 @@
       "fetchOptions": {
         "redirect": "manual"
       }
+    },
+
+    // should route dynamic routes at the same level to page
+    // lambds correctly
+    {
+      "path": "/teams/invite/hello-world",
+      "mustContain": "hello-world"
     }
   ]
 }
