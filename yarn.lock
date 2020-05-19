@@ -2109,10 +2109,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.20.4.tgz#00f0a25a88cac3712af4ba66561d9e281c6f05c9"
   integrity sha512-fmq+F/QxPec+k/zvT7HiVpk7oiGFseS6brfT/AYqmCUp6QFRK7vZf2Ref46MImsg/g2W3g5X6SRvGRmOAvEfdA==
 
-"@zeit/node-file-trace@0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.6.0.tgz#049176bdad5a99216ccf36bb0897edb733342007"
-  integrity sha512-wmMql5Iean+XWMhyzGU1VoogoNkM+KyvqFRkLASHFd2vQxzmYI24KE/USDPvOGi8dLXj4bKE/xOWmwYfENdnTw==
+"@zeit/node-file-trace@0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.6.1.tgz#44d832c4bf71bc4d142cc5e2ef3e708673cdd2b4"
+  integrity sha512-rcaY2xxhjBzGJEtpdLFbS87HYx8bVbi/a+0MBVpMVvURrmjVAY58VL+Ynz4QPNs1C6o8e0FB1gVQFtN47ZnkMw==
   dependencies:
     acorn "^7.1.1"
     acorn-class-fields "^0.3.2"
@@ -2126,6 +2126,7 @@
     graceful-fs "^4.1.15"
     micromatch "^4.0.2"
     mkdirp "^0.5.1"
+    node-gyp-build "^4.2.2"
     node-pre-gyp "^0.13.0"
     resolve-from "^5.0.0"
     rollup-pluginutils "^2.8.2"
@@ -7944,6 +7945,11 @@ node-fetch@2.6.0, node-fetch@^2.2.0, node-fetch@^2.2.1, node-fetch@^2.3.0, node-
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.0.tgz#e633456386d4aa55863f676a7ab0daa8fdecb0fd"
   integrity sha512-8dG4H5ujfvFiqDmVu9fQ5bOHUC15JMjMY/Zumv26oOvvVJjM67KF8koCWIabKQ1GJIa9r2mMZscBq/TbdOcmNA==
+
+node-gyp-build@^4.2.2:
+  version "4.2.2"
+  resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.2.2.tgz#3f44b65adaafd42fb6c3d81afd630e45c847eb66"
+  integrity sha512-Lqh7mrByWCM8Cf9UPqpeoVBBo5Ugx+RKu885GAzmLBVYjeywScxHXPGLa4JfYNZmcNGwzR0Glu5/9GaQZMFqyA==
 
 node-gyp@^5.0.2:
   version "5.0.3"
