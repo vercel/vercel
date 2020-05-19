@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "my-nodejs-project",
   "builds": [
     { "src": "www/**/*", "use": "@vercel/static" },
     { "src": "api/**/*.js", "use": "@vercel/node" }
