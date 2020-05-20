@@ -1192,8 +1192,6 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
-    req.pause();
-
     let nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
@@ -1664,9 +1662,7 @@ export default class DevServer {
           query: parsed.query,
         });
 
-        const getBody = rawBody(req);
-        req.resume();
-        const body = await getBody;
+        const body = await rawBody(req);
         const payload: InvokePayload = {
           method: req.method || 'GET',
           host: req.headers.host,
@@ -1910,7 +1906,6 @@ function proxyPass(
   output: Output,
   ignorePath: boolean = true
 ): void {
-  req.resume();
   return proxy.web(
     req,
     res,
