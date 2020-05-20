@@ -234,7 +234,14 @@ async function npmInstall(
   try {
     await execa(
       'npm',
-      ['install', '--save-exact', '--no-package-lock', ...sortedPackages],
+      [
+        'install',
+        '--save-exact',
+        '--no-package-lock',
+        '--no-audit',
+        '--no-progress',
+        ...sortedPackages,
+      ],
       {
         cwd,
         stdio: output.isDebugEnabled() ? 'inherit' : undefined,
