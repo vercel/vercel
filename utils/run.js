@@ -1,5 +1,5 @@
 const { execSync, spawn } = require('child_process');
-const { join, relative } = require('path');
+const { join, relative, sep } = require('path');
 const { readdirSync } = require('fs');
 
 if (
@@ -26,7 +26,7 @@ async function main() {
     matches = readdirSync(join(__dirname, '..', 'packages'));
     console.log(`Running script "${script}" for all packages`);
   } else {
-    const branch = execSync('git branch | grep "*" | cut -d " " -f2')
+    const branch = execSync('git rev-parse --abbrev-ref HEAD')
       .toString()
       .trim();
 
@@ -35,8 +35,8 @@ async function main() {
 
     const changed = diff
       .split('\n')
-      .filter(item => Boolean(item) && item.includes('packages/'))
-      .map(item => relative('packages', item).split('/')[0])
+      .filter(item => Boolean(item) && item.startsWith('packages'))
+      .map(item => relative('packages', item).split(sep)[0])
       .concat('now-cli'); // Always run tests for Now CLI
 
     matches = Array.from(new Set(changed));
