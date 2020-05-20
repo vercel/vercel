@@ -41,7 +41,7 @@ export function getNowLauncher({
   helpersPath,
   shouldAddHelpers = false,
 }: LauncherConfiguration) {
-  return function() {
+  return function(): Bridge {
     let bridge = new Bridge();
     let isServerListening = false;
 

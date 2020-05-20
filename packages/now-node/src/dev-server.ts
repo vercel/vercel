@@ -22,10 +22,9 @@ register({
 });
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { join } from 'path';
 import { Readable } from 'stream';
 import { Bridge } from './bridge';
-import { createServerWithHelpers } from './helpers';
+import { getNowLauncher } from './launcher';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -35,7 +34,7 @@ function listen(server: Server, port: number, host: string): Promise<void> {
   });
 }
 
-let bridge = new Bridge();
+let bridge: Bridge | undefined = undefined;
 
 async function main() {
   const entrypoint = process.env.NOW_DEV_ENTRYPOINT;
@@ -48,80 +47,26 @@ async function main() {
   const config = JSON.parse(process.env.NOW_DEV_CONFIG || '{}');
   delete process.env.NOW_DEV_CONFIG;
 
-  if (!process.env.NODE_ENV) {
-    process.env.NODE_ENV = 'development';
-  }
-
-  let isServerListening = false;
-  const originalListen = Server.prototype.listen;
-  Server.prototype.listen = function listen() {
-    isServerListening = true;
-    console.log('Legacy server listening...');
-    bridge.setServer(this);
-    Server.prototype.listen = originalListen;
-    bridge.listen();
-    return this;
-  };
-
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
 
-  try {
-    const entrypointPath = join(process.cwd(), entrypoint);
-    const { default: listener } = await import(entrypointPath);
+  bridge = getNowLauncher({
+    entrypointPath: entrypoint,
+    helpersPath: './helpers',
+    shouldAddHelpers,
+    bridgePath: 'not used',
+    sourcemapSupportPath: 'not used',
+  })();
 
-    if (typeof listener.listen === 'function') {
-      Server.prototype.listen = originalListen;
-      const server = listener;
-      bridge.setServer(server);
-      bridge.listen();
-    } else if (typeof listener === 'function') {
-      Server.prototype.listen = originalListen;
-      let server: Server;
-      if (shouldAddHelpers) {
-        bridge = new Bridge(undefined, true);
-        server = createServerWithHelpers(listener, bridge);
-      } else {
-        server = createServer(listener);
-      }
-      bridge.setServer(server);
-      bridge.listen();
-    } else if (
-      typeof listener === 'object' &&
-      Object.keys(listener).length === 0
-    ) {
-      setTimeout(() => {
-        if (!isServerListening) {
-          console.error(`No exports found in module "${entrypoint}"`);
-          console.error('Did you forget to export a function or a server?');
-          process.exit(1);
-        }
-      }, 5000);
-    } else {
-      console.error(`Invalid export found in module "${entrypoint}".`);
-      console.error('The default export must be a function or server.');
-    }
+  const proxyServer = createServer(onDevRequest);
+  await listen(proxyServer, 0, '127.0.0.1');
 
-    const proxyServer = createServer(onDevRequest);
-    await listen(proxyServer, 0, '127.0.0.1');
-
-    const address = proxyServer.address();
-    if (typeof process.send === 'function') {
-      process.send(address);
-    } else {
-      console.log('Dev server listening:', address);
-    }
-  } catch (err) {
-    if (err.code === 'MODULE_NOT_FOUND') {
-      console.error(err.message);
-      console.error(
-        'Did you forget to add it to "dependencies" in `package.json`?'
-      );
-    } else {
-      console.error(err);
-    }
-    process.exit(1);
+  const address = proxyServer.address();
+  if (typeof process.send === 'function') {
+    process.send(address);
+  } else {
+    console.log('Dev server listening:', address);
   }
 }
 
@@ -155,6 +100,11 @@ export async function onDevRequest(
       body: body.toString('base64'),
     }),
   };
+  if (!bridge) {
+    res.statusCode = 500;
+    res.end('Bridge is not defined');
+    return;
+  }
   const result = await bridge.launcher(event, {
     callbackWaitsForEmptyEventLoop: false,
   });
