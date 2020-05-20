@@ -22,8 +22,8 @@ $ hexo init project-name
 
 ### Deploying From Your Terminal
 
-You can deploy your new Hexo project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Hexo project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

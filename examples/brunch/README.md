@@ -20,8 +20,8 @@ $ brunch new project-name -s es6
 
 ### Deploying From Your Terminal
 
-You can deploy your new Brunch project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Brunch project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```
