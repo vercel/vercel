@@ -1,6 +1,6 @@
 import ms from 'ms';
 import path from 'path';
-import { URL } from 'url';
+import { URL, parse as parseUrl } from 'url';
 import test from 'ava';
 import semVer from 'semver';
 import { homedir } from 'os';
@@ -126,6 +126,38 @@ if (!process.env.CI) {
   );
 }
 
+function mockLoginApi(req, res) {
+  const { url = '/', method } = req;
+  let { pathname = '/', query = {} } = parseUrl(url, true);
+  console.log(`[mock-login-server] ${method} ${pathname}`);
+  const securityCode = 'Bears Beets Battlestar Galactica';
+  if (
+    method === 'POST' &&
+    pathname === '/now/registration' &&
+    query.mode === 'login'
+  ) {
+    res.end(JSON.stringify({ token, securityCode }));
+  } else if (
+    method === 'GET' &&
+    pathname === '/now/registration/verify' &&
+    query.email === email
+  ) {
+    res.end(JSON.stringify({ token }));
+  } else {
+    res.statusCode = 405;
+    res.end(JSON.stringify({ code: 'method_not_allowed' }));
+  }
+}
+
+let loginApiUrl = '';
+const loginApiServer = require('http')
+  .createServer(mockLoginApi)
+  .listen(0, () => {
+    const { port } = loginApiServer.address();
+    loginApiUrl = `http://localhost:${port}`;
+    console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
+  });
+
 const execute = (args, options) =>
   execa(binaryPath, [...defaultArgs, ...args], {
     ...defaultOptions,
@@ -184,7 +216,7 @@ const createUser = async () => {
       const user = await fetchTokenInformation(token);
 
       email = user.email;
-      contextName = user.email.split('@')[0];
+      contextName = user.username;
       session = Math.random()
         .toString(36)
         .split('.')[1];
@@ -206,25 +238,30 @@ test.before(async () => {
 });
 
 test.after.always(async () => {
+  if (loginApiServer) {
+    // Stop mock server
+    loginApiServer.close();
+  }
+
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
 
-  if (!tmpDir) {
-    return;
+  if (tmpDir) {
+    // Remove config directory entirely
+    tmpDir.removeCallback();
   }
-
-  // Remove config directory entirely
-  tmpDir.removeCallback();
 });
 
 test('login', async t => {
   t.timeout(ms('1m'));
 
-  // Delete the current token
-  const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
-
-  const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
+  const loginOutput = await execa(binaryPath, [
+    'login',
+    email,
+    '--api',
+    loginApiUrl,
+    ...defaultArgs,
+  ]);
 
   console.log(loginOutput.stderr);
   console.log(loginOutput.stdout);
@@ -237,12 +274,8 @@ test('login', async t => {
     formatOutput(loginOutput)
   );
 
-  // Save the new token
   const auth = await fs.readJSON(getConfigAuthPath());
-
-  token = auth.token;
-
-  t.is(typeof token, 'string');
+  t.is(auth.token, token);
 });
 
 test('deploy using only now.json with `redirects` defined', async t => {
@@ -399,13 +432,13 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   async function nowEnvAddFromStdin() {
     const now = execa(
       binaryPath,
-      ['env', 'add', 'MY_STDIN_VAR', 'preview', ...defaultArgs],
+      ['env', 'add', 'MY_STDIN_VAR', 'development', ...defaultArgs],
       {
         reject: false,
         cwd: target,
       }
     );
-    now.stdin.end('MY_STDIN_VALUE');
+    now.stdin.end('{"expect":"quotes"}');
     const { exitCode, stderr, stdout } = await now;
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
@@ -455,7 +488,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
 
     const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
     t.is(myStdinVars.length, 1);
-    t.regex(myStdinVars.join('\n'), /preview/gm);
+    t.regex(myStdinVars.join('\n'), /development/gm);
 
     const vercelVars = lines.filter(line => line.includes('VERCEL_URL'));
     t.is(vercelVars.length, 3);
@@ -480,6 +513,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
     const lines = new Set(contents.split('\n'));
     t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
+    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
     t.true(lines.has('VERCEL_URL=""'));
   }
 
@@ -501,7 +535,6 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(apiRes.status, 200, formatOutput({ stderr, stdout }));
     const apiJson = await apiRes.json();
     t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
-    t.is(apiJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
     t.is(apiJson['VERCEL_URL'], host);
 
     const homeUrl = `https://${host}`;
@@ -510,7 +543,6 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
     t.is(homeRes.status, 200, formatOutput({ stderr, stdout }));
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
-    t.is(homeJson['MY_STDIN_VAR'], 'MY_STDIN_VALUE');
     t.is(apiJson['VERCEL_URL'], host);
   }
 
@@ -539,7 +571,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   async function nowEnvRemoveWithArgs() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
-      ['env', 'rm', 'MY_STDIN_VAR', 'preview', '-y', ...defaultArgs],
+      ['env', 'rm', 'MY_STDIN_VAR', 'development', '-y', ...defaultArgs],
       {
         reject: false,
         cwd: target,
@@ -2340,11 +2372,12 @@ test('change user', async t => {
 
   await createUser();
 
-  await execute(['login', email, '--debug'], { stdio: 'inherit' });
+  await execute(['login', email, '--api', loginApiUrl, '--debug'], {
+    stdio: 'inherit',
+  });
 
   const auth = await fs.readJSON(getConfigAuthPath());
-
-  token = auth.token;
+  t.is(auth.token, token);
 
   const { stdout: nextUser } = await execute(['whoami']);
 

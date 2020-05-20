@@ -12,7 +12,7 @@ _Live Example: https://custom-build.now-examples.now.sh_
 
 ### How We Created This Example
 
-To get started deploying a Custom Built project with Vercel, you can use the [Now CLI](https://vercel.com/download) to initialize the project:
+To get started deploying a Custom Built project with Vercel, you can use the [Vercel CLI](https://vercel.com/download) to initialize the project:
 
 ```shell
 $ now init custom-build
@@ -20,8 +20,8 @@ $ now init custom-build
 
 ### Deploying From Your Terminal
 
-You can deploy your new Custom Built project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Custom Built project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```
