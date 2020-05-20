@@ -22,6 +22,7 @@ register({
 });
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
+import { join } from 'path';
 import { Readable } from 'stream';
 import { Bridge } from './bridge';
 import { getNowLauncher } from './launcher';
@@ -52,7 +53,7 @@ async function main() {
   );
 
   bridge = getNowLauncher({
-    entrypointPath: entrypoint,
+    entrypointPath: join(process.cwd(), entrypoint),
     helpersPath: './helpers',
     shouldAddHelpers,
     bridgePath: 'not used',
