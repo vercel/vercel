@@ -1910,6 +1910,7 @@ function proxyPass(
   output: Output,
   ignorePath: boolean = true
 ): void {
+  req.resume();
   return proxy.web(
     req,
     res,
