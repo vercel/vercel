@@ -1,4 +1,4 @@
-import url from 'url';
+import { parse } from 'url';
 import { createServer, Server } from 'http';
 import { Bridge } from './bridge';
 
@@ -21,14 +21,18 @@ export function makeNowLauncher(config: LauncherConfiguration): string {
     shouldAddHelpers = false,
     shouldAddSourcemapSupport = false,
   } = config;
-  return `const { Bridge } = require(${JSON.stringify(bridgePath)});
-const { Server, createServer } = require("http");
-${shouldAddSourcemapSupport ? `require("${sourcemapSupportPath}");\n` : ''}
+  return `const bridge_1 = require(${JSON.stringify(bridgePath)});
+const http_1 = require("http");
+${
+  shouldAddSourcemapSupport
+    ? `require(${JSON.stringify(sourcemapSupportPath)});`
+    : ''
+}
 const entrypointPath = ${JSON.stringify(entrypointPath)};
 const shouldAddHelpers = ${JSON.stringify(shouldAddHelpers)};
 const helpersPath = ${JSON.stringify(helpersPath)};
 
-const bridge = ${getNowLauncher(config)}();
+const bridge = (${getNowLauncher(config)})();
 exports.launcher = bridge.launcher;`;
 }
 
@@ -113,7 +117,7 @@ export function getNowLauncher({
 
 export function makeAwsLauncher(config: LauncherConfiguration): string {
   const { entrypointPath, awsLambdaHandler = '' } = config;
-  return `const url = require("url");
+  return `const url_1 = require("url");
 const funcName = ${JSON.stringify(awsLambdaHandler.split('.').pop())};
 const entrypointPath = ${JSON.stringify(entrypointPath)};
 exports.launcher = ${getAwsLauncher(config)}`;
@@ -131,7 +135,7 @@ export function getAwsLauncher({
   // @ts-ignore
   return function(e, context, callback) {
     const { path, method: httpMethod, body, headers } = JSON.parse(e.body);
-    const { query } = url.parse(path, true);
+    const { query } = parse(path, true);
     const queryStringParameters: { [i: string]: string } = {};
     for (const [key, value] of Object.entries(query)) {
       if (!Array.isArray(value)) {
