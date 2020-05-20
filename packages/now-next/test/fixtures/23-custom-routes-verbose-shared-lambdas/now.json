@@ -249,7 +249,7 @@
     },
 
     // should route dynamic routes at the same level to page
-    // lambds correctly
+    // lambdas correctly
     {
       "path": "/nested/teams/invite/hello-world",
       "mustContain": "hello-world"
