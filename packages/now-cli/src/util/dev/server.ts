@@ -1664,7 +1664,9 @@ export default class DevServer {
           query: parsed.query,
         });
 
-        const body = await rawBody(req);
+        const getBody = rawBody(req);
+        req.resume();
+        const body = await getBody;
         const payload: InvokePayload = {
           method: req.method || 'GET',
           host: req.headers.host,

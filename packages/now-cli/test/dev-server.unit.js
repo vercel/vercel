@@ -443,6 +443,20 @@ test(
   })
 );
 
+test(
+  '[DevServer] Test request body',
+  testFixture('now-dev-request-body', async (t, server) => {
+    {
+      const res = await fetch(`${server.address}/`, {
+        method: 'POST',
+        body: 'test1',
+      });
+      const body = await res.json();
+      t.is(body.data, 'test1');
+    }
+  })
+);
+
 test('[DevServer] parseListen()', t => {
   t.deepEqual(parseListen('0'), [0]);
   t.deepEqual(parseListen('3000'), [3000]);
