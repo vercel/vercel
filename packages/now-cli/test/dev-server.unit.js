@@ -443,6 +443,37 @@ test(
   })
 );
 
+test(
+  '[DevServer] Test request body',
+  testFixture('now-dev-request-body', async (t, server) => {
+    {
+      // Test that `req.body` works in dev
+      const res = await fetch(`${server.address}/api/req-body`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ hello: 'world' }),
+      });
+      const body = await res.json();
+      t.is(body.hello, 'world');
+    }
+
+    {
+      // Test that `req` "data" events work in dev
+      const res = await fetch(`${server.address}/api/data-events`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ hello: 'world' }),
+      });
+      const body = await res.json();
+      t.is(body.hello, 'world');
+    }
+  })
+);
+
 test('[DevServer] parseListen()', t => {
   t.deepEqual(parseListen('0'), [0]);
   t.deepEqual(parseListen('3000'), [3000]);
