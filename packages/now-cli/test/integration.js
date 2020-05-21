@@ -311,10 +311,12 @@ test('deploys gatsby and prints cached directories', async t => {
       stdio: 'inherit',
       reject: true,
     });
-    t.true(true, true);
+
+    t.true(true);
   }
 
   await tryDeploy(directory);
+  await sleep(5000);
   pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
   await writeFile(packageJsonPath, JSON.stringify(pkg));
   await tryDeploy(directory);
