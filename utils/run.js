@@ -49,7 +49,7 @@ async function main() {
     }
 
     console.log(
-      `Running "${script}" on branch "${branch}" with the following packages:`
+      `Running "${script}" on branch "${branch}" with the following packages:\n`
     );
   }
 
@@ -79,7 +79,9 @@ async function main() {
     return b - a;
   });
 
-  console.log(matches.join('\n') + '\n');
+  for (const m of matches) {
+    console.log(` - ${m}`);
+  }
 
   for (const pkgName of matches) {
     await runScript(pkgName, script);
