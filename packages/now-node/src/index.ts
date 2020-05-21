@@ -1,4 +1,3 @@
-// Temporary change in `now-node` to force tests to be selected
 import { fork, spawn } from 'child_process';
 import {
   readFileSync,
