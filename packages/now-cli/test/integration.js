@@ -31,6 +31,8 @@ function execa(file, args, options) {
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
+const example = name =>
+  path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
@@ -295,6 +297,28 @@ test('deploy using only now.json with `redirects` defined', async t => {
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   t.is(location, 'https://example.com/foo/bar');
+});
+
+test('deploys gatsby and prints cached directories', async t => {
+  const directory = example('gatsby');
+  const packageJsonPath = path.join(directory, 'package.json');
+  const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
+  const pkg = JSON.parse(packageJsonOriginal);
+
+  async function tryDeploy(cwd) {
+    await execa(binaryPath, [...defaultArgs, '--public', '--confirm'], {
+      cwd,
+      stdio: 'inherit',
+      reject: true,
+    });
+    t.true(true, true);
+  }
+
+  await tryDeploy(directory);
+  pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
+  await writeFile(packageJsonPath, JSON.stringify(pkg));
+  await tryDeploy(directory);
+  await writeFile(packageJsonPath, packageJsonOriginal);
 });
 
 test('deploy using --local-config flag v2', async t => {
