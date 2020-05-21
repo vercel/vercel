@@ -291,7 +291,7 @@ export async function runNpmInstall(
   } else {
     opts.prettyCommand = 'yarn install';
     command = 'yarn';
-    commandArgs = args.concat(['install', '--ignore-engines']);
+    commandArgs = ['install', ...args, '--ignore-engines'];
   }
 
   if (process.env.NPM_ONLY_PRODUCTION) {
