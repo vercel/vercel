@@ -26,7 +26,7 @@ async function main() {
     matches = readdirSync(join(__dirname, '..', 'packages'));
     console.log(`Running script "${script}" for all packages`);
   } else {
-    const branch = execSync('git rev-parse --abbrev-ref HEAD')
+    const branch = execSync('git branch --show-current')
       .toString()
       .trim();
 
