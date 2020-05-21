@@ -1,3 +1,4 @@
+console.log(process.env);
 const { execSync, spawn } = require('child_process');
 const { join, relative, sep } = require('path');
 const { readdirSync } = require('fs');
