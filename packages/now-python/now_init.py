@@ -156,6 +156,9 @@ elif 'app' in __now_variables:
             return return_dict
     else:
         print('using Asynchronous Server Gateway Interface (ASGI)')
+        # Contributed in PR 654 under MIT license
+        # https://github.com/zeit/now-builders/pull/654
+        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/mangum/__init__.py
         import asyncio
         import enum
         from urllib.parse import urlparse, unquote, urlencode
