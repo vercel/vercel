@@ -1,4 +1,3 @@
-console.log(process.env);
 const { execSync, spawn } = require('child_process');
 const { join, relative, sep } = require('path');
 const { readdirSync } = require('fs');
@@ -27,9 +26,11 @@ async function main() {
     matches = readdirSync(join(__dirname, '..', 'packages'));
     console.log(`Running script "${script}" for all packages`);
   } else {
-    const branch = execSync('git branch --show-current')
-      .toString()
-      .trim();
+    const branch =
+      process.env.GITHUB_HEAD_REF ||
+      execSync('git branch --show-current')
+        .toString()
+        .trim();
 
     const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
