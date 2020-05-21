@@ -443,7 +443,7 @@ test(
   })
 );
 
-test.only(
+test(
   '[DevServer] Test request body',
   testFixture('now-dev-request-body', async (t, server) => {
     {
