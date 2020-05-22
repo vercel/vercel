@@ -9,7 +9,7 @@
     {
       "path": "/",
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
     {

@@ -619,6 +619,7 @@ export const build = async ({
 
   const pageLambdaRoutes: Route[] = [];
   const dynamicPageLambdaRoutes: Route[] = [];
+  const dynamicPageLambdaRoutesMap: { [page: string]: Route } = {};
   const pageLambdaMap: { [page: string]: string } = {};
 
   const lambdas: { [key: string]: Lambda } = {};
@@ -1036,6 +1037,7 @@ export const build = async ({
         // is enabled
         if (routeIsDynamic) {
           dynamicPageLambdaRoutes.push(pageLambdaRoute);
+          dynamicPageLambdaRoutesMap[outputName] = pageLambdaRoute;
         } else {
           pageLambdaRoutes.push(pageLambdaRoute);
         }
@@ -1546,6 +1548,27 @@ export const build = async ({
       delete lambdas[routeFileNoExt];
     });
   }
+  const mergedDynamicRoutesLambdaRoutes = [];
+
+  if (isSharedLambdas) {
+    // we need to define the page lambda route immediately after
+    // the dynamic route in handle: 'rewrite' so that a matching
+    // dynamic route doesn't catch it before the page lambda route
+    // e.g. /teams/[team]/[inviteCode] -> page lambda
+    // but we also have /[teamSlug]/[project]/[id] which could match it first
+
+    for (let i = 0; i < dynamicRoutes.length; i++) {
+      const route = dynamicRoutes[i];
+
+      mergedDynamicRoutesLambdaRoutes.push(route);
+
+      if (pageLambdaMap[route.dest!]) {
+        mergedDynamicRoutesLambdaRoutes.push(
+          dynamicPageLambdaRoutesMap[route.dest!]
+        );
+      }
+    }
+  }
 
   return {
     output: {
@@ -1624,10 +1647,7 @@ export const build = async ({
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
-      ...dynamicRoutes,
-
-      // finally add dynamic page mappings to their respective lambda
-      ...dynamicPageLambdaRoutes,
+      ...(isSharedLambdas ? mergedDynamicRoutesLambdaRoutes : dynamicRoutes),
 
       // routes to call after a file has been matched
       { handle: 'hit' },
