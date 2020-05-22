@@ -87,6 +87,37 @@ function validateResponseHeaders(t, res, podId = null) {
 }
 
 test(
+  '[DevServer] Test request body',
+  testFixture('now-dev-request-body', async (t, server) => {
+    {
+      // Test that `req.body` works in dev
+      const res = await fetch(`${server.address}/api/req-body`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ hello: 'world' }),
+      });
+      const body = await res.json();
+      t.is(body.hello, 'world');
+    }
+
+    {
+      // Test that `req` "data" events work in dev
+      const res = await fetch(`${server.address}/api/data-events`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ hello: 'world' }),
+      });
+      const body = await res.json();
+      t.is(body.hello, 'world');
+    }
+  })
+);
+
+test(
   '[DevServer] Maintains query when invoking lambda',
   testFixture('now-dev-query-invoke', async (t, server) => {
     const res = await fetch(`${server.address}/something?url-param=a`);
@@ -439,37 +470,6 @@ test(
       t.is(res.status, 404);
       const body = await res.text();
       t.is(body, 'The page could not be found.\n\nNOT_FOUND\n');
-    }
-  })
-);
-
-test(
-  '[DevServer] Test request body',
-  testFixture('now-dev-request-body', async (t, server) => {
-    {
-      // Test that `req.body` works in dev
-      const res = await fetch(`${server.address}/api/req-body`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ hello: 'world' }),
-      });
-      const body = await res.json();
-      t.is(body.hello, 'world');
-    }
-
-    {
-      // Test that `req` "data" events work in dev
-      const res = await fetch(`${server.address}/api/data-events`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ hello: 'world' }),
-      });
-      const body = await res.json();
-      t.is(body.hello, 'world');
     }
   })
 );
