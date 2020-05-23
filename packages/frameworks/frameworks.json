@@ -28,34 +28,6 @@
     }
   },
   {
-    "name": "Blitz.js",
-    "slug": "blitzjs",
-    "demo": "https://blitzjs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/blitz.svg",
-    "tagline": "Blitz.js: Rails-like framework for fullstack React apps - built on Next.js",
-    "description": "A brand new Blitz.js app: the output of running `blitz new`",
-    "website": "https://blitzjs.org",
-    "detectors": {
-      "every": [
-        {
-          "path": "package.json",
-          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"blitz\":\\s*\".+?\"[^}]*}"
-        }
-      ]
-    },
-    "settings": {
-      "buildCommand": {
-        "placeholder": "`npm run build` or `blitz build`"
-      },
-      "devCommand": {
-        "value": "blitz start"
-      },
-      "outputDirectory": {
-        "placeholder": "Next.js default"
-      }
-    }
-  },
-  {
     "name": "Gatsby",
     "slug": "gatsby",
     "demo": "https://gatsby.now-examples.now.sh",
