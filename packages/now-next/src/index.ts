@@ -105,7 +105,13 @@ const MAX_AGE_ONE_YEAR = 31536000;
 /**
  * Read package.json from files
  */
-async function readPackageJson(entryPath: string) {
+async function readPackageJson(
+  entryPath: string
+): Promise<{
+  scripts?: { [key: string]: string };
+  dependencies?: { [key: string]: string };
+  devDependencies?: { [key: string]: string };
+}> {
   const packagePath = path.join(entryPath, 'package.json');
 
   try {
@@ -136,16 +142,29 @@ async function writeNpmRc(workPath: string, token: string) {
   );
 }
 
-function getNextVersion(packageJson: {
-  dependencies?: { [key: string]: string };
-  devDependencies?: { [key: string]: string };
-}) {
+async function getNextVersion(entryPath: string) {
   let nextVersion;
-  if (packageJson.dependencies && packageJson.dependencies.next) {
-    nextVersion = packageJson.dependencies.next;
-  } else if (packageJson.devDependencies && packageJson.devDependencies.next) {
-    nextVersion = packageJson.devDependencies.next;
+
+  try {
+    // First try to resolve the `next` dependency and get the real version from its
+    // package.json. This allows the builder to be used with frameworks like Blitz that
+    // bundle Next but where Next isn't in the project root's package.json
+    nextVersion = require(resolveFrom(entryPath, 'next/package.json')).version;
+
+    debug(`Detected Next.js version: ${nextVersion}`);
+  } catch (_ignored) {
+    debug(
+      `Could not identify real Next.js version, falling back to check root package.json`
+    );
+
+    const pkg = await readPackageJson(entryPath);
+    if (pkg.dependencies && pkg.dependencies.next) {
+      nextVersion = pkg.dependencies.next;
+    } else if (pkg.devDependencies && pkg.devDependencies.next) {
+      nextVersion = pkg.devDependencies.next;
+    }
   }
+
   return nextVersion;
 }
 
@@ -216,7 +235,7 @@ export const build = async ({
   await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
-  const nextVersion = getNextVersion(pkg);
+  const nextVersion = await getNextVersion(entryPath);
 
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -225,7 +244,7 @@ export const build = async ({
     throw new NowBuildError({
       code: 'NEXT_NO_VERSION',
       message:
-        'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"',
+        'No Next.js version could be detected in your project. Make sure `"next"` is installed in "dependencies" or "devDependencies"',
     });
   }
 
@@ -326,18 +345,8 @@ export const build = async ({
   console.log('Installing dependencies...');
   await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
-  let realNextVersion: string | undefined;
-  try {
-    realNextVersion = require(resolveFrom(entryPath, 'next/package.json'))
-      .version;
-
-    debug(`Detected Next.js version: ${realNextVersion}`);
-  } catch (_ignored) {
-    debug(`Could not identify real Next.js version, that's OK!`);
-  }
-
   if (!isLegacy) {
-    await createServerlessConfig(workPath, entryPath, realNextVersion);
+    await createServerlessConfig(workPath, entryPath, nextVersion);
   }
 
   debug('Running user script...');
@@ -374,7 +383,7 @@ export const build = async ({
   const routesManifest = await getRoutesManifest(
     entryPath,
     outputDirectory,
-    realNextVersion
+    nextVersion
   );
   const prerenderManifest = await getPrerenderManifest(entryPath);
   const headers: Route[] = [];
@@ -806,10 +815,7 @@ export const build = async ({
     // Assume tracing to be safe, bail if we know we don't need it.
     let requiresTracing = hasLambdas;
     try {
-      if (
-        realNextVersion &&
-        semver.lt(realNextVersion, ExperimentalTraceVersion)
-      ) {
+      if (nextVersion && semver.lt(nextVersion, ExperimentalTraceVersion)) {
         debug(
           'Next.js version is too old for us to trace the required dependencies.\n' +
             'Assuming Next.js has handled it!'
@@ -1722,8 +1728,7 @@ export const prepareCache = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
 
-  const pkg = await readPackageJson(entryPath);
-  const nextVersion = getNextVersion(pkg);
+  const nextVersion = await getNextVersion(entryPath);
   if (!nextVersion)
     throw new NowBuildError({
       code: 'NEXT_VERSION_PARSE_FAILED',
