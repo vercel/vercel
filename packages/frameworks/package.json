@@ -4,7 +4,7 @@
   "main": "frameworks.json",
   "license": "UNLICENSED",
   "scripts": {
-    "test-unit": "jest --env node --verbose --runInBand --bail test/*unit.*test.*"
+    "test-unit": "jest --env node --verbose --runInBand --bail"
   },
   "devDependencies": {
     "@types/jest": "24.0.22",
