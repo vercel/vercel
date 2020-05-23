@@ -6,7 +6,6 @@ import {
   NowRequestBody,
 } from './types';
 import { Server } from 'http';
-import { Readable } from 'stream';
 import { Bridge } from './bridge';
 
 function getBodyParser(req: NowRequest, body: Buffer) {
@@ -237,24 +236,9 @@ function setLazyProp<T>(req: NowRequest, prop: string, getter: () => T) {
   });
 }
 
-export function rawBody(readable: Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    let bytes = 0;
-    const chunks: Buffer[] = [];
-    readable.on('error', reject);
-    readable.on('data', chunk => {
-      chunks.push(chunk);
-      bytes += chunk.length;
-    });
-    readable.on('end', () => {
-      resolve(Buffer.concat(chunks, bytes));
-    });
-  });
-}
-
 export function createServerWithHelpers(
   handler: (req: NowRequest, res: NowResponse) => void | Promise<void>,
-  bridge?: Bridge
+  bridge: Bridge
 ) {
   const server = new Server(async (_req, _res) => {
     const req = _req as NowRequest;
@@ -266,17 +250,15 @@ export function createServerWithHelpers(
       // don't expose this header to the client
       delete req.headers['x-now-bridge-request-id'];
 
-      let body: Buffer;
-      if (typeof reqId === 'string' && bridge) {
-        const event = bridge.consumeEvent(reqId);
-        body = event.body;
-      } else {
-        body = await rawBody(req);
+      if (typeof reqId !== 'string') {
+        throw new ApiError(500, 'Internal Server Error');
       }
+
+      const event = bridge.consumeEvent(reqId);
 
       setLazyProp<NowRequestCookies>(req, 'cookies', getCookieParser(req));
       setLazyProp<NowRequestQuery>(req, 'query', getQueryParser(req));
-      setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, body));
+      setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, event.body));
 
       res.status = statusCode => status(res, statusCode);
       res.send = body => send(req, res, body);
