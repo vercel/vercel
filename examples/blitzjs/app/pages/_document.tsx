@@ -1,4 +1,4 @@
-import {Document, Html, DocumentHead, Main, NextScript /*DocumentContext*/} from 'blitz'
+import { Document, Html, DocumentHead, Main, NextScript /*DocumentContext*/ } from "blitz"
 
 class MyDocument extends Document {
   // Only uncomment if you need to customize this behaviour

@@ -1,4 +1,4 @@
-import {Head, Link} from 'blitz'
+import { Head, Link } from "blitz"
 
 const modelSnippet = `model Project {
   id      Int      @default(autoincrement()) @id
@@ -23,19 +23,15 @@ const Home = () => (
         1. Add this code to <strong>db/schema.prisma</strong>:
       </p>
       <pre>
-        <code>
-          {modelSnippet}
-        </code>
+        <code>{modelSnippet}</code>
       </pre>
       <p>2. Run these commands in your terminal:</p>
       <pre>
-        <code>
-          {migrateSnippet}
-        </code>
+        <code>{migrateSnippet}</code>
       </pre>
 
       <p>
-        3. Go to{' '}
+        3. Go to{" "}
         <Link href="/projects">
           <a>/projects</a>
         </Link>
@@ -45,21 +41,24 @@ const Home = () => (
           className="button"
           href="https://github.com/blitz-js/blitz/blob/master/USER_GUIDE.md?utm_source=blitz-new&utm_medium=app-template&utm_campaign=blitz-new"
           target="_blank"
-          rel="noopener noreferrer">
+          rel="noopener noreferrer"
+        >
           Documentation
         </a>
         <a
           className="button-outline"
           href="https://github.com/blitz-js/blitz"
           target="_blank"
-          rel="noopener noreferrer">
+          rel="noopener noreferrer"
+        >
           Github Repo
         </a>
         <a
           className="button-outline"
           href="https://slack.blitzjs.com"
           target="_blank"
-          rel="noopener noreferrer">
+          rel="noopener noreferrer"
+        >
           Slack Community
         </a>
       </div>
@@ -69,7 +68,8 @@ const Home = () => (
       <a
         href="https://blitzjs.com?utm_source=blitz-new&utm_medium=app-template&utm_campaign=blitz-new"
         target="_blank"
-        rel="noopener noreferrer">
+        rel="noopener noreferrer"
+      >
         Powered by Blitz.js
       </a>
     </footer>
@@ -185,14 +185,14 @@ const Home = () => (
     `}</style>
 
     <style jsx global>{`
-      @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;700&display=swap');
+      @import url("https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;700&display=swap");
 
       html,
       body {
         padding: 0;
         margin: 0;
-        font-family: 'Libre Franklin', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu,
-          Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+        font-family: "Libre Franklin", -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+          Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
       }
 
       * {
