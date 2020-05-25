@@ -142,6 +142,12 @@ async function writeNpmRc(workPath: string, token: string) {
   );
 }
 
+/**
+ * Get the installed Next version.
+ *
+ * If you want to get the real installed Next version, you must first
+ * run npm install before calling this function
+ */
 async function getNextVersion(entryPath: string) {
   let nextVersion;
 
@@ -235,18 +241,10 @@ export const build = async ({
   await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
-  const nextVersion = await getNextVersion(entryPath);
+  let nextVersion = await getNextVersion(entryPath);
 
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-
-  if (!nextVersion) {
-    throw new NowBuildError({
-      code: 'NEXT_NO_VERSION',
-      message:
-        'No Next.js version could be detected in your project. Make sure `"next"` is installed in "dependencies" or "devDependencies"',
-    });
-  }
 
   if (meta.isDev) {
     let childProcess: ChildProcess | undefined;
@@ -344,6 +342,19 @@ export const build = async ({
 
   console.log('Installing dependencies...');
   await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
+
+  // Refetch Next version now that dependencies are installed.
+  // This will now resolve the actual installed Next version,
+  // even if Next isn't in the project package.json
+  nextVersion = await getNextVersion(entryPath);
+
+  if (!nextVersion) {
+    throw new NowBuildError({
+      code: 'NEXT_NO_VERSION',
+      message:
+        'No Next.js version could be detected in your project. Make sure `"next"` is installed in "dependencies" or "devDependencies"',
+    });
+  }
 
   if (!isLegacy) {
     await createServerlessConfig(workPath, entryPath, nextVersion);
