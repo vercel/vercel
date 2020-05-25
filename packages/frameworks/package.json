@@ -1,10 +1,10 @@
 {
   "name": "@vercel/frameworks",
-  "version": "0.0.15-canary.0",
+  "version": "0.0.15-canary.2",
   "main": "frameworks.json",
   "license": "UNLICENSED",
   "scripts": {
-    "test-unit": "jest --env node --verbose --runInBand --bail test/*unit.*test.*"
+    "test-unit": "jest --env node --verbose --runInBand --bail"
   },
   "devDependencies": {
     "@types/jest": "24.0.22",

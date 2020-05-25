@@ -766,6 +766,13 @@ test(
 );
 
 test(
+  '[vercel dev] support legacy `@now` scope runtimes',
+  testFixtureStdio('legacy-now-runtime', async testPath => {
+    await testPath(200, '/', /A simple deployment with the Now API!/m);
+  })
+);
+
+test(
   '[vercel dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async testPath => {
     await testPath(200, '/', /Files within/m);
@@ -776,7 +783,7 @@ test(
 test(
   '[vercel dev] 01-node',
   testFixtureStdio('01-node', async testPath => {
-    await testPath(200, '/', /A simple deployment with the Now API!/m);
+    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
   })
 );
 
