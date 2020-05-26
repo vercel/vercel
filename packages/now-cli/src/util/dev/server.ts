@@ -6,6 +6,7 @@ import plural from 'pluralize';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
 import minimatch from 'minimatch';
+import ms from 'ms';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
@@ -780,16 +781,18 @@ export default class DevServer {
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
-    this.updateBuildersPromise = updateBuilders(builders, this.output)
-      .then(updatedBuilders => {
-        this.updateBuildersPromise = null;
-        this.invalidateBuildMatches(nowConfig, updatedBuilders);
-      })
-      .catch(err => {
-        this.updateBuildersPromise = null;
-        this.output.error(`Failed to update builders: ${err.message}`);
-        this.output.debug(err.stack);
-      });
+    setTimeout(() => {
+      this.updateBuildersPromise = updateBuilders(builders, this.output)
+        .then(updatedBuilders => {
+          this.updateBuildersPromise = null;
+          this.invalidateBuildMatches(nowConfig, updatedBuilders);
+        })
+        .catch(err => {
+          this.updateBuildersPromise = null;
+          this.output.error(`Failed to update builders: ${err.message}`);
+          this.output.debug(err.stack);
+        });
+    }, ms('30s'));
 
     // Now Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
