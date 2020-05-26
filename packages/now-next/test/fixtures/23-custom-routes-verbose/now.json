@@ -238,6 +238,13 @@
       "fetchOptions": {
         "redirect": "manual"
       }
+    },
+
+    // should apply un-named multi-match correctly
+    {
+      "path": "/hello/post-123.html",
+      "status": 200,
+      "mustContain": "123"
     }
   ]
 }
