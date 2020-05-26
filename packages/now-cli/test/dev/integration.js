@@ -436,6 +436,15 @@ test(
 );
 
 test(
+  '[vercel dev] should preserve query string even after miss phase',
+  testFixtureStdio('handle-miss-querystring', async testPath => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/echo/first/second', 'a=first,b=second');
+    await testPath(200, '/functions/echo.js?a=one&b=two', 'a=one,b=two');
+  })
+);
+
+test(
   '[vercel dev] handles hit after handle: filesystem',
   testFixtureStdio('handle-hit-after-fs', async testPath => {
     await testPath(200, '/blog.html', 'Blog Page', { test: '1' });

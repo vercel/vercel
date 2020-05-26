@@ -1288,6 +1288,18 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
+    const getReqUrl = (rr: RouteResult): string | undefined => {
+      if (rr.dest) {
+        if (rr.uri_args) {
+          const destParsed = url.parse(rr.dest, true);
+          Object.assign(destParsed.query, rr.uri_args);
+          return url.format(destParsed);
+        }
+        return rr.dest;
+      }
+      return req.url;
+    };
+
     const handleMap = getRoutesTypes(routes);
     const missRoutes = handleMap.get('miss') || [];
     const hitRoutes = handleMap.get('hit') || [];
@@ -1303,6 +1315,7 @@ export default class DevServer {
 
     for (const phase of phases) {
       statusCode = undefined;
+
       const phaseRoutes = handleMap.get(phase) || [];
       routeResult = await devRouter(
         prevUrl,
@@ -1314,7 +1327,9 @@ export default class DevServer {
         phase
       );
       prevUrl =
-        routeResult.continue && routeResult.dest ? routeResult.dest : req.url;
+        routeResult.continue && routeResult.dest
+          ? getReqUrl(routeResult)
+          : req.url;
       prevHeaders =
         routeResult.continue && routeResult.headers ? routeResult.headers : {};
 
@@ -1353,7 +1368,7 @@ export default class DevServer {
       if (!match && missRoutes.length > 0) {
         // Since there was no build match, enter the miss phase
         routeResult = await devRouter(
-          routeResult.dest || req.url,
+          getReqUrl(routeResult),
           req.method,
           missRoutes,
           this,
@@ -1385,7 +1400,7 @@ export default class DevServer {
         // The hit phase must not set status code.
         const prevStatus = routeResult.status;
         routeResult = await devRouter(
-          routeResult.dest || req.url,
+          getReqUrl(routeResult),
           req.method,
           hitRoutes,
           this,
