@@ -14,14 +14,14 @@
       "path": "/lambda",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "MISS"
+        "x-vercel-cache": "MISS"
       }
     },
     {
       "path": "/forever",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-vercel-cache": "PRERENDER"
       }
     },
     { "delay": 2000 },
@@ -29,14 +29,14 @@
       "path": "/forever",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
     {
       "path": "/another",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-vercel-cache": "PRERENDER"
       }
     },
     { "delay": 2000 },
@@ -44,14 +44,14 @@
       "path": "/another",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
     {
       "path": "/blog/post-1",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-vercel-cache": "PRERENDER"
       }
     },
     { "delay": 2000 },
@@ -59,14 +59,14 @@
       "path": "/blog/post-1",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
     {
       "path": "/blog/post-2",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-vercel-cache": "PRERENDER"
       }
     },
     { "delay": 2000 },
@@ -74,7 +74,7 @@
       "path": "/blog/post-2",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
     {
@@ -87,14 +87,14 @@
       "path": "/blog/post-3",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "/HIT|STALE/"
+        "x-vercel-cache": "/HIT|STALE/"
       }
     },
     {
       "path": "/_next/data/testing-build-id/blog/post-4.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "MISS"
+        "x-vercel-cache": "MISS"
       }
     },
     { "delay": 2000 },
@@ -102,7 +102,7 @@
       "path": "/_next/data/testing-build-id/blog/post-4.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "/HIT|STALE/"
+        "x-vercel-cache": "/HIT|STALE/"
       }
     },
     {
@@ -114,14 +114,14 @@
       "path": "/blog/post-1/comment-1",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-vercel-cache": "PRERENDER"
       }
     },
     {
       "path": "/blog/post-2/comment-2",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-vercel-cache": "PRERENDER"
       }
     },
     {
@@ -137,7 +137,7 @@
       "path": "/_next/data/testing-build-id/forever.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "/PRERENDER|HIT/"
+        "x-vercel-cache": "/PRERENDER|HIT/"
       }
     },
     { "delay": 2000 },
@@ -150,21 +150,21 @@
       "path": "/_next/data/testing-build-id/forever.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
     {
       "path": "/_next/data/testing-build-id/another.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "/HIT|STALE/"
+        "x-vercel-cache": "/HIT|STALE/"
       }
     },
     {
       "path": "/_next/data/testing-build-id/another2.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-vercel-cache": "PRERENDER"
       }
     },
     { "delay": 2000 },
@@ -172,21 +172,21 @@
       "path": "/_next/data/testing-build-id/another2.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
     {
       "path": "/_next/data/testing-build-id/blog/post-1.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "/HIT|STALE|PRERENDER/"
+        "x-vercel-cache": "/HIT|STALE|PRERENDER/"
       }
     },
     {
       "path": "/_next/data/testing-build-id/blog/post-1337/comment-1337.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "PRERENDER"
+        "x-vercel-cache": "PRERENDER"
       }
     },
     {
@@ -208,14 +208,14 @@
       "path": "/_next/data/testing-build-id/nofallback/one.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "/HIT|STALE|PRERENDER/"
+        "x-vercel-cache": "/HIT|STALE|PRERENDER/"
       }
     },
     {
       "path": "/_next/data/testing-build-id/nofallback/two.json",
       "status": 200,
       "responseHeaders": {
-        "x-now-cache": "/HIT|STALE|PRERENDER/"
+        "x-vercel-cache": "/HIT|STALE|PRERENDER/"
       }
     },
     {
