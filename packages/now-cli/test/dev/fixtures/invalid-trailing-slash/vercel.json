@@ -3,11 +3,11 @@
   "builds": [
     {
       "src": "index.html",
-      "use": "@now/static",
+      "use": "@vercel/static",
       "config": {
         "zeroConfig": true
       }
     }
   ],
-  "cleanUrls": "nope"
+  "trailingSlash": "nope"
 }

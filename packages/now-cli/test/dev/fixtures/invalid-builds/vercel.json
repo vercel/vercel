@@ -2,8 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.html",
-      "use": "@now/static",
+      "src": 1,
+      "use": "@vercel/static",
       "config": {
         "zeroConfig": true
       }
@@ -11,7 +11,7 @@
   ],
   "routes": [
     {
-      "src": 1,
+      "src": ".*",
       "dest": "/index.html"
     }
   ]

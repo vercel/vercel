@@ -3,13 +3,11 @@
   "builds": [
     {
       "src": "index.html",
-      "use": "@now/static",
+      "use": "@vercel/static",
       "config": {
         "zeroConfig": true
       }
     }
   ],
-  "redirects": [
-    { "source": "/first", "destination": "/foo", "statusCode": "ok" }
-  ]
+  "rewrites": [{ "source": "/hello", "destination": "index.html" }]
 }
