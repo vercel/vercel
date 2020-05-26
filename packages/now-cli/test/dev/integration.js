@@ -435,8 +435,7 @@ test(
   })
 );
 
-// eslint-disable-next-line
-test.only(
+test(
   '[vercel dev] should preserve query string even after miss phase',
   testFixtureStdio('handle-miss-querystring', async testPath => {
     await testPath(200, '/', 'Index Page');
