@@ -143,6 +143,7 @@ export default class DevServer {
   private getNowConfigPromise: Promise<NowConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
+  private updateBuildersTimeout: NodeJS.Timeout | undefined;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -781,7 +782,7 @@ export default class DevServer {
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
-    setTimeout(() => {
+    this.updateBuildersTimeout = setTimeout(() => {
       this.updateBuildersPromise = updateBuilders(builders, this.output)
         .then(updatedBuilders => {
           this.updateBuildersPromise = null;
@@ -894,6 +895,10 @@ export default class DevServer {
     if (this.stopping) return;
 
     this.stopping = true;
+
+    if (typeof this.updateBuildersTimeout !== 'undefined') {
+      clearTimeout(this.updateBuildersTimeout);
+    }
 
     const ops: Promise<any>[] = [];
 
