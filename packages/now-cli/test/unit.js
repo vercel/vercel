@@ -68,7 +68,7 @@ const getStaticFiles = async (dir, isBuilds = false) => {
 
 const normalizeWindowsPaths = files => {
   if (process.platform === 'win32') {
-    const prefix = 'D:/a/now/now/packages/now-cli/test/fixtures/';
+    const prefix = 'D:/a/vercel/vercel/packages/now-cli/test/fixtures/unit/';
     return files.map(f => f.replace(/\\/g, '/').slice(prefix.length));
   }
   return files;
