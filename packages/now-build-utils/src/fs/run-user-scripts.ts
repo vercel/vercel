@@ -291,7 +291,7 @@ export async function runNpmInstall(
   } else {
     opts.prettyCommand = 'yarn install';
     command = 'yarn';
-    commandArgs = args.concat(['install', '--ignore-engines']);
+    commandArgs = ['install', ...args, '--ignore-engines'];
   }
 
   if (process.env.NPM_ONLY_PRODUCTION) {
@@ -375,7 +375,7 @@ export async function runPackageJsonScript(
   } else {
     const prettyCommand = `yarn run ${scriptName}`;
     console.log(`Running "${prettyCommand}"`);
-    await spawnAsync('yarn', ['--ignore-engines', 'run', scriptName], {
+    await spawnAsync('yarn', ['run', scriptName, '--ignore-engines'], {
       ...spawnOpts,
       cwd: destPath,
       prettyCommand,
