@@ -255,17 +255,21 @@ async function getRoutes(
   }
 
   routes.push(
-    ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
-      arr =>
-        arr.map((route: Source) => {
-          // convert to make entire RegExp match as one group
-          route.src = route.src
-            .replace('^', `^${prefix}(`)
-            .replace('(\\/', '(')
-            .replace('$', ')$');
-          route.dest = `${url}/$1`;
-          return route;
-        })
+    ...(await getDynamicRoutes(
+      entryPath,
+      entryDirectory,
+      dynamicPages,
+      true
+    ).then(arr =>
+      arr.map((route: Source) => {
+        // convert to make entire RegExp match as one group
+        route.src = route.src
+          .replace('^', `^${prefix}(`)
+          .replace('(\\/', '(')
+          .replace('$', ')$');
+        route.dest = `${url}/$1`;
+        return route;
+      })
     ))
   );
 
@@ -490,7 +494,7 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
-        check: true,
+        check: !isDev,
       });
     }
   });
