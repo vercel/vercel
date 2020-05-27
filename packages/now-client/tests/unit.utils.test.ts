@@ -17,7 +17,9 @@ describe('buildFileTree', () => {
       'tests/fixtures/nowignore/index.txt',
     ].map(p => path.join(process.cwd(), p));
     const actual = await buildFileTree(ignoreFixturePath, true, () => {});
-    expect(normalizeWindowsPaths(actual).sort()).toEqual(expected.sort());
+    expect(normalizeWindowsPaths(expected).sort()).toEqual(
+      normalizeWindowsPaths(actual).sort()
+    );
   });
 });
 
@@ -36,6 +38,8 @@ describe('readdirRelative', () => {
       ignores,
       process.cwd()
     );
-    expect(normalizeWindowsPaths(actual).sort()).toEqual(expected.sort());
+    expect(normalizeWindowsPaths(expected).sort()).toEqual(
+      normalizeWindowsPaths(actual).sort()
+    );
   });
 });
