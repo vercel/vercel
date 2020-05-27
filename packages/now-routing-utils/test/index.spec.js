@@ -124,58 +124,58 @@ describe('normalizeRoutes', () => {
     assert.strictEqual(routes, input);
   });
 
-  test('fails with abnormal routes', () => {
-    const errors = [];
-    const routes = [];
+  test('fails if route has unknown "handle" value', () => {
+    const input = [{ handle: 'doesnotexist' }];
+    const { error } = normalizeRoutes(input);
 
-    routes.push({ handle: 'doesnotexist' });
-    errors.push({
-      message: 'This is not a valid handler (handle: doesnotexist)',
-      handle: 'doesnotexist',
-    });
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 0 has unknown handle "doesnotexist".'
+    );
+  });
 
-    // @ts-ignore
-    routes.push({ handle: 'filesystem', illegal: true });
-    errors.push({
-      message:
-        'Cannot have any other keys when handle is used (handle: filesystem)',
-      handle: 'filesystem',
-    });
+  test('fails if route has additional properties with "handle" property', () => {
+    const input = [{ handle: 'filesystem', illegal: true }];
+    const { error } = normalizeRoutes(input);
 
-    routes.push({ handle: 'filesystem' });
-    errors.push({
-      message: 'You can only handle something once (handle: filesystem)',
-      handle: 'filesystem',
-    });
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 0 has unknown property "illegal".'
+    );
+  });
 
-    routes.push({ src: '^/(broken]$' });
-    errors.push({
-      message: 'Invalid regular expression: "^/(broken]$"',
-      src: '^/(broken]$',
-    });
+  test('fails if route has a duplicate "handle"', () => {
+    const input = [{ handle: 'filesystem' }, { handle: 'filesystem' }];
+    const { error } = normalizeRoutes(input);
 
-    // @ts-ignore
-    routes.push({ doesNotExist: true });
-    errors.push({
-      message: 'A route must set either handle or src',
-    });
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 1 is a duplicate. Please use one "handle: filesystem" at most.'
+    );
+  });
 
-    // @ts-ignore
-    routes.push({ src: '^/about$', doesNotExist: true });
+  test('fails if route has a invalid regex', () => {
+    const input = [{ src: '^/(broken]$' }];
+    const { error } = normalizeRoutes(input);
 
-    const normalized = normalizeRoutes(routes);
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 0 has invalid regular expression "source: ^/(broken]$".'
+    );
+  });
 
-    assert.deepStrictEqual(normalized.routes, routes);
-    assert.deepStrictEqual(normalized.error.code, 'invalid_routes');
-    assert.deepStrictEqual(normalized.error.errors, errors);
-    assert.deepStrictEqual(
-      normalized.error.message,
-      `One or more invalid routes were found:
-- This is not a valid handler (handle: doesnotexist)
-- Cannot have any other keys when handle is used (handle: filesystem)
-- You can only handle something once (handle: filesystem)
-- Invalid regular expression: "^/(broken]$"
-- A route must set either handle or src`
+  test('fails if route does not define handle or src property', () => {
+    const input = [{ fake: 'foo' }];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 0 must define either "handle" or "src" property.'
     );
   });
 
@@ -515,10 +515,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You cannot assign "dest" after "handle: hit"'
+      error.message,
+      'Route at index 1 cannot define "dest" after "handle: hit".'
     );
   });
 
@@ -534,10 +534,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You must assign "continue: true" after "handle: hit"'
+      error.message,
+      'Route at index 1 must define "continue: true" after "handle: hit".'
     );
   });
 
@@ -554,10 +554,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You cannot assign "status" after "handle: hit"'
+      error.message,
+      'Route at index 1 cannot define "status" after "handle: hit".'
     );
   });
 
@@ -573,10 +573,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You must assign "check: true" after "handle: miss"'
+      error.message,
+      'Route at index 1 must define "check: true" after "handle: miss".'
     );
   });
 
@@ -592,10 +592,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You must assign "continue: true" after "handle: miss"'
+      error.message,
+      'Route at index 1 must define "continue: true" after "handle: miss".'
     );
   });
 });
@@ -623,7 +623,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_keys');
+    assert.equal(actual.error.code, 'invalid_mixed_routes');
+    assert.equal(
+      actual.error.message,
+      'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` is used, `routes` cannot be present.'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when redirects is invalid regex', () => {
@@ -632,7 +638,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirects');
+    assert.equal(actual.error.code, 'invalid_redirect');
+    assert.equal(
+      actual.error.message,
+      'Redirect at index 0 has invalid regular expression "source: ^/(*.)\\.html$".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when redirects is invalid pattern', () => {
@@ -641,7 +653,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirects');
+    assert.equal(actual.error.code, 'invalid_redirect');
+    assert.equal(
+      actual.error.message,
+      'Redirect at index 0 has invalid pattern "source: /:?".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when redirects defines both permanent and statusCode', () => {
@@ -657,7 +675,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirects');
+    assert.equal(actual.error.code, 'invalid_redirect');
+    assert.equal(
+      actual.error.message,
+      'Redirect at index 0 cannot define both "permanent" and "statusCode" properties.'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when headers is invalid regex', () => {
@@ -666,7 +690,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_headers');
+    assert.equal(actual.error.code, 'invalid_header');
+    assert.equal(
+      actual.error.message,
+      'Header at index 0 has invalid regular expression "source: ^/(*.)\\.html$".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when headers is invalid pattern', () => {
@@ -677,7 +707,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_headers');
+    assert.equal(actual.error.code, 'invalid_header');
+    assert.equal(
+      actual.error.message,
+      'Header at index 0 has invalid pattern "source: /:?".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when rewrites is invalid regex', () => {
@@ -686,7 +722,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_rewrites');
+    assert.equal(actual.error.code, 'invalid_rewrite');
+    assert.equal(
+      actual.error.message,
+      'Rewrite at index 0 has invalid regular expression "source: ^/(*.)\\.html$".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when rewrites is invalid pattern', () => {
@@ -695,7 +737,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_rewrites');
+    assert.equal(actual.error.code, 'invalid_rewrite');
+    assert.equal(
+      actual.error.message,
+      'Rewrite at index 0 has invalid pattern "source: /:?".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should normalize all redirects before rewrites', () => {

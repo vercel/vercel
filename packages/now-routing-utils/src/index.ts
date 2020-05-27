@@ -52,9 +52,9 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   inputRoutes.forEach((r, i) => {
     const route = { ...r };
     routes.push(route);
+    const keys = Object.keys(route);
     if (isHandler(route)) {
       const { handle } = route;
-      const keys = Object.keys(route);
       if (keys.length !== 1) {
         const unknownProp = keys.find(prop => prop !== 'handle');
         errors.push(
@@ -64,7 +64,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
         errors.push(`Route at index ${i} has unknown handle "${handle}".`);
       } else if (handling.includes(handle)) {
         errors.push(
-          `Route at index ${i} has is a duplicate. Please use one "handle: ${handle}" at most.`
+          `Route at index ${i} is a duplicate. Please use one "handle: ${handle}" at most.`
         );
       } else {
         handling.push(handle);
@@ -139,7 +139,7 @@ function checkRegexSyntax(
   try {
     new RegExp(src);
   } catch (err) {
-    return `${type} at index ${index} has invalid "source" regular expression: "${src}".`;
+    return `${type} at index ${index} has invalid regular expression "source: ${src}".`;
   }
   return null;
 }
@@ -160,7 +160,7 @@ function checkPatternSyntax(
   try {
     sourceSegments = new Set(sourceToRegex(source).segments);
   } catch (err) {
-    return `${type} as index ${index} has invalid source pattern: "${source}".`;
+    return `${type} at index ${index} has invalid pattern "source: ${source}".`;
   }
 
   if (destination) {
@@ -265,7 +265,7 @@ export function getTransformedRoutes({
   }
 
   if (typeof redirects !== 'undefined') {
-    const code = 'invalid_redirects';
+    const code = 'invalid_redirect';
     const regexErrorMessage = redirects
       .map((r, i) => checkRegexSyntax('Redirect', i, r.source))
       .find(notEmpty);
@@ -273,9 +273,9 @@ export function getTransformedRoutes({
       return {
         routes,
         error: createError(
-          code,
+          'invalid_redirect',
           regexErrorMessage,
-          'https://err.sh/now/invalid-route-source',
+          'https://vercel.link/invalid-route-source',
           'Learn More'
         ),
       };
@@ -289,7 +289,7 @@ export function getTransformedRoutes({
         error: createError(
           code,
           patternErrorMessage,
-          'https://err.sh/now/invalid-route-source',
+          'https://vercel.link/invalid-route-source',
           'Learn More'
         ),
       };
@@ -298,7 +298,12 @@ export function getTransformedRoutes({
     if (redirectErrorMessage) {
       return {
         routes,
-        error: createError(code, redirectErrorMessage),
+        error: createError(
+          code,
+          redirectErrorMessage,
+          'https://vercel.link/redirects-json',
+          'Learn More'
+        ),
       };
     }
     const normalized = normalizeRoutes(convertRedirects(redirects));
@@ -311,7 +316,7 @@ export function getTransformedRoutes({
   }
 
   if (typeof headers !== 'undefined') {
-    const code = 'invalid_headers';
+    const code = 'invalid_header';
     const regexErrorMessage = headers
       .map((r, i) => checkRegexSyntax('Header', i, r.source))
       .find(notEmpty);
@@ -321,7 +326,7 @@ export function getTransformedRoutes({
         error: createError(
           code,
           regexErrorMessage,
-          'https://err.sh/now/invalid-route-source',
+          'https://vercel.link/invalid-route-source',
           'Learn More'
         ),
       };
@@ -335,14 +340,14 @@ export function getTransformedRoutes({
         error: createError(
           code,
           patternErrorMessage,
-          'https://err.sh/now/invalid-route-source',
+          'https://vercel.link/invalid-route-source',
           'Learn More'
         ),
       };
     }
     const normalized = normalizeRoutes(convertHeaders(headers));
     if (normalized.error) {
-      normalized.error.code = 'invalid_headers';
+      normalized.error.code = code;
       return { routes, error: normalized.error };
     }
     routes = routes || [];
@@ -350,7 +355,7 @@ export function getTransformedRoutes({
   }
 
   if (typeof rewrites !== 'undefined') {
-    const code = 'invalid_rewrites';
+    const code = 'invalid_rewrite';
     const regexErrorMessage = rewrites
       .map((r, i) => checkRegexSyntax('Rewrite', i, r.source))
       .find(notEmpty);
@@ -360,7 +365,7 @@ export function getTransformedRoutes({
         error: createError(
           code,
           regexErrorMessage,
-          'https://err.sh/now/invalid-route-source',
+          'https://vercel.link/invalid-route-source',
           'Learn More'
         ),
       };
@@ -374,7 +379,7 @@ export function getTransformedRoutes({
         error: createError(
           code,
           patternErrorMessage,
-          'https://err.sh/now/invalid-route-source',
+          'https://vercel.link/invalid-route-source',
           'Learn More'
         ),
       };
