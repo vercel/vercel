@@ -4,7 +4,7 @@ import (
   "net/http"
   "__NOW_HANDLER_PACKAGE_NAME"
 
-  now "github.com/zeit/now-go-bridge/go/bridge"
+  now "github.com/vercel/go-bridge/go/bridge"
 )
 
 func main() {

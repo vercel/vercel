@@ -2,7 +2,7 @@ package main
 
 import (
 	"net/http"
-	now "github.com/zeit/now-go-bridge/go/bridge"
+	now "github.com/vercel/go-bridge/go/bridge"
 )
 
 func main() {
