@@ -433,6 +433,7 @@ export async function startDevServer(
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
     cwd: workPath,
+    execArgv: [],
     env: {
       ...process.env,
       ...meta.env,

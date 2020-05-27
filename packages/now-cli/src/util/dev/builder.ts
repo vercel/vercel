@@ -70,6 +70,7 @@ async function createBuildProcess(
 
   const buildProcess = fork(builderWorkerPath, [], {
     cwd: workPath,
+    execArgv: [],
     env,
   });
   match.buildProcess = buildProcess;

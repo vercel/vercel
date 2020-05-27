@@ -436,6 +436,19 @@ test(
 );
 
 test(
+  '[vercel dev] should preserve query string even after miss phase',
+  testFixtureStdio('handle-miss-querystring', async testPath => {
+    await testPath(200, '/', 'Index Page');
+    if (process.env.CI && process.platform === 'darwin') {
+      console.log('Skipping since GH Actions hangs for some reason');
+    } else {
+      await testPath(200, '/echo/first/second', 'a=first,b=second');
+      await testPath(200, '/functions/echo.js?a=one&b=two', 'a=one,b=two');
+    }
+  })
+);
+
+test(
   '[vercel dev] handles hit after handle: filesystem',
   testFixtureStdio('handle-hit-after-fs', async testPath => {
     await testPath(200, '/blog.html', 'Blog Page', { test: '1' });
@@ -766,6 +779,13 @@ test(
 );
 
 test(
+  '[vercel dev] support legacy `@now` scope runtimes',
+  testFixtureStdio('legacy-now-runtime', async testPath => {
+    await testPath(200, '/', /A simple deployment with the Now API!/m);
+  })
+);
+
+test(
   '[vercel dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async testPath => {
     await testPath(200, '/', /Files within/m);
@@ -776,7 +796,7 @@ test(
 test(
   '[vercel dev] 01-node',
   testFixtureStdio('01-node', async testPath => {
-    await testPath(200, '/', /A simple deployment with the Now API!/m);
+    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
   })
 );
 
