@@ -2,10 +2,11 @@
  * This converts Superstatic configuration to vercel.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
-import { isString } from 'util';
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
+
+const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
 export function getCleanUrls(
   filePaths: string[]
@@ -147,7 +148,14 @@ export function sourceToRegex(
     sensitive: true,
     delimiter: '/',
   });
-  const segments = keys.map(k => k.name).filter(isString);
+  const segments = keys
+    .map(k => k.name)
+    .map(name => {
+      if (typeof name !== 'string') {
+        return UN_NAMED_SEGMENT;
+      }
+      return name;
+    });
   return { src: r.source, segments };
 }
 
@@ -164,7 +172,10 @@ function replaceSegments(
   let { pathname, hash, query, ...rest } = parsedDestination;
   pathname = pathname || '';
   hash = hash || '';
-  if (segments.length > 0) {
+
+  const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
+
+  if (namedSegments.length > 0) {
     const indexes: { [k: string]: string } = {};
     segments.forEach((name, index) => {
       indexes[name] = toSegmentDest(index);
@@ -187,7 +198,7 @@ function replaceSegments(
     // specified
     if (!isRedirect) {
       for (const [name, value] of Object.entries(indexes)) {
-        if (!(name in query)) {
+        if (!(name in query) && name !== UN_NAMED_SEGMENT) {
           query[name] = value;
         }
       }
