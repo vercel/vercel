@@ -1,4 +1,4 @@
-![Polymer Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/polymer.svg)
+![Polymer Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/polymer.svg)
 
 # Polymer Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Polymer](https://www.polymer-project.org
 
 Deploy your own Polymer project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/polymer)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/polymer)
 
 _Live Example: https://polymer.now-examples.now.sh_
 

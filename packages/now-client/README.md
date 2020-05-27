@@ -1,27 +1,26 @@
-# now client
+# @vercel/client
 
-[![Build Status](https://travis-ci.org/zeit/now-client.svg?branch=master)](https://travis-ci.org/zeit/now-client)
-[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
+[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
 
-The official Node.js client for deploying to [Now](https://vercel.com/now). It supports v1 and v2 deployments.
+The official Node.js client for deploying to [Vercel](https://vercel.com).
 
 ## Usage
 
 Firstly, install the package:
 
 ```bash
-npm install now-client
+npm install @vercel/client
 # or
-yarn add now-client
+yarn add @vercel/client
 ```
 
 Next, load it:
 
 ```js
 // v2
-const { createDeployment } = require('now-client');
+const { createDeployment } = require('@vercel/client');
 // v1
-const { createLegacyDeployment } = require('now-client');
+const { createLegacyDeployment } = require('@vercel/client');
 ```
 
 Then call inside a `for...of` loop to follow the progress with the following arguments:
@@ -69,5 +68,5 @@ Full list of events:
 You can also get the events set programmatically:
 
 ```js
-import { EVENTS } from 'now-client';
+import { EVENTS } from '@vercel/client';
 ```

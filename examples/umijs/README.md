@@ -1,4 +1,4 @@
-![UmiJS Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/umi.svg)
+![UmiJS Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/umi.svg)
 
 # UmiJS Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [UmiJS](https://umijs.org/) app that can 
 
 Deploy your own UmiJS project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/umijs)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/umijs)
 
 _Live Example: https://umijs.now-examples.now.sh_
 

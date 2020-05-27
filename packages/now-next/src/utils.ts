@@ -344,7 +344,7 @@ export async function getRoutesManifest(
         '  1. If present, be sure your `build` script in "package.json" calls `next build`.' +
         '  2. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Build Command" is not overridden, or that it calls `next build`.' +
         '  3. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Output Directory" is not overridden. `next export` does **not** require you change this setting, even if you customize the `next export` output directory.',
-      link: 'https://err.sh/zeit/now/now-next-routes-manifest',
+      link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
       code: 'NEXT_NO_ROUTES_MANIFEST',
     });
   }

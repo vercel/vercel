@@ -14,9 +14,9 @@ Vercel is a cloud platform for static frontends and serverless functions. It ena
 
 This repository consists of multiple examples, created for use with the [Vercel](https://vercel.com) platform. In addition to this, it also contains:
 
-- [Code of Conduct](https://github.com/zeit/now/blob/master/.github/CODE_OF_CONDUCT.md) - our Code of Conduct, adapted from the [Contributor Covenant](http://contributor-covenant.org)
-- [Contributing Guidelines](https://github.com/zeit/now/blob/master/.github/CONTRIBUTING.md) - a guide on how to contribute to the Now Examples repository
-- [License](https://github.com/zeit/now/blob/master/LICENSE) - the standard MIT license under which these examples are published
+- [Code of Conduct](https://github.com/vercel/vercel/blob/master/.github/CODE_OF_CONDUCT.md) - our Code of Conduct, adapted from the [Contributor Covenant](http://contributor-covenant.org)
+- [Contributing Guidelines](https://github.com/vercel/vercel/blob/master/.github/CONTRIBUTING.md) - a guide on how to contribute to the Now Examples repository
+- [License](https://github.com/vercel/vercel/blob/master/LICENSE) - the standard MIT license under which these examples are published
 
 We recommend familiarizing yourself with the above sections, particularly if you are looking to make a contribution.
 
@@ -44,13 +44,13 @@ We are continuously improving our examples based on best practices and feedback 
 
 For example, the previous `nodejs` example showed a static frontend with a Node.js API. This is illustrated now in the `svelte` example. Below is a table that lists some of the most popular previous examples and the equivalent replacement:
 
-| Previous Example  | New Example                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| **monorepo**      | [gatsby-functions](https://github.com/zeit/now/tree/master/examples/gatsby)           |
-| **nodejs**        | [svelte-functions](https://github.com/zeit/now/tree/master/examples/svelte)           |
-| **nextjs-static** | [nextjs](https://github.com/zeit/now/tree/master/examples/nextjs)                     |
-| **vanilla-go**    | [create-react-app](https://github.com/zeit/now/tree/master/examples/create-react-app) |
-| **typescript**    | [gatsby-functions](https://github.com/zeit/now/tree/master/examples/gatsby)           |
+| Previous Example  | New Example                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| **monorepo**      | [gatsby-functions](https://github.com/vercel/vercel/tree/master/examples/gatsby)           |
+| **nodejs**        | [svelte-functions](https://github.com/vercel/vercel/tree/master/examples/svelte)           |
+| **nextjs-static** | [nextjs](https://github.com/vercel/vercel/tree/master/examples/nextjs)                     |
+| **vanilla-go**    | [create-react-app](https://github.com/vercel/vercel/tree/master/examples/create-react-app) |
+| **typescript**    | [gatsby-functions](https://github.com/vercel/vercel/tree/master/examples/gatsby)           |
 
 ## Migrating and Upgrading
 
@@ -64,7 +64,7 @@ Contributing to Now Examples should be an enjoyable experience, as such we have 
 
 The guidelines cover important information such as the requirements for new examples and where to get help if you have any questions.
 
-We have tried to make contributing to Now Examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [GitHub Discussions](https://github.com/zeit/now/discussions) where we will do our best to help you.
+We have tried to make contributing to Now Examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [GitHub Discussions](https://github.com/vercel/vercel/discussions) where we will do our best to help you.
 
 ## Reporting Issues
 
@@ -80,6 +80,6 @@ Now Examples is an open source project released under the [MIT License](https://
 
 ## Get In Touch
 
-If you have any questions that are not covered by raising an issue then please get in touch with us on [GitHub Discussions](https://github.com/zeit/now/discussions). There you will find both members of the community and staff who are happy to help answer questions on anything Vercel related.
+If you have any questions that are not covered by raising an issue then please get in touch with us on [GitHub Discussions](https://github.com/vercel/vercel/discussions). There you will find both members of the community and staff who are happy to help answer questions on anything Vercel related.
 
-[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/zeit/now/discussions)
+[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)

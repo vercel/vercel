@@ -131,7 +131,7 @@ export shouldServe(options: ShouldServeOptions) {
 }
 ```
 
-If this method is not defined, Now CLI will default to [this function](https://github.com/zeit/now/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
+If this method is not defined, Now CLI will default to [this function](https://github.com/vercel/vercel/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
 
 ### Runtime Options
 
@@ -147,7 +147,7 @@ The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCa
 
 ## Examples
 
-Check out our [Node.js Runtime](https://github.com/zeit/now/tree/master/packages/now-node), [Go Runtime](https://github.com/zeit/now/tree/master/packages/now-go), [Python Runtime](https://github.com/zeit/now/tree/master/packages/now-python) or [Ruby Runtime](https://github.com/zeit/now/tree/master/packages/now-ruby) for examples of how to build one.
+Check out our [Node.js Runtime](https://github.com/vercel/vercel/tree/master/packages/now-node), [Go Runtime](https://github.com/vercel/vercel/tree/master/packages/now-go), [Python Runtime](https://github.com/vercel/vercel/tree/master/packages/now-python) or [Ruby Runtime](https://github.com/vercel/vercel/tree/master/packages/now-ruby) for examples of how to build one.
 
 ## Technical Details
 

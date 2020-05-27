@@ -1,6 +1,6 @@
 # Contributing
 
-When contributing to this repository, please first discuss the change you wish to make via [GitHub Discussions](https://github.com/zeit/now/discussions/new) with the owners of this repository before submitting a Pull Request.
+When contributing to this repository, please first discuss the change you wish to make via [GitHub Discussions](https://github.com/vercel/vercel/discussions/new) with the owners of this repository before submitting a Pull Request.
 
 Please read our [code of conduct](CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
 
@@ -11,7 +11,7 @@ This project is configured in a monorepo pattern where one repo contains multipl
 To get started, execute the following:
 
 ```
-git clone https://github.com/zeit/now
+git clone https://github.com/vercel/vercel
 yarn install
 yarn bootstrap
 yarn build
