@@ -3,6 +3,13 @@ import { buildFileTree, getVercelIgnore, readdirRelative } from '../src/utils';
 
 const ignoreFixturePath = path.resolve(__dirname, 'fixtures', 'nowignore');
 
+const normalizeWindowsPaths = (files: string[]) => {
+  if (process.platform === 'win32') {
+    return files.map(f => f.replace(/\\/g, '/'));
+  }
+  return files;
+};
+
 describe('buildFileTree', () => {
   it('will include the correct files', async () => {
     const expected = [
@@ -10,7 +17,9 @@ describe('buildFileTree', () => {
       'tests/fixtures/nowignore/index.txt',
     ].map(p => path.join(process.cwd(), p));
     const actual = await buildFileTree(ignoreFixturePath, true, () => {});
-    expect(actual.sort()).toEqual(expected.sort());
+    expect(normalizeWindowsPaths(expected).sort()).toEqual(
+      normalizeWindowsPaths(actual).sort()
+    );
   });
 });
 
@@ -29,6 +38,8 @@ describe('readdirRelative', () => {
       ignores,
       process.cwd()
     );
-    expect(actual.sort()).toEqual(expected.sort());
+    expect(normalizeWindowsPaths(expected).sort()).toEqual(
+      normalizeWindowsPaths(actual).sort()
+    );
   });
 });
