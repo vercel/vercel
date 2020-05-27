@@ -9,7 +9,7 @@ export default withApiHandler(async function(
   res: NowResponse
 ) {
   await extract('https://github.com/vercel/vercel/archive/master.zip', '/tmp');
-  const exampleList = summary('/tmp/now-master/examples');
+  const exampleList = summary('/tmp/vercel-master/examples');
 
   const existingExamples = Array.from(exampleList).map(key => ({
     name: key,
