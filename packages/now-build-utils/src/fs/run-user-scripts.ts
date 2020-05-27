@@ -375,7 +375,7 @@ export async function runPackageJsonScript(
   } else {
     const prettyCommand = `yarn run ${scriptName}`;
     console.log(`Running "${prettyCommand}"`);
-    await spawnAsync('yarn', ['run', scriptName, '--ignore-engines'], {
+    await spawnAsync('yarn', ['run', '--ignore-engines', scriptName], {
       ...spawnOpts,
       cwd: destPath,
       prettyCommand,
