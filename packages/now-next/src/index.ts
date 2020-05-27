@@ -70,6 +70,7 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
+import findUp from 'find-up';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -204,7 +205,30 @@ export const build = async ({
 }> => {
   validateEntrypoint(entrypoint);
 
-  const isSharedLambdas = config.sharedLambdas;
+  const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
+    type: 'file',
+  });
+  let hasLegacyRoutes = false;
+
+  if (nowJsonPath) {
+    const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
+
+    if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
+      hasLegacyRoutes = true;
+      console.warn(
+        `WARNING: your application is being opted out of @vercel/next's shared lambdas mode due to legacy routes in ${path.basename(
+          nowJsonPath
+        )}. http://err.sh/zeit/now/now-next-legacy-routes-shared-lambdas`
+      );
+    }
+  }
+
+  // default to true but still allow opting out with the config
+  const isSharedLambdas =
+    !hasLegacyRoutes && typeof config.sharedLambdas === 'undefined'
+      ? true
+      : !!config.sharedLambdas;
+
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
 
