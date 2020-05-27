@@ -8,7 +8,7 @@ export default withApiHandler(async function(
   req: NowRequest,
   res: NowResponse
 ) {
-  await extract('https://github.com/zeit/now/archive/master.zip', '/tmp');
+  await extract('https://github.com/vercel/vercel/archive/master.zip', '/tmp');
   const exampleList = summary('/tmp/now-master/examples');
 
   const existingExamples = Array.from(exampleList).map(key => ({
