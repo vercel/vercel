@@ -319,8 +319,11 @@ test('deploys gatsby and prints cached directories', async t => {
   await sleep(5000);
   pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
   await writeFile(packageJsonPath, JSON.stringify(pkg));
-  await tryDeploy(directory);
-  await writeFile(packageJsonPath, packageJsonOriginal);
+  try {
+    await tryDeploy(directory);
+  } finally {
+    await writeFile(packageJsonPath, packageJsonOriginal);
+  }
 });
 
 test('deploy using --local-config flag v2', async t => {
