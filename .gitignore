@@ -27,3 +27,4 @@ test/lib/deployment/failed-page.txt
 /.env
 /public
 __pycache__
+.vercel
