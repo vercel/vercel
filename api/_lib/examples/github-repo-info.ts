@@ -51,7 +51,7 @@ export async function getGitHubRepoInfo(repo: Repo) {
     data.subdir = repo.path.slice(subdirPath.length).split('/');
   }
 
-  if (data.id === 'zeit/now' && data.subdir && data.subdir[0] === 'examples') {
+  if (data.id === 'vercel/vercel' && data.subdir && data.subdir[0] === 'examples') {
     // from our examples, add `homepage` and `description` fields
     const example = data.subdir[1];
     const exampleList = await getExampleList();
