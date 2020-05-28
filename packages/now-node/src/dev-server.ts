@@ -1,3 +1,13 @@
+const entrypoint = process.env.NOW_DEV_ENTRYPOINT;
+delete process.env.NOW_DEV_ENTRYPOINT;
+
+const tsconfig = process.env.NOW_DEV_TSCONFIG;
+delete process.env.NOW_DEV_TSCONFIG;
+
+if (!entrypoint) {
+  throw new Error('`NOW_DEV_ENTRYPOINT` must be defined');
+}
+
 import { register } from 'ts-node';
 
 // Use the project's version of TypeScript if available,
@@ -18,6 +28,7 @@ register({
     esModuleInterop: true,
     jsx: 'react',
   },
+  project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
   transpileOnly: true,
 });
 
@@ -38,13 +49,6 @@ function listen(server: Server, port: number, host: string): Promise<void> {
 let bridge: Bridge | undefined = undefined;
 
 async function main() {
-  const entrypoint = process.env.NOW_DEV_ENTRYPOINT;
-  delete process.env.NOW_DEV_ENTRYPOINT;
-
-  if (!entrypoint) {
-    throw new Error('`NOW_DEV_ENTRYPOINT` must be defined');
-  }
-
   const config = JSON.parse(process.env.NOW_DEV_CONFIG || '{}');
   delete process.env.NOW_DEV_CONFIG;
 
@@ -53,7 +57,7 @@ async function main() {
   );
 
   bridge = getNowLauncher({
-    entrypointPath: join(process.cwd(), entrypoint),
+    entrypointPath: join(process.cwd(), entrypoint!),
     helpersPath: './helpers',
     shouldAddHelpers,
     bridgePath: 'not used',
