@@ -431,9 +431,7 @@ export async function startDevServer(
 ): Promise<StartDevServerResult> {
   const { entrypoint, workPath, config, meta = {} } = opts;
 
-  // In order to type-check a single file, a standalone tsconfig
-  // file needs to be created that inherits from the base one :(
-  // See: https://stackoverflow.com/a/44748041/376773
+  // Find the `tsconfig.json` file closest to the entrypoint file
   const projectTsConfig = await walkParentDirs({
     base: workPath,
     start: join(workPath, dirname(entrypoint)),
@@ -467,7 +465,7 @@ export async function startDevServer(
     if (ext === '.ts' || ext === '.tsx') {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck(opts).catch((err: Error) => {
+      doTypeCheck(opts, projectTsConfig).catch((err: Error) => {
         console.error('Type check for %j failed:', entrypoint, err);
       });
     }
@@ -481,23 +479,17 @@ export async function startDevServer(
   }
 }
 
-async function doTypeCheck({
-  entrypoint,
-  workPath,
-  meta = {},
-}: StartDevServerOptions): Promise<void> {
+async function doTypeCheck(
+  { entrypoint, workPath, meta = {} }: StartDevServerOptions,
+  projectTsConfig: string | null
+): Promise<void> {
   const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
   const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
 
   // In order to type-check a single file, a standalone tsconfig
   // file needs to be created that inherits from the base one :(
   // See: https://stackoverflow.com/a/44748041/376773
-  const projectTsConfig = await walkParentDirs({
-    base: workPath,
-    start: join(workPath, dirname(entrypoint)),
-    filename: 'tsconfig.json',
-  });
-
+  //
   // A different filename needs to be used for different `extends` tsconfig.json
   const tsconfigName = projectTsConfig
     ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
