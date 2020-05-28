@@ -15,5 +15,5 @@ $ npx create-react-app my-app
 Once initialized, you can deploy the React example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```

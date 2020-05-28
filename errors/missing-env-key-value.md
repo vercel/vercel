@@ -9,11 +9,11 @@ You specified the `--env` or `-e` flag and didn't add a name and value for the e
 Make sure to set the name and value of the variable like this:
 
 ```bash
-now -e VARIABLE_NAME="VALUE"
+vercel -e VARIABLE_NAME="VALUE"
 ```
 
 You can also specify a environment variable that contains a secret:
 
 ```bash
-now -e VARIABLE_NAME=@secret-name
+vercel -e VARIABLE_NAME=@secret-name
 ```

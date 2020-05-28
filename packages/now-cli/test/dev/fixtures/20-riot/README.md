@@ -4,10 +4,10 @@ This directory is a brief example of a [Riot.js](https://riot.js.org/) app that 
 
 ## How we created this example
 
-To get started with Riot on Vercel, you can use the [Now CLI](https://vercel.com/download) to initialize the project:
+To get started with Riot on Vercel, you can use the [Vercel CLI](https://vercel.com/download) to initialize the project:
 
 ```shell
-$ now init riot
+$ vercel init riot
 ```
 
 ## Deploying this Example
@@ -15,5 +15,5 @@ $ now init riot
 Once initialized, you can deploy the Riot example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```
