@@ -33,5 +33,5 @@ When passing multiple `--regions` as a CLI parameter,
 make sure they're separated by a comma (`,`). For example:
 
 ```console
-now --regions sfo,bru,gru
+vercel --regions sfo,bru,gru
 ```

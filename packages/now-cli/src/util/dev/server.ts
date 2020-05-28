@@ -678,7 +678,7 @@ export default class DevServer {
 
   async validateNowConfig(config: NowConfig): Promise<void> {
     if (config.version === 1) {
-      this.output.error('Only `version: 2` is supported by `now dev`');
+      this.output.error('Cannot run `version: 1` projects.');
       await this.exit(1);
       return;
     }
@@ -745,7 +745,7 @@ export default class DevServer {
   }
 
   /**
-   * Launches the `now dev` server.
+   * Launches the `vercel dev` server.
    */
   async start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
@@ -807,7 +807,7 @@ export default class DevServer {
         });
     }, ms('30s'));
 
-    // Now Builders that do not define a `shouldServe()` function need to be
+    // Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
     // that can be served by the builder.
     const blockingBuilds = Array.from(this.buildMatches.values()).filter(
@@ -899,7 +899,7 @@ export default class DevServer {
   }
 
   /**
-   * Shuts down the `now dev` server, and cleans up any temporary resources.
+   * Shuts down the `vercel dev` server, and cleans up any temporary resources.
    */
   async stop(exitCode?: number): Promise<void> {
     const { devProcess } = this;
@@ -1091,7 +1091,7 @@ export default class DevServer {
   }
 
   /**
-   * Sets the response `headers` including the Now headers to `res`.
+   * Sets the response `headers` including the platform headers to `res`.
    */
   setResponseHeaders(
     res: http.ServerResponse,
@@ -1267,7 +1267,7 @@ export default class DevServer {
   };
 
   /**
-   * Serve project directory as a Now v2 deployment.
+   * Serve project directory as a v2 deployment.
    */
   serveProjectAsNowV2 = async (
     req: http.IncomingMessage,
@@ -1528,10 +1528,10 @@ export default class DevServer {
     }
 
     // Before doing any asset matching, check if this builder supports the
-    // `startDevServer()` "optimization". In this case, the now dev server invokes
+    // `startDevServer()` "optimization". In this case, the vercel dev server invokes
     // `startDevServer()` on the builder for every HTTP request so that it boots
-    // up a single-serve dev HTTP server that now dev will proxy this HTTP request
-    // to. Once the proxied request is finished, now dev shuts down the dev
+    // up a single-serve dev HTTP server that vercel dev will proxy this HTTP request
+    // to. Once the proxied request is finished, vercel dev shuts down the dev
     // server child process.
     const { builder, package: builderPkg } = match.builderWithPkg;
     if (typeof builder.startDevServer === 'function') {
@@ -1989,7 +1989,7 @@ function close(server: http.Server | httpProxy): Promise<void> {
 }
 
 /**
- * Generates a (fake) Now tracing ID for an HTTP request.
+ * Generates a (fake) tracing ID for an HTTP request.
  *
  * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */

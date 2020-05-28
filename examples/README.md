@@ -15,34 +15,34 @@ Vercel is a cloud platform for static frontends and serverless functions. It ena
 This repository consists of multiple examples, created for use with the [Vercel](https://vercel.com) platform. In addition to this, it also contains:
 
 - [Code of Conduct](https://github.com/vercel/vercel/blob/master/.github/CODE_OF_CONDUCT.md) - our Code of Conduct, adapted from the [Contributor Covenant](http://contributor-covenant.org)
-- [Contributing Guidelines](https://github.com/vercel/vercel/blob/master/.github/CONTRIBUTING.md) - a guide on how to contribute to the Now Examples repository
+- [Contributing Guidelines](https://github.com/vercel/vercel/blob/master/.github/CONTRIBUTING.md) - a guide on how to contribute to the examples repository
 - [License](https://github.com/vercel/vercel/blob/master/LICENSE) - the standard MIT license under which these examples are published
 
 We recommend familiarizing yourself with the above sections, particularly if you are looking to make a contribution.
 
 ## Deploying Examples
 
-To get started using any of these examples as your own project, [install Now](https://vercel.com/download) and use either of the following commands in your terminal:
+To get started using any of these examples as your own project, [install Vercel](https://vercel.com/download) and use either of the following commands in your terminal:
 
 ```sh
-now init                    # Pick an example in the CLI
-now init <example>          # Create a new project from a specific <example>
-now init <example> <name>   # Create a new project from a specific <example> with a different folder <name>
+vercel init                    # Pick an example in the CLI
+vercel init <example>          # Create a new project from a specific <example>
+vercel init <example> <name>   # Create a new project from a specific <example> with a different folder <name>
 ```
 
 Deploying your project takes seconds and can be done with **just a single command**:
 
 ```sh
-now                         # Deploys the project with Now
+vercel                         # Deploy your project with the CLI
 ```
 
-With the `now` command, your project will be built and served by Now, providing you with a URL that can be shared immediately.
+With the `vercel` command, your project will be built and served by Vercel, providing you with a URL that can be shared immediately.
 
 ## New Examples
 
 We are continuously improving our examples based on best practices and feedback from the community. As a result, it is possible that example names will change and on occasion deprecated in favor of an improved implementation.
 
-For example, the previous `nodejs` example showed a static frontend with a Node.js API. This is illustrated now in the `svelte` example. Below is a table that lists some of the most popular previous examples and the equivalent replacement:
+For example, the previous `nodejs` example showed a static frontend with a Node.js API. This is illustrated in the `svelte` example. Below is a table that lists some of the most popular previous examples and the equivalent replacement:
 
 | Previous Example  | New Example                                                                                |
 | ----------------- | ------------------------------------------------------------------------------------------ |
@@ -60,15 +60,15 @@ If you would like to upgrade a project to take advantage of zero configuration, 
 
 ## How to Contribute
 
-Contributing to Now Examples should be an enjoyable experience, as such we have created a set of [contributing guidelines](https://github.com/zeit/docs/blob/master/CONTRIBUTING.md) to help you do so.
+Contributing examples should be an enjoyable experience, as such we have created a set of [contributing guidelines](https://github.com/vercel/vercel/blob/master/.github/CONTRIBUTING.md) to help you do so.
 
 The guidelines cover important information such as the requirements for new examples and where to get help if you have any questions.
 
-We have tried to make contributing to Now Examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [GitHub Discussions](https://github.com/vercel/vercel/discussions) where we will do our best to help you.
+We have tried to make contributing to examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [GitHub Discussions](https://github.com/vercel/vercel/discussions) where we will do our best to help you.
 
 ## Reporting Issues
 
-We actively encourage our community to raise issues and provide feedback on areas of Now Examples that could be improved.
+We actively encourage our community to raise issues and provide feedback on areas of examples that could be improved.
 
 An issue can be raised by clicking the 'Issues' tab at the top of the repository, followed by the Green 'New issue' button.
 
@@ -76,7 +76,7 @@ When submitting an issue, please thoroughly and concisely describe the problem y
 
 ## License
 
-Now Examples is an open source project released under the [MIT License](https://github.com/zeit/docs/blob/master/LICENSE.md).
+This repository is an open source project. See the [License](https://github.com/vercel/vercel/blob/master/LICENSE).
 
 ## Get In Touch
 

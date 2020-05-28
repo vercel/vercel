@@ -40,7 +40,7 @@ async function initPrivateGit(credentials: string) {
  * Since `go build` does not support files that begin with a square bracket,
  * we must rename to something temporary to support Path Segments.
  * The output file is not renamed because v3 builders can't rename outputs
- * which works great for this feature. We also need to add a suffix during `now dev`
+ * which works great for this feature. We also need to add a suffix during `vercel dev`
  * since the entrypoint is already stripped of its suffix before build() is called.
  */
 async function getRenamedEntrypoint(
@@ -132,14 +132,14 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
   const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
 
   if (meta.isDev) {
-    // Create cache so Go rebuilds fast with `now dev`
+    // Create cache so Go rebuilds fast with `vercel dev`
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
     goPath = join(devCacheDir, 'now-go', basename(entrypoint, '.go'));
-    const destNow = join(goPath, 'src', 'lambda');
-    await download(downloadedFiles, destNow);
-    downloadedFiles = await glob('**', destNow);
-    downloadPath = destNow;
+    const destLambda = join(goPath, 'src', 'lambda');
+    await download(downloadedFiles, destLambda);
+    downloadedFiles = await glob('**', destLambda);
+    downloadPath = destLambda;
   }
 
   // find `go.mod` in downloadedFiles
@@ -348,7 +348,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
       throw err;
     }
     if (meta.isDev) {
-      // caching for `now dev`
+      // caching for `vercel dev`
       await move(
         join(baseGoModPath, 'go.mod'),
         join(baseGoModPath, 'go.mod.bk'),

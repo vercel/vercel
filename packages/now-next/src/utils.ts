@@ -441,7 +441,7 @@ export async function getDynamicRoutes(
 
   const routes: Source[] = [];
   pageMatchers.forEach(pageMatcher => {
-    // in `now dev` we don't need to prefix the destination
+    // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
       ? path.join('/', entryDirectory, pageMatcher.pageName)
       : pageMatcher.pageName;

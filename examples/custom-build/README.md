@@ -15,7 +15,7 @@ _Live Example: https://custom-build.now-examples.now.sh_
 To get started deploying a Custom Built project with Vercel, you can use the [Vercel CLI](https://vercel.com/download) to initialize the project:
 
 ```shell
-$ now init custom-build
+$ vercel init custom-build
 ```
 
 ### Deploying From Your Terminal

@@ -20,8 +20,8 @@ $ npx ionic start [project-name] conference --type react && cd [project-name]
 
 ### Deploying From Your Terminal
 
-You can deploy your new Ionic React project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Ionic React project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

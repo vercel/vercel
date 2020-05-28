@@ -34,7 +34,7 @@ async function deploy() {
 
   for await (const event of createDeployment({
     token: process.env.TOKEN,
-    path: '/Users/zeit-user/projects/front',
+    path: '/Users/vercel-user/projects/front',
   })) {
     if (event.type === 'ready') {
       deployment = event.payload;

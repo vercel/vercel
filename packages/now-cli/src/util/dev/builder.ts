@@ -38,6 +38,7 @@ import {
 } from './types';
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
+import { getTitleName } from '../pkg-name';
 
 interface BuildMessage {
   type: string;
@@ -248,9 +249,9 @@ export async function executeBuild(
     } as BuildResult;
   } else {
     throw new Error(
-      `Now CLI does not support builder version ${
+      `${getTitleName()} CLI does not support builder version ${
         builder.version
-      }.\nPlease run \`${await getUpdateCommand()}\` to update Now CLI.`
+      }.\nPlease run \`${await getUpdateCommand()}\` to update to the latest CLI.`
     );
   }
 
@@ -413,7 +414,7 @@ export async function getBuildMatches(
     if (src[0] === '/') {
       // Remove a leading slash so that the globbing is relative to `cwd`
       // instead of the root of the filesystem. This matches the behavior
-      // of Now deployments.
+      // of Vercel deployments.
       src = src.substring(1);
     }
 

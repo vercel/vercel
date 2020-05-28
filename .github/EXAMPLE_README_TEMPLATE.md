@@ -13,7 +13,7 @@ Deploy your own [Name] project with Vercel.
 To get started with [Name] on Vercel, you can use the [CLI Tool Used](CLI-link) to initialize the project:
 
 ```shell
-$ now init charge
+$ vercel init [Name]]
 ```
 
 ### Deploying From Your Terminal
@@ -21,5 +21,5 @@ $ now init charge
 Once initialized, you can deploy the [Name] example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```
