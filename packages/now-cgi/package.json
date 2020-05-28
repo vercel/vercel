@@ -4,7 +4,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-cgi"
   },
   "scripts": {

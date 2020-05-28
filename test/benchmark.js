@@ -39,9 +39,7 @@ function createRandomProject(dir, fileCount) {
   writeFileSync(join(dir, 'now.json'), nowJson, 'utf8');
   const publicDir = join(dir, 'public');
   mkdirSync(publicDir);
-  Array.from({ length: fileCount }).forEach(() =>
-    createRandomFile(publicDir)
-  );
+  Array.from({ length: fileCount }).forEach(() => createRandomFile(publicDir));
 }
 
 function main(fileCount = 1000) {
@@ -52,7 +50,7 @@ function main(fileCount = 1000) {
   createRandomProject(dir, Number(fileCount));
   console.log(`Done. Run the following:`);
   console.log(`cd ${dir}`);
-  console.log('time now --no-clipboard');
+  console.log('time vercel --no-clipboard');
 }
 
 main(process.argv[2]);

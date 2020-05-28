@@ -15,5 +15,5 @@ $ gridsome create my-website
 Once initialized, you can deploy the Gridsome example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```

@@ -5,12 +5,12 @@ const { readFile, writeFile, readdir, remove } = require('fs-extra');
 async function main() {
   const dirRoot = join(__dirname, '..');
 
-  // Compile the `doT.js` template files for `now dev`
+  // Compile the `doT.js` template files for `vercel dev`
   const templatesDir = join(dirRoot, 'src/util/dev/templates');
   const dotPacker = join(dirRoot, '../../node_modules/dot/bin/dot-packer');
   await execa(process.execPath, [dotPacker], {
     cwd: templatesDir,
-    stdio: 'inherit'
+    stdio: 'inherit',
   });
 
   const files = await readdir(templatesDir);
@@ -24,7 +24,7 @@ async function main() {
     [prettier, '--write', '--single-quote', ...compiledFiles],
     {
       cwd: templatesDir,
-      stdio: 'inherit'
+      stdio: 'inherit',
     }
   );
 
@@ -60,7 +60,7 @@ async function main() {
     )}`;
 
     lines.unshift(
-      'import encodeHTML from \'escape-html\';',
+      "import encodeHTML from 'escape-html';",
       '',
       ...def.split('\n')
     );

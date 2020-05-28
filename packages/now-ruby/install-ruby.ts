@@ -22,7 +22,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
   let selection = getLatestRubyVersion();
   if (meta.isDev) {
     throw new Error(
-      'Ruby is in the early alpha stage and does not support now dev at this time.'
+      'Ruby is in the early alpha stage and does not support vercel dev at this time.'
     );
   } else if (gemfileContents) {
     const line = gemfileContents
