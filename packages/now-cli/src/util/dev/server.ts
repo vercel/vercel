@@ -401,7 +401,9 @@ export default class DevServer {
     for (const match of matches) {
       const currentMatch = this.buildMatches.get(match.src);
       if (!currentMatch || currentMatch.use !== match.use) {
-        this.output.debug(`Adding build match for "${match.src}"`);
+        this.output.debug(
+          `Adding build match for "${match.src}" with "${match.use}"`
+        );
         this.buildMatches.set(match.src, match);
         if (!isInitial && needsBlockingBuild(match)) {
           const buildPromise = executeBuild(
@@ -418,12 +420,22 @@ export default class DevServer {
     }
 
     if (blockingBuilds.length > 0) {
-      const cleanup = () => {
-        this.blockingBuildsPromise = null;
-      };
+      this.output.debug(
+        `Waiting for ${blockingBuilds.length} "blocking builds"`
+      );
       this.blockingBuildsPromise = Promise.all(blockingBuilds)
-        .then(cleanup)
-        .catch(cleanup);
+        .then(() => {
+          this.output.debug(
+            `Cleaning up "blockingBuildsPromise" after successful resolve`
+          );
+          this.blockingBuildsPromise = null;
+        })
+        .catch((err?: Error) => {
+          this.output.debug(
+            `Cleaning up "blockingBuildsPromise" after error: ${err}`
+          );
+          this.blockingBuildsPromise = null;
+        });
     }
 
     // Sort build matches to make sure `@vercel/static-build` is always last
