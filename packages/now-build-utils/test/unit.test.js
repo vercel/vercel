@@ -139,7 +139,7 @@ it('should match all semver ranges', async () => {
   expect(await getSupportedNodeVersion('^10.5.0')).toHaveProperty('major', 10);
 });
 
-it('should ignore node version in now dev getNodeVersion()', async () => {
+it('should ignore node version in vercel dev getNodeVersion()', async () => {
   expect(
     await getNodeVersion(
       '/tmp',

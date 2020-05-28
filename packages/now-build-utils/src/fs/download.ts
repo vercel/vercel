@@ -48,7 +48,7 @@ export default async function download(
   } = meta || {};
 
   if (isDev || skipDownload) {
-    // In `now dev`, the `download()` function is a no-op because
+    // In `vercel dev`, the `download()` function is a no-op because
     // the `basePath` matches the `cwd` of the dev server, so the
     // source files are already available.
     return files as DownloadedFiles;

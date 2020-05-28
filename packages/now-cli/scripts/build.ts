@@ -33,13 +33,13 @@ async function main() {
     // During local development, these secrets will be empty.
     await createConstants();
 
-    // `now dev` uses chokidar to watch the filesystem, but opts-out of the
+    // `vercel dev` uses chokidar to watch the filesystem, but opts-out of the
     // `fsevents` feature using `useFsEvents: false`, so delete the module here so
     // that it is not compiled by ncc, which makes the npm package size larger
     // than necessary.
     await remove(join(dirRoot, '../../node_modules/fsevents'));
 
-    // Compile the `doT.js` template files for `now dev`
+    // Compile the `doT.js` template files for `vercel dev`
     console.log();
     await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
       stdio: 'inherit',

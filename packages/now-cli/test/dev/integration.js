@@ -781,7 +781,7 @@ test(
 test(
   '[vercel dev] support legacy `@now` scope runtimes',
   testFixtureStdio('legacy-now-runtime', async testPath => {
-    await testPath(200, '/', /A simple deployment with the Now API!/m);
+    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
   })
 );
 

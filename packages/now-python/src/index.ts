@@ -42,10 +42,10 @@ export async function downloadFilesInWorkPath({
   if (meta.isDev) {
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
-    const destNow = join(devCacheDir, basename(entrypoint, '.py'));
-    await download(downloadedFiles, destNow);
-    downloadedFiles = await glob('**', destNow);
-    workPath = destNow;
+    const destCache = join(devCacheDir, basename(entrypoint, '.py'));
+    await download(downloadedFiles, destCache);
+    downloadedFiles = await glob('**', destCache);
+    workPath = destCache;
   }
   return workPath;
 }
@@ -68,7 +68,7 @@ export const build = async ({
   try {
     // See: https://stackoverflow.com/a/44728772/376773
     //
-    // The `setup.cfg` is required for `now dev` on MacOS, where without
+    // The `setup.cfg` is required for `vercel dev` on MacOS, where without
     // this file being present in the src dir then this error happens:
     //
     // distutils.errors.DistutilsOptionError: must supply either home
@@ -146,7 +146,7 @@ export const build = async ({
   const originalNowHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
-  // Since `now dev` renames source files, we must reference the original
+  // Since `vercel dev` renames source files, we must reference the original
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
@@ -163,7 +163,7 @@ export const build = async ({
     nowHandlerPyContents
   );
 
-  // Use the system-installed version of `python3` when running via `now dev`
+  // Use the system-installed version of `python3` when running via `vercel dev`
   const runtime = meta.isDev ? 'python3' : 'python3.6';
 
   const globOptions: GlobOptions = {
