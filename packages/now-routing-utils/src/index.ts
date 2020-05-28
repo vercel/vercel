@@ -125,7 +125,14 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   });
 
   const error =
-    errors.length > 0 ? createError('invalid_route', errors[0]) : null;
+    errors.length > 0
+      ? createError(
+          'invalid_route',
+          errors[0],
+          'https://vercel.link/routes-json',
+          'Learn More'
+        )
+      : null;
   return { routes, error };
 }
 
@@ -201,8 +208,8 @@ function checkRedirect(r: NowRedirect, index: number) {
 function createError(
   code: string,
   message: string,
-  link?: string,
-  action?: string
+  link: string,
+  action: string
 ): RouteApiError | null {
   const error: RouteApiError = {
     code,
