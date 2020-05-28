@@ -1,13 +1,13 @@
 {
   "name": "vercel",
-  "version": "19.0.2-canary.7",
+  "version": "19.0.2-canary.8",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
   "homepage": "https://vercel.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-cli"
   },
   "scripts": {
@@ -62,13 +62,13 @@
     "node": ">= 10"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.3.2-canary.1",
-    "@vercel/go": "1.1.1",
-    "@vercel/next": "2.6.3-canary.3",
-    "@vercel/node": "1.6.2-canary.3",
-    "@vercel/python": "1.2.2-canary.0",
-    "@vercel/ruby": "1.2.1",
-    "@vercel/static-build": "0.17.1"
+    "@vercel/build-utils": "2.3.2-canary.2",
+    "@vercel/go": "1.1.2-canary.0",
+    "@vercel/next": "2.6.3-canary.4",
+    "@vercel/node": "1.6.2-canary.4",
+    "@vercel/python": "1.2.2-canary.1",
+    "@vercel/ruby": "1.2.2-canary.0",
+    "@vercel/static-build": "0.17.2-canary.0"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",

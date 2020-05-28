@@ -1,4 +1,4 @@
-![Angular Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/angular.svg)
+![Angular Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/angular.svg)
 
 # Angular Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of an [Angular](https://angular.io/) app that 
 
 Deploy your own Angular project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/angular)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/angular)
 
 _Live Example: https://angular.now-examples.now.sh_
 

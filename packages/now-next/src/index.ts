@@ -315,7 +315,7 @@ export const build = async ({
     }
 
     console.warn(
-      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
+      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/vercel/vercel/now-next-legacy-mode"
     );
 
     debug('Normalizing package.json');
@@ -823,7 +823,7 @@ export const build = async ({
       throw new NowBuildError({
         code: 'NEXT_NO_SERVERLESS_PAGES',
         message: 'No serverless pages were built',
-        link: 'https://err.sh/zeit/now/now-next-no-serverless-pages-built',
+        link: 'https://err.sh/vercel/vercel/now-next-no-serverless-pages-built',
       });
     }
 

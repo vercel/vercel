@@ -1,4 +1,4 @@
-![Vue.js Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/vue.svg)
+![Vue.js Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/vue.svg)
 
 # Vue.js Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Vue.js](https://vuejs.org/) app that can
 
 Deploy your own Vue.js project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/vue)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/vue)
 
 _Live Example: https://vue.now-examples.now.sh_
 

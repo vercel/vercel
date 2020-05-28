@@ -169,7 +169,7 @@ export async function getNodeVersion(
   meta?: Meta
 ): Promise<NodeVersion> {
   if (meta && meta.isDev) {
-    // Use the system-installed version of `node` in PATH for `now dev`
+    // Use the system-installed version of `node` in PATH for `vercel dev`
     const latest = getLatestNodeVersion();
     return { ...latest, runtime: 'nodejs' };
   }
