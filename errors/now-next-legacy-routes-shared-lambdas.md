@@ -1,8 +1,9 @@
-# `@now/next` Legacy Routes Shared Lambdas Opt-out
+# `@now/next` Legacy Routes Optimized Lambdas Opt-out
 
 #### Why This Warning Occurred
 
-`@vercel/next` by default now bundles pages into shared lambdas to optimize the number of lambdas needed for each application. When legacy `routes` are added in `now.json` or `vercel.json`, they cause conflicts with this optimization so it is opted-out.
+`@vercel/next` by default now bundles pages into optimized functions, minimizing bootup time and increasing overall application throughput.
+When legacy `routes` are added in `now.json` or `vercel.json`, they cause conflicts with this optimization, so it is opted-out.
 
 #### Possible Ways to Fix It
 

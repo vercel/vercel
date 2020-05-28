@@ -216,9 +216,9 @@ export const build = async ({
     if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
       hasLegacyRoutes = true;
       console.warn(
-        `WARNING: your application is being opted out of @vercel/next's shared lambdas mode due to legacy routes in ${path.basename(
+        `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
           nowJsonPath
-        )}. http://err.sh/zeit/now/now-next-legacy-routes-shared-lambdas`
+        )}. http://err.sh/zeit/now/now-next-legacy-routes-optimized-lambdas`
       );
     }
   }
