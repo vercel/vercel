@@ -128,7 +128,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
     errors.length > 0
       ? createError(
           'invalid_route',
-          errors[0],
+          errors,
           'https://vercel.link/routes-json',
           'Learn More'
         )
@@ -214,15 +214,23 @@ function checkRedirect(r: NowRedirect, index: number) {
 
 function createError(
   code: string,
-  message: string,
+  errors: string | string[],
   link: string,
   action: string
 ): RouteApiError | null {
+  let message: string;
+  let otherErrors: string[] = [];
+  if (Array.isArray(errors)) {
+    [message, ...otherErrors] = errors;
+  } else {
+    message = errors;
+  }
   const error: RouteApiError = {
     code,
     message,
     link,
     action,
+    otherErrors,
   };
   return error;
 }
