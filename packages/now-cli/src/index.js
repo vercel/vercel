@@ -529,7 +529,7 @@ const main = async argv_ => {
 
   if (argv['--team']) {
     output.warn(
-      `The ${param('--team')} flag is deprecated. Please use ${param(
+      `The ${param('--team')} option is deprecated. Please use ${param(
         '--scope'
       )} instead.`
     );

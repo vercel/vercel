@@ -1703,7 +1703,7 @@ test('ensure we are getting a warning for the old team flag', async t => {
   // Ensure the warning is printed
   t.true(
     stderr.includes(
-      'WARN! The "--team" flag is deprecated. Please use "--scope" instead.'
+      'WARN! The "--team" option is deprecated. Please use "--scope" instead.'
     )
   );
 

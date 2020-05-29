@@ -65,12 +65,13 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   function error(
     str: string,
     slug: string | null = null,
-    link: string | null = null
+    link: string | null = null,
+    action = 'More details'
   ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
     const details = slug ? `https://err.sh/now/${slug}` : link;
     if (details) {
-      print(`More details: ${details}\n`);
+      print(`${action}: ${details}\n`);
     }
   }
 
