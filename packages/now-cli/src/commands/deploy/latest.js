@@ -251,7 +251,9 @@ export default async function main(
   if (argv['--name']) {
     output.print(
       `${prependEmoji(
-        `The ${param('--name')} flag is deprecated (https://zeit.ink/1B)`,
+        `The ${param(
+          '--name'
+        )} flag is deprecated (https://vercel.link/name-flag)`,
         emoji('warning')
       )}\n`
     );
@@ -389,7 +391,7 @@ export default async function main(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
           localConfig[fileNameSymbol]
-        )} is deprecated (https://zeit.ink/5F)`,
+        )} is deprecated (https://vercel.link/name-prop)`,
         emoji('warning')
       )}\n`
     );
@@ -573,8 +575,10 @@ export default async function main(
 
     if (deployment instanceof Error) {
       output.error(
-        `${deployment.message ||
-          'An unexpected error occurred while deploying your project'} (http://zeit.ink/P4)`
+        deployment.message ||
+          'An unexpected error occurred while deploying your project',
+        null,
+        'https://vercel.link/help'
       );
       return 1;
     }
