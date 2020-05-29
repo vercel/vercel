@@ -161,13 +161,16 @@ function checkPatternSyntax(
     source: string;
     destination?: string;
   }
-): string | null {
+): { message: string; link: string } | null {
   let sourceSegments = new Set<string>();
   let destinationSegments = new Set<string>();
   try {
     sourceSegments = new Set(sourceToRegex(source).segments);
   } catch (err) {
-    return `${type} at index ${index} has invalid pattern "source: ${source}".`;
+    return {
+      message: `${type} at index ${index} has invalid \`source\` pattern "${source}".`,
+      link: 'https://vercel.link/invalid-route-source-pattern',
+    };
   }
 
   if (destination) {
@@ -187,7 +190,10 @@ function checkPatternSyntax(
 
     for (const segment of destinationSegments) {
       if (!sourceSegments.has(segment)) {
-        return `${type} at index ${index} has segment ":${segment}" in "destination" pattern but not in "source" pattern.`;
+        return {
+          message: `${type} at index ${index} has segment ":${segment}" in \`destination\` property but not in \`source\` property.`,
+          link: 'https://vercel.link/invalid-route-destination-segment',
+        };
       }
     }
   }
@@ -282,21 +288,21 @@ export function getTransformedRoutes({
         error: createError(
           'invalid_redirect',
           regexErrorMessage,
-          'https://vercel.link/invalid-route-source',
+          'https://vercel.link/invalid-route-source-pattern',
           'Learn More'
         ),
       };
     }
-    const patternErrorMessage = redirects
+    const patternError = redirects
       .map((r, i) => checkPatternSyntax('Redirect', i, r))
       .find(notEmpty);
-    if (patternErrorMessage) {
+    if (patternError) {
       return {
         routes,
         error: createError(
           code,
-          patternErrorMessage,
-          'https://vercel.link/invalid-route-source',
+          patternError.message,
+          patternError.link,
           'Learn More'
         ),
       };
@@ -333,21 +339,21 @@ export function getTransformedRoutes({
         error: createError(
           code,
           regexErrorMessage,
-          'https://vercel.link/invalid-route-source',
+          'https://vercel.link/invalid-route-source-pattern',
           'Learn More'
         ),
       };
     }
-    const patternErrorMessage = headers
+    const patternError = headers
       .map((r, i) => checkPatternSyntax('Header', i, r))
       .find(notEmpty);
-    if (patternErrorMessage) {
+    if (patternError) {
       return {
         routes,
         error: createError(
           code,
-          patternErrorMessage,
-          'https://vercel.link/invalid-route-source',
+          patternError.message,
+          patternError.link,
           'Learn More'
         ),
       };
@@ -372,21 +378,21 @@ export function getTransformedRoutes({
         error: createError(
           code,
           regexErrorMessage,
-          'https://vercel.link/invalid-route-source',
+          'https://vercel.link/invalid-route-source-pattern',
           'Learn More'
         ),
       };
     }
-    const patternErrorMessage = rewrites
+    const patternError = rewrites
       .map((r, i) => checkPatternSyntax('Rewrite', i, r))
       .find(notEmpty);
-    if (patternErrorMessage) {
+    if (patternError) {
       return {
         routes,
         error: createError(
           code,
-          patternErrorMessage,
-          'https://vercel.link/invalid-route-source',
+          patternError.message,
+          patternError.link,
           'Learn More'
         ),
       };
