@@ -877,4 +877,42 @@ describe('getTransformedRoutes', () => {
       actual.error.message
     );
   });
+
+  test('should error when segment is defined in `destination` query string but not `source`', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/iforgot/:id',
+          destination: '/api/login?id=123&name=:name',
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, null);
+    assert.ok(
+      actual.error.message.includes(
+        'in `destination` property but not in `source` property'
+      ),
+      actual.error.message
+    );
+  });
+
+  test('should error when segment is defined in HTTPS `destination` query string but not `source`', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/iforgot/:id',
+          destination: 'https://example.com/api/login?id=123&name=:name',
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, null);
+    assert.ok(
+      actual.error.message.includes(
+        'in `destination` property but not in `source` property'
+      ),
+      actual.error.message
+    );
+  });
 });
