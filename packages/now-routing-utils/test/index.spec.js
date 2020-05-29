@@ -164,7 +164,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 0 has invalid regular expression "source: ^/(broken]$".'
+      'Route at index 0 has invalid `source` regular expression "^/(broken]$".'
     );
   });
 
@@ -641,7 +641,7 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_redirect');
     assert.equal(
       actual.error.message,
-      'Redirect at index 0 has invalid regular expression "source: ^/(*.)\\.html$".'
+      'Redirect at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
     );
     assert.ok(actual.error.link);
     assert.ok(actual.error.action);
@@ -656,7 +656,7 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_redirect');
     assert.equal(
       actual.error.message,
-      'Redirect at index 0 has invalid pattern "source: /:?".'
+      'Redirect at index 0 has invalid `source` pattern "/:?".'
     );
     assert.ok(actual.error.link);
     assert.ok(actual.error.action);
@@ -693,7 +693,7 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_header');
     assert.equal(
       actual.error.message,
-      'Header at index 0 has invalid regular expression "source: ^/(*.)\\.html$".'
+      'Header at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
     );
     assert.ok(actual.error.link);
     assert.ok(actual.error.action);
@@ -710,7 +710,7 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_header');
     assert.equal(
       actual.error.message,
-      'Header at index 0 has invalid pattern "source: /:?".'
+      'Header at index 0 has invalid `source` pattern "/:?".'
     );
     assert.ok(actual.error.link);
     assert.ok(actual.error.action);
@@ -725,7 +725,7 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_rewrite');
     assert.equal(
       actual.error.message,
-      'Rewrite at index 0 has invalid regular expression "source: ^/(*.)\\.html$".'
+      'Rewrite at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
     );
     assert.ok(actual.error.link);
     assert.ok(actual.error.action);
@@ -740,7 +740,7 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_rewrite');
     assert.equal(
       actual.error.message,
-      'Rewrite at index 0 has invalid pattern "source: /:?".'
+      'Rewrite at index 0 has invalid `source` pattern "/:?".'
     );
     assert.ok(actual.error.link);
     assert.ok(actual.error.action);
@@ -853,7 +853,7 @@ describe('getTransformedRoutes', () => {
     assert.deepEqual(actual.routes, null);
     assert.ok(
       actual.error.message.includes(
-        'in "destination" pattern but not in "source"'
+        'in `destination` property but not in `source` property'
       ),
       actual.error.message
     );
@@ -872,7 +872,7 @@ describe('getTransformedRoutes', () => {
     assert.deepEqual(actual.routes, null);
     assert.ok(
       actual.error.message.includes(
-        'in "destination" pattern but not in "source"'
+        'in `destination` property but not in `source` property'
       ),
       actual.error.message
     );

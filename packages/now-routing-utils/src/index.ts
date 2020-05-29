@@ -146,7 +146,7 @@ function checkRegexSyntax(
   try {
     new RegExp(src);
   } catch (err) {
-    return `${type} at index ${index} has invalid regular expression "source: ${src}".`;
+    return `${type} at index ${index} has invalid \`source\` regular expression "${src}".`;
   }
   return null;
 }
