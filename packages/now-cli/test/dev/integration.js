@@ -575,7 +575,7 @@ test('[vercel dev] validate mixed routes and rewrites', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` is used, `routes` cannot be present./m
+    /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present./m
   );
   t.regex(output.stderr, /vercel\.link\/mix-routing-props/m);
 });
