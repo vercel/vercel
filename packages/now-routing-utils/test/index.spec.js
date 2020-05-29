@@ -626,7 +626,7 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_mixed_routes');
     assert.equal(
       actual.error.message,
-      'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` is used, `routes` cannot be present.'
+      'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.'
     );
     assert.ok(actual.error.link);
     assert.ok(actual.error.action);

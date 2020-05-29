@@ -255,7 +255,7 @@ export function getTransformedRoutes({
     if (hasNewProperties) {
       const error = createError(
         'invalid_mixed_routes',
-        'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` is used, `routes` cannot be present.',
+        'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.',
         'https://vercel.link/mix-routing-props',
         'Learn More'
       );
