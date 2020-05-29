@@ -578,7 +578,8 @@ export default async function main(
         deployment.message ||
           'An unexpected error occurred while deploying your project',
         null,
-        'https://vercel.link/help'
+        'https://vercel.link/help',
+        'Contact Support'
       );
       return 1;
     }
