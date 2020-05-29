@@ -573,7 +573,11 @@ test('[vercel dev] validate mixed routes and rewrites', async t => {
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/m);
+  t.regex(
+    output.stderr,
+    /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` is used, `routes` cannot be present./m
+  );
+  t.regex(output.stderr, /vercel\.link\/mix-routing-props/m);
 });
 
 // Test seems unstable: It won't return sometimes.
