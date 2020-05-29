@@ -58,13 +58,15 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       if (keys.length !== 1) {
         const unknownProp = keys.find(prop => prop !== 'handle');
         errors.push(
-          `Route at index ${i} has unknown property "${unknownProp}".`
+          `Route at index ${i} has unknown property \`${unknownProp}\`.`
         );
       } else if (!isValidHandleValue(handle)) {
-        errors.push(`Route at index ${i} has unknown handle "${handle}".`);
+        errors.push(
+          `Route at index ${i} has unknown handle value \`handle: ${handle}\`.`
+        );
       } else if (handling.includes(handle)) {
         errors.push(
-          `Route at index ${i} is a duplicate. Please use one "handle: ${handle}" at most.`
+          `Route at index ${i} is a duplicate. Please use one \`handle: ${handle}\` at most.`
         );
       } else {
         handling.push(handle);
@@ -93,33 +95,33 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       if (handleValue === 'hit') {
         if (route.dest) {
           errors.push(
-            `Route at index ${i} cannot define "dest" after "handle: hit".`
+            `Route at index ${i} cannot define \`dest\` after \`handle: hit\`.`
           );
         }
         if (route.status) {
           errors.push(
-            `Route at index ${i} cannot define "status" after "handle: hit".`
+            `Route at index ${i} cannot define \`status\` after \`handle: hit\`.`
           );
         }
         if (!route.continue) {
           errors.push(
-            `Route at index ${i} must define "continue: true" after "handle: hit".`
+            `Route at index ${i} must define \`continue: true\` after \`handle: hit\`.`
           );
         }
       } else if (handleValue === 'miss') {
         if (route.dest && !route.check) {
           errors.push(
-            `Route at index ${i} must define "check: true" after "handle: miss".`
+            `Route at index ${i} must define \`check: true\` after \`handle: miss\`.`
           );
         } else if (!route.dest && !route.continue) {
           errors.push(
-            `Route at index ${i} must define "continue: true" after "handle: miss".`
+            `Route at index ${i} must define \`continue: true\` after \`handle: miss\`.`
           );
         }
       }
     } else {
       errors.push(
-        `Route at index ${i} must define either "handle" or "src" property.`
+        `Route at index ${i} must define either \`handle\` or \`src\` property.`
       );
     }
   });
@@ -207,7 +209,7 @@ function checkRedirect(r: NowRedirect, index: number) {
     typeof r.permanent !== 'undefined' &&
     typeof r.statusCode !== 'undefined'
   ) {
-    return `Redirect at index ${index} cannot define both "permanent" and "statusCode" properties.`;
+    return `Redirect at index ${index} cannot define both \`permanent\` and \`statusCode\` properties.`;
   }
   return null;
 }

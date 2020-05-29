@@ -124,36 +124,36 @@ describe('normalizeRoutes', () => {
     assert.strictEqual(routes, input);
   });
 
-  test('fails if route has unknown "handle" value', () => {
+  test('fails if route has unknown `handle` value', () => {
     const input = [{ handle: 'doesnotexist' }];
     const { error } = normalizeRoutes(input);
 
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 0 has unknown handle "doesnotexist".'
+      'Route at index 0 has unknown handle value `handle: doesnotexist`.'
     );
   });
 
-  test('fails if route has additional properties with "handle" property', () => {
+  test('fails if route has additional properties with `handle` property', () => {
     const input = [{ handle: 'filesystem', illegal: true }];
     const { error } = normalizeRoutes(input);
 
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 0 has unknown property "illegal".'
+      'Route at index 0 has unknown property `illegal`.'
     );
   });
 
-  test('fails if route has a duplicate "handle"', () => {
+  test('fails if route has a duplicate `handle` value', () => {
     const input = [{ handle: 'filesystem' }, { handle: 'filesystem' }];
     const { error } = normalizeRoutes(input);
 
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 1 is a duplicate. Please use one "handle: filesystem" at most.'
+      'Route at index 1 is a duplicate. Please use one `handle: filesystem` at most.'
     );
   });
 
@@ -168,14 +168,14 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('fails if route does not define handle or src property', () => {
+  test('fails if route does not define `handle` or `src` property', () => {
     const input = [{ fake: 'foo' }];
     const { error } = normalizeRoutes(input);
 
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 0 must define either "handle" or "src" property.'
+      'Route at index 0 must define either `handle` or `src` property.'
     );
   });
 
@@ -518,7 +518,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 1 cannot define "dest" after "handle: hit".'
+      'Route at index 1 cannot define `dest` after `handle: hit`.'
     );
   });
 
@@ -537,7 +537,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 1 must define "continue: true" after "handle: hit".'
+      'Route at index 1 must define `continue: true` after `handle: hit`.'
     );
   });
 
@@ -557,7 +557,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 1 cannot define "status" after "handle: hit".'
+      'Route at index 1 cannot define `status` after `handle: hit`.'
     );
   });
 
@@ -576,7 +576,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 1 must define "check: true" after "handle: miss".'
+      'Route at index 1 must define `check: true` after `handle: miss`.'
     );
   });
 
@@ -595,7 +595,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 1 must define "continue: true" after "handle: miss".'
+      'Route at index 1 must define `continue: true` after `handle: miss`.'
     );
   });
 });
@@ -678,7 +678,7 @@ describe('getTransformedRoutes', () => {
     assert.equal(actual.error.code, 'invalid_redirect');
     assert.equal(
       actual.error.message,
-      'Redirect at index 0 cannot define both "permanent" and "statusCode" properties.'
+      'Redirect at index 0 cannot define both `permanent` and `statusCode` properties.'
     );
     assert.ok(actual.error.link);
     assert.ok(actual.error.action);
