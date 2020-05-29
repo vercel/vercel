@@ -253,7 +253,7 @@ export default async function main(
       `${prependEmoji(
         `The ${param(
           '--name'
-        )} flag is deprecated (https://vercel.link/name-flag)`,
+        )} option is deprecated (https://vercel.link/name-flag)`,
         emoji('warning')
       )}\n`
     );
