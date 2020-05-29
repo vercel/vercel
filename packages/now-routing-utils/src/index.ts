@@ -136,17 +136,18 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   return { routes, error };
 }
 
-type ErrorMessageType = 'Header' | 'Rewrite' | 'Redirect' | 'Route';
+type ErrorMessageType = 'Header' | 'Rewrite' | 'Redirect';
 
 function checkRegexSyntax(
-  type: ErrorMessageType,
+  type: ErrorMessageType | 'Route',
   index: number,
   src: string
 ): string | null {
   try {
     new RegExp(src);
   } catch (err) {
-    return `${type} at index ${index} has invalid \`source\` regular expression "${src}".`;
+    const prop = type === 'Route' ? 'src' : 'source';
+    return `${type} at index ${index} has invalid \`${prop}\` regular expression "${src}".`;
   }
   return null;
 }

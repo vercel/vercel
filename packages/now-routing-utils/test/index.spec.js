@@ -164,7 +164,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
       error.message,
-      'Route at index 0 has invalid `source` regular expression "^/(broken]$".'
+      'Route at index 0 has invalid `src` regular expression "^/(broken]$".'
     );
   });
 
