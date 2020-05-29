@@ -82,7 +82,7 @@ export default async function validatePaths(
   if (isFile) {
     output.print(
       `${prependEmoji(
-        'Deploying files with Vercel is deprecated',
+        'Deploying files with Vercel is deprecated (https://vercel.link/faq-deploy-file)',
         emoji('warning')
       )}\n`
     );
