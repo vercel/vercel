@@ -776,7 +776,11 @@ test(
   testFixtureStdio(
     'invalid-builder-routes',
     async testPath => {
-      await testPath(500, '/', /Invalid regular expression/m);
+      await testPath(
+        500,
+        '/',
+        /Route at index 0 has invalid `source` regular expression/m
+      );
     },
     { skipDeploy: true }
   )
