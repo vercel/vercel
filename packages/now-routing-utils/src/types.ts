@@ -5,7 +5,6 @@ export type RouteApiError = {
   message: string;
   link?: string; // link to error message details
   action?: string; // label for error link
-  sha?: string; // File errors
 };
 
 export type Source = {
