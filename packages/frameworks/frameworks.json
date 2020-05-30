@@ -73,15 +73,13 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "yarn rw db up --no-db-client && yarn rw build",
-        "placeholder": "`yarn run build` or `yarn rw build`"
+        "value": "yarn rw db up --no-db-client && yarn rw build"
       },
       "devCommand": {
         "value": "yarn rw dev --port $PORT"
       },
       "outputDirectory": {
-        "value": "web/dist",
-        "placeholder": "RedwoodJS default"
+        "value": "web/dist"
       }
     }
   },
