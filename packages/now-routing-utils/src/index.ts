@@ -1,3 +1,4 @@
+import { parse as parseUrl } from 'url';
 export * from './schemas';
 export * from './types';
 import {
@@ -166,7 +167,7 @@ function checkPatternSyntax(
   }
 ): { message: string; link: string } | null {
   let sourceSegments = new Set<string>();
-  let destinationSegments = new Set<string>();
+  const destinationSegments = new Set<string>();
   try {
     sourceSegments = new Set(sourceToRegex(source).segments);
   } catch (err) {
@@ -177,14 +178,20 @@ function checkPatternSyntax(
   }
 
   if (destination) {
-    if (destination.startsWith('http://')) {
-      destination = destination.slice(7);
-    }
-    if (destination.startsWith('https://')) {
-      destination = destination.slice(8);
-    }
     try {
-      destinationSegments = new Set(sourceToRegex(destination).segments);
+      const { hostname, pathname, query } = parseUrl(destination, true);
+      sourceToRegex(hostname || '').segments.forEach(name =>
+        destinationSegments.add(name)
+      );
+      sourceToRegex(pathname || '').segments.forEach(name =>
+        destinationSegments.add(name)
+      );
+      for (const strOrArray of Object.values(query)) {
+        const value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
+        sourceToRegex(value || '').segments.forEach(name =>
+          destinationSegments.add(name)
+        );
+      }
     } catch (err) {
       // Since checkPatternSyntax() is a validation helper, we don't want to
       // replicate all possible URL parsing here so we consume the error.
