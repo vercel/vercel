@@ -42,10 +42,18 @@ const linkSchema = {
 /**
  * Returns the `<cwd>/.vercel` directory for the current project
  * with a fallback to <cwd>/.now` if it exists.
+ *
+ * Throws an error if *both* `.vercel` and `.now` directories exist.
  */
-export function getVercelDirectory(cwd: string = process.cwd()) {
+export function getVercelDirectory(cwd: string = process.cwd()): string {
   const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
-  return possibleDirs.find(d => isDirectory(d)) || possibleDirs[0];
+  const existingDirs = possibleDirs.filter(d => isDirectory(d));
+  if (existingDirs.length > 1) {
+    throw new Error(
+      'Both `.vercel` and `.now` directories exist. Please remove the `.now` directory.'
+    );
+  }
+  return existingDirs[0] || possibleDirs[0];
 }
 
 async function getLink(path?: string): Promise<ProjectLink | null> {
