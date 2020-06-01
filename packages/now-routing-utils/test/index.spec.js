@@ -915,4 +915,65 @@ describe('getTransformedRoutes', () => {
       actual.error.message
     );
   });
+
+  test('should work with content-security-policy header containing URL', () => {
+    const nowConfig = {
+      headers: [
+        {
+          source: '/(.*)',
+          headers: [
+            {
+              key: 'content-security-policy',
+              value:
+                "default-src 'self'; script-src 'self'; img-src 'self' https://*.example.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.examplpe.com wss://gateway.example.com; form-action 'self'",
+            },
+            {
+              key: 'feature-policy',
+              value:
+                "accelerometer 'none'; camera 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; payment 'none'; usb 'none'",
+            },
+            {
+              key: 'referrer-policy',
+              value: 'strict-origin-when-cross-origin',
+            },
+            {
+              key: 'strict-transport-security',
+              value: 'max-age=31536000; includesubdomains; preload',
+            },
+            {
+              key: 'x-content-type-options',
+              value: 'nosniff',
+            },
+            {
+              key: 'x-frame-options',
+              value: 'sameorigin',
+            },
+            {
+              key: 'x-xss-protection',
+              value: '1; mode=block',
+            },
+          ],
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, [
+      {
+        continue: true,
+        headers: {
+          'content-security-policy':
+            "default-src 'self'; script-src 'self'; img-src 'self' https://*.example.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.examplpe.com wss://gateway.example.com; form-action 'self'",
+          'feature-policy':
+            "accelerometer 'none'; camera 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; payment 'none'; usb 'none'",
+          'referrer-policy': 'strict-origin-when-cross-origin',
+          'strict-transport-security':
+            'max-age=31536000; includesubdomains; preload',
+          'x-content-type-options': 'nosniff',
+          'x-frame-options': 'sameorigin',
+          'x-xss-protection': '1; mode=block',
+        },
+        src: '^(?:/(.*))$',
+      },
+    ]);
+  });
 });
