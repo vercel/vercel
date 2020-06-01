@@ -75,6 +75,11 @@ async function main() {
   const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
 
+  // Band-aid to delete stuff that `ncc` bundles, but it shouldn't
+  await remove(join(dirRoot, 'dist/dist'));
+  await remove(join(dirRoot, 'dist/config-chain'));
+  await remove(join(dirRoot, 'dist/util'));
+
   console.log('Finished building `now-cli`');
 }
 
