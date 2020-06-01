@@ -15,5 +15,5 @@ $ npx ember-cli new ember-project
 Once initialized, you can deploy the Ember example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```

@@ -1,4 +1,4 @@
-![Hexo Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/hexo.svg)
+![Hexo Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/hexo.svg)
 
 # Hexo Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Hexo](https://hexo.io/) site that can be
 
 Deploy your own Hexo project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/hexo)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/hexo)
 
 _Live Example: https://hexo.now-examples.now.sh_
 
@@ -22,8 +22,8 @@ $ hexo init project-name
 
 ### Deploying From Your Terminal
 
-You can deploy your new Hexo project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Hexo project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

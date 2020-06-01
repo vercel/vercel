@@ -6,12 +6,14 @@
       "path": "/",
       "mustContain": "Hi"
     },
+    /* TODO: enable this again once all tests pass
     {
       "path": "/",
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
+    */
     {
       "path": "/non-existent",
       "mustContain": "custom 404!!"

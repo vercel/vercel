@@ -6,7 +6,7 @@ This directory is a brief example of an [Ionic React](https://ionicframework.com
 
 Deploy your own Ionic React project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/ionic-react)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/ionic-react)
 
 _Live Example: https://ionic-react.now-examples.now.sh_
 
@@ -20,8 +20,8 @@ $ npx ionic start [project-name] conference --type react && cd [project-name]
 
 ### Deploying From Your Terminal
 
-You can deploy your new Ionic React project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Ionic React project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

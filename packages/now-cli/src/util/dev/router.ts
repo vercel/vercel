@@ -4,7 +4,7 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
+import { HttpHeadersConfig, RouteResult } from './types';
 import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
@@ -48,10 +48,10 @@ export function getRoutesTypes(routes: Route[] = []) {
 export async function devRouter(
   reqUrl: string = '/',
   reqMethod?: string,
-  routes?: RouteConfig[],
+  routes?: Route[],
   devServer?: DevServer,
   previousHeaders?: HttpHeadersConfig,
-  missRoutes?: RouteConfig[],
+  missRoutes?: Route[],
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
@@ -79,7 +79,8 @@ export async function devRouter(
       }
 
       const keys: string[] = [];
-      const matcher = PCRE(`%${src}%i`, keys);
+      const flags = devServer && devServer.isCaseSensitive() ? '' : 'i';
+      const matcher = PCRE(`%${src}%${flags}`, keys);
       const match =
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 
@@ -170,16 +171,17 @@ export async function devRouter(
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
-          const { pathname, query } = url.parse(destPath, true);
+          const destParsed = url.parse(destPath, true);
+          Object.assign(destParsed.query, query);
           result = {
             found: true,
-            dest: pathname || '/',
+            dest: destParsed.pathname || '/',
             continue: isContinue,
             userDest: Boolean(routeConfig.dest),
             isDestUrl,
             status: routeConfig.status || status,
             headers: combinedHeaders,
-            uri_args: query,
+            uri_args: destParsed.query,
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,

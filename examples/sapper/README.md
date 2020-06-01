@@ -6,7 +6,7 @@ This directory is a brief example of a [Sapper](https://sapper.svelte.dev/) app 
 
 Deploy your own Sapper project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/sapper)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/sapper)
 
 _Live Example: https://sapper.now-examples.now.sh_
 
@@ -22,8 +22,8 @@ $ npx degit "sveltejs/sapper-template#webpack" my-sapper-app
 
 ### Deploying From Your Terminal
 
-You can deploy your new Sapper project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Sapper project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

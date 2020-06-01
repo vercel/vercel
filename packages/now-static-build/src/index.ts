@@ -6,7 +6,16 @@ import isPortReachable from 'is-port-reachable';
 import { ChildProcess, SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { frameworks, Framework } from './frameworks';
+import buildUtils from './build-utils';
 import {
+  Files,
+  FileFsRef,
+  BuildOptions,
+  Config,
+  PackageJson,
+  PrepareCacheOptions,
+} from '@vercel/build-utils';
+const {
   glob,
   download,
   spawnAsync,
@@ -20,15 +29,9 @@ import {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
-  Files,
-  FileFsRef,
-  BuildOptions,
-  Config,
   debug,
-  PackageJson,
-  PrepareCacheOptions,
   NowBuildError,
-} from '@vercel/build-utils';
+} = buildUtils;
 import { Route, Source } from '@vercel/routing-utils';
 import { getVercelIgnore } from '@vercel/client';
 
@@ -89,7 +92,7 @@ function hasScript(script: string, pkg: PackageJson) {
 }
 
 function getScriptName(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
-  // The `dev` script can be `now dev`
+  // The `dev` script can be `now-dev`
   const nowCmd = `now-${cmd}`;
 
   if (!zeroConfig && cmd === 'dev') {
@@ -393,14 +396,14 @@ export async function build({
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         nowDevChildProcesses.add(child);
 
-        // Now wait for the server to have listened on `$PORT`, after which we
+        // Wait for the server to have listened on `$PORT`, after which we
         // will ProxyPass any requests to that development server that come in
         // for this builder.
         try {
           await checkForPort(devPort, DEV_SERVER_PORT_BIND_TIMEOUT);
         } catch (err) {
           throw new Error(
-            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/zeit/now/now-static-build-failed-to-detect-a-server`
+            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/vercel/vercel/now-static-build-failed-to-detect-a-server`
           );
         }
 
@@ -413,7 +416,7 @@ export async function build({
         srcBase = `/${srcBase}`;
       }
 
-      // We ignore defaultRoutes for `now dev`
+      // We ignore defaultRoutes for `vercel dev`
       // since in this case it will get proxied to
       // a custom server we don't have control over
       routes.push(

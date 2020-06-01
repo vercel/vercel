@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "0.17.0",
+  "version": "0.17.2-canary.0",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/static-builds",
@@ -9,7 +9,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-static-build"
   },
   "scripts": {

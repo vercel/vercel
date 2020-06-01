@@ -12,5 +12,5 @@ or from a previous deployment who's alias you're trying to overwrite) has
 the `min` scale setting set to `0`. You can do this by running
 
 ```
-now scale <deployment> 0 10
+vercel scale <deployment> 0 10
 ```

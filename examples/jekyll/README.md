@@ -6,7 +6,7 @@ This directory is a brief example of a [Jekyll](https://jekyllrb.com/) site that
 
 Deploy your own Jekyll project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/jekyll)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/jekyll)
 
 _Live Example: https://jekyll.now-examples.now.sh_
 
@@ -20,8 +20,8 @@ $ jekyll new my-blog
 
 ### Deploying From Your Terminal
 
-You can deploy your new Jekyll project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Jekyll project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

@@ -60,18 +60,40 @@ export default async function pull(
   const records = await withSpinner('Downloading', async () => {
     const dev = ProjectEnvTarget.Development;
     const envs = await getEnvVariables(output, client, project.id, 4, dev);
-    const values = await Promise.all(
-      envs.map(env => getDecryptedSecret(output, client, env.value))
+    const decryptedValues = await Promise.all(
+      envs.map(async env => {
+        try {
+          const value = await getDecryptedSecret(output, client, env.value);
+          return { value, found: true };
+        } catch (error) {
+          if (error && error.status === 404) {
+            return { value: '', found: false };
+          }
+          throw error;
+        }
+      })
     );
-    const results: { key: string; value: string }[] = [];
-    for (let i = 0; i < values.length; i++) {
-      results.push({ key: envs[i].key, value: values[i] });
+    const results: { key: string; value: string; found: boolean }[] = [];
+    for (let i = 0; i < decryptedValues.length; i++) {
+      const { key } = envs[i];
+      const { value, found } = decryptedValues[i];
+      results.push({ key, value, found });
     }
     return results;
   });
 
   const contents =
     records
+      .filter(obj => {
+        if (!obj.found) {
+          output.print('');
+          output.warn(
+            `Unable to download variable ${obj.key} because associated secret was deleted`
+          );
+          return false;
+        }
+        return true;
+      })
       .map(({ key, value }) => `${key}="${escapeValue(value)}"`)
       .join('\n') + '\n';
 
@@ -90,7 +112,6 @@ export default async function pull(
 
 function escapeValue(value: string) {
   return value
-    .replace(new RegExp('\\"', 'g'), '\\"') // escape quotes
     .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
     .replace(new RegExp('\r', 'g'), '\\r'); // combine newlines (windows) into one line
 }

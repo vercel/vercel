@@ -1,38 +1,56 @@
+import { fork, spawn } from 'child_process';
+import {
+  readFileSync,
+  lstatSync,
+  readlinkSync,
+  statSync,
+  promises as fsp,
+} from 'fs';
 import {
   basename,
   dirname,
+  extname,
   join,
   relative,
   resolve,
   sep,
   parse as parsePath,
 } from 'path';
+// @ts-ignore - `@types/mkdirp-promise` is broken
+import mkdirp from 'mkdirp-promise';
+import once from '@tootallnate/once';
 import nodeFileTrace from '@zeit/node-file-trace';
+import buildUtils from './build-utils';
 import {
-  glob,
-  download,
   File,
-  FileBlob,
-  FileFsRef,
   Files,
   Meta,
+  PrepareCacheOptions,
+  BuildOptions,
+  Config,
+  StartDevServerOptions,
+  StartDevServerResult,
+} from '@vercel/build-utils';
+const {
+  glob,
+  download,
+  FileBlob,
+  FileFsRef,
   createLambda,
   runNpmInstall,
   runPackageJsonScript,
   getNodeVersion,
   getSpawnOptions,
-  PrepareCacheOptions,
-  BuildOptions,
   shouldServe,
-  Config,
   debug,
   isSymbolicLink,
-} from '@vercel/build-utils';
+  walkParentDirs,
+} = buildUtils;
+import { makeNowLauncher, makeAwsLauncher } from './launcher';
+import { Register, register } from './typescript';
+
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
-import { makeNowLauncher, makeAwsLauncher } from './launcher';
-import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
-import { Register, register } from './typescript';
 
 interface CompilerConfig {
   debug?: boolean;
@@ -47,6 +65,19 @@ interface DownloadOptions {
   config: Config;
   meta: Meta;
 }
+
+interface PortInfo {
+  port: number;
+}
+
+function isPortInfo(v: any): v is PortInfo {
+  return v && typeof v.port === 'number';
+}
+
+const tscPath = resolve(
+  dirname(require.resolve(eval('"typescript"'))),
+  '../bin/tsc'
+);
 
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
@@ -120,7 +151,7 @@ async function compile(
       const files = await glob(pattern, workPath);
       await Promise.all(
         Object.keys(files).map(async file => {
-          const entry: FileFsRef = files[file];
+          const entry = files[file];
           fsCache.set(file, entry);
           const stream = entry.toStream();
           const { data } = await FileBlob.fromStream({ stream });
@@ -314,6 +345,7 @@ export async function build({
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
+
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const {
@@ -392,4 +424,111 @@ export async function prepareCache({
 }: PrepareCacheOptions): Promise<Files> {
   const cache = await glob('node_modules/**', workPath);
   return cache;
+}
+
+export async function startDevServer(
+  opts: StartDevServerOptions
+): Promise<StartDevServerResult> {
+  const { entrypoint, workPath, config, meta = {} } = opts;
+  const devServerPath = join(__dirname, 'dev-server.js');
+  const child = fork(devServerPath, [], {
+    cwd: workPath,
+    execArgv: [],
+    env: {
+      ...process.env,
+      ...meta.env,
+      NOW_DEV_ENTRYPOINT: entrypoint,
+      NOW_DEV_CONFIG: JSON.stringify(config),
+    },
+  });
+
+  const { pid } = child;
+  const onMessage = once<{ port: number }>(child, 'message');
+  const onExit = once.spread<[number, string | null]>(child, 'exit');
+  const result = await Promise.race([onMessage, onExit]);
+  onExit.cancel();
+  onMessage.cancel();
+
+  if (isPortInfo(result)) {
+    // "message" event
+
+    const ext = extname(entrypoint);
+    if (ext === '.ts' || ext === '.tsx') {
+      // Invoke `tsc --noEmit` asynchronously in the background, so
+      // that the HTTP request is not blocked by the type checking.
+      doTypeCheck(opts).catch((err: Error) => {
+        console.error('Type check for %j failed:', entrypoint, err);
+      });
+    }
+
+    return { port: result.port, pid };
+  } else {
+    // "exit" event
+    throw new Error(
+      `Failed to start dev server for "${entrypoint}" (code=${result[0]}, signal=${result[1]})`
+    );
+  }
+}
+
+async function doTypeCheck({
+  entrypoint,
+  workPath,
+  meta = {},
+}: StartDevServerOptions): Promise<void> {
+  const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
+  const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
+
+  // In order to type-check a single file, a standalone tsconfig
+  // file needs to be created that inherits from the base one :(
+  // See: https://stackoverflow.com/a/44748041/376773
+  const projectTsConfig = await walkParentDirs({
+    base: workPath,
+    start: join(workPath, dirname(entrypoint)),
+    filename: 'tsconfig.json',
+  });
+
+  // A different filename needs to be used for different `extends` tsconfig.json
+  const tsconfigName = projectTsConfig
+    ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
+        /[\\/.]/g,
+        '-'
+      )}.json`
+    : 'tsconfig.json';
+  const tsconfigPath = join(entrypointCacheDir, tsconfigName);
+  const tsconfig = {
+    extends: projectTsConfig
+      ? relative(entrypointCacheDir, projectTsConfig)
+      : undefined,
+    include: [relative(entrypointCacheDir, join(workPath, entrypoint))],
+  };
+
+  try {
+    const json = JSON.stringify(tsconfig, null, '\t');
+    await mkdirp(entrypointCacheDir);
+    await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
+  } catch (err) {
+    // Don't throw if the file already exists
+    if (err.code !== 'EEXIST') {
+      throw err;
+    }
+  }
+
+  const child = spawn(
+    process.execPath,
+    [
+      tscPath,
+      '--project',
+      tsconfigPath,
+      '--noEmit',
+      '--allowJs',
+      '--esModuleInterop',
+      '--jsx',
+      'react',
+    ],
+    {
+      cwd: workPath,
+      stdio: 'inherit',
+    }
+  );
+  await once.spread<[number, string | null]>(child, 'exit');
 }

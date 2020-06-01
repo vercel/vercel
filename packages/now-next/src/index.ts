@@ -1,24 +1,28 @@
-import {
-  BuildOptions,
-  Config,
+import buildUtils from './build-utils';
+const {
   createLambda,
   debug,
   download,
-  FileBlob,
-  FileFsRef,
-  Files,
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getSpawnOptions,
   glob,
-  Lambda,
-  PackageJson,
-  PrepareCacheOptions,
-  Prerender,
   runNpmInstall,
   runPackageJsonScript,
   execCommand,
   getNodeBinPath,
+} = buildUtils;
+
+import {
+  Lambda,
+  BuildOptions,
+  Config,
+  FileBlob,
+  FileFsRef,
+  Files,
+  PackageJson,
+  PrepareCacheOptions,
+  Prerender,
   NowBuildError,
 } from '@vercel/build-utils';
 import { Route, Handler } from '@vercel/routing-utils';
@@ -41,6 +45,7 @@ import path from 'path';
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import createServerlessConfig from './create-serverless-config';
+import escapeStringRegexp from 'escape-string-regexp';
 import nextLegacyVersions from './legacy-versions';
 import {
   createLambdaFromPseudoLayers,
@@ -82,7 +87,6 @@ interface BuildParamsType extends BuildOptions {
 export const version = 2;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
-const yarnPreferOffline = true;
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
   process.once(signal as NodeJS.Signals, () => {
@@ -200,6 +204,10 @@ export const build = async ({
 }> => {
   validateEntrypoint(entrypoint);
 
+  const isSharedLambdas = config.sharedLambdas;
+  // Limit for max size each lambda can be, 50 MB if no custom limit
+  const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
+
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
@@ -283,7 +291,7 @@ export const build = async ({
     }
 
     console.warn(
-      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
+      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/vercel/vercel/now-next-legacy-mode"
     );
 
     debug('Normalizing package.json');
@@ -316,12 +324,7 @@ export const build = async ({
   }
 
   console.log('Installing dependencies...');
-  await runNpmInstall(
-    entryPath,
-    [...(yarnPreferOffline ? ['--prefer-offline'] : [])],
-    spawnOpts,
-    meta
-  );
+  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
 
   let realNextVersion: string | undefined;
   try {
@@ -379,6 +382,7 @@ export const build = async ({
   const redirects: Route[] = [];
   const nextBasePathRoute: Route[] = [];
   const dataRoutes: Route[] = [];
+  let dynamicRoutes: Route[] = [];
   let nextBasePath: string | undefined;
   // whether they have enabled pages/404.js as the custom 404 page
   let hasPages404 = false;
@@ -412,22 +416,17 @@ export const build = async ({
             }
 
             dataRoutes.push({
-              src: (
-                dataRoute.namedDataRouteRegex || dataRoute.dataRouteRegex
-              ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
+              src: dataRoute.dataRouteRegex.replace(
+                /^\^/,
+                `^${appMountPrefixNoTrailingSlash}`
+              ),
               dest: path.join(
                 '/',
                 entryDirectory,
                 // make sure to route SSG data route to the data prerender
                 // output, we don't do this for SSP routes since they don't
                 // have a separate data output
-                `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
-                  dataRoute.routeKeys
-                    ? `?${dataRoute.routeKeys
-                        .map(key => `${key}=$${key}`)
-                        .join('&')}`
-                    : ''
-                }`
+                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
               ),
               check: true,
             });
@@ -608,7 +607,7 @@ export const build = async ({
     debug('Running npm install --production...');
     await runNpmInstall(
       entryPath,
-      [...(yarnPreferOffline ? ['--prefer-offline'] : []), '--production'],
+      ['--prefer-offline', '--production'],
       spawnOpts,
       meta
     );
@@ -618,31 +617,43 @@ export const build = async ({
     await unlinkFile(path.join(entryPath, '.npmrc'));
   }
 
+  const pageLambdaRoutes: Route[] = [];
+  const dynamicPageLambdaRoutes: Route[] = [];
+  const dynamicPageLambdaRoutesMap: { [page: string]: Route } = {};
+  const pageLambdaMap: { [page: string]: string } = {};
+
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender | FileFsRef } = {};
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
   let static404Page: string | undefined;
+  let buildId = '';
+  let page404Path = '';
+  let escapedBuildId = '';
 
-  if (isLegacy) {
-    const filesAfterBuild = await glob('**', entryPath);
-
-    debug('Preparing serverless function files...');
-    let buildId: string;
+  if (isLegacy || isSharedLambdas) {
     try {
       buildId = await readFile(
         path.join(entryPath, outputDirectory, 'BUILD_ID'),
         'utf8'
       );
+      escapedBuildId = escapeStringRegexp(buildId);
     } catch (err) {
       console.error(
         'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
       );
       throw new NowBuildError({
-        code: 'NEXT_NO_BUILD_ID',
+        code: 'NOW_NEXT_NO_BUILD_ID',
         message: 'Missing BUILD_ID',
       });
     }
+  }
+
+  if (isLegacy) {
+    const filesAfterBuild = await glob('**', entryPath);
+
+    debug('Preparing serverless function files...');
+
     const dotNextRootFiles = await glob(`${outputDirectory}/*`, entryPath);
     const dotNextServerRootFiles = await glob(
       `${outputDirectory}/server/*`,
@@ -788,7 +799,7 @@ export const build = async ({
       throw new NowBuildError({
         code: 'NEXT_NO_SERVERLESS_PAGES',
         message: 'No serverless pages were built',
-        link: 'https://err.sh/zeit/now/now-next-no-serverless-pages-built',
+        link: 'https://err.sh/vercel/vercel/now-next-no-serverless-pages-built',
       });
     }
 
@@ -817,8 +828,11 @@ export const build = async ({
           [filePath: string]: FileFsRef;
         };
 
+    let pseudoLayerBytes = 0;
+    let apiPseudoLayerBytes = 0;
     const pseudoLayers: PseudoLayer[] = [];
     const apiPseudoLayers: PseudoLayer[] = [];
+
     const isApiPage = (page: string) =>
       page.replace(/\\/g, '/').match(/serverless\/pages\/api/);
 
@@ -882,8 +896,19 @@ export const build = async ({
       const zippingLabel = 'Compressed shared serverless function files';
       console.time(zippingLabel);
 
-      pseudoLayers.push(await createPseudoLayer(tracedFiles));
-      apiPseudoLayers.push(await createPseudoLayer(apiTracedFiles));
+      let pseudoLayer;
+      let apiPseudoLayer;
+      ({ pseudoLayer, pseudoLayerBytes } = await createPseudoLayer(
+        tracedFiles
+      ));
+      ({
+        pseudoLayer: apiPseudoLayer,
+        pseudoLayerBytes: apiPseudoLayerBytes,
+      } = await createPseudoLayer(apiTracedFiles));
+
+      pseudoLayers.push(pseudoLayer);
+      apiPseudoLayers.push(apiPseudoLayer);
+
       console.timeEnd(zippingLabel);
     } else {
       // An optional assets folder that is placed alongside every page
@@ -915,76 +940,403 @@ export const build = async ({
       console.time(allLambdasLabel);
     }
 
-    await Promise.all(
-      pageKeys.map(async page => {
+    type LambdaGroup = {
+      pages: {
+        [outputName: string]: {
+          pageName: string;
+          pageFileName: string;
+          pageLayer: PseudoLayer;
+        };
+      };
+      isApiLambda: boolean;
+      lambdaIdentifier: string;
+      lambdaCombinedBytes: number;
+    };
+    const apiLambdaGroups: Array<LambdaGroup> = [];
+    const pageLambdaGroups: Array<LambdaGroup> = [];
+
+    if (isSharedLambdas) {
+      // Do initial check to make sure the traced files don't already
+      // exceed the lambda size limit as we won't be able to continue
+      // if they do
+      if (
+        pseudoLayerBytes >= lambdaCompressedByteLimit ||
+        apiPseudoLayerBytes >= lambdaCompressedByteLimit
+      ) {
+        throw new Error(
+          `Required lambda files exceed max lambda size of ${lambdaCompressedByteLimit} bytes`
+        );
+      }
+
+      for (const page of pageKeys) {
         // These default pages don't have to be handled as they'd always 404
         if (['_app.js', '_document.js'].includes(page)) {
-          return;
+          continue;
         }
 
-        // Don't create _error lambda if we have a static 404 page or
+        // Don't add _error to lambda if we have a static 404 page or
         // pages404 is enabled and 404.js is present
         if (
           page === '_error.js' &&
           ((static404Page && staticPages[static404Page]) ||
             (hasPages404 && pages['404.js']))
         ) {
-          return;
-        }
-
-        const pathname = page.replace(/\.js$/, '');
-
-        if (isDynamicRoute(pathname)) {
-          dynamicPages.push(normalizePage(pathname));
+          continue;
         }
 
         const pageFileName = path.normalize(
           path.relative(workPath, pages[page].fsPath)
         );
-        const launcher = launcherData.replace(
-          /__LAUNCHER_PAGE_PATH__/g,
-          JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
-        );
-        const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-          'now__bridge.js': new FileFsRef({
-            fsPath: path.join(__dirname, 'now__bridge.js'),
-          }),
-          'now__launcher.js': new FileBlob({ data: launcher }),
+        const pathname = page.replace(/\.js$/, '');
+        const routeIsApi = isApiPage(pageFileName);
+        const routeIsDynamic = isDynamicRoute(pathname);
+
+        if (routeIsDynamic) {
+          dynamicPages.push(normalizePage(pathname));
+        }
+        const outputName = path.join('/', entryDirectory, pathname);
+
+        const lambdaGroups = routeIsApi ? apiLambdaGroups : pageLambdaGroups;
+        let lambdaGroupIndex = lambdaGroups.length - 1;
+        const lastLambdaGroup = lambdaGroups[lambdaGroupIndex];
+        let currentLambdaGroup = lastLambdaGroup;
+
+        if (
+          !currentLambdaGroup ||
+          currentLambdaGroup.lambdaCombinedBytes >= lambdaCompressedByteLimit
+        ) {
+          lambdaGroupIndex++;
+          currentLambdaGroup = {
+            pages: {},
+            isApiLambda: !!routeIsApi,
+            lambdaCombinedBytes: !requiresTracing
+              ? 0
+              : routeIsApi
+              ? apiPseudoLayerBytes
+              : pseudoLayerBytes,
+            lambdaIdentifier: path.join(
+              entryDirectory,
+              `__NEXT_${routeIsApi ? 'API' : 'PAGE'}_LAMBDA_${lambdaGroupIndex}`
+            ),
+          };
+        }
+
+        const pageLambdaRoute: Route = {
+          src: `^${escapeStringRegexp(outputName).replace(
+            /\/index$/,
+            '(/|/index|)'
+          )}$`,
+          dest: `${path.join('/', currentLambdaGroup.lambdaIdentifier)}`,
+          headers: {
+            'x-nextjs-page': outputName,
+          },
+          check: true,
         };
 
+        // we only need to add the additional routes if shared lambdas
+        // is enabled
+        if (routeIsDynamic) {
+          dynamicPageLambdaRoutes.push(pageLambdaRoute);
+          dynamicPageLambdaRoutesMap[outputName] = pageLambdaRoute;
+        } else {
+          pageLambdaRoutes.push(pageLambdaRoute);
+        }
+
+        if (page === '_error.js' || (hasPages404 && page === '404.js')) {
+          page404Path = path.join('/', entryDirectory, pathname);
+        }
+
+        // we create the page as it's own layer so we can track how much
+        // it increased the lambda size on it's own and know when we
+        // need to create a new lambda
+        const {
+          pseudoLayer: pageLayer,
+          pseudoLayerBytes: pageLayerBytes,
+        } = await createPseudoLayer({ [pageFileName]: pages[page] });
+
+        currentLambdaGroup.pages[outputName] = {
+          pageLayer,
+          pageFileName,
+          pageName: page,
+        };
+
+        currentLambdaGroup.lambdaCombinedBytes += pageLayerBytes;
+        lambdaGroups[lambdaGroupIndex] = currentLambdaGroup;
+      }
+    } else {
+      await Promise.all(
+        pageKeys.map(async page => {
+          // These default pages don't have to be handled as they'd always 404
+          if (['_app.js', '_document.js'].includes(page)) {
+            return;
+          }
+
+          // Don't create _error lambda if we have a static 404 page or
+          // pages404 is enabled and 404.js is present
+          if (
+            page === '_error.js' &&
+            ((static404Page && staticPages[static404Page]) ||
+              (hasPages404 && pages['404.js']))
+          ) {
+            return;
+          }
+
+          const pathname = page.replace(/\.js$/, '');
+
+          if (isDynamicRoute(pathname)) {
+            dynamicPages.push(normalizePage(pathname));
+          }
+
+          const pageFileName = path.normalize(
+            path.relative(workPath, pages[page].fsPath)
+          );
+          const launcher = launcherData.replace(
+            /__LAUNCHER_PAGE_PATH__/g,
+            JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
+          );
+          const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
+            'now__bridge.js': new FileFsRef({
+              fsPath: path.join(__dirname, 'now__bridge.js'),
+            }),
+            'now__launcher.js': new FileBlob({ data: launcher }),
+          };
+
+          const lambdaOptions = await getLambdaOptionsFromFunction({
+            sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+            config,
+          });
+
+          const outputName = path.join(entryDirectory, pathname);
+
+          if (requiresTracing) {
+            lambdas[outputName] = await createLambdaFromPseudoLayers({
+              files: {
+                ...launcherFiles,
+                [requiresTracing ? pageFileName : 'page.js']: pages[page],
+              },
+              layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
+              handler: 'now__launcher.launcher',
+              runtime: nodeVersion.runtime,
+              ...lambdaOptions,
+            });
+          } else {
+            lambdas[outputName] = await createLambda({
+              files: {
+                ...launcherFiles,
+                ...assets,
+                ...tracedFiles,
+                [requiresTracing ? pageFileName : 'page.js']: pages[page],
+              },
+              handler: 'now__launcher.launcher',
+              runtime: nodeVersion.runtime,
+              ...lambdaOptions,
+            });
+          }
+        })
+      );
+    }
+
+    let dynamicPrefix = path.join('/', entryDirectory);
+    dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
+
+    dynamicRoutes = await getDynamicRoutes(
+      entryPath,
+      entryDirectory,
+      dynamicPages,
+      false,
+      routesManifest,
+      new Set(prerenderManifest.omittedRoutes)
+    ).then(arr =>
+      arr.map(route => {
+        route.src = route.src.replace('^', `^${dynamicPrefix}`);
+        return route;
+      })
+    );
+
+    if (isSharedLambdas) {
+      // since we combine the pages into lambda groups we need to merge
+      // the lambda options into one this means they should only configure
+      // lambda options for one page or one API as doing it for
+      // another will override it
+      const getMergedLambdaOptions = async (pageKeys: string[]) => {
+        if (pageKeys.length === 0) return {};
+
         const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          sourceFile: await getSourceFilePathFromPage({
+            workPath,
+            page: pageKeys[0],
+          }),
           config,
         });
 
-        const outputName = path.join(entryDirectory, pathname);
+        for (const page of pageKeys) {
+          if (page === pageKeys[0]) continue;
+          const sourceFile = await getSourceFilePathFromPage({
+            workPath,
+            page,
+          });
+          const newOptions = await getLambdaOptionsFromFunction({
+            sourceFile,
+            config,
+          });
 
-        if (requiresTracing) {
-          lambdas[outputName] = await createLambdaFromPseudoLayers({
-            files: {
-              ...launcherFiles,
-              [requiresTracing ? pageFileName : 'page.js']: pages[page],
-            },
-            layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
-            handler: 'now__launcher.launcher',
-            runtime: nodeVersion.runtime,
-            ...lambdaOptions,
-          });
-        } else {
-          lambdas[outputName] = await createLambda({
-            files: {
-              ...launcherFiles,
-              ...assets,
-              ...tracedFiles,
-              [requiresTracing ? pageFileName : 'page.js']: pages[page],
-            },
-            handler: 'now__launcher.launcher',
-            runtime: nodeVersion.runtime,
-            ...lambdaOptions,
-          });
+          for (const key of Object.keys(newOptions)) {
+            // eslint-disable-next-line
+            if (typeof (newOptions as any)[key] !== 'undefined') {
+              // eslint-disable-next-line
+              (lambdaOptions as any)[key] = (newOptions as any)[key];
+            }
+          }
         }
-      })
-    );
+        return lambdaOptions;
+      };
+
+      const mergedPageLambdaOptions = await getMergedLambdaOptions(
+        pageKeys.filter(page => !page.startsWith('api/'))
+      );
+      const mergedApiLambdaOptions = await getMergedLambdaOptions(
+        pageKeys.filter(page => page.startsWith('api/'))
+      );
+
+      const launcherPath = path.join(__dirname, 'templated-launcher-shared.js');
+      const launcherData = await readFile(launcherPath, 'utf8');
+
+      await Promise.all(
+        [...apiLambdaGroups, ...pageLambdaGroups].map(
+          async function buildLambdaGroup(group: LambdaGroup) {
+            const groupPageKeys = Object.keys(group.pages);
+
+            const launcher = launcherData.replace(
+              /\/\/ __LAUNCHER_PAGE_HANDLER__/g,
+              `
+              const url = require('url');
+              page = function(req, res) {
+                const pages = {
+                  ${groupPageKeys
+                    .map(
+                      page =>
+                        `'${page}': require('./${path.join(
+                          './',
+                          group.pages[page].pageFileName
+                        )}')`
+                    )
+                    .join(',\n')}
+                  ${
+                    '' /*
+                    creates a mapping of the page and the page's module e.g.
+                    '/about': require('./.next/serverless/pages/about.js')
+                  */
+                  }
+                }
+                let toRender = req.headers['x-nextjs-page']
+
+                if (!toRender) {
+                  try {
+                    const { pathname } = url.parse(req.url)
+                    toRender = pathname
+                  } catch (_) {
+                    // handle failing to parse url
+                    res.statusCode = 400
+                    return res.end('Bad Request')
+                  }
+                }
+
+                let currentPage = pages[toRender]
+
+                if (
+                  toRender &&
+                  !currentPage &&
+                  toRender.includes('/_next/data')
+                ) {
+                  toRender = toRender
+                    .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
+                    .replace(/\\.json$/, '')
+
+                  currentPage = pages[toRender]
+
+                  if (!currentPage) {
+                    // for prerendered dynamic routes (/blog/post-1) we need to
+                    // find the match since it won't match the page directly
+                    const dynamicRoutes = ${JSON.stringify(
+                      dynamicRoutes.map(route => ({
+                        src: route.src,
+                        dest: route.dest,
+                      }))
+                    )}
+
+                    for (const route of dynamicRoutes) {
+                      const matcher = new RegExp(route.src)
+
+                      if (matcher.test(toRender)) {
+                        toRender = route.dest
+                        currentPage = pages[toRender]
+                        break
+                      }
+                    }
+                  }
+                }
+
+                if (!currentPage) {
+                  res.statusCode = 500
+                  return res.end('internal server error')
+                }
+                const method = currentPage.render || currentPage.default || currentPage
+                return method(req, res)
+              }
+              `
+            );
+            const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
+              'now__bridge.js': new FileFsRef({
+                fsPath: path.join(__dirname, 'now__bridge.js'),
+              }),
+              'now__launcher.js': new FileBlob({ data: launcher }),
+            };
+
+            const pageLayers: PseudoLayer[] = [];
+
+            for (const page of groupPageKeys) {
+              const { pageLayer } = group.pages[page];
+              pageLambdaMap[page] = group.lambdaIdentifier;
+              pageLayers.push(pageLayer);
+            }
+
+            if (requiresTracing) {
+              lambdas[
+                group.lambdaIdentifier
+              ] = await createLambdaFromPseudoLayers({
+                files: {
+                  ...launcherFiles,
+                },
+                layers: [
+                  ...(group.isApiLambda ? apiPseudoLayers : pseudoLayers),
+                  ...pageLayers,
+                ],
+                handler: 'now__launcher.launcher',
+                runtime: nodeVersion.runtime,
+                ...(group.isApiLambda
+                  ? mergedApiLambdaOptions
+                  : mergedPageLambdaOptions),
+              });
+            } else {
+              lambdas[
+                group.lambdaIdentifier
+              ] = await createLambdaFromPseudoLayers({
+                files: {
+                  ...launcherFiles,
+                  ...assets,
+                },
+                layers: pageLayers,
+                handler: 'now__launcher.launcher',
+                runtime: nodeVersion.runtime,
+                ...(group.isApiLambda
+                  ? mergedApiLambdaOptions
+                  : mergedPageLambdaOptions),
+              });
+            }
+          }
+        )
+      );
+    }
 
     if (hasLambdas) {
       console.timeEnd(allLambdasLabel);
@@ -1052,16 +1404,31 @@ export const build = async ({
       }
 
       const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
-      const outputSrcPathPage =
-        srcRoute == null
-          ? outputPathPage
-          : path.posix.join(
-              entryDirectory,
-              srcRoute === '/' ? '/index' : srcRoute
-            );
+      let lambda: undefined | Lambda;
       const outputPathData = path.posix.join(entryDirectory, dataRoute);
 
-      const lambda = lambdas[outputSrcPathPage];
+      if (isSharedLambdas) {
+        const outputSrcPathPage = path.join(
+          '/',
+          srcRoute == null
+            ? outputPathPage
+            : path.join(entryDirectory, srcRoute === '/' ? '/index' : srcRoute)
+        );
+
+        const lambdaId = pageLambdaMap[outputSrcPathPage];
+        lambda = lambdas[lambdaId];
+      } else {
+        const outputSrcPathPage =
+          srcRoute == null
+            ? outputPathPage
+            : path.posix.join(
+                entryDirectory,
+                srcRoute === '/' ? '/index' : srcRoute
+              );
+
+        lambda = lambdas[outputSrcPathPage];
+      }
+
       if (lambda == null) {
         throw new NowBuildError({
           code: 'NEXT_MISSING_LAMBDA',
@@ -1122,6 +1489,7 @@ export const build = async ({
           ),
           // Location of lambda in builder output
           dest: path.posix.join(entryDirectory, dataRoute),
+          check: true,
         });
       });
     }
@@ -1161,40 +1529,46 @@ export const build = async ({
     {}
   );
 
-  let dynamicPrefix = path.join('/', entryDirectory);
-  dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
+  if (!isSharedLambdas) {
+    // We need to delete lambdas from output instead of omitting them from the
+    // start since we rely on them for powering Preview Mode (read above in
+    // onPrerenderRoute).
+    prerenderManifest.omittedRoutes.forEach(routeKey => {
+      // Get the route file as it'd be mounted in the builder output
+      const routeFileNoExt = path.posix.join(
+        entryDirectory,
+        routeKey === '/' ? '/index' : routeKey
+      );
+      if (typeof lambdas[routeFileNoExt] === undefined) {
+        throw new NowBuildError({
+          code: 'NEXT__UNKNOWN_ROUTE_KEY',
+          message: `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`,
+        });
+      }
+      delete lambdas[routeFileNoExt];
+    });
+  }
+  const mergedDynamicRoutesLambdaRoutes = [];
 
-  const dynamicRoutes = await getDynamicRoutes(
-    entryPath,
-    entryDirectory,
-    dynamicPages,
-    false,
-    routesManifest,
-    new Set(prerenderManifest.omittedRoutes)
-  ).then(arr =>
-    arr.map(route => {
-      route.src = route.src.replace('^', `^${dynamicPrefix}`);
-      return route;
-    })
-  );
+  if (isSharedLambdas) {
+    // we need to define the page lambda route immediately after
+    // the dynamic route in handle: 'rewrite' so that a matching
+    // dynamic route doesn't catch it before the page lambda route
+    // e.g. /teams/[team]/[inviteCode] -> page lambda
+    // but we also have /[teamSlug]/[project]/[id] which could match it first
 
-  // We need to delete lambdas from output instead of omitting them from the
-  // start since we rely on them for powering Preview Mode (read above in
-  // onPrerenderRoute).
-  prerenderManifest.omittedRoutes.forEach(routeKey => {
-    // Get the route file as it'd be mounted in the builder output
-    const routeFileNoExt = path.posix.join(
-      entryDirectory,
-      routeKey === '/' ? '/index' : routeKey
-    );
-    if (typeof lambdas[routeFileNoExt] === undefined) {
-      throw new NowBuildError({
-        code: 'NEXT__UNKNOWN_ROUTE_KEY',
-        message: `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`,
-      });
+    for (let i = 0; i < dynamicRoutes.length; i++) {
+      const route = dynamicRoutes[i];
+
+      mergedDynamicRoutesLambdaRoutes.push(route);
+
+      if (pageLambdaMap[route.dest!]) {
+        mergedDynamicRoutesLambdaRoutes.push(
+          dynamicPageLambdaRoutesMap[route.dest!]
+        );
+      }
     }
-    delete lambdas[routeFileNoExt];
-  });
+  }
 
   return {
     output: {
@@ -1237,6 +1611,12 @@ export const build = async ({
       // folder
       { handle: 'filesystem' },
 
+      // map pages to their lambda
+      ...pageLambdaRoutes,
+
+      // map /blog/[post] to correct lambda for iSSG
+      ...dynamicPageLambdaRoutes,
+
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...rewrites,
@@ -1262,8 +1642,12 @@ export const build = async ({
       // /_next/data routes for getServerProps/getStaticProps pages
       ...dataRoutes,
 
-      // Dynamic routes (must come after dataRoutes as they are more specific)
-      ...dynamicRoutes,
+      // re-check page routes to map them to the lambda
+      ...pageLambdaRoutes,
+
+      // Dynamic routes (must come after dataRoutes as dataRoutes are more
+      // specific)
+      ...(isSharedLambdas ? mergedDynamicRoutesLambdaRoutes : dynamicRoutes),
 
       // routes to call after a file has been matched
       { handle: 'hit' },
@@ -1291,22 +1675,36 @@ export const build = async ({
             // Custom Next.js 404 page
             { handle: 'error' } as Handler,
 
-            {
-              src: path.join('/', entryDirectory, '.*'),
-              // if static 404 is not present but we have pages/404.js
-              // it is a lambda due to _app getInitialProps
-              dest: static404Page
-                ? path.join('/', static404Page)
-                : path.join(
-                    '/',
-                    entryDirectory,
-                    hasPages404 &&
-                      lambdas[path.join('./', entryDirectory, '404')]
-                      ? '404'
-                      : '_error'
-                  ),
-              status: 404,
-            },
+            isSharedLambdas
+              ? {
+                  src: path.join('/', entryDirectory, '.*'),
+                  // if static 404 is not present but we have pages/404.js
+                  // it is a lambda due to _app getInitialProps
+                  dest: path.join('/', (static404Page
+                    ? static404Page
+                    : pageLambdaMap[page404Path]) as string),
+
+                  status: 404,
+                  headers: {
+                    'x-nextjs-page': page404Path,
+                  },
+                }
+              : {
+                  src: path.join('/', entryDirectory, '.*'),
+                  // if static 404 is not present but we have pages/404.js
+                  // it is a lambda due to _app getInitialProps
+                  dest: static404Page
+                    ? path.join('/', static404Page)
+                    : path.join(
+                        '/',
+                        entryDirectory,
+                        hasPages404 &&
+                          lambdas[path.join('./', entryDirectory, '404')]
+                          ? '404'
+                          : '_error'
+                      ),
+                  status: 404,
+                },
           ]),
     ],
     watch: [],

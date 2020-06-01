@@ -1,4 +1,4 @@
-![Preact Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/preact.svg)
+![Preact Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/preact.svg)
 
 # Preact Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Preact](https://preactjs.com/) app that 
 
 Deploy your own Preact project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/preact)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/preact)
 
 _Live Example: https://preact.now-examples.now.sh_
 
@@ -22,8 +22,8 @@ $ preact create default my-project
 
 ### Deploying From Your Terminal
 
-You can deploy your new Preact project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Preact project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

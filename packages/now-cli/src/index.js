@@ -157,7 +157,7 @@ const main = async argv_ => {
 
     console.log(
       info(
-        `Changelog: https://github.com/zeit/now/releases/tag/vercel@${update.latest}`
+        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${update.latest}`
       )
     );
   }
@@ -529,7 +529,7 @@ const main = async argv_ => {
 
   if (argv['--team']) {
     output.warn(
-      `The ${param('--team')} flag is deprecated. Please use ${param(
+      `The ${param('--team')} option is deprecated. Please use ${param(
         '--scope'
       )} instead.`
     );

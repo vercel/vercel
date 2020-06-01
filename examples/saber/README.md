@@ -1,4 +1,4 @@
-![Saber Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/saber.svg)
+![Saber Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/saber.svg)
 
 # Saber Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Saber](https://saber.land) site that can
 
 Deploy your own Saber project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/saber)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/saber)
 
 _Live Example: https://saber.now-examples.now.sh_
 
@@ -22,8 +22,8 @@ $ npm init site my-saber-site
 
 ### Deploying From Your Terminal
 
-You can deploy your new Saber project with a single command from your terminal using Now CLI:
+You can deploy your new Saber project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```
