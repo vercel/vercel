@@ -257,7 +257,7 @@ const login = async ctx => {
 
   output.print(
     `${prependEmoji(
-      `Connect your Git Repositories to deploy every branch push automatically (https://zeit.ink/1X).`,
+      `Connect your Git Repositories to deploy every branch push automatically (https://vercel.link/git).`,
       emoji('tip')
     )}\n`
   );

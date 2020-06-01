@@ -1,16 +1,11 @@
 import { HandleValue } from './index';
 
-export type NowError = {
+export type RouteApiError = {
   code: string;
   message: string;
-  errors: NowErrorNested[];
-  sha?: string; // File errors
-};
-
-export type NowErrorNested = {
-  message: string;
-  src?: string;
-  handle?: string;
+  link?: string; // link to error message details
+  action?: string; // label for error link
+  otherErrors?: string[];
 };
 
 export type Source = {
@@ -34,7 +29,7 @@ export type Route = Source | Handler;
 
 export type NormalizedRoutes = {
   routes: Route[] | null;
-  error: NowError | null;
+  error: RouteApiError | null;
 };
 
 export interface GetRoutesProps {

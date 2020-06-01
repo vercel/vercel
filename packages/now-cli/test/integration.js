@@ -2554,7 +2554,7 @@ test('should prefill "project name" prompt with --name', async t => {
   let isDeprecated = false;
 
   await waitForPrompt(now, chunk => {
-    if (chunk.includes('The "--name" flag is deprecated')) {
+    if (chunk.includes('The "--name" option is deprecated')) {
       isDeprecated = true;
     }
 
