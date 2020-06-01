@@ -5,7 +5,7 @@ export type RouteApiError = {
   message: string;
   link?: string; // link to error message details
   action?: string; // label for error link
-  otherErrors?: string[];
+  errors?: string[]; // array of all error messages
 };
 
 export type Source = {
