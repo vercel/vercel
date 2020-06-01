@@ -101,7 +101,7 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
         if (key.includes(':')) {
           key = safelyCompile(key, indexes);
         }
-        if (value.includes(':') && !/(http|https|wss):/.test(value)) {
+        if (value.includes(':')) {
           value = safelyCompile(value, indexes);
         }
       }
