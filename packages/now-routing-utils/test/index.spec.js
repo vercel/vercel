@@ -124,58 +124,58 @@ describe('normalizeRoutes', () => {
     assert.strictEqual(routes, input);
   });
 
-  test('fails with abnormal routes', () => {
-    const errors = [];
-    const routes = [];
+  test('fails if route has unknown `handle` value', () => {
+    const input = [{ handle: 'doesnotexist' }];
+    const { error } = normalizeRoutes(input);
 
-    routes.push({ handle: 'doesnotexist' });
-    errors.push({
-      message: 'This is not a valid handler (handle: doesnotexist)',
-      handle: 'doesnotexist',
-    });
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 0 has unknown handle value `handle: doesnotexist`.'
+    );
+  });
 
-    // @ts-ignore
-    routes.push({ handle: 'filesystem', illegal: true });
-    errors.push({
-      message:
-        'Cannot have any other keys when handle is used (handle: filesystem)',
-      handle: 'filesystem',
-    });
+  test('fails if route has additional properties with `handle` property', () => {
+    const input = [{ handle: 'filesystem', illegal: true }];
+    const { error } = normalizeRoutes(input);
 
-    routes.push({ handle: 'filesystem' });
-    errors.push({
-      message: 'You can only handle something once (handle: filesystem)',
-      handle: 'filesystem',
-    });
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 0 has unknown property `illegal`.'
+    );
+  });
 
-    routes.push({ src: '^/(broken]$' });
-    errors.push({
-      message: 'Invalid regular expression: "^/(broken]$"',
-      src: '^/(broken]$',
-    });
+  test('fails if route has a duplicate `handle` value', () => {
+    const input = [{ handle: 'filesystem' }, { handle: 'filesystem' }];
+    const { error } = normalizeRoutes(input);
 
-    // @ts-ignore
-    routes.push({ doesNotExist: true });
-    errors.push({
-      message: 'A route must set either handle or src',
-    });
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 1 is a duplicate. Please use one `handle: filesystem` at most.'
+    );
+  });
 
-    // @ts-ignore
-    routes.push({ src: '^/about$', doesNotExist: true });
+  test('fails if route has a invalid regex', () => {
+    const input = [{ src: '^/(broken]$' }];
+    const { error } = normalizeRoutes(input);
 
-    const normalized = normalizeRoutes(routes);
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 0 has invalid `src` regular expression "^/(broken]$".'
+    );
+  });
 
-    assert.deepStrictEqual(normalized.routes, routes);
-    assert.deepStrictEqual(normalized.error.code, 'invalid_routes');
-    assert.deepStrictEqual(normalized.error.errors, errors);
-    assert.deepStrictEqual(
-      normalized.error.message,
-      `One or more invalid routes were found:
-- This is not a valid handler (handle: doesnotexist)
-- Cannot have any other keys when handle is used (handle: filesystem)
-- You can only handle something once (handle: filesystem)
-- Invalid regular expression: "^/(broken]$"
-- A route must set either handle or src`
+  test('fails if route does not define `handle` or `src` property', () => {
+    const input = [{ fake: 'foo' }];
+    const { error } = normalizeRoutes(input);
+
+    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(
+      error.message,
+      'Route at index 0 must define either `handle` or `src` property.'
     );
   });
 
@@ -515,10 +515,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You cannot assign "dest" after "handle: hit"'
+      error.message,
+      'Route at index 1 cannot define `dest` after `handle: hit`.'
     );
   });
 
@@ -534,10 +534,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You must assign "continue: true" after "handle: hit"'
+      error.message,
+      'Route at index 1 must define `continue: true` after `handle: hit`.'
     );
   });
 
@@ -554,10 +554,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You cannot assign "status" after "handle: hit"'
+      error.message,
+      'Route at index 1 cannot define `status` after `handle: hit`.'
     );
   });
 
@@ -573,10 +573,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You must assign "check: true" after "handle: miss"'
+      error.message,
+      'Route at index 1 must define `check: true` after `handle: miss`.'
     );
   });
 
@@ -592,10 +592,10 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_routes');
+    assert.deepEqual(error.code, 'invalid_route');
     assert.deepEqual(
-      error.errors[0].message,
-      'You must assign "continue: true" after "handle: miss"'
+      error.message,
+      'Route at index 1 must define `continue: true` after `handle: miss`.'
     );
   });
 });
@@ -623,7 +623,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_keys');
+    assert.equal(actual.error.code, 'invalid_mixed_routes');
+    assert.equal(
+      actual.error.message,
+      'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when redirects is invalid regex', () => {
@@ -632,7 +638,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirects');
+    assert.equal(actual.error.code, 'invalid_redirect');
+    assert.equal(
+      actual.error.message,
+      'Redirect at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when redirects is invalid pattern', () => {
@@ -641,7 +653,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirects');
+    assert.equal(actual.error.code, 'invalid_redirect');
+    assert.equal(
+      actual.error.message,
+      'Redirect at index 0 has invalid `source` pattern "/:?".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when redirects defines both permanent and statusCode', () => {
@@ -657,7 +675,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirects');
+    assert.equal(actual.error.code, 'invalid_redirect');
+    assert.equal(
+      actual.error.message,
+      'Redirect at index 0 cannot define both `permanent` and `statusCode` properties.'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when headers is invalid regex', () => {
@@ -666,7 +690,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_headers');
+    assert.equal(actual.error.code, 'invalid_header');
+    assert.equal(
+      actual.error.message,
+      'Header at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when headers is invalid pattern', () => {
@@ -677,7 +707,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_headers');
+    assert.equal(actual.error.code, 'invalid_header');
+    assert.equal(
+      actual.error.message,
+      'Header at index 0 has invalid `source` pattern "/:?".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when rewrites is invalid regex', () => {
@@ -686,7 +722,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_rewrites');
+    assert.equal(actual.error.code, 'invalid_rewrite');
+    assert.equal(
+      actual.error.message,
+      'Rewrite at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should error when rewrites is invalid pattern', () => {
@@ -695,7 +737,13 @@ describe('getTransformedRoutes', () => {
     };
     const actual = getTransformedRoutes({ nowConfig });
     assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_rewrites');
+    assert.equal(actual.error.code, 'invalid_rewrite');
+    assert.equal(
+      actual.error.message,
+      'Rewrite at index 0 has invalid `source` pattern "/:?".'
+    );
+    assert.ok(actual.error.link);
+    assert.ok(actual.error.action);
   });
 
   test('should normalize all redirects before rewrites', () => {
@@ -805,7 +853,7 @@ describe('getTransformedRoutes', () => {
     assert.deepEqual(actual.routes, null);
     assert.ok(
       actual.error.message.includes(
-        'in "destination" pattern but not in "source"'
+        'in `destination` property but not in `source` property'
       ),
       actual.error.message
     );
@@ -824,9 +872,108 @@ describe('getTransformedRoutes', () => {
     assert.deepEqual(actual.routes, null);
     assert.ok(
       actual.error.message.includes(
-        'in "destination" pattern but not in "source"'
+        'in `destination` property but not in `source` property'
       ),
       actual.error.message
     );
+  });
+
+  test('should error when segment is defined in `destination` query string but not `source`', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/iforgot/:id',
+          destination: '/api/login?id=123&name=:name',
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, null);
+    assert.ok(
+      actual.error.message.includes(
+        'in `destination` property but not in `source` property'
+      ),
+      actual.error.message
+    );
+  });
+
+  test('should error when segment is defined in HTTPS `destination` query string but not `source`', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/iforgot/:id',
+          destination: 'https://example.com/api/login?id=123&name=:name',
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, null);
+    assert.ok(
+      actual.error.message.includes(
+        'in `destination` property but not in `source` property'
+      ),
+      actual.error.message
+    );
+  });
+
+  test('should work with content-security-policy header containing URL', () => {
+    const nowConfig = {
+      headers: [
+        {
+          source: '/(.*)',
+          headers: [
+            {
+              key: 'content-security-policy',
+              value:
+                "default-src 'self'; script-src 'self'; img-src 'self' https://*.example.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.examplpe.com wss://gateway.example.com; form-action 'self'",
+            },
+            {
+              key: 'feature-policy',
+              value:
+                "accelerometer 'none'; camera 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; payment 'none'; usb 'none'",
+            },
+            {
+              key: 'referrer-policy',
+              value: 'strict-origin-when-cross-origin',
+            },
+            {
+              key: 'strict-transport-security',
+              value: 'max-age=31536000; includesubdomains; preload',
+            },
+            {
+              key: 'x-content-type-options',
+              value: 'nosniff',
+            },
+            {
+              key: 'x-frame-options',
+              value: 'sameorigin',
+            },
+            {
+              key: 'x-xss-protection',
+              value: '1; mode=block',
+            },
+          ],
+        },
+      ],
+    };
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(actual.routes, [
+      {
+        continue: true,
+        headers: {
+          'content-security-policy':
+            "default-src 'self'; script-src 'self'; img-src 'self' https://*.example.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.examplpe.com wss://gateway.example.com; form-action 'self'",
+          'feature-policy':
+            "accelerometer 'none'; camera 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; payment 'none'; usb 'none'",
+          'referrer-policy': 'strict-origin-when-cross-origin',
+          'strict-transport-security':
+            'max-age=31536000; includesubdomains; preload',
+          'x-content-type-options': 'nosniff',
+          'x-frame-options': 'sameorigin',
+          'x-xss-protection': '1; mode=block',
+        },
+        src: '^(?:/(.*))$',
+      },
+    ]);
   });
 });
