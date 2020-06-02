@@ -78,13 +78,13 @@ async function main() {
   // Band-aid to delete stuff that `ncc` bundles, but it shouldn't:
 
   // TypeScript definition files from `@vercel/build-utils`
-  await remove(join(dirRoot, 'dist/dist'));
+  await remove(join(dirRoot, 'dist', 'dist'));
 
   // The Readme and `package.json` from "config-chain" module
-  await remove(join(dirRoot, 'dist/config-chain'));
+  await remove(join(dirRoot, 'dist', 'config-chain'));
 
   // A bunch of source `.ts` files from CLI's `util` directory
-  await remove(join(dirRoot, 'dist/util'));
+  await remove(join(dirRoot, 'dist', 'util'));
 
   console.log('Finished building `now-cli`');
 }
