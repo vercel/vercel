@@ -581,6 +581,7 @@ export default class DevServer {
         defaultRoutes,
         redirectRoutes,
         rewriteRoutes,
+        errorRoutes,
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
@@ -606,20 +607,27 @@ export default class DevServer {
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
-
-        const routes: Route[] = [];
-        const { routes: nowConfigRoutes } = config;
-        routes.push(...(redirectRoutes || []));
-        routes.push(
-          ...appendRoutesToPhase({
-            routes: nowConfigRoutes,
-            newRoutes: rewriteRoutes,
-            phase: 'filesystem',
-          })
-        );
-        routes.push(...(defaultRoutes || []));
-        config.routes = routes;
       }
+
+      const routes: Route[] = [];
+      const { routes: nowConfigRoutes } = config;
+      routes.push(...(redirectRoutes || []));
+      routes.push(
+        ...appendRoutesToPhase({
+          routes: nowConfigRoutes,
+          newRoutes: rewriteRoutes,
+          phase: 'filesystem',
+        })
+      );
+      routes.push(
+        ...appendRoutesToPhase({
+          routes: nowConfigRoutes,
+          newRoutes: errorRoutes,
+          phase: 'error',
+        })
+      );
+      routes.push(...(defaultRoutes || []));
+      config.routes = routes;
     }
 
     if (Array.isArray(config.builds)) {
@@ -1323,8 +1331,7 @@ export default class DevServer {
     const handleMap = getRoutesTypes(routes);
     const missRoutes = handleMap.get('miss') || [];
     const hitRoutes = handleMap.get('hit') || [];
-    handleMap.delete('miss');
-    handleMap.delete('hit');
+    const errorRoutes = handleMap.get('error') || [];
     const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
     let routeResult: RouteResult | null = null;
@@ -1633,7 +1640,21 @@ export default class DevServer {
     }
 
     if (!foundAsset) {
-      await this.send404(req, res, nowRequestId);
+      const { dest, status } = await devRouter(
+        req.url,
+        req.method,
+        errorRoutes,
+        this,
+        undefined,
+        undefined,
+        'error'
+      );
+      if (dest && status) {
+        res.statusCode = status;
+        // TODO: how should we serve the file?
+      } else {
+        await this.send404(req, res, nowRequestId);
+      }
       return;
     }
 
