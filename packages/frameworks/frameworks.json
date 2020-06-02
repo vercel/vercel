@@ -3,7 +3,7 @@
     "name": "Next.js",
     "slug": "nextjs",
     "demo": "https://nextjs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/next.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg",
     "tagline": "Next.js makes you productive with React instantly — whether you want to build static or dynamic sites. ",
     "description": "A Next.js app and a Serverless Function API.",
     "website": "https://nextjs.org",
@@ -17,7 +17,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`next build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `next build`"
       },
       "devCommand": {
         "value": "next dev --port $PORT"
@@ -31,7 +31,7 @@
     "name": "Gatsby",
     "slug": "gatsby",
     "demo": "https://gatsby.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gatsby.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gatsby.svg",
     "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
     "description": "A Gatsby app, using the default starter theme and a Serverless Function API.",
     "website": "https://gatsbyjs.org",
@@ -45,7 +45,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`gatsby build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `gatsby build`"
       },
       "devCommand": {
         "value": "gatsby develop --port $PORT"
@@ -59,9 +59,10 @@
     "name": "Hexo",
     "slug": "hexo",
     "demo": "https://hexo.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hexo.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hexo.svg",
     "tagline": "Hexo is a fast, simple & powerful blog framework powered by Node.js.",
     "description": "A Hexo site, created with the Hexo CLI.",
+    "website": "https://hexo.io/",
     "detectors": {
       "every": [
         {
@@ -72,7 +73,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`hexo generate` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `hexo generate`"
       },
       "devCommand": {
         "value": "hexo server --port $PORT"
@@ -86,9 +87,10 @@
     "name": "Eleventy",
     "slug": "eleventy",
     "demo": "https://eleventy.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/eleventy.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/eleventy.svg",
     "tagline": "11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.",
     "description": "An Eleventy site, created with npm init.",
+    "website": "https://www.11ty.dev/",
     "detectors": {
       "every": [
         {
@@ -99,7 +101,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`npx @11ty/eleventy` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `npx @11ty/eleventy`"
       },
       "devCommand": {
         "value": "npx @11ty/eleventy --serve --watch --port $PORT"
@@ -110,18 +112,15 @@
     }
   },
   {
-    "name": "Docusaurus",
-    "slug": "docusaurus",
-    "demo": "https://docusaurus.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
+    "name": "Docusaurus 2",
+    "slug": "docusaurus-2",
+    "demo": "https://docusaurus-2.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg",
     "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
     "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
+    "website": "https://v2.docusaurus.io",
     "detectors": {
       "some": [
-        {
-          "path": "package.json",
-          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"docusaurus\":\\s*\".+?\"[^}]*}"
-        },
         {
           "path": "package.json",
           "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@docusaurus\\/core\":\\s*\".+?\"[^}]*}"
@@ -130,7 +129,35 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`docusaurus-build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `docusaurus build`"
+      },
+      "devCommand": {
+        "value": "docusaurus start --port $PORT"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
+    }
+  },
+  {
+    "name": "Docusaurus 1",
+    "slug": "docusaurus",
+    "demo": "https://docusaurus.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg",
+    "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
+    "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
+    "website": "https://docusaurus.io/",
+    "detectors": {
+      "some": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"docusaurus\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `docusaurus-build`"
       },
       "devCommand": {
         "value": "docusaurus-start --port $PORT"
@@ -144,7 +171,7 @@
     "name": "Preact",
     "slug": "preact",
     "demo": "https://preact.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/preact.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/preact.svg",
     "tagline": "Preact is a fast 3kB alternative to React with the same modern API.",
     "description": "A Preact app, created with the Preact CLI.",
     "website": "https://preactjs.com",
@@ -158,7 +185,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`preact build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `preact build`"
       },
       "devCommand": {
         "value": "preact watch --port $PORT"
@@ -169,12 +196,44 @@
     }
   },
   {
+    "name": "Dojo",
+    "slug": "dojo",
+    "demo": "https://dojo.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/dojo.png",
+    "tagline": "Dojo is a modern progressive, TypeScript first framework.",
+    "description": "A Dojo app, created with the Dojo CLI's cli-create-app command.",
+    "website": "https://dojo.io",
+    "detectors": {
+      "some": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@dojo\\/framework\":\\s*\".+?\"[^}]*}"
+        },
+        {
+          "path": ".dojorc"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `dojo build`"
+      },
+      "devCommand": {
+        "value": "dojo build -m dev -w -s -p $PORT"
+      },
+      "outputDirectory": {
+        "value": "output/dist"
+      }
+    }
+  },
+  {
     "name": "Ember",
     "slug": "ember",
     "demo": "https://ember.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ember.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ember.svg",
     "tagline": "Ember.js helps webapp developers be more productive out of the box.",
     "description": "An Ember app, created with the Ember CLI.",
+    "website": "https://emberjs.com/",
     "detectors": {
       "every": [
         {
@@ -185,7 +244,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`ember build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `ember build`"
       },
       "devCommand": {
         "value": "ember serve --port $PORT"
@@ -199,7 +258,7 @@
     "name": "Vue.js",
     "slug": "vue",
     "demo": "https://vue.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vue.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/vue.svg",
     "tagline": "Vue.js is a versatile JavaScript framework that is as approachable as it is performant.",
     "description": "A Vue.js app, created with the Vue CLI.",
     "website": "https://vuejs.org",
@@ -213,7 +272,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`vue-cli-service build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `vue-cli-service build`"
       },
       "devCommand": {
         "value": "vue-cli-service serve --port $PORT"
@@ -227,8 +286,10 @@
     "name": "Scully",
     "slug": "scully",
     "demo": "https://scully.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/scullyio-logo.png",
     "tagline": "Scully is a static site generator for Angular.",
     "description": "The Static Site Generator for Angular apps.",
+    "website": "https://github.com/scullyio/scully",
     "detectors": {
       "every": [
         {
@@ -239,7 +300,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`ng build && scully` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `ng build && scully`"
       },
       "devCommand": {
         "value": "ng serve --port $PORT"
@@ -250,10 +311,38 @@
     }
   },
   {
+    "name": "Ionic Angular",
+    "slug": "ionic-angular",
+    "demo": "https://ionic-angular.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ionic.svg",
+    "tagline": "Ionic Angular allows you to build mobile PWAs with Angular and the Ionic Framework.",
+    "description": "An Ionic Angular site, created with the Ionic CLI.",
+    "website": "https://ionicframework.com",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@ionic\\/angular\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `ng build`"
+      },
+      "devCommand": {
+        "value": "ng start"
+      },
+      "outputDirectory": {
+        "value": "www"
+      }
+    }
+  },
+  {
     "name": "Angular",
     "slug": "angular",
     "demo": "https://angular.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/angular.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/angular.svg",
     "tagline": "Angular is a TypeScript-based cross-platform framework from Google.",
     "description": "An Angular app, created with the Angular CLI.",
     "website": "https://angular.io",
@@ -267,7 +356,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`ng build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `ng build`"
       },
       "devCommand": {
         "value": "ng serve --port $PORT"
@@ -281,9 +370,10 @@
     "name": "Polymer",
     "slug": "polymer",
     "demo": "https://polymer.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/polymer.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/polymer.svg",
     "tagline": "Polymer is an open-source webapps library from Google, for building using Web Components.",
     "description": "A Polymer app, created with the Polymer CLI.",
+    "website": "https://www.polymer-project.org/",
     "detectors": {
       "every": [
         {
@@ -294,7 +384,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`polymer build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `polymer build`"
       },
       "devCommand": {
         "value": "polymer serve --port $PORT"
@@ -308,7 +398,7 @@
     "name": "Svelte",
     "slug": "svelte",
     "demo": "https://svelte.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/svelte.svg",
     "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. ",
     "description": "A Svelte app, using the Svelte template, and a Serverless Function API.",
     "website": "https://svelte.dev",
@@ -322,7 +412,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`rollup -c` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `rollup -c`"
       },
       "devCommand": {
         "value": "sirv public --single --dev --port $PORT"
@@ -336,7 +426,7 @@
     "name": "Ionic React",
     "slug": "ionic-react",
     "demo": "https://ionic-react.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic-react.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ionic.svg",
     "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
     "description": "An Ionic React site, created with the Ionic CLI.",
     "website": "https://ionicframework.com",
@@ -350,13 +440,13 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`build` from `package.json`"
+        "placeholder": "`npm run build` or `react-scripts build`"
       },
       "devCommand": {
-        "value": "stencil build --dev --watch --serve --port $PORT"
+        "value": "react-scripts start"
       },
       "outputDirectory": {
-        "value": "public"
+        "value": "build"
       }
     }
   },
@@ -364,7 +454,7 @@
     "name": "Create React App",
     "slug": "create-react-app",
     "demo": "https://react-functions.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/react.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/react.svg",
     "tagline": "Create React App allows you to get going with React in no time.",
     "description": "A React app, bootstrapped with create-react-app, and a Serverless Function API.",
     "website": "https://create-react-app.dev",
@@ -382,7 +472,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`react-scripts build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `react-scripts build`"
       },
       "devCommand": {
         "value": "react-scripts start"
@@ -396,9 +486,10 @@
     "name": "Gridsome",
     "slug": "gridsome",
     "demo": "https://gridsome.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gridsome.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gridsome.svg",
     "tagline": "Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default.",
     "description": "A Gridsome app, created with the Gridsome CLI.",
+    "website": "https://gridsome.org/",
     "detectors": {
       "every": [
         {
@@ -409,7 +500,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`gridsome build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `gridsome build`"
       },
       "devCommand": {
         "value": "gridsome develop -p $PORT"
@@ -423,7 +514,7 @@
     "name": "UmiJS",
     "slug": "umijs",
     "demo": "https://umijs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/umi.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/umi.svg",
     "tagline": "UmiJS is an extensible enterprise-level React application framework.",
     "description": "An UmiJS app, created using the Umi CLI.",
     "website": "https://umijs.org",
@@ -437,7 +528,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`umi build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `umi build`"
       },
       "devCommand": {
         "value": "umi dev --port $PORT"
@@ -451,7 +542,7 @@
     "name": "Sapper",
     "slug": "sapper",
     "demo": "https://sapper.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/svelte.svg",
     "tagline": "Sapper is a framework for building high-performance universal web apps with Svelte.",
     "description": "A Sapper app, using the Sapper template.",
     "website": "https://sapper.svelte.dev",
@@ -465,7 +556,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`sapper export` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `sapper export`"
       },
       "devCommand": {
         "value": "sapper dev --port $PORT"
@@ -479,9 +570,10 @@
     "name": "Saber",
     "slug": "saber",
     "demo": "https://saber.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/saber.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/saber.svg",
     "tagline": "Saber is a framework for building static sites in Vue.js that supports data from any source.",
     "description": "A Saber site, created with npm init.",
+    "website": "https://saber.land/",
     "detectors": {
       "every": [
         {
@@ -492,7 +584,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`saber build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `saber build`"
       },
       "devCommand": {
         "value": "saber --port $PORT"
@@ -506,9 +598,10 @@
     "name": "Stencil",
     "slug": "stencil",
     "demo": "https://stencil.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/stencil.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/stencil.svg",
     "tagline": "Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems.",
     "description": "A Stencil site, created with the Stencil CLI.",
+    "website": "https://stenciljs.com/",
     "detectors": {
       "every": [
         {
@@ -519,7 +612,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`stencil build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `stencil build`"
       },
       "devCommand": {
         "value": "stencil build --dev --watch --serve --port $PORT"
@@ -533,7 +626,7 @@
     "name": "Nuxt.js",
     "slug": "nuxtjs",
     "demo": "https://nuxtjs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/nuxt.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/nuxt.svg",
     "tagline": "Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.",
     "description": "A Nuxt.js app, bootstrapped with create-nuxt-app.",
     "website": "https://nuxtjs.org",
@@ -547,7 +640,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`nuxt build` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `nuxt build`"
       },
       "devCommand": {
         "value": "nuxt"
@@ -561,7 +654,7 @@
     "name": "Hugo",
     "slug": "hugo",
     "demo": "https://hugo.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hugo.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hugo.svg",
     "tagline": "Hugo is the world’s fastest framework for building websites, written in Go.",
     "description": "A Hugo site, created with the Hugo CLI.",
     "website": "https://gohugo.io",
@@ -580,7 +673,7 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "hugo -D --gc"
+        "placeholder": "`npm run build` or `hugo -D --gc`"
       },
       "devCommand": {
         "value": "hugo server -D -w -p $PORT"
@@ -594,9 +687,10 @@
     "name": "Jekyll",
     "slug": "jekyll",
     "demo": "https://jekyll.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/jekyll.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/jekyll.svg",
     "tagline": "Jekyll makes it super easy to transform your plain text into static websites and blogs.",
     "description": "A Jekyll site, created with the Jekyll CLI.",
+    "website": "https://jekyllrb.com/",
     "detectors": {
       "every": [
         {
@@ -606,7 +700,7 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "jekyll build"
+        "placeholder": "`npm run build` or `jekyll build`"
       },
       "devCommand": {
         "value": "bundle exec jekyll serve --watch --port $PORT"
@@ -620,9 +714,10 @@
     "name": "Brunch",
     "slug": "brunch",
     "demo": "https://brunch.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/brunch.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/brunch.svg",
     "tagline": "Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development.",
     "description": "A Brunch app, created with the Brunch CLI.",
+    "website": "https://brunch.io/",
     "detectors": {
       "every": [
         {
@@ -632,7 +727,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`brunch build --production` or `build` from `package.json`"
+        "placeholder": "`npm run build` or `brunch build --production`"
       },
       "devCommand": {
         "value": "brunch watch --server --port $PORT"
@@ -646,9 +741,10 @@
     "name": "Middleman",
     "slug": "middleman",
     "demo": "https://middleman.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/middleman.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/middleman.svg",
     "tagline": "Middleman is a static site generator that uses all the shortcuts and tools in modern web development.",
     "description": "A Middleman app, created with the Middleman CLI.",
+    "website": "https://middlemanapp.com/",
     "detectors": {
       "every": [
         {
@@ -658,7 +754,7 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "bundle exec middleman build"
+        "value": "`npm run build` or `bundle exec middleman build`"
       },
       "devCommand": {
         "value": "bundle exec middleman server -p $PORT"
@@ -669,144 +765,20 @@
     }
   },
   {
-    "name": "Vanilla",
-    "slug": "vanilla",
-    "demo": "https://vanilla.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vanilla.svg",
-    "tagline": "Love the original way of making websites?",
-    "description": "A vanilla site and a Serverless Function API."
-  },
-  {
-    "name": "Storybook",
-    "slug": "storybook",
-    "demo": "https://storybook.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/storybook.svg",
-    "tagline": "Storybook is an open source tool for developing UI components in isolation for React, Vue, and Angular.",
-    "description": "A Storybook app, using the React demo template.",
-    "website": "https://storybook.js.org"
-  },
-  {
-    "name": "Docz",
-    "slug": "docz",
-    "demo": "https://docz.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docz.svg",
-    "tagline": "Docz makes it easy to write and publish beautiful interactive documentation for your code.",
-    "description": "A static Docz site that can be expanded upon to create documentation with ease.",
-    "website": "https://docz.site"
-  },
-  {
-    "name": "mdx-deck",
-    "slug": "mdx-deck",
-    "demo": "https://mdx-deck.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/mdx-deck.svg",
-    "tagline": "MDX Deck allows you to swiftly create React MDX-based presentation decks.",
-    "description": "An mdx-deck presentation template that includes a theme.",
-    "website": "https://github.com/jxnblk/mdx-deck"
-  },
-  {
-    "name": "Aurelia",
-    "slug": "aurelia",
-    "demo": "https://aurelia.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/aurelia.svg",
-    "tagline": "Aurelia is an all-in-one framework for building web, desktop, and mobile applications.",
-    "description": "An Aurelia app, created with the Aurelia CLI.",
-    "website": "https://aurelia.io"
-  },
-  {
-    "name": "VuePress",
-    "slug": "vuepress",
-    "demo": "https://vuepress.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vuepress.png",
-    "tagline": "VuePress is the performant way to create static sites with Vue.js.",
-    "description": "A VuePress app, created with the VuePress CLI.",
-    "website": "https://vuepress.vuejs.org"
-  },
-  {
-    "name": "Charge.js",
-    "slug": "charge",
-    "demo": "https://charge.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/chargejs.svg",
-    "tagline": "Charge is an opinionated, zero-config static site generator written in JavaScript.",
-    "description": "A Charge app to get you up and running."
-  },
-  {
-    "name": "Riot.js",
-    "slug": "riot",
-    "demo": "https://riot.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/riot.svg",
-    "tagline": "Riot.js lets you build user interfaces with custom tags using simple and enjoyable syntax.",
-    "description": "A Riot app to get you up and running."
-  },
-  {
-    "name": "Marko.js",
-    "slug": "marko",
-    "demo": "https://marko.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/marko.png",
-    "tagline": "Marko is a super fast UI library that makes building web apps fun.",
-    "description": "A Marko app, created with the Marko CLI."
-  },
-  {
-    "name": "Mithril.js",
-    "slug": "mithril",
-    "demo": "https://mithril.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/mithriljs.svg",
-    "tagline": "Mithril is a lightweight modern web framework for that makes it easy to build SPAs.",
-    "description": "A Mithril app to get you up and running."
-  },
-  {
-    "name": "Metalsmith",
-    "slug": "metalsmith",
-    "demo": "https://metalsmith.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/metalsmith.png",
-    "tagline": "Metalsmith is an extremely simple, extendable static site generator.",
-    "description": "A Metalsmith app, created using the static-site starter."
-  },
-  {
-    "name": "HyperApp",
-    "slug": "hyperapp",
-    "demo": "https://hyperapp.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hyperapp.svg",
-    "tagline": "HyperApp is a low-footprint framework for building web interfaces without a learning curve.",
-    "description": "A HyperApp app to get you up and running."
-  },
-  {
-    "name": "Zola",
-    "slug": "zola",
-    "demo": "https://zola.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/zola.svg",
-    "tagline": "Zola is a one-stop static site engine for all of your static needs.",
-    "description": "A Zola site, created with the Zola CLI."
-  },
-  {
-    "name": "Pelican",
-    "slug": "pelican",
-    "demo": "https://pelican.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/pelican.png",
-    "tagline": "Pelican is a versatile static site generator, written in Python.",
-    "description": "A Pelican site, created with the Pelican CLI."
-  },
-  {
-    "name": "MkDocs",
-    "slug": "mkdocs",
-    "demo": "https://mkdocs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/mkdocs.svg",
-    "tagline": "MkDocs is a fast, simple and downright gorgeous static site generator that's geared towards building project documentation.",
-    "description": "A MkDocs site, created with the MkDocs CLI."
-  },
-  {
-    "name": "Assemble",
-    "slug": "assemble",
-    "demo": "https://assemble.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/assemble.svg",
-    "tagline": "A static site generator for Grunt.js and Yeoman, Assemble makes it dead simple to build modular sites and blogs.",
-    "description": "An Assemble site, created from the Assemble quickstart."
-  },
-  {
-    "name": "Foundation",
-    "slug": "foundation",
-    "demo": "https://foundation.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/foundation.svg",
-    "tagline": "Foundation is the most advanced responsive front-end framework in the world.",
-    "description": "A Foundation app, created with the Foundation CLI."
+    "name": "Other",
+    "slug": null,
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/other.svg",
+    "description": "No framework or a unoptimized framework.",
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run now-build` or `npm run build`"
+      },
+      "devCommand": {
+        "placeholder": "None"
+      },
+      "outputDirectory": {
+        "placeholder": "`public` if it exists, or `.`"
+      }
+    }
   }
 ]

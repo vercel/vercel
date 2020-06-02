@@ -5,5 +5,5 @@ export default {
   pro: 'Pro',
   advanced: 'Advanced',
   'on-demand': 'On Demand',
-  unlimited: 'Unlimited'
+  unlimited: 'Unlimited',
 };

@@ -7,9 +7,9 @@ used an unknown or invalid dc identifier.
 
 #### Possible Ways to Fix It
 
-Check your `now.json` or `--regions` flag and
+Check your `vercel.json` or `--regions` flag and
 make sure you are using a valid string. Regions
-and DCs have to be in *lowercase*.
+and DCs have to be in _lowercase_.
 
 **Valid region identifiers**:
 
@@ -19,7 +19,7 @@ and DCs have to be in *lowercase*.
 - `gru`
 - `iad`
 
-In `now-cli`, they currently are transformed to 
+In `now-cli`, they currently are transformed to
 DC identifiers before being sent to our APIs.
 
 **Valid DC identifiers**:
@@ -33,5 +33,5 @@ When passing multiple `--regions` as a CLI parameter,
 make sure they're separated by a comma (`,`). For example:
 
 ```console
-now --regions sfo,bru,gru
+vercel --regions sfo,bru,gru
 ```

@@ -3,7 +3,6 @@ import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
-import wait from '../output/wait';
 
 export type AliasRecord = {
   uid: string;
@@ -20,7 +19,7 @@ export default async function createAlias(
   alias: string,
   externalDomain: boolean
 ) {
-  let cancelMessage = wait(`Creating alias`);
+  let cancelMessage = output.spinner(`Creating alias`);
   const result = await performCreateAlias(
     client,
     contextName,
@@ -41,7 +40,7 @@ export default async function createAlias(
       return cert;
     }
 
-    let cancelMessage = wait(`Creating alias`);
+    let cancelMessage = output.spinner(`Creating alias`);
     const secondTry = await performCreateAlias(
       client,
       contextName,
@@ -66,7 +65,7 @@ async function performCreateAlias(
       `/now/deployments/${deployment.uid}/aliases`,
       {
         method: 'POST',
-        body: { alias }
+        body: { alias },
       }
     );
   } catch (error) {
@@ -77,7 +76,10 @@ async function performCreateAlias(
       return { uid: error.uid, alias: error.alias } as AliasRecord;
     }
     if (error.code === 'deployment_not_found') {
-      return new ERRORS.DeploymentNotFound({ context: contextName, id: deployment.uid });
+      return new ERRORS.DeploymentNotFound({
+        context: contextName,
+        id: deployment.uid,
+      });
     }
     if (error.code === 'gone') {
       return new ERRORS.DeploymentFailedAliasImpossible();
@@ -94,7 +96,7 @@ async function performCreateAlias(
       }
     }
     if (error.status === 400) {
-      return new ERRORS.DeploymentNotReady({url: deployment.url })
+      return new ERRORS.DeploymentNotReady({ url: deployment.url });
     }
 
     throw error;

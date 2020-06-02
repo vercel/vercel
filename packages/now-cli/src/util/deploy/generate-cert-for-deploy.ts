@@ -4,7 +4,6 @@ import { Output } from '../output';
 import Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';
-import wait from '../output/wait';
 import { InvalidDomain } from '../errors-ts';
 
 export default async function generateCertForDeploy(
@@ -23,7 +22,9 @@ export default async function generateCertForDeploy(
     return new InvalidDomain(deployURL);
   }
 
-  const cancelSetupWait = wait(`Setting custom suffix domain ${domain}`);
+  const cancelSetupWait = output.spinner(
+    `Setting custom suffix domain ${domain}`
+  );
   const result = await setupDomain(output, client, domain, contextName);
   cancelSetupWait();
   if (result instanceof NowError) {
@@ -31,7 +32,7 @@ export default async function generateCertForDeploy(
   }
 
   // Generate the certificate with the given parameters
-  const cancelCertWait = wait(
+  const cancelCertWait = output.spinner(
     `Generating a wildcard certificate for ${domain}`
   );
   const cert = await createCertForCns(

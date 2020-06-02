@@ -3,6 +3,7 @@ import ignore from 'ignore';
 import dockerignore from '@zeit/dockerignore';
 import _glob, { IOptions } from 'glob';
 import fs from 'fs-extra';
+import { getVercelIgnore } from '@vercel/client';
 import IGNORED from './ignored';
 import uniqueStrings from './unique-strings';
 import getLocalConfigPath from './config/local-path';
@@ -11,7 +12,10 @@ import { NowConfig } from './dev/types';
 
 type NullableString = string | null;
 
-const flatten = (arr: NullableString[] | NullableString[][], res: NullableString[] = []) => {
+const flatten = (
+  arr: NullableString[] | NullableString[][],
+  res: NullableString[] = []
+) => {
   for (let cur of arr) {
     if (Array.isArray(cur)) {
       flatten(cur, res);
@@ -20,7 +24,7 @@ const flatten = (arr: NullableString[] | NullableString[][], res: NullableString
     }
   }
   return res;
-}
+};
 
 const glob = async function(pattern: string, options: IOptions) {
   return new Promise<string[]>((resolve, reject) => {
@@ -47,7 +51,12 @@ interface WalkSyncOptions {
  *  - `output` {Object} "output" helper object
  * @returns {Array}
  */
-const walkSync = async (dir: string, path: string, filelist: string[] = [], opts: WalkSyncOptions) => {
+const walkSync = async (
+  dir: string,
+  path: string,
+  filelist: string[] = [],
+  opts: WalkSyncOptions
+) => {
   const { debug } = opts.output;
   const dirc = await fs.readdir(asAbsolute(dir, path));
   for (let file of dirc) {
@@ -76,7 +85,11 @@ interface FilesInWhitelistOptions {
  *  - `output` {Object} "output" helper object
  * @returns {Array} the expanded list of whitelisted files.
  */
-const getFilesInWhitelist = async function(whitelist: string[], path: string, opts: FilesInWhitelistOptions) {
+const getFilesInWhitelist = async function(
+  whitelist: string[],
+  path: string,
+  opts: FilesInWhitelistOptions
+) {
   const { debug } = opts.output;
   const files: string[] = [];
 
@@ -140,8 +153,7 @@ const asAbsolute = function(path: string, parent: string) {
 
 export async function createIgnore(ignoreFilePath: string) {
   const ignoreFile = await maybeRead(ignoreFilePath, '');
-  const ig = ignore()
-    .add(`${IGNORED}\n${clearRelative(ignoreFile)}`);
+  const ig = ignore().add(`${IGNORED}\n${clearRelative(ignoreFile)}`);
   return ig;
 }
 
@@ -182,8 +194,9 @@ export async function staticFiles(
     const search = await glob(source, { cwd: path, absolute: true, dot: true });
 
     // Compile list of ignored patterns and files
-    const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
-    const ig = await createIgnore(resolve(path, ignoreName));
+    const ig = isBuilds
+      ? (await getVercelIgnore(path)).ig
+      : await createIgnore(resolve(path, '.gitignore'));
     const filter = ig.createFilter();
 
     const prefixLength = path.length + 1;
@@ -213,7 +226,7 @@ export async function staticFiles(
       `Locating files ${path}`,
       explode(search, {
         accepts,
-        output
+        output,
       })
     );
   }
@@ -241,7 +254,7 @@ interface NpmOptions {
  */
 export async function npm(
   path: string,
-  pkg: { files?: string[], now?: { files?: string[] } } = {},
+  pkg: { files?: string[]; now?: { files?: string[] } } = {},
   nowConfig: NowConfig = {},
   { hasNowJson = false, output }: NpmOptions
 ) {
@@ -299,7 +312,7 @@ export async function npm(
       `Locating files ${path}`,
       explode(search, {
         accepts,
-        output
+        output,
       })
     );
   }
@@ -361,7 +374,9 @@ export async function docker(
         ? await maybeRead(resolve(path, '.gitignore'), '')
         : dockerIgnore
     );
-    const ignoreInit = (dockerIgnore === null ? ignore : dockerignore) as any as typeof ignore;
+    const ignoreInit = ((dockerIgnore === null
+      ? ignore
+      : dockerignore) as any) as typeof ignore;
     const filter = ignoreInit()
       .add(`${IGNORED}\n${ignoredFiles}`)
       .createFilter();
@@ -415,7 +430,7 @@ export async function getAllProjectFiles(cwd: string, { debug }: Output) {
   const list = await glob('**', { cwd: current, absolute: true, nodir: true });
 
   // We need to replace \ with / for windows
-  return list.map((file) => file.replace(current.replace(/\\/g, '/'), ''));
+  return list.map(file => file.replace(current.replace(/\\/g, '/'), ''));
 }
 
 interface ExplodeOptions {
@@ -436,7 +451,10 @@ interface ExplodeOptions {
  *  - `output` {Object} "output" helper object
  * @return {Array} of {String}s of full paths
  */
-async function explode(paths: string[], { accepts, output }: ExplodeOptions): Promise<string[]> {
+async function explode(
+  paths: string[],
+  { accepts, output }: ExplodeOptions
+): Promise<string[]> {
   const { debug } = output;
   const list = async (file: string): Promise<string | null> => {
     let path = file;
@@ -465,7 +483,7 @@ async function explode(paths: string[], { accepts, output }: ExplodeOptions): Pr
       const all = await fs.readdir(file);
       /* eslint-disable no-use-before-define */
       const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
-      return recursive as any as Promise<string | null>;
+      return (recursive as any) as Promise<string | null>;
       /* eslint-enable no-use-before-define */
     }
     if (!s.isFile()) {

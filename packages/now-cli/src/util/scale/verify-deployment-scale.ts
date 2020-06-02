@@ -83,7 +83,7 @@ function getTargetInstancesCountForScale(
   return Object.keys(scale).reduce(
     (result, dc) => ({
       ...result,
-      [dc]: Math.min(Math.max(scale[dc].min, 1), scale[dc].max)
+      [dc]: Math.min(Math.max(scale[dc].min, 1), scale[dc].max),
     }),
     {}
   );
@@ -95,7 +95,7 @@ function getInitialInstancesCountForScale(
   return Object.keys(scale).reduce(
     (result, dc) => ({
       ...result,
-      [dc]: 0
+      [dc]: 0,
     }),
     {}
   );

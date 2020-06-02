@@ -5,7 +5,7 @@ import execa from 'execa';
 import fs from 'fs-extra';
 import fetch from 'node-fetch';
 import listen from 'async-listen';
-import { request, createServer } from 'http';
+import { createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
 import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
@@ -13,12 +13,28 @@ import parseListen from '../src/util/dev/parse-listen';
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath });
+    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
   }
 }
 
+const skipOnWindows = new Set([
+  'now-dev-default-builds-and-routes',
+  'now-dev-static-routes',
+  'now-dev-static-build-routing',
+  'now-dev-directory-listing',
+  'now-dev-api-with-public',
+  'now-dev-api-with-static',
+  'now-dev-custom-404',
+]);
+
 function testFixture(name, fn) {
   return async t => {
+    if (process.platform === 'win32' && skipOnWindows.has(name)) {
+      console.log(`Skipping test "${name}" on Windows.`);
+      t.is(true, true);
+      return;
+    }
+
     let server;
 
     const fixturePath = path.join(__dirname, 'fixtures', 'unit', name);
@@ -55,26 +71,51 @@ function testFixture(name, fn) {
 }
 
 function validateResponseHeaders(t, res, podId = null) {
-  t.is(res.headers.get('x-now-trace'), 'dev1');
   t.is(res.headers.get('server'), 'now');
   t.truthy(res.headers.get('cache-control').length > 0);
   t.truthy(
-    /^dev1:[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
-      res.headers.get('x-now-id')
+    /^dev1::(dev1::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
+      res.headers.get('x-vercel-id')
     )
   );
   if (podId) {
-    t.truthy(res.headers.get('x-now-id').startsWith(`dev1:${podId}`));
+    t.truthy(
+      res.headers.get('x-vercel-id').startsWith(`dev1::${podId}`) ||
+        res.headers.get('x-vercel-id').startsWith(`dev1::dev1::${podId}`)
+    );
   }
 }
 
-function get(url) {
-  return new Promise((resolve, reject) => {
-    request(url, resolve)
-      .on('error', reject)
-      .end();
-  });
-}
+test(
+  '[DevServer] Test request body',
+  testFixture('now-dev-request-body', async (t, server) => {
+    {
+      // Test that `req.body` works in dev
+      const res = await fetch(`${server.address}/api/req-body`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ hello: 'world' }),
+      });
+      const body = await res.json();
+      t.is(body.hello, 'world');
+    }
+
+    {
+      // Test that `req` "data" events work in dev
+      const res = await fetch(`${server.address}/api/data-events`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ hello: 'world' }),
+      });
+      const body = await res.json();
+      t.is(body.hello, 'world');
+    }
+  })
+);
 
 test(
   '[DevServer] Maintains query when invoking lambda',
@@ -138,16 +179,23 @@ test(
 test(
   '[DevServer] Allow `cache-control` to be overwritten',
   testFixture('now-dev-headers', async (t, server) => {
-    const res = await get(
+    const res = await fetch(
       `${server.address}/?name=cache-control&value=immutable`
     );
-    t.is(res.headers['cache-control'], 'immutable');
+    t.is(res.headers.get('cache-control'), 'immutable');
   })
 );
 
 test(
   '[DevServer] Sends `etag` header for static files',
   testFixture('now-dev-headers', async (t, server) => {
+    if (process.platform === 'win32') {
+      console.log(
+        'Skipping "etag" test on windows since it yields a different result.'
+      );
+      t.is(true, true);
+      return;
+    }
     const res = await fetch(`${server.address}/foo.txt`);
     t.is(res.headers.get('etag'), '"d263af8ab880c0b97eb6c5c125b5d44f9e5addd9"');
     t.is(await res.text(), 'hi\n');
@@ -175,30 +223,60 @@ test('[DevServer] Does not install builders if there are no builds', async t => 
 
 test('[DevServer] Installs canary build-utils if one more more builders is canary', t => {
   t.is(
-    getBuildUtils(['@now/static', '@now/node@canary']),
-    '@now/build-utils@canary'
+    getBuildUtils(['@vercel/static', '@vercel/node@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
   );
   t.is(
-    getBuildUtils(['@now/static', '@now/node@0.7.4-canary.0']),
-    '@now/build-utils@canary'
+    getBuildUtils(['@vercel/static', '@vercel/node@0.7.4-canary.0'], 'vercel'),
+    '@vercel/build-utils@canary'
   );
   t.is(
-    getBuildUtils(['@now/static', '@now/node@0.8.0']),
-    '@now/build-utils@latest'
+    getBuildUtils(['@vercel/static', '@vercel/node@0.8.0'], 'vercel'),
+    '@vercel/build-utils@latest'
   );
-  t.is(getBuildUtils(['@now/static', '@now/node']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['@now/static']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['@now/md@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['custom-builder']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['custom-builder@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['canary-bird']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['canary-bird@4.0.0']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['canary-bird@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['@canary/bird']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['@canary/bird@0.1.0']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['@canary/bird@canary']), '@now/build-utils@canary');
-  t.is(getBuildUtils(['https://example.com']), '@now/build-utils@latest');
-  t.is(getBuildUtils(['']), '@now/build-utils@latest');
+  t.is(
+    getBuildUtils(['@vercel/static', '@vercel/node'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['@vercel/static'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['@vercel/md@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
+  );
+  t.is(
+    getBuildUtils(['custom-builder'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['custom-builder@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
+  );
+  t.is(getBuildUtils(['canary-bird'], 'vercel'), '@vercel/build-utils@latest');
+  t.is(
+    getBuildUtils(['canary-bird@4.0.0'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['canary-bird@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
+  );
+  t.is(getBuildUtils(['@canary/bird'], 'vercel'), '@vercel/build-utils@latest');
+  t.is(
+    getBuildUtils(['@canary/bird@0.1.0'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(
+    getBuildUtils(['@canary/bird@canary'], 'vercel'),
+    '@vercel/build-utils@canary'
+  );
+  t.is(
+    getBuildUtils(['https://example.com'], 'vercel'),
+    '@vercel/build-utils@latest'
+  );
+  t.is(getBuildUtils([''], 'vercel'), '@vercel/build-utils@latest');
 });
 
 test(
@@ -209,7 +287,7 @@ test(
     {
       const res = await fetch(`${server.address}/`);
       validateResponseHeaders(t, res);
-      podId = res.headers.get('x-now-id').match(/:(\w+)-/)[1];
+      podId = res.headers.get('x-vercel-id').match(/:(\w+)-/)[1];
       const body = await res.text();
       t.is(body.includes('hello, this is the frontend'), true);
     }
@@ -238,10 +316,11 @@ test(
 );
 
 test(
-  '[DevServer] Test `@now/static` routing',
+  '[DevServer] Test `@vercel/static` routing',
   testFixture('now-dev-static-routes', async (t, server) => {
     {
       const res = await fetch(`${server.address}/`);
+      t.is(res.status, 200);
       const body = await res.text();
       t.is(body, '<body>Hello!</body>\n');
     }
@@ -249,10 +328,11 @@ test(
 );
 
 test(
-  '[DevServer] Test `@now/static-build` routing',
+  '[DevServer] Test `@vercel/static-build` routing',
   testFixture('now-dev-static-build-routing', async (t, server) => {
     {
       const res = await fetch(`${server.address}/api/date`);
+      t.is(res.status, 200);
       const body = await res.text();
       t.is(body.startsWith('The current date:'), true);
     }
@@ -360,7 +440,7 @@ test(
       t.is(res.status, 404);
       const body = await res.text();
       t.is(res.headers.get('content-type'), 'text/plain; charset=utf-8');
-      t.is(body, 'The page could not be found.\n\nFILE_NOT_FOUND\n');
+      t.is(body, 'The page could not be found.\n\nNOT_FOUND\n');
     }
   })
 );
@@ -389,7 +469,7 @@ test(
       const res = await fetch(`${server.address}/does-not-exist`);
       t.is(res.status, 404);
       const body = await res.text();
-      t.is(body, 'The page could not be found.\n\nFILE_NOT_FOUND\n');
+      t.is(body, 'The page could not be found.\n\nNOT_FOUND\n');
     }
   })
 );
@@ -400,12 +480,14 @@ test('[DevServer] parseListen()', t => {
   t.deepEqual(parseListen('0.0.0.0'), [3000, '0.0.0.0']);
   t.deepEqual(parseListen('127.0.0.1:3005'), [3005, '127.0.0.1']);
   t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
-  t.deepEqual(parseListen('unix:/home/user/server.sock'), [
-    '/home/user/server.sock',
-  ]);
-  t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
-    '\\\\.\\pipe\\PipeName',
-  ]);
+  if (process.platform !== 'win32') {
+    t.deepEqual(parseListen('unix:/home/user/server.sock'), [
+      '/home/user/server.sock',
+    ]);
+    t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
+      '\\\\.\\pipe\\PipeName',
+    ]);
+  }
 
   let err;
   try {

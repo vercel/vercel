@@ -1,143 +1,203 @@
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import Head from '../components/head';
-import Nav from '../components/nav';
+import Head from 'next/head'
 
-const Home = () => {
-  const [date, setDate] = useState(null);
+const Home = () => (
+  <div className="container">
+    <Head>
+      <title>Create Next App</title>
+      <link rel="icon" href="/favicon.ico" />
+    </Head>
 
-  useEffect(() => {
-    async function getDate() {
-      const res = await fetch('/api/date');
-      const newDate = await res.json();
-      setDate(newDate);
-    }
-    getDate();
-  }, []);
+    <main>
+      <h1 className="title">
+        Welcome to <a href="https://nextjs.org">Next.js!</a>
+      </h1>
 
-  return (
-    <div>
-      <Head title="Home" />
-      <Nav />
+      <p className="description">
+        Get started by editing <code>pages/index.js</code>
+      </p>
 
-      <div className="hero">
-        <h1 className="title">Welcome to Next!</h1>
-        <p className="description">
-          To get started, edit the <code>pages/index.js</code> or{' '}
-          <code>pages/api/date.js</code> files, then save to reload.
-        </p>
+      <div className="grid">
+        <a href="https://nextjs.org/docs" className="card">
+          <h3>Documentation &rarr;</h3>
+          <p>Find in-depth information about Next.js features and API.</p>
+        </a>
 
-        <p className="row date">
-          The date is:&nbsp;{' '}
-          {date ? (
-            <span>
-              <b>{date.date}</b>
-            </span>
-          ) : (
-            <span className="loading"></span>
-          )}
-        </p>
+        <a href="https://nextjs.org/learn" className="card">
+          <h3>Learn &rarr;</h3>
+          <p>Learn about Next.js in an interactive course with quizzes!</p>
+        </a>
 
-        <div className="row">
-          <Link href="https://github.com/zeit/next.js#setup">
-            <a className="card">
-              <h3>Getting Started &rarr;</h3>
-              <p>Learn more about Next.js on GitHub and in their examples.</p>
-            </a>
-          </Link>
-          <Link href="https://github.com/zeit/next.js/tree/master/examples">
-            <a className="card">
-              <h3>Examples &rarr;</h3>
-              <p>Find other example boilerplates on the Next.js GitHub.</p>
-            </a>
-          </Link>
-          <Link href="https://github.com/zeit/next.js">
-            <a className="card">
-              <h3>Create Next App &rarr;</h3>
-              <p>Was this tool helpful? Let us know how we can improve it!</p>
-            </a>
-          </Link>
-        </div>
+        <a
+          href="https://github.com/zeit/next.js/tree/master/examples"
+          className="card"
+        >
+          <h3>Examples &rarr;</h3>
+          <p>Discover and deploy boilerplate example Next.js projects.</p>
+        </a>
+
+        <a
+          href="https://vercel.com/new?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+          className="card"
+        >
+          <h3>Deploy &rarr;</h3>
+          <p>
+            Instantly deploy your Next.js site to a public URL with Vercel.
+          </p>
+        </a>
       </div>
+    </main>
 
-      <style jsx>{`
-        .hero {
-          width: 100%;
-          color: #333;
-        }
-        .title {
-          margin: 0;
-          width: 100%;
-          padding-top: 80px;
-          line-height: 1.15;
-          font-size: 48px;
-        }
-        .title,
-        .description {
-          text-align: center;
-        }
-        .row {
-          max-width: 880px;
-          margin: 80px auto 40px;
-          display: flex;
-          flex-direction: row;
-          justify-content: space-around;
-        }
-        .date {
-          height: 24px;
-          max-width: calc(100% - 32px)
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 16px;
-        }
-        .date p {
-          text-align: center;
-        }
-        .date span {
-          width: 176px;
-          text-align: center;
-        }
-        @keyframes Loading {
-          0%{background-position:0% 50%}
-          50%{background-position:100% 50%}
-          100%{background-position:0% 50%}
-        }
-        .date .loading {
-          max-width: 100%;
-          height: 24px;
-          border-radius: 4px;
-          display: inline-block;
-          background: linear-gradient(270deg, #D1D1D1, #EAEAEA);
-          background-size: 200% 200%;
-          animation: Loading 2s ease infinite;
-        }
-        .card {
-          padding: 18px 18px 24px;
-          width: 220px;
-          text-align: left;
-          text-decoration: none;
-          color: #434343;
-          border: 1px solid #9b9b9b;
-        }
-        .card:hover {
-          border-color: #067df7;
-        }
-        .card h3 {
-          margin: 0;
-          color: #067df7;
-          font-size: 18px;
-        }
-        .card p {
-          margin: 0;
-          padding: 12px 0 0;
-          font-size: 13px;
-          color: #333;
-        }
-      `}</style>
-    </div>
-  );
-};
+    <footer>
+      <a
+        href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Powered by <img src="/vercel.svg" alt="Vercel Logo" />
+      </a>
+    </footer>
 
-export default Home;
+    <style jsx>{`
+      .container {
+        min-height: 100vh;
+        padding: 0 0.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      main {
+        padding: 5rem 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      footer {
+        width: 100%;
+        height: 100px;
+        border-top: 1px solid #eaeaea;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      footer img {
+        margin-left: 0.5rem;
+      }
+
+      footer a {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .title a {
+        color: #0070f3;
+        text-decoration: none;
+      }
+
+      .title a:hover,
+      .title a:focus,
+      .title a:active {
+        text-decoration: underline;
+      }
+
+      .title {
+        margin: 0;
+        line-height: 1.15;
+        font-size: 4rem;
+      }
+
+      .title,
+      .description {
+        text-align: center;
+      }
+
+      .description {
+        line-height: 1.5;
+        font-size: 1.5rem;
+      }
+
+      code {
+        background: #fafafa;
+        border-radius: 5px;
+        padding: 0.75rem;
+        font-size: 1.1rem;
+        font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
+          DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
+      }
+
+      .grid {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+
+        max-width: 800px;
+        margin-top: 3rem;
+      }
+
+      .card {
+        margin: 1rem;
+        flex-basis: 45%;
+        padding: 1.5rem;
+        text-align: left;
+        color: inherit;
+        text-decoration: none;
+        border: 1px solid #eaeaea;
+        border-radius: 10px;
+        transition: color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .card:hover,
+      .card:focus,
+      .card:active {
+        color: #0070f3;
+        border-color: #0070f3;
+      }
+
+      .card h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1.5rem;
+      }
+
+      .card p {
+        margin: 0;
+        font-size: 1.25rem;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 600px) {
+        .grid {
+          width: 100%;
+          flex-direction: column;
+        }
+      }
+    `}</style>
+
+    <style jsx global>{`
+      html,
+      body {
+        padding: 0;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+          Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+    `}</style>
+  </div>
+)
+
+export default Home

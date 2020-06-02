@@ -1,5 +1,5 @@
 // A proxy to get the basic info of an existing github/gitlab repo:
-// GET /info?repo=zeit/micro
+// GET /info?repo=vercel/micro
 
 // @ts-ignore
 import parseGitUrl from 'parse-github-url';

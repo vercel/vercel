@@ -1,14 +1,13 @@
 {
-  "name": "@now/cgi",
-  "version": "1.0.1",
+  "name": "@vercel/cgi",
+  "version": "1.0.6-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-cgi"
   },
   "scripts": {
-    "test-integration": "best -I test/*.js",
     "prepublish": "./build.sh"
   },
   "files": [
@@ -19,7 +18,6 @@
     "fs-extra": "7.0.0"
   },
   "devDependencies": {
-    "@zeit/best": "0.4.3",
     "rmfr": "2.0.0"
   }
 }

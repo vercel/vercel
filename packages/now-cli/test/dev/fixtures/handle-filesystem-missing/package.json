@@ -3,6 +3,6 @@
     "build": "mkdir -p dist && echo hello > dist/index.txt"
   },
   "dependencies": {
-    "umi": "latest"
+    "umi": "3.2.1"
   }
 }

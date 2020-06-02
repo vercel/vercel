@@ -1,11 +1,11 @@
 {
-  "name": "@now/node-bridge",
-  "version": "1.2.7-canary.1",
+  "name": "@vercel/node-bridge",
+  "version": "1.3.1-canary.1",
   "license": "MIT",
   "main": "./index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-node-bridge"
   },
   "files": [
@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --env node --verbose --runInBand",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail",
     "prepublish": "npm run build"
   },
   "devDependencies": {

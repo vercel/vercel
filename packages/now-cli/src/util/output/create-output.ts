@@ -2,10 +2,15 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import { format } from 'util';
 import { Console } from 'console';
+import wait from './wait';
 
 export type Output = ReturnType<typeof createOutput>;
 
 export default function createOutput({ debug: debugEnabled = false } = {}) {
+  function isDebugEnabled() {
+    return debugEnabled;
+  }
+
   function print(str: string) {
     process.stderr.write(str);
   }
@@ -18,7 +23,11 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     print(`${color(`> ${str}`)}\n`);
   }
 
-  function warn(str: string, slug: string | null = null) {
+  function warn(
+    str: string,
+    slug: string | null = null,
+    link: string | null = null
+  ) {
     const prevTerm = process.env.TERM;
 
     if (!prevTerm) {
@@ -26,11 +35,13 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       process.env.TERM = 'xterm';
     }
 
+    const details = slug ? `https://err.sh/now/${slug}` : link;
+
     print(
       boxen(
         chalk.bold.yellow('WARN! ') +
           str +
-          (slug ? `\nMore details: https://err.sh/now/${slug}` : ''),
+          (details ? `\nMore details: ${details}` : ''),
         {
           padding: {
             top: 0,
@@ -51,10 +62,16 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     log(chalk`{yellow.bold NOTE:} ${str}`);
   }
 
-  function error(str: string, slug: string | null = null) {
+  function error(
+    str: string,
+    slug: string | null = null,
+    link: string | null = null,
+    action = 'More details'
+  ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
-    if (slug !== null) {
-      print(`More details: https://err.sh/now/${slug}\n`);
+    const details = slug ? `https://err.sh/now/${slug}` : link;
+    if (details) {
+      print(`${action}: ${details}\n`);
     }
   }
 
@@ -74,6 +91,20 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
         )} ${str}`
       );
     }
+  }
+
+  function spinner(message: string, delay: number = 300) {
+    if (debugEnabled) {
+      debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
+      let isEnded = false;
+      return () => {
+        if (isEnded) return;
+        isEnded = true;
+        debug(`Spinner ended (${message})`);
+      };
+    }
+
+    return wait(message, delay);
   }
 
   // This is pretty hacky, but since we control the version of Node.js
@@ -99,6 +130,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   return {
+    isDebugEnabled,
     print,
     log,
     warn,
@@ -109,5 +141,6 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     dim,
     time,
     note,
+    spinner,
   };
 }

@@ -1,32 +1,32 @@
-# now client
+# @vercel/client
 
-[![Build Status](https://travis-ci.org/zeit/now-client.svg?branch=master)](https://travis-ci.org/zeit/now-client) [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/zeit)
+[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
 
-The official Node.js client for deploying to [Now](https://zeit.co/now). It supports v1 and v2 deployments.
+The official Node.js client for deploying to [Vercel](https://vercel.com).
 
 ## Usage
 
 Firstly, install the package:
 
 ```bash
-npm install now-client
+npm install @vercel/client
 # or
-yarn add now-client
+yarn add @vercel/client
 ```
 
 Next, load it:
 
 ```js
 // v2
-const { createDeployment } = require('now-client');
+const { createDeployment } = require('@vercel/client');
 // v1
-const { createLegacyDeployment } = require('now-client');
+const { createLegacyDeployment } = require('@vercel/client');
 ```
 
 Then call inside a `for...of` loop to follow the progress with the following arguments:
 
 - `<path>` - a directory path / file path / array of file paths (must be on the same level)
-- `<options>` - An object containing `token`, an optional `teamId` and any `now.json`-valid [fields](https://zeit.co/docs/api#endpoints/deployments/create-a-new-deployment)
+- `<options>` - An object containing `token`, an optional `teamId` and any `vercel.json`-valid [fields](https://vercel.com/docs/api#endpoints/deployments/create-a-new-deployment)
 
 ```js
 async function deploy() {
@@ -34,7 +34,7 @@ async function deploy() {
 
   for await (const event of createDeployment({
     token: process.env.TOKEN,
-    path: '/Users/zeit-user/projects/front',
+    path: '/Users/vercel-user/projects/front',
   })) {
     if (event.type === 'ready') {
       deployment = event.payload;
@@ -68,5 +68,5 @@ Full list of events:
 You can also get the events set programmatically:
 
 ```js
-import { EVENTS } from 'now-client';
+import { EVENTS } from '@vercel/client';
 ```

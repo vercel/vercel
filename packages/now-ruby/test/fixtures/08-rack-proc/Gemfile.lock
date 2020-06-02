@@ -1,7 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    rack (2.1.1)
+    rack (2.2.2)
 
 PLATFORMS
   ruby
@@ -10,4 +10,4 @@ DEPENDENCIES
   rack (~> 2.0)
 
 BUNDLED WITH
-   1.17.3
+   2.1.4

@@ -13,11 +13,11 @@ export type Setting = SettingValue | SettingPlaceholder;
 
 export interface Framework {
   name: string;
-  slug: string;
+  slug: string | null;
   logo: string;
-  demo: string;
-  tagline: string;
-  website: string;
+  demo?: string;
+  tagline?: string;
+  website?: string;
   description: string;
   detectors?: {
     every?: FrameworkDetectionItem[];

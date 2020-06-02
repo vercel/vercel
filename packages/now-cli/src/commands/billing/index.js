@@ -15,10 +15,11 @@ import exit from '../../util/exit';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import createOutput from '../../util/output';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now billing`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} billing`)} [options] <command>
 
   ${chalk.dim('Options:')}
 
@@ -32,10 +33,10 @@ const help = () => {
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -46,7 +47,7 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new credit card (interactively)
 
-      ${chalk.cyan(`$ now billing add`)}
+      ${chalk.cyan(`$ ${getPkgName()} billing add`)}
   `);
 };
 
@@ -60,8 +61,8 @@ export default async ctx => {
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
-      debug: 'd'
-    }
+      debug: 'd',
+    },
   });
 
   argv._ = argv._.slice(1);
@@ -75,7 +76,10 @@ export default async ctx => {
     return 2;
   }
 
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
 
   return run({ token, config });
 };
@@ -91,13 +95,13 @@ function buildInquirerChoices(cards) {
     const str = [
       id,
       indent(source.name || source.owner.name, 2),
-      indent(`${source.brand || source.card.brand} ${number}`, 2)
+      indent(`${source.brand || source.card.brand} ${number}`, 2),
     ].join('\n');
 
     return {
       name: str, // Will be displayed by Inquirer
       value: source.id, // Will be used to identify the answer
-      short: source.id // Will be displayed after the users answers
+      short: source.id, // Will be displayed after the users answers
     };
   });
 }
@@ -149,7 +153,7 @@ async function run({ token, config: { currentTeam } }) {
           return [
             id,
             indent(source.name || source.owner.name, 2),
-            indent(`${source.brand || source.card.brand} ${number}`, 2)
+            indent(`${source.brand || source.card.brand} ${number}`, 2),
           ].join('\n');
         })
         .join('\n\n');
@@ -203,16 +207,16 @@ async function run({ token, config: { currentTeam } }) {
           message,
           choices,
           separator: true,
-          abort: 'end'
+          abort: 'end',
         });
       }
 
       // Check if the provided cardId (in case the user
-      // typed `now billing set-default <some-id>`) is valid
+      // typed `vercel billing set-default <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`;
         const confirmation = await promptBool(label, {
-          trailing: '\n'
+          trailing: '\n',
         });
 
         if (!confirmation) {
@@ -278,12 +282,12 @@ async function run({ token, config: { currentTeam } }) {
           message,
           choices,
           separator: true,
-          abort: 'start'
+          abort: 'start',
         });
       }
 
       // Shoud check if the provided cardId (in case the user
-      // typed `now billing rm <some-id>`) is valid
+      // typed `vercel billing rm <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you want to remove this card?`;
         const confirmation = await promptBool(label);
@@ -334,7 +338,7 @@ async function run({ token, config: { currentTeam } }) {
     case 'add': {
       await addBilling({
         creditCards,
-        contextName
+        contextName,
       });
 
       break;

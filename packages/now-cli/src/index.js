@@ -15,7 +15,7 @@ try {
 }
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, lstatSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
@@ -24,7 +24,7 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import getNowDir from './util/config/global-path';
+import getGlobalPathConfig from './util/config/global-path';
 import {
   getDefaultConfig,
   getDefaultAuthConfig,
@@ -48,11 +48,11 @@ import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getLinkedOrg } from './util/projects/link';
+import { getCommandName, getTitleName } from './util/pkg-name.ts';
 
-const NOW_DIR = getNowDir();
-const NOW_CONFIG_PATH = configFiles.getConfigFilePath();
-const NOW_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
+const VERCEL_DIR = getGlobalPathConfig();
+const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
+const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
 
@@ -63,12 +63,12 @@ sourceMap.install();
 // Configure the error reporting system
 Sentry.init({
   dsn: SENTRY_DSN,
-  release: `now-cli@${pkg.version}`,
+  release: `vercel-cli@${pkg.version}`,
   environment: pkg.version.includes('canary') ? 'canary' : 'stable',
 });
 
 let debug = () => {};
-let apiUrl = 'https://api.zeit.co';
+let apiUrl = 'https://api.vercel.com';
 
 const main = async argv_ => {
   const { isTTY } = process.stdout;
@@ -122,8 +122,8 @@ const main = async argv_ => {
   }
 
   // the second argument to the command can be a path
-  // (as in: `now path/`) or a subcommand / provider
-  // (as in: `now ls`)
+  // (as in: `vercel path/`) or a subcommand / provider
+  // (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
   let update = null;
@@ -149,26 +149,26 @@ const main = async argv_ => {
     console.log(
       info(
         `${chalk.bgRed('UPDATE AVAILABLE')} ` +
-          `Run ${cmd(await getUpdateCommand())} to install Now CLI ${
-            update.latest
-          }`
+          `Run ${cmd(
+            await getUpdateCommand()
+          )} to install ${getTitleName()} CLI ${update.latest}`
       )
     );
 
     console.log(
       info(
-        `Changelog: https://github.com/zeit/now/releases/tag/now@${update.latest}`
+        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${update.latest}`
       )
     );
   }
 
   output.print(
     `${chalk.grey(
-      `Now CLI ${pkg.version}${
+      `${getTitleName()} CLI ${pkg.version}${
         targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
       }${
         pkg.version.includes('canary') || targetOrSubcommand === 'dev'
-          ? ' — https://zeit.co/feedback'
+          ? ' — https://vercel.com/feedback'
           : ''
       }`
     )}\n`
@@ -177,7 +177,7 @@ const main = async argv_ => {
   // we want to handle version or help directly only
   if (!targetOrSubcommand) {
     if (argv['--version']) {
-      console.log(require('../package').version);
+      console.log(pkg.version);
       return 0;
     }
   }
@@ -185,12 +185,12 @@ const main = async argv_ => {
   let nowDirExists;
 
   try {
-    nowDirExists = existsSync(NOW_DIR);
+    nowDirExists = existsSync(VERCEL_DIR);
   } catch (err) {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          'now global directory: '}${err.message}`
+          'global directory: '}${err.message}`
       )
     );
 
@@ -199,12 +199,12 @@ const main = async argv_ => {
 
   if (!nowDirExists) {
     try {
-      await mkdirp(NOW_DIR);
+      await mkdirp(VERCEL_DIR);
     } catch (err) {
       console.error(
         error(
           `${'An unexpected error occurred while trying to create the ' +
-            `now global directory "${hp(NOW_DIR)}" `}${err.message}`
+            `global directory "${hp(VERCEL_DIR)}" `}${err.message}`
         )
       );
     }
@@ -214,12 +214,12 @@ const main = async argv_ => {
   let configExists;
 
   try {
-    configExists = existsSync(NOW_CONFIG_PATH);
+    configExists = existsSync(VERCEL_CONFIG_PATH);
   } catch (err) {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now config file "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
+          `config file "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -235,14 +235,14 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now config in "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
+            `config in "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
       return 1;
     }
 
-    // This is from when Now CLI supported
+    // This is from when Vercel CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
     if (
@@ -267,7 +267,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_CONFIG_PATH)}" `}${err.message}`
+            `default config to "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
@@ -278,12 +278,12 @@ const main = async argv_ => {
   let authConfigExists;
 
   try {
-    authConfigExists = existsSync(NOW_AUTH_CONFIG_PATH);
+    authConfigExists = existsSync(VERCEL_AUTH_CONFIG_PATH);
   } catch (err) {
     console.error(
       error(
         `${'An unexpected error occurred while trying to find the ' +
-          `now auth file "${hp(NOW_AUTH_CONFIG_PATH)}" `}${err.message}`
+          `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
       )
     );
 
@@ -301,14 +301,14 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to read the ' +
-            `now auth config in "${hp(NOW_AUTH_CONFIG_PATH)}" `}${err.message}`
+            `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
         )
       );
 
       return 1;
     }
 
-    // This is from when Now CLI supported
+    // This is from when Vercel CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
     if (authConfig.credentials) {
@@ -321,8 +321,10 @@ const main = async argv_ => {
     ) {
       console.error(
         error(
-          `The content of "${hp(NOW_AUTH_CONFIG_PATH)}" is invalid. ` +
-            'No `token` property found inside. Run `now login` to authorize.'
+          `The content of "${hp(VERCEL_AUTH_CONFIG_PATH)}" is invalid. ` +
+            `No \`token\` property found inside. Run ${getCommandName(
+              'login'
+            )} to authorize.`
         )
       );
       return 1;
@@ -339,7 +341,7 @@ const main = async argv_ => {
       console.error(
         error(
           `${'An unexpected error occurred while trying to write the ' +
-            `default now config to "${hp(NOW_AUTH_CONFIG_PATH)}" `}${
+            `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${
             err.message
           }`
         )
@@ -350,7 +352,7 @@ const main = async argv_ => {
 
   // Let the user know we migrated the config
   if (migrated) {
-    const directory = param(hp(NOW_DIR));
+    const directory = param(hp(VERCEL_DIR));
     debug(
       `The credentials and configuration within the ${directory} directory were upgraded`
     );
@@ -375,10 +377,30 @@ const main = async argv_ => {
       commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
+      const fileType = lstatSync(targetPath).isDirectory()
+        ? 'subdirectory'
+        : 'file';
+      const plural = targetOrSubcommand + 's';
+      const singular = targetOrSubcommand.endsWith('s')
+        ? targetOrSubcommand.slice(0, -1)
+        : '';
+      let alternative = '';
+      if (commands.has(plural)) {
+        alternative = plural;
+      } else if (commands.has(singular)) {
+        alternative = singular;
+      }
       console.error(
         error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous. ` +
-            'Both a directory and a subcommand are known'
+          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+            `\nIf you wish to deploy the ${fileType} ${param(
+              targetOrSubcommand
+            )}, first run "cd ${targetOrSubcommand}". ` +
+            (alternative
+              ? `\nIf you wish to use the subcommand ${param(
+                  targetOrSubcommand
+                )}, use ${param(alternative)} instead.`
+              : '')
         )
       );
       return 1;
@@ -444,7 +466,7 @@ const main = async argv_ => {
         error({
           message:
             'No existing credentials found. Please run ' +
-            `${param('now login')} or pass ${param('--token')}`,
+            `${getCommandName('login')} or pass ${param('--token')}`,
           slug: 'no-credentials-found',
         })
       );
@@ -507,7 +529,7 @@ const main = async argv_ => {
 
   if (argv['--team']) {
     output.warn(
-      `The ${param('--team')} flag is deprecated. Please use ${param(
+      `The ${param('--team')} option is deprecated. Please use ${param(
         '--scope'
       )} instead.`
     );
@@ -518,19 +540,6 @@ const main = async argv_ => {
   } = ctx;
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
-
-  if (process.env.NOW_ORG_ID || !scope) {
-    const client = new Client({ apiUrl, token });
-    const link = await getLinkedOrg(client, output);
-
-    if (link.status === 'error') {
-      return link.exitCode;
-    }
-
-    if (link.status === 'linked') {
-      scope = link.org.slug;
-    }
-  }
 
   const targetCommand = commands.get(subcommand);
 
@@ -628,10 +637,10 @@ const main = async argv_ => {
         .send();
     }
   } catch (err) {
-    if (err.code === 'ENOTFOUND' && err.hostname === 'api.zeit.co') {
+    if (err.code === 'ENOTFOUND' && err.hostname === 'api.vercel.com') {
       output.error(
         `The hostname ${highlight(
-          'api.zeit.co'
+          'api.vercel.com'
         )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
       );
       output.debug(err.stack);

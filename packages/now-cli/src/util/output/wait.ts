@@ -2,7 +2,7 @@ import ora from 'ora';
 import chalk from 'chalk';
 import eraseLines from './erase-lines';
 
-export default function wait(msg: string, timeout: number = 300, _ora = ora) {
+export default function wait(msg: string, delay: number = 300, _ora = ora) {
   let spinner: ReturnType<typeof _ora>;
   let running = false;
 
@@ -11,7 +11,7 @@ export default function wait(msg: string, timeout: number = 300, _ora = ora) {
     spinner.color = 'gray';
     spinner.start();
     running = true;
-  }, timeout);
+  }, delay);
 
   const cancel = () => {
     clearTimeout(planned);

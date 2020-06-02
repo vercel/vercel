@@ -23,11 +23,11 @@ interface Props {
   message: string;
   /**
    * A unique error code for this particular error.
-   * Should start with the builder name such as `NOW_NODE_`.
+   * Should start with the builder name such as `NODE_`.
    */
   code: string;
   /**
-   * Optional hyperlink starting with https://zeit.co to
+   * Optional hyperlink starting with https://vercel.com to
    * link to more information about this error.
    */
   link?: string;

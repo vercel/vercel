@@ -1,29 +1,30 @@
-![Next.js Logo](../../packages/frameworks/logos/next.svg)
+This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/zeit/next.js/tree/canary/packages/create-next-app).
 
-# Next.js Example
+## Getting Started
 
-This directory is a brief example of a [Next.js](https://nextjs.org) app that can be deployed with ZEIT Now and zero configuration.
+First, run the development server:
 
-## Deploy Your Own
-
-Deploy your own Next.js project with ZEIT Now.
-
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/new/project?template=https://github.com/zeit/now/tree/master/examples/nextjs)
-
-_Live Example: https://nextjs.now-examples.now.sh_
-
-### How We Created This Example
-
-To get started with Next.js deployed with ZEIT Now, you can use [npm create](https://www.npmjs.com/package/create-next-app) to initialize the project:
-
-```shell
-$ npm create next-app my-app
+```bash
+npm run dev
+# or
+yarn dev
 ```
 
-### Deploying From Your Terminal
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can deploy your new Next.js project with a single command from your terminal using [Now CLI](https://zeit.co/download):
+You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
 
-```shell
-$ now
-```
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/zeit/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/import?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.

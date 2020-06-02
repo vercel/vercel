@@ -2,7 +2,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@now/next",
+      "use": "@vercel/next",
       "config": {
         "functions": {
           "src/pages/api/memory.js": {
@@ -12,7 +12,7 @@
       }
     }
   ],
-  "propes": [
+  "probes": [
     {
       "path": "/api/memory",
       "status": 200,

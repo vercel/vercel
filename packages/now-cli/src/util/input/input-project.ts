@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { Output } from '../output';
 import { Project, Org } from '../../types';
-import wait from '../output/wait';
+import slugify from '@sindresorhus/slugify';
 
 export default async function inputProject(
   output: Output,
@@ -19,16 +19,26 @@ export default async function inputProject(
     return detectedProjectName;
   }
 
+  const slugifiedName = slugify(detectedProjectName);
+
   // attempt to auto-detect a project to link
   let detectedProject = null;
-  const existingProjectSpinner = wait('Searching for existing projects…', 1000);
+  const existingProjectSpinner = output.spinner(
+    'Searching for existing projects…',
+    1000
+  );
   try {
-    const project = await getProjectByIdOrName(
-      client,
-      detectedProjectName,
-      org.id
-    );
-    detectedProject = project instanceof ProjectNotFound ? null : project;
+    const [project, slugifiedProject] = await Promise.all([
+      getProjectByIdOrName(client, detectedProjectName, org.id),
+      slugifiedName !== detectedProjectName
+        ? getProjectByIdOrName(client, slugifiedName, org.id)
+        : null,
+    ]);
+    detectedProject = !(project instanceof ProjectNotFound)
+      ? project
+      : !(slugifiedProject instanceof ProjectNotFound)
+      ? slugifiedProject
+      : null;
   } catch (error) {}
   existingProjectSpinner();
 
@@ -42,7 +52,7 @@ export default async function inputProject(
     if (
       await confirm(
         `Found project ${chalk.cyan(
-          `“${org.slug}/${detectedProjectName}”`
+          `“${org.slug}/${detectedProject.name}”`
         )}. Link to it?`,
         true
       )
@@ -74,7 +84,7 @@ export default async function inputProject(
         continue;
       }
 
-      const spinner = wait('Verifying project name…', 1000);
+      const spinner = output.spinner('Verifying project name…', 1000);
       try {
         project = await getProjectByIdOrName(client, projectName, org.id);
       } finally {
@@ -82,7 +92,7 @@ export default async function inputProject(
       }
 
       if (project instanceof ProjectNotFound) {
-        output.print(`${chalk.red('Error!')} Project not found\n`);
+        output.error(`Project not found`);
       }
     }
 
@@ -97,7 +107,7 @@ export default async function inputProject(
       type: 'input',
       name: 'newProjectName',
       message: `What’s your project’s name?`,
-      default: !detectedProject ? detectedProjectName : undefined,
+      default: !detectedProject ? slugifiedName : undefined,
     });
     newProjectName = answers.newProjectName as string;
 
@@ -106,7 +116,7 @@ export default async function inputProject(
       continue;
     }
 
-    const spinner = wait('Verifying project name…', 1000);
+    const spinner = output.spinner('Verifying project name…', 1000);
     let existingProject: Project | ProjectNotFound;
     try {
       existingProject = await getProjectByIdOrName(
@@ -119,7 +129,7 @@ export default async function inputProject(
     }
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
-      output.print(`${chalk.red('Error!')} Project already exists\n`);
+      output.print(`Project already exists`);
       newProjectName = null;
     }
   }

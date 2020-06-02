@@ -4,9 +4,6 @@ import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
 import setupDomain from '../domains/setup-domain';
-import wait from '../output/wait';
-
-const NOW_SH_REGEX = /\.now\.sh$/;
 
 type AliasRecord = {
   uid: string;
@@ -24,7 +21,7 @@ export default async function upsertPathAlias(
 ) {
   let externalDomain = false;
 
-  if (!NOW_SH_REGEX.test(alias)) {
+  if (!alias.endsWith('.now.sh') && !alias.endsWith('.vercel.app')) {
     const domainInfo = await setupDomain(output, client, alias, contextName);
     if (domainInfo instanceof Error) {
       return domainInfo;
@@ -34,6 +31,7 @@ export default async function upsertPathAlias(
   }
 
   const result = await performUpsertPathAlias(
+    output,
     client,
     alias,
     rules,
@@ -51,23 +49,26 @@ export default async function upsertPathAlias(
       return cert;
     }
 
-    return performUpsertPathAlias(client, alias, rules, contextName);
+    return performUpsertPathAlias(output, client, alias, rules, contextName);
   }
 
   return result;
 }
 
 async function performUpsertPathAlias(
+  output: Output,
   client: Client,
   alias: string,
   rules: PathRule[],
   contextName: string
 ) {
-  const cancelMessage = wait(`Updating path alias rules for ${alias}`);
+  const cancelMessage = output.spinner(
+    `Updating path alias rules for ${alias}`
+  );
   try {
     const record = await client.fetch<AliasRecord>(`/now/aliases`, {
       body: { alias, rules },
-      method: 'POST'
+      method: 'POST',
     });
     cancelMessage();
     return record;

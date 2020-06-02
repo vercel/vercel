@@ -1,10 +1,10 @@
 const { execSync, spawn } = require('child_process');
-const { join, relative } = require('path');
+const { join, relative, sep } = require('path');
 const { readdirSync } = require('fs');
 
 if (
   process.env.GITHUB_REPOSITORY &&
-  process.env.GITHUB_REPOSITORY !== 'zeit/now'
+  process.env.GITHUB_REPOSITORY !== 'vercel/vercel'
 ) {
   console.log('Detected fork, skipping tests');
   return;
@@ -26,17 +26,19 @@ async function main() {
     matches = readdirSync(join(__dirname, '..', 'packages'));
     console.log(`Running script "${script}" for all packages`);
   } else {
-    const branch = execSync('git branch | grep "*" | cut -d " " -f2')
-      .toString()
-      .trim();
+    const branch =
+      process.env.GITHUB_HEAD_REF ||
+      execSync('git branch --show-current')
+        .toString()
+        .trim();
 
     const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
 
     const changed = diff
       .split('\n')
-      .filter(item => Boolean(item) && item.includes('packages/'))
-      .map(item => relative('packages', item).split('/')[0])
+      .filter(item => Boolean(item) && item.startsWith('packages'))
+      .map(item => relative('packages', item).split(sep)[0])
       .concat('now-cli'); // Always run tests for Now CLI
 
     matches = Array.from(new Set(changed));
@@ -47,7 +49,7 @@ async function main() {
     }
 
     console.log(
-      `Running "${script}" on branch "${branch}" with the following packages:`
+      `Running "${script}" on branch "${branch}" with the following packages:\n`
     );
   }
 
@@ -77,15 +79,13 @@ async function main() {
     return b - a;
   });
 
-  console.log(matches.join('\n') + '\n');
+  for (const m of matches) {
+    console.log(` - ${m}`);
+  }
 
   for (const pkgName of matches) {
     await runScript(pkgName, script);
   }
-
-  execSync(
-    `rm -rf public && mkdir public && echo '<a href="https://zeit.co/new">https://zeit.co/new</a>' > public/index.html`
-  );
 }
 
 function runScript(pkgName, script) {
@@ -99,7 +99,11 @@ function runScript(pkgName, script) {
     }
     if (pkgJson && pkgJson.scripts && pkgJson.scripts[script]) {
       console.log(`\n[${pkgName}] Running yarn ${script}`);
-      const child = spawn('yarn', [script], { cwd, stdio: 'inherit' });
+      const child = spawn('yarn', [script], {
+        cwd,
+        stdio: 'inherit',
+        shell: true,
+      });
       child.on('error', reject);
       child.on('close', (code, signal) => {
         if (code === 0) {

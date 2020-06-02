@@ -4,8 +4,8 @@ const {
   validateEntrypoint,
   normalizePackageJson,
   getNextConfig,
-} = require('@now/next/dist/utils');
-const { FileRef } = require('@now/build-utils');
+} = require('@vercel/next/dist/utils');
+const { FileRef } = require('@vercel/build-utils');
 
 describe('getNextConfig', () => {
   const workPath = path.join(__dirname, 'fixtures');
@@ -187,8 +187,8 @@ describe('normalizePackageJson', () => {
     });
   });
 
-  // https://github.com/zeit/next.js/issues/5700
-  it('should normalize user report zeit/next.js#5700 correctly', () => {
+  // https://github.com/vercel/next.js/issues/5700
+  it('should normalize user report vercel/next.js#5700 correctly', () => {
     const defaultPackage = {
       version: '1.0.0',
       scripts: {

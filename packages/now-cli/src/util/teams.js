@@ -1,22 +1,15 @@
 import Now from './index';
+import { URLSearchParams } from 'url';
 
 export default class Teams extends Now {
   async create({ slug }) {
-    return this.retry(async (bail, attempt) => {
-      if (this._debug) {
-        console.time(`> [debug] #${attempt} POST /teams}`);
-      }
-
+    return this.retry(async bail => {
       const res = await this._fetch(`/teams`, {
         method: 'POST',
         body: {
-          slug
-        }
+          slug,
+        },
       });
-
-      if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} POST /teams`);
-      }
 
       if (res.status === 403) {
         return bail(new Error('Unauthorized'));
@@ -40,11 +33,7 @@ export default class Teams extends Now {
   }
 
   async edit({ id, slug, name }) {
-    return this.retry(async (bail, attempt) => {
-      if (this._debug) {
-        console.time(`> [debug] #${attempt} PATCH /teams/${id}}`);
-      }
-
+    return this.retry(async bail => {
       const payload = {};
       if (name) {
         payload.name = name;
@@ -55,12 +44,8 @@ export default class Teams extends Now {
 
       const res = await this._fetch(`/teams/${id}`, {
         method: 'PATCH',
-        body: payload
+        body: payload,
       });
-
-      if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} PATCH /teams/${id}`);
-      }
 
       if (res.status === 403) {
         return bail(new Error('Unauthorized'));
@@ -84,24 +69,16 @@ export default class Teams extends Now {
   }
 
   async inviteUser({ teamId, email }) {
-    return this.retry(async (bail, attempt) => {
-      if (this._debug) {
-        console.time(`> [debug] #${attempt} POST /teams/${teamId}/members}`);
-      }
-
+    return this.retry(async bail => {
       const publicRes = await this._fetch(`/www/user/public?email=${email}`);
       const { name, username } = await publicRes.json();
 
       const res = await this._fetch(`/teams/${teamId}/members`, {
         method: 'POST',
         body: {
-          email
-        }
+          email,
+        },
       });
-
-      if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} POST /teams/${teamId}/members}`);
-      }
 
       if (res.status === 403) {
         return bail(new Error('Unauthorized'));
@@ -125,17 +102,16 @@ export default class Teams extends Now {
     });
   }
 
-  async ls() {
-    return this.retry(async (bail, attempt) => {
-      if (this._debug) {
-        console.time(`> [debug] #${attempt} GET /teams}`);
+  async ls({ next, apiVersion = 1 } = {}) {
+    return this.retry(async bail => {
+      const query = new URLSearchParams();
+
+      if (next) {
+        query.set('limit', 20);
+        query.set('until', next);
       }
 
-      const res = await this._fetch(`/teams`);
-
-      if (this._debug) {
-        console.timeEnd(`> [debug] #${attempt} GET /teams`);
-      }
+      const res = await this._fetch(`/v${apiVersion}/teams?${query}`);
 
       if (res.status === 403) {
         const error = new Error('Unauthorized');

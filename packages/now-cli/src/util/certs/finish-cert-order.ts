@@ -19,8 +19,8 @@ export default async function startCertOrder(
       method: 'PATCH',
       body: {
         op: 'finalizeOrder',
-        domains: cns
-      }
+        domains: cns,
+      },
     });
     cancelWait();
     return cert;

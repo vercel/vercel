@@ -28,3 +28,5 @@ npm-debug.log
 
 /junit.xml
 partials/structure/stylesheet.html
+
+!dist

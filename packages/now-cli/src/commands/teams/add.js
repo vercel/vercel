@@ -7,11 +7,11 @@ import rightPad from '../../util/output/right-pad';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 import success from '../../util/output/success';
-import cmd from '../../util/output/cmd.ts';
 import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
+import { getPkgName, getCommandName } from '../../util/pkg-name.ts';
 
 const validateSlugKeypress = (data, value) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -26,14 +26,14 @@ const validateNameKeypress = (data, value) =>
 const gracefulExit = () => {
   console.log(); // Blank line
   note(
-    `Your team is now active for all ${cmd('now')} commands!\n  Run ${cmd(
-      'now switch'
+    `Your team is now active for all ${getPkgName()} commands!\n  Run ${getCommandName(
+      `switch`
     )} to change it in the future.`
   );
   return 0;
 };
 
-const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('zeit.co/');
+const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('vercel.com/');
 const teamNamePrefix = rightPad('Team Name', 14);
 
 export default async function({ apiUrl, token, teams, config }) {
@@ -45,7 +45,7 @@ export default async function({ apiUrl, token, teams, config }) {
   console.log(
     info(
       `Pick a team identifier for its url (e.g.: ${chalk.cyan(
-        '`zeit.co/acme`'
+        '`vercel.com/acme`'
       )})`
     )
   );
@@ -57,7 +57,7 @@ export default async function({ apiUrl, token, teams, config }) {
         validateKeypress: validateSlugKeypress,
         initialValue: slug,
         valid: team,
-        forceLowerCase: true
+        forceLowerCase: true,
       });
     } catch (err) {
       if (err.message === 'USER_ABORT') {
@@ -95,7 +95,7 @@ export default async function({ apiUrl, token, teams, config }) {
   try {
     name = await textInput({
       label: `- ${teamNamePrefix}`,
-      validateKeypress: validateNameKeypress
+      validateKeypress: validateNameKeypress,
     });
   } catch (err) {
     if (err.message === 'USER_ABORT') {
@@ -151,9 +151,9 @@ export default async function({ apiUrl, token, teams, config }) {
     apiUrl,
     config,
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
-    noopMsg: `You can invite teammates later by running ${cmd(
-      'now teams invite'
-    )}`
+    noopMsg: `You can invite teammates later by running ${getCommandName(
+      `teams invite`
+    )}`,
   });
 
   gracefulExit();

@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import plural from 'pluralize';
 import table from 'text-table';
 import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
@@ -18,20 +17,22 @@ import getScope from '../util/get-scope.ts';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
+import getCommandFlags from '../util/get-command-flags';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now list`)} [app]
+  ${chalk.bold(`${logo} ${getPkgName()} list`)} [app]
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -41,26 +42,33 @@ const help = () => {
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} List all deployments
 
-    ${chalk.cyan('$ now ls')}
+    ${chalk.cyan(`$ ${getPkgName()} ls`)}
 
   ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
 
-    ${chalk.cyan('$ now ls my-app')}
+    ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
 
   ${chalk.gray(
     '–'
   )} List all deployments and all instances for the app ${chalk.dim('`my-app`')}
 
-    ${chalk.cyan('$ now ls my-app --all')}
+    ${chalk.cyan(`$ ${getPkgName()} ls my-app --all`)}
 
   ${chalk.gray('–')} Filter deployments by metadata
 
-    ${chalk.cyan('$ now ls -m key1=value1 -m key2=value2')}
+    ${chalk.cyan(`$ ${getPkgName()} ls -m key1=value1 -m key2=value2`)}
+
+  ${chalk.gray('–')} Paginate deployments for a project, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+    ${chalk.cyan(`$ ${getPkgName()} ls my-app --next 1584722256178`)}
 `);
 };
 
@@ -75,6 +83,8 @@ export default async function main(ctx) {
       '--meta': [String],
       '-a': '--all',
       '-m': '--meta',
+      '--next': Number,
+      '-N': '--next',
     });
   } catch (err) {
     handleError(err);
@@ -88,7 +98,7 @@ export default async function main(ctx) {
   });
 
   if (argv._.length > 2) {
-    error(`${cmd('now ls [app]')} accepts at most one argument`);
+    error(`${getCommandName('ls [app]')} accepts at most one argument`);
     return 1;
   }
 
@@ -127,6 +137,13 @@ export default async function main(ctx) {
     throw err;
   }
 
+  const nextTimestamp = argv['--next'];
+
+  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
+    error('Please provide a number for flag `--next`');
+    return 1;
+  }
+
   const stopSpinner = wait(
     `Fetching deployments in ${chalk.bold(contextName)}`
   );
@@ -146,12 +163,14 @@ export default async function main(ctx) {
 
   // Some people are using entire domains as app names, so
   // we need to account for this here
-  if (app && toHost(app).endsWith('.now.sh')) {
+  const asHost = app ? toHost(app) : '';
+  if (asHost.endsWith('.now.sh') || asHost.endsWith('.vercel.app')) {
     note(
-      'We suggest using `now inspect <deployment>` for retrieving details about a single deployment'
+      `We suggest using ${getCommandName(
+        'inspect <deployment>'
+      )} for retrieving details about a single deployment`
     );
 
-    const asHost = toHost(app);
     const hostParts = asHost.split('-');
 
     if (hostParts < 2) {
@@ -164,15 +183,21 @@ export default async function main(ctx) {
     host = asHost;
   }
 
-  let deployments;
+  let response;
 
   try {
     debug('Fetching deployments');
-    deployments = await now.list(app, { version: 5, meta });
+    response = await now.list(app, {
+      version: 6,
+      meta,
+      nextTimestamp,
+    });
   } catch (err) {
     stopSpinner();
     throw err;
   }
+
+  let { deployments, pagination } = response;
 
   if (app && !deployments.length) {
     debug(
@@ -201,7 +226,7 @@ export default async function main(ctx) {
     debug(
       'No deployments: attempting to find aliases that matches supplied app name'
     );
-    const aliases = await getAliases(now);
+    const { aliases } = await getAliases(now);
     const item = aliases.find(e => e.uid === app || e.alias === app);
 
     if (item) {
@@ -211,7 +236,7 @@ export default async function main(ctx) {
         now.close();
         stopSpinner();
         log(`Found matching path alias: ${chalk.cyan(item.alias)}`);
-        log(`Please run ${cmd(`now alias ls ${item.alias}`)} instead`);
+        log(`Please run ${getCommandName(`alias ls ${item.alias}`)} instead`);
         return 0;
       }
 
@@ -248,11 +273,9 @@ export default async function main(ctx) {
 
   stopSpinner();
   log(
-    `Fetched ${plural(
-      'deployment',
-      deployments.length,
-      true
-    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+    `Deployments under ${chalk.bold(contextName)} ${elapsed(
+      Date.now() - start
+    )}`
   );
 
   // we don't output the table headers if we have no deployments
@@ -263,10 +286,16 @@ export default async function main(ctx) {
   // information to help the user find other deployments or instances
   if (app == null) {
     log(
-      `To list more deployments for a project run ${cmd('now ls [project]')}`
+      `To list more deployments for a project run ${cmd(
+        `${getCommandName('ls [project]')}`
+      )}`
     );
   } else if (!argv['--all']) {
-    log(`To list deployment instances run ${cmd('now ls --all [project]')}`);
+    log(
+      `To list deployment instances run ${cmd(
+        `${getCommandName('ls --all [project]')}`
+      )}`
+    );
   }
 
   print('\n');
@@ -284,7 +313,7 @@ export default async function main(ctx) {
               getProjectName(dep),
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
               stateString(dep.state),
-              chalk.gray(ms(Date.now() - new Date(dep.created))),
+              chalk.gray(ms(Date.now() - new Date(dep.createdAt))),
               dep.creator.username,
             ],
             ...(argv['--all']
@@ -313,8 +342,17 @@ export default async function main(ctx) {
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
-    ).replace(/^/gm, '  ')}\n\n`
+    ).replace(/^/gm, '  ')}\n`
   );
+
+  if (pagination && pagination.count === 20) {
+    const flags = getCommandFlags(argv, ['_', '--next']);
+    log(
+      `To display the next page run ${getCommandName(
+        `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
+      )}`
+    );
+  }
 }
 
 function getProjectName(d) {
@@ -346,7 +384,7 @@ function stateString(s) {
 // sorts by most recent deployment
 function sortRecent() {
   return function recencySort(a, b) {
-    return b.created - a.created;
+    return b.createdAt - a.createdAt;
   };
 }
 

@@ -2,8 +2,6 @@ import { NowConfig } from './util/dev/types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
-export type Config = NowConfig;
-
 export interface NowContext {
   argv: string[];
   apiUrl: string;
@@ -14,7 +12,7 @@ export interface NowContext {
     currentTeam: string;
     updateChannel: string;
   };
-  localConfig: Config;
+  localConfig: NowConfig;
 }
 
 type Billing = {
@@ -187,6 +185,9 @@ export type DNSRecord = {
   value: string;
   created: number;
   updated: number;
+  createdAt: number;
+  updatedAt: number;
+  domain: string;
 };
 
 type SRVRecordData = {
@@ -216,6 +217,33 @@ export type DNSRecordData =
   | SRVRecordData
   | MXRecordData;
 
+export interface Secret {
+  uid: string;
+  name: string;
+  value: string;
+  teamId?: string;
+  userId?: string;
+  projectId?: string;
+  created: string;
+  createdAt: number;
+}
+
+export enum ProjectEnvTarget {
+  Production = 'production',
+  Preview = 'preview',
+  Development = 'development',
+}
+
+export interface ProjectEnvVariable {
+  key: string;
+  value: string;
+  configurationId?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
+  target?: ProjectEnvTarget;
+  system?: boolean;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -225,6 +253,7 @@ export interface Project {
   devCommand?: string | null;
   framework?: string | null;
   rootDirectory?: string | null;
+  latestDeployments?: Partial<Deployment>[];
 }
 
 export interface Org {
@@ -236,4 +265,10 @@ export interface Org {
 export interface ProjectLink {
   projectId: string;
   orgId: string;
+}
+
+export interface PaginationOptions {
+  prev: number;
+  count: number;
+  next?: number;
 }

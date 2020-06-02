@@ -1,15 +1,7 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const { promisify } = require('util');
-const { join, delimiter } = require('path');
-const { homedir } = require('os');
-
-const stat = promisify(fs.stat);
-const unlink = promisify(fs.unlink);
-
-function cmd(command) {
-  return `\`${command}\``;
-}
+const { join } = require('path');
+const { statSync } = require('fs');
+const pkg = require('../package');
 
 function error(command) {
   console.error('> Error!', command);
@@ -36,95 +28,58 @@ function isGlobal() {
     : Boolean(process.env.npm_config_global);
 }
 
-// Logic is from Now Desktop
-// See: https://git.io/fj4jD
-function getNowPath() {
-  if (process.platform === 'win32') {
-    const { LOCALAPPDATA, USERPROFILE, HOMEPATH } = process.env;
-    const home = homedir() || USERPROFILE || HOMEPATH;
-    let path;
-    if (LOCALAPPDATA) {
-      path = join(LOCALAPPDATA, 'now-cli', 'now.exe');
-    } else if (home) {
-      path = join(home, 'AppData', 'Local', 'now-cli', 'now.exe');
-    } else {
-      path = '';
-    }
-    return fs.existsSync(path) ? path : null;
-  }
-
-  const pathEnv = (process.env.PATH || '').split(delimiter);
-
-  const paths = [
-    join(process.env.HOME || '/', 'bin'),
-    '/usr/local/bin',
-    '/usr/bin',
-  ];
-
-  for (const basePath of paths) {
-    if (!pathEnv.includes(basePath)) {
-      continue;
-    }
-
-    const nowPath = join(basePath, 'now');
-
-    if (fs.existsSync(nowPath)) {
-      return nowPath;
-    }
-  }
-
-  return null;
+function isVercel() {
+  return pkg.name === 'vercel';
 }
 
-async function isBinary(nowPath) {
-  const stats = await stat(nowPath);
-  return !stats.isDirectory();
+function validateNodeVersion() {
+  let semver = '>= 0';
+  let major = '1';
+
+  try {
+    major = process.versions.node.split('.')[0];
+    const pkg = require('../package.json');
+    semver = pkg.engines.node;
+  } catch (e) {
+    debug('Failed to read package.json engines');
+  }
+
+  const isValid = eval(`${major} ${semver}`);
+  return { isValid, expected: semver, actual: process.versions.node };
+}
+
+function isInNodeModules(name) {
+  try {
+    const nodeModules = join(__dirname, '..', '..');
+    const stat = statSync(join(nodeModules, name));
+    return stat.isDirectory();
+  } catch (err) {
+    return false;
+  }
 }
 
 async function main() {
   if (!isGlobal()) {
-    debug('Skip preinstall since now is being installed locally');
+    debug('Skipping preinstall since Vercel CLI is being installed locally');
     return;
   }
 
-  const nowPath = getNowPath();
+  const ver = validateNodeVersion();
 
-  if (nowPath === null) {
-    debug(`No now binary found`);
-    return;
-  }
-
-  debug(`Located now binary at ${nowPath}`);
-
-  try {
-    if ((await isBinary(nowPath)) === false) {
-      debug(
-        'Found file or directory named now but will not delete, ' +
-          'as it seems unrelated to Now CLI'
-      );
-      return;
-    }
-
-    await unlink(nowPath);
-
-    debug(`Removed ${nowPath}`);
-  } catch (err) {
-    if (process.platform !== 'win32') {
-      error(
-        `Could not remove your previous Now CLI installation.\n` +
-          `Please use this command to remove it: ${cmd(
-            `sudo rm ${nowPath}`
-          )}.\n` +
-          `Then try to install it again.`
-      );
-    } else {
-      error(
-        `Could not remove your previous Now CLI installation.\n` +
-          `Please remove ${cmd(nowPath)} manually and try to install it again.`
-      );
-    }
-
+  if (!ver.isValid) {
+    error(
+      `Detected unsupported Node.js version.\n` +
+        `Expected "${ver.expected}" but found "${ver.actual}".\n` +
+        `Please update to the latest Node.js LTS version to install Vercel CLI.`
+    );
     process.exit(1);
+  }
+
+  if (isVercel() && isInNodeModules('now')) {
+    const uninstall = isYarn()
+      ? 'yarn global remove now'
+      : 'npm uninstall -g now';
+    console.error(`NOTE: Run \`${uninstall}\` to uninstall \`now\`\n`);
   }
 }
 
@@ -140,9 +95,7 @@ process.on('uncaughtException', err => {
   process.exit(1);
 });
 
-main()
-  .then(() => process.exit(0))
-  .catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

@@ -1,84 +1,50 @@
 import execa from 'execa';
 import semver from 'semver';
-import pipe from 'promisepipe';
-import retry from 'async-retry';
 import npa from 'npm-package-arg';
 import pluralize from 'pluralize';
-import { extract } from 'tar-fs';
-import { createHash } from 'crypto';
-import { createGunzip } from 'zlib';
-import { join, resolve } from 'path';
-import { PackageJson } from '@now/build-utils';
+import { basename, join } from 'path';
+import { PackageJson } from '@vercel/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
-import {
-  createReadStream,
-  mkdirp,
-  readFile,
-  readJSON,
-  writeFile,
-} from 'fs-extra';
-import pkg from '../../../package.json';
+import { mkdirp, readJSON, writeJSON } from 'fs-extra';
+import cliPkg from '../pkg';
 
 import { NoBuilderCacheError } from '../errors-ts';
-import wait from '../output/wait';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
-import { getBundledBuilders } from './get-bundled-builders';
+
+type CliPackageJson = typeof cliPkg;
 
 declare const __non_webpack_require__: typeof require;
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
-const localBuilders: { [key: string]: BuilderWithPackage } = {
-  '@now/static': {
+const createStaticBuilder = (scope: string): BuilderWithPackage => {
+  return {
     runInProcess: true,
+    requirePath: `${scope}/static`,
     builder: Object.freeze(staticBuilder),
-    package: Object.freeze({ name: '@now/static', version: '' }),
-  },
+    package: Object.freeze({ name: `@${scope}/static`, version: '' }),
+  };
 };
 
-const distTag = getDistTag(pkg.version);
+const localBuilders: { [key: string]: BuilderWithPackage } = {
+  '@now/static': createStaticBuilder('now'),
+  '@vercel/static': createStaticBuilder('vercel'),
+};
+
+const distTag = getDistTag(cliPkg.version);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
-export const builderModulePathPromise = prepareBuilderModulePath();
-
-function readFileOrNull(
-  filePath: string,
-  encoding?: null
-): Promise<Buffer | null>;
-function readFileOrNull(
-  filePath: string,
-  encoding: string
-): Promise<string | null>;
-async function readFileOrNull(
-  filePath: string,
-  encoding?: string | null
-): Promise<Buffer | string | null> {
-  try {
-    if (encoding) {
-      return await readFile(filePath, encoding);
-    }
-    return await readFile(filePath);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      return null;
-    }
-    throw err;
-  }
-}
 
 /**
- * Prepare cache directory for installing now-builders
+ * Prepare cache directory for installing Vercel runtimes.
  */
 export async function prepareCacheDir() {
-  const { NOW_BUILDER_CACHE_DIR } = process.env;
-  const designated = NOW_BUILDER_CACHE_DIR
-    ? resolve(NOW_BUILDER_CACHE_DIR)
-    : XDGAppPaths('co.zeit.now').cache();
+  const designated = XDGAppPaths('com.vercel.cli').cache();
 
   if (!designated) {
     throw new NoBuilderCacheError();
@@ -93,49 +59,17 @@ export async function prepareBuilderDir() {
   const builderDir = join(await cacheDirPromise, 'builders');
   await mkdirp(builderDir);
 
-  // Extract the bundled `builders.tar.gz` file, if necessary
-  const bundledTarballPath = join(__dirname, '../../../assets/builders.tar.gz');
-
-  const existingPackageJson =
-    (await readFileOrNull(join(builderDir, 'package.json'), 'utf8')) || '{}';
-  const { dependencies = {} } = JSON.parse(existingPackageJson);
-
-  if (!hasBundledBuilders(dependencies)) {
-    const extractor = extract(builderDir);
-    await pipe(
-      createReadStream(bundledTarballPath),
-      createGunzip(),
-      extractor
-    );
+  // Create an empty `package.json` file, only if one does not already exist
+  try {
+    const buildersPkg = join(builderDir, 'package.json');
+    await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
+  } catch (err) {
+    if (err.code !== 'EEXIST') {
+      throw err;
+    }
   }
 
   return builderDir;
-}
-
-export async function prepareBuilderModulePath() {
-  const [builderDir, builderContents] = await Promise.all([
-    builderDirPromise,
-    readFile(join(__dirname, 'builder-worker.js')),
-  ]);
-  let needsWrite = false;
-  const builderSha = getSha(builderContents);
-  const cachedBuilderPath = join(builderDir, 'builder.js');
-
-  const cachedBuilderContents = await readFileOrNull(cachedBuilderPath);
-  if (cachedBuilderContents) {
-    const cachedBuilderSha = getSha(cachedBuilderContents);
-    if (builderSha !== cachedBuilderSha) {
-      needsWrite = true;
-    }
-  } else {
-    needsWrite = true;
-  }
-
-  if (needsWrite) {
-    await writeFile(cachedBuilderPath, builderContents);
-  }
-
-  return cachedBuilderPath;
 }
 
 function getNpmVersion(use = ''): string {
@@ -146,14 +80,14 @@ function getNpmVersion(use = ''): string {
   return '';
 }
 
-export function getBuildUtils(packages: string[]): string {
+export function getBuildUtils(packages: string[], org: string): string {
   const version = packages
     .map(getNpmVersion)
     .some(ver => ver.includes('canary'))
     ? 'canary'
     : 'latest';
 
-  return `@now/build-utils@${version}`;
+  return `@${org}/build-utils@${version}`;
 }
 
 function parseVersionSafe(rawSpec: string) {
@@ -167,12 +101,19 @@ function parseVersionSafe(rawSpec: string) {
 export function filterPackage(
   builderSpec: string,
   distTag: string,
-  buildersPkg: PackageJson
+  buildersPkg: PackageJson,
+  cliPkg: CliPackageJson
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
   const parsedVersion = parseVersionSafe(parsed.rawSpec);
-  // skip install of already installed Runtime
+
+  // Skip install of Runtimes that are part of Vercel CLI's `dependencies`
+  if (isBundledBuilder(parsed, cliPkg)) {
+    return false;
+  }
+
+  // Skip install of already installed Runtime with exact version match
   if (
     parsed.name &&
     parsed.type === 'version' &&
@@ -182,11 +123,12 @@ export function filterPackage(
   ) {
     return false;
   }
+
+  // Skip install of already installed Runtime with tag compatible match
   if (
     parsed.name &&
     parsed.type === 'tag' &&
     parsed.fetchSpec === distTag &&
-    getBundledBuilders().includes(parsed.name) &&
     buildersPkg.dependencies
   ) {
     const parsedInstalled = npa(
@@ -206,6 +148,7 @@ export function filterPackage(
       return false;
     }
   }
+
   return true;
 }
 
@@ -214,7 +157,6 @@ export function filterPackage(
  */
 export async function installBuilders(
   packagesSet: Set<string>,
-  yarnDir: string,
   output: Output,
   builderDir?: string
 ): Promise<void> {
@@ -230,15 +172,16 @@ export async function installBuilders(
   if (!builderDir) {
     builderDir = await builderDirPromise;
   }
-  const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
+  const depsBefore = {
+    ...buildersPkgBefore.devDependencies,
+    ...buildersPkgBefore.dependencies,
+  };
 
-  packages.push(getBuildUtils(packages));
-
-  // Filter out any packages that come packaged with `now-cli`
+  // Filter out any packages that come packaged with Vercel CLI
   const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkgBefore)
+    filterPackage(p, distTag, buildersPkgBefore, cliPkg)
   );
 
   if (packagesToInstall.length === 0) {
@@ -246,40 +189,21 @@ export async function installBuilders(
     return;
   }
 
-  const stopSpinner = wait(
-    `Installing ${pluralize(
-      'Runtime',
-      packagesToInstall.length
-    )}: ${packagesToInstall.sort().join(', ')}`
+  packagesToInstall.push(
+    getBuildUtils(packages, 'vercel'),
+    getBuildUtils(packages, 'now')
   );
 
-  try {
-    await retry(
-      () =>
-        execa(
-          process.execPath,
-          [
-            yarnPath,
-            'add',
-            '--exact',
-            '--no-lockfile',
-            '--non-interactive',
-            ...packagesToInstall,
-          ],
-          {
-            cwd: builderDir,
-          }
-        ),
-      { retries: 2 }
-    );
-  } finally {
-    stopSpinner();
-  }
+  await npmInstall(builderDir, output, packagesToInstall, false);
 
   const updatedPackages: string[] = [];
   const buildersPkgAfter = await readJSON(buildersPkgPath);
-  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
-    if (version !== buildersPkgBefore.dependencies[name]) {
+  const depsAfter = {
+    ...buildersPkgAfter.devDependencies,
+    ...buildersPkgAfter.dependencies,
+  };
+  for (const [name, version] of Object.entries(depsAfter)) {
+    if (version !== depsBefore[name]) {
       output.debug(`Runtime "${name}" updated to version \`${version}\``);
       updatedPackages.push(name);
     }
@@ -288,9 +212,48 @@ export async function installBuilders(
   purgeRequireCache(updatedPackages, builderDir, output);
 }
 
+async function npmInstall(
+  cwd: string,
+  output: Output,
+  packagesToInstall: string[],
+  silent: boolean
+) {
+  const sortedPackages = packagesToInstall.sort();
+
+  const stopSpinner = silent
+    ? () => {}
+    : output.spinner(
+        `Installing ${pluralize(
+          'Runtime',
+          sortedPackages.length
+        )}: ${sortedPackages.join(', ')}`
+      );
+
+  output.debug(`Running npm install in ${cwd}`);
+
+  try {
+    await execa(
+      'npm',
+      [
+        'install',
+        '--save-exact',
+        '--no-package-lock',
+        '--no-audit',
+        '--no-progress',
+        ...sortedPackages,
+      ],
+      {
+        cwd,
+        stdio: output.isDebugEnabled() ? 'inherit' : undefined,
+      }
+    );
+  } finally {
+    stopSpinner();
+  }
+}
+
 export async function updateBuilders(
   packagesSet: Set<string>,
-  yarnDir: string,
   output: Output,
   builderDir?: string
 ): Promise<string[]> {
@@ -298,42 +261,49 @@ export async function updateBuilders(
     builderDir = await builderDirPromise;
   }
 
+  const updatedPackages: string[] = [];
   const packages = Array.from(packagesSet);
-  const yarnPath = join(yarnDir, 'yarn');
   const buildersPkgPath = join(builderDir, 'package.json');
   const buildersPkgBefore = await readJSON(buildersPkgPath);
+  const depsBefore = {
+    ...buildersPkgBefore.devDependencies,
+    ...buildersPkgBefore.dependencies,
+  };
 
-  packages.push(getBuildUtils(packages));
+  const packagesToUpdate = packages.filter(p => {
+    if (p in localBuilders) return false;
 
-  await retry(
-    () =>
-      execa(
-        process.execPath,
-        [
-          yarnPath,
-          'add',
-          '--exact',
-          '--no-lockfile',
-          '--non-interactive',
-          ...packages.filter(p => p !== '@now/static'),
-        ],
-        {
-          cwd: builderDir,
-        }
-      ),
-    { retries: 2 }
-  );
-
-  const updatedPackages: string[] = [];
-  const buildersPkgAfter = await readJSON(buildersPkgPath);
-  for (const [name, version] of Object.entries(buildersPkgAfter.dependencies)) {
-    if (version !== buildersPkgBefore.dependencies[name]) {
-      output.debug(`Runtime "${name}" updated to version \`${version}\``);
-      updatedPackages.push(name);
+    // If it's a builder that is part of Vercel CLI's
+    // `dependencies` then don't update it
+    if (isBundledBuilder(npa(p), cliPkg)) {
+      return false;
     }
-  }
 
-  purgeRequireCache(updatedPackages, builderDir, output);
+    return true;
+  });
+
+  if (packagesToUpdate.length > 0) {
+    packagesToUpdate.push(
+      getBuildUtils(packages, 'vercel'),
+      getBuildUtils(packages, 'now')
+    );
+
+    await npmInstall(builderDir, output, packagesToUpdate, true);
+
+    const buildersPkgAfter = await readJSON(buildersPkgPath);
+    const depsAfter = {
+      ...buildersPkgAfter.devDependencies,
+      ...buildersPkgAfter.dependencies,
+    };
+    for (const [name, version] of Object.entries(depsAfter)) {
+      if (version !== depsBefore[name]) {
+        output.debug(`Runtime "${name}" updated to version \`${version}\``);
+        updatedPackages.push(name);
+      }
+    }
+
+    purgeRequireCache(updatedPackages, builderDir, output);
+  }
 
   return updatedPackages;
 }
@@ -343,41 +313,81 @@ export async function updateBuilders(
  */
 export async function getBuilder(
   builderPkg: string,
-  yarnDir: string,
   output: Output,
-  builderDir?: string
+  builderDir?: string,
+  isRetry = false
 ): Promise<BuilderWithPackage> {
   let builderWithPkg: BuilderWithPackage = localBuilders[builderPkg];
   if (!builderWithPkg) {
     if (!builderDir) {
       builderDir = await builderDirPromise;
     }
+    let requirePath: string;
     const parsed = npa(builderPkg);
-    const buildersPkg = await readJSON(join(builderDir, 'package.json'));
-    const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
-    const dest = join(builderDir, 'node_modules', pkgName);
+
+    // First check if it's a bundled Runtime in Vercel CLI's `node_modules`
+    const bundledBuilder = isBundledBuilder(parsed, cliPkg);
+    if (bundledBuilder && parsed.name) {
+      requirePath = parsed.name;
+    } else {
+      const buildersPkg = await readJSON(join(builderDir, 'package.json'));
+      const pkgName = getPackageName(parsed, buildersPkg) || builderPkg;
+      requirePath = join(builderDir, 'node_modules', pkgName);
+    }
+
     try {
-      const mod = require(dest);
-      const pkg = require(join(dest, 'package.json'));
+      output.debug(`Requiring runtime: "${requirePath}"`);
+      const mod = require(requirePath);
+      const pkg = require(join(requirePath, 'package.json'));
       builderWithPkg = {
+        requirePath,
         builder: Object.freeze(mod),
         package: Object.freeze(pkg),
       };
     } catch (err) {
-      if (err.code === 'MODULE_NOT_FOUND') {
+      if (err.code === 'MODULE_NOT_FOUND' && !isRetry) {
         output.debug(
-          `Attempted to require ${builderPkg}, but it is not installed`
+          `Attempted to require ${requirePath}, but it is not installed`
         );
         const pkgSet = new Set([builderPkg]);
-        await installBuilders(pkgSet, yarnDir, output, builderDir);
+        await installBuilders(pkgSet, output, builderDir);
 
         // Run `getBuilder()` again now that the builder has been installed
-        return getBuilder(builderPkg, yarnDir, output, builderDir);
+        return getBuilder(builderPkg, output, builderDir, true);
       }
       throw err;
     }
+
+    // If it's a bundled builder, then cache the require call
+    if (bundledBuilder) {
+      localBuilders[builderPkg] = builderWithPkg;
+    }
   }
   return builderWithPkg;
+}
+
+export function isBundledBuilder(
+  parsed: npa.Result,
+  { dependencies = {} }: PackageJson
+): boolean {
+  if (!parsed.name) {
+    return false;
+  }
+
+  const bundledVersion = dependencies[parsed.name];
+  if (bundledVersion) {
+    if (parsed.type === 'tag') {
+      if (parsed.fetchSpec === 'canary') {
+        return bundledVersion.includes('canary');
+      } else if (parsed.fetchSpec === 'latest') {
+        return !bundledVersion.includes('canary');
+      }
+    } else if (parsed.type === 'version') {
+      return parsed.fetchSpec === bundledVersion;
+    }
+  }
+
+  return false;
 }
 
 function getPackageName(
@@ -387,28 +397,16 @@ function getPackageName(
   if (registryTypes.has(parsed.type)) {
     return parsed.name;
   }
-  const deps = { ...buildersPkg.devDependencies, ...buildersPkg.dependencies };
+  const deps: PackageJson.DependencyMap = {
+    ...buildersPkg.devDependencies,
+    ...buildersPkg.dependencies,
+  };
   for (const [name, dep] of Object.entries(deps)) {
-    if (dep === parsed.raw) {
+    if (dep === parsed.raw || basename(dep) === basename(parsed.raw)) {
       return name;
     }
   }
   return null;
-}
-
-function getSha(buffer: Buffer): string {
-  const hash = createHash('sha256');
-  hash.update(buffer);
-  return hash.digest('hex');
-}
-
-function hasBundledBuilders(dependencies: { [name: string]: string }): boolean {
-  for (const name of getBundledBuilders()) {
-    if (!(name in dependencies)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function purgeRequireCache(

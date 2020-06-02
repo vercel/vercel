@@ -1,0 +1,10 @@
+{
+  "build": {
+    "env": {
+      "SECRET": "@buildtime"
+    }
+  },
+  "env": {
+    "ANOTHER_SECRET": "@runtime"
+  }
+}

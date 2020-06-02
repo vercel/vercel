@@ -4,7 +4,6 @@ import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
@@ -15,6 +14,7 @@ import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
 import promptBool from '../../util/input/prompt-bool';
 import isRootDomain from '../../util/is-root-domain';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -29,7 +29,7 @@ export default async function transferIn(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -40,7 +40,7 @@ export default async function transferIn(
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -50,14 +50,16 @@ export default async function transferIn(
 
   const [domainName] = args;
   if (!domainName) {
-    output.error(`Missing domain name. Run ${cmd('now domains --help')}`);
+    output.error(
+      `Missing domain name. Run ${getCommandName(`domains --help`)}`
+    );
     return 1;
   }
 
   if (!isRootDomain(domainName)) {
     output.error(
-      `Invalid domain name ${param(domainName)}. Run ${cmd(
-        'now domains --help'
+      `Invalid domain name ${param(domainName)}. Run ${getCommandName(
+        `domains --help`
       )}`
     );
     return 1;
@@ -66,7 +68,7 @@ export default async function transferIn(
   const availableStamp = stamp();
   const [domainPrice, { transferable, transferPolicy }] = await Promise.all([
     getDomainPrice(client, domainName, 'renewal'),
-    checkTransfer(client, domainName)
+    checkTransfer(client, domainName),
   ]);
 
   if (domainPrice instanceof ERRORS.UnsupportedTLD) {
@@ -127,8 +129,8 @@ export default async function transferIn(
 
   if (transferInResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using ${cmd(
-        'now billing add'
+      `Could not purchase domain. Please add a payment method using ${getCommandName(
+        `billing add`
       )}.`
     );
     return 1;
@@ -151,12 +153,14 @@ export default async function transferIn(
   output.warn(
     `Once transferred, your domain ${param(
       domainName
-    )} will be using ZEIT DNS.\n`
+    )} will be using Vercel DNS.\n`
   );
   output.print(
     `  To transfer with previous DNS records, export the zone file from your previous registrar.\n`
   );
-  output.print(`  Then import it to ZEIT DNS by using:\n`);
-  output.print(`    ${cmd(`now dns import ${domainName} <zonefile>`)}\n\n`);
+  output.print(`  Then import it to Vercel DNS by using:\n`);
+  output.print(
+    `    ${getCommandName(`dns import ${domainName} <zonefile>`)}\n\n`
+  );
   return 0;
 }

@@ -7,7 +7,6 @@ import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
 import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getDeploymentForAlias from '../../util/alias/get-deployment-for-alias';
@@ -22,6 +21,8 @@ import upsertPathAlias from '../../util/alias/upsert-path-alias';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
+import { User } from '../../types';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -58,8 +59,9 @@ export default async function set(
     currentTeam,
     debug: debugEnabled,
   });
-  let contextName = null;
-  let user = null;
+
+  let user: User;
+  let contextName: string | null = null;
 
   try {
     ({ contextName, user } = await getScope(client));
@@ -75,7 +77,9 @@ export default async function set(
   // If there are more than two args we have to error
   if (args.length > 2) {
     output.error(
-      `${cmd('now alias <deployment> <target>')} accepts at most two arguments`
+      `${getCommandName(
+        `alias <deployment> <target>`
+      )} accepts at most two arguments`
     );
     return 1;
   }
@@ -123,8 +127,8 @@ export default async function set(
   if (args.length === 0 && !rules) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
-        'https://zeit.co/docs/v2/custom-domains/'
-      )}) and run ${cmd('now --prod')}.`
+        'https://vercel.com/docs/v2/custom-domains'
+      )}) and run ${getCommandName(`--prod`)}.`
     );
     return 1;
   }
@@ -173,6 +177,7 @@ export default async function set(
   }
 
   // If there are no rules for path alias we should find out a deployment and perform the alias
+
   const deployment = handleCertError(
     output,
     await getDeploymentForAlias(
@@ -298,8 +303,8 @@ function handleSetupDomainError<T>(
         )}\n\n`
       );
       output.print(
-        `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${cmd(
-          'now domains verify <domain>'
+        `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${getCommandName(
+          'domains verify <domain>'
         )}.\n`
       );
       output.print(
@@ -307,8 +312,8 @@ function handleSetupDomainError<T>(
       );
     } else {
       output.print(
-        `  Once your domain uses the nameservers from above, run again ${cmd(
-          'now domains verify <domain>'
+        `  Once your domain uses the nameservers from above, run again ${getCommandName(
+          'domains verify <domain>'
         )}.\n`
       );
     }
@@ -471,7 +476,7 @@ function handleCreateAliasError<T>(
     output.log(
       `Update the scale settings on ${chalk.dim(
         error.meta.url
-      )} with \`now scale\` and try again`
+      )} with ${getCommandName('scale')} and try again`
     );
     output.log('Read more: https://err.sh/now/v2-no-min');
     return 1;
@@ -487,7 +492,7 @@ function handleCreateAliasError<T>(
     output.log(
       `Update the scale settings on ${chalk.dim(
         error.meta.url
-      )} with \`now scale\` and try again`
+      )} with ${getCommandName('scale')} and try again`
     );
     return 1;
   }
@@ -507,7 +512,7 @@ function handleCreateAliasError<T>(
     output.log(
       `Update the scale settings on ${chalk.dim(
         error.meta.url
-      )} with \`now scale\` and try again`
+      )} with ${getCommandName('scale')} and try again`
     );
     return 1;
   }
@@ -517,8 +522,8 @@ function handleCreateAliasError<T>(
       `There is no certificate for the domain ${error.meta.domain} and it could not be created.`
     );
     output.log(
-      `Please generate a new certificate manually with ${cmd(
-        `now certs issue ${error.meta.domain}`
+      `Please generate a new certificate manually with ${getCommandName(
+        `certs issue ${error.meta.domain}`
       )}`
     );
     return 1;

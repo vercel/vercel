@@ -4,9 +4,9 @@ import fetch from 'node-fetch';
 import { mkdirp, pathExists } from 'fs-extra';
 import { dirname, join } from 'path';
 import { homedir } from 'os';
-import { debug } from '@now/build-utils';
+import buildUtils from './build-utils';
 import stringArgv from 'string-argv';
-
+const { debug } = buildUtils;
 const archMap = new Map([['x64', 'amd64'], ['x86', '386']]);
 const platformMap = new Map([['win32', 'windows']]);
 
@@ -123,7 +123,7 @@ export async function createGo(
 
 export async function downloadGo(
   dir = GO_DIR,
-  version = '1.12',
+  version = '1.13.7',
   platform = process.platform,
   arch = process.arch
 ) {

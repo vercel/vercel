@@ -1,4 +1,4 @@
-import url from 'url';
+import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
@@ -6,43 +6,49 @@ import plural from 'pluralize';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
 import minimatch from 'minimatch';
+import ms from 'ms';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
-import { basename, dirname, extname, join, delimiter } from 'path';
-import { getTransformedRoutes, HandleValue } from '@now/routing-utils';
+import { basename, dirname, extname, join } from 'path';
+import once from '@tootallnate/once';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
+import which from 'which';
 
+import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
+import {
+  getTransformedRoutes,
+  appendRoutesToPhase,
+  HandleValue,
+  Route,
+} from '@vercel/routing-utils';
 import {
   Builder,
+  Env,
+  StartDevServerResult,
   FileFsRef,
   PackageJson,
   detectBuilders,
-  detectRoutes,
   detectApiDirectory,
   detectApiExtensions,
-  execAsync,
   spawnCommand,
-} from '@now/build-utils';
+  isOfficialRuntime,
+} from '@vercel/build-utils';
 
-import { once } from '../once';
 import link from '../output/link';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import { version as cliVersion } from '../../../package.json';
-import {
-  createIgnore,
-  staticFiles as getFiles,
-  getAllProjectFiles,
-} from '../get-files';
+import cliPkg from '../pkg';
+import { getVercelDirectory } from '../projects/link';
+import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
 import {
   validateNowConfigBuilds,
   validateNowConfigRoutes,
@@ -56,10 +62,13 @@ import {
 
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
-import { getYarnPath } from './yarn-installer';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import { installBuilders, updateBuilders } from './builder-cache';
+import {
+  installBuilders,
+  updateBuilders,
+  builderDirPromise,
+} from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -69,7 +78,6 @@ import errorTemplate502 from './templates/error_502';
 import redirectTemplate from './templates/redirect';
 
 import {
-  EnvConfig,
   NowConfig,
   DevServerOptions,
   BuildMatch,
@@ -80,8 +88,9 @@ import {
   InvokePayload,
   InvokeResult,
   ListenSpec,
-  RouteConfig,
   RouteResult,
+  HttpHeadersConfig,
+  EnvConfigs,
 } from './types';
 
 interface FSEvent {
@@ -90,11 +99,11 @@ interface FSEvent {
 }
 
 function sortBuilders(buildA: Builder, buildB: Builder) {
-  if (buildA && buildA.use && buildA.use.startsWith('@now/static-build')) {
+  if (buildA && buildA.use && isOfficialRuntime('static-build', buildA.use)) {
     return 1;
   }
 
-  if (buildB && buildB.use && buildB.use.startsWith('@now/static-build')) {
+  if (buildB && buildB.use && isOfficialRuntime('static-build', buildB.use)) {
     return -1;
   }
 
@@ -105,18 +114,19 @@ export default class DevServer {
   public cwd: string;
   public debug: boolean;
   public output: Output;
-  public env: EnvConfig;
-  public buildEnv: EnvConfig;
+  public envConfigs: EnvConfigs;
+  public frameworkSlug: string | null;
   public files: BuilderInputs;
-  public yarnPath: string;
   public address: string;
+  public devCacheDir: string;
 
   private cachedNowConfig: NowConfig | null;
+  private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
+  private proxy: httpProxy;
   private server: http.Server;
   private stopping: boolean;
-  private serverUrlPrinted: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private watcher?: FSWatcher;
@@ -128,33 +138,37 @@ export default class DevServer {
   private devCommand?: string;
   private devProcess?: ChildProcess;
   private devProcessPort?: number;
+  private devServerPids: Set<number>;
 
   private getNowConfigPromise: Promise<NowConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
+  private updateBuildersTimeout: NodeJS.Timeout | undefined;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
     this.output = options.output;
-    this.env = {};
-    this.buildEnv = {};
+    this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
-
-    // This gets updated when `start()` is invoked
-    this.yarnPath = '/';
-
+    this.frameworkSlug = options.frameworkSlug;
     this.cachedNowConfig = null;
+    this.caseSensitive = false;
     this.apiDir = null;
-    this.apiExtensions = new Set<string>();
+    this.apiExtensions = new Set();
+    this.proxy = httpProxy.createProxyServer({
+      changeOrigin: true,
+      ws: true,
+      xfwd: true,
+    });
     this.server = http.createServer(this.devServerHandler);
     this.server.timeout = 0; // Disable timeout
-    this.serverUrlPrinted = false;
     this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
+    this.devCacheDir = join(getVercelDirectory(cwd), 'cache');
 
     this.getNowConfigPromise = null;
     this.blockingBuildsPromise = null;
@@ -168,6 +182,8 @@ export default class DevServer {
     this.podId = Math.random()
       .toString(32)
       .slice(-5);
+
+    this.devServerPids = new Set();
   }
 
   async exit(code = 1) {
@@ -354,7 +370,6 @@ export default class DevServer {
     const matches = await getBuildMatches(
       nowConfig,
       this.cwd,
-      this.yarnPath,
       this.output,
       this,
       fileList
@@ -386,7 +401,9 @@ export default class DevServer {
     for (const match of matches) {
       const currentMatch = this.buildMatches.get(match.src);
       if (!currentMatch || currentMatch.use !== match.use) {
-        this.output.debug(`Adding build match for "${match.src}"`);
+        this.output.debug(
+          `Adding build match for "${match.src}" with "${match.use}"`
+        );
         this.buildMatches.set(match.src, match);
         if (!isInitial && needsBlockingBuild(match)) {
           const buildPromise = executeBuild(
@@ -403,15 +420,25 @@ export default class DevServer {
     }
 
     if (blockingBuilds.length > 0) {
-      const cleanup = () => {
-        this.blockingBuildsPromise = null;
-      };
+      this.output.debug(
+        `Waiting for ${blockingBuilds.length} "blocking builds"`
+      );
       this.blockingBuildsPromise = Promise.all(blockingBuilds)
-        .then(cleanup)
-        .catch(cleanup);
+        .then(() => {
+          this.output.debug(
+            `Cleaning up "blockingBuildsPromise" after successful resolve`
+          );
+          this.blockingBuildsPromise = null;
+        })
+        .catch((err?: Error) => {
+          this.output.debug(
+            `Cleaning up "blockingBuildsPromise" after error: ${err}`
+          );
+          this.blockingBuildsPromise = null;
+        });
     }
 
-    // Sort build matches to make sure `@now/static-build` is always last
+    // Sort build matches to make sure `@vercel/static-build` is always last
     this.buildMatches = new Map(
       [...this.buildMatches.entries()].sort((matchA, matchB) => {
         return sortBuilders(matchA[1] as Builder, matchB[1] as Builder);
@@ -434,7 +461,7 @@ export default class DevServer {
         src,
         builderWithPkg: { package: pkg },
       } = buildMatch;
-      if (pkg.name === '@now/static') continue;
+      if (isOfficialRuntime('static', pkg.name)) continue;
       if (pkg.name && updatedBuilders.includes(pkg.name)) {
         shutdownBuilder(buildMatch, this.output);
         this.buildMatches.delete(src);
@@ -446,11 +473,11 @@ export default class DevServer {
     await this.updateBuildMatches(nowConfig);
   }
 
-  async getLocalEnv(fileName: string, base?: EnvConfig): Promise<EnvConfig> {
+  async getLocalEnv(fileName: string, base?: Env): Promise<Env> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
     const filePath = join(this.cwd, fileName);
-    let env: EnvConfig = {};
+    let env: Env = {};
     try {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
@@ -473,14 +500,11 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache, isInitialLoad);
+    this.getNowConfigPromise = this._getNowConfig(canUseCache);
     try {
       return await this.getNowConfigPromise;
     } finally {
@@ -488,19 +512,20 @@ export default class DevServer {
     }
   }
 
-  async _getNowConfig(
-    canUseCache: boolean = true,
-    isInitialLoad: boolean = false
-  ): Promise<NowConfig> {
+  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
     if (canUseCache && this.cachedNowConfig) {
       return this.cachedNowConfig;
     }
 
     const pkg = await this.getPackageJson();
 
-    // The default empty `now.json` is used to serve all files as static
-    // when no `now.json` is present
-    let config: NowConfig = this.cachedNowConfig || { version: 2 };
+    // The default empty `vercel.json` is used to serve all files as static
+    // when no `vercel.json` is present
+    let configPath = 'vercel.json';
+    let config: NowConfig = this.cachedNowConfig || {
+      version: 2,
+      [fileNameSymbol]: configPath,
+    };
 
     // We need to delete these properties for zero config to work
     // with file changes
@@ -510,15 +535,16 @@ export default class DevServer {
     }
 
     try {
-      this.output.debug('Reading `now.json` file');
-      const nowConfigPath = getNowConfigPath(this.cwd);
-      config = JSON.parse(await fs.readFile(nowConfigPath, 'utf8'));
+      configPath = getNowConfigPath(this.cwd);
+      this.output.debug(`Reading ${configPath}`);
+      config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+      config[fileNameSymbol] = configPath;
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.debug('No `now.json` file present');
+        this.output.debug(err.toString());
       } else if (err.name === 'SyntaxError') {
         this.output.warn(
-          `There is a syntax error in the \`now.json\` file: ${err.message}`
+          `There is a syntax error in ${configPath}: ${err.message}`
         );
       } else {
         throw err;
@@ -538,7 +564,7 @@ export default class DevServer {
       nowConfig: config,
     });
     if (routeError) {
-      this.output.error(routeError.message);
+      this.output.error(routeError.message, null, routeError.link);
       await this.exit();
     }
     config.routes = maybeRoutes || [];
@@ -548,10 +574,20 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      let { builders, warnings, errors } = await detectBuilders(files, pkg, {
-        tag: getDistTag(cliVersion) === 'canary' ? 'canary' : 'latest',
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+        rewriteRoutes,
+      } = await detectBuilders(files, pkg, {
+        tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
         ...(projectSettings ? { projectSettings } : {}),
+        featHandleMiss,
+        cleanUrls,
+        trailingSlash,
       });
 
       if (errors) {
@@ -568,45 +604,30 @@ export default class DevServer {
           builders = builders.filter(filterFrontendBuilds);
         }
 
-        const {
-          defaultRoutes,
-          redirectRoutes,
-          error: routesError,
-        } = await detectRoutes(
-          files,
-          builders,
-          featHandleMiss,
-          cleanUrls,
-          trailingSlash
-        );
-
         config.builds = config.builds || [];
         config.builds.push(...builders);
 
-        if (routesError) {
-          this.output.error(routesError.message);
-          await this.exit();
-        } else {
-          const routes: RouteConfig[] = [];
-          const { routes: nowConfigRoutes } = config;
-          routes.push(...(redirectRoutes || []));
-          routes.push(...(nowConfigRoutes || []));
-          routes.push(...(defaultRoutes || []));
-          config.routes = routes;
-        }
+        const routes: Route[] = [];
+        const { routes: nowConfigRoutes } = config;
+        routes.push(...(redirectRoutes || []));
+        routes.push(
+          ...appendRoutesToPhase({
+            routes: nowConfigRoutes,
+            newRoutes: rewriteRoutes,
+            phase: 'filesystem',
+          })
+        );
+        routes.push(...(defaultRoutes || []));
+        config.routes = routes;
       }
     }
 
-    if (!config.builds || config.builds.length === 0) {
-      if (isInitialLoad && !this.devCommand) {
-        this.output.note(`Serving all files as static`);
-      }
-    } else if (Array.isArray(config.builds)) {
+    if (Array.isArray(config.builds)) {
       if (this.devCommand) {
         config.builds = config.builds.filter(filterFrontendBuilds);
       }
 
-      // `@now/static-build` needs to be the last builder
+      // `@vercel/static-build` needs to be the last builder
       // since it might catch all other requests
       config.builds.sort(sortBuilders);
     }
@@ -614,6 +635,7 @@ export default class DevServer {
     await this.validateNowConfig(config);
 
     this.cachedNowConfig = config;
+    this.caseSensitive = hasNewRoutingProperties(config);
     this.apiDir = detectApiDirectory(config.builds || []);
     this.apiExtensions = detectApiExtensions(config.builds || []);
     return config;
@@ -656,8 +678,9 @@ export default class DevServer {
 
   async validateNowConfig(config: NowConfig): Promise<void> {
     if (config.version === 1) {
-      this.output.error('Only `version: 2` is supported by `now dev`');
+      this.output.error('Cannot run `version: 1` projects.');
       await this.exit(1);
+      return;
     }
 
     await this.tryValidateOrExit(config, validateNowConfigBuilds);
@@ -670,12 +693,8 @@ export default class DevServer {
     await this.tryValidateOrExit(config, validateNowConfigFunctions);
   }
 
-  validateEnvConfig(
-    type: string,
-    env: EnvConfig = {},
-    localEnv: EnvConfig = {}
-  ): EnvConfig {
-    // Validate if there are any missing env vars defined in `now.json`,
+  validateEnvConfig(type: string, env: Env = {}, localEnv: Env = {}): Env {
+    // Validate if there are any missing env vars defined in `vercel.json`,
     // but not in the `.env` / `.build.env` file
     const missing: string[] = Object.entries(env)
       .filter(
@@ -690,7 +709,7 @@ export default class DevServer {
       throw new MissingDotenvVarsError(type, missing);
     }
 
-    const merged: EnvConfig = { ...env, ...localEnv };
+    const merged: Env = { ...env, ...localEnv };
 
     // Validate that the env var name matches what AWS Lambda allows:
     //   - https://docs.aws.amazon.com/lambda/latest/dg/env_variables.html
@@ -726,7 +745,7 @@ export default class DevServer {
   }
 
   /**
-   * Launches the `now dev` server.
+   * Launches the `vercel dev` server.
    */
   async start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
@@ -737,21 +756,19 @@ export default class DevServer {
       throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
     }
 
-    this.yarnPath = await getYarnPath(this.output);
-
-    const ig = await createIgnore(join(this.cwd, '.nowignore'));
+    const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
     // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false, true);
+    const nowConfig = await this.getNowConfig(false);
     const nowConfigBuild = nowConfig.build || {};
-    const [env, buildEnv] = await Promise.all([
+    const [runEnv, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', nowConfig.env),
       this.getLocalEnv('.env.build', nowConfigBuild.env),
     ]);
-    Object.assign(process.env, buildEnv);
-    this.env = env;
-    this.buildEnv = buildEnv;
+    const allEnv = { ...buildEnv, ...runEnv };
+    Object.assign(process.env, allEnv);
+    this.envConfigs = { buildEnv, runEnv, allEnv };
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
@@ -772,27 +789,25 @@ export default class DevServer {
         .map((b: Builder) => b.use)
     );
 
-    await installBuilders(builders, this.yarnPath, this.output);
+    await installBuilders(builders, this.output);
     await this.updateBuildMatches(nowConfig, true);
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
-    this.updateBuildersPromise = updateBuilders(
-      builders,
-      this.yarnPath,
-      this.output
-    )
-      .then(updatedBuilders => {
-        this.updateBuildersPromise = null;
-        this.invalidateBuildMatches(nowConfig, updatedBuilders);
-      })
-      .catch(err => {
-        this.updateBuildersPromise = null;
-        this.output.error(`Failed to update builders: ${err.message}`);
-        this.output.debug(err.stack);
-      });
+    this.updateBuildersTimeout = setTimeout(() => {
+      this.updateBuildersPromise = updateBuilders(builders, this.output)
+        .then(updatedBuilders => {
+          this.updateBuildersPromise = null;
+          this.invalidateBuildMatches(nowConfig, updatedBuilders);
+        })
+        .catch(err => {
+          this.updateBuildersPromise = null;
+          this.output.error(`Failed to update builders: ${err.message}`);
+          this.output.debug(err.stack);
+        });
+    }, ms('30s'));
 
-    // Now Builders that do not define a `shouldServe()` function need to be
+    // Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
     // that can be served by the builder.
     const blockingBuilds = Array.from(this.buildMatches.values()).filter(
@@ -809,6 +824,10 @@ export default class DevServer {
 
       this.output.success('Build completed');
     }
+
+    // Ensure that the dev cache directory exists so that runtimes
+    // don't need to create it themselves.
+    await fs.mkdirp(this.devCacheDir);
 
     // Start the filesystem watcher
     this.watcher = watch(this.cwd, {
@@ -833,6 +852,13 @@ export default class DevServer {
 
     // Wait for "ready" event of the watcher
     await once(this.watcher, 'ready');
+
+    // Configure the server to forward WebSocket "upgrade" events to the proxy.
+    this.server.on('upgrade', (req, socket, head) => {
+      const target = `http://localhost:${this.devProcessPort}`;
+      this.output.debug(`Detected upgrade event, proxying to ${target}`);
+      this.proxy.ws(req, socket, head, { target });
+    });
 
     const devCommandPromise = this.runDevCommand();
 
@@ -870,52 +896,63 @@ export default class DevServer {
     await devCommandPromise;
 
     this.output.ready(`Available at ${link(this.address)}`);
-    this.serverUrlPrinted = true;
   }
 
   /**
-   * Shuts down the `now dev` server, and cleans up any temporary resources.
+   * Shuts down the `vercel dev` server, and cleans up any temporary resources.
    */
   async stop(exitCode?: number): Promise<void> {
+    const { devProcess } = this;
+    const { debug } = this.output;
     if (this.stopping) return;
 
     this.stopping = true;
 
-    if (this.serverUrlPrinted) {
-      // This makes it look cleaner
-      process.stdout.write('\n');
-      this.output.log(`Stopping ${chalk.bold('`now dev`')} server`);
+    if (typeof this.updateBuildersTimeout !== 'undefined') {
+      clearTimeout(this.updateBuildersTimeout);
     }
 
-    const ops: Promise<void>[] = [];
+    const ops: Promise<any>[] = [];
 
     for (const match of this.buildMatches.values()) {
       ops.push(shutdownBuilder(match, this.output));
     }
 
-    ops.push(
-      new Promise(resolve => {
-        if (!this.devProcess) {
-          resolve();
-          return;
-        }
-
-        this.devProcess.on('exit', () => resolve());
-        process.kill(this.devProcess.pid, exitCode);
-      })
-    );
+    if (devProcess) {
+      ops.push(
+        new Promise((resolve, reject) => {
+          devProcess.once('exit', () => resolve());
+          try {
+            process.kill(devProcess.pid);
+          } catch (err) {
+            if (err.code === 'ESRCH') {
+              // Process already exited
+              return resolve();
+            }
+            reject(err);
+          }
+        })
+      );
+    }
 
     ops.push(close(this.server));
 
     if (this.watcher) {
-      this.output.debug(`Closing file watcher`);
-      this.watcher.close();
+      debug(`Closing file watcher`);
+      ops.push(this.watcher.close());
     }
 
     if (this.updateBuildersPromise) {
-      this.output.debug(`Waiting for builders update to complete`);
+      debug(`Waiting for builders update to complete`);
       ops.push(this.updateBuildersPromise);
     }
+
+    for (const pid of this.devServerPids) {
+      ops.push(this.killBuilderDevServer(pid));
+    }
+
+    // Ensure that the builders module cache is created
+    ops.push(builderDirPromise);
 
     try {
       await Promise.all(ops);
@@ -932,12 +969,24 @@ export default class DevServer {
     }
   }
 
+  async killBuilderDevServer(pid: number) {
+    const { debug } = this.output;
+    debug(`Killing builder dev server with PID ${pid}`);
+    this.devServerPids.delete(pid);
+    try {
+      process.kill(pid, 'SIGTERM');
+      debug(`Killed builder dev server with PID ${pid}`);
+    } catch (err) {
+      debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
+    }
+  }
+
   async send404(
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string
   ): Promise<void> {
-    return this.sendError(req, res, nowRequestId, 'FILE_NOT_FOUND', 404);
+    return this.sendError(req, res, nowRequestId, 'NOT_FOUND', 404);
   }
 
   async sendError(
@@ -945,10 +994,11 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string,
     errorCode?: string,
-    statusCode: number = 500
+    statusCode: number = 500,
+    headers: HttpHeadersConfig = {}
   ): Promise<void> {
     res.statusCode = statusCode;
-    this.setResponseHeaders(res, nowRequestId);
+    this.setResponseHeaders(res, nowRequestId, headers);
 
     const http_status_description = generateHttpStatusDescription(statusCode);
     const error_code = errorCode || http_status_description;
@@ -1041,7 +1091,7 @@ export default class DevServer {
   }
 
   /**
-   * Sets the response `headers` including the Now headers to `res`.
+   * Sets the response `headers` including the platform headers to `res`.
    */
   setResponseHeaders(
     res: http.ServerResponse,
@@ -1055,6 +1105,8 @@ export default class DevServer {
       'x-now-trace': 'dev1',
       'x-now-id': nowRequestId,
       'x-now-cache': 'MISS',
+      'x-vercel-id': nowRequestId,
+      'x-vercel-cache': 'MISS',
     };
     for (const [name, value] of Object.entries(allHeaders)) {
       res.setHeader(name, value);
@@ -1160,7 +1212,7 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
-    const nowRequestId = generateRequestId(this.podId);
+    let nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
@@ -1186,16 +1238,47 @@ export default class DevServer {
   };
 
   /**
-   * Serve project directory as a Now v2 deployment.
+   * This is the equivalent to now-proxy exit_with_status() function.
+   */
+  exitWithStatus = async (
+    match: BuildMatch | null,
+    routeResult: RouteResult,
+    phase: HandleValue | null,
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    nowRequestId: string
+  ): Promise<boolean> => {
+    const { status, headers, dest } = routeResult;
+    const location = headers['location'] || dest;
+
+    if (status && location && (300 <= status && status <= 399)) {
+      this.output.debug(`Route found with redirect status code ${status}`);
+      await this.sendRedirect(req, res, nowRequestId, location, status);
+      return true;
+    }
+
+    if (!match && status && phase !== 'miss') {
+      this.output.debug(`Route found with with status code ${status}`);
+      await this.sendError(req, res, nowRequestId, '', status, headers);
+      return true;
+    }
+
+    return false;
+  };
+
+  /**
+   * Serve project directory as a v2 deployment.
    */
   serveProjectAsNowV2 = async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string,
     nowConfig: NowConfig,
-    routes: RouteConfig[] | undefined = nowConfig.routes,
+    routes: Route[] | undefined = nowConfig.routes,
     callLevel: number = 0
   ) => {
+    const { debug } = this.output;
+
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
     const parsed = url.parse(req.url || '/');
@@ -1212,18 +1295,30 @@ export default class DevServer {
         return;
       }
 
-      this.output.debug(`Rewriting URL from "${req.url}" to "${location}"`);
+      debug(`Rewriting URL from "${req.url}" to "${location}"`);
       req.url = location;
     }
 
-    await this.updateBuildMatches(nowConfig);
+    if (callLevel === 0) {
+      await this.updateBuildMatches(nowConfig);
+    }
 
     if (this.blockingBuildsPromise) {
-      this.output.debug(
-        'Waiting for builds to complete before handling request'
-      );
+      debug('Waiting for builds to complete before handling request');
       await this.blockingBuildsPromise;
     }
+
+    const getReqUrl = (rr: RouteResult): string | undefined => {
+      if (rr.dest) {
+        if (rr.uri_args) {
+          const destParsed = url.parse(rr.dest, true);
+          Object.assign(destParsed.query, rr.uri_args);
+          return url.format(destParsed);
+        }
+        return rr.dest;
+      }
+      return req.url;
+    };
 
     const handleMap = getRoutesTypes(routes);
     const missRoutes = handleMap.get('miss') || [];
@@ -1235,19 +1330,28 @@ export default class DevServer {
     let routeResult: RouteResult | null = null;
     let match: BuildMatch | null = null;
     let statusCode: number | undefined;
+    let prevUrl = req.url;
+    let prevHeaders: HttpHeadersConfig = {};
 
     for (const phase of phases) {
       statusCode = undefined;
+
       const phaseRoutes = handleMap.get(phase) || [];
       routeResult = await devRouter(
-        req.url,
+        prevUrl,
         req.method,
         phaseRoutes,
         this,
-        undefined,
+        prevHeaders,
         missRoutes,
         phase
       );
+      prevUrl =
+        routeResult.continue && routeResult.dest
+          ? getReqUrl(routeResult)
+          : req.url;
+      prevHeaders =
+        routeResult.continue && routeResult.headers ? routeResult.headers : {};
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
@@ -1256,9 +1360,9 @@ export default class DevServer {
         Object.assign(destParsed.query, routeResult.uri_args);
         const destUrl = url.format(destParsed);
 
-        this.output.debug(`ProxyPass: ${destUrl}`);
+        debug(`ProxyPass: ${destUrl}`);
         this.setResponseHeaders(res, nowRequestId);
-        return proxyPass(req, res, destUrl, this.output);
+        return proxyPass(req, res, destUrl, this.proxy, this.output);
       }
 
       match = await findBuildMatch(
@@ -1268,10 +1372,23 @@ export default class DevServer {
         this
       );
 
+      if (
+        await this.exitWithStatus(
+          match,
+          routeResult,
+          phase,
+          req,
+          res,
+          nowRequestId
+        )
+      ) {
+        return;
+      }
+
       if (!match && missRoutes.length > 0) {
         // Since there was no build match, enter the miss phase
         routeResult = await devRouter(
-          routeResult.dest || req.url,
+          getReqUrl(routeResult),
           req.method,
           missRoutes,
           this,
@@ -1286,12 +1403,24 @@ export default class DevServer {
           routeResult.dest,
           this
         );
+        if (
+          await this.exitWithStatus(
+            match,
+            routeResult,
+            phase,
+            req,
+            res,
+            nowRequestId
+          )
+        ) {
+          return;
+        }
       } else if (match && hitRoutes.length > 0) {
         // Since there was a build match, enter the hit phase.
         // The hit phase must not set status code.
         const prevStatus = routeResult.status;
         routeResult = await devRouter(
-          routeResult.dest || req.url,
+          getReqUrl(routeResult),
           req.method,
           hitRoutes,
           this,
@@ -1303,28 +1432,6 @@ export default class DevServer {
       }
 
       statusCode = routeResult.status;
-
-      if (match && statusCode === 404 && routeResult.phase === 'miss') {
-        statusCode = undefined;
-      }
-
-      const location = routeResult.headers['location'] || routeResult.dest;
-
-      if (statusCode && location && (300 <= statusCode && statusCode <= 399)) {
-        // Equivalent to now-proxy exit_with_status() function
-        this.output.debug(
-          `Route found with redirect status code ${statusCode}`
-        );
-        await this.sendRedirect(req, res, nowRequestId, location, statusCode);
-        return;
-      }
-
-      if (!match && statusCode && routeResult.phase !== 'miss') {
-        // Equivalent to now-proxy exit_with_status() function
-        this.output.debug(`Route found with with status code ${statusCode}`);
-        await this.sendError(req, res, nowRequestId, '', statusCode);
-        return;
-      }
 
       if (match) {
         // end the phase
@@ -1344,19 +1451,31 @@ export default class DevServer {
     });
 
     if (statusCode) {
-      res.statusCode = statusCode;
+      // Set the `statusCode` as read-only so that `http-proxy`
+      // is not able to modify the value in the future
+      Object.defineProperty(res, 'statusCode', {
+        get() {
+          return statusCode;
+        },
+        /* eslint-disable @typescript-eslint/no-unused-vars */
+        set(_: number) {
+          /* ignore */
+        },
+      });
     }
 
     const requestPath = dest.replace(/^\//, '');
 
     if (!match) {
-      // if the dev command is started, proxy to it
+      // If the dev command is started, then proxy to it
       if (this.devProcessPort) {
-        this.output.debug('Proxy to dev command server');
+        debug('Proxying to frontend dev server');
+        this.setResponseHeaders(res, nowRequestId);
         return proxyPass(
           req,
           res,
           `http://localhost:${this.devProcessPort}`,
+          this.proxy,
           this.output,
           false
         );
@@ -1384,7 +1503,7 @@ export default class DevServer {
       origUrl.pathname = dest;
       Object.assign(origUrl.query, uri_args);
       const newUrl = url.format(origUrl);
-      this.output.debug(
+      debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
       const matchedRoute = await devRouter(
@@ -1394,9 +1513,7 @@ export default class DevServer {
         this
       );
       if (matchedRoute.found && callLevel === 0) {
-        this.output.debug(
-          `Found matching route ${matchedRoute.dest} for ${newUrl}`
-        );
+        debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
         req.url = newUrl;
         await this.serveProjectAsNowV2(
           req,
@@ -1410,7 +1527,85 @@ export default class DevServer {
       }
     }
 
+    // Before doing any asset matching, check if this builder supports the
+    // `startDevServer()` "optimization". In this case, the vercel dev server invokes
+    // `startDevServer()` on the builder for every HTTP request so that it boots
+    // up a single-serve dev HTTP server that vercel dev will proxy this HTTP request
+    // to. Once the proxied request is finished, vercel dev shuts down the dev
+    // server child process.
+    const { builder, package: builderPkg } = match.builderWithPkg;
+    if (typeof builder.startDevServer === 'function') {
+      let devServerResult: StartDevServerResult = null;
+      try {
+        const { envConfigs, files, devCacheDir, cwd: workPath } = this;
+        devServerResult = await builder.startDevServer({
+          files,
+          entrypoint: match.entrypoint,
+          workPath,
+          config: match.config || {},
+          meta: {
+            isDev: true,
+            requestPath,
+            devCacheDir,
+            env: envConfigs.runEnv,
+            buildEnv: envConfigs.buildEnv,
+          },
+        });
+      } catch (err) {
+        // `startDevServer()` threw an error. Most likely this means the dev
+        // server process exited before sending the port information message
+        // (missing dependency at runtime, for example).
+        debug(`Error starting "${builderPkg.name}" dev server: ${err}`);
+        await this.sendError(
+          req,
+          res,
+          nowRequestId,
+          'NO_STATUS_CODE_FROM_DEV_SERVER',
+          502
+        );
+        return;
+      }
+
+      if (devServerResult) {
+        // When invoking lambda functions, the region where the lambda was invoked
+        // is also included in the request ID. So use the same `dev1` fake region.
+        nowRequestId = generateRequestId(this.podId, true);
+
+        const { port, pid } = devServerResult;
+        this.devServerPids.add(pid);
+
+        res.once('close', () => {
+          this.killBuilderDevServer(pid);
+        });
+
+        debug(
+          `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
+        );
+
+        // Mix in the routing based query parameters
+        const parsed = url.parse(req.url || '/', true);
+        Object.assign(parsed.query, uri_args);
+        req.url = url.format({
+          pathname: parsed.pathname,
+          query: parsed.query,
+        });
+
+        this.setResponseHeaders(res, nowRequestId);
+        return proxyPass(
+          req,
+          res,
+          `http://localhost:${port}`,
+          this.proxy,
+          this.output,
+          false
+        );
+      } else {
+        debug(`Skipping \`startDevServer()\` for ${match.entrypoint}`);
+      }
+    }
+
     let foundAsset = findAsset(match, requestPath, nowConfig);
+
     if (!foundAsset && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req);
 
@@ -1418,25 +1613,32 @@ export default class DevServer {
       foundAsset = findAsset(match, requestPath, nowConfig);
     }
 
-    if (!foundAsset) {
-      // if the dev command is started, proxy to it
-      if (this.devProcessPort) {
-        this.output.debug('Proxy to dev command server');
-        return proxyPass(
-          req,
-          res,
-          `http://localhost:${this.devProcessPort}`,
-          this.output,
-          false
-        );
-      }
+    // Proxy to the dev server:
+    // - when there is no asset
+    // - when the asset is not a Lambda (the dev server must take care of all static files)
+    if (
+      this.devProcessPort &&
+      (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
+    ) {
+      debug('Proxying to frontend dev server');
+      this.setResponseHeaders(res, nowRequestId);
+      return proxyPass(
+        req,
+        res,
+        `http://localhost:${this.devProcessPort}`,
+        this.proxy,
+        this.output,
+        false
+      );
+    }
 
+    if (!foundAsset) {
       await this.send404(req, res, nowRequestId);
       return;
     }
 
     const { asset, assetKey } = foundAsset;
-    this.output.debug(
+    debug(
       `Serving asset: [${asset.type}] ${assetKey} ${(asset as any)
         .contentType || ''}`
     );
@@ -1483,6 +1685,10 @@ export default class DevServer {
           return;
         }
 
+        // When invoking lambda functions, the region where the lambda was invoked
+        // is also included in the request ID. So use the same `dev1` fake region.
+        nowRequestId = generateRequestId(this.podId, true);
+
         // Mix the `routes` result dest query params into the req path
         const parsed = url.parse(req.url || '/', true);
         Object.assign(parsed.query, uri_args);
@@ -1501,7 +1707,7 @@ export default class DevServer {
           body: body.toString('base64'),
         };
 
-        this.output.debug(`Invoking lambda: "${assetKey}" with ${path}`);
+        debug(`Invoking lambda: "${assetKey}" with ${path}`);
 
         let result: InvokeResult;
         try {
@@ -1557,7 +1763,9 @@ export default class DevServer {
         const base = basename(p);
         if (
           base === 'now.json' ||
+          base === 'vercel.json' ||
           base === '.nowignore' ||
+          base === '.vercelignore' ||
           !p.startsWith(prefix)
         ) {
           return false;
@@ -1631,43 +1839,84 @@ export default class DevServer {
     return false;
   }
 
+  isCaseSensitive(): boolean {
+    return this.caseSensitive;
+  }
+
   async runDevCommand() {
-    if (!this.devCommand) return;
+    const { devCommand, cwd } = this;
 
-    const cwd = this.cwd;
-
-    const { stdout: yarnBinStdout } = await execAsync('yarn', ['bin'], {
-      cwd,
-    });
-
-    const yarnBinPath = yarnBinStdout.trim();
+    if (!devCommand) {
+      return;
+    }
 
     this.output.log(
-      `Running Dev Command ${chalk.cyan.bold(`“${this.devCommand}”`)}`
+      `Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`
     );
 
     const port = await getPort();
 
-    const env: EnvConfig = {
+    const env: Env = {
+      // Because of child process 'pipe' below, isTTY will be false.
+      // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
+      FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
+      ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
-      ...this.buildEnv,
-      PATH: `${yarnBinPath}${delimiter}${process.env.PATH}`,
+      ...this.envConfigs.allEnv,
       NOW_REGION: 'dev1',
+      VERCEL_REGION: 'dev1',
       PORT: `${port}`,
     };
 
+    // This is necesary so that the dev command in the Project
+    // will work cross-platform (especially Windows).
+    let command = devCommand
+      .replace(/\$PORT/g, `${port}`)
+      .replace(/%PORT%/g, `${port}`);
+
     this.output.debug(
       `Starting dev command with parameters : ${JSON.stringify({
-        cwd: this.cwd,
-        devCommand: this.devCommand,
+        cwd,
+        command,
         port,
       })}`
     );
 
-    const p = spawnCommand(this.devCommand, {
-      stdio: 'inherit',
+    const isNpxAvailable = await which('npx')
+      .then(() => true)
+      .catch(() => false);
+
+    if (isNpxAvailable) {
+      command = `npx --no-install ${command}`;
+    } else {
+      const isYarnAvailable = await which('yarn')
+        .then(() => true)
+        .catch(() => false);
+
+      if (isYarnAvailable) {
+        command = `yarn run --silent ${command}`;
+      }
+    }
+
+    this.output.debug(`Spawning dev command: ${command}`);
+
+    const devPort = new URL(this.address).port;
+    const proxyPort = new RegExp(port.toString(), 'g');
+    const p = spawnCommand(command, {
+      stdio: ['inherit', 'pipe', 'pipe'],
       cwd,
       env,
+    });
+
+    if (!p.stdout || !p.stderr) {
+      throw new Error('Expected child process to have stdout and stderr');
+    }
+
+    p.stderr.pipe(process.stderr);
+    p.stdout.setEncoding('utf8');
+
+    p.stdout.on('data', (data: string) => {
+      process.stdout.write(data.replace(proxyPort, devPort));
     });
 
     p.on('exit', () => {
@@ -1688,30 +1937,26 @@ function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   dest: string,
+  proxy: httpProxy,
   output: Output,
   ignorePath: boolean = true
 ): void {
-  const proxy = httpProxy.createProxyServer({
-    changeOrigin: true,
-    ws: true,
-    xfwd: true,
-    ignorePath,
-    target: dest,
-  });
+  return proxy.web(
+    req,
+    res,
+    { target: dest, ignorePath },
+    (error: NodeJS.ErrnoException) => {
+      // If the client hangs up a socket, we do not
+      // want to do anything, as the client just expects
+      // the connection to be closed.
+      if (error.code === 'ECONNRESET') {
+        res.end();
+        return;
+      }
 
-  proxy.on('error', (error: NodeJS.ErrnoException) => {
-    // If the client hangs up a socket, we do not
-    // want to do anything, as the client just expects
-    // the connection to be closed.
-    if (error.code === 'ECONNRESET') {
-      res.end();
-      return;
+      output.error(`Failed to complete request to ${req.url}: ${error}`);
     }
-
-    output.error(`Failed to complete request to ${req.url}: ${error}`);
-  });
-
-  return proxy.web(req, res);
+  );
 }
 
 /**
@@ -1731,7 +1976,7 @@ function serveStaticFile(
   });
 }
 
-function close(server: http.Server): Promise<void> {
+function close(server: http.Server | httpProxy): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((err?: Error) => {
       if (err) {
@@ -1744,14 +1989,17 @@ function close(server: http.Server): Promise<void> {
 }
 
 /**
- * Generates a (fake) Now tracing ID for an HTTP request.
+ * Generates a (fake) tracing ID for an HTTP request.
  *
  * Example: dev1:q4wlg-1562364135397-7a873ac99c8e
  */
-function generateRequestId(podId: string): string {
-  return `dev1:${[podId, Date.now(), randomBytes(6).toString('hex')].join(
-    '-'
-  )}`;
+function generateRequestId(podId: string, isInvoke = false): string {
+  const invoke = isInvoke ? 'dev1::' : '';
+  return `dev1::${invoke}${[
+    podId,
+    Date.now(),
+    randomBytes(6).toString('hex'),
+  ].join('-')}`;
 }
 
 function hasOwnProperty(obj: any, prop: string) {
@@ -1817,7 +2065,7 @@ async function shouldServe(
     const shouldServe = await builder.shouldServe({
       entrypoint: src,
       files,
-      config,
+      config: config || {},
       requestPath,
       workPath: devServer.cwd,
     });
@@ -1954,7 +2202,17 @@ async function checkForPort(
 
 function filterFrontendBuilds(build: Builder) {
   return (
-    !build.use.startsWith('@now/static-build') &&
-    !build.use.startsWith('@now/next')
+    !isOfficialRuntime('static-build', build.use) &&
+    !isOfficialRuntime('next', build.use)
+  );
+}
+
+function hasNewRoutingProperties(nowConfig: NowConfig) {
+  return (
+    typeof nowConfig.cleanUrls !== undefined ||
+    typeof nowConfig.headers !== undefined ||
+    typeof nowConfig.redirects !== undefined ||
+    typeof nowConfig.rewrites !== undefined ||
+    typeof nowConfig.trailingSlash !== undefined
   );
 }

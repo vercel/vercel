@@ -1,9 +1,8 @@
 import bytes from 'bytes';
 import { Response } from 'node-fetch';
 import { NowError } from './now-error';
-import param from './output/param';
-import cmd from './output/cmd';
 import code from './output/code';
+import { getCommandName } from './pkg-name';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -13,6 +12,7 @@ import code from './output/code';
 export class APIError extends Error {
   status: number;
   serverMessage: string;
+  link?: string;
   retryAfter: number | null | 'never';
   [key: string]: any;
 
@@ -50,8 +50,8 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
   constructor() {
     super({
       code: 'TEAM_DELETED',
-      message: `Your team was deleted. You can switch to a different one using ${param(
-        'now switch'
+      message: `Your team was deleted. You can switch to a different one using ${getCommandName(
+        `switch`
       )}.`,
       meta: {},
     });
@@ -141,8 +141,8 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
     super({
       code: 'SOURCE_NOT_FOUND',
       meta: {},
-      message: `Not able to purchase. Please add a payment method using ${cmd(
-        'now billing add'
+      message: `Not able to purchase. Please add a payment method using ${getCommandName(
+        `billing add`
       )}.`,
     });
   }
@@ -1040,7 +1040,7 @@ export class AccountNotFound extends NowError<
 > {
   constructor(
     email: string,
-    message: string = `Please sign up: https://zeit.co/signup`
+    message: string = `Please sign up: https://vercel.com/signup`
   ) {
     super({
       code: 'ACCOUNT_NOT_FOUND',

@@ -5,11 +5,11 @@ import { createHash } from 'crypto';
 import fs from 'fs-extra';
 
 /**
-  * Computes hashes for the contents of each file given.
-  *
-  * @param {Array} of {String} full paths
-  * @return {Map}
-  */
+ * Computes hashes for the contents of each file given.
+ *
+ * @param {Array} of {String} full paths
+ * @return {Map}
+ */
 
 async function hashes(files) {
   const map = new Map();

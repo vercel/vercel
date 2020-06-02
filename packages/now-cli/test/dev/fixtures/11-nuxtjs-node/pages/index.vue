@@ -3,14 +3,10 @@
     <h1>Nuxt.js + Node.js API</h1>
     <h2>
       Deployed with
-      <a href="https://zeit.co/docs" target="_blank" rel="noreferrer noopener">ZEIT Now</a>!
+      <a href="https://vercel.com/docs" target="_blank" rel="noreferrer noopener">Vercel</a>!
     </h2>
     <p>
-      <a
-        href="https://github.com/zeit/now-examples/blob/master/nuxtjs-node"
-        target="_blank"
-        rel="noreferrer noopener"
-      >This project</a> is a
+      This project is a
       <a href="https://nuxtjs.org/">Nuxt.js</a>
       app with three directories,
       <code>/static</code>

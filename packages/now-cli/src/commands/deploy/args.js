@@ -2,9 +2,10 @@ import chalk from 'chalk';
 import logo from '../../util/output/logo';
 import code from '../../util/output/code';
 import note from '../../util/output/note';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 export const latestHelp = () => `
-  ${chalk.bold(`${logo} now`)} [options] <command | path>
+  ${chalk.bold(`${logo} ${getPkgName()}`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
 
@@ -14,6 +15,7 @@ export const latestHelp = () => `
         '(default)'
       )}
       dev                              Start a local development server
+      env                              Manages the Environment Variables for your current Project
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
@@ -28,7 +30,7 @@ export const latestHelp = () => `
       domains              [name]      Manages your domain names
       dns                  [name]      Manages your DNS records
       certs                [cmd]       Manages your SSL certificates
-      secrets              [name]      Manages your secret environment variables
+      secrets              [name]      Manages your global Secrets, for use in Environment Variables
       logs                 [url]       Displays the logs for a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
@@ -40,12 +42,13 @@ export const latestHelp = () => `
     -V, --platform-version         Set the platform version to deploy to
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
-)}   Path to the local ${'`now.json`'} file
+)}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
   'DIR'
-)}    Path to the global ${'`.now`'} directory
+)}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
+    --with-cache                   Retain build cache when using "--force"
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
   'TOKEN'
 )}        Login token
@@ -69,7 +72,7 @@ export const latestHelp = () => `
 
   ${note(
     `To view the usage information for Now 1.0, run ${code(
-      'now help deploy-v1'
+      `${getPkgName()} help deploy-v1`
     )}`
   )}
 
@@ -77,26 +80,29 @@ export const latestHelp = () => `
 
   ${chalk.gray('–')} Deploy the current directory
 
-    ${chalk.cyan('$ now')}
+    ${chalk.cyan(`$ ${getPkgName()}`)}
 
   ${chalk.gray('–')} Deploy a custom path
 
-    ${chalk.cyan('$ now /usr/src/project')}
+    ${chalk.cyan(`$ ${getPkgName()} /usr/src/project`)}
 
-  ${chalk.gray('–')} Deploy with environment variables
+  ${chalk.gray('–')} Deploy with Environment Variables
 
-    ${chalk.cyan('$ now -e NODE_ENV=production -e SECRET=@mysql-secret')}
+    ${chalk.cyan(
+      `$ ${getPkgName()} -e NODE_ENV=production -e SECRET=@mysql-secret`
+    )}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
   '`list`'
 )}
 
-    ${chalk.cyan('$ now help list')}
+    ${chalk.cyan(`$ ${getPkgName()} help list`)}
 
 `;
 
 export const latestArgs = {
   '--force': Boolean,
+  '--with-cache': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
   '--env': [String],
@@ -234,10 +240,10 @@ export const legacyHelp = () => `
     -n, --name                     Set the project name of the deployment
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
-)}   Path to the local ${'`now.json`'} file
+)}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
   'DIR'
-)}    Path to the global ${'`.now`'} directory
+)}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(

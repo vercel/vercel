@@ -8,48 +8,47 @@ import chalk from 'chalk';
 import ua from '../util/ua.ts';
 import getArgs from '../util/get-args';
 import error from '../util/output/error';
-import wait from '../util/output/wait';
 import highlight from '../util/output/highlight';
 import ok from '../util/output/ok';
-import cmd from '../util/output/cmd.ts';
 import param from '../util/output/param.ts';
 import eraseLines from '../util/output/erase-lines';
 import sleep from '../util/sleep';
 import { handleError } from '../util/error';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
-import getNowDir from '../util/config/global-path';
+import getGlobalPathConfig from '../util/config/global-path';
 import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
 import createOutput from '../util/output';
 import executeLogin from '../util/login/login.ts';
 import { prependEmoji, emoji } from '../util/emoji';
+import { getCommandName, getPkgName } from '../util/pkg-name.ts';
 
-const debug = debugFactory('now:sh:login');
+const debug = debugFactory(`${getPkgName()}:login`);
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now login`)} <email>
+  ${chalk.bold(`${logo} ${getPkgName()} login`)} <email>
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Log into the Now platform
+  ${chalk.gray('–')} Log into the Vercel platform
 
-    ${chalk.cyan('$ now login')}
+    ${chalk.cyan(`$ ${getPkgName()} login`)}
 
   ${chalk.gray('–')} Log in using a specific email address
 
-    ${chalk.cyan('$ now login john@doe.com')}
+    ${chalk.cyan(`$ ${getPkgName()} login john@doe.com`)}
 `);
 };
 
@@ -115,8 +114,8 @@ const readEmail = async () => {
     if (err.message === 'stdin lacks setRawMode support') {
       throw new Error(
         error(
-          `Interactive mode not supported – please run ${cmd(
-            'now login you@domain.com'
+          `Interactive mode not supported – please run ${getCommandName(
+            `login you@domain.com`
           )}`
         )
       );
@@ -191,7 +190,7 @@ const login = async ctx => {
   let verificationToken;
   let securityCode;
 
-  stopSpinner = wait('Sending you an email');
+  stopSpinner = output.spinner('Sending you an email');
 
   try {
     const data = await executeLogin(apiUrl, email);
@@ -216,7 +215,7 @@ const login = async ctx => {
     )}.\n`
   );
 
-  stopSpinner = wait('Waiting for your confirmation');
+  stopSpinner = output.spinner('Waiting for your confirmation');
 
   let token;
 
@@ -249,16 +248,16 @@ const login = async ctx => {
   writeToAuthConfigFile(ctx.authConfig);
   writeToConfigFile(ctx.config);
 
-  output.debug(`Saved credentials in "${hp(getNowDir())}"`);
+  output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
   console.log(
     `${chalk.cyan('Congratulations!')} ` +
-      `You are now logged in. In order to deploy something, run ${cmd('now')}.`
+      `You are now logged in. In order to deploy something, run ${getCommandName()}.`
   );
 
   output.print(
     `${prependEmoji(
-      `Connect your Git Repositories to deploy every branch push automatically (https://zeit.ink/1X).`,
+      `Connect your Git Repositories to deploy every branch push automatically (https://vercel.link/git).`,
       emoji('tip')
     )}\n`
   );

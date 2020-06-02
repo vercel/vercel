@@ -1,11 +1,17 @@
-from http.server import BaseHTTPRequestHandler
 
+import sys
 import base64
 import json
 import inspect
+from importlib import util
+from http.server import BaseHTTPRequestHandler
 
-import __NOW_HANDLER_FILENAME
-__now_variables = dir(__NOW_HANDLER_FILENAME)
+# Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+__now_spec = util.spec_from_file_location("__NOW_HANDLER_MODULE_NAME", "./__NOW_HANDLER_ENTRYPOINT")
+__now_module = util.module_from_spec(__now_spec)
+sys.modules["__NOW_HANDLER_MODULE_NAME"] = __now_module
+__now_spec.loader.exec_module(__now_module)
+__now_variables = dir(__now_module)
 
 
 def format_headers(headers, decode=False):
@@ -21,10 +27,10 @@ def format_headers(headers, decode=False):
 
 
 if 'handler' in __now_variables or 'Handler' in __now_variables:
-    base = __NOW_HANDLER_FILENAME.handler if ('handler' in __now_variables) else  __NOW_HANDLER_FILENAME.Handler
+    base = __now_module.handler if ('handler' in __now_variables) else  __now_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
-        print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
+        print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
         exit(1)
 
     print('using HTTP Handler')
@@ -41,6 +47,7 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
 
         payload = json.loads(event['body'])
         path = unquote(payload['path'])
+        path = path.replace(' ', '%20')
         headers = payload['headers']
         method = payload['method']
         encoding = payload.get('encoding')
@@ -74,11 +81,10 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
 
 elif 'app' in __now_variables:
     if (
-        not inspect.iscoroutinefunction(__NOW_HANDLER_FILENAME.app) and
-        not inspect.iscoroutinefunction(__NOW_HANDLER_FILENAME.app.__call__)
+        not inspect.iscoroutinefunction(__now_module.app) and
+        not inspect.iscoroutinefunction(__now_module.app.__call__)
     ):
         print('using Web Server Gateway Interface (WSGI)')
-        import sys
         from urllib.parse import urlparse, unquote
         from werkzeug._compat import BytesIO
         from werkzeug._compat import string_types
@@ -136,7 +142,7 @@ elif 'app' in __now_variables:
                 if key not in ('HTTP_CONTENT_TYPE', 'HTTP_CONTENT_LENGTH'):
                     environ[key] = value
 
-            response = Response.from_app(__NOW_HANDLER_FILENAME.app, environ)
+            response = Response.from_app(__now_module.app, environ)
 
             return_dict = {
                 'statusCode': response.status_code,
@@ -150,6 +156,9 @@ elif 'app' in __now_variables:
             return return_dict
     else:
         print('using Asynchronous Server Gateway Interface (ASGI)')
+        # Originally authored by Jordan Eremieff and included under MIT license:
+        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/mangum/__init__.py
+        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
         import asyncio
         import enum
         from urllib.parse import urlparse, unquote, urlencode
@@ -271,10 +280,10 @@ elif 'app' in __now_variables:
             }
 
             asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(__NOW_HANDLER_FILENAME.app, body)
+            response = asgi_cycle(__now_module.app, body)
             return response
 
 else:
-    print('Missing variable `handler` or `app` in file __NOW_HANDLER_FILENAME.py')
-    print('See the docs https://zeit.co/docs/v2/deployments/official-builders/python-now-python')
+    print('Missing variable `handler` or `app` in file "__NOW_HANDLER_ENTRYPOINT".')
+    print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
     exit(1)

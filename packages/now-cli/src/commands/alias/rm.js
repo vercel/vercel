@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import Now from '../../util';
-import cmd from '../../util/output/cmd.ts';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
@@ -11,9 +10,13 @@ import strlen from '../../util/strlen.ts';
 import promptBool from '../../util/prompt-bool';
 import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 export default async function rm(ctx, opts, args, output) {
-  const { authConfig: { token }, config } = ctx;
+  const {
+    authConfig: { token },
+    config,
+  } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debugEnabled } = opts;
@@ -21,7 +24,7 @@ export default async function rm(ctx, opts, args, output) {
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled
+    debug: debugEnabled,
   });
   let contextName = null;
 
@@ -43,14 +46,14 @@ export default async function rm(ctx, opts, args, output) {
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now alias rm <alias>`'
+        `${getCommandName('alias rm <alias>')}`
       )}`
     );
     return 1;
   }
 
   if (!aliasOrId) {
-    output.error(`${cmd('now alias rm <alias>')} expects one argument`);
+    output.error(`${getCommandName('alias rm <alias>')} expects one argument`);
     return 1;
   }
 
@@ -65,12 +68,12 @@ export default async function rm(ctx, opts, args, output) {
     output.error(
       `Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`
     );
-    output.log(`Run ${cmd('now alias ls')} to see your aliases.`);
+    output.log(`Run ${getCommandName('alias ls')} to see your aliases.`);
     return 1;
   }
 
   const removeStamp = stamp();
-  if (!opts['--yes'] && !await confirmAliasRemove(output, alias)) {
+  if (!opts['--yes'] && !(await confirmAliasRemove(output, alias))) {
     output.log('Aborted');
     return 0;
   }
@@ -93,13 +96,13 @@ async function confirmAliasRemove(output, alias) {
       [
         ...(srcUrl ? [srcUrl] : []),
         chalk.underline(alias.alias),
-        chalk.gray(`${ms(new Date() - new Date(alias.created))} ago`)
-      ]
+        chalk.gray(`${ms(new Date() - new Date(alias.created))} ago`),
+      ],
     ],
     {
       align: ['l', 'l', 'r'],
       hsep: ' '.repeat(4),
-      stringLength: strlen
+      stringLength: strlen,
     }
   );
 

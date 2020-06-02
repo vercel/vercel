@@ -19,7 +19,7 @@
     "url": "https://github.com/marko-js-samples/marko-starter-demo"
   },
   "scripts": {
-    "build": "NODE_ENV=production marko-starter build && mv dist public",
+    "build": "NODE_ENV=production marko-starter build && rm -rf public && mv dist public",
     "format": "prettier src/**/*.{js,css,less} --write && marko-prettyprint src",
     "lint": "eslint src",
     "serve": "NODE_ENV=production marko-starter serve-static",

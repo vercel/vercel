@@ -12,6 +12,7 @@ import {
   spawnAsync,
   execCommand,
   spawnCommand,
+  walkParentDirs,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
@@ -20,6 +21,7 @@ import {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
+  getNodeBinPath,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -48,6 +50,8 @@ export {
   runPackageJsonScript,
   execCommand,
   spawnCommand,
+  walkParentDirs,
+  getNodeBinPath,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -64,12 +68,11 @@ export {
 };
 
 export {
-  detectRoutes,
+  detectBuilders,
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
-} from './detect-routes';
-export { detectBuilders } from './detect-builders';
+} from './detect-builders';
 export { detectFramework } from './detect-framework';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
@@ -77,3 +80,42 @@ export { readConfigFile } from './fs/read-config-file';
 export * from './schemas';
 export * from './types';
 export * from './errors';
+
+/**
+ * Helper function to support both `@vercel` and legacy `@now` official Runtimes.
+ */
+export const isOfficialRuntime = (desired: string, name?: string): boolean => {
+  if (typeof name !== 'string') {
+    return false;
+  }
+  return (
+    name === `@vercel/${desired}` ||
+    name === `@now/${desired}` ||
+    name.startsWith(`@vercel/${desired}@`) ||
+    name.startsWith(`@now/${desired}@`)
+  );
+};
+
+export const isStaticRuntime = (name?: string): boolean => {
+  return isOfficialRuntime('static', name);
+};
+
+/**
+ * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.
+ * Throws an error if *both* env vars are defined.
+ */
+export const getPlatformEnv = (name: string): string | undefined => {
+  const vName = `VERCEL_${name}`;
+  const nName = `NOW_${name}`;
+  const v = process.env[vName];
+  const n = process.env[nName];
+  if (typeof v === 'string') {
+    if (typeof n === 'string') {
+      throw new Error(
+        `Both "${vName}" and "${nName}" env vars are defined. Please only define the "${vName}" env var`
+      );
+    }
+    return v;
+  }
+  return n;
+};

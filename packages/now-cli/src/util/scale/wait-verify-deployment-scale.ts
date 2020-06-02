@@ -9,7 +9,6 @@ import Client from '../client';
 import joinWords from '../output/join-words';
 import stamp from '../output/stamp';
 import verifyDeploymentScale from './verify-deployment-scale';
-import wait from '../output/wait';
 
 export default async function waitForScale(
   output: Output,
@@ -19,7 +18,7 @@ export default async function waitForScale(
 ) {
   const remainingDCs = new Set(Object.keys(scale));
   const scaleStamp = stamp();
-  let cancelWait = renderWaitDcs(Array.from(remainingDCs.keys()));
+  let cancelWait = renderWaitDcs(output, Array.from(remainingDCs.keys()));
 
   for await (const dcReady of verifyDeploymentScale(
     output,
@@ -43,13 +42,13 @@ export default async function waitForScale(
     }
 
     if (remainingDCs.size > 0) {
-      cancelWait = renderWaitDcs(Array.from(remainingDCs.keys()));
+      cancelWait = renderWaitDcs(output, Array.from(remainingDCs.keys()));
     }
   }
 }
 
-function renderWaitDcs(dcs: string[]) {
-  return wait(
+function renderWaitDcs(output: Output, dcs: string[]) {
+  return output.spinner(
     `Waiting for instances in ${joinWords(
       dcs.map(dc => chalk.bold(dc))
     )} to be ready`

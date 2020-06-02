@@ -1,6 +1,6 @@
 import path from 'path';
 import chalk from 'chalk';
-import { PackageJson } from '@now/build-utils';
+import { PackageJson } from '@vercel/build-utils';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
@@ -13,6 +13,7 @@ import cmd from '../../util/output/cmd';
 import dev from './dev';
 import readPackage from '../../util/read-package';
 import readConfig from '../../util/config/read-config';
+import { getPkgName, getCommandName } from '../../util/pkg-name';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -20,25 +21,28 @@ const COMMAND_CONFIG = {
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now dev`)} [options] <dir>
+  ${chalk.bold(`${logo} ${getPkgName()} dev`)} [options] <dir>
 
-  Starts the \`now dev\` server.
+  Starts the \`${getPkgName()} dev\` server.
 
   ${chalk.dim('Options:')}
 
     -h, --help             Output usage information
     -d, --debug            Debug mode [off]
     -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
+    -t, --token   [token]  Specify an Authorization Token
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Start the \`now dev\` server on port 8080
+  ${chalk.gray('–')} Start the \`${getPkgName()} dev\` server on port 8080
 
-      ${chalk.cyan('$ now dev --listen 8080')}
+      ${chalk.cyan(`$ ${getPkgName()} dev --listen 8080`)}
 
-  ${chalk.gray('–')} Make the \`now dev\` server bind to localhost on port 5000
+  ${chalk.gray(
+    '–'
+  )} Make the \`vercel dev\` server bind to localhost on port 5000
 
-      ${chalk.cyan('$ now dev --listen 127.0.0.1:5000')}
+      ${chalk.cyan(`$ ${getPkgName()} dev --listen 127.0.0.1:5000`)}
   `);
 };
 
@@ -76,7 +80,7 @@ export default async function main(ctx: NowContext) {
 
   const [dir = '.'] = args;
 
-  const nowJson = await readConfig(path.join(dir, 'now.json'));
+  const nowJson = await readConfig(dir);
   // @ts-ignore: Because `nowJson` could be one of three different types
   const hasBuilds = nowJson && nowJson.builds && nowJson.builds.length > 0;
 
@@ -95,11 +99,20 @@ export default async function main(ctx: NowContext) {
         output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
         return 1;
       }
+      if (scripts && scripts.dev && /\bvercel\b\W+\bdev\b/.test(scripts.dev)) {
+        output.error(
+          `The ${cmd('dev')} script in ${cmd(
+            'package.json'
+          )} must not contain ${cmd('vercel dev')}`
+        );
+        output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
+        return 1;
+      }
     }
   }
 
   if (argv._.length > 2) {
-    output.error(`${cmd('now dev [dir]')} accepts at most one argument`);
+    output.error(`${getCommandName(`dev [dir]`)} accepts at most one argument`);
     return 1;
   }
 

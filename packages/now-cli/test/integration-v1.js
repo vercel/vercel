@@ -18,7 +18,7 @@ import prepareFixtures from './helpers/prepare';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
-const deployHelpMessage = `${logo} now [options] <command | path>`;
+const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 const session = Math.random()
   .toString(36)
   .split('.')[1];
@@ -37,6 +37,7 @@ const testv1 = async (...args) => {
     // Only run v1 tests on Node 12
     return;
   }
+  // eslint-disable-next-line
   await test(...args);
 };
 
@@ -87,7 +88,7 @@ function fetchTokenWithRetry(url, retries = 3) {
 }
 
 function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.zeit.co/www/user`;
+  const url = `https://api.vercel.com/www/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
   return retry(
@@ -141,7 +142,7 @@ const execute = (args, options) =>
   });
 
 const apiFetch = (url, { headers, ...options } = {}) => {
-  return fetch(`https://api.zeit.co${url}`, {
+  return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       ...(headers || {}),
@@ -184,6 +185,8 @@ test.before(async () => {
 });
 
 test('login', async t => {
+  t.timeout(ms('1m'));
+
   // Delete the current token
   const logoutOutput = await execute(['logout']);
   t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
@@ -328,7 +331,7 @@ test('output the version', async t => {
 test('detect update command', async t => {
   {
     const { stderr } = await execute(['update']);
-    t.regex(stderr, /yarn add now@/gm, `Received: "${stderr}"`);
+    t.regex(stderr, /yarn add vercel@/gm, `Received: "${stderr}"`);
   }
 
   {
@@ -381,7 +384,7 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `> Error! Please sign up: https://zeit.co/signup`;
+  const goal = `> Error! Please sign up: https://vercel.com/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
@@ -1700,7 +1703,7 @@ test('ensure we are getting a warning for the old team flag', async t => {
   // Ensure the warning is printed
   t.true(
     stderr.includes(
-      'WARN! The "--team" flag is deprecated. Please use "--scope" instead.'
+      'WARN! The "--team" option is deprecated. Please use "--scope" instead.'
     )
   );
 
@@ -1857,79 +1860,6 @@ test('deploy a static build deployment', async t => {
   const response = await fetch(href);
   const content = await response.text();
   t.is(content.trim(), 'hello');
-});
-
-test('use build-env', async t => {
-  const directory = fixture('build-env');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), 'bar');
-});
-
-test('use `--build-env` CLI flag', async t => {
-  const directory = fixture('build-env-arg');
-  const nonce = Math.random()
-    .toString(36)
-    .substring(2);
-
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--build-env',
-      `NONCE=${nonce}`,
-      ...defaultArgs,
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0, `Received:\n"${stderr}"\n"${stdout}"`);
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), nonce);
 });
 
 test('use `--debug` CLI flag', async t => {
@@ -2300,7 +2230,7 @@ test('print correct link in legacy warning', async t => {
   // It is expected to fail,
   // since the package.json does not have a start script
   t.is(exitCode, 1);
-  t.regex(stderr, /migrate-to-zeit-now/);
+  t.regex(stderr, /migrate-to-vercel/);
 });
 
 test('`now rm` 404 exits quickly', async t => {
@@ -2372,19 +2302,15 @@ test('now certs ls', async t => {
   t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
 });
 
-test('now certs ls --after=cert_test', async t => {
-  const output = await execute(['certs', 'ls', '--after=cert_test']);
+test('now certs ls --next=123456', async t => {
+  const output = await execute(['certs', 'ls', '--next=123456']);
 
   console.log(output.stderr);
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /The cert cert_test can't be found\./gm,
-    formatOutput(output)
-  );
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /No certificates found under/gm, formatOutput(output));
 });
 
 test('now hasOwnProperty not a valid subcommand', async t => {
@@ -2450,7 +2376,7 @@ test('now secret ls', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 0, formatOutput(output));
-  t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
+  t.regex(output.stdout, /Secrets found under/gm, formatOutput(output));
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
 
@@ -2493,7 +2419,7 @@ test('deploy with a custom API URL', async t => {
       '--name',
       session,
       '--api',
-      'https://zeit.co/api',
+      'https://vercel.com/api',
       ...defaultArgs,
     ],
     {

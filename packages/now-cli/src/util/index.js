@@ -29,12 +29,20 @@ const IS_WIN = process.platform.startsWith('win');
 const SEP = IS_WIN ? '\\' : '/';
 
 export default class Now extends EventEmitter {
-  constructor({ apiUrl, token, currentTeam, forceNew = false, debug = false }) {
+  constructor({
+    apiUrl,
+    token,
+    currentTeam,
+    forceNew = false,
+    withCache = false,
+    debug = false,
+  }) {
     super();
 
     this._token = token;
     this._debug = debug;
     this._forceNew = forceNew;
+    this._withCache = withCache;
     this._output = createOutput({ debug });
     this._apiUrl = apiUrl;
     this._onRetry = this._onRetry.bind(this);
@@ -64,6 +72,7 @@ export default class Now extends EventEmitter {
       env,
       build,
       forceNew = false,
+      withCache = false,
       target = null,
       deployStamp,
       projectSettings,
@@ -138,7 +147,7 @@ export default class Now extends EventEmitter {
       projectSettings,
     };
 
-    // Ignore specific items from Now.json
+    // Ignore specific items from vercel.json
     delete requestBody.scope;
     delete requestBody.github;
 
@@ -155,6 +164,7 @@ export default class Now extends EventEmitter {
         meta,
         public: wantsPublic || nowConfig.public,
         forceNew,
+        withCache,
         name,
         project,
         description,
@@ -180,6 +190,7 @@ export default class Now extends EventEmitter {
       quiet,
       nowConfig,
       force: forceNew,
+      withCache,
       org,
       projectName: name,
       isSettingUpProject,
@@ -212,7 +223,7 @@ export default class Now extends EventEmitter {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
         log(
           `Please upgrade your plan here: ${chalk.cyan(
-            'https://zeit.co/account/plan'
+            'https://vercel.com/account/plan'
           )}`
         );
       }
@@ -298,7 +309,7 @@ export default class Now extends EventEmitter {
 
         err.message =
           `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
-            '.nowignore'
+            '.vercelignore'
           )}):` +
           `\n- ${unreferencedBuildSpecs
             .map(item => JSON.stringify(item))
@@ -329,9 +340,15 @@ export default class Now extends EventEmitter {
     return new Error(error.message);
   }
 
-  async listSecrets() {
-    const { secrets } = await this.retry(async bail => {
-      const res = await this._fetch('/now/secrets');
+  async listSecrets(next) {
+    const payload = await this.retry(async bail => {
+      let secretsUrl = '/v3/now/secrets?limit=20';
+
+      if (next) {
+        secretsUrl += `&until=${next}`;
+      }
+
+      const res = await this._fetch(secretsUrl);
 
       if (res.status === 200) {
         // What we want
@@ -345,10 +362,10 @@ export default class Now extends EventEmitter {
       throw await responseError(res, 'Failed to list secrets');
     });
 
-    return secrets;
+    return payload;
   }
 
-  async list(app, { version = 4, meta = {} } = {}) {
+  async list(app, { version = 4, meta = {}, nextTimestamp } = {}) {
     const fetchRetry = async (url, options = {}) => {
       return this.retry(
         async bail => {
@@ -375,9 +392,14 @@ export default class Now extends EventEmitter {
     };
 
     if (!app && !Object.keys(meta).length) {
-      // Get the 35 latest projects and their latest deployment
-      const query = new URLSearchParams({ limit: 35 });
-      const projects = await fetchRetry(`/v2/projects/?${query}`);
+      // Get the 20 latest projects and their latest deployment
+      const query = new URLSearchParams({ limit: (20).toString() });
+      if (nextTimestamp) {
+        query.set('until', String(nextTimestamp));
+      }
+      const { projects, pagination } = await fetchRetry(
+        `/v4/projects/?${query}`
+      );
 
       const deployments = await Promise.all(
         projects.map(async ({ id: projectId }) => {
@@ -389,7 +411,7 @@ export default class Now extends EventEmitter {
         })
       );
 
-      return deployments.filter(x => x);
+      return { deployments: deployments.filter(x => x), pagination };
     }
 
     const query = new URLSearchParams();
@@ -400,10 +422,14 @@ export default class Now extends EventEmitter {
 
     Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
 
-    const { deployments } = await fetchRetry(
-      `/v${version}/now/deployments?${query}`
-    );
-    return deployments;
+    query.set('limit', '20');
+
+    if (nextTimestamp) {
+      query.set('until', String(nextTimestamp));
+    }
+
+    const response = await fetchRetry(`/v${version}/now/deployments?${query}`);
+    return response;
   }
 
   async listInstances(deploymentId) {
@@ -540,10 +566,6 @@ export default class Now extends EventEmitter {
 
   get id() {
     return this._id;
-  }
-
-  get url() {
-    return `https://${this._host}`;
   }
 
   get fileCount() {

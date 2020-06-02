@@ -49,8 +49,9 @@ export interface Config {
 
 export interface Meta {
   isDev?: boolean;
+  devCacheDir?: string;
   skipDownload?: boolean;
-  requestPath?: string;
+  requestPath?: string | null;
   filesChanged?: string[];
   filesRemoved?: string[];
   env?: Env;
@@ -81,7 +82,7 @@ export interface AnalyzeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -108,12 +109,12 @@ export interface BuildOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 
   /**
-   * Metadata related to the invoker of the builder, used by `now dev`.
+   * Metadata related to the invoker of the builder, used by `vercel dev`.
    * Builders may use the properties on this object to change behavior based
    * on the build environment.
    */
@@ -148,7 +149,7 @@ export interface PrepareCacheOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
@@ -182,17 +183,42 @@ export interface ShouldServeOptions {
 
   /**
    * An arbitrary object passed by the user in the build definition defined
-   * in `now.json`.
+   * in `vercel.json`.
    */
   config: Config;
 }
+
+/**
+ * `startDevServer()` is given the same parameters as `build()`.
+ */
+export type StartDevServerOptions = BuildOptions;
+
+export interface StartDevServerSuccess {
+  /**
+   * Port number where the dev server can be connected to, assumed to be running
+   * on `localhost`.
+   */
+  port: number;
+
+  /**
+   * Process ID number of the dev server. Useful for the `vercel dev` server to
+   * shut down the dev server once an HTTP request has been fulfilled.
+   */
+  pid: number;
+}
+
+/**
+ * `startDevServer()` may return `null` to opt-out of spawning a dev server for
+ * a given `entrypoint`.
+ */
+export type StartDevServerResult = StartDevServerSuccess | null;
 
 /**
  * Credit to Iain Reid, MIT license.
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
 // eslint-disable-next-line @typescript-eslint/no-namespace
-namespace PackageJson {
+export namespace PackageJson {
   /**
    * An author or contributor
    */
@@ -314,25 +340,4 @@ export interface BuilderFunctions {
     includeFiles?: string;
     excludeFiles?: string;
   };
-}
-
-export interface NowRewrite {
-  source: string;
-  destination: string;
-}
-
-export interface NowRedirect {
-  source: string;
-  destination: string;
-  statusCode?: number;
-}
-
-export interface NowHeader {
-  source: string;
-  headers: NowHeaderKeyValue[];
-}
-
-export interface NowHeaderKeyValue {
-  key: string;
-  value: string;
 }

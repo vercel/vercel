@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "**/*.js",
-      "use": "@now/node",
+      "use": "@vercel/node",
       "config": {
         "functions": {
           "**/*.js": {
@@ -11,16 +11,6 @@
           }
         }
       }
-    }
-  ],
-  "probes": [
-    {
-      "path": "/lighthouse",
-      "mustContain": "lighthouse:RANDOMNESS_PLACEHOLDER"
-    },
-    {
-      "path": "/screenshot",
-      "mustContain": "screenshot:RANDOMNESS_PLACEHOLDER"
     }
   ]
 }

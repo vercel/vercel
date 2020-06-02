@@ -4,6 +4,7 @@ import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import title from 'title';
+import { fileNameSymbol } from '@vercel/client';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
@@ -53,6 +54,8 @@ import { inputRootDirectory } from '../../util/input/input-root-directory';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
+import { readLocalConfig } from '../../util/config/files';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -94,16 +97,13 @@ const printDeploymentStatus = async (
   },
   deployStamp,
   isClipboardEnabled,
-  quiet,
   isFile
 ) => {
   const isProdDeployment = target === 'production';
 
   if (readyState !== 'READY') {
     output.error(
-      `${chalk.red(
-        'Error!'
-      )} Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+      `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
     );
     return 1;
   }
@@ -123,7 +123,10 @@ const printDeploymentStatus = async (
       // but fallback to the first alias in the list
       const mainAlias =
         aliasList.find(
-          alias => !alias.endsWith('.now.sh') && !isWildcardAlias(alias)
+          alias =>
+            !alias.endsWith('.now.sh') &&
+            !alias.endsWith('.vercel.app') &&
+            !isWildcardAlias(alias)
         ) || aliasList[0];
 
       isWildcard = isWildcardAlias(mainAlias);
@@ -142,11 +145,6 @@ const printDeploymentStatus = async (
           isCopiedToClipboard = true;
         })
         .catch(error => output.debug(`Error copying to clipboard: ${error}`));
-    }
-
-    // write to stdout
-    if (quiet) {
-      process.stdout.write(`https://${deploymentUrl}`);
     }
 
     output.print(
@@ -244,13 +242,6 @@ export default async function main(
   const { isFile, path } = pathValidation;
   const autoConfirm = argv['--confirm'] || isFile;
 
-  // build `meta`
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(argv['--meta'])
-  );
-
   // --no-scale
   if (argv['--no-scale']) {
     warn(`The option --no-scale is only supported on Now 1.0 deployments`);
@@ -260,18 +251,147 @@ export default async function main(
   if (argv['--name']) {
     output.print(
       `${prependEmoji(
-        `The ${param('--name')} flag is deprecated (https://zeit.ink/1B)`,
+        `The ${param(
+          '--name'
+        )} option is deprecated (https://vercel.link/name-flag)`,
         emoji('warning')
       )}\n`
     );
   }
 
-  if (localConfig && localConfig.name) {
+  const client = new Client({
+    apiUrl: ctx.apiUrl,
+    token: ctx.authConfig.token,
+    debug: debugEnabled,
+  });
+
+  // retrieve `project` and `org` from .vercel
+  const link = await getLinkedProject(output, client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
+  let newProjectName = null;
+  let rootDirectory = project ? project.rootDirectory : null;
+
+  if (status === 'not_linked') {
+    const shouldStartSetup =
+      autoConfirm ||
+      (await confirm(
+        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        true
+      ));
+
+    if (!shouldStartSetup) {
+      output.print(`Aborted. Project not set up.\n`);
+      return 0;
+    }
+
+    try {
+      org = await selectOrg(
+        output,
+        'Which scope do you want to deploy to?',
+        client,
+        ctx.config.currentTeam,
+        autoConfirm
+      );
+    } catch (err) {
+      if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+        output.error(err.message);
+        return 1;
+      }
+
+      throw err;
+    }
+
+    // We use `localConfig` here to read the name
+    // even though the `vercel.json` file can change
+    // afterwards, this is fine since the property
+    // will be deprecated and can be replaced with
+    // user input.
+    const detectedProjectName = getProjectName({
+      argv,
+      nowConfig: localConfig || {},
+      isFile,
+      paths,
+    });
+
+    const projectOrNewProjectName = await inputProject(
+      output,
+      client,
+      org,
+      detectedProjectName,
+      autoConfirm
+    );
+
+    if (typeof projectOrNewProjectName === 'string') {
+      newProjectName = projectOrNewProjectName;
+      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+    } else {
+      project = projectOrNewProjectName;
+      rootDirectory = project.rootDirectory;
+
+      // we can already link the project
+      await linkFolderToProject(
+        output,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug
+      );
+      status = 'linked';
+    }
+  }
+
+  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+
+  if (
+    rootDirectory &&
+    (await validateRootDirectory(
+      output,
+      path,
+      sourcePath,
+      project
+        ? `To change your project settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
+        : ''
+    )) === false
+  ) {
+    return 1;
+  }
+
+  // If Root Directory is used we'll try to read the config
+  // from there instead and use it if it exists.
+  if (rootDirectory) {
+    const rootDirectoryConfig = readLocalConfig(sourcePath);
+
+    if (rootDirectoryConfig) {
+      debug(`Read local config from root directory (${rootDirectory})`);
+      localConfig = rootDirectoryConfig;
+    } else if (localConfig) {
+      output.print(
+        `${prependEmoji(
+          `The ${highlight(
+            localConfig[fileNameSymbol]
+          )} file should be inside of the provided root directory.`,
+          emoji('warning')
+        )}\n`
+      );
+    }
+  }
+
+  localConfig = localConfig || {};
+
+  if (localConfig.name) {
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
-          'now.json'
-        )} is deprecated (https://zeit.ink/5F)`,
+          localConfig[fileNameSymbol]
+        )} is deprecated (https://vercel.link/name-prop)`,
         emoji('warning')
       )}\n`
     );
@@ -287,7 +407,7 @@ export default async function main(
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
     error(
       `The ${code('env')} property in ${highlight(
-        'now.json'
+        localConfig[fileNameSymbol]
       )} needs to be an object`
     );
     return 1;
@@ -297,7 +417,7 @@ export default async function main(
     if (!isObject(localConfig.build)) {
       error(
         `The ${code('build')} property in ${highlight(
-          'now.json'
+          localConfig[fileNameSymbol]
         )} needs to be an object`
       );
       return 1;
@@ -309,21 +429,28 @@ export default async function main(
     ) {
       error(
         `The ${code('build.env')} property in ${highlight(
-          'now.json'
+          localConfig[fileNameSymbol]
         )} needs to be an object`
       );
       return 1;
     }
   }
 
-  // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
+  // build `meta`
+  const meta = Object.assign(
+    {},
+    parseMeta(localConfig.meta),
+    parseMeta(argv['--meta'])
+  );
+
+  // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
     parseEnv(localConfig.env),
     parseEnv(argv['--env'])
   );
 
-  // Merge build env out of  `build.env` from now.json, and `--build-env` args
+  // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
@@ -373,94 +500,6 @@ export default async function main(
     target = 'production';
   }
 
-  const client = new Client({
-    apiUrl: ctx.apiUrl,
-    token: ctx.authConfig.token,
-    debug: debugEnabled,
-  });
-
-  // retrieve `project` and `org` from .now
-  const link = await getLinkedProject(output, client, path);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  }
-
-  let { org, project, status } = link;
-  let newProjectName = null;
-  let rootDirectory = project ? project.rootDirectory : null;
-
-  if (status === 'not_linked') {
-    const shouldStartSetup =
-      autoConfirm ||
-      (await confirm(
-        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-        true
-      ));
-
-    if (!shouldStartSetup) {
-      output.print(`Aborted. Project not set up.\n`);
-      return 0;
-    }
-
-    org = await selectOrg(
-      'Which scope do you want to deploy to?',
-      client,
-      ctx.config.currentTeam,
-      autoConfirm
-    );
-
-    const detectedProjectName = getProjectName({
-      argv,
-      nowConfig: localConfig,
-      isFile,
-      paths,
-    });
-
-    const projectOrNewProjectName = await inputProject(
-      output,
-      client,
-      org,
-      detectedProjectName,
-      autoConfirm
-    );
-
-    if (typeof projectOrNewProjectName === 'string') {
-      newProjectName = projectOrNewProjectName;
-    } else {
-      project = projectOrNewProjectName;
-
-      // we can already link the project
-      await linkFolderToProject(
-        output,
-        path,
-        {
-          projectId: project.id,
-          orgId: org.id,
-        },
-        project.name,
-        org.slug
-      );
-      status = 'linked';
-    }
-
-    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
-  }
-
-  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
-
-  if (
-    rootDirectory &&
-    (await validateRootDirectory(
-      output,
-      path,
-      sourcePath,
-      project ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings` : ''
-    )) === false
-  ) {
-    return 1;
-  }
-
   const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   let deployStamp = stamp();
@@ -472,6 +511,7 @@ export default async function main(
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
+      withCache: argv['--with-cache'],
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       isFile,
@@ -535,9 +575,17 @@ export default async function main(
 
     if (deployment instanceof Error) {
       output.error(
-        `${deployment.message ||
-          'An unexpected error occurred while deploying your project'} (http://zeit.ink/P4)`
+        deployment.message ||
+          'An unexpected error occurred while deploying your project',
+        null,
+        'https://vercel.link/help',
+        'Contact Support'
       );
+      return 1;
+    }
+
+    if (deployment.readyState === 'CANCELED') {
+      output.print('The deployment has been canceled.\n');
       return 1;
     }
 
@@ -595,11 +643,11 @@ export default async function main(
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment);
+        handleCreateDeployError(output, deployment, localConfig);
         return 1;
       }
 
-      handleCreateDeployError(output, purchase);
+      handleCreateDeployError(output, purchase, localConfig);
       return 1;
     }
 
@@ -619,15 +667,20 @@ export default async function main(
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, err);
+      handleCreateDeployError(output, err, localConfig);
       return 1;
     }
 
     if (err instanceof BuildError) {
       output.error('Build failed');
       output.error(
-        `Check your logs at ${now.url}/_logs or run ${code(
-          `now logs ${now.url}`
+        `Check your logs at https://${now.url}/_logs or run ${getCommandName(
+          `logs ${now.url}`,
+          {
+            // Backticks are interpreted as part of the URL, causing CMD+Click
+            // behavior to fail in editors like VSCode.
+            backticks: false,
+          }
         )}`
       );
 
@@ -656,12 +709,11 @@ export default async function main(
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
-    quiet,
     isFile
   );
 }
 
-function handleCreateDeployError(output, error) {
+function handleCreateDeployError(output, error, localConfig) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
     return 1;
@@ -690,8 +742,8 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} is not allowed in ${highlight(
-          'now.json'
-        )} when using Now 2.0 – please remove it.`
+          localConfig[fileNameSymbol]
+        )} – please remove it.`
       );
 
       if (prop === 'build.env' || prop === 'builds.env') {
@@ -715,18 +767,18 @@ function handleCreateDeployError(output, error) {
 
       output.error(
         `The property ${code(prop)} in ${highlight(
-          'now.json'
+          localConfig[fileNameSymbol]
         )} can only be of type ${code(title(params.type))}.`
       );
 
       return 1;
     }
 
-    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
+    const link = 'https://vercel.com/docs/configuration';
 
     output.error(
       `Failed to validate ${highlight(
-        'now.json'
+        localConfig[fileNameSymbol]
       )}: ${message}\nDocumentation: ${link}`
     );
 
@@ -753,7 +805,9 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
-    output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
+    output.note(
+      `Run ${getCommandName('upgrade')} to increase your builds limit.`
+    );
     return 1;
   }
   if (

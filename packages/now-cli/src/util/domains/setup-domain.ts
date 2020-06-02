@@ -18,22 +18,14 @@ export default async function setupDomain(
   contextName: string
 ) {
   const aliasDomain = extractDomain(alias);
-  const parsedDomain = psl.parse(aliasDomain);
-  if (parsedDomain.error) {
-    return new ERRORS.InvalidDomain(alias, parsedDomain.error.message);
-  }
-  if (!parsedDomain.domain) {
-    return new ERRORS.InvalidDomain(alias);
-  }
-
-  const { domain } = parsedDomain;
-  output.debug(`Trying to fetch domain ${domain} by name`);
-  const info = await maybeGetDomainByName(client, contextName, domain);
+  output.debug(`Trying to fetch domain ${aliasDomain} by name`);
+  const info = await maybeGetDomainByName(client, contextName, aliasDomain);
   if (info instanceof ERRORS.DomainPermissionDenied) {
     return info;
   }
 
   if (info) {
+    const { name: domain } = info;
     output.debug(`Domain ${domain} found for the given context`);
     if (!info.verified || (!info.nsVerifiedAt && isWildcardAlias(alias))) {
       output.debug(
@@ -53,8 +45,8 @@ export default async function setupDomain(
           domain,
           nsVerification: {
             intendedNameservers: verificationResult.intendedNameservers,
-            nameservers: verificationResult.nameservers
-          }
+            nameservers: verificationResult.nameservers,
+          },
         });
       }
 
@@ -68,7 +60,9 @@ export default async function setupDomain(
     return info;
   }
 
-  output.debug(`The domain ${domain} was not found, trying to purchase it`);
+  output.debug(
+    `The domain ${aliasDomain} was not found, trying to purchase it`
+  );
   const purchased = await purchaseDomainIfAvailable(
     output,
     client,
@@ -81,8 +75,18 @@ export default async function setupDomain(
 
   if (!purchased) {
     output.debug(
-      `Domain ${domain} is not available to be purchased. Trying to add it`
+      `Domain ${aliasDomain} is not available to be purchased. Trying to add it`
     );
+    const parsedDomain = psl.parse(aliasDomain);
+    if (parsedDomain.error) {
+      return new ERRORS.InvalidDomain(alias, parsedDomain.error.message);
+    }
+    if (!parsedDomain.domain) {
+      return new ERRORS.InvalidDomain(alias);
+    }
+
+    const { domain } = parsedDomain;
+    output.debug(`Adding ${domain}`);
     const addResult = await addDomain(client, domain, contextName);
     if (addResult instanceof NowError) {
       return addResult;
@@ -109,12 +113,13 @@ export default async function setupDomain(
     return addResult;
   }
 
-  output.debug(`The domain ${domain} was successfuly purchased`);
+  output.debug(`The domain ${aliasDomain} was successfuly purchased`);
   const purchasedDomain = (await maybeGetDomainByName(
     client,
     contextName,
-    domain
+    aliasDomain
   )) as Domain;
+  const { name: domain } = purchasedDomain;
   if (!purchasedDomain.verified) {
     const verificationResult = await verifyDomain(client, domain, contextName);
     if (verificationResult instanceof ERRORS.DomainVerificationFailed) {
@@ -125,7 +130,7 @@ export default async function setupDomain(
         domain: verificationResult.meta.domain,
         nsVerification: verificationResult.meta.nsVerification,
         txtVerification: verificationResult.meta.txtVerification,
-        purchased: true
+        purchased: true,
       });
     }
 

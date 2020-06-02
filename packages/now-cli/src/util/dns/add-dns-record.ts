@@ -4,13 +4,13 @@ import {
   DNSPermissionDenied,
   DNSInvalidPort,
   DNSInvalidType,
-  DNSConflictingRecord
+  DNSConflictingRecord,
 } from '../errors-ts';
 import { DNSRecordData } from '../../types';
 
 type Response = {
   uid: string;
-}
+};
 
 export default async function addDNSRecord(
   client: Client,
@@ -18,10 +18,13 @@ export default async function addDNSRecord(
   recordData: DNSRecordData
 ) {
   try {
-    const record = await client.fetch<Response>(`/v3/domains/${domain}/records`, {
-      body: recordData,
-      method: 'POST'
-    });
+    const record = await client.fetch<Response>(
+      `/v3/domains/${encodeURIComponent(domain)}/records`,
+      {
+        body: recordData,
+        method: 'POST',
+      }
+    );
     return record;
   } catch (error) {
     if (error.status === 400 && error.code === 'invalid_type') {

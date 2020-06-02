@@ -4,7 +4,7 @@ const {
   packAndDeploy,
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment');
-const { glob, detectBuilders, detectRoutes } = require('../');
+const { glob, detectBuilders } = require('../');
 
 jest.setTimeout(4 * 60 * 1000);
 
@@ -27,7 +27,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   }
 
   // eslint-disable-next-line no-loop-func
-  it(`should build ${fixture}`, async () => {
+  it(`Should build "${fixture}"`, async () => {
     await expect(
       testDeployment(
         { builderUrl, buildUtilsUrl },
@@ -53,7 +53,7 @@ for (const builder of buildersToTestWith) {
     // don't run all foreign fixtures, just some
     if (['01-cowsay', '01-cache-headers', '03-env-vars'].includes(fixture)) {
       // eslint-disable-next-line no-loop-func
-      it(`should build ${builder}/${fixture}`, async () => {
+      it(`Should build "${builder}/${fixture}"`, async () => {
         await expect(
           testDeployment(
             { builderUrl, buildUtilsUrl },
@@ -110,10 +110,10 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
     },
   ];
 
-  const { builders } = await detectBuilders(files, pkg);
-  const { defaultRoutes } = await detectRoutes(files, builders);
+  const { builders, defaultRoutes } = await detectBuilders(files, pkg);
 
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };
+
   await fs.writeFile(
     path.join(fixture, 'now.json'),
     JSON.stringify(nowConfig, null, 2)
@@ -126,7 +126,7 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
   expect(deployment).toBeDefined();
 });
 
-it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
+it('Test `detectBuilders` with `index` files', async () => {
   const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
   const pkg = await fs.readJSON(path.join(fixture, 'package.json'));
   const fileList = await glob('**', fixture);
@@ -192,8 +192,7 @@ it('Test `detectBuilders` and `detectRoutes` with `index` files', async () => {
     },
   ];
 
-  const { builders } = await detectBuilders(files, pkg);
-  const { defaultRoutes } = await detectRoutes(files, builders);
+  const { builders, defaultRoutes } = await detectBuilders(files, pkg);
 
   const nowConfig = { builds: builders, routes: defaultRoutes, probes };
   await fs.writeFile(

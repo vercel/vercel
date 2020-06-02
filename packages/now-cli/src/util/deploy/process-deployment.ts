@@ -5,8 +5,7 @@ import {
   createDeployment,
   DeploymentOptions,
   NowClientOptions,
-} from 'now-client';
-import wait from '../output/wait';
+} from '@vercel/client';
 import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';
@@ -35,8 +34,8 @@ function printInspectUrl(
   const deploymentShortId = q.pop();
   const projectName = q.join('-');
 
-  const inspectUrl = `https://zeit.co/${orgSlug}/${projectName}/${deploymentShortId}${
-    apex !== 'now.sh' ? `/${apex}` : ''
+  const inspectUrl = `https://vercel.com/${orgSlug}/${projectName}/${deploymentShortId}${
+    apex !== 'now.sh' && apex !== 'vercel.app' ? `/${apex}` : ''
   }`;
 
   output.print(
@@ -67,6 +66,7 @@ export default async function processDeployment({
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
+  withCache?: boolean;
   org: Org;
   projectName: string;
   isSettingUpProject: boolean;
@@ -83,7 +83,9 @@ export default async function processDeployment({
     requestBody,
     deployStamp,
     force,
+    withCache,
     nowConfig,
+    quiet,
   } = args;
 
   const { debug } = output;
@@ -99,6 +101,7 @@ export default async function processDeployment({
     userAgent: ua,
     path: paths[0],
     force,
+    withCache,
     skipAutoDetectionConfirmation,
   };
 
@@ -106,9 +109,9 @@ export default async function processDeployment({
   let buildSpinner = null;
   let deploySpinner = null;
 
-  let deployingSpinner = wait(
+  const deployingSpinner = output.spinner(
     isSettingUpProject
-      ? `Setting up project`
+      ? 'Setting up project'
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
     0
   );
@@ -117,142 +120,176 @@ export default async function processDeployment({
   // the deployment is done
   const indications = [];
 
-  for await (const event of createDeployment(
-    nowClientOptions,
-    requestBody,
-    nowConfig
-  )) {
-    if (event.type === 'hashes-calculated') {
-      hashes = event.payload;
-    }
-
-    if (['tip', 'notice', 'warning'].includes(event.type)) {
-      indications.push(event);
-    }
-
-    if (event.type === 'file-count') {
-      debug(
-        `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
-      );
-
-      const missingSize = event.payload.missing
-        .map((sha: string) => event.payload.total.get(sha).data.length)
-        .reduce((a: number, b: number) => a + b, 0);
-
-      bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
-        width: 20,
-        complete: '=',
-        incomplete: '',
-        total: missingSize,
-        clear: true,
-      });
-    }
-
-    if (event.type === 'file-uploaded') {
-      debug(
-        `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-          event.payload.file.data.length
-        )})`
-      );
-
-      if (bar) {
-        bar.tick(event.payload.file.data.length);
+  try {
+    for await (const event of createDeployment(
+      nowClientOptions,
+      requestBody,
+      nowConfig
+    )) {
+      if (event.type === 'hashes-calculated') {
+        hashes = event.payload;
       }
-    }
 
-    if (event.type === 'created') {
-      if (deployingSpinner) {
+      if (['tip', 'notice', 'warning'].includes(event.type)) {
+        indications.push(event);
+      }
+
+      if (event.type === 'file-count') {
+        debug(
+          `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
+        );
+
+        const missingSize = event.payload.missing
+          .map((sha: string) => event.payload.total.get(sha).data.length)
+          .reduce((a: number, b: number) => a + b, 0);
+
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+        if (buildSpinner) {
+          buildSpinner();
+        }
+        if (deploySpinner) {
+          deploySpinner();
+        }
         deployingSpinner();
+        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
+          width: 20,
+          complete: '=',
+          incomplete: '',
+          total: missingSize,
+          clear: true,
+        });
       }
 
-      now._host = event.payload.url;
+      if (event.type === 'file-uploaded') {
+        debug(
+          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
+            event.payload.file.data.length
+          )})`
+        );
 
-      await linkFolderToProject(
-        output,
-        cwd || paths[0],
-        {
-          orgId: org.id,
-          projectId: event.payload.projectId,
-        },
-        projectName,
-        org.slug
-      );
-
-      printInspectUrl(output, event.payload.url, deployStamp, org.slug);
-
-      if (queuedSpinner === null) {
-        queuedSpinner =
-          event.payload.readyState === 'QUEUED'
-            ? wait('Queued', 0)
-            : wait('Building', 0);
-      }
-    }
-
-    if (event.type === 'building') {
-      if (queuedSpinner) {
-        queuedSpinner();
+        if (bar) {
+          bar.tick(event.payload.file.data.length);
+        }
       }
 
-      if (buildSpinner === null) {
-        buildSpinner = wait('Building', 0);
-      }
-    }
-
-    if (event.type === 'ready') {
-      if (queuedSpinner) {
-        queuedSpinner();
-      }
-      if (buildSpinner) {
-        buildSpinner();
-      }
-
-      deploySpinner = wait('Completing', 0);
-    }
-
-    // Handle error events
-    if (event.type === 'error') {
-      if (queuedSpinner) {
-        queuedSpinner();
-      }
-      if (buildSpinner) {
-        buildSpinner();
-      }
-      if (deploySpinner) {
-        deploySpinner();
-      }
-      if (deployingSpinner) {
+      if (event.type === 'created') {
         deployingSpinner();
+
+        now._host = event.payload.url;
+
+        await linkFolderToProject(
+          output,
+          cwd || paths[0],
+          {
+            orgId: org.id,
+            projectId: event.payload.projectId,
+          },
+          projectName,
+          org.slug
+        );
+
+        now.url = event.payload.url;
+
+        printInspectUrl(output, event.payload.url, deployStamp, org.slug);
+
+        if (quiet) {
+          process.stdout.write(`https://${event.payload.url}`);
+        }
+
+        if (queuedSpinner === null) {
+          queuedSpinner =
+            event.payload.readyState === 'QUEUED'
+              ? output.spinner('Queued', 0)
+              : output.spinner('Building', 0);
+        }
       }
 
-      const error = await now.handleDeploymentError(event.payload, {
-        hashes,
-        env,
-      });
+      if (event.type === 'building') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
 
-      if (error.code === 'missing_project_settings') {
-        return error;
+        if (buildSpinner === null) {
+          buildSpinner = output.spinner('Building', 0);
+        }
       }
 
-      throw error;
-    }
+      if (event.type === 'canceled') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+        if (buildSpinner) {
+          buildSpinner();
+        }
+        return event.payload;
+      }
 
-    // Handle alias-assigned event
-    if (event.type === 'alias-assigned') {
-      if (queuedSpinner) {
-        queuedSpinner();
+      if (event.type === 'ready') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+        if (buildSpinner) {
+          buildSpinner();
+        }
+
+        deploySpinner = output.spinner('Completing', 0);
       }
-      if (buildSpinner) {
-        buildSpinner();
-      }
-      if (deploySpinner) {
-        deploySpinner();
-      }
-      if (deployingSpinner) {
+
+      // Handle error events
+      if (event.type === 'error') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+        if (buildSpinner) {
+          buildSpinner();
+        }
+        if (deploySpinner) {
+          deploySpinner();
+        }
         deployingSpinner();
+
+        const error = await now.handleDeploymentError(event.payload, {
+          hashes,
+          env,
+        });
+
+        if (error.code === 'missing_project_settings') {
+          return error;
+        }
+
+        throw error;
       }
 
-      event.payload.indications = indications;
-      return event.payload;
+      // Handle alias-assigned event
+      if (event.type === 'alias-assigned') {
+        if (queuedSpinner) {
+          queuedSpinner();
+        }
+        if (buildSpinner) {
+          buildSpinner();
+        }
+        if (deploySpinner) {
+          deploySpinner();
+        }
+        deployingSpinner();
+
+        event.payload.indications = indications;
+        return event.payload;
+      }
     }
+  } catch (err) {
+    if (queuedSpinner) {
+      queuedSpinner();
+    }
+    if (buildSpinner) {
+      buildSpinner();
+    }
+    if (deploySpinner) {
+      deploySpinner();
+    }
+    deployingSpinner();
+    throw err;
   }
 }

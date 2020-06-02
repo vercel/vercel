@@ -5,7 +5,6 @@ import { NowContext, User, Team } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
 import getScope from '../../util/get-scope';
 import withSpinner from '../../util/with-spinner';
 import moveOutDomain from '../../util/domains/move-out-domain';
@@ -16,6 +15,7 @@ import getDomainAliases from '../../util/alias/get-domain-aliases';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import promptBool from '../../util/input/prompt-bool';
 import getTeams from '../../util/get-teams';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -30,7 +30,7 @@ export default async function move(
 ) {
   const {
     authConfig: { token },
-    config
+    config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
@@ -42,7 +42,7 @@ export default async function move(
   try {
     ({ contextName, user } = await getScope(client));
   } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
     }
@@ -53,7 +53,9 @@ export default async function move(
   const { domainName, destination } = await getArgs(args);
   if (!isRootDomain(domainName)) {
     output.error(
-      `Invalid domain name "${domainName}". Run ${cmd('now domains --help')}`
+      `Invalid domain name "${domainName}". Run ${getCommandName(
+        `domains --help`
+      )}`
     );
     return 1;
   }
@@ -61,7 +63,7 @@ export default async function move(
   const domain = await getDomainByName(client, contextName, domainName);
   if (domain instanceof ERRORS.DomainNotFound) {
     output.error(`Domain not found under ${chalk.bold(contextName)}`);
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
   if (domain instanceof ERRORS.DomainPermissionDenied) {
@@ -100,7 +102,7 @@ export default async function move(
       output.warn(
         `This domain's ${chalk.bold(
           plural('alias', aliases.length, true)
-        )} will be removed. Run ${chalk.dim('`now alias ls`')} to list them.`
+        )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`
       );
       if (
         !(await promptBool(
@@ -115,12 +117,7 @@ export default async function move(
 
   const context = contextName;
   const moveTokenResult = await withSpinner('Moving', () => {
-    return moveOutDomain(
-      client,
-      context,
-      domainName,
-      matchId || destination
-    );
+    return moveOutDomain(client, context, domainName, matchId || destination);
   });
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
     const { suffix, pendingAsyncPurchase } = moveTokenResult.meta;
@@ -145,7 +142,7 @@ export default async function move(
   }
   if (moveTokenResult instanceof ERRORS.DomainNotFound) {
     output.error(`Domain not found under ${chalk.bold(contextName)}`);
-    output.log(`Run ${cmd('now domains ls')} to see your domains.`);
+    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
   if (moveTokenResult instanceof ERRORS.DomainPermissionDenied) {
@@ -184,14 +181,14 @@ async function getArgs(args: string[]) {
   if (!domainName) {
     domainName = await textInput({
       label: `- Domain name: `,
-      validateValue: isRootDomain
+      validateValue: isRootDomain,
     });
   }
 
   if (!destination) {
     destination = await textInput({
       label: `- Destination: `,
-      validateValue: (v: string) => Boolean(v && v.length > 0)
+      validateValue: (v: string) => Boolean(v && v.length > 0),
     });
   }
 
