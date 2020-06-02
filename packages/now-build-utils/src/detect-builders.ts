@@ -912,8 +912,9 @@ function getRouteResult(
   const errorRoutes: Route[] = [];
   const isNextjs =
     frontendBuilder &&
-    frontendBuilder.config &&
-    frontendBuilder.config.framework === 'nextjs';
+    ((frontendBuilder.use && frontendBuilder.use.startsWith('@vercel/next')) ||
+      (frontendBuilder.config &&
+        frontendBuilder.config.framework === 'nextjs'));
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -956,16 +957,6 @@ function getRouteResult(
         status: 404,
         continue: true,
       });
-
-      if (!isNextjs) {
-        // Exclude Next.js to avoid overriding custom error page
-        // https://nextjs.org/docs/advanced-features/custom-error-page
-        errorRoutes.push({
-          status: 404,
-          src: '^/(?!.*api).*$',
-          dest: options.cleanUrls ? '/404' : '/404.html',
-        });
-      }
     } else {
       defaultRoutes.push(...apiRoutes);
 
@@ -987,6 +978,17 @@ function getRouteResult(
     defaultRoutes.push({
       src: '/(.*)',
       dest: `/${outputDirectory}/$1`,
+    });
+  }
+
+  if (options.featHandleMiss && !isNextjs) {
+    //console.log({frontendBuilder, outputDirectory})
+    // Exclude Next.js to avoid overriding custom error page
+    // https://nextjs.org/docs/advanced-features/custom-error-page
+    errorRoutes.push({
+      status: 404,
+      src: '^/(?!.*api).*$',
+      dest: options.cleanUrls ? '/404' : '/404.html',
     });
   }
 

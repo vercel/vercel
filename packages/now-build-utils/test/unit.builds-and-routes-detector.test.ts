@@ -924,7 +924,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(defaultRoutes).toStrictEqual([]);
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([]);
-    expect(errorRoutes).toStrictEqual([]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('no package.json + public', async () => {
@@ -1045,8 +1046,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
-    expect(errorRoutes!.length).toBe(1);
-    expect((errorRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([]);
   });
 
   it('api + next + raw static', async () => {
@@ -1075,8 +1075,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
-    expect(errorRoutes!.length).toBe(1);
-    expect((errorRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([]);
   });
 
   it('api + raw static', async () => {
@@ -1187,6 +1186,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       featHandleMiss,
     });
     expect(builders![0].src).toBe('public/**/*');
+    expect(builders![0].use).toBe('@vercel/static');
     expect(builders!.length).toBe(1);
     expect(errorRoutes!.length).toBe(1);
     expect((errorRoutes![0] as Source).status).toBe(404);
