@@ -69,6 +69,7 @@ import {
   stringMap,
   syncEnvVars,
   validateEntrypoint,
+  handleRestrictedOutputNames,
 } from './utils';
 
 interface BuildParamsMeta {
@@ -518,6 +519,8 @@ export const build = async ({
         }
       });
 
+    const restrictedNameRewrites = handleRestrictedOutputNames(output);
+
     return {
       output,
       routes: [
@@ -543,6 +546,9 @@ export const build = async ({
         // folder
         { handle: 'filesystem' },
 
+        // map restricted outputs to their safe output names
+        ...restrictedNameRewrites,
+
         // These need to come before handle: miss or else they are grouped
         // with that routing section
         ...rewrites,
@@ -561,6 +567,11 @@ export const build = async ({
           check: true,
           dest: '$0',
         },
+
+        { handle: 'rewrite' },
+
+        // map restricted outputs to their safe output names
+        ...restrictedNameRewrites,
 
         // Dynamic routes
         // TODO: do we want to do this?: ...dynamicRoutes,
@@ -1570,16 +1581,20 @@ export const build = async ({
     }
   }
 
+  const output = {
+    ...publicDirectoryFiles,
+    ...lambdas,
+    // Prerenders may override Lambdas -- this is an intentional behavior.
+    ...prerenders,
+    ...staticPages,
+    ...staticFiles,
+    ...staticDirectoryFiles,
+  };
+
+  const restrictedNameRewrites = handleRestrictedOutputNames(output);
+
   return {
-    output: {
-      ...publicDirectoryFiles,
-      ...lambdas,
-      // Prerenders may override Lambdas -- this is an intentional behavior.
-      ...prerenders,
-      ...staticPages,
-      ...staticFiles,
-      ...staticDirectoryFiles,
-    },
+    output,
     /*
       Desired routes order
       - Runtime headers
@@ -1611,6 +1626,9 @@ export const build = async ({
       // folder
       { handle: 'filesystem' },
 
+      // map restricted outputs to their safe output names
+      ...restrictedNameRewrites,
+
       // map pages to their lambda
       ...pageLambdaRoutes,
 
@@ -1641,6 +1659,9 @@ export const build = async ({
 
       // /_next/data routes for getServerProps/getStaticProps pages
       ...dataRoutes,
+
+      // map restricted outputs to their safe output names
+      ...restrictedNameRewrites,
 
       // re-check page routes to map them to the lambda
       ...pageLambdaRoutes,

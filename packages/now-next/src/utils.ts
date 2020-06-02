@@ -957,6 +957,29 @@ async function getSourceFilePathFromPage({
   return path.join('pages', page);
 }
 
+const restrictedOutputNames = new Set<string>(
+  Object.getOwnPropertyNames(({} as any).__proto__)
+);
+
+export function handleRestrictedOutputNames(outputs: Files): Route[] {
+  const restrictedNameRewrites: Route[] = [];
+
+  for (const outputName of Object.keys(outputs)) {
+    if (restrictedOutputNames.has(outputName)) {
+      outputs[`__${outputName}`] = outputs[outputName];
+      delete outputs[outputName];
+
+      restrictedNameRewrites.push({
+        src: `^/${outputName}$`,
+        dest: `/__${outputName}`,
+        check: true,
+      });
+    }
+  }
+
+  return restrictedNameRewrites;
+}
+
 export {
   excludeFiles,
   validateEntrypoint,
