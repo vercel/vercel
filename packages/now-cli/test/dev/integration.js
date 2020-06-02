@@ -1350,12 +1350,8 @@ test(
 
 test(
   '[vercel dev] Should work with nested `tsconfig.json` files',
-  testFixtureStdio(
-    'nested-tsconfig',
-    async testPath => {
-      await testPath(200, `/`, /Nested tsconfig.json test page/);
-      await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
-    },
-    { skipDeploy: true }
-  )
+  testFixtureStdio('nested-tsconfig', async testPath => {
+    await testPath(200, `/`, /Nested tsconfig.json test page/);
+    await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
+  })
 );
