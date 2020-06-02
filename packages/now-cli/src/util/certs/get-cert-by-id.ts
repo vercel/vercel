@@ -1,13 +1,8 @@
 import { Cert } from '../../types';
-import { Output } from '../output/create-output';
 import Client from '../client';
 import * as ERRORS from '../errors-ts';
 
-export default async function getCertById(
-  output: Output,
-  client: Client,
-  id: string
-) {
+export default async function getCertById(client: Client, id: string) {
   try {
     return await client.fetch<Cert>(`/v3/now/certs/${id}`);
   } catch (error) {

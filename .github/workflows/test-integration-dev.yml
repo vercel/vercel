@@ -11,7 +11,7 @@ on:
 jobs:
   test:
     name: Dev
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -31,3 +31,6 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: yarn test-integration-dev --clean false
+        env:
+          VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
+          VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}

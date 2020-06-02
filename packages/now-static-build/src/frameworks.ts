@@ -1,12 +1,12 @@
 import { readdir, stat, readFile, unlink } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
-import { readConfigFile } from '@now/build-utils';
-import { Route } from '@now/routing-utils';
+import { readConfigFile } from '@vercel/build-utils';
+import { Route } from '@vercel/routing-utils';
 import NowFrameworks, {
   Framework as NowFramework,
   SettingValue,
-} from '@now/frameworks';
+} from '@vercel/frameworks';
 
 const readirPromise = promisify(readdir);
 const readFilePromise = promisify(readFile);
@@ -198,6 +198,22 @@ const frameworkList: Framework[] = [
     getOutputDirName: async () => 'dist/static',
   },
   {
+    name: 'Ionic Angular',
+    slug: 'ionic-angular',
+    dependency: '@ionic/angular',
+    buildCommand: 'ng build',
+    getOutputDirName: async () => 'www',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Angular',
     slug: 'angular',
     dependency: '@angular/cli',
@@ -259,6 +275,37 @@ const frameworkList: Framework[] = [
       },
       {
         src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
+    name: 'Ionic React',
+    slug: 'ionic-react',
+    dependency: '@ionic/react',
+    buildCommand: 'react-scripts build',
+    getOutputDirName: async () => 'build',
+    defaultRoutes: [
+      {
+        src: '/static/(.*)',
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+      {
+        src: '/sockjs-node/(.*)',
+        dest: '/sockjs-node/$1',
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        headers: { 'cache-control': 's-maxage=0' },
         dest: '/index.html',
       },
     ],

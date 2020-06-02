@@ -3,7 +3,7 @@
     "name": "Next.js",
     "slug": "nextjs",
     "demo": "https://nextjs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/next.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg",
     "tagline": "Next.js makes you productive with React instantly — whether you want to build static or dynamic sites. ",
     "description": "A Next.js app and a Serverless Function API.",
     "website": "https://nextjs.org",
@@ -31,7 +31,7 @@
     "name": "Gatsby",
     "slug": "gatsby",
     "demo": "https://gatsby.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gatsby.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gatsby.svg",
     "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
     "description": "A Gatsby app, using the default starter theme and a Serverless Function API.",
     "website": "https://gatsbyjs.org",
@@ -59,7 +59,7 @@
     "name": "Hexo",
     "slug": "hexo",
     "demo": "https://hexo.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hexo.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hexo.svg",
     "tagline": "Hexo is a fast, simple & powerful blog framework powered by Node.js.",
     "description": "A Hexo site, created with the Hexo CLI.",
     "website": "https://hexo.io/",
@@ -87,7 +87,7 @@
     "name": "Eleventy",
     "slug": "eleventy",
     "demo": "https://eleventy.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/eleventy.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/eleventy.svg",
     "tagline": "11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.",
     "description": "An Eleventy site, created with npm init.",
     "website": "https://www.11ty.dev/",
@@ -114,8 +114,8 @@
   {
     "name": "Docusaurus 2",
     "slug": "docusaurus-2",
-    "demo": "https://docusaurus.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
+    "demo": "https://docusaurus-2.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg",
     "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
     "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
     "website": "https://v2.docusaurus.io",
@@ -143,7 +143,7 @@
     "name": "Docusaurus 1",
     "slug": "docusaurus",
     "demo": "https://docusaurus.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/docusaurus.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg",
     "tagline": "Docusaurus makes it easy to maintain Open Source documentation websites.",
     "description": "A static Docusaurus site that makes it easy to maintain OSS documentation.",
     "website": "https://docusaurus.io/",
@@ -171,7 +171,7 @@
     "name": "Preact",
     "slug": "preact",
     "demo": "https://preact.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/preact.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/preact.svg",
     "tagline": "Preact is a fast 3kB alternative to React with the same modern API.",
     "description": "A Preact app, created with the Preact CLI.",
     "website": "https://preactjs.com",
@@ -199,7 +199,7 @@
     "name": "Dojo",
     "slug": "dojo",
     "demo": "https://dojo.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/dojo.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/dojo.png",
     "tagline": "Dojo is a modern progressive, TypeScript first framework.",
     "description": "A Dojo app, created with the Dojo CLI's cli-create-app command.",
     "website": "https://dojo.io",
@@ -230,7 +230,7 @@
     "name": "Ember",
     "slug": "ember",
     "demo": "https://ember.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ember.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ember.svg",
     "tagline": "Ember.js helps webapp developers be more productive out of the box.",
     "description": "An Ember app, created with the Ember CLI.",
     "website": "https://emberjs.com/",
@@ -258,7 +258,7 @@
     "name": "Vue.js",
     "slug": "vue",
     "demo": "https://vue.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/vue.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/vue.svg",
     "tagline": "Vue.js is a versatile JavaScript framework that is as approachable as it is performant.",
     "description": "A Vue.js app, created with the Vue CLI.",
     "website": "https://vuejs.org",
@@ -286,6 +286,7 @@
     "name": "Scully",
     "slug": "scully",
     "demo": "https://scully.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/scullyio-logo.png",
     "tagline": "Scully is a static site generator for Angular.",
     "description": "The Static Site Generator for Angular apps.",
     "website": "https://github.com/scullyio/scully",
@@ -310,10 +311,38 @@
     }
   },
   {
+    "name": "Ionic Angular",
+    "slug": "ionic-angular",
+    "demo": "https://ionic-angular.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ionic.svg",
+    "tagline": "Ionic Angular allows you to build mobile PWAs with Angular and the Ionic Framework.",
+    "description": "An Ionic Angular site, created with the Ionic CLI.",
+    "website": "https://ionicframework.com",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@ionic\\/angular\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `ng build`"
+      },
+      "devCommand": {
+        "value": "ng start"
+      },
+      "outputDirectory": {
+        "value": "www"
+      }
+    }
+  },
+  {
     "name": "Angular",
     "slug": "angular",
     "demo": "https://angular.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/angular.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/angular.svg",
     "tagline": "Angular is a TypeScript-based cross-platform framework from Google.",
     "description": "An Angular app, created with the Angular CLI.",
     "website": "https://angular.io",
@@ -341,7 +370,7 @@
     "name": "Polymer",
     "slug": "polymer",
     "demo": "https://polymer.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/polymer.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/polymer.svg",
     "tagline": "Polymer is an open-source webapps library from Google, for building using Web Components.",
     "description": "A Polymer app, created with the Polymer CLI.",
     "website": "https://www.polymer-project.org/",
@@ -369,7 +398,7 @@
     "name": "Svelte",
     "slug": "svelte",
     "demo": "https://svelte.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/svelte.svg",
     "tagline": "Svelte lets you write high performance reactive apps with significantly less boilerplate. ",
     "description": "A Svelte app, using the Svelte template, and a Serverless Function API.",
     "website": "https://svelte.dev",
@@ -397,7 +426,7 @@
     "name": "Ionic React",
     "slug": "ionic-react",
     "demo": "https://ionic-react.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/ionic-react.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ionic.svg",
     "tagline": "Ionic React allows you to build mobile PWAs with React and the Ionic Framework.",
     "description": "An Ionic React site, created with the Ionic CLI.",
     "website": "https://ionicframework.com",
@@ -411,10 +440,10 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "npm run build"
+        "placeholder": "`npm run build` or `react-scripts build`"
       },
       "devCommand": {
-        "value": "npm run start"
+        "value": "react-scripts start"
       },
       "outputDirectory": {
         "value": "build"
@@ -425,7 +454,7 @@
     "name": "Create React App",
     "slug": "create-react-app",
     "demo": "https://react-functions.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/react.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/react.svg",
     "tagline": "Create React App allows you to get going with React in no time.",
     "description": "A React app, bootstrapped with create-react-app, and a Serverless Function API.",
     "website": "https://create-react-app.dev",
@@ -457,7 +486,7 @@
     "name": "Gridsome",
     "slug": "gridsome",
     "demo": "https://gridsome.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/gridsome.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gridsome.svg",
     "tagline": "Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default.",
     "description": "A Gridsome app, created with the Gridsome CLI.",
     "website": "https://gridsome.org/",
@@ -485,7 +514,7 @@
     "name": "UmiJS",
     "slug": "umijs",
     "demo": "https://umijs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/umi.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/umi.svg",
     "tagline": "UmiJS is an extensible enterprise-level React application framework.",
     "description": "An UmiJS app, created using the Umi CLI.",
     "website": "https://umijs.org",
@@ -513,7 +542,7 @@
     "name": "Sapper",
     "slug": "sapper",
     "demo": "https://sapper.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/svelte.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/svelte.svg",
     "tagline": "Sapper is a framework for building high-performance universal web apps with Svelte.",
     "description": "A Sapper app, using the Sapper template.",
     "website": "https://sapper.svelte.dev",
@@ -541,7 +570,7 @@
     "name": "Saber",
     "slug": "saber",
     "demo": "https://saber.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/saber.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/saber.svg",
     "tagline": "Saber is a framework for building static sites in Vue.js that supports data from any source.",
     "description": "A Saber site, created with npm init.",
     "website": "https://saber.land/",
@@ -569,7 +598,7 @@
     "name": "Stencil",
     "slug": "stencil",
     "demo": "https://stencil.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/stencil.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/stencil.svg",
     "tagline": "Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems.",
     "description": "A Stencil site, created with the Stencil CLI.",
     "website": "https://stenciljs.com/",
@@ -597,7 +626,7 @@
     "name": "Nuxt.js",
     "slug": "nuxtjs",
     "demo": "https://nuxtjs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/nuxt.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/nuxt.svg",
     "tagline": "Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.",
     "description": "A Nuxt.js app, bootstrapped with create-nuxt-app.",
     "website": "https://nuxtjs.org",
@@ -625,7 +654,7 @@
     "name": "Hugo",
     "slug": "hugo",
     "demo": "https://hugo.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/hugo.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hugo.svg",
     "tagline": "Hugo is the world’s fastest framework for building websites, written in Go.",
     "description": "A Hugo site, created with the Hugo CLI.",
     "website": "https://gohugo.io",
@@ -658,7 +687,7 @@
     "name": "Jekyll",
     "slug": "jekyll",
     "demo": "https://jekyll.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/jekyll.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/jekyll.svg",
     "tagline": "Jekyll makes it super easy to transform your plain text into static websites and blogs.",
     "description": "A Jekyll site, created with the Jekyll CLI.",
     "website": "https://jekyllrb.com/",
@@ -685,7 +714,7 @@
     "name": "Brunch",
     "slug": "brunch",
     "demo": "https://brunch.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/brunch.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/brunch.svg",
     "tagline": "Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development.",
     "description": "A Brunch app, created with the Brunch CLI.",
     "website": "https://brunch.io/",
@@ -712,7 +741,7 @@
     "name": "Middleman",
     "slug": "middleman",
     "demo": "https://middleman.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/middleman.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/middleman.svg",
     "tagline": "Middleman is a static site generator that uses all the shortcuts and tools in modern web development.",
     "description": "A Middleman app, created with the Middleman CLI.",
     "website": "https://middlemanapp.com/",
@@ -738,7 +767,7 @@
   {
     "name": "Other",
     "slug": null,
-    "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/other.svg",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/other.svg",
     "description": "No framework or a unoptimized framework.",
     "settings": {
       "buildCommand": {

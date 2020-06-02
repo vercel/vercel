@@ -6,7 +6,16 @@ import isPortReachable from 'is-port-reachable';
 import { ChildProcess, SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { frameworks, Framework } from './frameworks';
+import buildUtils from './build-utils';
 import {
+  Files,
+  FileFsRef,
+  BuildOptions,
+  Config,
+  PackageJson,
+  PrepareCacheOptions,
+} from '@vercel/build-utils';
+const {
   glob,
   download,
   spawnAsync,
@@ -20,17 +29,11 @@ import {
   runShellScript,
   getNodeVersion,
   getSpawnOptions,
-  Files,
-  FileFsRef,
-  BuildOptions,
-  Config,
   debug,
-  PackageJson,
-  PrepareCacheOptions,
   NowBuildError,
-} from '@now/build-utils';
-import { Route, Source } from '@now/routing-utils';
-import { getNowIgnore } from 'now-client';
+} = buildUtils;
+import { Route, Source } from '@vercel/routing-utils';
+import { getVercelIgnore } from '@vercel/client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -56,11 +59,11 @@ function validateDistDir(distDir: string) {
   const isEmpty = () => readdirSync(distDir).length === 0;
 
   const link =
-    'https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-public-directory';
+    'https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-public-directory';
 
   if (!exists()) {
     throw new NowBuildError({
-      code: 'NOW_STATIC_BUILD_NO_OUT_DIR',
+      code: 'STATIC_BUILD_NO_OUT_DIR',
       message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your project settings.`,
       link,
     });
@@ -68,7 +71,7 @@ function validateDistDir(distDir: string) {
 
   if (!isDirectory()) {
     throw new NowBuildError({
-      code: 'NOW_STATIC_BUILD_NOT_A_DIR',
+      code: 'STATIC_BUILD_NOT_A_DIR',
       message: `The path specified as Output Directory ("${distDirName}") is not actually a directory.`,
       link,
     });
@@ -76,7 +79,7 @@ function validateDistDir(distDir: string) {
 
   if (isEmpty()) {
     throw new NowBuildError({
-      code: 'NOW_STATIC_BUILD_EMPTY_OUT_DIR',
+      code: 'STATIC_BUILD_EMPTY_OUT_DIR',
       message: `The Output Directory "${distDirName}" is empty.`,
       link,
     });
@@ -89,7 +92,7 @@ function hasScript(script: string, pkg: PackageJson) {
 }
 
 function getScriptName(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
-  // The `dev` script can be `now dev`
+  // The `dev` script can be `now-dev`
   const nowCmd = `now-${cmd}`;
 
   if (!zeroConfig && cmd === 'dev') {
@@ -229,9 +232,9 @@ async function fetchBinary(url: string, framework: string, version: string) {
   const res = await fetch(url);
   if (res.status === 404) {
     throw new NowBuildError({
-      code: 'NOW_STATIC_BUILD_BINARY_NOT_FOUND',
+      code: 'STATIC_BUILD_BINARY_NOT_FOUND',
       message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
-      link: 'https://zeit.co/docs/v2/build-step#framework-versioning',
+      link: 'https://vercel.com/docs/v2/build-step#framework-versioning',
     });
   }
   await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
@@ -337,8 +340,14 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-    console.log('Installing dependencies...');
-    await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
+    if (meta.isDev) {
+      debug('Skipping dependency installation because dev mode is enabled');
+    } else {
+      const installTime = Date.now();
+      console.log('Installing dependencies...');
+      await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
+      debug(`Install complete [${Date.now() - installTime}ms]`);
+    }
 
     if (pkg && (buildCommand || devCommand)) {
       // We want to add `node_modules/.bin` after `npm install`
@@ -387,14 +396,14 @@ export async function build({
         child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
         nowDevChildProcesses.add(child);
 
-        // Now wait for the server to have listened on `$PORT`, after which we
+        // Wait for the server to have listened on `$PORT`, after which we
         // will ProxyPass any requests to that development server that come in
         // for this builder.
         try {
           await checkForPort(devPort, DEV_SERVER_PORT_BIND_TIMEOUT);
         } catch (err) {
           throw new Error(
-            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/zeit/now/now-static-build-failed-to-detect-a-server`
+            `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/vercel/vercel/now-static-build-failed-to-detect-a-server`
           );
         }
 
@@ -407,7 +416,7 @@ export async function build({
         srcBase = `/${srcBase}`;
       }
 
-      // We ignore defaultRoutes for `now dev`
+      // We ignore defaultRoutes for `vercel dev`
       // since in this case it will get proxied to
       // a custom server we don't have control over
       routes.push(
@@ -419,9 +428,6 @@ export async function build({
     } else {
       if (meta.isDev) {
         debug(`WARN: A dev script is missing.`);
-        debug(
-          'See the local development docs: https://zeit.co/docs/v2/deployments/official-builders/static-build-now-static-build/#local-development'
-        );
       }
 
       if (buildCommand) {
@@ -478,10 +484,16 @@ export async function build({
 
       let ignore: string[] = [];
       if (config.zeroConfig) {
-        const result = await getNowIgnore(distPath);
+        const result = await getVercelIgnore(distPath);
         ignore = result.ignores
           .map(file => (file.endsWith('/') ? `${file}**` : file))
-          .concat(['yarn.lock', 'package-lock.json', 'package.json']);
+          .concat([
+            '.env',
+            '.env.*',
+            'yarn.lock',
+            'package-lock.json',
+            'package.json',
+          ]);
         debug(`Using ignore: ${JSON.stringify(ignore)}`);
       }
       output = await glob('**', { cwd: distPath, ignore }, mountpoint);

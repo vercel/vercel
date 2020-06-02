@@ -2,6 +2,7 @@ import bytes from 'bytes';
 import info from './output/info';
 import errorOutput from './output/error';
 import { APIError } from './errors-ts';
+import { getCommandName } from './pkg-name';
 
 export default function handleError(
   error: string | Error | APIError,
@@ -22,7 +23,10 @@ export default function handleError(
   if (status === 403) {
     console.error(
       errorOutput(
-        message || 'Authentication error. Run `now login` to log-in again.'
+        message ||
+          `Authentication error. Run ${getCommandName(
+            'login'
+          )} to log-in again.`
       )
     );
   } else if (status === 429) {

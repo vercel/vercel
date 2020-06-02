@@ -7,6 +7,10 @@ import wait from './wait';
 export type Output = ReturnType<typeof createOutput>;
 
 export default function createOutput({ debug: debugEnabled = false } = {}) {
+  function isDebugEnabled() {
+    return debugEnabled;
+  }
+
   function print(str: string) {
     process.stderr.write(str);
   }
@@ -61,12 +65,13 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   function error(
     str: string,
     slug: string | null = null,
-    link: string | null = null
+    link: string | null = null,
+    action = 'More details'
   ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
     const details = slug ? `https://err.sh/now/${slug}` : link;
     if (details) {
-      print(`More details: ${details}\n`);
+      print(`${action}: ${details}\n`);
     }
   }
 
@@ -125,6 +130,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   return {
+    isDebugEnabled,
     print,
     log,
     warn,

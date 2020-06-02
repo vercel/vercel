@@ -6,13 +6,18 @@ import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import { cpus } from 'os';
+import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
+
+interface SpawnOptionsExtended extends SpawnOptions {
+  prettyCommand?: string;
+}
 
 export function spawnAsync(
   command: string,
   args: string[],
-  opts: SpawnOptions = {}
+  opts: SpawnOptionsExtended = {}
 ) {
   return new Promise<void>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
@@ -29,12 +34,18 @@ export function spawnAsync(
         return resolve();
       }
 
-      const errorLogs = stderrLogs.map(line => line.toString()).join('');
-      if (opts.stdio !== 'inherit') {
-        reject(new Error(`Exited with ${code || signal}\n${errorLogs}`));
-      } else {
-        reject(new Error(`Exited with ${code || signal}`));
-      }
+      const cmd = opts.prettyCommand
+        ? `Command "${opts.prettyCommand}"`
+        : 'Command';
+      reject(
+        new NowBuildError({
+          code: `BUILD_UTILS_SPAWN_${code || signal}`,
+          message:
+            opts.stdio === 'inherit'
+              ? `${cmd} exited with ${code || signal}`
+              : stderrLogs.map(line => line.toString()).join(''),
+        })
+      );
     });
   });
 }
@@ -42,7 +53,7 @@ export function spawnAsync(
 export function execAsync(
   command: string,
   args: string[],
-  opts: SpawnOptions = {}
+  opts: SpawnOptionsExtended = {}
 ) {
   return new Promise<{ stdout: string; stderr: string; code: number }>(
     (resolve, reject) => {
@@ -64,10 +75,15 @@ export function execAsync(
       child.on('error', reject);
       child.on('close', (code, signal) => {
         if (code !== 0) {
+          const cmd = opts.prettyCommand
+            ? `Command "${opts.prettyCommand}"`
+            : 'Command';
+
           return reject(
-            new Error(
-              `Program "${command}" exited with non-zero exit code ${code} ${signal}.`
-            )
+            new NowBuildError({
+              code: `BUILD_UTILS_EXEC_${code || signal}`,
+              message: `${cmd} exited with ${code || signal}`,
+            })
           );
         }
 
@@ -82,18 +98,20 @@ export function execAsync(
 }
 
 export function spawnCommand(command: string, options: SpawnOptions = {}) {
+  const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {
-    return spawn('cmd.exe', ['/C', command], options);
+    return spawn('cmd.exe', ['/C', command], opts);
   }
 
-  return spawn('sh', ['-c', command], options);
+  return spawn('sh', ['-c', command], opts);
 }
 
 export async function execCommand(command: string, options: SpawnOptions = {}) {
+  const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {
-    await spawnAsync('cmd.exe', ['/C', command], options);
+    await spawnAsync('cmd.exe', ['/C', command], opts);
   } else {
-    await spawnAsync('sh', ['-c', command], options);
+    await spawnAsync('sh', ['-c', command], opts);
   }
 
   return true;
@@ -120,9 +138,11 @@ export async function runShellScript(
   assert(path.isAbsolute(fsPath));
   const destPath = path.dirname(fsPath);
   await chmodPlusX(fsPath);
-  await spawnAsync(`./${path.basename(fsPath)}`, args, {
-    cwd: destPath,
+  const command = `./${path.basename(fsPath)}`;
+  await spawnAsync(command, args, {
     ...spawnOpts,
+    cwd: destPath,
+    prettyCommand: command,
   });
   return true;
 }
@@ -149,7 +169,7 @@ export async function getNodeVersion(
   meta?: Meta
 ): Promise<NodeVersion> {
   if (meta && meta.isDev) {
-    // Use the system-installed version of `node` in PATH for `now dev`
+    // Use the system-installed version of `node` in PATH for `vercel dev`
     const latest = getLatestNodeVersion();
     return { ...latest, runtime: 'nodejs' };
   }
@@ -166,7 +186,8 @@ export async function getNodeVersion(
 async function scanParentDirs(destPath: string, readPackageJson = false) {
   assert(path.isAbsolute(destPath));
 
-  let hasPackageLockJson = false;
+  type CliType = 'yarn' | 'npm';
+  let cliType: CliType = 'yarn';
   let packageJson: PackageJson | undefined;
   let currentDestPath = destPath;
 
@@ -180,9 +201,13 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
         packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
       }
       // eslint-disable-next-line no-await-in-loop
-      hasPackageLockJson = await fs.pathExists(
-        path.join(currentDestPath, 'package-lock.json')
-      );
+      const [hasPackageLockJson, hasYarnLock] = await Promise.all([
+        fs.pathExists(path.join(currentDestPath, 'package-lock.json')),
+        fs.pathExists(path.join(currentDestPath, 'yarn.lock')),
+      ]);
+      if (hasPackageLockJson && !hasYarnLock) {
+        cliType = 'npm';
+      }
       break;
     }
 
@@ -191,7 +216,7 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
     currentDestPath = newDestPath;
   }
 
-  return { hasPackageLockJson, packageJson };
+  return { cliType, packageJson };
 }
 
 interface WalkParentDirsProps {
@@ -248,8 +273,8 @@ export async function runNpmInstall(
   assert(path.isAbsolute(destPath));
   debug(`Installing to ${destPath}`);
 
-  const { hasPackageLockJson } = await scanParentDirs(destPath);
-  const opts: SpawnOptions = { cwd: destPath, ...spawnOpts };
+  const { cliType } = await scanParentDirs(destPath);
+  const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
   const env = opts.env ? { ...opts.env } : { ...process.env };
   delete env.NODE_ENV;
   opts.env = env;
@@ -257,14 +282,16 @@ export async function runNpmInstall(
   let command: 'npm' | 'yarn';
   let commandArgs: string[];
 
-  if (hasPackageLockJson) {
+  if (cliType === 'npm') {
+    opts.prettyCommand = 'npm install';
     command = 'npm';
     commandArgs = args
       .filter(a => a !== '--prefer-offline')
       .concat(['install', '--no-audit', '--unsafe-perm']);
   } else {
+    opts.prettyCommand = 'yarn install';
     command = 'yarn';
-    commandArgs = args.concat(['install', '--ignore-engines']);
+    commandArgs = ['install', ...args];
   }
 
   if (process.env.NPM_ONLY_PRODUCTION) {
@@ -285,7 +312,7 @@ export async function runBundleInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { cwd: destPath, ...spawnOpts };
+  const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'bundle install' };
 
   await spawnAsync(
     'bundle',
@@ -313,7 +340,7 @@ export async function runPipInstall(
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { cwd: destPath, ...spawnOpts };
+  const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'pip3 install' };
 
   await spawnAsync(
     'pip3',
@@ -328,10 +355,7 @@ export async function runPackageJsonScript(
   spawnOpts?: SpawnOptions
 ) {
   assert(path.isAbsolute(destPath));
-  const { packageJson, hasPackageLockJson } = await scanParentDirs(
-    destPath,
-    true
-  );
+  const { packageJson, cliType } = await scanParentDirs(destPath, true);
   const hasScript = Boolean(
     packageJson &&
       packageJson.scripts &&
@@ -340,18 +364,22 @@ export async function runPackageJsonScript(
   );
   if (!hasScript) return false;
 
-  const opts = { cwd: destPath, ...spawnOpts };
-
-  if (hasPackageLockJson) {
-    console.log(`Running "npm run ${scriptName}"`);
-    await spawnAsync('npm', ['run', scriptName], opts);
+  if (cliType === 'npm') {
+    const prettyCommand = `npm run ${scriptName}`;
+    console.log(`Running "${prettyCommand}"`);
+    await spawnAsync('npm', ['run', scriptName], {
+      ...spawnOpts,
+      cwd: destPath,
+      prettyCommand,
+    });
   } else {
-    console.log(`Running "yarn run ${scriptName}"`);
-    await spawnAsync(
-      'yarn',
-      ['--ignore-engines', '--cwd', destPath, 'run', scriptName],
-      opts
-    );
+    const prettyCommand = `yarn run ${scriptName}`;
+    console.log(`Running "${prettyCommand}"`);
+    await spawnAsync('yarn', ['run', scriptName], {
+      ...spawnOpts,
+      cwd: destPath,
+      prettyCommand,
+    });
   }
 
   return true;

@@ -19,3 +19,6 @@ coverage
 # NPM
 node_modules
 public
+
+.now
+.vercel

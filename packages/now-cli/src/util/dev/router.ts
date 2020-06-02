@@ -4,8 +4,8 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { HttpHeadersConfig, RouteConfig, RouteResult } from './types';
-import { isHandler, Route, HandleValue } from '@now/routing-utils';
+import { HttpHeadersConfig, RouteResult } from './types';
+import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
@@ -48,22 +48,24 @@ export function getRoutesTypes(routes: Route[] = []) {
 export async function devRouter(
   reqUrl: string = '/',
   reqMethod?: string,
-  routes?: RouteConfig[],
+  routes?: Route[],
   devServer?: DevServer,
   previousHeaders?: HttpHeadersConfig,
-  missRoutes?: RouteConfig[],
+  missRoutes?: Route[],
   phase?: HandleValue | null
 ): Promise<RouteResult> {
-  let found: RouteResult | undefined;
+  let result: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
   let status: number | undefined;
+  let isContinue = false;
 
   // Try route match
   if (routes) {
     let idx = -1;
     for (const routeConfig of routes) {
       idx++;
+      isContinue = false;
 
       if (isHandler(routeConfig)) {
         // We don't expect any Handle, only Source routes
@@ -77,7 +79,8 @@ export async function devRouter(
       }
 
       const keys: string[] = [];
-      const matcher = PCRE(`%${src}%i`, keys);
+      const flags = devServer && devServer.isCaseSensitive() ? '' : 'i';
+      const matcher = PCRE(`%${src}%${flags}`, keys);
       const match =
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 
@@ -110,6 +113,7 @@ export async function devRouter(
             status = routeConfig.status;
           }
           reqPathname = destPath;
+          isContinue = true;
           continue;
         }
 
@@ -127,7 +131,7 @@ export async function devRouter(
                 reqMethod,
                 missRoutes,
                 devServer,
-                previousHeaders,
+                combinedHeaders,
                 [],
                 'miss'
               );
@@ -149,9 +153,10 @@ export async function devRouter(
 
         const isDestUrl = isURL(destPath);
         if (isDestUrl) {
-          found = {
+          result = {
             found: true,
             dest: destPath,
+            continue: isContinue,
             userDest: false,
             isDestUrl,
             status: routeConfig.status || status,
@@ -166,15 +171,17 @@ export async function devRouter(
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
-          const { pathname, query } = url.parse(destPath, true);
-          found = {
+          const destParsed = url.parse(destPath, true);
+          Object.assign(destParsed.query, query);
+          result = {
             found: true,
-            dest: pathname || '/',
+            dest: destParsed.pathname || '/',
+            continue: isContinue,
             userDest: Boolean(routeConfig.dest),
             isDestUrl,
             status: routeConfig.status || status,
             headers: combinedHeaders,
-            uri_args: query,
+            uri_args: destParsed.query,
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
@@ -185,10 +192,11 @@ export async function devRouter(
     }
   }
 
-  if (!found) {
-    found = {
+  if (!result) {
+    result = {
       found: false,
       dest: reqPathname,
+      continue: isContinue,
       status,
       isDestUrl: false,
       uri_args: query,
@@ -197,5 +205,5 @@ export async function devRouter(
     };
   }
 
-  return found;
+  return result;
 }

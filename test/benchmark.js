@@ -1,4 +1,3 @@
-const { execSync } = require('child_process');
 const { join } = require('path');
 const { tmpdir } = require('os');
 const { mkdirSync, writeFileSync } = require('fs');
@@ -20,14 +19,14 @@ function getRandomText(wordCount) {
     .join(' ');
 }
 
-function getRandomFileData(min) {
+function getRandomFileData() {
   const wordCount = getRandomInt(1000, 2000);
   return getRandomText(wordCount);
 }
 
-function createRandomFile(dir, i) {
+function createRandomFile(dir) {
   const fileName = getRandomId() + '.txt';
-  const data = getRandomFileData(i);
+  const data = getRandomFileData();
   writeFileSync(join(dir, fileName), data, 'utf8');
 }
 
@@ -40,9 +39,7 @@ function createRandomProject(dir, fileCount) {
   writeFileSync(join(dir, 'now.json'), nowJson, 'utf8');
   const publicDir = join(dir, 'public');
   mkdirSync(publicDir);
-  Array.from({ length: fileCount }).forEach((_, i) =>
-    createRandomFile(publicDir, i)
-  );
+  Array.from({ length: fileCount }).forEach(() => createRandomFile(publicDir));
 }
 
 function main(fileCount = 1000) {
@@ -53,7 +50,7 @@ function main(fileCount = 1000) {
   createRandomProject(dir, Number(fileCount));
   console.log(`Done. Run the following:`);
   console.log(`cd ${dir}`);
-  console.log('time now --no-clipboard');
+  console.log('time vercel --no-clipboard');
 }
 
 main(process.argv[2]);

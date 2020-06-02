@@ -147,7 +147,7 @@ export default class Now extends EventEmitter {
       projectSettings,
     };
 
-    // Ignore specific items from Now.json
+    // Ignore specific items from vercel.json
     delete requestBody.scope;
     delete requestBody.github;
 
@@ -223,7 +223,7 @@ export default class Now extends EventEmitter {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
         log(
           `Please upgrade your plan here: ${chalk.cyan(
-            'https://zeit.co/account/plan'
+            'https://vercel.com/account/plan'
           )}`
         );
       }
@@ -309,7 +309,7 @@ export default class Now extends EventEmitter {
 
         err.message =
           `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
-            '.nowignore'
+            '.vercelignore'
           )}):` +
           `\n- ${unreferencedBuildSpecs
             .map(item => JSON.stringify(item))
@@ -340,9 +340,15 @@ export default class Now extends EventEmitter {
     return new Error(error.message);
   }
 
-  async listSecrets() {
-    const { secrets } = await this.retry(async bail => {
-      const res = await this._fetch('/now/secrets');
+  async listSecrets(next) {
+    const payload = await this.retry(async bail => {
+      let secretsUrl = '/v3/now/secrets?limit=20';
+
+      if (next) {
+        secretsUrl += `&until=${next}`;
+      }
+
+      const res = await this._fetch(secretsUrl);
 
       if (res.status === 200) {
         // What we want
@@ -356,7 +362,7 @@ export default class Now extends EventEmitter {
       throw await responseError(res, 'Failed to list secrets');
     });
 
-    return secrets;
+    return payload;
   }
 
   async list(app, { version = 4, meta = {}, nextTimestamp } = {}) {
@@ -388,7 +394,12 @@ export default class Now extends EventEmitter {
     if (!app && !Object.keys(meta).length) {
       // Get the 20 latest projects and their latest deployment
       const query = new URLSearchParams({ limit: (20).toString() });
-      const projects = await fetchRetry(`/v2/projects/?${query}`);
+      if (nextTimestamp) {
+        query.set('until', String(nextTimestamp));
+      }
+      const { projects, pagination } = await fetchRetry(
+        `/v4/projects/?${query}`
+      );
 
       const deployments = await Promise.all(
         projects.map(async ({ id: projectId }) => {
@@ -400,7 +411,7 @@ export default class Now extends EventEmitter {
         })
       );
 
-      return { deployments: deployments.filter(x => x) };
+      return { deployments: deployments.filter(x => x), pagination };
     }
 
     const query = new URLSearchParams();

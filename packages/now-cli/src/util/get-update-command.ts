@@ -2,6 +2,7 @@ import { Stats } from 'fs';
 import { sep, dirname, join, resolve } from 'path';
 import { readJSON, lstat, readlink, readFile, realpath } from 'fs-extra';
 import { isCanary } from './is-canary';
+import { getPkgName } from './pkg-name';
 
 // `npm` tacks a bunch of extra properties on the `package.json` file,
 // so check for one of them to determine yarn vs. npm.
@@ -93,12 +94,15 @@ async function isGlobal() {
 
 export default async function getUpdateCommand(): Promise<string> {
   const tag = isCanary() ? 'canary' : 'latest';
+  const pkgAndVersion = `${getPkgName()}@${tag}`;
 
   if (await isGlobal()) {
     return (await isYarn())
-      ? `yarn global add now@${tag}`
-      : `npm i -g now@${tag}`;
+      ? `yarn global add ${pkgAndVersion}`
+      : `npm i -g ${pkgAndVersion}`;
   }
 
-  return (await isYarn()) ? `yarn add now@${tag}` : `npm i now@${tag}`;
+  return (await isYarn())
+    ? `yarn add ${pkgAndVersion}`
+    : `npm i ${pkgAndVersion}`;
 }

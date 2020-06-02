@@ -25,6 +25,8 @@ import link from '../../util/output/link';
 import exit from '../../util/exit';
 // @ts-ignore
 import Now from '../../util';
+// @ts-ignore
+import NowSecrets from '../../util/secrets';
 import uniq from '../../util/unique-strings';
 import promptBool from '../../util/input/prompt-bool';
 // @ts-ignore
@@ -259,7 +261,7 @@ export default async function main(
   quiet = !isTTY;
   ({ log, error, note, debug, warn } = output);
 
-  const infoUrl = 'https://zeit.co/guides/migrate-to-zeit-now';
+  const infoUrl = 'https://vercel.com/guides/migrate-to-vercel';
 
   warn(
     `You are using an old version of the Now Platform. More: ${link(infoUrl)}`
@@ -633,20 +635,7 @@ async function sync({
       nowConfig.build.env = deploymentBuildEnv;
     }
 
-    const hasSecrets = Object.keys(deploymentEnv).some(key =>
-      (deploymentEnv[key] || '').startsWith('@')
-    );
-
-    const secretsPromise = hasSecrets ? now.listSecrets() : null;
-
-    const findSecret = async (uidOrName: string) => {
-      const secrets = await Promise.resolve(secretsPromise);
-
-      return secrets.filter(
-        (secret: { name: string; uid: string }) =>
-          secret.name === uidOrName || secret.uid === uidOrName
-      );
-    };
+    const nowSecrets = new NowSecrets({ apiUrl, token, debug, currentTeam });
 
     const env_ = await Promise.all(
       Object.keys(deploymentEnv).map(async (key: string) => {
@@ -673,36 +662,17 @@ async function sync({
 
         if (val[0] === '@') {
           const uidOrName = val.substr(1);
-          const _secrets = await findSecret(uidOrName);
+          const secret = await nowSecrets.getSecretByNameOrId(uidOrName);
 
-          if (_secrets.length === 0) {
-            if (uidOrName === '') {
-              error(
-                `Empty reference provided for env key ${chalk.bold(
-                  `"${chalk.bold(key)}"`
-                )}`
-              );
-            } else {
-              error(
-                `No secret found by uid or name ${chalk.bold(
-                  `"${uidOrName}"`
-                )}`,
-                'env-no-secret'
-              );
-            }
-
-            await exit(1);
-          } else if (_secrets.length > 1) {
+          if (!secret) {
             error(
-              `Ambiguous secret ${chalk.bold(
-                `"${uidOrName}"`
-              )} (matches ${chalk.bold(_secrets.length)} secrets)`
+              `No secret found by uid or name ${chalk.bold(`"${uidOrName}"`)}`,
+              'env-no-secret'
             );
-
             await exit(1);
           }
 
-          val = { uid: _secrets[0].uid };
+          val = { uid: secret.uid };
         }
 
         return [key, typeof val === 'string' ? val.replace(/^\\@/, '@') : val];
@@ -794,10 +764,10 @@ async function sync({
             });
           }
 
-          let url = 'https://zeit.co/account/plan';
+          let url = 'https://vercel.com/account/plan';
 
           if (currentTeam) {
-            url = `https://zeit.co/teams/${contextName}/settings/plan`;
+            url = `https://vercel.com/teams/${contextName}/settings/plan`;
           }
 
           note(
@@ -1104,7 +1074,7 @@ function handleCreateDeployError(output: Output, error: Error) {
       `Failed to validate ${highlight(
         'now.json'
       )}: ${message}\nDocumentation: ${link(
-        'https://zeit.co/docs/v2/advanced/configuration'
+        'https://vercel.com/docs/configuration'
       )}`
     );
 

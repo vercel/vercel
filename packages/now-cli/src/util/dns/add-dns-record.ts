@@ -19,7 +19,7 @@ export default async function addDNSRecord(
 ) {
   try {
     const record = await client.fetch<Response>(
-      `/v3/domains/${domain}/records`,
+      `/v3/domains/${encodeURIComponent(domain)}/records`,
       {
         body: recordData,
         method: 'POST',

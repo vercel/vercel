@@ -18,17 +18,17 @@ function App() {
       <h2>
         Deployed with{' '}
         <a
-          href="https://zeit.co/docs"
+          href="https://vercel.com/docs"
           target="_blank"
           rel="noreferrer noopener"
         >
-          ZEIT Now
+          Vercel
         </a>
         !
       </h2>
       <p>
         <a
-          href="https://github.com/zeit/now/tree/master/examples/create-react-app"
+          href="https://github.com/vercel/vercel/tree/master/examples/create-react-app"
           target="_blank"
           rel="noreferrer noopener"
         >

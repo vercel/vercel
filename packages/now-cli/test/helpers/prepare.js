@@ -134,6 +134,10 @@ module.exports = async session => {
       'now.json': '{"builder": 1, "type": "static"}',
       'index.html': '<span>test</span',
     },
+    'builds-wrong-vercel': {
+      'vercel.json': '{"fake": 1}',
+      'index.html': '<h1>Fake</h1>',
+    },
     'builds-no-list': {
       'now.json': `{
   "version": 2,
@@ -172,7 +176,8 @@ fs.writeFileSync(
   'index.js',
   fs
     .readFileSync('index.js', 'utf8')
-    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
+    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off')
+    .replace('BUILD_ENV_DEBUG', process.env.VERCEL_BUILDER_DEBUG ? 'on' : 'off'),
 );
       `,
       'index.js': `
@@ -232,7 +237,7 @@ module.exports = (req, res) => {
     },
     'failing-alias': {
       'now.json': JSON.stringify(
-        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'vercel.com' })
       ),
     },
     'local-config-cloud-v1': {
@@ -284,12 +289,23 @@ CMD ["node", "index.js"]`,
         files: ['.gitignore', 'folder', 'index.js', 'test.html'],
       }),
     },
+    'static-v2-meta': {
+      'index.html': 'Static V2',
+    },
     'redirects-v2': {
       'now.json': JSON.stringify({
         version: 2,
         name: 'redirects-v2',
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
+    },
+    'deploy-with-only-readme-now-json': {
+      'now.json': JSON.stringify({ version: 2 }),
+      'README.md': 'readme contents',
+    },
+    'deploy-with-only-readme-vercel-json': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      'README.md': 'readme contents',
     },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
@@ -322,6 +338,31 @@ CMD ["node", "index.js"]`,
     'subdirectory-secret': {
       'index.html': 'Home page',
       'secret/file.txt': 'my secret',
+    },
+    'build-secret': {
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'mkdir public && echo $MY_SECRET > public/index.txt',
+        },
+      }),
+      'now.json': JSON.stringify({
+        build: {
+          env: {
+            MY_SECRET: '@mysecret',
+          },
+        },
+      }),
+    },
+    'api-env': {
+      'api/get-env.js': 'module.exports = (_, res) => res.json(process.env)',
+      'print.js': 'console.log(JSON.stringify(process.env))',
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'mkdir public && node print.js > public/index.json',
+        },
+      }),
     },
     'alias-rules': {
       'rules.json': JSON.stringify({

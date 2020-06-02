@@ -1,4 +1,4 @@
-import { intersects } from 'semver';
+import { intersects, validRange } from 'semver';
 import boxen from 'boxen';
 import { NodeVersion } from '../types';
 import { NowBuildError } from '../errors';
@@ -40,12 +40,14 @@ export async function getSupportedNodeVersion(
   let selection = getLatestNodeVersion();
 
   if (engineRange) {
-    const found = allOptions.some(o => {
-      // the array is already in order so return the first
-      // match which will be the newest version of node
-      selection = o;
-      return intersects(o.range, engineRange);
-    });
+    const found =
+      validRange(engineRange) &&
+      allOptions.some(o => {
+        // the array is already in order so return the first
+        // match which will be the newest version of node
+        selection = o;
+        return intersects(o.range, engineRange);
+      });
     if (!found) {
       const intro =
         isAuto || !engineRange
@@ -54,9 +56,9 @@ export async function getSupportedNodeVersion(
             engineRange +
             '".';
       throw new NowBuildError({
-        code: 'NOW_BUILD_UTILS_NODE_VERSION_INVALID',
+        code: 'BUILD_UTILS_NODE_VERSION_INVALID',
         link:
-          'https://zeit.co/docs/runtimes#official-runtimes/node-js/node-js-version',
+          'https://vercel.com/docs/runtimes#official-runtimes/node-js/node-js-version',
         message: intro + '\n' + pleaseSet,
       });
     }
@@ -72,9 +74,9 @@ export async function getSupportedNodeVersion(
           engineRange +
           '".';
     throw new NowBuildError({
-      code: 'NOW_BUILD_UTILS_NODE_VERSION_DISCONTINUED',
+      code: 'BUILD_UTILS_NODE_VERSION_DISCONTINUED',
       link:
-        'https://zeit.co/docs/runtimes#official-runtimes/node-js/node-js-version',
+        'https://vercel.com/docs/runtimes#official-runtimes/node-js/node-js-version',
       message: intro + '\n' + pleaseSet + '\n' + upstreamProvider,
     });
   }

@@ -2,17 +2,17 @@ name: Cancel
 on:
   push:
     branches:
-    - '*'
+    - '**'
     - '!master'
 
 jobs:
   cancel:
     name: 'Cancel Previous Runs'
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 2
     steps:
-      - uses: styfle/cancel-workflow-action@0.3.1
+      - uses: styfle/cancel-workflow-action@0.3.2
         with:
           workflow_id: 849295, 849296, 849297, 849298
-          access_token: ${{ secrets.GITHUB_WORKFLOW_TOKEN }}
+          access_token: ${{ github.token }}
 

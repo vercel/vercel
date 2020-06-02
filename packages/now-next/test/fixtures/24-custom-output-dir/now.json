@@ -2,14 +2,14 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@now/next",
+      "use": "@vercel/next",
       "config": {
         "buildCommand": "next build",
         "outputDirectory": "the-output-directory"
       }
     }
   ],
-  "propes": [
+  "probes": [
     {
       "path": "/",
       "status": 200,
