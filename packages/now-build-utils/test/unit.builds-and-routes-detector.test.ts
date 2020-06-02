@@ -2122,6 +2122,37 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         dest: '/404.html',
       },
     ]);
+
+    const pattern = new RegExp(errorRoutes[0].src);
+
+    [
+      '/',
+      '/index.html',
+      '/page.html',
+      '/page',
+      '/another/index.html',
+      '/another/page.html',
+      '/another/page',
+      '/another/sub/index.html',
+      '/another/sub/page.html',
+      '/another/sub/page',
+    ].forEach(file => {
+      expect(file).toMatch(pattern);
+    });
+
+    [
+      '/api',
+      '/api/',
+      '/api/index.html',
+      '/api/page.html',
+      '/api/page',
+      '/api/sub',
+      '/api/sub/index.html',
+      '/api/sub/page.html',
+      '/api/sub/page',
+    ].forEach(file => {
+      expect(file).not.toMatch(pattern);
+    });
   }
 
   {
