@@ -2123,7 +2123,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       },
     ]);
 
-    const pattern = new RegExp(errorRoutes[0].src);
+    const pattern = new RegExp(errorRoutes![0].src!);
 
     [
       '/',
