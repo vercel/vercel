@@ -1,7 +1,7 @@
 import path from 'path';
 import mri from 'mri';
 import { InvalidLocalConfig } from '../errors';
-import { ConflictingConfigFiles } from './errors-ts';
+import { ConflictingConfigFiles } from '../errors-ts';
 import { existsSync } from 'fs';
 
 export default function getLocalPathConfig(prefix: string) {
