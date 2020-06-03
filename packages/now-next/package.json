@@ -34,7 +34,7 @@
     "get-port": "5.0.0",
     "resolve-from": "5.0.0",
     "semver": "6.1.1",
-    "typescript": "3.5.2",
+    "typescript": "3.9.3",
     "yazl": "https://github.com/ijjk/yazl#70949c55b482647669ce37023017b1514c42b33c"
   }
 }
