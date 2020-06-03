@@ -609,7 +609,7 @@ export default class DevServer {
         config.builds.push(...builders);
       }
 
-      const routes: Route[] = [];
+      let routes: Route[] = [];
       const { routes: nowConfigRoutes } = config;
       routes.push(...(redirectRoutes || []));
       routes.push(
@@ -619,13 +619,11 @@ export default class DevServer {
           phase: 'filesystem',
         })
       );
-      routes.push(
-        ...appendRoutesToPhase({
-          routes: nowConfigRoutes,
-          newRoutes: errorRoutes,
-          phase: 'error',
-        })
-      );
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: errorRoutes,
+        phase: 'error',
+      });
       routes.push(...(defaultRoutes || []));
       config.routes = routes;
     }
@@ -1438,6 +1436,26 @@ export default class DevServer {
         routeResult.status = prevStatus;
       }
 
+      if (!match && errorRoutes.length > 0) {
+        // error phase
+        routeResult = await devRouter(
+          getReqUrl(routeResult),
+          req.method,
+          errorRoutes,
+          this,
+          routeResult.headers,
+          [],
+          'error'
+        );
+
+        match = await findBuildMatch(
+          this.buildMatches,
+          this.files,
+          routeResult.dest,
+          this
+        );
+      }
+
       statusCode = routeResult.status;
 
       if (match) {
@@ -1640,21 +1658,7 @@ export default class DevServer {
     }
 
     if (!foundAsset) {
-      const { dest, status } = await devRouter(
-        req.url,
-        req.method,
-        errorRoutes,
-        this,
-        undefined,
-        undefined,
-        'error'
-      );
-      if (dest && status) {
-        res.statusCode = status;
-        // TODO: how should we serve the file?
-      } else {
-        await this.send404(req, res, nowRequestId);
-      }
+      await this.send404(req, res, nowRequestId);
       return;
     }
 
