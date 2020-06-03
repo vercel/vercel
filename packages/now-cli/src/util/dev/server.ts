@@ -2029,11 +2029,8 @@ async function findBuildMatch(
     }
   }
 
-  // check for a non-.html index file
-  if (typeof bestIndexMatch !== 'undefined') {
-    return bestIndexMatch;
-  }
-  return null;
+  // return a non-.html index file or none are found
+  return bestIndexMatch || null;
 }
 
 async function shouldServe(

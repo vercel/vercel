@@ -498,12 +498,3 @@ test('[DevServer] parseListen()', t => {
   t.truthy(err);
   t.is(err.message, 'Unknown `--listen` scheme (protocol): bad:');
 });
-
-test(
-  '[DevServer] index.html prioritized over other index.* files',
-  testFixture('now-dev-prioritize-index-html', async (t, server) => {
-    const res = await fetch(`${server.address}`);
-    const html = await res.text();
-    t.is(html.includes(`<title>Hello World</title>`) > -1, true);
-  })
-);
