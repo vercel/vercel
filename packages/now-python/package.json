@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python",
-  "version": "1.2.2-canary.1",
+  "version": "1.2.2-canary.2",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
