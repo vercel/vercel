@@ -20,6 +20,6 @@
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/node": "10.x",
-    "typescript": "3.5.2"
+    "typescript": "3.9.3"
   }
 }

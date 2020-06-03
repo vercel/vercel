@@ -27,7 +27,7 @@
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@zeit/ncc": "0.18.5",
-    "typescript": "3.5.1"
+    "typescript": "3.9.3"
   },
   "jest": {
     "preset": "ts-jest",
