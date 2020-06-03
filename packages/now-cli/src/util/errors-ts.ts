@@ -771,6 +771,20 @@ export class CantParseJSONFile extends NowError<
   }
 }
 
+export class ConflictingConfigFiles extends NowError<
+  'CONFLICTING_CONFIG_FILES',
+  { files: string[] }
+> {
+  constructor(files: string[]) {
+    super({
+      code: 'CONFLICTING_CONFIG_FILES',
+      meta: { files },
+      message:
+        'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
+    });
+  }
+}
+
 export class CantFindConfig extends NowError<
   'CANT_FIND_CONFIG',
   { paths: string[] }

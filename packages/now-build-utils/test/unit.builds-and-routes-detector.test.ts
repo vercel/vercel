@@ -531,6 +531,7 @@ describe('Test `detectBuilders`', () => {
     const files = ['api/user.php'];
     // @ts-ignore
     const { errors } = await detectBuilders(files, null, {
+      // @ts-ignore
       functions,
     });
 
@@ -1578,6 +1579,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     const files = ['api/user.php'];
     // @ts-ignore
     const { errors } = await detectBuilders(files, null, {
+      // @ts-ignore
       functions,
       featHandleMiss,
     });
@@ -1678,6 +1680,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     // @ts-ignore
     const { errors } = await detectBuilders(files, null, {
+      // @ts-ignore
       functions,
       featHandleMiss,
     });
@@ -1694,6 +1697,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     // @ts-ignore: Since we test an invalid type
     const { errors } = await detectBuilders(files, null, {
+      // @ts-ignore
       functions,
       featHandleMiss,
     });

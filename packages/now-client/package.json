@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "8.0.2-canary.1",
+  "version": "8.0.2-canary.2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -27,7 +27,7 @@
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@zeit/ncc": "0.18.5",
-    "typescript": "3.5.1"
+    "typescript": "3.9.3"
   },
   "jest": {
     "preset": "ts-jest",

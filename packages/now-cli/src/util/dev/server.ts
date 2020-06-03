@@ -1634,7 +1634,6 @@ export default class DevServer {
         debug(`Skipping \`startDevServer()\` for ${match.entrypoint}`);
       }
     }
-
     let foundAsset = findAsset(match, requestPath, nowConfig);
 
     if (!foundAsset && callLevel === 0) {
@@ -2045,12 +2044,24 @@ async function findBuildMatch(
   isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
   requestPath = requestPath.replace(/^\//, '');
+
+  let bestIndexMatch: undefined | BuildMatch;
   for (const match of matches.values()) {
     if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
-      return match;
+      if (!isIndex(match.src)) {
+        return match;
+      } else {
+        // if isIndex === true and ends in .html, we're done. Otherwise, keep searching
+        bestIndexMatch = match;
+        if (extname(match.src) === '.html') {
+          return bestIndexMatch;
+        }
+      }
     }
   }
-  return null;
+
+  // return a non-.html index file or none are found
+  return bestIndexMatch || null;
 }
 
 async function shouldServe(
