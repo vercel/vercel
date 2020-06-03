@@ -62,7 +62,7 @@ const main = async ctx => {
     });
   } catch (error) {
     handleError(error);
-    return 1;
+    return exit(1);
   }
 
   argv._ = argv._.slice(1);
@@ -73,7 +73,7 @@ const main = async ctx => {
 
   if (argv['--help']) {
     help();
-    return 2;
+    return exit(2);
   }
 
   const output = createOutput({ debug });
@@ -127,7 +127,7 @@ async function run({ client, contextName }) {
           )}`
         )
       );
-      return exit(1);
+      return exit(2);
     }
 
     const stopSpinner = wait(`Fetching projects in ${chalk.bold(contextName)}`);
