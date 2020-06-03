@@ -1438,7 +1438,7 @@ export default class DevServer {
 
       if (!match && errorRoutes.length > 0) {
         // error phase
-        routeResult = await devRouter(
+        const routeResultForError = await devRouter(
           getReqUrl(routeResult),
           req.method,
           errorRoutes,
@@ -1448,12 +1448,18 @@ export default class DevServer {
           'error'
         );
 
-        match = await findBuildMatch(
+        const matchForError = await findBuildMatch(
           this.buildMatches,
           this.files,
-          routeResult.dest,
+          routeResultForError.dest,
           this
         );
+
+        if (matchForError) {
+          // error phase only applies if the file was found
+          routeResult = routeResultForError;
+          match = matchForError;
+        }
       }
 
       statusCode = routeResult.status;
