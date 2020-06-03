@@ -27,6 +27,6 @@
     "is-port-reachable": "2.0.1",
     "ms": "2.1.2",
     "node-fetch": "2.6.0",
-    "typescript": "3.5.2"
+    "typescript": "3.9.3"
   }
 }

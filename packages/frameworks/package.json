@@ -12,6 +12,6 @@
     "ajv": "6.10.2",
     "jest": "24.9.0",
     "ts-jest": "24.1.0",
-    "typescript": "3.5.2"
+    "typescript": "3.9.3"
   }
 }

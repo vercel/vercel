@@ -28,6 +28,6 @@
     "node-fetch": "^2.2.1",
     "string-argv": "0.3.1",
     "tar": "4.4.6",
-    "typescript": "3.5.2"
+    "typescript": "3.9.3"
   }
 }
