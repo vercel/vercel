@@ -471,14 +471,19 @@ test(
 
 test(
   '[vercel dev] should serve the public directory and api functions',
-  testFixtureStdio('public-and-api', async testPath => {
-    await testPath(200, '/', 'This is the home page');
-    await testPath(200, '/about.html', 'This is the about page');
-    await testPath(200, '/api/date', /current date/);
-    await testPath(200, '/api/rand', /random number/);
-    await testPath(200, '/api/rand.js', /random number/);
-    await testPath(404, '/api/api');
-  })
+  testFixtureStdio(
+    'public-and-api',
+    async testPath => {
+      await testPath(200, '/', 'This is the home page');
+      await testPath(200, '/about.html', 'This is the about page');
+      await testPath(200, '/api/date', /current date/);
+      await testPath(200, '/api/rand', /random number/);
+      await testPath(200, '/api/rand.js', /random number/);
+      await testPath(404, '/api/api', /NOT_FOUND/);
+      await testPath(404, '/nothing', /Custom 404 Page/);
+    },
+    { skipDeploy: true /** TODO: remove after prod goes live */ }
+  )
 );
 
 test(
@@ -677,6 +682,21 @@ test(
 );
 
 test(
+  '[vercel dev] should serve custom 404 when `cleanUrls: true`',
+  testFixtureStdio(
+    'test-clean-urls-custom-404',
+    async testPath => {
+      await testPath(200, '/', 'This is the home page');
+      await testPath(200, '/about', 'The about page');
+      await testPath(200, '/contact/me', 'Contact Me Subdirectory');
+      await testPath(404, '/nothing', 'Custom 404 Page');
+      await testPath(404, '/nothing/', 'Custom 404 Page');
+    },
+    { skipDeploy: true /** TODO: remove after prod goes live */ }
+  )
+);
+
+test(
   '[vercel dev] test cleanUrls and trailingSlash serve correct content',
   testFixtureStdio('test-clean-urls-trailing-slash', async testPath => {
     await testPath(200, '/', 'Index Page');
@@ -742,6 +762,20 @@ test(
       Location: '/sub/',
     });
   })
+);
+
+test(
+  '[vercel dev] should serve custom 404 when `trailingSlash: true`',
+  testFixtureStdio(
+    'test-trailing-slash-custom-404',
+    async testPath => {
+      await testPath(200, '/', 'This is the home page');
+      await testPath(200, '/about.html', 'The about page');
+      await testPath(200, '/contact/', 'Contact Subdirectory');
+      await testPath(404, '/nothing/', 'Custom 404 Page');
+    },
+    { skipDeploy: true /** TODO: remove after prod goes live */ }
+  )
 );
 
 test(
@@ -905,6 +939,8 @@ test(
   '[vercel dev] 10-nextjs-node',
   testFixtureStdio('10-nextjs-node', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
+    await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(404, '/nothing', /Custom Next 404/);
   })
 );
 
@@ -1363,4 +1399,3 @@ test(
     await testPath(200, '/index.css', 'This is index.css');
   })
 );
-
