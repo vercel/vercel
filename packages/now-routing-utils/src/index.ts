@@ -223,23 +223,18 @@ function checkRedirect(r: NowRedirect, index: number) {
 
 function createError(
   code: string,
-  errors: string | string[],
+  allErrors: string | string[],
   link: string,
   action: string
 ): RouteApiError | null {
-  let message: string;
-  let otherErrors: string[] = [];
-  if (Array.isArray(errors)) {
-    [message, ...otherErrors] = errors;
-  } else {
-    message = errors;
-  }
+  const errors = Array.isArray(allErrors) ? allErrors : [allErrors];
+  const message = errors[0];
   const error: RouteApiError = {
     code,
     message,
     link,
     action,
-    otherErrors,
+    errors,
   };
   return error;
 }

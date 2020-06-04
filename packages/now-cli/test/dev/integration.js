@@ -1347,3 +1347,20 @@ test(
     await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
   })
 );
+
+test(
+  '[vercel dev] Should work with nested `tsconfig.json` files',
+  testFixtureStdio('nested-tsconfig', async testPath => {
+    await testPath(200, `/`, /Nested tsconfig.json test page/);
+    await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
+  })
+);
+
+test(
+  '[vercel dev] should prioritize index.html over other file named index.*',
+  testFixtureStdio('index-html-priority', async testPath => {
+    await testPath(200, '/', 'This is index.html');
+    await testPath(200, '/index.css', 'This is index.css');
+  })
+);
+
