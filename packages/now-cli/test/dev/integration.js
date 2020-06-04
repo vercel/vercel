@@ -392,6 +392,16 @@ test(
 );
 
 test(
+  '[vercel dev] validate routes that use custom 404 page',
+  testFixtureStdio('routes-custom-404', async testPath => {
+    await testPath(200, '/', 'Home Page');
+    await testPath(404, '/nothing', 'Custom User 404');
+    await testPath(200, '/api/hello', 'Hello');
+    await testPath(404, '/api/nothing', 'Custom User 404');
+  })
+);
+
+test(
   '[vercel dev] handles miss after route',
   testFixtureStdio('handle-miss-after-route', async testPath => {
     await testPath(200, '/post', 'Blog Post Page', {
