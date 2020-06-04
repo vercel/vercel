@@ -396,6 +396,7 @@ test(
   testFixtureStdio('routes-custom-404', async testPath => {
     await testPath(200, '/', 'Home Page');
     await testPath(404, '/nothing', 'Custom User 404');
+    await testPath(404, '/exact', 'Exact Custom 404');
     await testPath(200, '/api/hello', 'Hello');
     await testPath(404, '/api/nothing', 'Custom User 404');
   })
