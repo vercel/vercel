@@ -82,6 +82,7 @@ export async function detectBuilders(
   defaultRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
+  errorRoutes: Route[] | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
@@ -99,6 +100,7 @@ export async function detectBuilders(
       defaultRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
+      errorRoutes: null,
     };
   }
 
@@ -154,6 +156,7 @@ export async function detectBuilders(
           defaultRoutes: null,
           redirectRoutes: null,
           rewriteRoutes: null,
+          errorRoutes: null,
         };
       }
 
@@ -231,6 +234,7 @@ export async function detectBuilders(
         redirectRoutes: null,
         defaultRoutes: null,
         rewriteRoutes: null,
+        errorRoutes: null,
       };
     }
 
@@ -272,6 +276,7 @@ export async function detectBuilders(
       redirectRoutes: null,
       defaultRoutes: null,
       rewriteRoutes: null,
+      errorRoutes: null,
     };
   }
 
@@ -309,6 +314,7 @@ export async function detectBuilders(
     redirectRoutes: routesResult.redirectRoutes,
     defaultRoutes: routesResult.defaultRoutes,
     rewriteRoutes: routesResult.rewriteRoutes,
+    errorRoutes: routesResult.errorRoutes,
   };
 }
 
@@ -898,10 +904,17 @@ function getRouteResult(
   defaultRoutes: Route[];
   redirectRoutes: Route[];
   rewriteRoutes: Route[];
+  errorRoutes: Route[];
 } {
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
+  const errorRoutes: Route[] = [];
+  const isNextjs =
+    frontendBuilder &&
+    ((frontendBuilder.use && frontendBuilder.use.startsWith('@vercel/next')) ||
+      (frontendBuilder.config &&
+        frontendBuilder.config.framework === 'nextjs'));
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -968,10 +981,21 @@ function getRouteResult(
     });
   }
 
+  if (options.featHandleMiss && !isNextjs) {
+    // Exclude Next.js to avoid overriding custom error page
+    // https://nextjs.org/docs/advanced-features/custom-error-page
+    errorRoutes.push({
+      status: 404,
+      src: '^/(?!.*api).*$',
+      dest: options.cleanUrls ? '/404' : '/404.html',
+    });
+  }
+
   return {
     defaultRoutes,
     redirectRoutes,
     rewriteRoutes,
+    errorRoutes,
   };
 }
 
