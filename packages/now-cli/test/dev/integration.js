@@ -479,7 +479,7 @@ test(
       await testPath(200, '/api/date', /current date/);
       await testPath(200, '/api/rand', /random number/);
       await testPath(200, '/api/rand.js', /random number/);
-      await testPath(404, '/api/api', /NOT_FOUND/);
+      await testPath(404, '/api/api', /NOT_FOUND/m);
       await testPath(404, '/nothing', /Custom 404 Page/);
     },
     { skipDeploy: true /** TODO: remove after prod goes live */ }
