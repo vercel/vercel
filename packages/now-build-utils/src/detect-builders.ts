@@ -982,7 +982,6 @@ function getRouteResult(
   }
 
   if (options.featHandleMiss && !isNextjs) {
-    //console.log({frontendBuilder, outputDirectory})
     // Exclude Next.js to avoid overriding custom error page
     // https://nextjs.org/docs/advanced-features/custom-error-page
     errorRoutes.push({
