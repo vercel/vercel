@@ -581,6 +581,7 @@ export default class DevServer {
         defaultRoutes,
         redirectRoutes,
         rewriteRoutes,
+        errorRoutes,
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
@@ -606,20 +607,25 @@ export default class DevServer {
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
-
-        const routes: Route[] = [];
-        const { routes: nowConfigRoutes } = config;
-        routes.push(...(redirectRoutes || []));
-        routes.push(
-          ...appendRoutesToPhase({
-            routes: nowConfigRoutes,
-            newRoutes: rewriteRoutes,
-            phase: 'filesystem',
-          })
-        );
-        routes.push(...(defaultRoutes || []));
-        config.routes = routes;
       }
+
+      let routes: Route[] = [];
+      const { routes: nowConfigRoutes } = config;
+      routes.push(...(redirectRoutes || []));
+      routes.push(
+        ...appendRoutesToPhase({
+          routes: nowConfigRoutes,
+          newRoutes: rewriteRoutes,
+          phase: 'filesystem',
+        })
+      );
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: errorRoutes,
+        phase: 'error',
+      });
+      routes.push(...(defaultRoutes || []));
+      config.routes = routes;
     }
 
     if (Array.isArray(config.builds)) {
@@ -1323,8 +1329,7 @@ export default class DevServer {
     const handleMap = getRoutesTypes(routes);
     const missRoutes = handleMap.get('miss') || [];
     const hitRoutes = handleMap.get('hit') || [];
-    handleMap.delete('miss');
-    handleMap.delete('hit');
+    const errorRoutes = handleMap.get('error') || [];
     const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
     let routeResult: RouteResult | null = null;
@@ -1429,6 +1434,32 @@ export default class DevServer {
           'hit'
         );
         routeResult.status = prevStatus;
+      }
+
+      if (!match && errorRoutes.length > 0) {
+        // error phase
+        const routeResultForError = await devRouter(
+          getReqUrl(routeResult),
+          req.method,
+          errorRoutes,
+          this,
+          routeResult.headers,
+          [],
+          'error'
+        );
+
+        const matchForError = await findBuildMatch(
+          this.buildMatches,
+          this.files,
+          routeResultForError.dest,
+          this
+        );
+
+        if (matchForError) {
+          // error phase only applies if the file was found
+          routeResult = routeResultForError;
+          match = matchForError;
+        }
       }
 
       statusCode = routeResult.status;
