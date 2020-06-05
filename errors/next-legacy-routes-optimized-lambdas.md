@@ -1,4 +1,4 @@
-# `@now/next` Legacy Routes Optimized Lambdas Opt-out
+# `@vercel/next` Legacy Routes Optimized Lambdas Opt-out
 
 #### Why This Warning Occurred
 

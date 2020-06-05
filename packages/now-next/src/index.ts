@@ -218,7 +218,7 @@ export const build = async ({
       console.warn(
         `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
           nowJsonPath
-        )}. http://err.sh/vercel/vercel/now-next-legacy-routes-optimized-lambdas`
+        )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
       );
     }
   }
