@@ -2554,7 +2554,7 @@ test('should prefill "project name" prompt with --name', async t => {
   let isDeprecated = false;
 
   await waitForPrompt(now, chunk => {
-    if (chunk.includes('The "--name" flag is deprecated')) {
+    if (chunk.includes('The "--name" option is deprecated')) {
       isDeprecated = true;
     }
 
@@ -2894,4 +2894,25 @@ test('deploys with only vercel.json and README.md', async t => {
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   t.regex(text, /readme contents/);
+});
+
+test('reject conflicting `vercel.json` and `now.json` files', async t => {
+  const directory = fixture('conflicting-now-json-vercel-json');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+  t.true(
+    stderr.includes(
+      'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+    ),
+    formatOutput({ stderr, stdout })
+  );
 });

@@ -2,7 +2,7 @@ package main
 
 import (
 	"net/http"
-	vc "github.com/vercel/go-bridge/go/bridgee"
+	vc "github.com/vercel/go-bridge/go/bridge"
 )
 
 func main() {
