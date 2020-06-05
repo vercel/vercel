@@ -1591,7 +1591,7 @@ export default class DevServer {
           req,
           res,
           nowRequestId,
-          'NO_STATUS_CODE_FROM_DEV_SERVER',
+          'NO_RESPONSE_FROM_FUNCTION',
           502
         );
         return;
@@ -1751,7 +1751,7 @@ export default class DevServer {
             req,
             res,
             nowRequestId,
-            'NO_STATUS_CODE_FROM_LAMBDA',
+            'NO_RESPONSE_FROM_FUNCTION',
             502
           );
           return;
