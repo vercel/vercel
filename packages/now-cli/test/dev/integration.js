@@ -375,6 +375,16 @@ test.afterEach(async () => {
   );
 });
 
+test('[vercel dev] prints `npm install` errors', async t => {
+  const dir = fixture('runtime-not-installed');
+  const result = await exec(dir);
+  t.truthy(result.stderr.includes('npm ERR! 404'));
+  t.truthy(
+    result.stderr.includes('Failed to install `vercel dev` dependencies')
+  );
+  t.truthy(result.stderr.includes('https://vercel.link/npm-install-error'));
+});
+
 test(
   '[vercel dev] validate routes that use `check: true`',
   testFixtureStdio('routes-check-true', async testPath => {
