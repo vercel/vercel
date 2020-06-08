@@ -114,6 +114,7 @@ export default class DevServer {
   public cwd: string;
   public debug: boolean;
   public output: Output;
+  public proxy: httpProxy;
   public envConfigs: EnvConfigs;
   public frameworkSlug: string | null;
   public files: BuilderInputs;
@@ -124,7 +125,6 @@ export default class DevServer {
   private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
-  private proxy: httpProxy;
   private server: http.Server;
   private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
@@ -1367,7 +1367,7 @@ export default class DevServer {
 
         debug(`ProxyPass: ${destUrl}`);
         this.setResponseHeaders(res, nowRequestId);
-        return proxyPass(req, res, destUrl, this.proxy, this.output);
+        return proxyPass(req, res, destUrl, this, nowRequestId);
       }
 
       match = await findBuildMatch(
@@ -1506,8 +1506,8 @@ export default class DevServer {
           req,
           res,
           `http://localhost:${this.devProcessPort}`,
-          this.proxy,
-          this.output,
+          this,
+          nowRequestId,
           false
         );
       }
@@ -1626,8 +1626,8 @@ export default class DevServer {
           req,
           res,
           `http://localhost:${port}`,
-          this.proxy,
-          this.output,
+          this,
+          nowRequestId,
           false
         );
       } else {
@@ -1656,8 +1656,8 @@ export default class DevServer {
         req,
         res,
         `http://localhost:${this.devProcessPort}`,
-        this.proxy,
-        this.output,
+        this,
+        nowRequestId,
         false
       );
     }
@@ -1967,24 +1967,27 @@ function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   dest: string,
-  proxy: httpProxy,
-  output: Output,
+  devServer: DevServer,
+  nowRequestId: string,
   ignorePath: boolean = true
 ): void {
-  return proxy.web(
+  return devServer.proxy.web(
     req,
     res,
     { target: dest, ignorePath },
     (error: NodeJS.ErrnoException) => {
-      // If the client hangs up a socket, we do not
-      // want to do anything, as the client just expects
-      // the connection to be closed.
-      if (error.code === 'ECONNRESET') {
-        res.end();
-        return;
+      devServer.output.error(
+        `Failed to complete request to ${req.url}: ${error}`
+      );
+      if (!res.headersSent) {
+        devServer.sendError(
+          req,
+          res,
+          nowRequestId,
+          'NO_RESPONSE_FROM_FUNCTION',
+          502
+        );
       }
-
-      output.error(`Failed to complete request to ${req.url}: ${error}`);
     }
   );
 }
