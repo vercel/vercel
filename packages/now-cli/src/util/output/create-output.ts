@@ -77,16 +77,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   function prettyError(err: Error & { link?: string; action?: string }) {
-    let str = err.message;
-    let link: string | undefined = undefined;
-    let action: string | undefined = undefined;
-    if (err.link) {
-      link = err.link;
-    }
-    if (err.action) {
-      action = err.action;
-    }
-    return error(str, undefined, link, action);
+    return error(err.message, undefined, err.link, err.action);
   }
 
   function ready(str: string) {
