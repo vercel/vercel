@@ -3,7 +3,6 @@ import { Response } from 'node-fetch';
 import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
-import { NowBuildError } from '@vercel/build-utils';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -1234,19 +1233,6 @@ export class BuildError extends NowError<'BUILD_ERROR', {}> {
       code: 'BUILD_ERROR',
       meta,
       message,
-    });
-  }
-}
-
-export class NpmInstallError extends NowBuildError {
-  constructor(message: string, isEnoent = false) {
-    if (isEnoent) {
-      message += ' Make sure `npm` is installed.';
-    }
-    super({
-      message,
-      code: 'NPM_INSTALL_ERROR',
-      link: 'https://vercel.link/npm-install-error',
     });
   }
 }

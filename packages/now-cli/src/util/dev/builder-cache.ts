@@ -3,12 +3,12 @@ import semver from 'semver';
 import npa from 'npm-package-arg';
 import pluralize from 'pluralize';
 import { basename, join } from 'path';
-import { PackageJson } from '@vercel/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
+import { NowBuildError, PackageJson } from '@vercel/build-utils';
 import cliPkg from '../pkg';
 
-import { NoBuilderCacheError, NpmInstallError } from '../errors-ts';
+import { NoBuilderCacheError } from '../errors-ts';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
 
@@ -258,11 +258,14 @@ async function npmInstall(
       if (result.stderr) {
         console.error(result.stderr);
       }
-      const isEnoent = (result as any).code === 'ENOENT';
-      throw new NpmInstallError(
-        'Failed to install `vercel dev` dependencies.',
-        isEnoent
-      );
+      throw new NowBuildError({
+        message:
+          (result as any).code === 'ENOENT'
+            ? '`npm` is not installed'
+            : 'Failed to install `vercel dev` dependencies',
+        code: 'NPM_INSTALL_ERROR',
+        link: 'https://vercel.link/npm-install-error',
+      });
     }
   } finally {
     stopSpinner();
