@@ -62,7 +62,7 @@ def webrick_handler(httpMethod, path, body, headers)
   
   res_headers = res.each_capitalized.to_h
   res_encoding = "UTF-8"
-  if res_headers["Content-Type"].include?("charset=")
+  if res_headers["Content-Type"] && res_headers["Content-Type"].include?("charset=")
     res_encoding = res_headers["Content-Type"].match(/charset=([^;]*)/)[1]
   end
 
