@@ -482,19 +482,15 @@ test(
 
 test(
   '[vercel dev] should serve the public directory and api functions',
-  testFixtureStdio(
-    'public-and-api',
-    async testPath => {
-      await testPath(200, '/', 'This is the home page');
-      await testPath(200, '/about.html', 'This is the about page');
-      await testPath(200, '/api/date', /current date/);
-      await testPath(200, '/api/rand', /random number/);
-      await testPath(200, '/api/rand.js', /random number/);
-      await testPath(404, '/api/api', /NOT_FOUND/m);
-      await testPath(404, '/nothing', /Custom 404 Page/);
-    },
-    { skipDeploy: true /** TODO: remove after prod goes live */ }
-  )
+  testFixtureStdio('public-and-api', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'This is the about page');
+    await testPath(200, '/api/date', /current date/);
+    await testPath(200, '/api/rand', /random number/);
+    await testPath(200, '/api/rand.js', /random number/);
+    await testPath(404, '/api/api', /NOT_FOUND/m);
+    await testPath(404, '/nothing', /Custom 404 Page/);
+  })
 );
 
 test(
@@ -694,17 +690,13 @@ test(
 
 test(
   '[vercel dev] should serve custom 404 when `cleanUrls: true`',
-  testFixtureStdio(
-    'test-clean-urls-custom-404',
-    async testPath => {
-      await testPath(200, '/', 'This is the home page');
-      await testPath(200, '/about', 'The about page');
-      await testPath(200, '/contact/me', 'Contact Me Subdirectory');
-      await testPath(404, '/nothing', 'Custom 404 Page');
-      await testPath(404, '/nothing/', 'Custom 404 Page');
-    },
-    { skipDeploy: true /** TODO: remove after prod goes live */ }
-  )
+  testFixtureStdio('test-clean-urls-custom-404', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about', 'The about page');
+    await testPath(200, '/contact/me', 'Contact Me Subdirectory');
+    await testPath(404, '/nothing', 'Custom 404 Page');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
 );
 
 test(
@@ -777,16 +769,12 @@ test(
 
 test(
   '[vercel dev] should serve custom 404 when `trailingSlash: true`',
-  testFixtureStdio(
-    'test-trailing-slash-custom-404',
-    async testPath => {
-      await testPath(200, '/', 'This is the home page');
-      await testPath(200, '/about.html', 'The about page');
-      await testPath(200, '/contact/', 'Contact Subdirectory');
-      await testPath(404, '/nothing/', 'Custom 404 Page');
-    },
-    { skipDeploy: true /** TODO: remove after prod goes live */ }
-  )
+  testFixtureStdio('test-trailing-slash-custom-404', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'The about page');
+    await testPath(200, '/contact/', 'Contact Subdirectory');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
 );
 
 test(
