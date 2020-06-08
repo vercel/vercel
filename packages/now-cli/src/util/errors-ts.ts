@@ -3,6 +3,7 @@ import { Response } from 'node-fetch';
 import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
+import { NowBuildError } from '@vercel/build-utils';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -1237,25 +1238,15 @@ export class BuildError extends NowError<'BUILD_ERROR', {}> {
   }
 }
 
-/**
- * This Error subclass can be used by the `output.prettyError()` function.
- */
-export class LinkableError extends Error {
-  link: string;
-  action?: string;
-
-  constructor(message: string, link: string, action?: string) {
-    super(message);
-    this.link = link;
-    this.action = action;
-  }
-}
-
-export class NpmInstallError extends LinkableError {
+export class NpmInstallError extends NowBuildError {
   constructor(message: string, isEnoent = false) {
     if (isEnoent) {
       message += ' Make sure `npm` is installed.';
     }
-    super(message, 'https://vercel.link/npm-install-error');
+    super({
+      message,
+      code: 'NPM_INSTALL_ERROR',
+      link: 'https://vercel.link/npm-install-error',
+    });
   }
 }

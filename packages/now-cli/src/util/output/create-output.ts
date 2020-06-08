@@ -4,7 +4,6 @@ import { format } from 'util';
 import { Console } from 'console';
 import renderLink from './link';
 import wait from './wait';
-import { LinkableError } from '../errors-ts';
 
 export type Output = ReturnType<typeof createOutput>;
 
@@ -66,8 +65,8 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
 
   function error(
     str: string,
-    slug: string | null = null,
-    link: string | null = null,
+    slug?: string,
+    link?: string,
     action = 'More details'
   ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
@@ -77,15 +76,17 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
-  function prettyError(err: Error) {
+  function prettyError(err: Error & { link?: string; action?: string }) {
     let str = err.message;
-    let link: string | null = null;
+    let link: string | undefined = undefined;
     let action: string | undefined = undefined;
-    if (err instanceof LinkableError) {
+    if (err.link) {
       link = err.link;
+    }
+    if (err.action) {
       action = err.action;
     }
-    return error(str, null, link, action);
+    return error(str, undefined, link, action);
   }
 
   function ready(str: string) {
@@ -120,8 +121,6 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     return wait(message, delay);
   }
 
-  // This is pretty hacky, but since we control the version of Node.js
-  // being used because of `pkg` it's safe to do in this case.
   const c = {
     _times: new Map(),
     log(a: string, ...args: string[]) {
