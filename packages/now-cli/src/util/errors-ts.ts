@@ -1236,3 +1236,26 @@ export class BuildError extends NowError<'BUILD_ERROR', {}> {
     });
   }
 }
+
+/**
+ * This Error subclass can be used by the `output.error()` function.
+ */
+export class LinkableError extends Error {
+  link: string;
+  action?: string;
+
+  constructor(message: string, link: string, action?: string) {
+    super(message);
+    this.link = link;
+    this.action = action;
+  }
+}
+
+export class NpmInstallError extends LinkableError {
+  constructor(message: string, isEnoent = false) {
+    if (isEnoent) {
+      message += ' Make sure `npm` is installed.';
+    }
+    super(message, 'https://vercel.link/npm-install-error');
+  }
+}

@@ -8,7 +8,7 @@ import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
 import cliPkg from '../pkg';
 
-import { NoBuilderCacheError } from '../errors-ts';
+import { NoBuilderCacheError, NpmInstallError } from '../errors-ts';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
 
@@ -258,7 +258,11 @@ async function npmInstall(
       if (result.stderr) {
         console.error(result.stderr);
       }
-      throw result;
+      const isEnoent = (result as any).code === 'ENOENT';
+      throw new NpmInstallError(
+        'Failed to install `vercel dev` dependencies.',
+        isEnoent
+      );
     }
   } finally {
     stopSpinner();

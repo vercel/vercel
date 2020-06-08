@@ -2,7 +2,9 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import { format } from 'util';
 import { Console } from 'console';
+import renderLink from './link';
 import wait from './wait';
+import { LinkableError } from '../errors-ts';
 
 export type Output = ReturnType<typeof createOutput>;
 
@@ -41,7 +43,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       boxen(
         chalk.bold.yellow('WARN! ') +
           str +
-          (details ? `\nMore details: ${details}` : ''),
+          (details ? `\nMore details: ${renderLink(details)}` : ''),
         {
           padding: {
             top: 0,
@@ -71,8 +73,19 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
     const details = slug ? `https://err.sh/now/${slug}` : link;
     if (details) {
-      print(`${action}: ${details}\n`);
+      print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }
+  }
+
+  function prettyError(err: Error) {
+    let str = err.message;
+    let link: string | null = null;
+    let action: string | undefined = undefined;
+    if (err instanceof LinkableError) {
+      link = err.link;
+      action = err.action;
+    }
+    return error(str, null, link, action);
   }
 
   function ready(str: string) {
@@ -135,6 +148,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     log,
     warn,
     error,
+    prettyError,
     ready,
     success,
     debug,
