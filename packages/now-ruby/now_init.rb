@@ -59,11 +59,17 @@ def webrick_handler(httpMethod, path, body, headers)
 
   server.shutdown
   Thread.kill(th)
+  
+  res_headers = res.each_capitalized.to_h
+  res_encoding = "UTF-8"
+  if res_headers["Content-Type"].include?("charset=")
+    res_encoding = res_headers["Content-Type"].match(/charset=([^;]*)/)[1]
+  end
 
   {
     :statusCode => res.code.to_i,
-    :headers => res.each_capitalized.to_h,
-    :body => res.body,
+    :headers => res_headers,
+    :body => res.body.force_encoding(res_encoding),
   }
 end
 
