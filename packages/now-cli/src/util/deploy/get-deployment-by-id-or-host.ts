@@ -1,20 +1,20 @@
 import Client from '../client';
-import toHost from '../to-host';
+import { toHost } from '../to-host';
 import { Deployment } from '../../types';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
   InvalidDeploymentId,
-} from '../errors-ts';
+} from '../errors';
 import mapCertError from '../certs/map-cert-error';
 
-type APIVersion = 'v5' | 'v10';
+type APIVersion = 'v12';
 
 export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
   idOrHost: string,
-  apiVersion: APIVersion = 'v5'
+  apiVersion: APIVersion = 'v12'
 ) {
   try {
     const { deployment } =
@@ -25,6 +25,7 @@ export default async function getDeploymentByIdOrHost(
             apiVersion
           )
         : await getDeploymentById(client, idOrHost, apiVersion);
+
     return deployment;
   } catch (error) {
     if (error.status === 404) {
@@ -57,17 +58,13 @@ async function getDeploymentById(
   return { deployment };
 }
 
-type Response = {
-  id: string;
-};
-
 async function getDeploymentByHost(
   client: Client,
   host: string,
   apiVersion: APIVersion
 ) {
-  const response = await client.fetch<Response>(
-    `/v10/now/deployments/get?url=${encodeURIComponent(
+  const response = await client.fetch<{ id: string }>(
+    `/${apiVersion}/now/deployments/get?url=${encodeURIComponent(
       host
     )}&resolve=1&noState=1`
   );

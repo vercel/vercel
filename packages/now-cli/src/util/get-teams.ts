@@ -1,8 +1,7 @@
 import Client from './client';
-import { APIError, InvalidToken } from './errors-ts';
+import { APIError, InvalidToken } from './errors';
 import { Team } from '../types';
-// @ts-ignore
-import NowTeams from './teams.js';
+import NowTeams from './teams';
 
 let teams: Team[] | undefined;
 

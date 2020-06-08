@@ -1,5 +1,5 @@
 import path from 'path';
-import { CantParseJSONFile } from './errors-ts';
+import { CantParseJSONFile } from './errors';
 import readJSONFile from './read-json-file';
 import { NowConfig } from './dev/types';
 import { PackageJson } from '@vercel/build-utils';

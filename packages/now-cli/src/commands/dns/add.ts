@@ -4,7 +4,7 @@ import {
   DNSPermissionDenied,
   DNSInvalidPort,
   DNSInvalidType,
-} from '../../util/errors-ts';
+} from '../../util/errors';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import addDNSRecord from '../../util/dns/add-dns-record';

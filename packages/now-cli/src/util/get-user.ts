@@ -1,6 +1,6 @@
 import Client from './client';
 import { User } from '../types';
-import { APIError, InvalidToken, MissingUser } from './errors-ts';
+import { APIError, InvalidToken, MissingUser } from './errors';
 
 let user: User | undefined;
 

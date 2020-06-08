@@ -5,7 +5,7 @@ import {
   CantFindConfig,
   ConflictingConfigFiles,
   WorkingDirectoryDoesNotExist,
-} from './errors-ts';
+} from './errors';
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
 import readPackage from './read-package';

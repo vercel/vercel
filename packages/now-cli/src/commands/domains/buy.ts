@@ -3,7 +3,7 @@ import psl from 'psl';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import Client from '../../util/client';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';

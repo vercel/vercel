@@ -22,7 +22,7 @@ import { Output } from '../output';
 import highlight from '../output/highlight';
 import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
-import { LambdaSizeExceededError } from '../errors-ts';
+import { LambdaSizeExceededError } from '../errors';
 
 import DevServer from './server';
 import { getBuilder } from './builder-cache';

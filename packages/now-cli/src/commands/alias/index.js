@@ -1,4 +1,3 @@
-//
 import chalk from 'chalk';
 
 import { handleError } from '../../util/error';
@@ -32,9 +31,6 @@ const help = () => {
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
   )}         Path to the global ${'`.vercel`'} directory
-    -r ${chalk.bold.underline('RULES_FILE')}, --rules=${chalk.bold.underline(
-    'RULES_FILE'
-  )}   Rules file
     -d, --debug                         Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -42,6 +38,7 @@ const help = () => {
     -S, --scope                         Set a custom scope
     -n, --no-verify                     Don't wait until instance count meets the previous alias constraints
     -N, --next                          Show next page of results
+
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.now.sh')}
@@ -67,29 +64,6 @@ const help = () => {
     'Protocols'
   )} in the URLs are unneeded and ignored.
 
-  ${chalk.gray('–')} Add and modify path based aliases for ${chalk.underline(
-    'example.com'
-  )}
-
-      ${chalk.cyan(
-        `$ ${getPkgName()} alias ${chalk.underline(
-          'example.com'
-        )} -r ${chalk.underline('rules.json')}`
-      )}
-
-      Export effective routing rules
-
-      ${chalk.cyan(
-        `$ ${getPkgName()} alias ls aliasId --json > ${chalk.underline(
-          'rules.json'
-        )}`
-      )}
-
-  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
-    '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch.
-
-      ${chalk.cyan(`$ ${getPkgName()} alias ls --next 1584722256178`)}
 `);
 };
 
@@ -106,12 +80,8 @@ export default async function main(ctx) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--json': Boolean,
-      '--no-verify': Boolean,
-      '--rules': String,
       '--yes': Boolean,
       '--next': Number,
-      '-n': '--no-verify',
-      '-r': '--rules',
       '-y': '--yes',
       '-N': '--next',
     });

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import Client from '../client';
 import issueCert from './issue-cert';
 import wait from '../output/wait';

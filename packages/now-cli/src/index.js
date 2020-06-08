@@ -43,7 +43,7 @@ import { handleError } from './util/error';
 import highlight from './util/output/highlight';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
-import * as ERRORS from './util/errors-ts';
+import * as ERRORS from './util/errors';
 import { NowError } from './util/now-error';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';

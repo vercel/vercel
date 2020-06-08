@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import Client from '../../util/client';
 import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';

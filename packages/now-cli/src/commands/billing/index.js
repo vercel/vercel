@@ -301,10 +301,13 @@ async function run({ token, config: { currentTeam } }) {
         const deletedCard = cards.sources.find(card => card.id === cardId);
         const remainingCards = cards.sources.filter(card => card.id !== cardId);
 
-        let text = `${deletedCard.brand ||
-          deletedCard.card.brand} ending in ${deletedCard.last4 ||
-          deletedCard.card.last4} was deleted`;
-        //  ${chalk.gray(`[${elapsed}]`)}
+        let text = `The provided card does not exist`;
+
+        if (deletedCard) {
+          text = `${deletedCard.brand ||
+            deletedCard.card.brand} ending in ${deletedCard.last4 ||
+            deletedCard.card.last4} was deleted`;
+        }
 
         if (cardId === cards.defaultSource) {
           if (remainingCards.length === 0) {

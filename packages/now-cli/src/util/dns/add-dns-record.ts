@@ -5,7 +5,7 @@ import {
   DNSInvalidPort,
   DNSInvalidType,
   DNSConflictingRecord,
-} from '../errors-ts';
+} from '../errors';
 import { DNSRecordData } from '../../types';
 
 type Response = {

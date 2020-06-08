@@ -6,7 +6,7 @@ import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
-import { NowConfig, NowClientOptions, DeploymentOptions } from './types';
+import { NowClientOptions, DeploymentOptions } from './types';
 
 const isClientNetworkError = (err: Error | DeploymentError) => {
   if (err.message) {
@@ -27,7 +27,6 @@ const isClientNetworkError = (err: Error | DeploymentError) => {
 
 export async function* upload(
   files: Map<string, DeploymentFile>,
-  nowConfig: NowConfig,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<any> {
@@ -43,12 +42,7 @@ export async function* upload(
 
   debug('Determining necessary files for upload...');
 
-  for await (const event of deploy(
-    files,
-    nowConfig,
-    clientOptions,
-    deploymentOptions
-  )) {
+  for await (const event of deploy(files, clientOptions, deploymentOptions)) {
     if (event.type === 'error') {
       if (event.payload.code === 'missing_files') {
         missingFiles = event.payload.missing;
@@ -196,12 +190,7 @@ export async function* upload(
 
   try {
     debug('Starting deployment creation');
-    for await (const event of deploy(
-      files,
-      nowConfig,
-      clientOptions,
-      deploymentOptions
-    )) {
+    for await (const event of deploy(files, clientOptions, deploymentOptions)) {
       if (event.type === 'alias-assigned') {
         debug('Deployment is ready');
         return yield event;

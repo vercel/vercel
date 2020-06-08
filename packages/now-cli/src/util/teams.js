@@ -1,4 +1,4 @@
-import Now from './index';
+import Now from './now';
 import { URLSearchParams } from 'url';
 
 export default class Teams extends Now {

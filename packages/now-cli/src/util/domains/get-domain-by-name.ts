@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import Client from '../client';
 import wait from '../output/wait';
 import { Domain } from '../../types';
-import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
+import { DomainPermissionDenied, DomainNotFound } from '../errors';
 
 type Response = {
   domain: Domain;

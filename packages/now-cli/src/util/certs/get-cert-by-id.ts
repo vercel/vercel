@@ -1,6 +1,6 @@
 import { Cert } from '../../types';
 import Client from '../client';
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 
 export default async function getCertById(client: Client, id: string) {
   try {

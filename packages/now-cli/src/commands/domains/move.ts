@@ -3,7 +3,7 @@ import plural from 'pluralize';
 
 import { NowContext, User, Team } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
+import * as ERRORS from '../../util/errors';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import withSpinner from '../../util/with-spinner';

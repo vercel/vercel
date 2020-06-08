@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import confirm from './confirm';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
-import { ProjectNotFound } from '../../util/errors-ts';
+import { ProjectNotFound } from '../../util/errors';
 import { Output } from '../output';
 import { Project, Org } from '../../types';
 import slugify from '@sindresorhus/slugify';

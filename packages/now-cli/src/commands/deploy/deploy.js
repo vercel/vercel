@@ -9,7 +9,7 @@ import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
-import Now from '../../util';
+import Now from '../../util/now';
 import stamp from '../../util/output/stamp.ts';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
@@ -36,7 +36,7 @@ import {
   ConflictingPathSegment,
   BuildError,
   NotDomainOwner,
-} from '../../util/errors-ts';
+} from '../../util/errors';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
@@ -46,7 +46,7 @@ import {
   getLinkedProject,
   linkFolderToProject,
 } from '../../util/projects/link';
-import getProjectName from '../../util/get-project-name';
+import { getProjectName } from '../../util/get-project-name';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
 import { prependEmoji, emoji } from '../../util/emoji';
@@ -228,7 +228,6 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
-  // $FlowFixMe
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
 

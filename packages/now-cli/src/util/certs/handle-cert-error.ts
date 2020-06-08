@@ -1,7 +1,7 @@
 import ms from 'ms';
 import { parse } from 'psl';
 import chalk from 'chalk';
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors';
 import { Output } from '../output';
 import dnsTable from '../format-dns-table';
 import { getCommandName } from '../pkg-name';

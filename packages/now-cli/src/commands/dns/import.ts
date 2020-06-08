@@ -3,7 +3,7 @@ import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
+import { DomainNotFound, InvalidDomain } from '../../util/errors';
 import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
 import { getCommandName } from '../../util/pkg-name';

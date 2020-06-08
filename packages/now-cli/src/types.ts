@@ -2,6 +2,10 @@ import { NowConfig } from './util/dev/types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
+export interface Dictionary<T> {
+  [key: string]: T;
+}
+
 export interface NowContext {
   argv: string[];
   apiUrl: string;
@@ -25,7 +29,7 @@ type Billing = {
 };
 
 export type User = {
-  uid: string;
+  id: string;
   avatar: string;
   bio?: string;
   date: number;
@@ -113,7 +117,7 @@ export type NpmDeployment = {
 };
 
 export type StaticDeployment = {
-  uid: string;
+  id: string;
   url: string;
   name: string;
   type: 'STATIC';
@@ -125,7 +129,7 @@ export type StaticDeployment = {
 };
 
 export type DockerDeployment = {
-  uid: string;
+  id: string;
   url: string;
   name: string;
   type: 'DOCKER';

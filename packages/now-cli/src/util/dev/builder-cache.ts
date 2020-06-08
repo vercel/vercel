@@ -8,7 +8,7 @@ import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
 import cliPkg from '../pkg';
 
-import { NoBuilderCacheError } from '../errors-ts';
+import { NoBuilderCacheError } from '../errors';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
 

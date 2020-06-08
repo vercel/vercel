@@ -2182,6 +2182,11 @@
     semver "^7.3.2"
     tsutils "^3.17.1"
 
+"@vercel/next@2.6.3-canary.6":
+  version "2.6.3-canary.6"
+  resolved "https://registry.yarnpkg.com/@vercel/next/-/next-2.6.3-canary.6.tgz#e6d789bdef3e8561926dd9074c904704fae1de4b"
+  integrity sha512-cRH2fP0OUSnC1dH5K426JGEm4Jv7341GqoFLjHBpnR6qQyGOdaRVx7vROmmB2GmF1EGjyYoQKPLiV1OzaJCWxQ==
+
 "@zeit/dns-cached-resolve@2.1.0":
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/@zeit/dns-cached-resolve/-/dns-cached-resolve-2.1.0.tgz#78583010df1683fdb7b05949b75593c9a8641bc1"
@@ -2192,11 +2197,6 @@
     "@types/node" "10.12.18"
     async-retry "1.2.3"
     lru-cache "5.1.1"
-
-"@zeit/dockerignore@0.0.5":
-  version "0.0.5"
-  resolved "https://registry.yarnpkg.com/@zeit/dockerignore/-/dockerignore-0.0.5.tgz#b12a693f6ee79aaeffd97914457dc874d5f8386e"
-  integrity sha512-SQ9/wXM1sjv8HnjbAWVSl6KOgitAWiPpjk5AZFXP6rBpmevsLWqtR1L0COIYnHY2UrHC5yXuUG/jh+Sqq0kK8Q==
 
 "@zeit/fetch-cached-dns@1.2.0":
   version "1.2.0"
@@ -2448,11 +2448,6 @@ ajv@^6.0.0, ajv@^6.10.0, ajv@^6.10.2, ajv@^6.5.5:
     fast-json-stable-stringify "^2.0.0"
     json-schema-traverse "^0.4.1"
     uri-js "^4.2.2"
-
-alpha-sort@2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/alpha-sort/-/alpha-sort-2.0.1.tgz#50d3538947cf70ebcc15a6b461fb04fff3bf1ed9"
-  integrity sha1-UNNTiUfPcOvMFaa0YfsE//O/Htk=
 
 ansi-align@^3.0.0:
   version "3.0.0"
@@ -6131,11 +6126,6 @@ inherits@2.0.3:
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.3.tgz#633c2c83e3da42a502f52466022480f4208261de"
   integrity sha1-Yzwsg+PaQqUC9SRmAiSA9CCCYd4=
 
-ini@1.3.4:
-  version "1.3.4"
-  resolved "https://registry.yarnpkg.com/ini/-/ini-1.3.4.tgz#0537cb79daf59b59a1a517dff706c86ec039162e"
-  integrity sha1-BTfLedr1m1mhpRff9wbIbsA5Fi4=
-
 ini@^1.3.2, ini@^1.3.4, ini@~1.3.0:
   version "1.3.5"
   resolved "https://registry.yarnpkg.com/ini/-/ini-1.3.5.tgz#eee25f56db1c9ec6085e0c22778083f596abf927"
@@ -9278,11 +9268,6 @@ qs@~6.5.1, qs@~6.5.2:
   version "6.5.2"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.5.2.tgz#cb3ae806e8740444584ef154ce8ee98d403f3e36"
   integrity sha512-N5ZAX4/LxJmF+7wN74pUD6qAh9/wnvdQcjq9TZjevvXzSUo7bfmw91saqMjzGS2xq91/odN2dW/WOl7qQHNDGA==
-
-querystring@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/querystring/-/querystring-0.2.0.tgz#b209849203bb25df820da756e747005878521620"
-  integrity sha1-sgmEkgO7Jd+CDadW50cAWHhSFiA=
 
 quick-lru@^1.0.0:
   version "1.1.0"

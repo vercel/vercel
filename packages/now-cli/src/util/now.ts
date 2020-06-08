@@ -1,34 +1,54 @@
-import { homedir } from 'os';
-import { resolve as resolvePath } from 'path';
-import EventEmitter from 'events';
-import qs from 'querystring';
-import { parse as parseUrl } from 'url';
-import bytes from 'bytes';
-import chalk from 'chalk';
-import retry from 'async-retry';
-import { parse as parseIni } from 'ini';
-import fs from 'fs-extra';
 import ms from 'ms';
+import ua from './ua';
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
-import {
-  staticFiles as getFiles,
-  npm as getNpmFiles,
-  docker as getDockerFiles,
-} from './get-files';
-import ua from './ua.ts';
-import processDeployment from './deploy/process-deployment.ts';
-import highlight from './output/highlight';
-import createOutput from './output';
 import { responseError } from './error';
+import { Dictionary } from '../types';
+import { parse as parseUrl } from 'url';
+import { Org } from '../types';
+import EventEmitter from 'events';
 import stamp from './output/stamp';
-import { BuildError } from './errors-ts';
+import { BuildError } from './errors';
+import highlight from './output/highlight';
+import createOutput, { Output } from './output';
+import retry, { RetryFunction } from 'async-retry';
+import { NowConfig, DeploymentOptions } from 'now-client';
+import processDeployment from './deploy/process-deployment';
 
-// Check if running windows
-const IS_WIN = process.platform.startsWith('win');
-const SEP = IS_WIN ? '\\' : '/';
+interface Options {
+  token: string;
+  apiUrl: string;
+  debug?: boolean;
+  forceNew?: boolean;
+  currentTeam?: string;
+}
+
+interface CreateOptions {
+  nowConfig: NowConfig;
+  name: string;
+  wantsPublic: boolean;
+  meta: Dictionary<string>;
+  regions: NowConfig['regions'];
+  quiet: boolean;
+  env: NowConfig['env'];
+  build?: NowConfig['build'];
+  forceNew: boolean;
+  target: string | null;
+  withCache: boolean;
+  deployStamp: () => string;
+  projectSettings: NowConfig['projectSettings'];
+  skipAutoDetectionConfirmation: boolean;
+}
 
 export default class Now extends EventEmitter {
+  public _token: string;
+  public _debug: boolean;
+  public _forceNew: boolean;
+  public _output: Output;
+  public _apiUrl: string;
+  public currentTeam?: string;
+  public url?: string;
+
   constructor({
     apiUrl,
     token,
@@ -36,35 +56,25 @@ export default class Now extends EventEmitter {
     forceNew = false,
     withCache = false,
     debug = false,
-  }) {
+  }: Options) {
     super();
 
     this._token = token;
-    this._debug = debug;
-    this._forceNew = forceNew;
     this._withCache = withCache;
-    this._output = createOutput({ debug });
     this._apiUrl = apiUrl;
-    this._onRetry = this._onRetry.bind(this);
+    this._debug = Boolean(debug);
+    this._forceNew = Boolean(forceNew);
+    this._output = createOutput({ debug });
     this.currentTeam = currentTeam;
+
+    this._onRetry = this._onRetry.bind(this);
   }
 
   async create(
-    paths,
+    paths: string[],
     {
-      // Legacy
-      forwardNpm = false,
-      scale = {},
-      description,
-      type = 'npm',
-      pkg = {},
       nowConfig = {},
-      hasNowJson = false,
-      sessionAffinity = 'random',
-
-      // Latest
       name,
-      project,
       wantsPublic,
       meta,
       regions,
@@ -77,112 +87,29 @@ export default class Now extends EventEmitter {
       deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
-    },
-    org,
-    isSettingUpProject,
-    cwd
+    }: CreateOptions,
+    org: Org,
+    isSettingUpProject: boolean,
+    cwd: string
   ) {
-    const opts = { output: this._output, hasNowJson };
-    const { log, warn } = this._output;
-    const isLegacy = type !== null;
-
-    let files = [];
-    let hashes = {};
-    const relatives = {};
-    let engines;
-    let deployment;
-
-    if (type === 'npm') {
-      files = await getNpmFiles(paths[0], pkg, nowConfig, opts);
-
-      // A `start` or `now-start` npm script, or a `server.js` file
-      // in the root directory of the deployment are required
-      if (
-        isLegacy &&
-        !hasNpmStart(pkg) &&
-        !hasFile(paths[0], files, 'server.js')
-      ) {
-        const err = new Error(
-          'Missing `start` (or `now-start`) script in `package.json`. ' +
-            'See: https://docs.npmjs.com/cli/start'
-        );
-        throw err;
-      }
-
-      engines = nowConfig.engines || pkg.engines;
-      forwardNpm = forwardNpm || nowConfig.forwardNpm;
-    } else if (type === 'static') {
-      if (paths.length === 1) {
-        files = await getFiles(paths[0], nowConfig, opts);
-      } else {
-        if (!files) {
-          files = [];
-        }
-
-        for (const path of paths) {
-          const list = await getFiles(path, {}, opts);
-          files = files.concat(list);
-
-          for (const file of list) {
-            relatives[file] = path;
-          }
-        }
-      }
-    } else if (type === 'docker') {
-      files = await getDockerFiles(paths[0], nowConfig, opts);
-    }
-
     const uploadStamp = stamp();
 
-    let requestBody = {
+    const requestBody: DeploymentOptions = {
       ...nowConfig,
       env,
       build,
       public: wantsPublic || nowConfig.public,
       name,
-      project,
       meta,
       regions,
       target: target || undefined,
       projectSettings,
     };
 
-    // Ignore specific items from vercel.json
-    delete requestBody.scope;
-    delete requestBody.github;
-
-    if (isLegacy) {
-      // Read `registry.npmjs.org` authToken from .npmrc
-      const registryAuthToken =
-        type === 'npm' && forwardNpm
-          ? (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
-          : undefined;
-
-      requestBody = {
-        env,
-        build,
-        meta,
-        public: wantsPublic || nowConfig.public,
-        forceNew,
-        withCache,
-        name,
-        project,
-        description,
-        deploymentType: type,
-        registryAuthToken,
-        engines,
-        scale,
-        sessionAffinity,
-        limits: nowConfig.limits,
-        config: nowConfig,
-      };
-    }
-
-    deployment = await processDeployment({
+    const deployment = await processDeployment({
       isLegacy,
       now: this,
       output: this._output,
-      hashes,
       paths,
       requestBody,
       uploadStamp,
@@ -198,59 +125,16 @@ export default class Now extends EventEmitter {
       cwd,
     });
 
-    // We report about files whose sizes are too big
-    let missingVersion = false;
-
-    if (deployment && deployment.warnings) {
-      let sizeExceeded = 0;
-
-      deployment.warnings.forEach(warning => {
-        if (warning.reason === 'size_limit_exceeded') {
-          const { sha, limit } = warning;
-          const n = hashes[sha].names.pop();
-
-          warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`);
-
-          hashes[sha].names.unshift(n); // Move name (hack, if duplicate matches we report them in order)
-          sizeExceeded++;
-        } else if (warning.reason === 'node_version_not_found') {
-          warn(`Requested node version ${warning.wanted} is not available`);
-          missingVersion = true;
-        }
-      });
-
-      if (sizeExceeded > 0) {
-        warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
-        log(
-          `Please upgrade your plan here: ${chalk.cyan(
-            'https://vercel.com/account/plan'
-          )}`
-        );
-      }
-    }
-
-    if (isLegacy && !quiet && type === 'npm' && deployment.nodeVersion) {
-      if (engines && engines.node && !missingVersion) {
-        log(
-          chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
-        );
-      } else {
-        log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`);
-      }
-    }
-
-    this._id = deployment.deploymentId;
-    this._host = deployment.url;
-    this._missing = [];
-    this._fileCount = files.length;
-
     return deployment;
   }
 
-  async handleDeploymentError(error, { hashes, env }) {
+  async handleDeploymentError(
+    error: any,
+    { env }: { env: Dictionary<string> }
+  ) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
-        const err = new Error(error.message);
+        const err = new Error(error.message) as any;
         err.status = error.status;
         err.retryAfter = 'never';
         err.code = error.code;
@@ -269,7 +153,7 @@ export default class Now extends EventEmitter {
         msg += 'Please slow down.';
       }
 
-      const err = new Error(msg);
+      const err = new Error(msg) as any;
 
       err.status = error.status;
       err.retryAfter = 'never';
@@ -283,9 +167,6 @@ export default class Now extends EventEmitter {
     }
 
     if (error.status === 400 && error.code === 'missing_files') {
-      this._missing = error.missing || [];
-      this._fileCount = hashes.length;
-
       return error;
     }
 
@@ -312,7 +193,7 @@ export default class Now extends EventEmitter {
             '.vercelignore'
           )}):` +
           `\n- ${unreferencedBuildSpecs
-            .map(item => JSON.stringify(item))
+            .map((item: any) => JSON.stringify(item))
             .join('\n- ')}`;
       } else {
         Object.assign(err, error);
@@ -325,7 +206,7 @@ export default class Now extends EventEmitter {
     if (error.id && error.id.startsWith('bld_')) {
       return new BuildError({
         meta: {
-          entrypoint: error.entrypoint,
+          entrypoint: error.entrypoint as string,
         },
       });
     }
@@ -340,33 +221,19 @@ export default class Now extends EventEmitter {
     return new Error(error.message);
   }
 
-  async listSecrets(next) {
-    const payload = await this.retry(async bail => {
-      let secretsUrl = '/v3/now/secrets?limit=20';
-
-      if (next) {
-        secretsUrl += `&until=${next}`;
-      }
-
-      const res = await this._fetch(secretsUrl);
-
-      if (res.status === 200) {
-        // What we want
-        return res.json();
-      }
-      if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to list secrets'));
-      }
-      // If something is wrong with the server, we retry
-      throw await responseError(res, 'Failed to list secrets');
-    });
-
-    return payload;
-  }
-
-  async list(app, { version = 4, meta = {}, nextTimestamp } = {}) {
-    const fetchRetry = async (url, options = {}) => {
+  async list(
+    app: string,
+    {
+      version = 4,
+      meta = {},
+      nextTimestamp,
+    }: {
+      version?: number;
+      meta?: Dictionary<string>;
+      nextTimestamp?: number;
+    } = {}
+  ) {
+    const fetchRetry = async (url: string, options = {}) => {
       return this.retry(
         async bail => {
           const res = await this._fetch(url, options);
@@ -386,7 +253,6 @@ export default class Now extends EventEmitter {
         {
           retries: 3,
           minTimeout: 2500,
-          onRetry: this._onRetry,
         }
       );
     };
@@ -402,8 +268,11 @@ export default class Now extends EventEmitter {
       );
 
       const deployments = await Promise.all(
-        projects.map(async ({ id: projectId }) => {
-          const query = new URLSearchParams({ limit: 1, projectId });
+        projects.map(async ({ id: projectId }: { id: string }) => {
+          const query = new URLSearchParams({
+            limit: (1).toString(),
+            projectId,
+          });
           const { deployments } = await fetchRetry(
             `/v${version}/now/deployments?${query}`
           );
@@ -432,39 +301,11 @@ export default class Now extends EventEmitter {
     return response;
   }
 
-  async listInstances(deploymentId) {
-    const { instances } = await this.retry(
-      async bail => {
-        const res = await this._fetch(
-          `/now/deployments/${deploymentId}/instances`
-        );
-
-        if (res.status === 200) {
-          // What we want
-          return res.json();
-        }
-        if (res.status > 200 && res.status < 500) {
-          // If something is wrong with our request, we don't retry
-          return bail(await responseError(res, 'Failed to list instances'));
-        }
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to list instances');
-      },
-      {
-        retries: 3,
-        minTimeout: 2500,
-        onRetry: this._onRetry,
-      }
-    );
-
-    return instances;
-  }
-
-  async findDeployment(hostOrId) {
+  async findDeployment(hostOrId: string) {
     const { debug } = this._output;
 
-    let id = hostOrId && !hostOrId.includes('.');
-    let isBuilds = null;
+    let id: string | null =
+      hostOrId && !hostOrId.includes('.') ? hostOrId : null;
 
     if (!id) {
       let host = hostOrId.replace(/^https:\/\//i, '');
@@ -495,20 +336,17 @@ export default class Now extends EventEmitter {
 
           return res.json();
         },
-        { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+        { retries: 3, minTimeout: 2500 }
       );
 
       id = deployment.id;
-      isBuilds = deployment.type === 'LAMBDAS';
     }
-
-    const url = `/${
-      isBuilds ? 'v11' : 'v5'
-    }/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {
-        const res = await this._fetch(url);
+        const res = await this._fetch(
+          `/v12/now/deployments/${encodeURIComponent(id as string)}`
+        );
 
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
@@ -524,11 +362,11 @@ export default class Now extends EventEmitter {
 
         return res.json();
       },
-      { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+      { retries: 3, minTimeout: 2500 }
     );
   }
 
-  async remove(deploymentId, { hard }) {
+  async remove(deploymentId: string, { hard }: { hard: boolean }) {
     const url = `/now/deployments/${deploymentId}?hard=${hard ? 1 : 0}`;
 
     await this.retry(async bail => {
@@ -550,53 +388,41 @@ export default class Now extends EventEmitter {
     return true;
   }
 
-  retry(fn, { retries = 3, maxTimeout = Infinity } = {}) {
+  retry<T>(
+    fn: RetryFunction<T>,
+    {
+      minTimeout,
+      retries = 3,
+      maxTimeout = Infinity,
+    }: {
+      retries?: number;
+      maxTimeout?: number;
+      minTimeout?: number;
+    } = {}
+  ) {
     return retry(fn, {
       retries,
       maxTimeout,
+      minTimeout,
       onRetry: this._onRetry,
     });
   }
 
-  _onRetry(err) {
+  _onRetry(err: Error) {
     this._output.debug(`Retrying: ${err}\n${err.stack}`);
   }
 
   close() {}
 
-  get id() {
-    return this._id;
-  }
-
-  get fileCount() {
-    return this._fileCount;
-  }
-
-  get host() {
-    return this._host;
-  }
-
-  get syncAmount() {
-    if (!this._syncAmount) {
-      this._syncAmount = this._missing
-        .map(sha => this._files.get(sha).data.length)
-        .reduce((a, b) => a + b, 0);
-    }
-
-    return this._syncAmount;
-  }
-
-  get syncFileCount() {
-    return this._missing.length;
-  }
-
-  _fetch(_url, opts = {}) {
+  _fetch(_url: string, opts: any = {}) {
     if (opts.useCurrentTeam !== false && this.currentTeam) {
       const parsedUrl = parseUrl(_url, true);
-      const query = parsedUrl.query;
+      const query = new URLSearchParams(parsedUrl.query);
+      if (this.currentTeam) {
+        query.set('teamId', this.currentTeam);
+      }
 
-      query.teamId = this.currentTeam;
-      _url = `${parsedUrl.pathname}?${qs.encode(query)}`;
+      _url = `${parsedUrl.pathname}?${query}`;
       delete opts.useCurrentTeam;
     }
 
@@ -628,7 +454,7 @@ export default class Now extends EventEmitter {
   // which automatically returns the json response body
   // if the response is ok and content-type json
   // it does the same for JSON` body` in opts
-  async fetch(url, opts = {}) {
+  async fetch(url: string, opts: any = {}) {
     return this.retry(async bail => {
       if (opts.json !== false && opts.body && typeof opts.body === 'object') {
         opts = Object.assign({}, opts, {
@@ -658,39 +484,5 @@ export default class Now extends EventEmitter {
       }
       throw err;
     }, opts.retry);
-  }
-
-  async getPlanMax() {
-    return 10;
-  }
-}
-
-function toRelative(path, base) {
-  const fullBase = base.endsWith(SEP) ? base : base + SEP;
-  let relative = path.substr(fullBase.length);
-
-  if (relative.startsWith(SEP)) {
-    relative = relative.substr(1);
-  }
-
-  return relative.replace(/\\/g, '/');
-}
-
-function hasNpmStart(pkg) {
-  return pkg.scripts && (pkg.scripts.start || pkg.scripts['now-start']);
-}
-
-function hasFile(base, files, name) {
-  const relative = files.map(file => toRelative(file, base));
-  return relative.indexOf(name) !== -1;
-}
-
-async function readAuthToken(path, name = '.npmrc') {
-  try {
-    const contents = await fs.readFile(resolvePath(path, name), 'utf8');
-    const npmrc = parseIni(contents);
-    return npmrc['//registry.npmjs.org/:_authToken'];
-  } catch (err) {
-    // Do nothing
   }
 }

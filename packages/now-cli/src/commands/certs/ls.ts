@@ -1,8 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-// @ts-ignore
-import Now from '../../util';
+
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -48,7 +47,6 @@ async function ls(
     output.error('Please provide a number for flag --next');
     return 1;
   }
-  const now = new Now({ apiUrl, token, debug, currentTeam });
   const lsStamp = stamp();
 
   if (args.length !== 0) {
@@ -61,7 +59,7 @@ async function ls(
   }
 
   // Get the list of certificates
-  const { certs, pagination } = await getCerts(now, nextTimestamp).catch(
+  const { certs, pagination } = await getCerts(client, nextTimestamp).catch(
     err => err
   );
 

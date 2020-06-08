@@ -45,7 +45,7 @@ import { Output } from '../output';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
 import getNowConfigPath from '../config/local-path';
-import { MissingDotenvVarsError } from '../errors-ts';
+import { MissingDotenvVarsError } from '../errors';
 import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
@@ -776,8 +776,7 @@ export default class DevServer {
     Object.assign(process.env, allEnv);
     this.envConfigs = { buildEnv, runEnv, allEnv };
 
-    const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowConfig, opts);
+    const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);

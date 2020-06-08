@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { email as regexEmail } from '../../util/input/regexes';
+import createOutput from '../../util/output/create-output';
 import wait from '../../util/output/wait';
-import fatalError from '../../util/fatal-error';
 import cmd from '../../util/output/cmd.ts';
 import info from '../../util/output/info';
 import stamp from '../../util/output/stamp.ts';
@@ -66,6 +66,7 @@ export default async function({
   apiUrl,
   token,
 } = {}) {
+  const output = createOutput();
   const { currentTeam: currentTeamId } = config;
 
   const stopSpinner = wait('Fetching teams');
@@ -100,7 +101,8 @@ export default async function({
     )}.\nPlease select a team scope using ${getCommandName(
       `switch`
     )} or use ${cmd('--scope')}`;
-    return fatalError(err);
+    output.error(err);
+    return 1;
   }
 
   console.log(

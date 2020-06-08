@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Now from '../../util';
+import Now from '../../util/now';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
@@ -39,7 +39,6 @@ export default async function rm(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const [aliasOrId] = args;
 
