@@ -232,21 +232,34 @@ async function npmInstall(
   output.debug(`Running npm install in ${cwd}`);
 
   try {
-    await execa(
-      'npm',
-      [
-        'install',
-        '--save-exact',
-        '--no-package-lock',
-        '--no-audit',
-        '--no-progress',
-        ...sortedPackages,
-      ],
-      {
-        cwd,
-        stdio: output.isDebugEnabled() ? 'inherit' : undefined,
+    const args = [
+      'install',
+      '--save-exact',
+      '--no-package-lock',
+      '--no-audit',
+      '--no-progress',
+    ];
+    if (process.stderr.isTTY) {
+      // Force colors in the npm child process
+      // https://docs.npmjs.com/misc/config#color
+      args.push('--color=always');
+    }
+    args.push(...sortedPackages);
+    const result = await execa('npm', args, {
+      cwd,
+      reject: false,
+      stdio: output.isDebugEnabled() ? 'inherit' : 'pipe',
+    });
+    if (result.failed) {
+      stopSpinner();
+      if (result.stdout) {
+        console.log(result.stdout);
       }
-    );
+      if (result.stderr) {
+        console.error(result.stderr);
+      }
+      throw result;
+    }
   } finally {
     stopSpinner();
   }
