@@ -1,6 +1,7 @@
 import { HandleValue } from './index';
 
 export type RouteApiError = {
+  name: string;
   code: string;
   message: string;
   link?: string; // link to error message details

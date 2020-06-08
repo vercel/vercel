@@ -564,7 +564,7 @@ export default class DevServer {
       nowConfig: config,
     });
     if (routeError) {
-      this.output.error(routeError.message, null, routeError.link);
+      this.output.prettyError(routeError);
       await this.exit();
     }
     config.routes = maybeRoutes || [];

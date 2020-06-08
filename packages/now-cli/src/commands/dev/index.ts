@@ -119,7 +119,7 @@ export default async function main(ctx: NowContext) {
   try {
     return await dev(ctx, argv, args, output);
   } catch (err) {
-    output.error(err.message);
+    output.prettyError(err);
     output.debug(stringifyError(err));
     return 1;
   }
