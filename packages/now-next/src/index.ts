@@ -226,7 +226,7 @@ export const build = async ({
 
   if (hasFunctionsConfig) {
     console.warn(
-      `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to \`functions\` config. http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
+      `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
     );
   }
 
