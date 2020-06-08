@@ -1238,7 +1238,7 @@ export class BuildError extends NowError<'BUILD_ERROR', {}> {
 }
 
 /**
- * This Error subclass can be used by the `output.error()` function.
+ * This Error subclass can be used by the `output.prettyError()` function.
  */
 export class LinkableError extends Error {
   link: string;
