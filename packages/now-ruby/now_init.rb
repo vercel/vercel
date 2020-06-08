@@ -60,6 +60,8 @@ def webrick_handler(httpMethod, path, body, headers)
   server.shutdown
   Thread.kill(th)
   
+  # Forced string encoding is required due to upstream issue with Net::HTTP
+  # https://bugs.ruby-lang.org/issues/15517
   res_headers = res.each_capitalized.to_h
   res_encoding = "UTF-8"
   if res_headers["Content-Type"] && res_headers["Content-Type"].include?("charset=")
