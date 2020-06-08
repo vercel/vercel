@@ -2916,3 +2916,19 @@ test('reject conflicting `vercel.json` and `now.json` files', async t => {
     formatOutput({ stderr, stdout })
   );
 });
+
+test('`vc --debug project ls` should output the projects listing', async t => {
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--debug', 'project', 'ls'],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  t.true(
+    stdout.includes('> Projects found under'),
+    formatOutput({ stderr, stdout })
+  );
+});

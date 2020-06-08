@@ -209,6 +209,7 @@ export const build = async ({
     type: 'file',
   });
   let hasLegacyRoutes = false;
+  const hasFunctionsConfig = !!config.functions;
 
   if (nowJsonPath) {
     const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
@@ -223,9 +224,17 @@ export const build = async ({
     }
   }
 
+  if (hasFunctionsConfig) {
+    console.warn(
+      `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
+    );
+  }
+
   // default to true but still allow opting out with the config
   const isSharedLambdas =
-    !hasLegacyRoutes && typeof config.sharedLambdas === 'undefined'
+    !hasLegacyRoutes &&
+    !hasFunctionsConfig &&
+    typeof config.sharedLambdas === 'undefined'
       ? true
       : !!config.sharedLambdas;
 
@@ -1178,50 +1187,6 @@ export const build = async ({
     );
 
     if (isSharedLambdas) {
-      // since we combine the pages into lambda groups we need to merge
-      // the lambda options into one this means they should only configure
-      // lambda options for one page or one API as doing it for
-      // another will override it
-      const getMergedLambdaOptions = async (pageKeys: string[]) => {
-        if (pageKeys.length === 0) return {};
-
-        const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({
-            workPath,
-            page: pageKeys[0],
-          }),
-          config,
-        });
-
-        for (const page of pageKeys) {
-          if (page === pageKeys[0]) continue;
-          const sourceFile = await getSourceFilePathFromPage({
-            workPath,
-            page,
-          });
-          const newOptions = await getLambdaOptionsFromFunction({
-            sourceFile,
-            config,
-          });
-
-          for (const key of Object.keys(newOptions)) {
-            // eslint-disable-next-line
-            if (typeof (newOptions as any)[key] !== 'undefined') {
-              // eslint-disable-next-line
-              (lambdaOptions as any)[key] = (newOptions as any)[key];
-            }
-          }
-        }
-        return lambdaOptions;
-      };
-
-      const mergedPageLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => !page.startsWith('api/'))
-      );
-      const mergedApiLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => page.startsWith('api/'))
-      );
-
       const launcherPath = path.join(__dirname, 'templated-launcher-shared.js');
       const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -1337,9 +1302,6 @@ export const build = async ({
                 ],
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...(group.isApiLambda
-                  ? mergedApiLambdaOptions
-                  : mergedPageLambdaOptions),
               });
             } else {
               lambdas[
@@ -1352,9 +1314,6 @@ export const build = async ({
                 layers: pageLayers,
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...(group.isApiLambda
-                  ? mergedApiLambdaOptions
-                  : mergedPageLambdaOptions),
               });
             }
           }
