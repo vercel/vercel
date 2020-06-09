@@ -39,7 +39,6 @@ import {
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
-import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';
 import {
@@ -56,6 +55,7 @@ import validatePaths, {
 } from '../../util/validate-paths';
 import { readLocalConfig } from '../../util/config/files';
 import { getCommandName } from '../../util/pkg-name.ts';
+import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url.ts';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -87,6 +87,7 @@ const addProcessEnv = async (log, env) => {
 
 const printDeploymentStatus = async (
   output,
+  client,
   {
     readyState,
     alias: aliasList,
@@ -119,18 +120,14 @@ const printDeploymentStatus = async (
     let previewUrl;
     let isWildcard;
     if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
-      // search for a non now.sh/non wildcard domain
-      // but fallback to the first alias in the list
-      const mainAlias =
-        aliasList.find(
-          alias =>
-            !alias.endsWith('.now.sh') &&
-            !alias.endsWith('.vercel.app') &&
-            !isWildcardAlias(alias)
-        ) || aliasList[0];
-
-      isWildcard = isWildcardAlias(mainAlias);
-      previewUrl = isWildcard ? mainAlias : `https://${mainAlias}`;
+      const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
+      if (previewUrlInfo) {
+        isWildcard = previewUrlInfo.isWildcard;
+        previewUrl = previewUrlInfo.previewUrl;
+      } else {
+        isWildcard = false;
+        previewUrl = `https://${deploymentUrl}`;
+      }
     } else {
       // fallback to deployment url
       isWildcard = false;
@@ -706,6 +703,12 @@ export default async function main(
 
   return printDeploymentStatus(
     output,
+    new Client({
+      apiUrl: ctx.apiUrl,
+      token: ctx.authConfig.token,
+      currentTeam: org.id,
+      debug: debugEnabled,
+    }),
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
