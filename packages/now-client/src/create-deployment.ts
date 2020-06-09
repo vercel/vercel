@@ -3,7 +3,7 @@ import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 import { relative, isAbsolute, basename } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
-import { buildFileTree, createDebug, parseNowJSON } from './utils';
+import { buildFileTree, createDebug, parseVercelConfig } from './utils';
 import { DeploymentError } from './errors';
 import {
   NowConfig,
@@ -85,10 +85,24 @@ export default function buildCreateDeployment(version: number) {
     let configPath: string | undefined;
     if (!nowConfig) {
       // If the user did not provide a config file, use the one in the root directory.
-      configPath = fileList
-        .map(f => relative(cwd, f))
-        .find(f => f === 'vercel.json' || f === 'now.json');
-      nowConfig = await parseNowJSON(configPath);
+      const relativePaths = fileList.map(f => relative(cwd, f));
+      const hasVercelConfig = relativePaths.includes('vercel.json');
+      const hasNowConfig = relativePaths.includes('now.json');
+
+      if (hasVercelConfig) {
+        if (hasNowConfig) {
+          throw new DeploymentError({
+            code: 'conflicting_config',
+            message:
+              'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
+          });
+        }
+        configPath = 'vercel.json';
+      } else if (hasNowConfig) {
+        configPath = 'now.json';
+      }
+
+      nowConfig = await parseVercelConfig(configPath);
     }
 
     if (

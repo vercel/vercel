@@ -70,6 +70,7 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
+import findUp from 'find-up';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -204,7 +205,39 @@ export const build = async ({
 }> => {
   validateEntrypoint(entrypoint);
 
-  const isSharedLambdas = config.sharedLambdas;
+  const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
+    type: 'file',
+  });
+  let hasLegacyRoutes = false;
+  const hasFunctionsConfig = !!config.functions;
+
+  if (nowJsonPath) {
+    const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
+
+    if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
+      hasLegacyRoutes = true;
+      console.warn(
+        `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
+          nowJsonPath
+        )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
+      );
+    }
+  }
+
+  if (hasFunctionsConfig) {
+    console.warn(
+      `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
+    );
+  }
+
+  // default to true but still allow opting out with the config
+  const isSharedLambdas =
+    !hasLegacyRoutes &&
+    !hasFunctionsConfig &&
+    typeof config.sharedLambdas === 'undefined'
+      ? true
+      : !!config.sharedLambdas;
+
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
 
@@ -1154,50 +1187,6 @@ export const build = async ({
     );
 
     if (isSharedLambdas) {
-      // since we combine the pages into lambda groups we need to merge
-      // the lambda options into one this means they should only configure
-      // lambda options for one page or one API as doing it for
-      // another will override it
-      const getMergedLambdaOptions = async (pageKeys: string[]) => {
-        if (pageKeys.length === 0) return {};
-
-        const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({
-            workPath,
-            page: pageKeys[0],
-          }),
-          config,
-        });
-
-        for (const page of pageKeys) {
-          if (page === pageKeys[0]) continue;
-          const sourceFile = await getSourceFilePathFromPage({
-            workPath,
-            page,
-          });
-          const newOptions = await getLambdaOptionsFromFunction({
-            sourceFile,
-            config,
-          });
-
-          for (const key of Object.keys(newOptions)) {
-            // eslint-disable-next-line
-            if (typeof (newOptions as any)[key] !== 'undefined') {
-              // eslint-disable-next-line
-              (lambdaOptions as any)[key] = (newOptions as any)[key];
-            }
-          }
-        }
-        return lambdaOptions;
-      };
-
-      const mergedPageLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => !page.startsWith('api/'))
-      );
-      const mergedApiLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => page.startsWith('api/'))
-      );
-
       const launcherPath = path.join(__dirname, 'templated-launcher-shared.js');
       const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -1313,9 +1302,6 @@ export const build = async ({
                 ],
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...(group.isApiLambda
-                  ? mergedApiLambdaOptions
-                  : mergedPageLambdaOptions),
               });
             } else {
               lambdas[
@@ -1328,9 +1314,6 @@ export const build = async ({
                 layers: pageLayers,
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...(group.isApiLambda
-                  ? mergedApiLambdaOptions
-                  : mergedPageLambdaOptions),
               });
             }
           }

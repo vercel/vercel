@@ -114,6 +114,7 @@ export default class DevServer {
   public cwd: string;
   public debug: boolean;
   public output: Output;
+  public proxy: httpProxy;
   public envConfigs: EnvConfigs;
   public frameworkSlug: string | null;
   public files: BuilderInputs;
@@ -124,7 +125,6 @@ export default class DevServer {
   private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
-  private proxy: httpProxy;
   private server: http.Server;
   private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
@@ -564,7 +564,7 @@ export default class DevServer {
       nowConfig: config,
     });
     if (routeError) {
-      this.output.error(routeError.message, null, routeError.link);
+      this.output.prettyError(routeError);
       await this.exit();
     }
     config.routes = maybeRoutes || [];
@@ -581,6 +581,7 @@ export default class DevServer {
         defaultRoutes,
         redirectRoutes,
         rewriteRoutes,
+        errorRoutes,
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
@@ -606,20 +607,25 @@ export default class DevServer {
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
-
-        const routes: Route[] = [];
-        const { routes: nowConfigRoutes } = config;
-        routes.push(...(redirectRoutes || []));
-        routes.push(
-          ...appendRoutesToPhase({
-            routes: nowConfigRoutes,
-            newRoutes: rewriteRoutes,
-            phase: 'filesystem',
-          })
-        );
-        routes.push(...(defaultRoutes || []));
-        config.routes = routes;
       }
+
+      let routes: Route[] = [];
+      const { routes: nowConfigRoutes } = config;
+      routes.push(...(redirectRoutes || []));
+      routes.push(
+        ...appendRoutesToPhase({
+          routes: nowConfigRoutes,
+          newRoutes: rewriteRoutes,
+          phase: 'filesystem',
+        })
+      );
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: errorRoutes,
+        phase: 'error',
+      });
+      routes.push(...(defaultRoutes || []));
+      config.routes = routes;
     }
 
     if (Array.isArray(config.builds)) {
@@ -1323,8 +1329,7 @@ export default class DevServer {
     const handleMap = getRoutesTypes(routes);
     const missRoutes = handleMap.get('miss') || [];
     const hitRoutes = handleMap.get('hit') || [];
-    handleMap.delete('miss');
-    handleMap.delete('hit');
+    const errorRoutes = handleMap.get('error') || [];
     const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
     let routeResult: RouteResult | null = null;
@@ -1362,7 +1367,7 @@ export default class DevServer {
 
         debug(`ProxyPass: ${destUrl}`);
         this.setResponseHeaders(res, nowRequestId);
-        return proxyPass(req, res, destUrl, this.proxy, this.output);
+        return proxyPass(req, res, destUrl, this, nowRequestId);
       }
 
       match = await findBuildMatch(
@@ -1431,6 +1436,32 @@ export default class DevServer {
         routeResult.status = prevStatus;
       }
 
+      if (!match && errorRoutes.length > 0) {
+        // error phase
+        const routeResultForError = await devRouter(
+          getReqUrl(routeResult),
+          req.method,
+          errorRoutes,
+          this,
+          routeResult.headers,
+          [],
+          'error'
+        );
+
+        const matchForError = await findBuildMatch(
+          this.buildMatches,
+          this.files,
+          routeResultForError.dest,
+          this
+        );
+
+        if (matchForError) {
+          // error phase only applies if the file was found
+          routeResult = routeResultForError;
+          match = matchForError;
+        }
+      }
+
       statusCode = routeResult.status;
 
       if (match) {
@@ -1475,8 +1506,8 @@ export default class DevServer {
           req,
           res,
           `http://localhost:${this.devProcessPort}`,
-          this.proxy,
-          this.output,
+          this,
+          nowRequestId,
           false
         );
       }
@@ -1560,7 +1591,7 @@ export default class DevServer {
           req,
           res,
           nowRequestId,
-          'NO_STATUS_CODE_FROM_DEV_SERVER',
+          'NO_RESPONSE_FROM_FUNCTION',
           502
         );
         return;
@@ -1595,15 +1626,14 @@ export default class DevServer {
           req,
           res,
           `http://localhost:${port}`,
-          this.proxy,
-          this.output,
+          this,
+          nowRequestId,
           false
         );
       } else {
         debug(`Skipping \`startDevServer()\` for ${match.entrypoint}`);
       }
     }
-
     let foundAsset = findAsset(match, requestPath, nowConfig);
 
     if (!foundAsset && callLevel === 0) {
@@ -1626,8 +1656,8 @@ export default class DevServer {
         req,
         res,
         `http://localhost:${this.devProcessPort}`,
-        this.proxy,
-        this.output,
+        this,
+        nowRequestId,
         false
       );
     }
@@ -1721,7 +1751,7 @@ export default class DevServer {
             req,
             res,
             nowRequestId,
-            'NO_STATUS_CODE_FROM_LAMBDA',
+            'NO_RESPONSE_FROM_FUNCTION',
             502
           );
           return;
@@ -1937,24 +1967,27 @@ function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   dest: string,
-  proxy: httpProxy,
-  output: Output,
+  devServer: DevServer,
+  nowRequestId: string,
   ignorePath: boolean = true
 ): void {
-  return proxy.web(
+  return devServer.proxy.web(
     req,
     res,
     { target: dest, ignorePath },
     (error: NodeJS.ErrnoException) => {
-      // If the client hangs up a socket, we do not
-      // want to do anything, as the client just expects
-      // the connection to be closed.
-      if (error.code === 'ECONNRESET') {
-        res.end();
-        return;
+      devServer.output.error(
+        `Failed to complete request to ${req.url}: ${error}`
+      );
+      if (!res.headersSent) {
+        devServer.sendError(
+          req,
+          res,
+          nowRequestId,
+          'NO_RESPONSE_FROM_FUNCTION',
+          502
+        );
       }
-
-      output.error(`Failed to complete request to ${req.url}: ${error}`);
     }
   );
 }
@@ -2014,12 +2047,24 @@ async function findBuildMatch(
   isFilesystem?: boolean
 ): Promise<BuildMatch | null> {
   requestPath = requestPath.replace(/^\//, '');
+
+  let bestIndexMatch: undefined | BuildMatch;
   for (const match of matches.values()) {
     if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
-      return match;
+      if (!isIndex(match.src)) {
+        return match;
+      } else {
+        // if isIndex === true and ends in .html, we're done. Otherwise, keep searching
+        bestIndexMatch = match;
+        if (extname(match.src) === '.html') {
+          return bestIndexMatch;
+        }
+      }
     }
   }
-  return null;
+
+  // return a non-.html index file or none are found
+  return bestIndexMatch || null;
 }
 
 async function shouldServe(

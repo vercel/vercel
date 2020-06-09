@@ -2895,3 +2895,40 @@ test('deploys with only vercel.json and README.md', async t => {
   const text = await res.text();
   t.regex(text, /readme contents/);
 });
+
+test('reject conflicting `vercel.json` and `now.json` files', async t => {
+  const directory = fixture('conflicting-now-json-vercel-json');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+  t.true(
+    stderr.includes(
+      'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+    ),
+    formatOutput({ stderr, stdout })
+  );
+});
+
+test('`vc --debug project ls` should output the projects listing', async t => {
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--debug', 'project', 'ls'],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  t.true(
+    stdout.includes('> Projects found under'),
+    formatOutput({ stderr, stdout })
+  );
+});

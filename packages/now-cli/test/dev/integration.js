@@ -375,6 +375,16 @@ test.afterEach(async () => {
   );
 });
 
+test('[vercel dev] prints `npm install` errors', async t => {
+  const dir = fixture('runtime-not-installed');
+  const result = await exec(dir);
+  t.truthy(result.stderr.includes('npm ERR! 404'));
+  t.truthy(
+    result.stderr.includes('Failed to install `vercel dev` dependencies')
+  );
+  t.truthy(result.stderr.includes('https://vercel.link/npm-install-error'));
+});
+
 test(
   '[vercel dev] validate routes that use `check: true`',
   testFixtureStdio('routes-check-true', async testPath => {
@@ -388,6 +398,17 @@ test(
     await testPath(403, '/secret');
     await testPath(200, '/post', 'This is a post.');
     await testPath(200, '/post.html', 'This is a post.');
+  })
+);
+
+test(
+  '[vercel dev] validate routes that use custom 404 page',
+  testFixtureStdio('routes-custom-404', async testPath => {
+    await testPath(200, '/', 'Home Page');
+    await testPath(404, '/nothing', 'Custom User 404');
+    await testPath(404, '/exact', 'Exact Custom 404');
+    await testPath(200, '/api/hello', 'Hello');
+    await testPath(404, '/api/nothing', 'Custom User 404');
   })
 );
 
@@ -477,7 +498,8 @@ test(
     await testPath(200, '/api/date', /current date/);
     await testPath(200, '/api/rand', /random number/);
     await testPath(200, '/api/rand.js', /random number/);
-    await testPath(404, '/api/api');
+    await testPath(404, '/api/api', /NOT_FOUND/m);
+    await testPath(404, '/nothing', /Custom 404 Page/);
   })
 );
 
@@ -677,6 +699,17 @@ test(
 );
 
 test(
+  '[vercel dev] should serve custom 404 when `cleanUrls: true`',
+  testFixtureStdio('test-clean-urls-custom-404', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about', 'The about page');
+    await testPath(200, '/contact/me', 'Contact Me Subdirectory');
+    await testPath(404, '/nothing', 'Custom 404 Page');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
+);
+
+test(
   '[vercel dev] test cleanUrls and trailingSlash serve correct content',
   testFixtureStdio('test-clean-urls-trailing-slash', async testPath => {
     await testPath(200, '/', 'Index Page');
@@ -741,6 +774,16 @@ test(
     await testPath(308, '/sub', 'Redirecting to /sub/ (308)', {
       Location: '/sub/',
     });
+  })
+);
+
+test(
+  '[vercel dev] should serve custom 404 when `trailingSlash: true`',
+  testFixtureStdio('test-trailing-slash-custom-404', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'The about page');
+    await testPath(200, '/contact/', 'Contact Subdirectory');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
   })
 );
 
@@ -905,6 +948,8 @@ test(
   '[vercel dev] 10-nextjs-node',
   testFixtureStdio('10-nextjs-node', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
+    await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(404, '/nothing', /Custom Next 404/);
   })
 );
 
@@ -1345,5 +1390,21 @@ test(
   testFixtureStdio('custom-runtime', async testPath => {
     await testPath(200, `/api/user`, /Hello, from Bash!/m);
     await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
+  })
+);
+
+test(
+  '[vercel dev] Should work with nested `tsconfig.json` files',
+  testFixtureStdio('nested-tsconfig', async testPath => {
+    await testPath(200, `/`, /Nested tsconfig.json test page/);
+    await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
+  })
+);
+
+test(
+  '[vercel dev] should prioritize index.html over other file named index.*',
+  testFixtureStdio('index-html-priority', async testPath => {
+    await testPath(200, '/', 'This is index.html');
+    await testPath(200, '/index.css', 'This is index.css');
   })
 );

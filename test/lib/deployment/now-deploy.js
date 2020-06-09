@@ -186,7 +186,10 @@ async function fetchTokenWithRetry(retries = 5) {
       },
     });
     if (!res.ok) {
-      throw new Error(`Unexpected status from registration: ${res.status}`);
+      const text = await res.text();
+      throw new Error(
+        `Unexpected status (${res.status}) from registration: ${text}`
+      );
     }
     const data = await res.json();
     if (!data) {
