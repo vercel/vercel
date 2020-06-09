@@ -161,7 +161,7 @@ async function testPath(
     Object.entries(headers).forEach(([key, expectedValue]) => {
       let actualValue = res.headers.get(key);
       if (key.toLowerCase() === 'location' && actualValue === '//') {
-        // HACK: `node-fetch` has strang behavior for location header so fix it
+        // HACK: `node-fetch` has strange behavior for location header so fix it
         // with `manual-dont-change` opt and convert double slash to single.
         // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
         actualValue = '/';
@@ -187,20 +187,29 @@ async function testFixture(directory, opts = {}, args = []) {
     }
   );
 
-  const stdoutList = [];
-  const stderrList = [];
-
+  let stdout = '';
+  let stderr = '';
+  const readyResolver = createResolver();
   const exitResolver = createResolver();
 
-  dev.stderr.on('data', data => stderrList.push(Buffer.from(data)));
-  dev.stdout.on('data', data => stdoutList.push(Buffer.from(data)));
+  dev.stdout.setEncoding('utf8');
+  dev.stderr.setEncoding('utf8');
+
+  dev.stdout.on('data', data => {
+    stdout += data;
+  });
+  dev.stderr.on('data', data => {
+    stderr += data;
+
+    if (stderr.includes('Ready! Available at')) {
+      readyResolver.resolve();
+    }
+  });
 
   let printedOutput = false;
 
   dev.on('exit', () => {
     if (!printedOutput) {
-      const stdout = Buffer.concat(stdoutList).toString();
-      const stderr = Buffer.concat(stderrList).toString();
       printOutput(directory, stdout, stderr);
       printedOutput = true;
     }
@@ -209,8 +218,6 @@ async function testFixture(directory, opts = {}, args = []) {
 
   dev.on('error', () => {
     if (!printedOutput) {
-      const stdout = Buffer.concat(stdoutList).toString();
-      const stderr = Buffer.concat(stderrList).toString();
       printOutput(directory, stdout, stderr);
       printedOutput = true;
     }
@@ -226,6 +233,7 @@ async function testFixture(directory, opts = {}, args = []) {
   return {
     dev,
     port,
+    readyResolver,
   };
 }
 
@@ -267,14 +275,12 @@ function testFixtureStdio(
 
     await runNpmInstall(cwd);
 
-    const stdoutList = [];
-    const stderrList = [];
-
+    let stdout = '';
+    let stderr = '';
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
     try {
-      let stderr = '';
       let printedOutput = false;
 
       const env = skipDeploy
@@ -285,17 +291,19 @@ function testFixtureStdio(
         env,
       });
 
+      dev.stdout.setEncoding('utf8');
+      dev.stderro.setEncoding('utf8');
+
       dev.stdout.pipe(process.stdout);
       dev.stderr.pipe(process.stderr);
 
       dev.stdout.on('data', data => {
-        stdoutList.push(data);
+        stdout += data;
       });
 
       dev.stderr.on('data', data => {
-        stderrList.push(data);
+        stderr += data;
 
-        stderr += data.toString();
         if (stderr.includes('Ready! Available at')) {
           readyResolver.resolve();
         }
@@ -315,8 +323,6 @@ function testFixtureStdio(
 
       dev.on('exit', () => {
         if (!printedOutput) {
-          const stdout = Buffer.concat(stdoutList).toString();
-          const stderr = Buffer.concat(stderrList).toString();
           printOutput(directory, stdout, stderr);
           printedOutput = true;
         }
@@ -325,8 +331,6 @@ function testFixtureStdio(
 
       dev.on('error', () => {
         if (!printedOutput) {
-          const stdout = Buffer.concat(stdoutList).toString();
-          const stderr = Buffer.concat(stderrList).toString();
           printOutput(directory, stdout, stderr);
           printedOutput = true;
         }
@@ -383,6 +387,110 @@ test('[vercel dev] prints `npm install` errors', async t => {
     result.stderr.includes('Failed to install `vercel dev` dependencies')
   );
   t.truthy(result.stderr.includes('https://vercel.link/npm-install-error'));
+});
+
+test('[vercel dev] reflects changes to config and env without restart', async t => {
+  const dir = fixture('node-helpers');
+  const configPath = join(dir, 'vercel.json');
+  const originalConfig = await fs.readJSON(configPath);
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    {
+      // Node.js helpers should be available by default
+      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'bar');
+    }
+
+    {
+      // Disable the helpers via `config.helpers = false`
+      const config = {
+        ...originalConfig,
+        builds: [
+          {
+            ...originalConfig.builds[0],
+            config: {
+              helpers: false,
+            },
+          },
+        ],
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(500);
+
+      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const body = await res.json();
+      t.is(body.hasHelpers, false);
+      t.is(body.query, undefined);
+    }
+
+    {
+      // Enable the helpers via `config.helpers = true`
+      const config = {
+        ...originalConfig,
+        builds: [
+          {
+            ...originalConfig.builds[0],
+            config: {
+              helpers: true,
+            },
+          },
+        ],
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(500);
+
+      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'baz');
+    }
+
+    {
+      // Disable the helpers via `NODEJS_HELPERS = '0'`
+      const config = {
+        ...originalConfig,
+        build: {
+          env: {
+            NODEJS_HELPERS: '0',
+          },
+        },
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const body = await res.json();
+      t.is(body.hasHelpers, false);
+      t.is(body.query, undefined);
+    }
+
+    {
+      // Enable the helpers via `NODEJS_HELPERS = '1'`
+      const config = {
+        ...originalConfig,
+        build: {
+          env: {
+            NODEJS_HELPERS: '1',
+          },
+        },
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=boo`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'boo');
+    }
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.writeJSON(configPath, originalConfig);
+  }
 });
 
 test(
