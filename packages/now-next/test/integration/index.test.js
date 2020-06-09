@@ -34,6 +34,28 @@ it(
   FOUR_MINUTES
 );
 
+// it(
+//   'Should opt-out of shared lambdas when routes are detected',
+//   async () => {
+//     const {
+//       buildResult: { output },
+//     } = await runBuildLambda(path.join(__dirname, '../fixtures/26-mono-repo-404-lambda'));
+//     expect(output['packages/webapp/404']).toBeDefined();
+//     expect(output['packages/webapp/index']).toBeDefined();
+//     expect(output['packages/webapp/__NEXT_PAGE_LAMBDA_0']).not.toBeDefined();
+//     const filePaths = Object.keys(output);
+//     const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
+//       filePath.match(/static.*\/pages\/_app\.js$/)
+//     );
+//     const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
+//       filePath.match(/static.*\/pages\/_error\.js$/)
+//     );
+//     expect(hasUnderScoreAppStaticFile).toBeTruthy();
+//     expect(hasUnderScoreErrorStaticFile).toBeTruthy();
+//   },
+//   FOUR_MINUTES
+// );
+
 it(
   'Should build the monorepo example',
   async () => {
