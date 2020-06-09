@@ -18,6 +18,7 @@ import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
+import deepEqual from 'fast-deep-equal';
 import which from 'which';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
@@ -234,8 +235,18 @@ export default class DevServer {
       }
     }
 
-    // Update the build matches in case an entrypoint was created or deleted
     const nowConfig = await this.getNowConfig(false);
+
+    // Update the env vars configuration
+    const nowConfigBuild = nowConfig.build || {};
+    const [runEnv, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env', nowConfig.env),
+      this.getLocalEnv('.env.build', nowConfigBuild.env),
+    ]);
+    const allEnv = { ...buildEnv, ...runEnv };
+    this.envConfigs = { buildEnv, runEnv, allEnv };
+
+    // Update the build matches in case an entrypoint was created or deleted
     await this.updateBuildMatches(nowConfig);
 
     const filesChangedArray = [...filesChanged];
@@ -400,7 +411,7 @@ export default class DevServer {
     const blockingBuilds: Promise<void>[] = [];
     for (const match of matches) {
       const currentMatch = this.buildMatches.get(match.src);
-      if (!currentMatch || currentMatch.use !== match.use) {
+      if (!buildMatchEquals(currentMatch, match)) {
         this.output.debug(
           `Adding build match for "${match.src}" with "${match.use}"`
         );
@@ -2260,4 +2271,12 @@ function hasNewRoutingProperties(nowConfig: NowConfig) {
     typeof nowConfig.rewrites !== undefined ||
     typeof nowConfig.trailingSlash !== undefined
   );
+}
+
+function buildMatchEquals(a?: BuildMatch, b?: BuildMatch): boolean {
+  if (!a || !b) return false;
+  if (a.src !== b.src) return false;
+  if (a.use !== b.use) return false;
+  if (!deepEqual(a.config || {}, b.config || {})) return false;
+  return true;
 }
