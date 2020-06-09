@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-You're running Now CLI in a non-terminal context and there are no credentials available. This means that Now CLI is not able to authenticate against our service.
+You're running Vercel CLI in a non-terminal context and there are no credentials available. This means that Vercel CLI is not able to authenticate against our service.
 
 #### Possible Ways to Fix It
 

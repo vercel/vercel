@@ -212,7 +212,7 @@ async function run({ token, config: { currentTeam } }) {
       }
 
       // Check if the provided cardId (in case the user
-      // typed `now billing set-default <some-id>`) is valid
+      // typed `vercel billing set-default <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`;
         const confirmation = await promptBool(label, {
@@ -287,7 +287,7 @@ async function run({ token, config: { currentTeam } }) {
       }
 
       // Shoud check if the provided cardId (in case the user
-      // typed `now billing rm <some-id>`) is valid
+      // typed `vercel billing rm <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you want to remove this card?`;
         const confirmation = await promptBool(label);

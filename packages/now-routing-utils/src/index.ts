@@ -1,3 +1,4 @@
+import { parse as parseUrl } from 'url';
 export * from './schemas';
 export * from './types';
 import {
@@ -5,8 +6,7 @@ import {
   Handler,
   NormalizedRoutes,
   GetRoutesProps,
-  NowError,
-  NowErrorNested,
+  RouteApiError,
   NowRedirect,
 } from './types';
 import {
@@ -48,32 +48,27 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
 
   const routes: Route[] = [];
   const handling: HandleValue[] = [];
-  const errors: NowErrorNested[] = [];
+  const errors: string[] = [];
 
-  // We don't want to treat the input routes as references
-  inputRoutes.forEach(r => routes.push(Object.assign({}, r)));
-
-  for (const route of routes) {
+  inputRoutes.forEach((r, i) => {
+    const route = { ...r };
+    routes.push(route);
+    const keys = Object.keys(route);
     if (isHandler(route)) {
-      if (Object.keys(route).length !== 1) {
-        errors.push({
-          message: `Cannot have any other keys when handle is used (handle: ${route.handle})`,
-          handle: route.handle,
-        });
-      }
       const { handle } = route;
-      if (!isValidHandleValue(handle)) {
-        errors.push({
-          message: `This is not a valid handler (handle: ${handle})`,
-          handle: handle,
-        });
-        continue;
-      }
-      if (handling.includes(handle)) {
-        errors.push({
-          message: `You can only handle something once (handle: ${handle})`,
-          handle: handle,
-        });
+      if (keys.length !== 1) {
+        const unknownProp = keys.find(prop => prop !== 'handle');
+        errors.push(
+          `Route at index ${i} has unknown property \`${unknownProp}\`.`
+        );
+      } else if (!isValidHandleValue(handle)) {
+        errors.push(
+          `Route at index ${i} has unknown handle value \`handle: ${handle}\`.`
+        );
+      } else if (handling.includes(handle)) {
+        errors.push(
+          `Route at index ${i} is a duplicate. Please use one \`handle: ${handle}\` at most.`
+        );
       } else {
         handling.push(handle);
       }
@@ -91,7 +86,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       // Route src should strip escaped forward slash, its not special
       route.src = route.src.replace(/\\\//g, '/');
 
-      const regError = checkRegexSyntax(route.src);
+      const regError = checkRegexSyntax('Route', i, route.src);
       if (regError) {
         errors.push(regError);
       }
@@ -100,91 +95,103 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       const handleValue = handling[handling.length - 1];
       if (handleValue === 'hit') {
         if (route.dest) {
-          errors.push({
-            message: `You cannot assign "dest" after "handle: hit"`,
-            src: route.src,
-          });
+          errors.push(
+            `Route at index ${i} cannot define \`dest\` after \`handle: hit\`.`
+          );
         }
         if (route.status) {
-          errors.push({
-            message: `You cannot assign "status" after "handle: hit"`,
-            src: route.src,
-          });
+          errors.push(
+            `Route at index ${i} cannot define \`status\` after \`handle: hit\`.`
+          );
         }
         if (!route.continue) {
-          errors.push({
-            message: `You must assign "continue: true" after "handle: hit"`,
-            src: route.src,
-          });
+          errors.push(
+            `Route at index ${i} must define \`continue: true\` after \`handle: hit\`.`
+          );
         }
       } else if (handleValue === 'miss') {
         if (route.dest && !route.check) {
-          errors.push({
-            message: `You must assign "check: true" after "handle: miss"`,
-            src: route.src,
-          });
+          errors.push(
+            `Route at index ${i} must define \`check: true\` after \`handle: miss\`.`
+          );
         } else if (!route.dest && !route.continue) {
-          errors.push({
-            message: `You must assign "continue: true" after "handle: miss"`,
-            src: route.src,
-          });
+          errors.push(
+            `Route at index ${i} must define \`continue: true\` after \`handle: miss\`.`
+          );
         }
       }
     } else {
-      errors.push({
-        message: 'A route must set either handle or src',
-      });
+      errors.push(
+        `Route at index ${i} must define either \`handle\` or \`src\` property.`
+      );
     }
-  }
+  });
 
-  const error = createNowError(
-    'invalid_routes',
-    'One or more invalid routes were found',
-    errors
-  );
+  const error =
+    errors.length > 0
+      ? createError(
+          'invalid_route',
+          errors,
+          'https://vercel.link/routes-json',
+          'Learn More'
+        )
+      : null;
   return { routes, error };
 }
 
-function checkRegexSyntax(src: string): NowErrorNested | null {
+type ErrorMessageType = 'Header' | 'Rewrite' | 'Redirect';
+
+function checkRegexSyntax(
+  type: ErrorMessageType | 'Route',
+  index: number,
+  src: string
+): string | null {
   try {
-    // This feels a bit dangerous if there would be a vulnerability in RegExp.
     new RegExp(src);
   } catch (err) {
-    return {
-      message: `Invalid regular expression: "${src}"`,
-      src,
-    };
+    const prop = type === 'Route' ? 'src' : 'source';
+    return `${type} at index ${index} has invalid \`${prop}\` regular expression "${src}".`;
   }
   return null;
 }
 
-function checkPatternSyntax({
-  source,
-  destination,
-}: {
-  source: string;
-  destination?: string;
-}): NowErrorNested | null {
+function checkPatternSyntax(
+  type: ErrorMessageType,
+  index: number,
+  {
+    source,
+    destination,
+  }: {
+    source: string;
+    destination?: string;
+  }
+): { message: string; link: string } | null {
   let sourceSegments = new Set<string>();
-  let destinationSegments = new Set<string>();
+  const destinationSegments = new Set<string>();
   try {
     sourceSegments = new Set(sourceToRegex(source).segments);
   } catch (err) {
     return {
-      message: `Invalid source pattern: "${source}"`,
-      src: source,
+      message: `${type} at index ${index} has invalid \`source\` pattern "${source}".`,
+      link: 'https://vercel.link/invalid-route-source-pattern',
     };
   }
 
   if (destination) {
-    if (destination.startsWith('http://')) {
-      destination = destination.slice(7);
-    }
-    if (destination.startsWith('https://')) {
-      destination = destination.slice(8);
-    }
     try {
-      destinationSegments = new Set(sourceToRegex(destination).segments);
+      const { hostname, pathname, query } = parseUrl(destination, true);
+      sourceToRegex(hostname || '').segments.forEach(name =>
+        destinationSegments.add(name)
+      );
+      sourceToRegex(pathname || '').segments.forEach(name =>
+        destinationSegments.add(name)
+      );
+      for (const strOrArray of Object.values(query)) {
+        const value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
+        sourceToRegex(value || '').segments.forEach(name =>
+          destinationSegments.add(name)
+        );
+      }
     } catch (err) {
       // Since checkPatternSyntax() is a validation helper, we don't want to
       // replicate all possible URL parsing here so we consume the error.
@@ -194,8 +201,8 @@ function checkPatternSyntax({
     for (const segment of destinationSegments) {
       if (!sourceSegments.has(segment)) {
         return {
-          message: `Found segment ":${segment}" in "destination" pattern but not in "source" pattern.`,
-          src: segment,
+          message: `${type} at index ${index} has segment ":${segment}" in \`destination\` property but not in \`source\` property.`,
+          link: 'https://vercel.link/invalid-route-destination-segment',
         };
       }
     }
@@ -204,34 +211,32 @@ function checkPatternSyntax({
   return null;
 }
 
-function checkRedirect(r: NowRedirect) {
+function checkRedirect(r: NowRedirect, index: number) {
   if (
     typeof r.permanent !== 'undefined' &&
     typeof r.statusCode !== 'undefined'
   ) {
-    return {
-      message: `Redirect "${r.source}" cannot define both "permanent" and "statusCode".`,
-      src: r.source,
-    };
+    return `Redirect at index ${index} cannot define both \`permanent\` and \`statusCode\` properties.`;
   }
   return null;
 }
 
-function createNowError(
+function createError(
   code: string,
-  msg: string,
-  errors: NowErrorNested[]
-): NowError | null {
-  const error: NowError | null =
-    errors.length > 0
-      ? {
-          code,
-          message: `${msg}:\n${errors
-            .map(item => `- ${item.message}`)
-            .join('\n')}`,
-          errors,
-        }
-      : null;
+  allErrors: string | string[],
+  link: string,
+  action: string
+): RouteApiError | null {
+  const errors = Array.isArray(allErrors) ? allErrors : [allErrors];
+  const message = errors[0];
+  const error: RouteApiError = {
+    name: 'RouteApiError',
+    code,
+    message,
+    link,
+    action,
+    errors,
+  };
   return error;
 }
 
@@ -244,38 +249,20 @@ export function getTransformedRoutes({
 }: GetRoutesProps): NormalizedRoutes {
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } = nowConfig;
   let { routes = null } = nowConfig;
-  const errors: NowErrorNested[] = [];
   if (routes) {
-    if (typeof cleanUrls !== 'undefined') {
-      errors.push({
-        message: 'Cannot define both `routes` and `cleanUrls`',
-      });
-    }
-    if (typeof trailingSlash !== 'undefined') {
-      errors.push({
-        message: 'Cannot define both `routes` and `trailingSlash`',
-      });
-    }
-    if (typeof redirects !== 'undefined') {
-      errors.push({
-        message: 'Cannot define both `routes` and `redirects`',
-      });
-    }
-    if (typeof headers !== 'undefined') {
-      errors.push({
-        message: 'Cannot define both `routes` and `headers`',
-      });
-    }
-    if (typeof rewrites !== 'undefined') {
-      errors.push({
-        message: 'Cannot define both `routes` and `rewrites`',
-      });
-    }
-    if (errors.length > 0) {
-      const error = createNowError(
-        'invalid_keys',
-        'Cannot mix legacy routes with new keys',
-        errors
+    const hasNewProperties =
+      typeof cleanUrls !== 'undefined' ||
+      typeof trailingSlash !== 'undefined' ||
+      typeof redirects !== 'undefined' ||
+      typeof headers !== 'undefined' ||
+      typeof rewrites !== 'undefined';
+
+    if (hasNewProperties) {
+      const error = createError(
+        'invalid_mixed_routes',
+        'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.',
+        'https://vercel.link/mix-routing-props',
+        'Learn More'
       );
       return { routes, error };
     }
@@ -305,38 +292,45 @@ export function getTransformedRoutes({
   }
 
   if (typeof redirects !== 'undefined') {
-    const code = 'invalid_redirects';
-    const errorsRegex = redirects
-      .map(r => checkRegexSyntax(r.source))
-      .filter(notEmpty);
-    if (errorsRegex.length > 0) {
+    const code = 'invalid_redirect';
+    const regexErrorMessage = redirects
+      .map((r, i) => checkRegexSyntax('Redirect', i, r.source))
+      .find(notEmpty);
+    if (regexErrorMessage) {
       return {
         routes,
-        error: createNowError(
-          code,
-          'Redirect `source` contains invalid regex. Read more: https://err.sh/now/invalid-route-source',
-          errorsRegex
+        error: createError(
+          'invalid_redirect',
+          regexErrorMessage,
+          'https://vercel.link/invalid-route-source-pattern',
+          'Learn More'
         ),
       };
     }
-    const errorsPattern = redirects
-      .map(r => checkPatternSyntax(r))
-      .filter(notEmpty);
-    if (errorsPattern.length > 0) {
+    const patternError = redirects
+      .map((r, i) => checkPatternSyntax('Redirect', i, r))
+      .find(notEmpty);
+    if (patternError) {
       return {
         routes,
-        error: createNowError(
+        error: createError(
           code,
-          'Redirect `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
-          errorsPattern
+          patternError.message,
+          patternError.link,
+          'Learn More'
         ),
       };
     }
-    const errorProps = redirects.map(r => checkRedirect(r)).filter(notEmpty);
-    if (errorProps.length > 0) {
+    const redirectErrorMessage = redirects.map(checkRedirect).find(notEmpty);
+    if (redirectErrorMessage) {
       return {
         routes,
-        error: createNowError(code, 'Invalid redirects', errorProps),
+        error: createError(
+          code,
+          redirectErrorMessage,
+          'https://vercel.link/redirects-json',
+          'Learn More'
+        ),
       };
     }
     const normalized = normalizeRoutes(convertRedirects(redirects));
@@ -349,36 +343,38 @@ export function getTransformedRoutes({
   }
 
   if (typeof headers !== 'undefined') {
-    const code = 'invalid_headers';
-    const errorsRegex = headers
-      .map(r => checkRegexSyntax(r.source))
-      .filter(notEmpty);
-    if (errorsRegex.length > 0) {
+    const code = 'invalid_header';
+    const regexErrorMessage = headers
+      .map((r, i) => checkRegexSyntax('Header', i, r.source))
+      .find(notEmpty);
+    if (regexErrorMessage) {
       return {
         routes,
-        error: createNowError(
+        error: createError(
           code,
-          'Headers `source` contains invalid regex. Read more: https://err.sh/now/invalid-route-source',
-          errorsRegex
+          regexErrorMessage,
+          'https://vercel.link/invalid-route-source-pattern',
+          'Learn More'
         ),
       };
     }
-    const errorsPattern = headers
-      .map(r => checkPatternSyntax(r))
-      .filter(notEmpty);
-    if (errorsPattern.length > 0) {
+    const patternError = headers
+      .map((r, i) => checkPatternSyntax('Header', i, r))
+      .find(notEmpty);
+    if (patternError) {
       return {
         routes,
-        error: createNowError(
+        error: createError(
           code,
-          'Headers `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
-          errorsPattern
+          patternError.message,
+          patternError.link,
+          'Learn More'
         ),
       };
     }
     const normalized = normalizeRoutes(convertHeaders(headers));
     if (normalized.error) {
-      normalized.error.code = 'invalid_headers';
+      normalized.error.code = code;
       return { routes, error: normalized.error };
     }
     routes = routes || [];
@@ -386,30 +382,32 @@ export function getTransformedRoutes({
   }
 
   if (typeof rewrites !== 'undefined') {
-    const code = 'invalid_rewrites';
-    const errorsRegex = rewrites
-      .map(r => checkRegexSyntax(r.source))
-      .filter(notEmpty);
-    if (errorsRegex.length > 0) {
+    const code = 'invalid_rewrite';
+    const regexErrorMessage = rewrites
+      .map((r, i) => checkRegexSyntax('Rewrite', i, r.source))
+      .find(notEmpty);
+    if (regexErrorMessage) {
       return {
         routes,
-        error: createNowError(
+        error: createError(
           code,
-          'Rewrites `source` contains invalid regex. Read more: https://err.sh/now/invalid-route-source',
-          errorsRegex
+          regexErrorMessage,
+          'https://vercel.link/invalid-route-source-pattern',
+          'Learn More'
         ),
       };
     }
-    const errorsPattern = rewrites
-      .map(r => checkPatternSyntax(r))
-      .filter(notEmpty);
-    if (errorsPattern.length > 0) {
+    const patternError = rewrites
+      .map((r, i) => checkPatternSyntax('Rewrite', i, r))
+      .find(notEmpty);
+    if (patternError) {
       return {
         routes,
-        error: createNowError(
+        error: createError(
           code,
-          'Rewrites `source` contains invalid pattern. Read more: https://err.sh/now/invalid-route-source',
-          errorsPattern
+          patternError.message,
+          patternError.link,
+          'Learn More'
         ),
       };
     }

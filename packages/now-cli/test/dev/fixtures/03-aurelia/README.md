@@ -15,5 +15,5 @@ $ au new
 Once initialized, you can deploy the Aurelia example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```

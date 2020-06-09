@@ -52,6 +52,7 @@ export async function getGitHubRepoInfo(repo: Repo) {
   }
 
   if (data.id === 'vercel/vercel' && data.subdir && data.subdir[0] === 'examples') {
+
     // from our examples, add `homepage` and `description` fields
     const example = data.subdir[1];
     const exampleList = await getExampleList();

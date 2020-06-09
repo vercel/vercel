@@ -15,5 +15,5 @@ $ marko create my-project
 Once initialized, you can deploy the Marko.js example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```

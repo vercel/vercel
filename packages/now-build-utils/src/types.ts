@@ -114,7 +114,7 @@ export interface BuildOptions {
   config: Config;
 
   /**
-   * Metadata related to the invoker of the builder, used by `now dev`.
+   * Metadata related to the invoker of the builder, used by `vercel dev`.
    * Builders may use the properties on this object to change behavior based
    * on the build environment.
    */
@@ -201,7 +201,7 @@ export interface StartDevServerSuccess {
   port: number;
 
   /**
-   * Process ID number of the dev server. Useful for the `now dev` server to
+   * Process ID number of the dev server. Useful for the `vercel dev` server to
    * shut down the dev server once an HTTP request has been fulfilled.
    */
   pid: number;

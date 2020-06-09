@@ -1,4 +1,4 @@
-![Docusaurus Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/docusaurus.svg)
+![Docusaurus Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/docusaurus.svg)
 
 # Docusaurus Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Docusaurus](https://docusaurus.io/) site
 
 Deploy your own Docusaurus project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/docusaurus)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/docusaurus)
 
 _Live Example: https://docusaurus.now-examples.now.sh_
 

@@ -400,7 +400,7 @@ test('deploy using --local-config flag above target', async t => {
   t.regex(host, /root-level/gm, `Expected "root-level" but received "${host}"`);
 });
 
-test('Deploy `api-env` fixture and test `now env` command', async t => {
+test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   const target = fixture('api-env');
 
   async function nowDeploy() {
@@ -643,6 +643,7 @@ test('Deploy `api-env` fixture and test `now env` command', async t => {
   await nowEnvRemoveWithArgs();
   await nowEnvRemoveWithNameOnly();
   await nowEnvLsIsEmpty();
+  fs.unlinkSync(path.join(target, '.env'));
 });
 
 test('deploy with metadata containing "=" in the value', async t => {
@@ -2077,7 +2078,7 @@ test('print correct link in legacy warning', async t => {
   t.regex(stderr, /migrate-to-vercel/);
 });
 
-test('`now rm` removes a deployment', async t => {
+test('`vercel rm` removes a deployment', async t => {
   const directory = fixture('builds');
 
   const { stdout } = await execa(
@@ -2109,7 +2110,7 @@ test('`now rm` removes a deployment', async t => {
   t.is(exitCode, 0);
 });
 
-test('`now rm` 404 exits quickly', async t => {
+test('`vercel rm` 404 exits quickly', async t => {
   const start = Date.now();
   const { exitCode, stderr, stdout } = await execute([
     'rm',
@@ -2167,7 +2168,7 @@ test('invalid deployment, projects and alias names', async t => {
   ]);
 });
 
-test('now certs ls', async t => {
+test('vercel certs ls', async t => {
   const output = await execute(['certs', 'ls']);
 
   console.log(output.stderr);
@@ -2178,7 +2179,7 @@ test('now certs ls', async t => {
   t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
 });
 
-test('now certs ls --next=123456', async t => {
+test('vercel certs ls --next=123456', async t => {
   const output = await execute(['certs', 'ls', '--next=123456']);
 
   console.log(output.stderr);
@@ -2189,7 +2190,7 @@ test('now certs ls --next=123456', async t => {
   t.regex(output.stderr, /No certificates found under/gm, formatOutput(output));
 });
 
-test('now hasOwnProperty not a valid subcommand', async t => {
+test('vercel hasOwnProperty not a valid subcommand', async t => {
   const output = await execute(['hasOwnProperty']);
 
   console.log(output.stderr);
@@ -2240,7 +2241,7 @@ test('create zero-config deployment', async t => {
   );
 });
 
-test('now secret add', async t => {
+test('vercel secret add', async t => {
   context.secretName = `my-secret-${Date.now().toString(36)}`;
   const value = 'https://my-secret-endpoint.com';
 
@@ -2253,7 +2254,7 @@ test('now secret add', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('now secret ls', async t => {
+test('vercel secret ls', async t => {
   const output = await execute(['secret', 'ls']);
 
   console.log(output.stderr);
@@ -2265,7 +2266,7 @@ test('now secret ls', async t => {
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
 
-test('now secret rename', async t => {
+test('vercel secret rename', async t => {
   const nextName = `renamed-secret-${Date.now().toString(36)}`;
   const output = await execute([
     'secret',
@@ -2283,7 +2284,7 @@ test('now secret rename', async t => {
   context.secretName = nextName;
 });
 
-test('now secret rm', async t => {
+test('vercel secret rm', async t => {
   const output = await execute(['secret', 'rm', context.secretName, '-y']);
 
   console.log(output.stderr);
@@ -2582,7 +2583,7 @@ test('should prefill "project name" prompt with --name', async t => {
   let isDeprecated = false;
 
   await waitForPrompt(now, chunk => {
-    if (chunk.includes('The "--name" flag is deprecated')) {
+    if (chunk.includes('The "--name" option is deprecated')) {
       isDeprecated = true;
     }
 
@@ -2831,7 +2832,7 @@ test('use `rootDirectory` from project when deploying', async t => {
   });
 });
 
-test('now deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
+test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
   const output = await execute(['deploy'], {
     env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
@@ -2840,7 +2841,7 @@ test('now deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('now env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
+test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
   const output = await execute(['env'], {
     env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
@@ -2922,4 +2923,41 @@ test('deploys with only vercel.json and README.md', async t => {
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   t.regex(text, /readme contents/);
+});
+
+test('reject conflicting `vercel.json` and `now.json` files', async t => {
+  const directory = fixture('conflicting-now-json-vercel-json');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+  t.true(
+    stderr.includes(
+      'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+    ),
+    formatOutput({ stderr, stdout })
+  );
+});
+
+test('`vc --debug project ls` should output the projects listing', async t => {
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--debug', 'project', 'ls'],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  t.true(
+    stdout.includes('> Projects found under'),
+    formatOutput({ stderr, stdout })
+  );
 });
