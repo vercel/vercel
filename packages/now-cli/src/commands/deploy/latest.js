@@ -706,7 +706,7 @@ export default async function main(
     new Client({
       apiUrl: ctx.apiUrl,
       token: ctx.authConfig.token,
-      currentTeam: org.id,
+      currentTeam: org.type === 'team' ? org.id : null,
       debug: debugEnabled,
     }),
     deployment,

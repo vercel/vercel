@@ -1,10 +1,6 @@
 import isWildcardAlias from '../alias/is-wildcard-alias';
 import { getCertsForCn } from '../certs/get-certs-for-cn';
-import createDebug from 'debug';
-import { getPkgName } from '../pkg-name';
 import Client from '../client';
-
-const debug = createDebug(`${getPkgName}:get-preferred-preview-url`);
 
 /**
  * Tries to find the "best" alias url.
@@ -28,12 +24,9 @@ export async function getPreferredPreviewURL(
       !isWildcardAlias(alias)
   );
   for (const alias of preferredAliases) {
-    const certs = await getCertsForCn(client, alias, { limit: 1 }).catch(
-      error => {
-        debug(`Error fetching cert for ${alias}:`, error.messsage);
-        return null;
-      }
-    );
+    const certs = await getCertsForCn(client, alias, { limit: 1 }).catch(() => {
+      return null;
+    });
     if (certs && certs.length > 0) {
       return { previewUrl: `https://${alias}`, isWildcard: false };
     }
