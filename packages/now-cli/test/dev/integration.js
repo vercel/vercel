@@ -292,7 +292,7 @@ function testFixtureStdio(
       });
 
       dev.stdout.setEncoding('utf8');
-      dev.stderro.setEncoding('utf8');
+      dev.stderr.setEncoding('utf8');
 
       dev.stdout.pipe(process.stdout);
       dev.stderr.pipe(process.stderr);
