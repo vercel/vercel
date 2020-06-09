@@ -235,8 +235,18 @@ export default class DevServer {
       }
     }
 
-    // Update the build matches in case an entrypoint was created or deleted
     const nowConfig = await this.getNowConfig(false);
+
+    // Update the env vars configuration
+    const nowConfigBuild = nowConfig.build || {};
+    const [runEnv, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env', nowConfig.env),
+      this.getLocalEnv('.env.build', nowConfigBuild.env),
+    ]);
+    const allEnv = { ...buildEnv, ...runEnv };
+    this.envConfigs = { buildEnv, runEnv, allEnv };
+
+    // Update the build matches in case an entrypoint was created or deleted
     await this.updateBuildMatches(nowConfig);
 
     const filesChangedArray = [...filesChanged];
