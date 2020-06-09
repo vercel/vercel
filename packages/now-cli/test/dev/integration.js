@@ -420,7 +420,7 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         ],
       };
       await fs.writeJSON(configPath, config);
-      await sleep(500);
+      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=bar`);
       const body = await res.json();
@@ -442,7 +442,7 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         ],
       };
       await fs.writeJSON(configPath, config);
-      await sleep(500);
+      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
