@@ -106,7 +106,7 @@
     "@zeit/fun": "0.11.2",
     "@zeit/ncc": "0.18.5",
     "@zeit/source-map-support": "0.6.2",
-    "ajv": "6.10.2",
+    "ajv": "6.12.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
     "ansi-regex": "3.0.0",
