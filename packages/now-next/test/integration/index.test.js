@@ -15,8 +15,8 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'standard'));
     expect(output['index']).toBeDefined();
-    expect(output.goodbye).not.toBeDefined();
-    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
+    expect(output.goodbye).toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).not.toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -63,8 +63,8 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'monorepo'));
 
-    expect(output['www/index']).not.toBeDefined();
-    expect(output['www/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
+    expect(output['www/index']).toBeDefined();
+    expect(output['www/__NEXT_PAGE_LAMBDA_0']).not.toBeDefined();
     expect(output['www/static/test.txt']).toBeDefined();
     expect(output['www/data.txt']).toBeDefined();
     const filePaths = Object.keys(output);
@@ -164,9 +164,9 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'serverless-config'));
 
-    expect(output.index).not.toBeDefined();
-    expect(output.goodbye).not.toBeDefined();
-    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
+    expect(output.index).toBeDefined();
+    expect(output.goodbye).toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).not.toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -201,9 +201,9 @@ it(
       path.join(__dirname, 'serverless-config-monorepo-missing')
     );
 
-    expect(output['nested/index']).not.toBeDefined();
-    expect(output['nested/goodbye']).not.toBeDefined();
-    expect(output['nested/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
+    expect(output['nested/index']).toBeDefined();
+    expect(output['nested/goodbye']).toBeDefined();
+    expect(output['nested/__NEXT_PAGE_LAMBDA_0']).not.toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -235,9 +235,9 @@ it(
       path.join(__dirname, 'serverless-config-monorepo-present')
     );
 
-    expect(output['nested/index']).not.toBeDefined();
-    expect(output['nested/goodbye']).not.toBeDefined();
-    expect(output['nested/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
+    expect(output['nested/index']).toBeDefined();
+    expect(output['nested/goodbye']).toBeDefined();
+    expect(output['nested/__NEXT_PAGE_LAMBDA_0']).not.toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -303,8 +303,8 @@ it(
     } = await runBuildLambda(path.join(__dirname, 'serverless-config-object'));
 
     expect(output['index']).toBeDefined();
-    expect(output.goodbye).not.toBeDefined();
-    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
+    expect(output.goodbye).toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).not.toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -338,8 +338,8 @@ it(
     } = await runBuildLambda(path.join(__dirname, 'serverless-no-config'));
 
     expect(output['index']).toBeDefined();
-    expect(output.goodbye).not.toBeDefined();
-    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
+    expect(output.goodbye).toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).not.toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
