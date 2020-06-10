@@ -70,7 +70,7 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
-import findUp from 'find-up';
+// import findUp from 'find-up';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -205,39 +205,6 @@ export const build = async ({
 }> => {
   validateEntrypoint(entrypoint);
 
-  const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
-    type: 'file',
-  });
-  let hasLegacyRoutes = false;
-  const hasFunctionsConfig = !!config.functions;
-
-  if (nowJsonPath) {
-    const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
-
-    if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
-      hasLegacyRoutes = true;
-      console.warn(
-        `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
-          nowJsonPath
-        )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
-      );
-    }
-  }
-
-  if (hasFunctionsConfig) {
-    console.warn(
-      `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
-    );
-  }
-
-  // default to true but still allow opting out with the config
-  const isSharedLambdas =
-    !hasLegacyRoutes &&
-    !hasFunctionsConfig &&
-    typeof config.sharedLambdas === 'undefined'
-      ? true
-      : !!config.sharedLambdas;
-
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
 
@@ -261,6 +228,48 @@ export const build = async ({
         'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"',
     });
   }
+
+  // let nowJsonPath = Object.keys(files).find(file => {
+  //   return file.endsWith('now.json') || file.endsWith('vercel.json')
+  // })
+
+  // if (nowJsonPath) nowJsonPath = files[nowJsonPath].fsPath
+
+  // if (!nowJsonPath) {
+  //   nowJsonPath = await findUp(['now.json', 'vercel.json'], {
+  //     cwd: path.join(workPath, path.dirname(entrypoint))
+  //   })
+  // }
+
+  // let hasLegacyRoutes = false;
+  // const hasFunctionsConfig = !!config.functions;
+
+  // if (nowJsonPath) {
+  //   const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
+
+  //   if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
+  //     hasLegacyRoutes = true;
+  //     console.warn(
+  //       `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
+  //         nowJsonPath
+  //       )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
+  //     );
+  //   }
+  // }
+
+  // if (hasFunctionsConfig) {
+  //   console.warn(
+  //     `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
+  //   );
+  // }
+
+  // default to true but still allow opting out with the config
+  const isSharedLambdas = !!config.sharedLambdas;
+  // !hasLegacyRoutes &&
+  // !hasFunctionsConfig &&
+  // typeof config.sharedLambdas === 'undefined'
+  //   ? true
+  //   : !!config.sharedLambdas;
 
   if (meta.isDev) {
     let childProcess: ChildProcess | undefined;
