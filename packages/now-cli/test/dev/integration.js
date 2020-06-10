@@ -1513,7 +1513,16 @@ test(
   '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
   testFixtureStdio('force-module-commonjs', async testPath => {
     await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
-    await testPath(200, `/api`, 'Force "module: commonjs" API endpoint');
+    await testPath(
+      200,
+      `/api`,
+      'Force "module: commonjs" JavaScript with ES Modules API endpoint'
+    );
+    await testPath(
+      200,
+      `/api/ts`,
+      'Force "module: commonjs" TypeScript API endpoint'
+    );
   })
 );
 
