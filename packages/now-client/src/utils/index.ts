@@ -7,6 +7,7 @@ import qs from 'querystring';
 import ignore from 'ignore';
 type Ignore = ReturnType<typeof ignore>;
 import { pkgVersion } from '../pkg';
+import { NowBuildError } from '@vercel/build-utils';
 import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
@@ -166,9 +167,12 @@ export async function getVercelIgnore(
         maybeRead(join(cwd, '.nowignore'), ''),
       ]);
       if (vercelignore && nowignore) {
-        throw new Error(
-          'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.'
-        );
+        throw new NowBuildError({
+          code: 'CONFLICTING_IGNORE_FILES',
+          message:
+            'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
+          link: 'https://vercel.link/combining-old-and-new-config',
+        });
       }
       return vercelignore || nowignore;
     })
