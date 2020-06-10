@@ -24,7 +24,7 @@ export default class Client extends EventEmitter {
   _withCache: boolean;
   _output: Output;
   _token: string;
-  currentTeam?: string;
+  currentTeam?: string | null;
 
   constructor({
     apiUrl,
@@ -36,7 +36,7 @@ export default class Client extends EventEmitter {
   }: {
     apiUrl: string;
     token: string;
-    currentTeam?: string;
+    currentTeam?: string | null;
     forceNew?: boolean;
     withCache?: boolean;
     debug?: boolean;

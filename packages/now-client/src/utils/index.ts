@@ -49,7 +49,7 @@ export function getApiDeploymentsUrl(
     return '/v10/now/deployments';
   }
 
-  return '/v12/now/deployments';
+  return '/v13/now/deployments';
 }
 
 export async function parseVercelConfig(filePath?: string): Promise<NowConfig> {
