@@ -1510,6 +1510,14 @@ test(
 );
 
 test(
+  '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
+  testFixtureStdio('force-module-commonjs', async testPath => {
+    await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
+    await testPath(200, `/api`, 'Force "module: commonjs" API endpoint');
+  })
+);
+
+test(
   '[vercel dev] should prioritize index.html over other file named index.*',
   testFixtureStdio('index-html-priority', async testPath => {
     await testPath(200, '/', 'This is index.html');

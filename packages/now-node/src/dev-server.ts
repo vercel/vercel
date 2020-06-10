@@ -27,6 +27,7 @@ register({
     allowJs: true,
     esModuleInterop: true,
     jsx: 'react',
+    module: 'commonjs',
   },
   project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
   transpileOnly: true,
