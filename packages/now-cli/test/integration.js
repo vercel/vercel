@@ -42,7 +42,6 @@ function fixture(name) {
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-const deployHelpMessage = `${logo} now [options] <command | path>`;
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
