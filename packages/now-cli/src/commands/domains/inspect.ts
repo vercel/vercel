@@ -4,7 +4,6 @@ import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
-import dnsTable from '../../util/format-dns-table';
 import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
@@ -155,35 +154,15 @@ export default async function inspect(
   );
   output.print('\n');
 
-  output.print(chalk.bold('  Verification Record\n\n'));
-  output.print(
-    `${dnsTable([['_now', 'TXT', domain.verificationRecord]], {
-      extraSpace: '    ',
-    })}\n`
-  );
-  output.print('\n');
-
   if (!domain.verified) {
-    output.warn(`This domain is not verified. To verify it you should either:`);
+    output.warn(`This domain is not verified. `);
     output.print(
-      `  ${chalk.gray(
-        'a)'
-      )} Change your domain nameservers to the intended set detailed above. ${chalk.gray(
+      `  To verify it you should, change your domain nameservers to the intended set detailed above. ${chalk.gray(
         '[recommended]'
       )}\n`
     );
     output.print(
-      `  ${chalk.gray(
-        'b)'
-      )} Add a DNS TXT record with the name and value shown above.\n\n`
-    );
-    output.print(
       `  We will run a verification for you and you will receive an email upon completion.\n`
-    );
-    output.print(
-      `  If you want to force running a verification, you can run ${getCommandName(
-        `domains verify <domain>`
-      )}\n`
     );
     output.print('  Read more: https://err.sh/now/domain-verification\n\n');
   }

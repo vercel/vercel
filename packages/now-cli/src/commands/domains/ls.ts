@@ -24,7 +24,7 @@ interface DomainInfo {
   domain: string;
   apexDomain: string;
   projectName: string | null;
-  dns: 'ZEIT' | 'External';
+  dns: 'Vercel' | 'External';
   configured: boolean;
   expiresAt: number | null;
   createdAt: number | null;
@@ -123,7 +123,7 @@ function createDomainsInfo(domains: Domain[], projects: Project[]) {
       expiresAt: domain.expiresAt || null,
       createdAt: domain.createdAt,
       configured: Boolean(domain.verified),
-      dns: domain.serviceType === 'zeit.world' ? 'ZEIT' : 'External',
+      dns: domain.serviceType === 'zeit.world' ? 'Vercel' : 'External',
     });
 
     projects.forEach(project => {
@@ -137,7 +137,7 @@ function createDomainsInfo(domains: Domain[], projects: Project[]) {
           expiresAt: domain.expiresAt || null,
           createdAt: domain.createdAt || target.createdAt || null,
           configured: Boolean(domain.verified),
-          dns: domain.serviceType === 'zeit.world' ? 'ZEIT' : 'External',
+          dns: domain.serviceType === 'zeit.world' ? 'Vercel' : 'External',
         });
       });
     });
@@ -158,7 +158,7 @@ function createDomainsInfo(domains: Domain[], projects: Project[]) {
         expiresAt: null,
         createdAt: target.createdAt || null,
         configured: target.domain.endsWith('.now.sh') ? true : false,
-        dns: target.domain.endsWith('.now.sh') ? 'ZEIT' : 'External',
+        dns: target.domain.endsWith('.now.sh') ? 'Vercel' : 'External',
       });
     });
   });
