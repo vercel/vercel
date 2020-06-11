@@ -244,7 +244,7 @@ function testFixtureStdio(
 ) {
   if (process.env.CI && process.platform === 'darwin') {
     // See https://git.io/Jf9DN for more info
-    console.log('Skipping deploy since GH Actions has limit macOS concurrency');
+    console.log('Skipping deploy since GH Actions has macOS concurrency limit');
     skipDeploy = true;
   }
 
