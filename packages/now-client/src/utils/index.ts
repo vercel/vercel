@@ -77,43 +77,22 @@ const maybeRead = async function<T>(path: string, default_: T) {
   }
 };
 
-export async function readdirRelative(
-  path: string,
-  ignores: string[],
-  cwd: string
-): Promise<string[]> {
-  const preprocessedIgnores = ignores.map(ignore => {
-    if (ignore.endsWith('/')) {
-      return ignore.slice(0, -1);
-    }
-    return ignore;
-  });
-  const dirContents = await readdir(path, preprocessedIgnores);
-  return dirContents.map(filePath => relative(cwd, filePath));
-}
-
 export async function buildFileTree(
   path: string | string[],
   isDirectory: boolean,
   debug: Debug
 ): Promise<string[]> {
-  // Get .nowignore
-  let { ig, ignores } = await getVercelIgnore(path);
-
-  debug(`Found ${ig.ignores.length} rules in .nowignore`);
-
   let fileList: string[];
+  let { ig } = await getVercelIgnore(path);
 
+  debug(`Found ${ig.ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
 
   if (isDirectory && !Array.isArray(path)) {
     // Directory path
     const cwd = process.cwd();
-    const relativeFileList = await readdirRelative(path, ignores, cwd);
-    fileList = ig
-      .filter(relativeFileList)
-      .map((relativePath: string) => join(cwd, relativePath));
-
+    const ignores = (absPath: string) => ig.ignores(relative(cwd, absPath));
+    fileList = await readdir(path, [ignores]);
     debug(`Read ${fileList.length} files in the specified directory`);
   } else if (Array.isArray(path)) {
     // Array of file paths
