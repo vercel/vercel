@@ -1,9 +1,9 @@
 const fetch = require('node-fetch');
 const retryBailByDefault = require('./retry-bail-by-default.js');
 
-async function fetchRetry(...args) {
+async function fetchRetry (...args) {
   return await retryBailByDefault(
-    async canRetry => {
+    async (canRetry) => {
       try {
         return await fetch(...args);
       } catch (error) {

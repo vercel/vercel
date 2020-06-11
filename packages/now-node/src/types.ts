@@ -16,4 +16,7 @@ export type NowResponse = ServerResponse & {
   status: (statusCode: number) => NowResponse;
 };
 
-export type NowApiHandler = (req: NowRequest, res: NowResponse) => void;
+export type NowApiHandler = (
+  req: NowRequest,
+  res: NowResponse
+) => void;
