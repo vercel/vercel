@@ -4,24 +4,24 @@
 *                                        @tootallnate
 /.github/workflows                       @AndyBitz @styfle
 /packages/frameworks                     @AndyBitz
-/packages/now-cli/src/commands/dev/      @tootallnate @styfle @AndyBitz
-/packages/now-cli/src/util/dev/          @tootallnate @styfle @AndyBitz
-/packages/now-cli/src/commands/domains/  @javivelasco @mglagola @anatrajkovska
-/packages/now-cli/src/commands/certs/    @javivelasco @mglagola @anatrajkovska
+/packages/now-cli/src/commands/dev       @tootallnate @styfle @AndyBitz
+/packages/now-cli/src/util/dev           @tootallnate @styfle @AndyBitz
+/packages/now-cli/src/commands/domains   @javivelasco @mglagola @anatrajkovska
+/packages/now-cli/src/commands/certs     @javivelasco @mglagola @anatrajkovska
 /packages/now-cli/src/commands/env       @styfle @lucleray
-/packages/now-client                     @rdev
-/packages/now-build-utils                @styfle @AndyBitz
+/packages/now-client                     @rdev @styfle @tootallnate
+/packages/now-build-utils                @styfle @AndyBitz @tootallnate
 /packages/now-node                       @styfle @tootallnate @lucleray
 /packages/now-node-bridge                @styfle @tootallnate @lucleray
 /packages/now-next                       @Timer @ijjk
-/packages/now-go                         @styfle @sophearak
-/packages/now-python                     @styfle @sophearak
-/packages/now-ruby                       @styfle @coetry @nathancahill
+/packages/now-go                         @styfle @tootallnate
+/packages/now-python                     @styfle @tootallnate
+/packages/now-ruby                       @styfle @coetry @tootallnate
 /packages/now-static-build               @styfle @AndyBitz
 /packages/now-routing-utils              @styfle @dav-is @ijjk
 /examples                                @mcsdevv @timothyis
 /examples/create-react-app               @Timer
-/examples/nextjs                         @timneutkens
+/examples/nextjs                         @timneutkens @Timer
 /examples/hugo                           @mcsdevv @timothyis @styfle
-/examples/jekyll                         @mcsdevv @timothyis @sarupbanskota
+/examples/jekyll                         @mcsdevv @timothyis @styfle
 /examples/zola                           @mcsdevv @timothyis @styfle
