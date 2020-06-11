@@ -391,6 +391,37 @@ test('[vercel dev] prints `npm install` errors', async t => {
   );
 });
 
+test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
+  const dir = fixture('invalidate-vercel-config');
+  const configPath = join(dir, 'vercel.json');
+  const originalConfig = await fs.readJSON(configPath);
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    {
+      // Env var should be set from `vercel.json`
+      const res = await fetch(`http://localhost:${port}/api`);
+      const body = await res.json();
+      t.is(body.FOO, 'bar');
+    }
+
+    {
+      // Env var should not be set after `vercel.json` is deleted
+      await fs.remove(configPath);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/api`);
+      const body = await res.json();
+      t.is(body.FOO, undefined);
+    }
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.writeJSON(configPath, originalConfig);
+  }
+});
+
 test('[vercel dev] reflects changes to config and env without restart', async t => {
   const dir = fixture('node-helpers');
   const configPath = join(dir, 'vercel.json');
