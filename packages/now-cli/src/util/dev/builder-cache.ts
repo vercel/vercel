@@ -264,7 +264,7 @@ async function npmInstall(
             ? '`npm` is not installed'
             : 'Failed to install `vercel dev` dependencies',
         code: 'NPM_INSTALL_ERROR',
-        link: 'https://vercel.link/npm-install-error',
+        link: 'https://vercel.link/npm-install-failed-dev',
       });
     }
   } finally {
