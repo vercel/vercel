@@ -240,8 +240,14 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { expectedCode = 0, skipDeploy } = {}
+  { expectedCode = 0, skipDeploy = process.env.__VERCEL_SKIP_DEV_CMD } = {}
 ) {
+  if (process.env.CI && process.platform === 'darwin') {
+    // See https://git.io/Jf9DN for more info
+    console.log('Skipping deploy since GH Actions has limit macOS concurrency');
+    skipDeploy = true;
+  }
+
   return async t => {
     const cwd = fixtureAbsolute(directory);
     const token = await fetchTokenWithRetry();
