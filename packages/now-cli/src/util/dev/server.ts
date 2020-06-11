@@ -533,17 +533,10 @@ export default class DevServer {
     // The default empty `vercel.json` is used to serve all files as static
     // when no `vercel.json` is present
     let configPath = 'vercel.json';
-    let config: NowConfig = (canUseCache && this.cachedNowConfig) || {
+    let config: NowConfig = {
       version: 2,
       [fileNameSymbol]: configPath,
     };
-
-    // We need to delete these properties for zero config to work
-    // with file changes
-    if (this.cachedNowConfig) {
-      delete this.cachedNowConfig.builds;
-      delete this.cachedNowConfig.routes;
-    }
 
     try {
       configPath = getNowConfigPath(this.cwd);
