@@ -1,22 +1,22 @@
 # Documentation
 # https://help.github.com/en/articles/about-code-owners
 
-*                                        @tootallnate
+*                                        @TooTallNate
 /.github/workflows                       @AndyBitz @styfle
 /packages/frameworks                     @AndyBitz
-/packages/now-cli/src/commands/dev       @tootallnate @styfle @AndyBitz
-/packages/now-cli/src/util/dev           @tootallnate @styfle @AndyBitz
+/packages/now-cli/src/commands/dev       @TooTallNate @styfle @AndyBitz
+/packages/now-cli/src/util/dev           @TooTallNate @styfle @AndyBitz
 /packages/now-cli/src/commands/domains   @javivelasco @mglagola @anatrajkovska
 /packages/now-cli/src/commands/certs     @javivelasco @mglagola @anatrajkovska
 /packages/now-cli/src/commands/env       @styfle @lucleray
-/packages/now-client                     @rdev @styfle @tootallnate
-/packages/now-build-utils                @styfle @AndyBitz @tootallnate
-/packages/now-node                       @styfle @tootallnate @lucleray
-/packages/now-node-bridge                @styfle @tootallnate @lucleray
+/packages/now-client                     @rdev @styfle @TooTallNate
+/packages/now-build-utils                @styfle @AndyBitz @TooTallNate
+/packages/now-node                       @styfle @TooTallNate @lucleray
+/packages/now-node-bridge                @styfle @TooTallNate @lucleray
 /packages/now-next                       @Timer @ijjk
-/packages/now-go                         @styfle @tootallnate
-/packages/now-python                     @styfle @tootallnate
-/packages/now-ruby                       @styfle @coetry @tootallnate
+/packages/now-go                         @styfle @TooTallNate
+/packages/now-python                     @styfle @TooTallNate
+/packages/now-ruby                       @styfle @coetry @TooTallNate
 /packages/now-static-build               @styfle @AndyBitz
 /packages/now-routing-utils              @styfle @dav-is @ijjk
 /examples                                @mcsdevv @timothyis
