@@ -921,7 +921,15 @@ test('domains inspect', async t => {
     .toString()
     .slice(2);
 
-  await execute([directory, `--name=${projectName}`, '--confirm', '--public']);
+  const output = await execute([
+    directory,
+    `-V`,
+    `2`,
+    `--name=${projectName}`,
+    '--confirm',
+    '--public',
+  ]);
+  t.is(output.exitCode, 0, formatOutput(output));
 
   {
     // Add a domain that can be inspected
