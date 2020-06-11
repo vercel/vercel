@@ -25,10 +25,17 @@ export async function findProjectsForDomain(
       const response = await client.fetch<Project[]>(`/v2/projects/?${query}`);
       result.push(...response);
 
+      // No need to sort if there is no or only one project.
+      if (response.length < 2) {
+        break;
+      }
+
       const [latest] = response.sort((a, b) => b.updatedAt - a.updatedAt);
       query.append('from', latest.updatedAt.toString());
 
-      if (response.length !== limit) break;
+      if (response.length !== limit) {
+        break;
+      }
     }
 
     return result;
