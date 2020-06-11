@@ -1591,7 +1591,7 @@ test('create a staging deployment', async t => {
     /Setting target to staging/gm,
     formatOutput(targetCall)
   );
-
+  t.regex(targetCall.stdout, /https:\/\//gm);
   t.is(targetCall.exitCode, 0, formatOutput(targetCall));
 
   const { host } = new URL(targetCall.stdout);
@@ -1627,6 +1627,7 @@ test('create a production deployment', async t => {
     /Setting target to production/gm,
     formatOutput(targetCall)
   );
+  t.regex(targetCall.stdout, /https:\/\//gm);
 
   const { host: targetHost } = new URL(targetCall.stdout);
   const targetDeployment = await apiFetch(
@@ -1650,6 +1651,7 @@ test('create a production deployment', async t => {
     /Setting target to production/gm,
     formatOutput(targetCall)
   );
+  t.regex(call.stdout, /https:\/\//gm);
 
   const { host } = new URL(call.stdout);
   const deployment = await apiFetch(

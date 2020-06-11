@@ -1,11 +1,11 @@
-const entrypoint = process.env.NOW_DEV_ENTRYPOINT;
-delete process.env.NOW_DEV_ENTRYPOINT;
+const entrypoint = process.env.VERCEL_DEV_ENTRYPOINT;
+delete process.env.VERCEL_DEV_ENTRYPOINT;
 
-const tsconfig = process.env.NOW_DEV_TSCONFIG;
-delete process.env.NOW_DEV_TSCONFIG;
+const tsconfig = process.env.VERCEL_DEV_TSCONFIG;
+delete process.env.VERCEL_DEV_TSCONFIG;
 
 if (!entrypoint) {
-  throw new Error('`NOW_DEV_ENTRYPOINT` must be defined');
+  throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
 import { register } from 'ts-node';
@@ -27,6 +27,7 @@ register({
     allowJs: true,
     esModuleInterop: true,
     jsx: 'react',
+    module: 'commonjs',
   },
   project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
   transpileOnly: true,
@@ -49,11 +50,14 @@ function listen(server: Server, port: number, host: string): Promise<void> {
 let bridge: Bridge | undefined = undefined;
 
 async function main() {
-  const config = JSON.parse(process.env.NOW_DEV_CONFIG || '{}');
-  delete process.env.NOW_DEV_CONFIG;
+  const config = JSON.parse(process.env.VERCEL_DEV_CONFIG || '{}');
+  delete process.env.VERCEL_DEV_CONFIG;
+
+  const buildEnv = JSON.parse(process.env.VERCEL_DEV_BUILD_ENV || '{}');
+  delete process.env.VERCEL_DEV_BUILD_ENV;
 
   const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
+    config.helpers === false || buildEnv.NODEJS_HELPERS === '0'
   );
 
   bridge = getNowLauncher({
