@@ -533,7 +533,7 @@ export default class DevServer {
     // The default empty `vercel.json` is used to serve all files as static
     // when no `vercel.json` is present
     let configPath = 'vercel.json';
-    let config: NowConfig = this.cachedNowConfig || {
+    let config: NowConfig = (canUseCache && this.cachedNowConfig) || {
       version: 2,
       [fileNameSymbol]: configPath,
     };
@@ -784,7 +784,6 @@ export default class DevServer {
       this.getLocalEnv('.env.build', nowConfigBuild.env),
     ]);
     const allEnv = { ...buildEnv, ...runEnv };
-    Object.assign(process.env, allEnv);
     this.envConfigs = { buildEnv, runEnv, allEnv };
 
     const opts = { output: this.output, isBuilds: true };
