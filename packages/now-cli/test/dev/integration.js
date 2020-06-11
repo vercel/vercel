@@ -386,7 +386,40 @@ test('[vercel dev] prints `npm install` errors', async t => {
   t.truthy(
     result.stderr.includes('Failed to install `vercel dev` dependencies')
   );
-  t.truthy(result.stderr.includes('https://vercel.link/npm-install-error'));
+  t.truthy(
+    result.stderr.includes('https://vercel.link/npm-install-failed-dev')
+  );
+});
+
+test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
+  const dir = fixture('invalidate-vercel-config');
+  const configPath = join(dir, 'vercel.json');
+  const originalConfig = await fs.readJSON(configPath);
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    {
+      // Env var should be set from `vercel.json`
+      const res = await fetch(`http://localhost:${port}/api`);
+      const body = await res.json();
+      t.is(body.FOO, 'bar');
+    }
+
+    {
+      // Env var should not be set after `vercel.json` is deleted
+      await fs.remove(configPath);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/api`);
+      const body = await res.json();
+      t.is(body.FOO, undefined);
+    }
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.writeJSON(configPath, originalConfig);
+  }
 });
 
 test('[vercel dev] reflects changes to config and env without restart', async t => {
@@ -1506,6 +1539,23 @@ test(
   testFixtureStdio('nested-tsconfig', async testPath => {
     await testPath(200, `/`, /Nested tsconfig.json test page/);
     await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
+  })
+);
+
+test(
+  '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
+  testFixtureStdio('force-module-commonjs', async testPath => {
+    await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
+    await testPath(
+      200,
+      `/api`,
+      'Force "module: commonjs" JavaScript with ES Modules API endpoint'
+    );
+    await testPath(
+      200,
+      `/api/ts`,
+      'Force "module: commonjs" TypeScript API endpoint'
+    );
   })
 );
 
