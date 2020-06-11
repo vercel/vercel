@@ -2266,10 +2266,10 @@
   resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.20.4.tgz#00f0a25a88cac3712af4ba66561d9e281c6f05c9"
   integrity sha512-fmq+F/QxPec+k/zvT7HiVpk7oiGFseS6brfT/AYqmCUp6QFRK7vZf2Ref46MImsg/g2W3g5X6SRvGRmOAvEfdA==
 
-"@zeit/node-file-trace@0.6.2":
-  version "0.6.2"
-  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.6.2.tgz#0413b66906a1be6683987f757444815d9e1377ad"
-  integrity sha512-pm5FKTZG+I5kPbg4/dn95pqQ+5J2d4w4jtH0zxIYwmfdQaUfSCQbcnL45tWFM3HVzkUmOYxMScbpDzCxX5T+lg==
+"@zeit/node-file-trace@0.6.3":
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.6.3.tgz#2f654fabce62a84b8e0bd0734c454eed056dac7e"
+  integrity sha512-ue0s6eoLdw7rrGEtKL/j2YUF6rtg8POFM83J6E6a0nJdWvBj9Y8ke2NB2dpZQzj8D4c6KJvRVOlo5TkRF5QQnw==
   dependencies:
     acorn "^7.1.1"
     acorn-class-fields "^0.3.2"
