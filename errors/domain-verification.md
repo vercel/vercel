@@ -16,5 +16,4 @@ If you would not like to verify your domain, you can remove it from your account
 
 #### Resources
 
-- [Zero-Downtime Domain Migration Guide](https://zeit.co/docs/v2/domains-and-aliases/zero-downtime-domain-migration/)
 - [Vercel Custom Domains Documentation](https://vercel.com/docs/v2/custom-domains)
