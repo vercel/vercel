@@ -1,4 +1,4 @@
-import * as ERRORS from '../errors';
+import * as ERRORS from '../errors-ts';
 import Client from '../client';
 
 export default async function removeDomainByName(
@@ -7,7 +7,9 @@ export default async function removeDomainByName(
   domain: string
 ) {
   try {
-    return await now.fetch(`/v3/domains/${domain}`, { method: 'DELETE' });
+    return await now.fetch(`/v3/domains/${encodeURIComponent(domain)}`, {
+      method: 'DELETE',
+    });
   } catch (error) {
     if (error.code === 'not_found') {
       return new ERRORS.DomainNotFound(domain);

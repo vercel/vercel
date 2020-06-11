@@ -1,6 +1,6 @@
 import Client from '../client';
 import { Project } from '../../types';
-import { ProjectNotFound } from '../errors';
+import { ProjectNotFound } from '../errors-ts';
 
 export default async function getProjectByNameOrId(
   client: Client,

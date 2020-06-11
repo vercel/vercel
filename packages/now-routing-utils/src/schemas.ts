@@ -92,6 +92,9 @@ export const redirectsSchema = {
         type: 'string',
         maxLength: 4096,
       },
+      permanent: {
+        type: 'boolean',
+      },
       statusCode: {
         type: 'integer',
         minimum: 100,

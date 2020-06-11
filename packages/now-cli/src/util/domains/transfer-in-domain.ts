@@ -1,4 +1,4 @@
-import * as ERRORS from '../errors';
+import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import { Domain } from '../../types';
 

@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@now/static-build",
+      "use": "@vercel/static-build",
       "config": { "zeroConfig": true }
     }
   ],
@@ -12,7 +12,5 @@
       "HUGO_VERSION": "0.42"
     }
   },
-  "probes": [
-    { "path": "/", "mustContain": "0.42" }
-  ]
+  "probes": [{ "path": "/", "mustContain": "0.42" }]
 }

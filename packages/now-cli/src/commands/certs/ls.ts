@@ -1,22 +1,21 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import plural from 'pluralize';
-import psl from 'psl';
 import table from 'text-table';
-import Now from '../../util/now';
-import cmd from '../../util/output/cmd';
+// @ts-ignore
+import Now from '../../util';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
-import { CertNotFound } from '../../util/errors';
 import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
 import { NowContext, Cert } from '../../types';
+import getCommandFlags from '../../util/get-command-flags';
+import { getCommandName } from '../../util/pkg-name';
 
 interface Options {
   '--debug'?: boolean;
-  '--after'?: string;
+  '--next'?: number;
 }
 
 async function ls(
@@ -31,8 +30,7 @@ async function ls(
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const debug = opts['--debug'];
-  const after = opts['--after'];
+  const { '--debug': debug, '--next': nextTimestamp } = opts;
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
@@ -46,48 +44,44 @@ async function ls(
 
     throw err;
   }
-
+  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
+    output.error('Please provide a number for flag --next');
+    return 1;
+  }
   const now = new Now({ apiUrl, token, debug, currentTeam });
   const lsStamp = stamp();
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan('`now certs ls`')}`
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        `${getCommandName('certs ls')}`
+      )}`
     );
     return 1;
   }
 
   // Get the list of certificates
-  const certificates = await getCerts(output, now, { after }).catch(err => err);
-
-  if (certificates instanceof CertNotFound) {
-    output.error(certificates.message);
-    return 1;
-  }
-
-  if (certificates instanceof Error) {
-    throw certificates;
-  }
-
-  const certs = sortByCn(certificates);
-
-  output.log(
-    `${plural('certificate', certs.length, true)} found under ${chalk.bold(
-      contextName
-    )} ${lsStamp()}`
+  const { certs, pagination } = await getCerts(now, nextTimestamp).catch(
+    err => err
   );
 
-  if (certs.length >= 100) {
-    const { uid: lastCert } = certificates[certificates.length - 1];
-    output.note(
-      `There may be more certificates that can be retrieved with ${cmd(
-        `now ${process.argv.slice(2).join(' ')} --after=${lastCert}`
-      )}.\n`
-    );
-  }
+  output.log(
+    `${
+      certs.length > 0 ? 'Certificates' : 'No certificates'
+    } found under ${chalk.bold(contextName)} ${lsStamp()}`
+  );
 
   if (certs.length > 0) {
     console.log(formatCertsTable(certs));
+  }
+
+  if (pagination && pagination.count === 20) {
+    const flags = getCommandFlags(opts, ['_', '--next']);
+    output.log(
+      `To display the next page run ${getCommandName(
+        `certs ls${flags} --next ${pagination.next}`
+      )}`
+    );
   }
 
   return 0;
@@ -158,20 +152,6 @@ function formatExpirationDate(date: Date) {
   return diff < 0
     ? chalk.gray(`${ms(-diff)} ago`)
     : chalk.gray(`in ${ms(diff)}`);
-}
-
-/**
- * This function sorts the list of certs by root domain changing *
- * to 'wildcard' since that will allow psl get the root domain
- * properly to make the comparison.
- */
-function sortByCn(certsList: Cert[]) {
-  return certsList.concat().sort((a: Cert, b: Cert) => {
-    const domainA = psl.get(a.cns[0].replace('*', 'wildcard'));
-    const domainB = psl.get(b.cns[0].replace('*', 'wildcard'));
-    if (!domainA || !domainB) return 0;
-    return domainA.localeCompare(domainB);
-  });
 }
 
 export default ls;

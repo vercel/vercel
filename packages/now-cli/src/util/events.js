@@ -1,5 +1,5 @@
 // Native
-import { URLSearchParams } from 'url';
+import qs from 'querystring';
 
 // Packages
 import { eraseLines } from 'ansi-escapes';
@@ -25,19 +25,16 @@ async function printEvents(
     onOpen();
   }
 
-  const query = new URLSearchParams({
+  const q = qs.stringify({
     direction: findOpts.direction,
     limit: findOpts.limit,
-    q: findOpts.query,
-    types: (findOpts.types || []).join(','),
     since: findOpts.since,
     until: findOpts.until,
-    instanceId: findOpts.instanceId,
     follow: findOpts.follow ? '1' : '',
     format: 'lines',
   });
 
-  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${query}`;
+  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${q}`;
   let pollUrl = `/v3/now/deployments/${deploymentIdOrURL}`;
 
   if (currentTeam) {

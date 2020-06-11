@@ -2,12 +2,6 @@ import { NowConfig } from './util/dev/types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
-export type Config = NowConfig;
-
-export interface Dictionary<T> {
-  [key: string]: T;
-}
-
 export interface NowContext {
   argv: string[];
   apiUrl: string;
@@ -18,7 +12,7 @@ export interface NowContext {
     currentTeam: string;
     updateChannel: string;
   };
-  localConfig: Config;
+  localConfig: NowConfig;
 }
 
 type Billing = {
@@ -106,7 +100,7 @@ export type DeploymentScale = {
 };
 
 export type NpmDeployment = {
-  id: string;
+  uid: string;
   url: string;
   name: string;
   type: 'NPM';
@@ -119,7 +113,7 @@ export type NpmDeployment = {
 };
 
 export type StaticDeployment = {
-  id: string;
+  uid: string;
   url: string;
   name: string;
   type: 'STATIC';
@@ -131,7 +125,7 @@ export type StaticDeployment = {
 };
 
 export type DockerDeployment = {
-  id: string;
+  uid: string;
   url: string;
   name: string;
   type: 'DOCKER';
@@ -191,6 +185,9 @@ export type DNSRecord = {
   value: string;
   created: number;
   updated: number;
+  createdAt: number;
+  updatedAt: number;
+  domain: string;
 };
 
 type SRVRecordData = {
@@ -230,6 +227,33 @@ export interface ProjectAliasTarget {
   configuredChangeAttempts?: [number, number];
 }
 
+export interface Secret {
+  uid: string;
+  name: string;
+  value: string;
+  teamId?: string;
+  userId?: string;
+  projectId?: string;
+  created: string;
+  createdAt: number;
+}
+
+export enum ProjectEnvTarget {
+  Production = 'production',
+  Preview = 'preview',
+  Development = 'development',
+}
+
+export interface ProjectEnvVariable {
+  key: string;
+  value: string;
+  configurationId?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
+  target?: ProjectEnvTarget;
+  system?: boolean;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -252,4 +276,10 @@ export interface Org {
 export interface ProjectLink {
   projectId: string;
   orgId: string;
+}
+
+export interface PaginationOptions {
+  prev: number;
+  count: number;
+  next?: number;
 }

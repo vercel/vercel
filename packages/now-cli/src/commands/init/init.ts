@@ -15,6 +15,7 @@ import success from '../../util/output/success';
 import info from '../../util/output/info';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -152,9 +153,11 @@ async function extractExample(
       const folderRel = path.relative(process.cwd(), folder);
       const deployHint =
         folderRel === ''
-          ? listItem(`To deploy, run ${cmd('now')}.`)
+          ? listItem(`To deploy, run ${getCommandName()}.`)
           : listItem(
-              `To deploy, ${cmd(`cd ${folderRel}`)} and run ${cmd('now')}.`
+              `To deploy, ${cmd(
+                `cd ${folderRel}`
+              )} and run ${getCommandName()}.`
             );
       console.log(success(`${successLog}\n${deployHint}`));
       return 0;
@@ -185,7 +188,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
           folder
         )}" already exists and is not an empty directory. You may use ${cmd(
           '--force'
-        )} or ${cmd('--f')} to override it.`
+        )} or ${cmd('-f')} to override it.`
       );
     }
   } else if (dest !== cwd) {
@@ -204,8 +207,8 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
  */
 async function guess(exampleList: string[], name: string) {
   const GuessError = new Error(
-    `No example found for ${chalk.bold(name)}, run ${cmd(
-      `now init`
+    `No example found for ${chalk.bold(name)}, run ${getCommandName(
+      `init`
     )} to see the list of available examples.`
   );
 

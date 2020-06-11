@@ -3,8 +3,8 @@ export const getDefaultConfig = async existingCopy => {
 
   const config = {
     _:
-      'This is your Now config file. For more information see the global configuration documentation: https://zeit.co/docs/v2/advanced/global-configuration',
-    collectMetrics: true
+      'This is your Now config file. For more information see the global configuration documentation: https://vercel.com/docs/configuration#global',
+    collectMetrics: true,
   };
 
   if (existingCopy) {
@@ -16,7 +16,7 @@ export const getDefaultConfig = async existingCopy => {
       'collectMetrics',
       'api',
       // This is deleted later in the code
-      'shownTips'
+      'shownTips',
     ];
 
     try {
@@ -46,7 +46,7 @@ export const getDefaultConfig = async existingCopy => {
           config.desktop.shownTips = config.shownTips;
         } else {
           config.desktop = {
-            shownTips: config.shownTips
+            shownTips: config.shownTips,
           };
         }
 
@@ -66,7 +66,7 @@ export const getDefaultAuthConfig = async existing => {
 
   const config = {
     _:
-      'This is your Now credentials file. DO NOT SHARE! More: https://zeit.co/docs/v2/advanced/global-configuration'
+      'This is your Now credentials file. DO NOT SHARE! More: https://vercel.com/docs/configuration#global',
   };
 
   if (existing) {

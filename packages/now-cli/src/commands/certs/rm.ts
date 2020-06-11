@@ -3,7 +3,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 import { NowContext, Cert } from '../../types';
-import * as ERRORS from '../../util/errors';
+import * as ERRORS from '../../util/errors-ts';
 import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
@@ -12,6 +12,7 @@ import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
@@ -49,7 +50,7 @@ async function rm(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now certs rm <id or cn>`'
+        `${getCommandName('certs rm <id or cn>')}`
       )}`
     );
     return 1;
@@ -98,7 +99,7 @@ async function getCertsToDelete(
   contextName: string,
   id: string
 ) {
-  const cert = await getCertById(output, client, id);
+  const cert = await getCertById(client, id);
   if (cert instanceof ERRORS.CertNotFound) {
     const certs = await getCertsForDomain(output, client, contextName, id);
     if (certs instanceof ERRORS.CertsPermissionDenied) {

@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import confirm from './confirm';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
-import { ProjectNotFound } from '../../util/errors';
+import { ProjectNotFound } from '../../util/errors-ts';
 import { Output } from '../output';
 import { Project, Org } from '../../types';
 import slugify from '@sindresorhus/slugify';
@@ -92,7 +92,7 @@ export default async function inputProject(
       }
 
       if (project instanceof ProjectNotFound) {
-        output.print(`${chalk.red('Error!')} Project not found\n`);
+        output.error(`Project not found`);
       }
     }
 
@@ -129,7 +129,7 @@ export default async function inputProject(
     }
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
-      output.print(`${chalk.red('Error!')} Project already exists\n`);
+      output.print(`Project already exists`);
       newProjectName = null;
     }
   }

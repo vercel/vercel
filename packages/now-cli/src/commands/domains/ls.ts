@@ -12,9 +12,12 @@ import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
 import { Domain, Project, NowContext } from '../../types';
 import { getProjectsWithDomains } from '../../util/projects/get-projects-with-domains';
+import getCommandFlags from '../../util/get-command-flags';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
+  '--next': number;
 };
 
 interface DomainInfo {
@@ -39,9 +42,14 @@ export default async function ls(
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const debug = opts['--debug'];
+  const { '--debug': debug, '--next': nextTimestamp } = opts;
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
+
+  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
+    output.error('Please provide a number for flag --next');
+    return 1;
+  }
 
   try {
     ({ contextName } = await getScope(client));
@@ -58,15 +66,17 @@ export default async function ls(
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan('`now domains ls`')}`
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        `${getCommandName('domains ls')}`
+      )}`
     );
     return 1;
   }
 
-  const [domains, projects] = await Promise.all([
+  const [{ domains, pagination }, projects] = await Promise.all([
     getDomains(client, contextName),
     getProjectsWithDomains(client),
-  ]);
+  ] as const);
 
   if (projects instanceof Error) {
     output.error(projects.message);
@@ -88,6 +98,15 @@ export default async function ls(
       formatDomainsTable(domainsInfo).replace(/^(.*)/gm, `${' '.repeat(3)}$1`)
     );
     output.print('\n\n');
+  }
+
+  if (pagination && pagination.count === 20) {
+    const flags = getCommandFlags(opts, ['_', '--next']);
+    output.log(
+      `To display the next page run ${getCommandName(
+        `domains ls${flags} --next ${pagination.next}`
+      )}`
+    );
   }
 
   return 0;

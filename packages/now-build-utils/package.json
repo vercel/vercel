@@ -1,19 +1,19 @@
 {
-  "name": "@now/build-utils",
-  "version": "2.1.2-canary.0",
+  "name": "@vercel/build-utils",
+  "version": "2.3.2-canary.6",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
-  "homepage": "https://github.com/zeit/now/blob/master/DEVELOPING_A_RUNTIME.md",
+  "homepage": "https://github.com/vercel/vercel/blob/master/DEVELOPING_A_RUNTIME.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-build-utils"
   },
   "scripts": {
     "build": "./build.sh",
-    "test-unit": "jest --env node --verbose --runInBand test/unit.*test.*",
-    "test-integration-once": "jest --env node --verbose --runInBand test/integration.test.js",
+    "test-unit": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {
@@ -45,7 +45,7 @@
     "node-fetch": "2.2.0",
     "semver": "6.1.1",
     "ts-jest": "24.1.0",
-    "typescript": "3.5.2",
+    "typescript": "3.9.3",
     "yazl": "2.4.3"
   }
 }

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import Client from '../client';
 import wait from '../output/wait';
 import { Domain } from '../../types';
-import { DomainPermissionDenied, DomainNotFound } from '../errors';
+import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
 
 type Response = {
   domain: Domain;
@@ -18,7 +18,7 @@ async function getDomainByName(
   );
   try {
     const { domain } = await client.fetch<Response>(
-      `/v4/domains/${domainName}`
+      `/v4/domains/${encodeURIComponent(domainName)}`
     );
     cancelWait();
     return domain;

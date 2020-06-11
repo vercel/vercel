@@ -1,10 +1,11 @@
 import ms from 'ms';
 import path from 'path';
-import { URL } from 'url';
+import { URL, parse as parseUrl } from 'url';
 import test from 'ava';
 import semVer from 'semver';
 import { homedir } from 'os';
 import _execa from 'execa';
+import XDGAppPaths from 'xdg-app-paths';
 import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
@@ -20,10 +21,11 @@ import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
 import prepareFixtures from './helpers/prepare';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 // log command when running `execa`
 function execa(file, args, options) {
-  console.log(`$ now ${args.join(' ')}`);
+  console.log(`$ vercel ${args.join(' ')}`);
   return _execa(file, args, options);
 }
 
@@ -39,9 +41,9 @@ function fixture(name) {
   return directory;
 }
 
-const str = 'aHR0cHM6Ly9hcGktdG9rZW4tZmFjdG9yeS56ZWl0LnNo';
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const deployHelpMessage = `${logo} now [options] <command | path>`;
+const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
 const isCanary = pkg.version.includes('canary');
@@ -52,7 +54,6 @@ const pickUrl = stdout => {
 };
 
 const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
-const createDirectory = dest => fs.mkdirSync(dest);
 
 const waitForDeployment = async href => {
   console.log(`waiting for ${href} to become ready...`);
@@ -81,27 +82,8 @@ const waitForDeployment = async href => {
   }
 };
 
-function fetchTokenWithRetry(url, retries = 3) {
-  return retry(
-    async () => {
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data.token;
-    },
-    { retries, factor: 1 }
-  );
-}
-
 function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.zeit.co/www/user`;
+  const url = `https://api.vercel.com/www/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
   return retry(
@@ -150,6 +132,8 @@ let contextName;
 
 let tmpDir;
 
+let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
+
 if (!process.env.CI) {
   tmpDir = tmp.dirSync({
     // This ensures the directory gets
@@ -157,8 +141,46 @@ if (!process.env.CI) {
     unsafeCleanup: true,
   });
 
-  defaultArgs.push('-Q', path.join(tmpDir.name, '.now'));
+  globalDir = path.join(tmpDir.name, 'com.vercel.tests');
+
+  defaultArgs.push('-Q', globalDir);
+  console.log(
+    'No CI detected, adding defaultArgs to avoid polluting user settings',
+    defaultArgs
+  );
 }
+
+function mockLoginApi(req, res) {
+  const { url = '/', method } = req;
+  let { pathname = '/', query = {} } = parseUrl(url, true);
+  console.log(`[mock-login-server] ${method} ${pathname}`);
+  const securityCode = 'Bears Beets Battlestar Galactica';
+  if (
+    method === 'POST' &&
+    pathname === '/now/registration' &&
+    query.mode === 'login'
+  ) {
+    res.end(JSON.stringify({ token, securityCode }));
+  } else if (
+    method === 'GET' &&
+    pathname === '/now/registration/verify' &&
+    query.email === email
+  ) {
+    res.end(JSON.stringify({ token }));
+  } else {
+    res.statusCode = 405;
+    res.end(JSON.stringify({ code: 'method_not_allowed' }));
+  }
+}
+
+let loginApiUrl = '';
+const loginApiServer = require('http')
+  .createServer(mockLoginApi)
+  .listen(0, () => {
+    const { port } = loginApiServer.address();
+    loginApiUrl = `http://localhost:${port}`;
+    console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
+  });
 
 const execute = (args, options) =>
   execa(binaryPath, [...defaultArgs, ...args], {
@@ -166,8 +188,8 @@ const execute = (args, options) =>
     ...options,
   });
 
-const apiFetch = async (url, { headers, ...options } = {}) => {
-  return fetch(`https://api.zeit.co${url}`, {
+const apiFetch = (url, { headers, ...options } = {}) => {
+  return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       ...(headers || {}),
@@ -177,8 +199,11 @@ const apiFetch = async (url, { headers, ...options } = {}) => {
 };
 
 const waitForPrompt = (cp, assertion) =>
-  new Promise(resolve => {
+  new Promise((resolve, reject) => {
+    console.log('Waiting for prompt...');
+    setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
     const listener = chunk => {
+      console.log('> ' + chunk);
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
         cp.stderr.off && cp.stderr.off('data', listener);
@@ -190,44 +215,32 @@ const waitForPrompt = (cp, assertion) =>
     cp.stderr.on('data', listener);
   });
 
-async function getDeploymentBuildsByUrl(url) {
+const getDeploymentBuildsByUrl = async url => {
   const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
   const { id } = await hostRes.json();
   const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
   const { builds } = await buildsRes.json();
   return builds;
-}
-
-async function createDeploymentWithFixture(project = 'static-deployment') {
-  const directory = fixture(project);
-  const output = await execute([directory, '--confirm']);
-
-  if (output.exitCode !== 0) {
-    throw output;
-  }
-
-  const { host } = new URL(output.stdout);
-
-  return host;
-}
+};
 
 const createUser = async () => {
   await retry(
     async () => {
-      const location = getConfigPath();
-      const url = Buffer.from(str, 'base64').toString();
-      token = await fetchTokenWithRetry(url);
-
-      if (!fs.existsSync(location)) {
-        await createDirectory(location);
+      if (!fs.existsSync(globalDir)) {
+        console.log('Creating global config directory ', globalDir);
+        await ensureDir(globalDir);
+      } else {
+        console.log('Found global config directory ', globalDir);
       }
+
+      token = await fetchTokenWithRetry();
 
       await fs.writeJSON(getConfigAuthPath(), { token });
 
       const user = await fetchTokenInformation(token);
 
       email = user.email;
-      contextName = user.email.split('@')[0];
+      contextName = user.username;
       session = Math.random()
         .toString(36)
         .split('.')[1];
@@ -236,8 +249,7 @@ const createUser = async () => {
   );
 };
 
-const getConfigPath = () => path.join(tmpDir ? tmpDir.name : homedir(), '.now');
-const getConfigAuthPath = () => path.join(getConfigPath(), 'auth.json');
+const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
 
 test.before(async () => {
   try {
@@ -245,28 +257,35 @@ test.before(async () => {
     await prepareFixtures(contextName);
   } catch (err) {
     console.log('Failed `test.before`');
-    throw err;
+    console.log(err);
   }
 });
 
 test.after.always(async () => {
+  if (loginApiServer) {
+    // Stop mock server
+    loginApiServer.close();
+  }
+
   // Make sure the token gets revoked
   await execa(binaryPath, ['logout', ...defaultArgs]);
 
-  if (!tmpDir) {
-    return;
+  if (tmpDir) {
+    // Remove config directory entirely
+    tmpDir.removeCallback();
   }
-
-  // Remove config directory entirely
-  tmpDir.removeCallback();
 });
 
 test('login', async t => {
-  // Delete the current token
-  const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
+  t.timeout(ms('1m'));
 
-  const loginOutput = await execa(binaryPath, ['login', email, ...defaultArgs]);
+  const loginOutput = await execa(binaryPath, [
+    'login',
+    email,
+    '--api',
+    loginApiUrl,
+    ...defaultArgs,
+  ]);
 
   t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
   t.regex(
@@ -275,12 +294,8 @@ test('login', async t => {
     formatOutput(loginOutput)
   );
 
-  // Save the new token
   const auth = await fs.readJSON(getConfigAuthPath());
-
-  token = auth.token;
-
-  t.is(typeof token, 'string');
+  t.is(auth.token, token);
 });
 
 test('deploy using only now.json with `redirects` defined', async t => {
@@ -296,8 +311,7 @@ test('deploy using only now.json with `redirects` defined', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const i = stdout.lastIndexOf('https://');
-  const url = stdout.slice(i);
+  const url = stdout;
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   t.is(location, 'https://example.com/foo/bar');
@@ -377,6 +391,272 @@ test('deploy using --local-config flag above target', async t => {
   t.regex(host, /root-level/gm, `Expected "root-level" but received "${host}"`);
 });
 
+test('Deploy `api-env` fixture and test `vercel env` command', async t => {
+  const target = fixture('api-env');
+
+  async function nowDeploy() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [...defaultArgs, '--confirm'],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    console.log({ stdout });
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvLsIsEmpty() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'ls', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /No Environment Variables found in Project/gm);
+  }
+
+  async function nowEnvAdd() {
+    const now = execa(binaryPath, ['env', 'add', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+    await waitForPrompt(now, chunk =>
+      chunk.includes('What’s the name of the variable?')
+    );
+    now.stdin.write('MY_ENV_VAR\n');
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('What’s the value of') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('MY_VALUE\n');
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvAddFromStdin() {
+    const now = execa(
+      binaryPath,
+      ['env', 'add', 'MY_STDIN_VAR', 'development', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    now.stdin.end('{"expect":"quotes"}');
+    const { exitCode, stderr, stdout } = await now;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvAddSystemEnv() {
+    const now = execa(
+      binaryPath,
+      ['env', 'add', 'VERCEL_URL', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvLsIncludesVar() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'ls', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /Environment Variables found in Project/gm);
+
+    const lines = stdout.split('\n');
+
+    const myEnvVars = lines.filter(line => line.includes('MY_ENV_VAR'));
+    t.is(myEnvVars.length, 3);
+    t.regex(myEnvVars.join('\n'), /development/gm);
+    t.regex(myEnvVars.join('\n'), /preview/gm);
+    t.regex(myEnvVars.join('\n'), /production/gm);
+
+    const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
+    t.is(myStdinVars.length, 1);
+    t.regex(myStdinVars.join('\n'), /development/gm);
+
+    const vercelVars = lines.filter(line => line.includes('VERCEL_URL'));
+    t.is(vercelVars.length, 3);
+    t.regex(vercelVars.join('\n'), /development/gm);
+    t.regex(vercelVars.join('\n'), /preview/gm);
+    t.regex(vercelVars.join('\n'), /production/gm);
+  }
+
+  async function nowEnvPull() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'pull', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /Created .env file/gm);
+
+    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    const lines = new Set(contents.split('\n'));
+    t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
+    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
+    t.true(lines.has('VERCEL_URL=""'));
+  }
+
+  async function nowDeployWithVar() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    const { host } = new URL(stdout);
+
+    const apiUrl = `https://${host}/api/get-env`;
+    console.log({ apiUrl });
+    const apiRes = await fetch(apiUrl);
+    t.is(apiRes.status, 200, formatOutput({ stderr, stdout }));
+    const apiJson = await apiRes.json();
+    t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(apiJson['VERCEL_URL'], host);
+
+    const homeUrl = `https://${host}`;
+    console.log({ homeUrl });
+    const homeRes = await fetch(homeUrl);
+    t.is(homeRes.status, 200, formatOutput({ stderr, stdout }));
+    const homeJson = await homeRes.json();
+    t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(apiJson['VERCEL_URL'], host);
+  }
+
+  async function nowEnvRemove() {
+    const now = execa(binaryPath, ['env', 'rm', '-y', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+    await waitForPrompt(now, chunk =>
+      chunk.includes('What’s the name of the variable?')
+    );
+    now.stdin.write('MY_ENV_VAR\n');
+
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
+    );
+    now.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await now;
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvRemoveWithArgs() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'rm', 'MY_STDIN_VAR', 'development', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowEnvRemoveWithNameOnly() {
+    const vc = execa(
+      binaryPath,
+      ['env', 'rm', 'VERCEL_URL', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    await waitForPrompt(
+      vc,
+      chunk =>
+        chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
+    );
+    vc.stdin.write('a\n'); // select all
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  await nowDeploy();
+  await nowEnvLsIsEmpty();
+  await nowEnvAdd();
+  await nowEnvAddFromStdin();
+  await nowEnvAddSystemEnv();
+  await nowEnvLsIncludesVar();
+  await nowEnvPull();
+  await nowDeployWithVar();
+  await nowEnvRemove();
+  await nowEnvRemoveWithArgs();
+  await nowEnvRemoveWithNameOnly();
+  await nowEnvLsIsEmpty();
+  fs.unlinkSync(path.join(target, '.env'));
+});
+
+test('deploy with metadata containing "=" in the value', async t => {
+  const target = fixture('static-v2-meta');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [target, ...defaultArgs, '--confirm', '--meta', 'someKey=='],
+    { reject: false }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const { host } = new URL(stdout);
+  const res = await fetch(
+    `https://api.vercel.com/v12/now/deployments/get?url=${host}`,
+    { headers: { authorization: `Bearer ${token}` } }
+  );
+  const deployment = await res.json();
+  t.is(deployment.meta.someKey, '=');
+});
+
 test('print the deploy help message', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -418,6 +698,74 @@ test('output the version', async t => {
   t.is(version, pkg.version);
 });
 
+test('should error with suggestion for secrets subcommand', async t => {
+  const target = fixture('subdirectory-secret');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['secret', 'add', 'key', 'value', ...defaultArgs],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.regex(
+    stderr,
+    /secrets/gm,
+    `Expected "secrets" suggestion but received "${stderr}"`
+  );
+});
+
+test('should add secret with hyphen prefix', async t => {
+  const target = fixture('build-secret');
+  const key = 'mysecret';
+  const value = '-foo_bar';
+
+  let secretCall = await execa(
+    binaryPath,
+    ['secrets', 'add', ...defaultArgs, key, value],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
+
+  t.is(
+    secretCall.exitCode,
+    0,
+    formatOutput({ stderr: secretCall.stderr, stdout: secretCall.stdout })
+  );
+
+  let targetCall = await execa(binaryPath, [...defaultArgs, '--confirm'], {
+    cwd: target,
+    reject: false,
+  });
+
+  t.is(
+    targetCall.exitCode,
+    0,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+  const { host } = new URL(targetCall.stdout);
+  const response = await fetch(`https://${host}`);
+  t.is(
+    response.status,
+    200,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+  t.is(
+    await response.text(),
+    `${value}\n`,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+});
+
 test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
@@ -431,12 +779,42 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `Error! Please sign up: https://zeit.co/signup`;
+  const goal = `Error! Please sign up: https://vercel.com/signup`;
   const lines = stdout.trim().split('\n');
   const last = lines[lines.length - 1];
 
   t.is(exitCode, 1);
   t.is(last, goal);
+});
+
+test('test invalid json alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-json-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.regex(output.stderr, /Error parsing/, formatOutput(output));
+});
+
+test('test invalid alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
+});
+
+test('test invalid type for alias rules', async t => {
+  const fixturePath = fixture('alias-rules');
+  const output = await execute(['alias', '-r', 'invalid-type-rules.json'], {
+    cwd: fixturePath,
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
 });
 
 test('ignore files specified in .nowignore', async t => {
@@ -597,7 +975,7 @@ test('try to purchase a domain', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      `Error! Could not purchase domain. Please add a payment method using \`now billing add\`.`
+      `Error! Could not purchase domain. Please add a payment method using \`vercel billing add\`.`
     )
   );
 });
@@ -656,7 +1034,7 @@ test('try to move an invalid domain', async t => {
 test('try to set default without existing payment method', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['billing', 'set-default', '-y', ...defaultArgs],
+    ['billing', 'set-default', ...defaultArgs],
     {
       reject: false,
     }
@@ -673,7 +1051,7 @@ test('try to set default without existing payment method', async t => {
 test('try to remove a non-existing payment method', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['billing', 'rm', 'card_d2j32d9382jr928rd', '-y', ...defaultArgs],
+    ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
     {
       reject: false,
     }
@@ -691,12 +1069,14 @@ test('try to remove a non-existing payment method', async t => {
   );
 });
 
-test('output logs of a 2.0 deployment', async t => {
-  const deployment = await createDeploymentWithFixture();
+test('set platform version using `-V` to invalid number', async t => {
+  const directory = fixture('builds');
+  const goal =
+    'Error! The "--platform-version" option must be either `1` or `2`.';
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['logs', deployment, ...defaultArgs],
+    [directory, '--public', '--name', session, ...defaultArgs, '-V', 3],
     {
       reject: false,
     }
@@ -706,19 +1086,111 @@ test('output logs of a 2.0 deployment', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  t.true(
-    stderr.includes(`Fetched deployment "${deployment}"`),
-    formatOutput({ stderr, stdout })
+  // Ensure the exit code is right
+  t.is(exitCode, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `--platform-version` to invalid number', async t => {
+  const directory = fixture('builds');
+  const goal =
+    'Error! The "--platform-version" option must be either `1` or `2`.';
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      '--platform-version',
+      3,
+    ],
+    {
+      reject: false,
+    }
   );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  // Ensure the exit code is right
+  t.is(exitCode, 1);
+
+  // Ensure the error message shows up
+  t.true(stderr.includes(goal));
+});
+
+test('set platform version using `-V` to `2`', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, exitCode } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      '-V',
+      2,
+      '--force',
+      '--confirm',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  const output = `Received:\n"${stderr}"\n"${stdout}"`;
+
+  // Ensure the exit code is right
+  t.is(exitCode, 0, output);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session, output);
+
+  if (host) {
+    context.deployment = host;
+  }
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
+
+test('output logs of a 2.0 deployment', async t => {
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    ['logs', context.deployment, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.true(stderr.includes(`Fetched deployment "${context.deployment}"`));
   t.is(exitCode, 0);
 });
 
 test('output logs of a 2.0 deployment without annotate', async t => {
-  const deployment = await createDeploymentWithFixture();
-
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['logs', deployment, ...defaultArgs],
+    ['logs', context.deployment, ...defaultArgs],
     {
       reject: false,
     }
@@ -737,28 +1209,30 @@ test('output logs of a 2.0 deployment without annotate', async t => {
   t.is(exitCode, 0);
 });
 
+/*
+ * Disabled 2 tests because these temp users don't have certs
 test('create wildcard alias for deployment', async t => {
-  const deployment = await createDeploymentWithFixture('context-website');
-  const alias = `*.${contextName}.now.sh`;
+  const hosts = {
+    deployment: context.deployment,
+    alias: `*.${contextName}.now.sh`,
+  };
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    ['alias', deployment, alias, ...defaultArgs],
+    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
     {
       reject: false,
     }
   );
 
-  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
 
-  t.regex(
-    stdout,
-    new RegExp(
-      `> Success! \\${alias} now points to https://${deployment}`,
-      'gm'
-    ),
-    formatOutput({ stderr, stdout })
-  );
+  const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
+
+  t.is(exitCode, 0);
+  t.true(stdout.startsWith(goal));
 
   // Send a test request to the alias
   // Retries to make sure we consider the time it takes to update
@@ -777,9 +1251,9 @@ test('create wildcard alias for deployment', async t => {
   const content = await response.text();
 
   t.true(response.ok);
-  t.regex(content, new RegExp(contextName));
+  t.true(content.includes(contextName));
 
-  context.wildcardAlias = alias;
+  context.wildcardAlias = hosts.alias;
 });
 
 test('remove the wildcard alias', async t => {
@@ -800,6 +1274,7 @@ test('remove the wildcard alias', async t => {
   t.is(exitCode, 0);
   t.true(stdout.startsWith(goal));
 });
+*/
 
 test('ensure username in list is right', async t => {
   const { stdout, stderr, exitCode } = await execa(
@@ -817,11 +1292,52 @@ test('ensure username in list is right', async t => {
   // Ensure the exit code is right
   t.is(exitCode, 0);
 
-  const line = stdout.split('\n').find(line => line.includes('.now.sh'));
+  const line = stdout
+    .split('\n')
+    .find(line => line.includes('.now.sh') || line.includes('.vercel.app'));
   const columns = line.split(/\s+/);
 
   // Ensure username column have username
   t.truthy(columns.pop().includes(contextName));
+});
+
+test('set platform version using `--platform-version` to `2`', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, exitCode } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      '--platform-version',
+      2,
+      '--force',
+      '--confirm',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  // Ensure the exit code is right
+  t.is(exitCode, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
 });
 
 test('ensure we render a warning for deployments with no files', async t => {
@@ -975,20 +1491,12 @@ test('ensure the `scope` property works with username', async t => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('try to create a builds deployments with wrong config', async t => {
+test('try to create a builds deployments with wrong now.json', async t => {
   const directory = fixture('builds-wrong');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--confirm',
-    ],
+    [directory, '--public', ...defaultArgs, '--confirm'],
     {
       reject: false,
     }
@@ -1002,7 +1510,30 @@ test('try to create a builds deployments with wrong config', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in now.json when using Now 2.0 – please remove it.'
+      'Error! The property `builder` is not allowed in now.json – please remove it.'
+    )
+  );
+});
+
+test('try to create a builds deployments with wrong vercel.json', async t => {
+  const directory = fixture('builds-wrong-vercel');
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    [directory, '--public', ...defaultArgs, '--confirm'],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.is(exitCode, 1);
+  t.true(
+    stderr.includes(
+      'Error! The property `fake` is not allowed in vercel.json – please remove it.'
     )
   );
 });
@@ -1038,6 +1569,43 @@ test('create a builds deployments with no actual builds', async t => {
   t.is(host.split('-')[0], session);
 });
 
+test('create a builds deployments without platform version flag', async t => {
+  const directory = fixture('builds');
+
+  const { stdout, stderr, exitCode } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      '--force',
+      '--confirm',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  // Ensure the exit code is right
+  t.is(exitCode, 0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  t.is(host.split('-')[0], session);
+
+  // Send a test request to the deployment
+  const response = await fetch(href);
+  const contentType = response.headers.get('content-type');
+
+  t.is(contentType, 'text/html; charset=utf-8');
+});
+
 test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
 
@@ -1058,7 +1626,7 @@ test('create a staging deployment', async t => {
     /Setting target to staging/gm,
     formatOutput(targetCall)
   );
-
+  t.regex(targetCall.stdout, /https:\/\//gm);
   t.is(targetCall.exitCode, 0, formatOutput(targetCall));
 
   const { host } = new URL(targetCall.stdout);
@@ -1094,6 +1662,7 @@ test('create a production deployment', async t => {
     /Setting target to production/gm,
     formatOutput(targetCall)
   );
+  t.regex(targetCall.stdout, /https:\/\//gm);
 
   const { host: targetHost } = new URL(targetCall.stdout);
   const targetDeployment = await apiFetch(
@@ -1117,6 +1686,7 @@ test('create a production deployment', async t => {
     /Setting target to production/gm,
     formatOutput(targetCall)
   );
+  t.regex(call.stdout, /https:\/\//gm);
 
   const { host } = new URL(call.stdout);
   const deployment = await apiFetch(
@@ -1136,13 +1706,13 @@ test('deploying a file should not show prompts and display deprecation', async t
 
   // Ensure the exit code is right
   t.is(exitCode, 0, formatOutput(output));
-  t.true(stderr.includes('Deploying files with ZEIT Now is deprecated'));
+  t.true(stderr.includes('Deploying files with Vercel is deprecated'));
 
-  // Ensure `.now` was not created
+  // Ensure `.vercel` was not created
   t.is(
-    await exists(path.join(path.dirname(file), '.now')),
+    await exists(path.join(path.dirname(file), '.vercel')),
     false,
-    '.now should not exists'
+    '.vercel should not exists'
   );
 
   // Test if the output is really a URL
@@ -1176,75 +1746,6 @@ test('deploying more than 1 path should fail', async t => {
   // Ensure the exit code is right
   t.is(exitCode, 1);
   t.true(stderr.trim().endsWith(`Can't deploy more than one path.`));
-});
-
-test('use build-env', async t => {
-  const directory = fixture('build-env');
-
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    [directory, '--public', ...defaultArgs, '--confirm'],
-    {
-      reject: false,
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href } = new URL(deploymentUrl);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), 'bar');
-});
-
-test('use `--build-env` CLI flag', async t => {
-  const directory = fixture('build-env-arg');
-  const nonce = Math.random()
-    .toString(36)
-    .substring(2);
-
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--build-env',
-      `NONCE=${nonce}`,
-      ...defaultArgs,
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0, `Received:\n"${stderr}"\n"${stdout}"`);
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), nonce);
 });
 
 test('use `--debug` CLI flag', async t => {
@@ -1306,7 +1807,7 @@ test('try to deploy non-existing path', async t => {
 });
 
 test('try to deploy with non-existing team', async t => {
-  const target = fixture('static-deployment');
+  const target = fixture('node');
   const goal = `Error! The specified scope does not exist`;
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1401,7 +1902,7 @@ test('initialize example to existing directory with "-f"', async t => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  createDirectory(path.join(cwd, 'angular'));
+  await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
   const { stdout, stderr, exitCode } = await execute(
     ['init', 'angular', '-f'],
@@ -1415,7 +1916,7 @@ test('initialize example to existing directory with "-f"', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 0);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
   t.true(verifyExampleAngular(cwd, 'angular'));
 });
 
@@ -1423,9 +1924,9 @@ test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `--f` to override it.';
+    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
 
-  createDirectory(path.join(cwd, 'angular'));
+  await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
   const { stdout, stderr, exitCode } = await execute(['init', 'angular'], {
     cwd,
@@ -1437,14 +1938,14 @@ test('try to initialize example to existing directory', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! No example found for noce, run `now init` to see the list of available examples.';
+    'Error! No example found for noce, run `vercel init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'noce'], { cwd });
 
@@ -1453,14 +1954,14 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize example "example-404"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! No example found for example-404, run `now init` to see the list of available examples.';
+    'Error! No example found for example-404, run `vercel init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'example-404'], {
     cwd,
@@ -1471,7 +1972,7 @@ test('try to initialize example "example-404"', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(stdout.includes(goal));
+  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to revert a deployment and assign the automatic aliases', async t => {
@@ -1570,7 +2071,56 @@ test('fail `now dev` dev script without now.json', async t => {
   );
 });
 
-test('`now rm` 404 exits quickly', async t => {
+test('print correct link in legacy warning', async t => {
+  const deploymentPath = fixture('v1-warning-link');
+  const { exitCode, stderr, stdout } = await execute([
+    deploymentPath,
+    '--confirm',
+  ]);
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  // It is expected to fail,
+  // since the package.json does not have a start script
+  t.is(exitCode, 1);
+  t.regex(stderr, /migrate-to-vercel/);
+});
+
+test('`vercel rm` removes a deployment', async t => {
+  const directory = fixture('builds');
+
+  const { stdout } = await execa(
+    binaryPath,
+    [
+      directory,
+      '--public',
+      '--name',
+      session,
+      ...defaultArgs,
+      '-V',
+      2,
+      '--force',
+      '--confirm',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  const { host } = new URL(stdout);
+  const { exitCode, stdout: stdoutRemove } = await execute([
+    'rm',
+    host,
+    '--yes',
+  ]);
+
+  t.truthy(stdoutRemove.includes(host));
+  t.is(exitCode, 0);
+});
+
+test('`vercel rm` 404 exits quickly', async t => {
   const start = Date.now();
   const { exitCode, stderr, stdout } = await execute([
     'rm',
@@ -1628,7 +2178,7 @@ test('invalid deployment, projects and alias names', async t => {
   ]);
 });
 
-test('now certs ls', async t => {
+test('vercel certs ls', async t => {
   const output = await execute(['certs', 'ls']);
 
   console.log(output.stderr);
@@ -1639,22 +2189,18 @@ test('now certs ls', async t => {
   t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
 });
 
-test('now certs ls --after=cert_test', async t => {
-  const output = await execute(['certs', 'ls', '--after=cert_test']);
+test('vercel certs ls --next=123456', async t => {
+  const output = await execute(['certs', 'ls', '--next=123456']);
 
   console.log(output.stderr);
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /The cert cert_test can't be found\./gm,
-    formatOutput(output)
-  );
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /No certificates found under/gm, formatOutput(output));
 });
 
-test('now hasOwnProperty not a valid subcommand', async t => {
+test('vercel hasOwnProperty not a valid subcommand', async t => {
   const output = await execute(['hasOwnProperty']);
 
   console.log(output.stderr);
@@ -1706,7 +2252,7 @@ test('create zero-config deployment', async t => {
   );
 });
 
-test('now secret add', async t => {
+test('vercel secret add', async t => {
   context.secretName = `my-secret-${Date.now().toString(36)}`;
   const value = 'https://my-secret-endpoint.com';
 
@@ -1719,7 +2265,7 @@ test('now secret add', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('now secret ls', async t => {
+test('vercel secret ls', async t => {
   const output = await execute(['secret', 'ls']);
 
   console.log(output.stderr);
@@ -1727,11 +2273,11 @@ test('now secret ls', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 0, formatOutput(output));
-  t.regex(output.stdout, /secrets? found under/gm, formatOutput(output));
+  t.regex(output.stdout, /Secrets found under/gm, formatOutput(output));
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
 
-test('now secret rename', async t => {
+test('vercel secret rename', async t => {
   const nextName = `renamed-secret-${Date.now().toString(36)}`;
   const output = await execute([
     'secret',
@@ -1749,7 +2295,7 @@ test('now secret rename', async t => {
   context.secretName = nextName;
 });
 
-test('now secret rm', async t => {
+test('vercel secret rm', async t => {
   const output = await execute(['secret', 'rm', context.secretName, '-y']);
 
   console.log(output.stderr);
@@ -1781,11 +2327,8 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
   const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /Functions must have a memory value between 128 and 3008 in steps of 64\./gm,
-    formatOutput(output)
-  );
+  t.regex(output.stderr, /steps of 64/gm, formatOutput(output));
+  t.regex(output.stderr, /More details/gm, formatOutput(output));
 });
 
 test('deploy a Lambda with 3 seconds of maxDuration', async t => {
@@ -1922,20 +2465,21 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
 });
 
 test('change user', async t => {
+  t.timeout(ms('1m'));
+
   const { stdout: prevUser } = await execute(['whoami']);
 
   // Delete the current token
-  const logoutOutput = await execute(['logout']);
-  t.is(logoutOutput.exitCode, 0, formatOutput(logoutOutput));
+  await execute(['logout', '--debug'], { stdio: 'inherit' });
 
   await createUser();
 
-  const loginOutput = await execute(['login', email]);
-  t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
+  await execute(['login', email, '--api', loginApiUrl, '--debug'], {
+    stdio: 'inherit',
+  });
 
   const auth = await fs.readJSON(getConfigAuthPath());
-
-  token = auth.token;
+  t.is(auth.token, token);
 
   const { stdout: nextUser } = await execute(['whoami']);
 
@@ -1956,7 +2500,7 @@ test('should show prompts to set up project', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
 
   const now = execa(binaryPath, [directory, ...defaultArgs]);
 
@@ -2018,16 +2562,19 @@ test('should show prompts to set up project', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(directory, '.gitignore'))).toString(), '.now');
-
-  // Ensure .now/project.json and .now/README.txt are created
   t.is(
-    await exists(path.join(directory, '.now', 'project.json')),
+    (await readFile(path.join(directory, '.gitignore'))).toString(),
+    '.vercel'
+  );
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(directory, '.vercel', 'project.json')),
     true,
     'project.json should be created'
   );
   t.is(
-    await exists(path.join(directory, '.now', 'README.txt')),
+    await exists(path.join(directory, '.vercel', 'README.txt')),
     true,
     'README.txt should be created'
   );
@@ -2048,7 +2595,7 @@ test('should prefill "project name" prompt with folder name', async t => {
   const src = fixture('static-deployment');
 
   // remove previously linked project if it exists
-  await remove(path.join(src, '.now'));
+  await remove(path.join(src, '.vercel'));
 
   const directory = path.join(src, '../', projectName);
   await copy(src, directory);
@@ -2096,7 +2643,7 @@ test('should prefill "project name" prompt with --name', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
 
   const now = execa(binaryPath, [
     directory,
@@ -2108,7 +2655,7 @@ test('should prefill "project name" prompt with --name', async t => {
   let isDeprecated = false;
 
   await waitForPrompt(now, chunk => {
-    if (chunk.includes('The "--name" flag is deprecated')) {
+    if (chunk.includes('The "--name" option is deprecated')) {
       isDeprecated = true;
     }
 
@@ -2156,9 +2703,9 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   }`;
 
   // remove previously linked project if it exists
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
   await fs.writeFile(
-    path.join(directory, 'now.json'),
+    path.join(directory, 'vercel.json'),
     JSON.stringify({
       name: projectName,
     })
@@ -2170,7 +2717,9 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
 
   now.stderr.on('data', data => {
     if (
-      data.toString().includes('The `name` property in now.json is deprecated')
+      data
+        .toString()
+        .includes('The `name` property in vercel.json is deprecated')
     ) {
       isDeprecated = true;
     }
@@ -2212,17 +2761,17 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   t.is(isDeprecated, true);
 
   // clean up
-  await remove(path.join(directory, 'now.json'));
+  await remove(path.join(directory, 'vercel.json'));
 });
 
-test('deploy with unknown `NOW_PROJECT_ID` should fail', async t => {
+test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
     env: {
-      NOW_ORG_ID: user.uid,
-      NOW_PROJECT_ID: 'asdf',
+      VERCEL_ORG_ID: user.uid,
+      VERCEL_PROJECT_ID: 'asdf',
     },
   });
 
@@ -2230,54 +2779,54 @@ test('deploy with unknown `NOW_PROJECT_ID` should fail', async t => {
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('deploy with `NOW_ORG_ID` but without `NOW_PROJECT_ID` should fail', async t => {
+test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
-    env: { NOW_ORG_ID: user.uid },
+    env: { VERCEL_ORG_ID: user.uid },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(
     output.stderr.includes(
-      'You specified `NOW_ORG_ID` but you forgot to specify `NOW_PROJECT_ID`. You need to specify both to deploy to a custom project.'
+      'You specified `VERCEL_ORG_ID` but you forgot to specify `VERCEL_PROJECT_ID`. You need to specify both to deploy to a custom project.'
     ),
     true,
     formatOutput(output)
   );
 });
 
-test('deploy with `NOW_PROJECT_ID` but without `NOW_ORG_ID` should fail', async t => {
+test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', async t => {
   const directory = fixture('static-deployment');
 
   const output = await execute([directory], {
-    env: { NOW_PROJECT_ID: 'asdf' },
+    env: { VERCEL_PROJECT_ID: 'asdf' },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(
     output.stderr.includes(
-      'You specified `NOW_PROJECT_ID` but you forgot to specify `NOW_ORG_ID`. You need to specify both to deploy to a custom project.'
+      'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_ORG_ID`. You need to specify both to deploy to a custom project.'
     ),
     true,
     formatOutput(output)
   );
 });
 
-test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
+test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async t => {
   const directory = fixture('static-deployment');
 
-  // generate `.now`
+  // generate `.vercel`
   await execute([directory, '--confirm']);
 
-  const link = require(path.join(directory, '.now/project.json'));
-  await remove(path.join(directory, '.now'));
+  const link = require(path.join(directory, '.vercel/project.json'));
+  await remove(path.join(directory, '.vercel'));
 
   const output = await execute([directory], {
     env: {
-      NOW_ORG_ID: link.orgId,
-      NOW_PROJECT_ID: link.projectId,
+      VERCEL_ORG_ID: link.orgId,
+      VERCEL_PROJECT_ID: link.projectId,
     },
   });
 
@@ -2285,13 +2834,13 @@ test('deploy with `NOW_ORG_ID` and `NOW_PROJECT_ID`', async t => {
   t.is(output.stdout.includes('Linked to'), false);
 });
 
-test('deploy shows notice when project in `.now` does not exists', async t => {
+test('deploy shows notice when project in `.vercel` does not exists', async t => {
   const directory = fixture('static-deployment');
 
-  // overwrite .now with unexisting project
-  await ensureDir(path.join(directory, '.now'));
+  // overwrite .vercel with unexisting project
+  await ensureDir(path.join(directory, '.vercel'));
   await writeFile(
-    path.join(directory, '.now/project.json'),
+    path.join(directory, '.vercel/project.json'),
     JSON.stringify({
       orgId: 'asdf',
       projectId: 'asdf',
@@ -2307,7 +2856,7 @@ test('deploy shows notice when project in `.now` does not exists', async t => {
     detectedNotice =
       detectedNotice ||
       chunk.includes(
-        'Your project was either removed from ZEIT Now or you’re not a member of it anymore'
+        'Your project was either removed from Vercel or you’re not a member of it anymore'
       );
 
     return /Set up and deploy [^?]+\?/.test(chunk);
@@ -2355,39 +2904,48 @@ test('use `rootDirectory` from project when deploying', async t => {
   });
 });
 
-test('whoami with unknown `NOW_ORG_ID` should error', async t => {
-  const output = await execute(['whoami'], {
-    env: { NOW_ORG_ID: 'asdf' },
+test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
+  const output = await execute(['deploy'], {
+    env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
+  const output = await execute(['env'], {
+    env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
+  });
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
+});
+
+test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async t => {
+  const user = await fetchTokenInformation(token);
+
+  const output = await execute(['whoami', '--scope', 'asdf'], {
+    env: { VERCEL_ORG_ID: user.uid },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.is(
-    output.stderr.includes('Organization not found'),
+    output.stderr.includes('The specified scope does not exist'),
     true,
     formatOutput(output)
   );
 });
 
-test('whoami with `NOW_ORG_ID`', async t => {
-  const user = await fetchTokenInformation(token);
-
-  const output = await execute(['whoami', '--scope', 'asdf'], {
-    env: { NOW_ORG_ID: user.uid },
-  });
-
-  t.is(output.exitCode, 0, formatOutput(output));
-  t.is(output.stdout.includes(contextName), true, formatOutput(output));
-});
-
-test('whoami with local .now scope', async t => {
+test('whoami with local .vercel scope', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
-  // create local .now
-  await ensureDir(path.join(directory, '.now'));
+  // create local .vercel
+  await ensureDir(path.join(directory, '.vercel'));
   await fs.writeFile(
-    path.join(directory, '.now', 'project.json'),
-    JSON.stringify({ orgId: user.uid })
+    path.join(directory, '.vercel', 'project.json'),
+    JSON.stringify({ orgId: user.uid, projectId: 'xxx' })
   );
 
   const output = await execute(['whoami'], {
@@ -2398,5 +2956,80 @@ test('whoami with local .now scope', async t => {
   t.is(output.stdout.includes(contextName), true, formatOutput(output));
 
   // clean up
-  await remove(path.join(directory, '.now'));
+  await remove(path.join(directory, '.vercel'));
+});
+
+test('deploys with only now.json and README.md', async t => {
+  const directory = fixture('deploy-with-only-readme-now-json');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  const { host } = new URL(stdout);
+  const res = await fetch(`https://${host}/README.md`);
+  const text = await res.text();
+  t.regex(text, /readme contents/);
+});
+
+test('deploys with only vercel.json and README.md', async t => {
+  const directory = fixture('deploy-with-only-readme-vercel-json');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  const { host } = new URL(stdout);
+  const res = await fetch(`https://${host}/README.md`);
+  const text = await res.text();
+  t.regex(text, /readme contents/);
+});
+
+test('reject conflicting `vercel.json` and `now.json` files', async t => {
+  const directory = fixture('conflicting-now-json-vercel-json');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+  t.true(
+    stderr.includes(
+      'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+    ),
+    formatOutput({ stderr, stdout })
+  );
+});
+
+test('`vc --debug project ls` should output the projects listing', async t => {
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--debug', 'project', 'ls'],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  t.true(
+    stdout.includes('> Projects found under'),
+    formatOutput({ stderr, stdout })
+  );
 });

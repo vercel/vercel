@@ -2,12 +2,14 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import Now from '../../util/now';
+import Now from '../../util';
 import Client from '../../util/client.ts';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen.ts';
+import getCommandFlags from '../../util/get-command-flags';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 export default async function ls(ctx, opts, args, output) {
   const {
@@ -16,7 +18,7 @@ export default async function ls(ctx, opts, args, output) {
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const { '--debug': debugEnabled } = opts;
+  const { '--debug': debugEnabled, '--next': nextTimestamp } = opts;
   const client = new Client({
     apiUrl,
     token,
@@ -36,14 +38,24 @@ export default async function ls(ctx, opts, args, output) {
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
+    output.error('Please provide a number for flag --next');
+    return 1;
+  }
+
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+  });
   const lsStamp = stamp();
   let cancelWait;
 
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        '`now alias ls [alias]`'
+        `${getCommandName('alias ls [alias]')}`
       )}`
     );
     return 1;
@@ -57,7 +69,11 @@ export default async function ls(ctx, opts, args, output) {
       : `Fetching aliases under ${chalk.bold(contextName)}`
   );
 
-  const aliases = await getAliases(now);
+  const { aliases, pagination } = await getAliases(
+    now,
+    undefined,
+    nextTimestamp
+  );
   if (cancelWait) cancelWait();
 
   if (args[0]) {
@@ -83,13 +99,17 @@ export default async function ls(ctx, opts, args, output) {
       output.print(`${printPathAliasTable(rules)}\n`);
     }
   } else {
-    aliases.sort((a, b) => new Date(b.created) - new Date(a.created));
-    output.log(
-      `${plural('alias', aliases.length, true)} found under ${chalk.bold(
-        contextName
-      )} ${lsStamp()}`
-    );
+    output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
     console.log(printAliasTable(aliases));
+  }
+
+  if (pagination && pagination.count === 20) {
+    const flags = getCommandFlags(opts, ['_', '--next']);
+    output.log(
+      `To display the next page run ${getCommandName(
+        `alias ls${flags} --next ${pagination.next}`
+      )}`
+    );
   }
 
   now.close();
@@ -110,7 +130,7 @@ function printAliasTable(aliases) {
           ? a.deployment.url
           : chalk.gray('–'),
         a.alias,
-        ms(Date.now() - new Date(a.created)),
+        ms(Date.now() - new Date(a.createdAt)),
       ]),
     ],
     {

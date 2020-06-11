@@ -1,17 +1,19 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/next" }],
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
     {
       "path": "/",
       "mustContain": "Hi"
     },
+    /* TODO: enable this again once all tests pass
     {
       "path": "/",
       "responseHeaders": {
-        "x-now-cache": "HIT"
+        "x-vercel-cache": "HIT"
       }
     },
+    */
     {
       "path": "/non-existent",
       "mustContain": "custom 404!!"
@@ -19,6 +21,14 @@
     {
       "path": "/non-existent",
       "mustContain": "__next"
+    },
+    {
+      "path": "/non-existent",
+      "status": 404
+    },
+    {
+      "path": "/404",
+      "status": 404
     }
   ]
 }

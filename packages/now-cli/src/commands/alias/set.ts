@@ -1,28 +1,34 @@
+import ms from 'ms';
 import chalk from 'chalk';
-import { toHost } from '../../util/to-host';
 import { SetDifference } from 'utility-types';
 import { AliasRecord } from '../../util/alias/create-alias';
 import { NowContext, Domain } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors';
+import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
+import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
-import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
+import getDeploymentForAlias from '../../util/alias/get-deployment-for-alias';
+import getRulesFromFile from '../../util/alias/get-rules-from-file';
 import getScope from '../../util/get-scope';
+import { getTargetsForAlias } from '../../util/alias/get-targets-for-alias';
+import humanizePath from '../../util/humanize-path';
 import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
 import { isValidName } from '../../util/is-valid-name';
+import upsertPathAlias from '../../util/alias/upsert-path-alias';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
-import { User, Config } from '../../types';
-import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
+import { User } from '../../types';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--debug': boolean;
   '--local-config': string;
+  '--no-verify': boolean;
+  '--rules': string;
 };
 
 export default async function set(
@@ -41,7 +47,11 @@ export default async function set(
   const { apiUrl } = ctx;
   const setStamp = stamp();
 
-  const { '--debug': debugEnabled } = opts;
+  const {
+    '--debug': debugEnabled,
+    '--no-verify': noVerify,
+    '--rules': rulesPath,
+  } = opts;
 
   const client = new Client({
     apiUrl,
@@ -67,7 +77,9 @@ export default async function set(
   // If there are more than two args we have to error
   if (args.length > 2) {
     output.error(
-      `${cmd('now alias <deployment> <target>')} accepts at most two arguments`
+      `${getCommandName(
+        `alias <deployment> <target>`
+      )} accepts at most two arguments`
     );
     return 1;
   }
@@ -84,88 +96,99 @@ export default async function set(
     return 1;
   }
 
-  if (args.length === 0) {
+  // Read the path alias rules in case there is is given
+  const rules = await getRulesFromFile(rulesPath);
+  if (rules instanceof ERRORS.FileNotFound) {
+    output.error(`Can't find the provided rules file at location:`);
+    output.print(`  ${chalk.gray('-')} ${rules.meta.file}\n`);
+    return 1;
+  }
+
+  if (rules instanceof ERRORS.CantParseJSONFile) {
+    output.error(`Error parsing provided rules.json file at location:`);
+    output.print(`  ${chalk.gray('-')} ${rules.meta.file}\n`);
+    return 1;
+  }
+
+  if (rules instanceof ERRORS.RulesFileValidationError) {
+    output.error(`Path Alias validation error: ${rules.meta.message}`);
+    output.print(`  ${chalk.gray('-')} ${rules.meta.location}\n`);
+    return 1;
+  }
+
+  // If the user provided rules and also a deployment target, we should fail
+  if (args.length === 2 && rules) {
     output.error(
-      `To ship to production, optionally configure your domains (${link(
-        'https://zeit.co/docs/v2/custom-domains/'
-      )}) and run ${cmd('now --prod')}.`
+      `You can't supply a deployment target and target rules simultaneously.`
     );
     return 1;
   }
 
-  // For `now alias <argument>`
-  if (args.length === 1) {
-    const deployment = handleCertError(
-      output,
-      await getDeploymentForAlias(
-        client,
-        output,
-        args,
-        opts['--local-config'],
-        user,
-        contextName,
-        localConfig
-      )
+  if (args.length === 0 && !rules) {
+    output.error(
+      `To ship to production, optionally configure your domains (${link(
+        'https://vercel.com/docs/v2/custom-domains'
+      )}) and run ${getCommandName(`--prod`)}.`
     );
+    return 1;
+  }
 
-    if (deployment === 1) {
-      return deployment;
-    }
+  // Find the targets to perform the alias
+  const targets = getTargetsForAlias(args, localConfig);
 
-    if (deployment instanceof Error) {
-      output.error(deployment.message);
-      return 1;
-    }
+  if (targets instanceof ERRORS.NoAliasInConfig) {
+    output.error(`Couldn't find an alias in config`);
+    return 1;
+  }
 
-    if (!deployment) {
-      output.error(
-        `Couldn't find a deployment to alias. Please provide one as an argument.`
-      );
-      return 1;
-    }
+  if (targets instanceof ERRORS.InvalidAliasInConfig) {
+    output.error(
+      `Wrong value for alias found in config. It must be a string or array of string.`
+    );
+    return 1;
+  }
 
-    // Find the targets to perform the alias	  const [deploymentIdOrHost, aliasTarget] = args;
-    const targets = getTargetsForAlias(args, localConfig);
-
-    if (targets instanceof Error) {
-      output.error(targets.message);
-      return 1;
-    }
-
+  if (rules) {
+    // If we have rules for path alias we assign them to the domain
     for (const target of targets) {
-      output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
-
-      const record = await assignAlias(
+      output.log(
+        `Assigning path alias rules from ${humanizePath(
+          rulesPath
+        )} to ${target}`
+      );
+      const pathAlias = await upsertPathAlias(
         output,
         client,
-        deployment,
+        rules,
         target,
         contextName
       );
-
-      const handleResult = handleSetupDomainError(
-        output,
-        handleCreateAliasError(output, record)
-      );
-
-      if (handleResult === 1) {
-        return 1;
+      const remaining = handleCreateAliasError(output, pathAlias);
+      if (handleSetupDomainError(output, remaining) !== 1) {
+        console.log(
+          `${chalk.cyan('> Success!')} ${
+            rules.length
+          } rules configured for ${chalk.underline(target)} ${setStamp()}`
+        );
       }
-
-      console.log(
-        `${chalk.cyan('> Success!')} ${chalk.bold(
-          `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`
-        )} now points to https://${deployment.url} ${setStamp()}`
-      );
     }
 
     return 0;
   }
 
-  const [deploymentIdOrHost, aliasTarget] = args;
+  // If there are no rules for path alias we should find out a deployment and perform the alias
+
   const deployment = handleCertError(
     output,
-    await getDeploymentByIdOrHost(client, contextName, deploymentIdOrHost)
+    await getDeploymentForAlias(
+      client,
+      output,
+      args,
+      opts['--local-config'],
+      user,
+      contextName,
+      localConfig
+    )
   );
 
   if (deployment === 1) {
@@ -202,33 +225,36 @@ export default async function set(
     return 1;
   }
 
-  output.log(`Assigning alias ${aliasTarget} to deployment ${deployment.url}`);
+  // Assign the alias for each of the targets in the array
+  for (const target of targets) {
+    output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
-  const isWildcard = isWildcardAlias(aliasTarget);
-  const record = await assignAlias(
-    output,
-    client,
-    deployment,
-    aliasTarget,
-    contextName
-  );
+    const isWildcard = isWildcardAlias(target);
+    const record = await assignAlias(
+      output,
+      client,
+      deployment,
+      target,
+      contextName,
+      noVerify
+    );
+    const handleResult = handleSetupDomainError(
+      output,
+      handleCreateAliasError(output, record),
+      isWildcard
+    );
+    if (handleResult === 1) {
+      return 1;
+    }
 
-  const handleResult = handleSetupDomainError(
-    output,
-    handleCreateAliasError(output, record)
-  );
+    const prefix = isWildcard ? '' : 'https://';
 
-  if (handleResult === 1) {
-    return 1;
+    console.log(
+      `${chalk.cyan('> Success!')} ${chalk.bold(
+        `${prefix}${handleResult.alias}`
+      )} now points to https://${deployment.url} ${setStamp()}`
+    );
   }
-
-  const prefix = isWildcard ? '' : 'https://';
-
-  console.log(
-    `${chalk.cyan('> Success!')} ${chalk.bold(
-      `${prefix}${handleResult.alias}`
-    )} now points to https://${deployment.url} ${setStamp()}`
-  );
 
   return 0;
 }
@@ -239,7 +265,8 @@ type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
 
 function handleSetupDomainError<T>(
   output: Output,
-  error: SetupDomainError | T
+  error: SetupDomainError | T,
+  isWildcard: boolean = false
 ): T | 1 {
   if (
     error instanceof ERRORS.DomainVerificationFailed ||
@@ -251,7 +278,9 @@ function handleSetupDomainError<T>(
       `We could not alias since the domain ${domain} could not be verified due to the following reasons:\n`
     );
     output.print(
-      `Nameservers verification failed since we see a different set than the intended set:`
+      `  ${chalk.gray(
+        'a)'
+      )} Nameservers verification failed since we see a different set than the intended set:`
     );
     output.print(
       `\n${formatNSTable(
@@ -260,6 +289,34 @@ function handleSetupDomainError<T>(
         { extraSpace: '     ' }
       )}\n\n`
     );
+    if (error instanceof ERRORS.DomainVerificationFailed && !isWildcard) {
+      const { txtVerification } = error.meta;
+      output.print(
+        `  ${chalk.gray(
+          'b)'
+        )} DNS TXT verification failed since found no matching records.`
+      );
+      output.print(
+        `\n${formatDnsTable(
+          [['_now', 'TXT', txtVerification.verificationRecord]],
+          { extraSpace: '     ' }
+        )}\n\n`
+      );
+      output.print(
+        `  Once your domain uses either the nameservers or the TXT DNS record from above, run again ${getCommandName(
+          'domains verify <domain>'
+        )}.\n`
+      );
+      output.print(
+        `  We will also periodically run a verification check for you and you will receive an email once your domain is verified.\n`
+      );
+    } else {
+      output.print(
+        `  Once your domain uses the nameservers from above, run again ${getCommandName(
+          'domains verify <domain>'
+        )}.\n`
+      );
+    }
     output.print('  Read more: https://err.sh/now/domain-verification\n');
     return 1;
   }
@@ -400,13 +457,73 @@ function handleCreateAliasError<T>(
     return 1;
   }
 
+  if (error instanceof ERRORS.RuleValidationFailed) {
+    output.error(`Rule validation error: ${error.meta.message}.`);
+    output.print(`  Make sure your rules file is written correctly.\n`);
+    return 1;
+  }
+  if (error instanceof ERRORS.VerifyScaleTimeout) {
+    output.error(`Instance verification timed out (${ms(error.meta.timeout)})`);
+    output.log('Read more: https://err.sh/now/verification-timeout');
+    return 1;
+  }
+  if (error instanceof ERRORS.NotSupportedMinScaleSlots) {
+    output.error(
+      `Scale rules from previous aliased deployment ${chalk.dim(
+        error.meta.url
+      )} could not be copied since Cloud v2 deployments cannot have a non-zero min`
+    );
+    output.log(
+      `Update the scale settings on ${chalk.dim(
+        error.meta.url
+      )} with ${getCommandName('scale')} and try again`
+    );
+    output.log('Read more: https://err.sh/now/v2-no-min');
+    return 1;
+  }
+  if (error instanceof ERRORS.ForbiddenScaleMaxInstances) {
+    output.error(
+      `Scale rules from previous aliased deployment ${chalk.dim(
+        error.meta.url
+      )} could not be copied since the given number of max instances (${
+        error.meta.max
+      }) is not allowed.`
+    );
+    output.log(
+      `Update the scale settings on ${chalk.dim(
+        error.meta.url
+      )} with ${getCommandName('scale')} and try again`
+    );
+    return 1;
+  }
+  if (error instanceof ERRORS.ForbiddenScaleMinInstances) {
+    output.error(
+      `You can't scale to more than ${error.meta.max} min instances with your current plan.`
+    );
+    return 1;
+  }
+
+  if (error instanceof ERRORS.InvalidScaleMinMaxRelation) {
+    output.error(
+      `Scale rules from previous aliased deployment ${chalk.dim(
+        error.meta.url
+      )} could not be copied becuase the relation between min and max instances is wrong.`
+    );
+    output.log(
+      `Update the scale settings on ${chalk.dim(
+        error.meta.url
+      )} with ${getCommandName('scale')} and try again`
+    );
+    return 1;
+  }
+
   if (error instanceof ERRORS.CertMissing) {
     output.error(
       `There is no certificate for the domain ${error.meta.domain} and it could not be created.`
     );
     output.log(
-      `Please generate a new certificate manually with ${cmd(
-        `now certs issue ${error.meta.domain}`
+      `Please generate a new certificate manually with ${getCommandName(
+        `certs issue ${error.meta.domain}`
       )}`
     );
     return 1;
@@ -434,23 +551,4 @@ function handleCreateAliasError<T>(
   }
 
   return error;
-}
-
-function getTargetsForAlias(args: string[], { alias }: Config) {
-  if (args.length) {
-    return [args[args.length - 1]]
-      .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))
-      .filter((x): x is string => !!x && typeof x === 'string');
-  }
-
-  if (!alias) {
-    return new ERRORS.NoAliasInConfig();
-  }
-
-  // Check the type for the option aliases
-  if (typeof alias !== 'string' && !Array.isArray(alias)) {
-    return new ERRORS.InvalidAliasInConfig(alias);
-  }
-
-  return typeof alias === 'string' ? [alias] : alias;
 }

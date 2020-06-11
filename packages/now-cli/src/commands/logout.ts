@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import fetch from 'node-fetch';
 import logo from '../util/output/logo';
+// @ts-ignore
 import { handleError } from '../util/error';
 import {
   readConfigFile,
@@ -11,26 +12,27 @@ import {
 import getArgs from '../util/get-args';
 import { NowContext } from '../types';
 import createOutput, { Output } from '../util/output';
+import { getPkgName } from '../util/pkg-name';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now logout`)}
+  ${chalk.bold(`${logo} ${getPkgName()} logout`)}
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Logout from the CLI:
 
-    ${chalk.cyan('$ now logout')}
+    ${chalk.cyan(`$ ${getPkgName()} logout`)}
 `);
 };
 

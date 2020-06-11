@@ -1,10 +1,11 @@
-import { CantParseJSONFile } from '../errors';
+import { join } from 'path';
+import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
-import { Config } from '../../types';
+import { NowConfig } from '../dev/types';
 import getLocalConfigPath from './local-path';
 
-export default async function readConfig(file?: string) {
-  const pkgFilePath = file || getLocalConfigPath(process.cwd());
+export default async function readConfig(dir: string) {
+  const pkgFilePath = getLocalConfigPath(join(process.cwd(), dir));
   const result = await readJSONFile(pkgFilePath);
 
   if (result instanceof CantParseJSONFile) {
@@ -12,7 +13,7 @@ export default async function readConfig(file?: string) {
   }
 
   if (result) {
-    return result as Config;
+    return result as NowConfig;
   }
 
   return null;

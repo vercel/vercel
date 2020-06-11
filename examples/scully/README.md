@@ -1,27 +1,29 @@
-# Scully
+![Scully Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/scully.svg)
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli).
+# Scully Example
 
-## Development server
+This directory is a brief example of a [Scully](https://scully.io) site that can be deployed to Vercel with zero configuration.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+## Deploy Your Own
 
-## Code scaffolding
+Deploy your own Scully project with Vercel.
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/scully)
 
-## Build
+_Live Example: https://scully.now-examples.now.sh_
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
+### How We Created This Example
 
-## Running unit tests
+To get started deploying Scully with Vercel, you can use the [Vercel CLI](https://vercel.com/download) to initialize the project:
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+```shell
+$ vercel init scully
+```
 
-## Running end-to-end tests
+### Deploying From Your Terminal
 
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
+You can deploy your new Scully project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+```shell
+$ vercel
+```

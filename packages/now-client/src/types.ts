@@ -1,5 +1,10 @@
-import { Builder, BuilderFunctions } from '@now/build-utils';
-import { NowHeader, Route, NowRedirect, NowRewrite } from '@now/routing-utils';
+import { Builder, BuilderFunctions } from '@vercel/build-utils';
+import {
+  NowHeader,
+  Route,
+  NowRedirect,
+  NowRewrite,
+} from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
@@ -19,6 +24,7 @@ export interface NowClientOptions {
   teamId?: string;
   apiUrl?: string;
   force?: boolean;
+  withCache?: boolean;
   userAgent?: string;
   defaultName?: string;
   isDirectory?: boolean;
@@ -27,11 +33,11 @@ export interface NowClientOptions {
 
 export interface Deployment {
   id: string;
-  version: 2;
   deploymentId?: string;
   url: string;
   name: string;
   meta: Dictionary<string | number | boolean>;
+  version: number;
   regions: string[];
   routes: Route[];
   builds?: Builder[];
@@ -95,9 +101,16 @@ export interface DeploymentGithubData {
   autoJobCancelation: boolean;
 }
 
-export interface NowConfig {
+interface LegacyNowConfig {
+  type?: string;
+  aliases?: string | string[];
+}
+
+export const fileNameSymbol = Symbol('fileName');
+
+export interface NowConfig extends LegacyNowConfig {
+  [fileNameSymbol]?: string;
   name?: string;
-  public?: boolean;
   version?: number;
   env?: Dictionary<string>;
   build?: {
@@ -115,7 +128,6 @@ export interface NowConfig {
   github?: DeploymentGithubData;
   scope?: string;
   alias?: string | string[];
-  regions?: string[];
   projectSettings?: {
     devCommand?: string | null;
     buildCommand?: string | null;
@@ -124,10 +136,33 @@ export interface NowConfig {
   };
 }
 
+interface LegacyDeploymentOptions {
+  project?: string;
+  forceNew?: boolean;
+  description?: string;
+  registryAuthToken?: string;
+  engines?: Dictionary<string>;
+  sessionAffinity?: 'ip' | 'key' | 'random';
+  deploymentType?: 'NPM' | 'STATIC' | 'DOCKER';
+  scale?: Dictionary<{
+    min?: number;
+    max?: number | 'auto';
+  }>;
+  limits?: {
+    duration?: number;
+    maxConcurrentReqs?: number;
+    timeout?: number;
+  };
+  // Can't be NowConfig, since we don't
+  // include all legacy types here
+  config?: Dictionary<any>;
+}
+
 /**
  * Options that will be sent to the API.
  */
-export interface DeploymentOptions {
+export interface DeploymentOptions extends LegacyDeploymentOptions {
+  version?: number;
   regions?: string[];
   routes?: Route[];
   cleanUrls?: boolean;
@@ -139,7 +174,7 @@ export interface DeploymentOptions {
   functions?: BuilderFunctions;
   env?: Dictionary<string>;
   build?: {
-    env?: Dictionary<string>;
+    env: Dictionary<string>;
   };
   target?: string;
   name?: string;

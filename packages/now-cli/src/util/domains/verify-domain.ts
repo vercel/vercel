@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
 import { Domain } from '../../types';
-import * as ERRORS from '../errors';
+import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import wait from '../output/wait';
 

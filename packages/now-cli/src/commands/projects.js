@@ -1,21 +1,23 @@
 import chalk from 'chalk';
 import table from 'text-table';
-import mri from 'mri';
 import ms from 'ms';
-import plural from 'pluralize';
 import strlen from '../util/strlen';
+import getArgs from '../util/get-args';
 import { handleError, error } from '../util/error';
 import exit from '../util/exit';
 import Client from '../util/client.ts';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import createOutput from '../util/output';
+import getCommandFlags from '../util/get-command-flags';
+import wait from '../util/output/wait';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const e = encodeURIComponent;
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now projects`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} projects`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -30,12 +32,19 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Add a new project
 
-    ${chalk.cyan('$ now projects add my-project')}
+    ${chalk.cyan(`$ ${getPkgName()} projects add my-project`)}
+
+  ${chalk.gray('–')} Paginate projects, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+    ${chalk.cyan(`$ ${getPkgName()} projects ls --next 1584722256178`)}
 `);
 };
 
@@ -46,22 +55,25 @@ let apiUrl;
 let subcommand;
 
 const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
-    boolean: ['help'],
-    alias: {
-      help: 'h',
-    },
-  });
+  try {
+    argv = getArgs(ctx.argv.slice(2), {
+      '--next': Number,
+      '-N': '--next',
+    });
+  } catch (error) {
+    handleError(error);
+    return exit(1);
+  }
 
   argv._ = argv._.slice(1);
 
-  debug = argv.debug;
+  debug = argv['--debug'];
   apiUrl = ctx.apiUrl;
-  subcommand = argv._[0];
+  subcommand = argv._[0] || 'list';
 
-  if (argv.help || !subcommand) {
+  if (argv['--help']) {
     help();
-    await exit(0);
+    return exit(2);
   }
 
   const output = createOutput({ debug });
@@ -111,20 +123,34 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now projects ls`'
+            `${getCommandName('projects ls')}`
           )}`
         )
       );
-      return exit(1);
+      return exit(2);
     }
 
-    const list = await client.fetch('/v2/projects/', { method: 'GET' });
+    const stopSpinner = wait(`Fetching projects in ${chalk.bold(contextName)}`);
+
+    let projectsUrl = '/v4/projects/?limit=20';
+
+    const next = argv['--next'];
+    if (next) {
+      projectsUrl += `&until=${next}`;
+    }
+
+    const { projects: list, pagination } = await client.fetch(projectsUrl, {
+      method: 'GET',
+    });
+
+    stopSpinner();
+
     const elapsed = ms(new Date() - start);
 
     console.log(
-      `> ${plural('project', list.length, true)} found under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(`[${elapsed}]`)}`
+      `> ${
+        list.length > 0 ? 'Projects' : 'No projects'
+      } found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
     );
 
     if (list.length > 0) {
@@ -149,6 +175,12 @@ async function run({ client, contextName }) {
       if (out) {
         console.log(`\n${out}\n`);
       }
+
+      if (pagination && pagination.count === 20) {
+        const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d', '-y']);
+        const nextCmd = `projects ls${flags} --next ${pagination.next}`;
+        console.log(`To display the next page run ${getCommandName(nextCmd)}`);
+      }
     }
     return;
   }
@@ -158,7 +190,7 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now project  rm <name>`'
+            `${getCommandName('project rm <name>')}`
           )}`
         )
       );
@@ -200,13 +232,15 @@ async function run({ client, contextName }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now projects add <name>`'
+            `${getCommandName('projects add <name>')}`
           )}`
         )
       );
 
       if (args.length > 1) {
-        const example = chalk.cyan(`$ now projects add "${args.join(' ')}"`);
+        const example = chalk.cyan(
+          `${getCommandName(`projects add "${args.join(' ')}"`)}`
+        );
         console.log(
           `> If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
         );
@@ -232,7 +266,7 @@ async function run({ client, contextName }) {
 
   console.error(error('Please specify a valid subcommand: ls | add | rm'));
   help();
-  exit(1);
+  exit(2);
 }
 
 process.on('uncaughtException', err => {

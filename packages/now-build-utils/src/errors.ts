@@ -7,11 +7,13 @@ export class NowBuildError extends Error {
   public hideStackTrace = true;
   public code: string;
   public link?: string;
+  public action?: string;
 
-  constructor({ message, code, link }: Props) {
+  constructor({ message, code, link, action }: Props) {
     super(message);
     this.code = code;
     this.link = link;
+    this.action = action;
   }
 }
 
@@ -23,12 +25,16 @@ interface Props {
   message: string;
   /**
    * A unique error code for this particular error.
-   * Should start with the builder name such as `NOW_NODE_`.
+   * Should start with the builder name such as `NODE_`.
    */
   code: string;
   /**
-   * Optional hyperlink starting with https://zeit.co to
+   * Optional hyperlink starting with https://vercel.com to
    * link to more information about this error.
    */
   link?: string;
+  /**
+   * Optional "action" to display before the `link`, such as "More details".
+   */
+  action?: string;
 }

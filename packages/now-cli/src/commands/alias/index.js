@@ -1,3 +1,4 @@
+//
 import chalk from 'chalk';
 
 import { handleError } from '../../util/error';
@@ -6,6 +7,7 @@ import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
+import { getPkgName } from '../../util/pkg-name.ts';
 
 import ls from './ls';
 import rm from './rm';
@@ -13,7 +15,7 @@ import set from './set';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now alias`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} alias`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -26,22 +28,26 @@ const help = () => {
     -h, --help                          Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}        Path to the local ${'`now.json`'} file
+  )}        Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}         Path to the global ${'`.now`'} directory
+  )}         Path to the global ${'`.vercel`'} directory
+    -r ${chalk.bold.underline('RULES_FILE')}, --rules=${chalk.bold.underline(
+    'RULES_FILE'
+  )}   Rules file
     -d, --debug                         Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}             Login token
     -S, --scope                         Set a custom scope
-
+    -n, --no-verify                     Don't wait until instance count meets the previous alias constraints
+    -N, --next                          Show next page of results
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.now.sh')}
 
       ${chalk.cyan(
-        `$ now alias set ${chalk.underline(
+        `$ ${getPkgName()} alias set ${chalk.underline(
           'api-ownv3nc9f8.now.sh'
         )} ${chalk.underline('my-api.now.sh')}`
       )}
@@ -49,7 +55,7 @@ const help = () => {
       Custom domains work as alias targets
 
       ${chalk.cyan(
-        `$ now alias set ${chalk.underline(
+        `$ ${getPkgName()} alias set ${chalk.underline(
           'api-ownv3nc9f8.now.sh'
         )} ${chalk.underline('my-api.com')}`
       )}
@@ -60,6 +66,30 @@ const help = () => {
       ${chalk.dim('–')} ${chalk.dim(
     'Protocols'
   )} in the URLs are unneeded and ignored.
+
+  ${chalk.gray('–')} Add and modify path based aliases for ${chalk.underline(
+    'example.com'
+  )}
+
+      ${chalk.cyan(
+        `$ ${getPkgName()} alias ${chalk.underline(
+          'example.com'
+        )} -r ${chalk.underline('rules.json')}`
+      )}
+
+      Export effective routing rules
+
+      ${chalk.cyan(
+        `$ ${getPkgName()} alias ls aliasId --json > ${chalk.underline(
+          'rules.json'
+        )}`
+      )}
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+      ${chalk.cyan(`$ ${getPkgName()} alias ls --next 1584722256178`)}
 `);
 };
 
@@ -76,8 +106,14 @@ export default async function main(ctx) {
   try {
     argv = getArgs(ctx.argv.slice(2), {
       '--json': Boolean,
+      '--no-verify': Boolean,
+      '--rules': String,
       '--yes': Boolean,
+      '--next': Number,
+      '-n': '--no-verify',
+      '-r': '--rules',
       '-y': '--yes',
+      '-N': '--next',
     });
   } catch (err) {
     handleError(err);

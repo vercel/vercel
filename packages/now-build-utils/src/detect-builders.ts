@@ -1,8 +1,9 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
-import { Route, Source } from '@now/routing-utils';
+import { Route, Source } from '@vercel/routing-utils';
 import { PackageJson, Builder, Config, BuilderFunctions } from './types';
+import { isOfficialRuntime } from './';
 
 interface ErrorResponse {
   code: string;
@@ -55,7 +56,7 @@ export function detectApiDirectory(builders: Builder[]): string | null {
 function getPublicBuilder(builders: Builder[]): Builder | null {
   const builder = builders.find(
     builder =>
-      builder.use === '@now/static' &&
+      isOfficialRuntime('static', builder.use) &&
       /^.*\/\*\*\/\*$/.test(builder.src) &&
       builder.config &&
       builder.config.zeroConfig === true
@@ -81,6 +82,7 @@ export async function detectBuilders(
   defaultRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
+  errorRoutes: Route[] | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
@@ -98,6 +100,7 @@ export async function detectBuilders(
       defaultRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
+      errorRoutes: null,
     };
   }
 
@@ -153,6 +156,7 @@ export async function detectBuilders(
           defaultRoutes: null,
           redirectRoutes: null,
           rewriteRoutes: null,
+          errorRoutes: null,
         };
       }
 
@@ -190,7 +194,13 @@ export async function detectBuilders(
       hasNextApiFiles = true;
     }
 
-    if (!fallbackEntrypoint && buildCommand && !fileName.includes('/')) {
+    if (
+      !fallbackEntrypoint &&
+      buildCommand &&
+      !fileName.includes('/') &&
+      fileName !== 'now.json' &&
+      fileName !== 'vercel.json'
+    ) {
       fallbackEntrypoint = fileName;
     }
   }
@@ -224,6 +234,7 @@ export async function detectBuilders(
         redirectRoutes: null,
         defaultRoutes: null,
         rewriteRoutes: null,
+        errorRoutes: null,
       };
     }
 
@@ -231,7 +242,7 @@ export async function detectBuilders(
     // we'll default to the root directory.
     if (hasUsedOutputDirectory && outputDirectory !== '') {
       frontendBuilder = {
-        use: '@now/static',
+        use: '@vercel/static',
         src: `${usedOutputDirectory}/**/*`,
         config: {
           zeroConfig: true,
@@ -242,7 +253,7 @@ export async function detectBuilders(
       // Everything besides the api directory
       // and package.json can be served as static files
       frontendBuilder = {
-        use: '@now/static',
+        use: '@vercel/static',
         src: '!{api/**,package.json}',
         config: {
           zeroConfig: true,
@@ -265,6 +276,7 @@ export async function detectBuilders(
       redirectRoutes: null,
       defaultRoutes: null,
       rewriteRoutes: null,
+      errorRoutes: null,
     };
   }
 
@@ -302,6 +314,7 @@ export async function detectBuilders(
     redirectRoutes: routesResult.redirectRoutes,
     defaultRoutes: routesResult.defaultRoutes,
     rewriteRoutes: routesResult.rewriteRoutes,
+    errorRoutes: routesResult.errorRoutes,
   };
 }
 
@@ -384,11 +397,11 @@ function getApiMatches({ tag }: Options = {}) {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'api/**/*.js', use: `@now/node${withTag}`, config },
-    { src: 'api/**/*.ts', use: `@now/node${withTag}`, config },
-    { src: 'api/**/!(*_test).go', use: `@now/go${withTag}`, config },
-    { src: 'api/**/*.py', use: `@now/python${withTag}`, config },
-    { src: 'api/**/*.rb', use: `@now/ruby${withTag}`, config },
+    { src: 'api/**/*.js', use: `@vercel/node${withTag}`, config },
+    { src: 'api/**/*.ts', use: `@vercel/node${withTag}`, config },
+    { src: 'api/**/!(*_test).go', use: `@vercel/go${withTag}`, config },
+    { src: 'api/**/*.py', use: `@vercel/python${withTag}`, config },
+    { src: 'api/**/*.rb', use: `@vercel/ruby${withTag}`, config },
   ];
 }
 
@@ -450,7 +463,7 @@ function detectFrontBuilder(
   }
 
   if (framework === 'nextjs') {
-    return { src: 'package.json', use: `@now/next${withTag}`, config };
+    return { src: 'package.json', use: `@vercel/next${withTag}`, config };
   }
 
   // Entrypoints for other frameworks
@@ -473,7 +486,7 @@ function detectFrontBuilder(
 
   return {
     src: source || 'package.json',
-    use: `@now/static-build${withTag}`,
+    use: `@vercel/static-build${withTag}`,
     config,
   };
 }
@@ -483,7 +496,7 @@ function getMissingBuildScriptError() {
     code: 'missing_build_script',
     message:
       'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
-      '\nMore details: https://zeit.co/docs/v2/platform/frequently-asked-questions#missing-build-script',
+      '\nMore details: https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-build-script',
   };
 }
 
@@ -588,7 +601,7 @@ function checkUnusedFunctions(
   }
 
   // Next.js can use functions only for `src/pages` or `pages`
-  if (frontendBuilder && frontendBuilder.use.startsWith('@now/next')) {
+  if (frontendBuilder && isOfficialRuntime('next', frontendBuilder.use)) {
     for (const fnKey of unusedFunctions.values()) {
       if (fnKey.startsWith('pages/') || fnKey.startsWith('src/pages')) {
         unusedFunctions.delete(fnKey);
@@ -891,10 +904,17 @@ function getRouteResult(
   defaultRoutes: Route[];
   redirectRoutes: Route[];
   rewriteRoutes: Route[];
+  errorRoutes: Route[];
 } {
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
+  const errorRoutes: Route[] = [];
+  const isNextjs =
+    frontendBuilder &&
+    ((frontendBuilder.use && frontendBuilder.use.startsWith('@vercel/next')) ||
+      (frontendBuilder.config &&
+        frontendBuilder.config.framework === 'nextjs'));
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -953,7 +973,7 @@ function getRouteResult(
     outputDirectory &&
     frontendBuilder &&
     !options.featHandleMiss &&
-    frontendBuilder.use === '@now/static'
+    isOfficialRuntime('static', frontendBuilder.use)
   ) {
     defaultRoutes.push({
       src: '/(.*)',
@@ -961,10 +981,21 @@ function getRouteResult(
     });
   }
 
+  if (options.featHandleMiss && !isNextjs) {
+    // Exclude Next.js to avoid overriding custom error page
+    // https://nextjs.org/docs/advanced-features/custom-error-page
+    errorRoutes.push({
+      status: 404,
+      src: '^/(?!.*api).*$',
+      dest: options.cleanUrls ? '/404' : '/404.html',
+    });
+  }
+
   return {
     defaultRoutes,
     redirectRoutes,
     rewriteRoutes,
+    errorRoutes,
   };
 }
 

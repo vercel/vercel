@@ -1,6 +1,5 @@
-import ms from 'ms';
 import sleep from 'sleep-promise';
-import { createDebug } from './utils';
+import ms from 'ms';
 import { fetch, getApiDeploymentsUrl } from './utils';
 import {
   isDone,
@@ -9,6 +8,7 @@ import {
   isAliasAssigned,
   isAliasError,
 } from './utils/ready-state';
+import { createDebug } from './utils';
 import {
   Deployment,
   NowClientOptions,
@@ -26,15 +26,19 @@ export async function* checkDeploymentStatus(
   deployment: Deployment,
   clientOptions: NowClientOptions
 ): AsyncIterableIterator<DeploymentStatus> {
+  const { version } = deployment;
   const { token, teamId, apiUrl, userAgent } = clientOptions;
   const debug = createDebug(clientOptions.debug);
 
   let deploymentState = deployment;
 
   const apiDeployments = getApiDeploymentsUrl({
+    version,
     builds: deployment.builds,
     functions: deployment.functions,
   });
+
+  debug(`Using ${version ? `${version}.0` : '2.0'} API for status checks`);
 
   // If the deployment is ready, we don't want any of this to run
   if (isDone(deploymentState) && isAliasAssigned(deploymentState)) {
@@ -89,6 +93,16 @@ export async function* checkDeploymentStatus(
     }
 
     if (isAliasAssigned(deploymentUpdate)) {
+      if (
+        deploymentUpdate.aliasWarning &&
+        deploymentUpdate.aliasWarning.message
+      ) {
+        yield {
+          type: 'warning',
+          payload: deploymentUpdate.aliasWarning.message,
+        };
+      }
+
       debug('Deployment alias assigned');
       return yield { type: 'alias-assigned', payload: deploymentUpdate };
     }

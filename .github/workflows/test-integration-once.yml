@@ -1,0 +1,25 @@
+name: E2E
+
+on:
+  push:
+    branches:
+    - master
+    tags:
+    - '!*'
+  pull_request:
+
+jobs:
+  test:
+    name: E2E
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch origin master --depth=10
+      - run: git fetch origin ${{ github.ref }} --depth=10
+      - run: yarn install
+      - run: yarn run build
+      - run: yarn test-integration-once --clean false
+        env:
+          VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
+          VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}

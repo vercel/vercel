@@ -1,17 +1,21 @@
-import { URL } from 'url';
+import { DeploymentFile } from './hashes';
+import { parse as parseUrl } from 'url';
+import { FetchOptions } from '@zeit/fetch';
+import { nodeFetch, zeitFetch } from './fetch';
+import { join, sep, relative } from 'path';
+import qs from 'querystring';
 import ignore from 'ignore';
+type Ignore = ReturnType<typeof ignore>;
+import { pkgVersion } from '../pkg';
+import { NowBuildError } from '@vercel/build-utils';
+import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
-import { pkgVersion } from '../pkg';
-import { DeploymentFile } from './hashes';
-import { FetchOptions } from '@zeit/fetch';
-import { join, sep, relative } from 'path';
-import { nodeFetch, zeitFetch } from './fetch';
-import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
+import readdir from 'recursive-readdir';
+const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/now/files';
-
-const semaphore = new Sema(10);
+export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
 const EVENTS_ARRAY = [
   // File events
@@ -35,16 +39,20 @@ export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
 export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl(
-  metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
+  metadata?: Pick<DeploymentOptions, 'version' | 'builds' | 'functions'>
 ) {
+  if (metadata && metadata.version !== 2) {
+    return '/v3/now/deployments';
+  }
+
   if (metadata && metadata.builds && !metadata.functions) {
     return '/v10/now/deployments';
   }
 
-  return '/v12/now/deployments';
+  return '/v13/now/deployments';
 }
 
-export async function parseNowJSON(filePath?: string): Promise<NowConfig> {
+export async function parseVercelConfig(filePath?: string): Promise<NowConfig> {
   if (!filePath) {
     return {};
   }
@@ -69,15 +77,69 @@ const maybeRead = async function<T>(path: string, default_: T) {
   }
 };
 
-export async function getNowIgnore(path: string | string[]): Promise<any> {
-  let ignores: string[] = [
-    '.hg',
-    '.git',
+export async function readdirRelative(
+  path: string,
+  ignores: string[],
+  cwd: string
+): Promise<string[]> {
+  const preprocessedIgnores = ignores.map(ignore => {
+    if (ignore.endsWith('/')) {
+      return ignore.slice(0, -1);
+    }
+    return ignore;
+  });
+  const dirContents = await readdir(path, preprocessedIgnores);
+  return dirContents.map(filePath => relative(cwd, filePath));
+}
+
+export async function buildFileTree(
+  path: string | string[],
+  isDirectory: boolean,
+  debug: Debug
+): Promise<string[]> {
+  // Get .nowignore
+  let { ig, ignores } = await getVercelIgnore(path);
+
+  debug(`Found ${ig.ignores.length} rules in .nowignore`);
+
+  let fileList: string[];
+
+  debug('Building file tree...');
+
+  if (isDirectory && !Array.isArray(path)) {
+    // Directory path
+    const cwd = process.cwd();
+    const relativeFileList = await readdirRelative(path, ignores, cwd);
+    fileList = ig
+      .filter(relativeFileList)
+      .map((relativePath: string) => join(cwd, relativePath));
+
+    debug(`Read ${fileList.length} files in the specified directory`);
+  } else if (Array.isArray(path)) {
+    // Array of file paths
+    fileList = path;
+    debug(`Assigned ${fileList.length} files provided explicitly`);
+  } else {
+    // Single file
+    fileList = [path];
+    debug(`Deploying the provided path as single file`);
+  }
+
+  return fileList;
+}
+
+export async function getVercelIgnore(
+  cwd: string | string[]
+): Promise<{ ig: Ignore; ignores: string[] }> {
+  const ignores: string[] = [
+    '.hg/',
+    '.git/',
     '.gitmodules',
-    '.svn',
+    '.svn/',
     '.cache',
-    '.next',
-    '.now',
+    '.next/',
+    '.now/',
+    '.vercel/',
     '.npmignore',
     '.dockerignore',
     '.gitignore',
@@ -85,30 +147,52 @@ export async function getNowIgnore(path: string | string[]): Promise<any> {
     '.DS_Store',
     '.wafpicke-*',
     '.lock-wscript',
-    '.env',
-    '.env.*',
+    '.env.local',
+    '.env.*.local',
     '.venv',
     'npm-debug.log',
     'config.gypi',
-    'node_modules',
+    'node_modules/',
     '__pycache__/',
     'venv/',
     'CVS',
   ];
 
-  const nowIgnore = Array.isArray(path)
-    ? await maybeRead(
-        join(
-          path.find(fileName => fileName.includes('.nowignore'), '') || '',
-          '.nowignore'
-        ),
-        ''
-      )
-    : await maybeRead(join(path, '.nowignore'), '');
+  const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
-  const ig = ignore().add(`${ignores.join('\n')}\n${nowIgnore}`);
+  const files = await Promise.all(
+    cwds.map(async cwd => {
+      const [vercelignore, nowignore] = await Promise.all([
+        maybeRead(join(cwd, '.vercelignore'), ''),
+        maybeRead(join(cwd, '.nowignore'), ''),
+      ]);
+      if (vercelignore && nowignore) {
+        throw new NowBuildError({
+          code: 'CONFLICTING_IGNORE_FILES',
+          message:
+            'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
+          link: 'https://vercel.link/combining-old-and-new-config',
+        });
+      }
+      return vercelignore || nowignore;
+    })
+  );
+
+  const ignoreFile = files.join('\n');
+
+  const ig = ignore().add(
+    `${ignores.join('\n')}\n${clearRelative(ignoreFile)}`
+  );
 
   return { ig, ignores };
+}
+
+/**
+ * Remove leading `./` from the beginning of ignores
+ * because ignore doesn't like them :|
+ */
+function clearRelative(str: string) {
+  return str.replace(/(\n|^)\.\//g, '$1');
 }
 
 interface FetchOpts extends FetchOptions {
@@ -130,13 +214,15 @@ export const fetch = async (
   const debug = createDebug(debugEnabled);
   let time: number;
 
-  url = `${opts.apiUrl || 'https://api.zeit.co'}${url}`;
+  url = `${opts.apiUrl || 'https://api.vercel.com'}${url}`;
   delete opts.apiUrl;
 
   if (opts.teamId) {
-    const parsedUrl = new URL(url);
-    parsedUrl.searchParams.set('teamId', opts.teamId);
-    url = parsedUrl.toString();
+    const parsedUrl = parseUrl(url, true);
+    const query = parsedUrl.query;
+
+    query.teamId = opts.teamId;
+    url = `${parsedUrl.href}?${qs.encode(query)}`;
     delete opts.teamId;
   }
 
@@ -212,9 +298,7 @@ export const prepareFiles = (
 };
 
 export function createDebug(debug?: boolean) {
-  const isDebug = debug || process.env.NOW_CLIENT_DEBUG;
-
-  if (isDebug) {
+  if (debug) {
     return (...logs: string[]) => {
       process.stderr.write(
         [`[now-client-debug] ${new Date().toISOString()}`, ...logs].join(' ') +
@@ -225,3 +309,4 @@ export function createDebug(debug?: boolean) {
 
   return () => {};
 }
+type Debug = ReturnType<typeof createDebug>;

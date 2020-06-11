@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { email as regexEmail } from '../../util/input/regexes';
-import createOutput from '../../util/output/create-output';
 import wait from '../../util/output/wait';
+import fatalError from '../../util/fatal-error';
 import cmd from '../../util/output/cmd.ts';
 import info from '../../util/output/info';
 import stamp from '../../util/output/stamp.ts';
@@ -14,6 +14,7 @@ import eraseLines from '../../util/output/erase-lines';
 import success from '../../util/output/success';
 import getUser from '../../util/get-user.ts';
 import Client from '../../util/client.ts';
+import { getCommandName } from '../../util/pkg-name.ts';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 
@@ -65,7 +66,6 @@ export default async function({
   apiUrl,
   token,
 } = {}) {
-  const output = createOutput();
   const { currentTeam: currentTeamId } = config;
 
   const stopSpinner = wait('Fetching teams');
@@ -97,11 +97,10 @@ export default async function({
     // We specifically need a team scope here
     let err = `You can't run this command under ${param(
       user.username || user.email
-    )}.\nPlease select a team scope using ${cmd('now switch')} or use ${cmd(
-      '--scope'
-    )}`;
-    output.error(err);
-    return 1;
+    )}.\nPlease select a team scope using ${getCommandName(
+      `switch`
+    )} or use ${cmd('--scope')}`;
+    return fatalError(err);
   }
 
   console.log(

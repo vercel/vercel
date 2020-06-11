@@ -28,7 +28,7 @@ export default async function({ apiUrl, token, debug, args, config }) {
   let stopSpinner = wait('Fetching teams');
 
   // We're loading the teams here without `currentTeam`, so that
-  // people can use `now switch` in the case that their
+  // people can use `vercel switch` in the case that their
   // current team was deleted.
   const teams = new NowTeams({ apiUrl, token, debug });
   const list = (await teams.ls()).teams;
@@ -75,9 +75,9 @@ export default async function({ apiUrl, token, debug, args, config }) {
       updateCurrentTeam(config, newTeam);
       console.log(
         success(
-          `The team ${chalk.bold(
-            newTeam.name
-          )} (${newTeam.slug}) is now active!`
+          `The team ${chalk.bold(newTeam.name)} (${
+            newTeam.slug
+          }) is now active!`
         )
       );
       return 0;
@@ -110,7 +110,7 @@ export default async function({ apiUrl, token, debug, args, config }) {
     return {
       name,
       value: slug,
-      short: slug
+      short: slug,
     };
   });
 
@@ -123,7 +123,7 @@ export default async function({ apiUrl, token, debug, args, config }) {
   choices.unshift({
     name: userEntryName,
     value: user.email,
-    short: user.username
+    short: user.username,
   });
 
   // Let's bring the current team to the beginning of the list
@@ -145,7 +145,7 @@ export default async function({ apiUrl, token, debug, args, config }) {
     message,
     choices,
     separator: false,
-    eraseFinalAnswer: true
+    eraseFinalAnswer: true,
   });
 
   // Abort

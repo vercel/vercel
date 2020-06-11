@@ -36,3 +36,6 @@ node_modules
 /test/coverage-karma
 
 !yarn.lock
+
+.now
+.vercel

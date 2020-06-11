@@ -1,5 +1,5 @@
 import stripeFactory from 'stripe';
-import Now from './now';
+import Now from '.';
 
 const stripe = stripeFactory('pk_live_alyEi3lN0kSwbdevK0nrGwTw');
 
@@ -38,7 +38,7 @@ export default class CreditCards extends Now {
     return true;
   }
 
-  async add(card) {
+  add(card) {
     return new Promise(async (resolve, reject) => {
       if (!card.expDate) {
         reject(new Error(`Please define a expiration date for your card`));

@@ -6,5 +6,5 @@ You specified the `--scope` flag and specified the ID or slug of a team that you
 
 #### Possible Ways to Fix It
 
-- Make sure commands like `now ls` work just fine. This will ensure that your user credentials are valid. If it's not working correctly, please log in again using `now login`.
-- Ensure that the scope you specified using `--scope` shows up in the output of `now switch`. If it doesn't, you're either not part of the team (if you specified a team) or you logged into the wrong user account.
+- Make sure commands like `vercel ls` work just fine. This will ensure that your user credentials are valid. If it's not working correctly, please log in again using `vercel login`.
+- Ensure that the scope you specified using `--scope` shows up in the output of `vercel switch`. If it doesn't, you're either not part of the team (if you specified a team) or you logged into the wrong user account.

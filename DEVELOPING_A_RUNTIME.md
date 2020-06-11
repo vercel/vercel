@@ -3,10 +3,10 @@
 The following page is a reference for how to create a Runtime using the available Runtime API.
 
 A Runtime is an npm module that exposes a `build` function and optionally an `analyze` function and `prepareCache` function.
-Official Runtimes are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `now.json` configuration file.
+Official Runtimes are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `vercel.json` configuration file.
 However, the `use` property will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo url which is useful for testing your Runtime.
 
-See the [Runtimes Documentation](https://zeit.co/docs/runtimes) to view example usage.
+See the [Runtimes Documentation](https://vercel.com/docs/runtimes) to view example usage.
 
 ## Runtime Exports
 
@@ -18,7 +18,7 @@ The latest and suggested version is `3`.
 
 ### `analyze`
 
-An **optional** exported function that returns a unique fingerprint used for the purpose of [build de-duplication](https://zeit.co/docs/v2/advanced/concepts/immutability#deduplication-algorithm). If the `analyze` function is not supplied, a random fingerprint is assigned to each build.
+An **optional** exported function that returns a unique fingerprint used for the purpose of [build de-duplication](https://vercel.com/docs/v2/platform/deployments#deduplication). If the `analyze` function is not supplied, a random fingerprint is assigned to each build.
 
 ```js
 export analyze({
@@ -32,7 +32,7 @@ export analyze({
 If you are using TypeScript, you should use the following types:
 
 ```ts
-import { AnalyzeOptions } from '@now/build-utils'
+import { AnalyzeOptions } from '@vercel/build-utils'
 
 export analyze(options: AnalyzeOptions) {
   return 'fingerprint goes here'
@@ -43,7 +43,7 @@ export analyze(options: AnalyzeOptions) {
 
 A **required** exported function that returns a [Serverless Function](#serverless-function).
 
-What's a Serverless Function? Read about [Serverless Function concepts](https://zeit.co/docs/v2/deployments/concepts/lambdas) to learn more.
+What's a Serverless Function? Read about [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction) to learn more.
 
 ```js
 build({
@@ -67,7 +67,7 @@ build({
 If you are using TypeScript, you should use the following types:
 
 ```ts
-import { BuildOptions } from '@now/build-utils'
+import { BuildOptions } from '@vercel/build-utils'
 
 export build(options: BuildOptions) {
   // Build the code here
@@ -100,7 +100,7 @@ prepareCache({
 If you are using TypeScript, you can import the types for each of these functions by using the following:
 
 ```ts
-import { PrepareCacheOptions } from '@now/build-utils'
+import { PrepareCacheOptions } from '@vercel/build-utils'
 
 export prepareCache(options: PrepareCacheOptions) {
   return { 'path-to-file': File }
@@ -109,7 +109,7 @@ export prepareCache(options: PrepareCacheOptions) {
 
 ### `shouldServe`
 
-An **optional** exported function that is only used by `now dev` in [Now CLI](https:///download) and indicates whether a [Runtime](https://zeit.co/docs/v2/advanced/runtimes) wants to be responsible for building a certain request path.
+An **optional** exported function that is only used by `vercel dev` in [Vercel CLI](https:///download) and indicates whether a [Runtime](https://vercel.com/docs/runtimes) wants to be responsible for building a certain request path.
 
 ```js
 shouldServe({
@@ -124,14 +124,14 @@ shouldServe({
 If you are using TypeScript, you can import the types for each of these functions by using the following:
 
 ```ts
-import { ShouldServeOptions } from '@now/build-utils'
+import { ShouldServeOptions } from '@vercel/build-utils'
 
 export shouldServe(options: ShouldServeOptions) {
   return Boolean
 }
 ```
 
-If this method is not defined, Now CLI will default to [this function](https://github.com/zeit/now/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
+If this method is not defined, Vercel CLI will default to [this function](https://github.com/vercel/vercel/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
 
 ### Runtime Options
 
@@ -143,17 +143,17 @@ The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCa
 - `entrypoint`: Name of entrypoint file for this particular build job. Value `files[entrypoint]` is guaranteed to exist and be a valid [File](#files) reference. `entrypoint` is always a discrete file and never a glob, since globs are expanded into separate builds at deployment time.
 - `workPath`: A writable temporary directory where you are encouraged to perform your build process. This directory will be populated with the restored cache from the previous run (if any) for [`analyze`](#analyze) and [`build`](#build).
 - `cachePath`: A writable temporary directory where you can build a cache for the next run. This is only passed to `prepareCache`.
-- `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `now.json`.
+- `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `vercel.json`.
 
 ## Examples
 
-Check out our [Node.js Runtime](https://github.com/zeit/now/tree/master/packages/now-node), [Go Runtime](https://github.com/zeit/now/tree/master/packages/now-go), [Python Runtime](https://github.com/zeit/now/tree/master/packages/now-python) or [Ruby Runtime](https://github.com/zeit/now/tree/master/packages/now-ruby) for examples of how to build one.
+Check out our [Node.js Runtime](https://github.com/vercel/vercel/tree/master/packages/now-node), [Go Runtime](https://github.com/vercel/vercel/tree/master/packages/now-go), [Python Runtime](https://github.com/vercel/vercel/tree/master/packages/now-python) or [Ruby Runtime](https://github.com/vercel/vercel/tree/master/packages/now-ruby) for examples of how to build one.
 
 ## Technical Details
 
 ### Execution Context
 
-A [Serverless Function](https://zeit.co/docs/v2/advanced/concepts/lambdas) is created where the Runtime logic is executed. The lambda is run using the Node.js 8 runtime. A brand new sandbox is created for each deployment, for security reasons. The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
+A [Serverless Function](https://vercel.com/docs/v2/serverless-functions/introduction) is created where the Runtime logic is executed. The lambda is run using the Node.js 8 runtime. A brand new sandbox is created for each deployment, for security reasons. The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
 
 All the APIs you export ([`analyze`](#analyze), [`build`](#build) and [`prepareCache`](#preparecache)) are not guaranteed to be run in the same process, but the filesystem we expose (e.g.: `workPath` and the results of calling [`getWriteableDirectory`](#getWriteableDirectory) ) is retained.
 
@@ -165,22 +165,20 @@ When a new build is created, we pre-populate the `workPath` supplied to `analyze
 
 The `analyze` step can modify that directory, and it will not be re-created when it's supplied to `build` and `prepareCache`.
 
-To learn how the cache key is computed and invalidated, refer to the [overview](https://zeit.co/docs/v2/advanced/runtimes#technical-details).
-
 ### Accessing Environment and Secrets
 
 The env and secrets specified by the user as `build.env` are passed to the Runtime process. This means you can access user env via `process.env` in Node.js.
 
 ### Utilities as peerDependencies
 
-When you publish your Runtime to npm, make sure to not specify `@now/build-utils` (as seen below in the API definitions) as a dependency, but rather as part of `peerDependencies`.
+When you publish your Runtime to npm, make sure to not specify `@vercel/build-utils` (as seen below in the API definitions) as a dependency, but rather as part of `peerDependencies`.
 
 ## Types
 
 ### `Files`
 
 ```ts
-import { File } from '@now/build-utils';
+import { File } from '@vercel/build-utils';
 type Files = { [filePath: string]: File };
 ```
 
@@ -202,7 +200,7 @@ An example of a valid output `Files` object is:
 This is an abstract type that can be imported if you are using TypeScript.
 
 ```ts
-import { File } from '@now/build-utils';
+import { File } from '@vercel/build-utils';
 ```
 
 Valid `File` types include:
@@ -214,7 +212,7 @@ Valid `File` types include:
 ### `FileRef`
 
 ```ts
-import { FileRef } from '@now/build-utils';
+import { FileRef } from '@vercel/build-utils';
 ```
 
 This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract file instance stored in our platform, based on the file identifier string (its checksum). When a `Files` object is passed as an input to `analyze` or `build`, all its values will be instances of `FileRef`.
@@ -231,7 +229,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ### `FileFsRef`
 
 ```ts
-import { FileFsRef } from '@now/build-utils';
+import { FileFsRef } from '@vercel/build-utils';
 ```
 
 This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract instance of a file present in the filesystem that the build process is executing in.
@@ -249,7 +247,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ### `FileBlob`
 
 ```ts
-import { FileBlob } from '@now/build-utils';
+import { FileBlob } from '@vercel/build-utils';
 ```
 
 This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract instance of a file present in memory.
@@ -267,7 +265,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ### `Lambda`
 
 ```ts
-import { Lambda } from '@now/build-utils';
+import { Lambda } from '@vercel/build-utils';
 ```
 
 This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes), called a Serverless Function, that can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper. The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
@@ -295,20 +293,20 @@ This is an abstract enumeration type that is implemented by one of the following
 
 ## JavaScript API
 
-The following is exposed by `@now/build-utils` to simplify the process of writing Runtimes, manipulating the file system, using the above types, etc.
+The following is exposed by `@vercel/build-utils` to simplify the process of writing Runtimes, manipulating the file system, using the above types, etc.
 
 ### `createLambda`
 
 Signature: `createLambda(Object spec) : Lambda`
 
 ```ts
-import { createLambda } from '@now/build-utils';
+import { createLambda } from '@vercel/build-utils';
 ```
 
 Constructor for the [`Lambda`](#lambda) type.
 
 ```js
-const { createLambda, FileBlob } = require('@now/build-utils');
+const { createLambda, FileBlob } = require('@vercel/build-utils');
 await createLambda({
   runtime: 'nodejs8.10',
   handler: 'index.main',
@@ -323,7 +321,7 @@ await createLambda({
 Signature: `download() : Files`
 
 ```ts
-import { download } from '@now/build-utils';
+import { download } from '@vercel/build-utils';
 ```
 
 This utility allows you to download the contents of a [`Files`](#files) data structure, therefore creating the filesystem represented in it.
@@ -341,7 +339,7 @@ await download(files, workPath, meta);
 Signature: `glob() : Files`
 
 ```ts
-import { glob } from '@now/build-utils';
+import { glob } from '@vercel/build-utils';
 ```
 
 This utility allows you to _scan_ the filesystem and return a [`Files`](#files) representation of the matched glob search string. It can be thought of as the reverse of [`download`](#download).
@@ -349,7 +347,7 @@ This utility allows you to _scan_ the filesystem and return a [`Files`](#files) 
 The following trivial example downloads everything to the filesystem, only to return it back (therefore just re-creating the passed-in [`Files`](#files)):
 
 ```js
-const { glob, download } = require('@now/build-utils')
+const { glob, download } = require('@vercel/build-utils')
 
 exports.build = ({ files, workPath }) => {
   await download(files, workPath)
@@ -362,7 +360,7 @@ exports.build = ({ files, workPath }) => {
 Signature: `getWriteableDirectory() : String`
 
 ```ts
-import { getWriteableDirectory } from '@now/build-utils';
+import { getWriteableDirectory } from '@vercel/build-utils';
 ```
 
 In some occasions, you might want to write to a temporary directory.
@@ -372,13 +370,13 @@ In some occasions, you might want to write to a temporary directory.
 Signature: `rename(Files) : Files`
 
 ```ts
-import { rename } from '@now/build-utils';
+import { rename } from '@vercel/build-utils';
 ```
 
 Renames the keys of the [`Files`](#files) object, which represent the paths. For example, to remove the `*.go` suffix you can use:
 
 ```js
-const rename = require('@now/build-utils')
+const rename = require('@vercel/build-utils')
 const originalFiles = { 'one.go': fileFsRef1, 'two.go': fileFsRef2 }
 const renamedFiles = rename(originalFiles, path => path.replace(/\.go$/, '')
 ```

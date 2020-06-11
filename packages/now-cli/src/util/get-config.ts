@@ -1,21 +1,23 @@
 import path from 'path';
+import { fileNameSymbol } from '@vercel/client';
 import {
   CantParseJSONFile,
   CantFindConfig,
+  ConflictingConfigFiles,
   WorkingDirectoryDoesNotExist,
-} from './errors';
+} from './errors-ts';
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
 import readPackage from './read-package';
-import { Config } from '../types';
+import { NowConfig } from './dev/types';
 import { Output } from './output';
 
-let config: Config;
+let config: NowConfig;
 
 export default async function getConfig(
   output: Output,
   configFile?: string
-): Promise<Config | Error> {
+): Promise<NowConfig | Error> {
   // If config was already read, just return it
   if (config) {
     return config;
@@ -42,21 +44,38 @@ export default async function getConfig(
       return localConfig;
     }
     if (localConfig !== null) {
-      config = localConfig;
+      config = localConfig as NowConfig;
+      config[fileNameSymbol] = configFile;
       return config;
     }
   }
 
-  // Then try with now.json in the same directory
+  // Then try with `vercel.json` or `now.json` in the same directory
+  const vercelFilePath = path.resolve(localPath, 'vercel.json');
   const nowFilePath = path.resolve(localPath, 'now.json');
-  const mainConfig = await readJSONFile(nowFilePath);
-  if (mainConfig instanceof CantParseJSONFile) {
-    return mainConfig;
+  const [vercelConfig, nowConfig] = await Promise.all([
+    readJSONFile(vercelFilePath),
+    readJSONFile(nowFilePath),
+  ]);
+  if (vercelConfig instanceof CantParseJSONFile) {
+    return vercelConfig;
   }
-  if (mainConfig !== null) {
-    output.debug(`Found config in file ${nowFilePath}`);
-    const castedConfig = mainConfig;
-    config = castedConfig;
+  if (nowConfig instanceof CantParseJSONFile) {
+    return nowConfig;
+  }
+  if (vercelConfig && nowConfig) {
+    return new ConflictingConfigFiles([vercelFilePath, nowFilePath]);
+  }
+  if (vercelConfig !== null) {
+    output.debug(`Found config in file "${vercelFilePath}"`);
+    config = vercelConfig as NowConfig;
+    config[fileNameSymbol] = 'vercel.json';
+    return config;
+  }
+  if (nowConfig !== null) {
+    output.debug(`Found config in file "${nowFilePath}"`);
+    config = nowConfig as NowConfig;
+    config[fileNameSymbol] = 'now.json';
     return config;
   }
 
@@ -67,14 +86,16 @@ export default async function getConfig(
     return pkgConfig;
   }
   if (pkgConfig) {
-    output.debug(`Found config in package ${nowFilePath}`);
-    const castedConfig = pkgConfig;
-    config = castedConfig;
+    output.debug(`Found config in package ${pkgFilePath}`);
+    config = pkgConfig as NowConfig;
+    config[fileNameSymbol] = 'package.json';
     return config;
   }
 
   // If we couldn't find the config anywhere return error
-  return new CantFindConfig([nowFilePath, pkgFilePath].map(humanizePath));
+  return new CantFindConfig(
+    [vercelFilePath, nowFilePath, pkgFilePath].map(humanizePath)
+  );
 }
 
 async function readConfigFromPackage(file: string) {

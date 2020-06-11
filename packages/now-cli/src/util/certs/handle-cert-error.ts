@@ -1,9 +1,10 @@
 import ms from 'ms';
 import { parse } from 'psl';
 import chalk from 'chalk';
-import * as ERRORS from '../errors';
+import * as ERRORS from '../errors-ts';
 import { Output } from '../output';
 import dnsTable from '../format-dns-table';
+import { getCommandName } from '../pkg-name';
 
 export default function handleCertError<T>(
   output: Output,
@@ -55,8 +56,8 @@ export default function handleCertError<T>(
           cns.map(cn => {
             const parsed = parse(cn);
             return !parsed.error && parsed.subdomain
-              ? [parsed.subdomain, 'ALIAS', 'alias.zeit.co']
-              : ['', 'ALIAS', 'alias.zeit.co'];
+              ? [parsed.subdomain, 'ALIAS', 'alias.vercel.com']
+              : ['', 'ALIAS', 'alias.vercel.com'];
           })
         )}\n\n`
       );
@@ -64,7 +65,7 @@ export default function handleCertError<T>(
         `Alternatively, you can issue a certificate solving DNS challenges manually after running:`
       );
       output.print(
-        `  ${chalk.cyan(`now certs issue --challenge-only <cns>`)}\n`
+        `  ${getCommandName(`certs issue --challenge-only <cns>`)}\n`
       );
       output.print('  Read more: https://err.sh/now/dns-configuration-error\n');
     } else {

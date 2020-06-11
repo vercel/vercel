@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "gatsby-starter-default",
+  "name": "gatsby",
   "version": "1.0.0",
   "dependencies": {
     "gatsby": "^2.18.14",

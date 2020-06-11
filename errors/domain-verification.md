@@ -8,13 +8,13 @@ The domain you supplied cannot be verified using the intended nameservers.
 
 Apply the intended set of nameservers to your domain.
 
-You can retrieve the intended nameservers by running `now domains inspect <domain>`.
+You can retrieve both the intended nameservers and TXT verification record for the domain you wish to verify by running `vercel domains inspect <domain>`.
 
-ZEIT will automatically check periodically that your domain has been verified and automatically mark it as such.
+Vercel will also automatically check periodically that your domain has been verified and automatically mark it as such if we detect either verification method on the domain.
 
-If you would not like to verify your domain, you can remove it from your account using `now domains rm <domain>`.
+If you would not like to verify your domain, you can remove it from your account using `vercel domains rm <domain>`.
 
 #### Resources
 
-- [ZEIT Domains Documentation](https://zeit.co/docs/v2/domains-and-aliases/adding-a-domain/)
 - [Zero-Downtime Domain Migration Guide](https://zeit.co/docs/v2/domains-and-aliases/zero-downtime-domain-migration/)
+- [Vercel Custom Domains Documentation](https://vercel.com/docs/v2/custom-domains)

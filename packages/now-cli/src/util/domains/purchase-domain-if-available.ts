@@ -9,7 +9,7 @@ import getDomainStatus from './get-domain-status';
 import promptBool from '../input/prompt-bool';
 import purchaseDomain from './purchase-domain';
 import stamp from '../output/stamp';
-import * as ERRORS from '../errors';
+import * as ERRORS from '../errors-ts';
 
 const isTTY = process.stdout.isTTY;
 

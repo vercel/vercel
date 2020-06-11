@@ -1,5 +1,5 @@
 import psl from 'psl';
-import { InvalidDomain } from '../errors';
+import { InvalidDomain } from '../errors-ts';
 import isWildcardAlias from '../alias/is-wildcard-alias';
 import extractDomain from '../alias/extract-domain';
 

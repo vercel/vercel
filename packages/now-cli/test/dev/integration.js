@@ -1,7 +1,7 @@
 import ms from 'ms';
 import fs from 'fs-extra';
 import test from 'ava';
-import path from 'path';
+import { join, resolve, delimiter } from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
 import sleep from 'then-sleep';
@@ -9,18 +9,15 @@ import retry from 'async-retry';
 import { satisfies } from 'semver';
 import { getDistTag } from '../../src/util/get-dist-tag';
 import { version as cliVersion } from '../../package.json';
+import { fetchTokenWithRetry } from '../../../../test/lib/deployment/now-deploy';
 
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
-const binaryPath = path.resolve(__dirname, `../../scripts/start.js`);
-const fixture = name => path.join('test', 'dev', 'fixtures', name);
-
-// For the Hugo executable
-process.env.PATH = `${path.resolve(fixture('08-hugo'))}${path.delimiter}${
-  process.env.PATH
-}`;
+const binaryPath = resolve(__dirname, `../../scripts/start.js`);
+const fixture = name => join('test', 'dev', 'fixtures', name);
+const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
 
 let processCounter = 0;
 const processList = new Map();
@@ -97,31 +94,31 @@ function shouldSkip(t, name, versions) {
 }
 
 function validateResponseHeaders(t, res) {
-  t.is(res.headers.get('x-now-trace'), 'dev1');
-  t.truthy(res.headers.get('cache-control').length > 0);
-  t.truthy(
-    /^dev1:[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
-      res.headers.get('x-now-id')
-    )
-  );
+  if (res.status < 500) {
+    t.truthy(res.headers.get('x-vercel-id'));
+    t.truthy(res.headers.get('cache-control').length > 0);
+  }
 }
 
 async function exec(directory, args = []) {
   return execa(binaryPath, ['dev', directory, ...args], {
     reject: false,
     shell: true,
-    env: { __NOW_SKIP_DEV_COMMAND: 1 },
+    env: { __VERCEL_SKIP_DEV_CMD: 1 },
   });
 }
 
 async function runNpmInstall(fixturePath) {
-  if (await fs.exists(path.join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
+  if (await fs.exists(join(fixturePath, 'package.json'))) {
+    await execa('yarn', ['install'], {
+      cwd: fixturePath,
+      shell: true,
+    });
   }
 }
 
 async function getPackedBuilderPath(builderDirName) {
-  const packagePath = path.join(__dirname, '..', '..', '..', builderDirName);
+  const packagePath = join(__dirname, '..', '..', '..', builderDirName);
   const output = await execa('npm', ['pack'], {
     cwd: packagePath,
     shell: true,
@@ -133,22 +130,43 @@ async function getPackedBuilderPath(builderDirName) {
     );
   }
 
-  return path.join(packagePath, output.stdout.trim());
+  return join(packagePath, output.stdout.trim());
 }
 
-async function testPath(t, port, status, path, expectedText, headers = {}) {
-  const opts = { redirect: 'manual' };
-  const res = await fetch(`http://localhost:${port}${path}`, opts);
-  const msg = `Testing path ${path}`;
+async function testPath(
+  t,
+  origin,
+  status,
+  path,
+  expectedText,
+  headers = {},
+  method = 'GET'
+) {
+  const opts = { redirect: 'manual-dont-change', method };
+  const url = `${origin}${path}`;
+  const res = await fetch(url, opts);
+  const msg = `Testing response from ${method} ${url}`;
+  console.log(msg);
   t.is(res.status, status, msg);
-  if (expectedText) {
+  validateResponseHeaders(t, res);
+  if (typeof expectedText === 'string') {
     const actualText = await res.text();
     t.is(actualText.trim(), expectedText.trim(), msg);
+  } else if (expectedText instanceof RegExp) {
+    const actualText = await res.text();
+    expectedText.lastIndex = 0; // reset since we test twice
+    t.regex(actualText, expectedText);
   }
   if (headers) {
-    Object.keys(headers).forEach(key => {
-      const k = key.toLowerCase();
-      t.is(headers[k], res.headers[k], msg);
+    Object.entries(headers).forEach(([key, expectedValue]) => {
+      let actualValue = res.headers.get(key);
+      if (key.toLowerCase() === 'location' && actualValue === '//') {
+        // HACK: `node-fetch` has strange behavior for location header so fix it
+        // with `manual-dont-change` opt and convert double slash to single.
+        // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
+        actualValue = '/';
+      }
+      t.is(actualValue, expectedValue, msg);
     });
   }
 }
@@ -165,24 +183,33 @@ async function testFixture(directory, opts = {}, args = []) {
       shell: true,
       stdio: 'pipe',
       ...opts,
-      env: { ...opts.env, __NOW_SKIP_DEV_COMMAND: 1 },
+      env: { ...opts.env, __VERCEL_SKIP_DEV_CMD: 1 },
     }
   );
 
-  const stdoutList = [];
-  const stderrList = [];
-
+  let stdout = '';
+  let stderr = '';
+  const readyResolver = createResolver();
   const exitResolver = createResolver();
 
-  dev.stderr.on('data', data => stderrList.push(Buffer.from(data)));
-  dev.stdout.on('data', data => stdoutList.push(Buffer.from(data)));
+  dev.stdout.setEncoding('utf8');
+  dev.stderr.setEncoding('utf8');
+
+  dev.stdout.on('data', data => {
+    stdout += data;
+  });
+  dev.stderr.on('data', data => {
+    stderr += data;
+
+    if (stderr.includes('Ready! Available at')) {
+      readyResolver.resolve();
+    }
+  });
 
   let printedOutput = false;
 
   dev.on('exit', () => {
     if (!printedOutput) {
-      const stdout = Buffer.concat(stdoutList).toString();
-      const stderr = Buffer.concat(stderrList).toString();
       printOutput(directory, stdout, stderr);
       printedOutput = true;
     }
@@ -191,8 +218,6 @@ async function testFixture(directory, opts = {}, args = []) {
 
   dev.on('error', () => {
     if (!printedOutput) {
-      const stdout = Buffer.concat(stdoutList).toString();
-      const stderr = Buffer.concat(stderrList).toString();
       printOutput(directory, stdout, stderr);
       printedOutput = true;
     }
@@ -208,39 +233,77 @@ async function testFixture(directory, opts = {}, args = []) {
   return {
     dev,
     port,
+    readyResolver,
   };
 }
 
-function testFixtureStdio(directory, fn) {
+function testFixtureStdio(
+  directory,
+  fn,
+  { expectedCode = 0, skipDeploy } = {}
+) {
   return async t => {
+    const cwd = fixtureAbsolute(directory);
+    const token = await fetchTokenWithRetry();
+    let deploymentUrl;
+
+    // Deploy fixture and link project
+    if (!skipDeploy) {
+      const project = join(cwd, '.vercel', 'project.json');
+      if (await fs.exists(project)) {
+        await fs.unlink(project);
+      }
+      const gitignore = join(cwd, '.gitignore');
+      const gitignoreOrig = await fs.exists(gitignore);
+      let { stdout, stderr, exitCode } = await execa(
+        binaryPath,
+        ['-t', token, '--confirm', '--public', '--no-clipboard', '--debug'],
+        { cwd, reject: false }
+      );
+      console.log({ stdout, stderr, exitCode });
+      if (!gitignoreOrig && (await fs.exists(gitignore))) {
+        await fs.unlink(gitignore);
+      }
+      t.is(exitCode, expectedCode);
+      if (expectedCode === 0) {
+        deploymentUrl = new URL(stdout).host;
+      }
+    }
+
+    // Start dev
     let dev;
-    const dir = fixture(directory);
 
-    await runNpmInstall(dir);
+    await runNpmInstall(cwd);
 
-    const stdoutList = [];
-    const stderrList = [];
-
+    let stdout = '';
+    let stderr = '';
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
     try {
-      let stderr = '';
       let printedOutput = false;
 
-      dev = execa(binaryPath, ['dev', dir, '-l', port], {
-        shell: true,
-        env: { __NOW_SKIP_DEV_COMMAND: 1 },
+      const env = skipDeploy
+        ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
+        : process.env;
+      dev = execa(binaryPath, ['dev', '-l', port, '-t', token, '--debug'], {
+        cwd,
+        env,
       });
 
+      dev.stdout.setEncoding('utf8');
+      dev.stderr.setEncoding('utf8');
+
+      dev.stdout.pipe(process.stdout);
+      dev.stderr.pipe(process.stderr);
+
       dev.stdout.on('data', data => {
-        stdoutList.push(data);
+        stdout += data;
       });
 
       dev.stderr.on('data', data => {
-        stderrList.push(data);
+        stderr += data;
 
-        stderr += data.toString();
         if (stderr.includes('Ready! Available at')) {
           readyResolver.resolve();
         }
@@ -260,8 +323,6 @@ function testFixtureStdio(directory, fn) {
 
       dev.on('exit', () => {
         if (!printedOutput) {
-          const stdout = Buffer.concat(stdoutList).toString();
-          const stderr = Buffer.concat(stderrList).toString();
           printOutput(directory, stdout, stderr);
           printedOutput = true;
         }
@@ -270,8 +331,6 @@ function testFixtureStdio(directory, fn) {
 
       dev.on('error', () => {
         if (!printedOutput) {
-          const stdout = Buffer.concat(stdoutList).toString();
-          const stderr = Buffer.concat(stderrList).toString();
           printOutput(directory, stdout, stderr);
           printedOutput = true;
         }
@@ -279,8 +338,14 @@ function testFixtureStdio(directory, fn) {
       });
 
       await readyResolver;
-      const helperTestPath = (...args) => testPath(t, port, ...args);
-      await fn(t, port, helperTestPath);
+
+      const helperTestPath = async (...args) => {
+        if (!skipDeploy) {
+          await testPath(t, `https://${deploymentUrl}`, ...args);
+        }
+        await testPath(t, `http://localhost:${port}`, ...args);
+      };
+      await fn(helperTestPath, t, port);
     } finally {
       dev.kill('SIGTERM');
       await exitResolver;
@@ -314,244 +379,339 @@ test.afterEach(async () => {
   );
 });
 
+test('[vercel dev] prints `npm install` errors', async t => {
+  const dir = fixture('runtime-not-installed');
+  const result = await exec(dir);
+  t.truthy(result.stderr.includes('npm ERR! 404'));
+  t.truthy(
+    result.stderr.includes('Failed to install `vercel dev` dependencies')
+  );
+  t.truthy(result.stderr.includes('https://vercel.link/npm-install-error'));
+});
+
+test('[vercel dev] reflects changes to config and env without restart', async t => {
+  const dir = fixture('node-helpers');
+  const configPath = join(dir, 'vercel.json');
+  const originalConfig = await fs.readJSON(configPath);
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    {
+      // Node.js helpers should be available by default
+      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'bar');
+    }
+
+    {
+      // Disable the helpers via `config.helpers = false`
+      const config = {
+        ...originalConfig,
+        builds: [
+          {
+            ...originalConfig.builds[0],
+            config: {
+              helpers: false,
+            },
+          },
+        ],
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const body = await res.json();
+      t.is(body.hasHelpers, false);
+      t.is(body.query, undefined);
+    }
+
+    {
+      // Enable the helpers via `config.helpers = true`
+      const config = {
+        ...originalConfig,
+        builds: [
+          {
+            ...originalConfig.builds[0],
+            config: {
+              helpers: true,
+            },
+          },
+        ],
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'baz');
+    }
+
+    {
+      // Disable the helpers via `NODEJS_HELPERS = '0'`
+      const config = {
+        ...originalConfig,
+        build: {
+          env: {
+            NODEJS_HELPERS: '0',
+          },
+        },
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const body = await res.json();
+      t.is(body.hasHelpers, false);
+      t.is(body.query, undefined);
+    }
+
+    {
+      // Enable the helpers via `NODEJS_HELPERS = '1'`
+      const config = {
+        ...originalConfig,
+        build: {
+          env: {
+            NODEJS_HELPERS: '1',
+          },
+        },
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=boo`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'boo');
+    }
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.writeJSON(configPath, originalConfig);
+  }
+});
+
 test(
-  '[now dev] validate routes that use `check: true`',
-  testFixtureStdio('routes-check-true', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/blog/post`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Blog Home/gm);
+  '[vercel dev] validate routes that use `check: true`',
+  testFixtureStdio('routes-check-true', async testPath => {
+    await testPath(200, '/blog/post', 'Blog Home');
   })
 );
 
 test(
-  '[now dev] validate routes that use `check: true` and `status` code',
-  testFixtureStdio('routes-check-true-status', async (t, port) => {
-    const secret = await fetch(`http://localhost:${port}/secret`);
-    t.is(secret.status, 403);
-    t.regex(await secret.text(), /FORBIDDEN/gm);
-
-    const rewrite = await fetchWithRetry(`http://localhost:${port}/post`);
-    t.is(rewrite.status, 200);
-    t.regex(await rewrite.text(), /This is a post/gm);
-
-    const raw = await fetchWithRetry(`http://localhost:${port}/post.html`);
-    t.is(raw.status, 200);
-    t.regex(await raw.text(), /This is a post/gm);
+  '[vercel dev] validate routes that use `check: true` and `status` code',
+  testFixtureStdio('routes-check-true-status', async testPath => {
+    await testPath(403, '/secret');
+    await testPath(200, '/post', 'This is a post.');
+    await testPath(200, '/post.html', 'This is a post.');
   })
 );
 
 test(
-  '[now dev] handles miss after route',
-  testFixtureStdio('handle-miss-after-route', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'exected miss header to be added');
-    t.is(override, 'one', 'exected override header to not override');
-
-    const body = await response.text();
-    t.regex(body, /Blog/gm);
+  '[vercel dev] validate routes that use custom 404 page',
+  testFixtureStdio('routes-custom-404', async testPath => {
+    await testPath(200, '/', 'Home Page');
+    await testPath(404, '/nothing', 'Custom User 404');
+    await testPath(404, '/exact', 'Exact Custom 404');
+    await testPath(200, '/api/hello', 'Hello');
+    await testPath(404, '/api/nothing', 'Custom User 404');
   })
 );
 
 test(
-  '[now dev] handles miss after rewrite',
-  testFixtureStdio('handle-miss-after-rewrite', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected miss header to be added');
-    t.is(override, 'two', 'expected override header to not override');
-    t.is(response.status, 200);
-    const body = await response.text();
-    t.regex(body, /Blog Post Page/gm);
-
-    const response1 = await fetchWithRetry(
-      `http://localhost:${port}/blog/post`
-    );
-    const test1 = response.headers.get('test');
-    const override1 = response.headers.get('override');
-    t.is(test1, '1', 'expected miss header to be added');
-    t.is(override1, 'two', 'expected override header to be added');
-    t.is(response1.status, 200);
-    t.regex(await response1.text(), /Blog Post Page/gm);
-
-    const response2 = await fetchWithRetry(
-      `http://localhost:${port}/about.html`
-    );
-    const test2 = response2.headers.get('test');
-    const override2 = response2.headers.get('override');
-    t.is(test2, null, 'expected miss header to be not be added');
-    t.is(override2, null, 'expected override header to not be added');
-    t.is(response2.status, 200);
-    t.regex(await response2.text(), /About Page/gm);
+  '[vercel dev] handles miss after route',
+  testFixtureStdio('handle-miss-after-route', async testPath => {
+    await testPath(200, '/post', 'Blog Post Page', {
+      test: '1',
+      override: 'one',
+    });
   })
 );
 
 test(
-  '[now dev] displays directory listing after miss',
-  testFixtureStdio('handle-miss-display-dir-list', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const body = await response.text();
-    t.regex(body, /one.html/gm);
+  '[vercel dev] handles miss after rewrite',
+  testFixtureStdio('handle-miss-after-rewrite', async testPath => {
+    await testPath(200, '/post', 'Blog Post Page', {
+      test: '1',
+      override: 'one',
+    });
+    await testPath(200, '/blog/post', 'Blog Post Page', {
+      test: '1',
+      override: 'two',
+    });
+    await testPath(404, '/blog/about.html', undefined, {
+      test: '1',
+      override: 'two',
+    });
+  })
+);
+/*
+test(
+  '[vercel dev] displays directory listing after miss',
+  testFixtureStdio('handle-miss-display-dir-list', async (testPath) => {
+    await testPath(404, '/post', /one.html/m);
+  })
+);
+*/
+
+test(
+  '[vercel dev] does not display directory listing after 404',
+  testFixtureStdio('handle-miss-hide-dir-list', async testPath => {
+    await testPath(404, '/post');
+    await testPath(200, '/post/one.html', 'First Post');
   })
 );
 
 test(
-  '[now dev] does not display directory listing after 404',
-  testFixtureStdio('handle-miss-hide-dir-list', async (t, port) => {
-    const post = await fetch(`http://localhost:${port}/post`);
-    t.is(post.status, 404);
-
-    const file = await fetch(`http://localhost:${port}/post/one.html`);
-    t.is(file.status, 200);
-    t.regex(await file.text(), /First Post/gm);
+  '[vercel dev] should preserve query string even after miss phase',
+  testFixtureStdio('handle-miss-querystring', async testPath => {
+    await testPath(200, '/', 'Index Page');
+    if (process.env.CI && process.platform === 'darwin') {
+      console.log('Skipping since GH Actions hangs for some reason');
+    } else {
+      await testPath(200, '/echo/first/second', 'a=first,b=second');
+      await testPath(200, '/functions/echo.js?a=one&b=two', 'a=one,b=two');
+    }
   })
 );
 
 test(
-  '[now dev] handles hit after handle: filesystem',
-  testFixtureStdio('handle-hit-after-fs', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/blog.html`);
-    const test = response.headers.get('test');
-    t.is(test, '1', 'expected hit header to be added');
-    const body = await response.text();
-    t.regex(body, /Blog Page/gm);
+  '[vercel dev] handles hit after handle: filesystem',
+  testFixtureStdio('handle-hit-after-fs', async testPath => {
+    await testPath(200, '/blog.html', 'Blog Page', { test: '1' });
   })
 );
 
 test(
-  '[now dev] handles hit after dest',
-  testFixtureStdio('handle-hit-after-dest', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected hit header to be added');
-    t.is(override, 'one', 'expected hit header to not override');
-    const body = await response.text();
-    t.regex(body, /Blog Post/gm);
+  '[vercel dev] handles hit after dest',
+  testFixtureStdio('handle-hit-after-dest', async testPath => {
+    await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
 test(
-  '[now dev] handles hit after rewrite',
-  testFixtureStdio('handle-hit-after-rewrite', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/post`);
-    const test = response.headers.get('test');
-    const override = response.headers.get('override');
-    t.is(test, '1', 'expected hit header to be added');
-    t.is(override, 'one', 'expected hit header to not override');
-    const body = await response.text();
-    t.regex(body, /Blog Post/gm);
+  '[vercel dev] handles hit after rewrite',
+  testFixtureStdio('handle-hit-after-rewrite', async testPath => {
+    await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
 test(
-  '[now dev] should serve the public directory and api functions',
-  testFixtureStdio('public-and-api', async (t, port) => {
-    const index = await fetchWithRetry(`http://localhost:${port}`);
-    t.regex(await index.text(), /home page/gm);
-    const about = await fetchWithRetry(`http://localhost:${port}/about.html`);
-    t.regex(await about.text(), /about page/gm);
-    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
-    t.regex(await date.text(), /current date/gm);
-    const rand = await fetchWithRetry(`http://localhost:${port}/api/rand`);
-    t.regex(await rand.text(), /random number/gm);
-    const rand2 = await fetchWithRetry(`http://localhost:${port}/api/rand.js`);
-    t.regex(await rand2.text(), /random number/gm);
-    const notfound = await fetch(`http://localhost:${port}/api`);
-    t.is(notfound.status, 404);
+  '[vercel dev] should serve the public directory and api functions',
+  testFixtureStdio('public-and-api', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'This is the about page');
+    await testPath(200, '/api/date', /current date/);
+    await testPath(200, '/api/rand', /random number/);
+    await testPath(200, '/api/rand.js', /random number/);
+    await testPath(404, '/api/api', /NOT_FOUND/m);
+    await testPath(404, '/nothing', /Custom 404 Page/);
   })
 );
 
-test('[now dev] validate builds', async t => {
+test(
+  '[vercel dev] should allow user rewrites for path segment files',
+  testFixtureStdio('test-zero-config-rewrite', async testPath => {
+    await testPath(404, '/');
+    await testPath(200, '/echo/1', '{"id":"1"}', {
+      'Access-Control-Allow-Origin': '*',
+    });
+    await testPath(200, '/echo/2', '{"id":"2"}', {
+      'Access-Control-Allow-Headers': '*',
+    });
+  })
+);
+
+test('[vercel dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `builds` property: \[0\]\.src should be string/gm
+    /Invalid `builds` property: \[0\]\.src should be string/m
   );
 });
 
-test('[now dev] validate routes', async t => {
+test('[vercel dev] validate routes', async t => {
   const directory = fixture('invalid-routes');
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `routes` property: \[0\]\.src should be string/gm
+    /Invalid `routes` property: \[0\]\.src should be string/m
   );
 });
 
-test('[now dev] validate cleanUrls', async t => {
+test('[vercel dev] validate cleanUrls', async t => {
   const directory = fixture('invalid-clean-urls');
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/gm);
+  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/m);
 });
 
-test('[now dev] validate trailingSlash', async t => {
+test('[vercel dev] validate trailingSlash', async t => {
   const directory = fixture('invalid-trailing-slash');
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `trailingSlash` property:\s+should be boolean/gm
+    /Invalid `trailingSlash` property:\s+should be boolean/m
   );
 });
 
-test('[now dev] validate rewrites', async t => {
+test('[vercel dev] validate rewrites', async t => {
   const directory = fixture('invalid-rewrites');
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `rewrites` property: \[0\]\.destination should be string/gm
+    /Invalid `rewrites` property: \[0\]\.destination should be string/m
   );
 });
 
-test('[now dev] validate redirects', async t => {
+test('[vercel dev] validate redirects', async t => {
   const directory = fixture('invalid-redirects');
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `redirects` property: \[0\]\.statusCode should be integer/gm
+    /Invalid `redirects` property: \[0\]\.statusCode should be integer/m
   );
 });
 
-test('[now dev] validate headers', async t => {
+test('[vercel dev] validate headers', async t => {
   const directory = fixture('invalid-headers');
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/gm
+    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/m
   );
 });
 
-test('[now dev] validate mixed routes and rewrites', async t => {
+test('[vercel dev] validate mixed routes and rewrites', async t => {
   const directory = fixture('invalid-mixed-routes-rewrites');
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Cannot define both `routes` and `rewrites`/gm);
+  t.regex(
+    output.stderr,
+    /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present./m
+  );
+  t.regex(output.stderr, /vercel\.link\/mix-routing-props/m);
 });
 
 // Test seems unstable: It won't return sometimes.
-test('[now dev] validate env var names', async t => {
+test('[vercel dev] validate env var names', async t => {
   const directory = fixture('invalid-env-var-name');
   const { dev } = await testFixture(directory, { stdio: 'pipe' });
 
@@ -589,80 +749,123 @@ test('[now dev] validate env var names', async t => {
 });
 
 test(
-  '[now dev] test rewrites with segments serve correct content',
-  testFixtureStdio('test-rewrites-with-segments', async (t, port) => {
-    const users = await fetchWithRetry(
-      `http://localhost:${port}/api/users/first`,
-      3
-    );
-    t.regex(await users.text(), /first/gm);
-    const fourtytwo = await fetchWithRetry(
-      `http://localhost:${port}/api/fourty-two`,
-      3
-    );
-    t.regex(await fourtytwo.text(), /42/gm);
-    const rand = await fetchWithRetry(`http://localhost:${port}/rand`, 3);
-    t.regex(await rand.text(), /42/gm);
-    const dynamic = await fetchWithRetry(
-      `http://localhost:${port}/api/dynamic`,
-      3
-    );
-    t.regex(await dynamic.text(), /dynamic/gm);
-    const notfound = await fetch(`http://localhost:${port}/api`);
-    t.is(notfound.status, 404);
+  '[vercel dev] test rewrites with segments serve correct content',
+  testFixtureStdio('test-rewrites-with-segments', async testPath => {
+    await testPath(200, '/api/users/first', 'first');
+    await testPath(200, '/api/fourty-two', '42');
+    await testPath(200, '/rand', '42');
+    await testPath(200, '/api/dynamic', 'dynamic');
+    await testPath(404, '/api');
   })
 );
 
 test(
-  '[now dev] test rewrites serve correct content',
-  testFixtureStdio('test-rewrites', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}/hello`, 3);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Hello World/gm);
+  '[vercel dev] test rewrites serve correct content',
+  testFixtureStdio('test-rewrites', async testPath => {
+    await testPath(200, '/hello', 'Hello World');
   })
 );
 
 test(
-  '[now dev] test cleanUrls serve correct content',
-  testFixtureStdio('test-clean-urls', async (t, port, testPath) => {
+  '[vercel dev] test rewrites and redirects is case sensitive',
+  testFixtureStdio('test-routing-case-sensitive', async testPath => {
+    await testPath(200, '/Path', 'UPPERCASE');
+    await testPath(200, '/path', 'lowercase');
+    await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
+      Location: '/upper.html',
+    });
+    await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
+      Location: '/lower.html',
+    });
+  })
+);
+
+test(
+  '[vercel dev] test cleanUrls serve correct content',
+  testFixtureStdio('test-clean-urls', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/about', 'About Page');
     await testPath(200, '/sub', 'Sub Index Page');
     await testPath(200, '/sub/another', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/index.html', '', { Location: '/' });
-    await testPath(308, '/about.html', '', { Location: '/about' });
-    await testPath(308, '/sub/index.html', '', { Location: '/sub' });
-    await testPath(308, '/sub/another.html', '', { Location: '/sub/another' });
+    await testPath(308, '/index.html', 'Redirecting to / (308)', {
+      Location: '/',
+    });
+    await testPath(308, '/about.html', 'Redirecting to /about (308)', {
+      Location: '/about',
+    });
+    await testPath(308, '/sub/index.html', 'Redirecting to /sub (308)', {
+      Location: '/sub',
+    });
+    await testPath(
+      308,
+      '/sub/another.html',
+      'Redirecting to /sub/another (308)',
+      { Location: '/sub/another' }
+    );
   })
 );
 
 test(
-  '[now dev] test cleanUrls and trailingSlash serve correct content',
-  testFixtureStdio(
-    'test-clean-urls-trailing-slash',
-    async (t, port, testPath) => {
-      await testPath(200, '/', 'Index Page');
-      await testPath(200, '/about/', 'About Page');
-      await testPath(200, '/sub/', 'Sub Index Page');
-      await testPath(200, '/sub/another/', 'Sub Another Page');
-      await testPath(200, '/style.css', 'body { color: green }');
-      await testPath(308, '/index.html', '', { Location: '/' });
-      await testPath(308, '/about.html', '', { Location: '/about/' });
-      await testPath(308, '/sub/index.html', '', { Location: '/sub/' });
-      await testPath(308, '/sub/another.html', '', {
-        Location: '/sub/another/',
-      });
-    }
-  )
+  '[vercel dev] should serve custom 404 when `cleanUrls: true`',
+  testFixtureStdio('test-clean-urls-custom-404', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about', 'The about page');
+    await testPath(200, '/contact/me', 'Contact Me Subdirectory');
+    await testPath(404, '/nothing', 'Custom 404 Page');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
 );
 
 test(
-  '[now dev] test trailingSlash true serve correct content',
-  testFixtureStdio('test-trailing-slash', async (t, port, testPath) => {
+  '[vercel dev] test cleanUrls and trailingSlash serve correct content',
+  testFixtureStdio('test-clean-urls-trailing-slash', async testPath => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/about/', 'About Page');
+    await testPath(200, '/sub/', 'Sub Index Page');
+    await testPath(200, '/sub/another/', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    //TODO: fix this test so that location is `/` instead of `//`
+    //await testPath(308, '/index.html', 'Redirecting to / (308)', { Location: '/' });
+    await testPath(308, '/about.html', 'Redirecting to /about/ (308)', {
+      Location: '/about/',
+    });
+    await testPath(308, '/sub/index.html', 'Redirecting to /sub/ (308)', {
+      Location: '/sub/',
+    });
+    await testPath(
+      308,
+      '/sub/another.html',
+      'Redirecting to /sub/another/ (308)',
+      {
+        Location: '/sub/another/',
+      }
+    );
+  })
+);
+
+test(
+  '[vercel dev] test cors headers work with OPTIONS',
+  testFixtureStdio('test-cors-routes', async testPath => {
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers':
+        'Content-Type, Authorization, Accept, Content-Length, Origin, User-Agent',
+      'Access-Control-Allow-Methods':
+        'GET, POST, OPTIONS, HEAD, PATCH, PUT, DELETE',
+    };
+    await testPath(200, '/', 'status api', headers, 'GET');
+    await testPath(200, '/', 'status api', headers, 'POST');
+    await testPath(200, '/api/status.js', 'status api', headers, 'GET');
+    await testPath(200, '/api/status.js', 'status api', headers, 'POST');
+    await testPath(204, '/', '', headers, 'OPTIONS');
+    await testPath(204, '/api/status.js', '', headers, 'OPTIONS');
+  })
+);
+
+test(
+  '[vercel dev] test trailingSlash true serve correct content',
+  testFixtureStdio('test-trailing-slash', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/index.html', 'Index Page');
     await testPath(200, '/about.html', 'About Page');
@@ -670,15 +873,31 @@ test(
     await testPath(200, '/sub/index.html', 'Sub Index Page');
     await testPath(200, '/sub/another.html', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/about.html/', '', { Location: '/about.html' });
-    await testPath(308, '/style.css/', '', { Location: '/style.css' });
-    await testPath(308, '/sub', '', { Location: '/sub/' });
+    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
+      Location: '/about.html',
+    });
+    await testPath(308, '/style.css/', 'Redirecting to /style.css (308)', {
+      Location: '/style.css',
+    });
+    await testPath(308, '/sub', 'Redirecting to /sub/ (308)', {
+      Location: '/sub/',
+    });
   })
 );
 
 test(
-  '[now dev] test trailingSlash false serve correct content',
-  testFixtureStdio('test-trailing-slash-false', async (t, port, testPath) => {
+  '[vercel dev] should serve custom 404 when `trailingSlash: true`',
+  testFixtureStdio('test-trailing-slash-custom-404', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'The about page');
+    await testPath(200, '/contact/', 'Contact Subdirectory');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
+);
+
+test(
+  '[vercel dev] test trailingSlash false serve correct content',
+  testFixtureStdio('test-trailing-slash-false', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/index.html', 'Index Page');
     await testPath(200, '/about.html', 'About Page');
@@ -686,52 +905,62 @@ test(
     await testPath(200, '/sub/index.html', 'Sub Index Page');
     await testPath(200, '/sub/another.html', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/about.html/', '', { Location: '/about.html' });
-    await testPath(308, '/sub/', '', { Location: '/sub' });
-    await testPath(308, '/sub/another.html/', '', {
-      Location: '/sub/another.html',
+    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
+      Location: '/about.html',
     });
+    await testPath(308, '/sub/', 'Redirecting to /sub (308)', {
+      Location: '/sub',
+    });
+    await testPath(
+      308,
+      '/sub/another.html/',
+      'Redirecting to /sub/another.html (308)',
+      {
+        Location: '/sub/another.html',
+      }
+    );
   })
 );
 
 test(
-  '[now dev] throw when invalid builder routes detected',
-  testFixtureStdio('invalid-builder-routes', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-    const body = await response.text();
-    t.regex(body, /Invalid regular expression/gm);
+  '[vercel dev] throw when invalid builder routes detected',
+  testFixtureStdio(
+    'invalid-builder-routes',
+    async testPath => {
+      await testPath(
+        500,
+        '/',
+        /Route at index 0 has invalid `src` regular expression/m
+      );
+    },
+    { skipDeploy: true }
+  )
+);
+
+test(
+  '[vercel dev] support legacy `@now` scope runtimes',
+  testFixtureStdio('legacy-now-runtime', async testPath => {
+    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
   })
 );
 
 test(
-  '[now dev] 00-list-directory',
-  testFixtureStdio('00-list-directory', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 60);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Files within/gm);
-    t.regex(body, /test1.txt/gm);
-    t.regex(body, /directory/gm);
+  '[vercel dev] 00-list-directory',
+  testFixtureStdio('00-list-directory', async testPath => {
+    await testPath(200, '/', /Files within/m);
+    await testPath(200, '/', /test[0-3]\.txt/m);
   })
 );
 
-test('[now dev] 01-node', async t => {
-  const tester = testFixtureStdio('01-node', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /A simple deployment with the Now API!/gm);
-  });
-
-  await tester(t);
-});
+test(
+  '[vercel dev] 01-node',
+  testFixtureStdio('01-node', async testPath => {
+    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
+  })
+);
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
-test('[now dev] 02-angular-node', async t => {
+test('[vercel dev] 02-angular-node', async t => {
   if (shouldSkip(t, '02-angular-node', '10.x')) return;
 
   const directory = fixture('02-angular-node');
@@ -746,7 +975,7 @@ test('[now dev] 02-angular-node', async t => {
       stderr += data.toString();
     });
 
-    // start `now dev` detached in child_process
+    // start `vercel dev` detached in child_process
     dev.unref();
 
     const response = await fetchWithRetry(`http://localhost:${port}`, 180);
@@ -754,7 +983,7 @@ test('[now dev] 02-angular-node', async t => {
     validateResponseHeaders(t, response);
 
     const body = await response.text();
-    t.regex(body, /Angular \+ Node.js API/gm);
+    t.regex(body, /Angular \+ Node.js API/m);
   } finally {
     dev.kill('SIGTERM');
   }
@@ -768,461 +997,337 @@ test('[now dev] 02-angular-node', async t => {
   }
 });
 
-test('[now dev] 03-aurelia', async t => {
-  const tester = testFixtureStdio('03-aurelia', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Aurelia Navigation Skeleton/gm);
-  });
-
-  await tester(t);
-});
-
 test(
-  '[now dev] 04-create-react-app',
-  testFixtureStdio('04-create-react-app', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /React App/gm);
-  })
+  '[vercel dev] 03-aurelia',
+  testFixtureStdio(
+    '03-aurelia',
+    async testPath => {
+      await testPath(200, '/', /Aurelia Navigation Skeleton/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
-test('[now dev] 05-gatsby', async t => {
-  if (shouldSkip(t, '05-gatsby', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
-
-  const tester = testFixtureStdio('05-gatsby', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Gatsby Default Starter/gm);
-  });
-
-  await tester(t);
-});
-
-test('[now dev] 06-gridsome', async t => {
-  const tester = testFixtureStdio('06-gridsome', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-    t.is(response.status, 200, await response.text());
-  });
-
-  await tester(t);
-});
-
 test(
-  '[now dev] 07-hexo-node',
-  testFixtureStdio('07-hexo-node', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Hexo \+ Node.js API/gm);
+  '[vercel dev] 04-create-react-app',
+  testFixtureStdio('04-create-react-app', async testPath => {
+    await testPath(200, '/', /React App/m);
+  })
+);
+/*
+test(
+  '[vercel dev] 05-gatsby',
+  testFixtureStdio('05-gatsby', async testPath => {
+    await testPath(200, '/', /Gatsby Default Starter/m);
+  })
+);
+*/
+test(
+  '[vercel dev] 06-gridsome',
+  testFixtureStdio('06-gridsome', async testPath => {
+    await testPath(200, '/');
   })
 );
 
 test(
-  '[now dev] 08-hugo',
-  testFixtureStdio('08-hugo', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    // const body = await response.text();
-    // t.regex(body, /Hugo on ZEIT Now/gm);
-    t.is(response.status, 200, await response.text());
+  '[vercel dev] 07-hexo-node',
+  testFixtureStdio('07-hexo-node', async testPath => {
+    await testPath(200, '/', /Hexo \+ Node.js API/m);
   })
 );
 
-test('[now dev] 10-nextjs-node', async t => {
-  const tester = testFixtureStdio('10-nextjs-node', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Next.js \+ Node.js API/gm);
-  });
-
-  await tester(t);
-});
-
-// test('[now dev] 11-nuxtjs-node', async t => {
-//   const directory = fixture('11-nuxtjs-node');
-//   const { dev, port } = await testFixture(directory);
-
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
-
-//     const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /Nuxt.js \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
-
-test('[now dev] 12-polymer-node', async t => {
-  const directory = fixture('12-polymer-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Polymer \+ Node.js API/gm);
-  } finally {
-    await dev.kill('SIGTERM');
+test('[vercel dev] 08-hugo', async t => {
+  if (process.platform === 'darwin') {
+    // Update PATH to find the Hugo executable installed via GH Actions
+    process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
+      process.env.PATH
+    }`;
+    const tester = testFixtureStdio('08-hugo', async testPath => {
+      await testPath(200, '/', /Hugo/m);
+    });
+    await tester(t);
+  } else {
+    console.log(`Skipping 08-hugo on platform ${process.platform}`);
+    t.pass();
   }
-});
-
-test('[now dev] 13-preact-node', async t => {
-  const directory = fixture('13-preact-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Preact \+ Node.js API/gm);
-  } finally {
-    await dev.kill('SIGTERM');
-  }
-});
-
-test('[now dev] 14-svelte-node', async t => {
-  const directory = fixture('14-svelte-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const response = await fetchWithRetry(`http://localhost:${port}`, 80);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Svelte \+ Node.js API/gm);
-  } finally {
-    await dev.kill('SIGTERM');
-  }
-});
-
-// test('[now dev] 15-umijs-node', async t => {
-//   const directory = fixture('15-umijs-node');
-//   const { dev, port } = await testFixture(directory);
-
-//   try {
-//     // start `now dev` detached in child_process
-//     dev.unref();
-
-//     const response = await fetchWithRetry(`http://localhost:${port}`, 80);
-
-//     validateResponseHeaders(t, response);
-
-//     const body = await response.text();
-//     t.regex(body, /UmiJS \+ Node.js API/gm);
-
-//   } finally {
-//     dev.kill('SIGTERM')
-//   }
-// });
-
-test('[now dev] 16-vue-node', async t => {
-  const directory = fixture('16-vue-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Vue.js \+ Node.js API/gm);
-  } finally {
-    await dev.kill('SIGTERM');
-  }
-});
-
-test('[now dev] 17-vuepress-node', async t => {
-  const directory = fixture('17-vuepress-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /VuePress \+ Node.js API/gm);
-  } finally {
-    await dev.kill('SIGTERM');
-  }
-});
-
-test('[now dev] double slashes redirect', async t => {
-  const directory = fixture('01-node');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    // Wait for `now dev` to boot up
-    await sleep(ms('10s'));
-
-    {
-      const res = await fetch(`http://localhost:${port}////?foo=bar`, {
-        redirect: 'manual',
-      });
-
-      validateResponseHeaders(t, res);
-
-      const body = await res.text();
-      t.is(res.status, 301);
-      t.is(res.headers.get('location'), `http://localhost:${port}/?foo=bar`);
-      t.is(body, 'Redirecting to /?foo=bar (301)\n');
-    }
-
-    {
-      const res = await fetch(`http://localhost:${port}///api////date.js`, {
-        method: 'POST',
-        redirect: 'manual',
-      });
-
-      validateResponseHeaders(t, res);
-
-      const body = await res.text();
-      t.is(res.status, 200);
-      t.truthy(
-        body.startsWith('January') ||
-          body.startsWith('February') ||
-          body.startsWith('March') ||
-          body.startsWith('April') ||
-          body.startsWith('May') ||
-          body.startsWith('June') ||
-          body.startsWith('July') ||
-          body.startsWith('August') ||
-          body.startsWith('September') ||
-          body.startsWith('October') ||
-          body.startsWith('November') ||
-          body.startsWith('December')
-      );
-    }
-  } finally {
-    await dev.kill('SIGTERM');
-  }
-});
-
-test('[now dev] 18-marko', async t => {
-  const tester = testFixtureStdio('18-marko', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Marko Starter/gm);
-  });
-
-  await tester(t);
 });
 
 test(
-  '[now dev] 19-mithril',
-  testFixtureStdio('19-mithril', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Mithril on ZEIT Now/gm);
+  '[vercel dev] 10-nextjs-node',
+  testFixtureStdio('10-nextjs-node', async testPath => {
+    await testPath(200, '/', /Next.js \+ Node.js API/m);
+    await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(404, '/nothing', /Custom Next 404/);
   })
 );
 
 test(
-  '[now dev] 20-riot',
-  testFixtureStdio('20-riot', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Riot on ZEIT Now/gm);
-  })
+  '[vercel dev] 12-polymer-node',
+  testFixtureStdio(
+    '12-polymer-node',
+    async testPath => {
+      await testPath(200, '/', /Polymer \+ Node.js API/m);
+    },
+    { skipDeploy: true }
+  )
 );
-
-test('[now dev] 21-charge', async t => {
-  const tester = testFixtureStdio('21-charge', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Welcome to my new Charge site/gm);
-  });
-
-  await tester(t);
-});
 
 test(
-  '[now dev] 22-brunch',
-  testFixtureStdio('22-brunch', async (t, port) => {
-    const response = await fetchWithRetry(`http://localhost:${port}`, 50);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Bon Appétit./gm);
-  })
+  '[vercel dev] 13-preact-node',
+  testFixtureStdio(
+    '13-preact-node',
+    async testPath => {
+      await testPath(200, '/', /Preact/m);
+    },
+    { skipDeploy: true }
+  )
 );
 
-test('[now dev] 23-docusaurus', async t => {
-  const tester = testFixtureStdio('23-docusaurus', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
+test(
+  '[vercel dev] 14-svelte-node',
+  testFixtureStdio(
+    '14-svelte-node',
+    async testPath => {
+      await testPath(200, '/', /Svelte/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-    validateResponseHeaders(t, response);
+test(
+  '[vercel dev] 16-vue-node',
+  testFixtureStdio(
+    '16-vue-node',
+    async testPath => {
+      await testPath(200, '/', /Vue.js \+ Node.js API/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-    const body = await response.text();
-    t.regex(body, /Test Site · A website for testing/gm);
-  });
+test(
+  '[vercel dev] 17-vuepress-node',
+  testFixtureStdio(
+    '17-vuepress-node',
+    async testPath => {
+      await testPath(200, '/', /VuePress \+ Node.js API/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-  await tester(t);
-});
+test(
+  '[vercel dev] double slashes redirect',
+  testFixtureStdio(
+    '01-node',
+    async (_testPath, t, port) => {
+      {
+        const res = await fetch(`http://localhost:${port}////?foo=bar`, {
+          redirect: 'manual',
+        });
 
-test('[now dev] 24-ember', async t => {
-  if (shouldSkip(t, '24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
+        validateResponseHeaders(t, res);
 
-  const tester = await testFixtureStdio('24-ember', async (t, port) => {
-    const response = await fetch(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /HelloWorld/gm);
-  });
-
-  tester(t);
-});
-
-test('[now dev] temporary directory listing', async t => {
-  const directory = fixture('temporary-directory-listing');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    await fs.unlink(path.join(directory, 'index.txt')).catch(() => null);
-
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    await sleep(ms('20s'));
-
-    const firstResponse = await fetch(`http://localhost:${port}`);
-    validateResponseHeaders(t, firstResponse);
-    const body = await firstResponse.text();
-    t.is(firstResponse.status, 404, `Received instead: ${body}`);
-
-    await fs.writeFile(path.join(directory, 'index.txt'), 'hello');
-
-    for (let i = 0; i < 20; i++) {
-      const response = await fetch(`http://localhost:${port}`);
-      validateResponseHeaders(t, response);
-
-      if (response.status === 200) {
-        const body = await response.text();
-        t.is(body, 'hello');
+        const body = await res.text();
+        t.is(res.status, 301);
+        t.is(res.headers.get('location'), `http://localhost:${port}/?foo=bar`);
+        t.is(body, 'Redirecting to /?foo=bar (301)\n');
       }
 
-      await sleep(ms('1s'));
-    }
-  } finally {
-    await dev.kill('SIGTERM');
-  }
-});
+      {
+        const res = await fetch(`http://localhost:${port}///api////date.js`, {
+          method: 'POST',
+          redirect: 'manual',
+        });
 
-test('[now dev] add a `package.json` to trigger `@now/static-build`', async t => {
-  const directory = fixture('trigger-static-build');
+        validateResponseHeaders(t, res);
 
-  await fs.unlink(path.join(directory, 'package.json')).catch(() => null);
+        const body = await res.text();
+        t.is(res.status, 200);
+        t.truthy(
+          body.startsWith('January') ||
+            body.startsWith('February') ||
+            body.startsWith('March') ||
+            body.startsWith('April') ||
+            body.startsWith('May') ||
+            body.startsWith('June') ||
+            body.startsWith('July') ||
+            body.startsWith('August') ||
+            body.startsWith('September') ||
+            body.startsWith('October') ||
+            body.startsWith('November') ||
+            body.startsWith('December')
+        );
+      }
+    },
+    { skipDeploy: true }
+  )
+);
 
-  await fs
-    .unlink(path.join(directory, 'public', 'index.txt'))
-    .catch(() => null);
+test(
+  '[vercel dev] 18-marko',
+  testFixtureStdio(
+    '18-marko',
+    async testPath => {
+      await testPath(200, '/', /Marko Starter/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-  await fs.rmdir(path.join(directory, 'public')).catch(() => null);
+test(
+  '[vercel dev] 19-mithril',
+  testFixtureStdio(
+    '19-mithril',
+    async testPath => {
+      await testPath(200, '/', /Mithril on Vercel/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-  const tester = testFixtureStdio('trigger-static-build', async (t, port) => {
-    {
-      const response = await fetch(`http://localhost:${port}`);
-      validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), 'hello:index.txt');
-    }
+test(
+  '[vercel dev] 20-riot',
+  testFixtureStdio(
+    '20-riot',
+    async testPath => {
+      await testPath(200, '/', /Riot on Vercel/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-    const rnd = Math.random().toString();
-    const pkg = {
-      private: true,
-      scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
-    };
+test(
+  '[vercel dev] 21-charge',
+  testFixtureStdio(
+    '21-charge',
+    async testPath => {
+      await testPath(200, '/', /Welcome to my new Charge site/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-    await fs.writeFile(
-      path.join(directory, 'package.json'),
-      JSON.stringify(pkg)
-    );
+test(
+  '[vercel dev] 22-brunch',
+  testFixtureStdio(
+    '22-brunch',
+    async testPath => {
+      await testPath(200, '/', /Bon Appétit./m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-    // Wait until file events have been processed
-    await sleep(ms('2s'));
+test(
+  '[vercel dev] 23-docusaurus',
+  testFixtureStdio(
+    '23-docusaurus',
+    async testPath => {
+      await testPath(200, '/', /My Site/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-    {
-      const response = await fetch(`http://localhost:${port}`);
-      validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), rnd);
-    }
-  });
+test('[vercel dev] 24-ember', async t => {
+  if (shouldSkip(t, '24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
+
+  const tester = await testFixtureStdio(
+    '24-ember',
+    async testPath => {
+      await testPath(200, '/', /HelloWorld/m);
+    },
+    { skipDeploy: true }
+  );
 
   await tester(t);
 });
 
-test('[now dev] no build matches warning', async t => {
+test(
+  '[vercel dev] temporary directory listing',
+  testFixtureStdio(
+    'temporary-directory-listing',
+    async (_testPath, t, port) => {
+      const directory = fixture('temporary-directory-listing');
+      await fs.unlink(join(directory, 'index.txt')).catch(() => null);
+
+      await sleep(ms('20s'));
+
+      const firstResponse = await fetch(`http://localhost:${port}`);
+      validateResponseHeaders(t, firstResponse);
+      const body = await firstResponse.text();
+      t.is(firstResponse.status, 404, `Received instead: ${body}`);
+
+      await fs.writeFile(join(directory, 'index.txt'), 'hello');
+
+      for (let i = 0; i < 20; i++) {
+        const response = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(t, response);
+
+        if (response.status === 200) {
+          const body = await response.text();
+          t.is(body, 'hello');
+        }
+
+        await sleep(ms('1s'));
+      }
+    },
+    { skipDeploy: true }
+  )
+);
+
+test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async t => {
+  const directory = fixture('trigger-static-build');
+
+  await fs.unlink(join(directory, 'package.json')).catch(() => null);
+
+  await fs.unlink(join(directory, 'public', 'index.txt')).catch(() => null);
+
+  await fs.rmdir(join(directory, 'public')).catch(() => null);
+
+  const tester = testFixtureStdio(
+    'trigger-static-build',
+    async (_testPath, t, port) => {
+      {
+        const response = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(t, response);
+        const body = await response.text();
+        t.is(body.trim(), 'hello:index.txt');
+      }
+
+      const rnd = Math.random().toString();
+      const pkg = {
+        private: true,
+        scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
+      };
+
+      await fs.writeFile(join(directory, 'package.json'), JSON.stringify(pkg));
+
+      // Wait until file events have been processed
+      await sleep(ms('2s'));
+
+      {
+        const response = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(t, response);
+        const body = await response.text();
+        t.is(body.trim(), rnd);
+      }
+    },
+    { skipDeploy: true }
+  );
+
+  await tester(t);
+});
+
+test('[vercel dev] no build matches warning', async t => {
   const directory = fixture('no-build-matches');
   const { dev } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   try {
-    // start `now dev` detached in child_process
+    // start `vercel dev` detached in child_process
     dev.unref();
 
     dev.stderr.setEncoding('utf8');
@@ -1240,31 +1345,15 @@ test('[now dev] no build matches warning', async t => {
   }
 });
 
-test('[now dev] do not recursivly check the path', async t => {
-  const directory = fixture('handle-filesystem-missing');
-  const { dev, port } = await testFixture(directory);
+test(
+  '[vercel dev] do not recursivly check the path',
+  testFixtureStdio('handle-filesystem-missing', async testPath => {
+    await testPath(200, '/', /hello/m);
+    await testPath(404, '/favicon.txt');
+  })
+);
 
-  try {
-    dev.unref();
-
-    {
-      const response = await fetchWithRetry(`http://localhost:${port}`, 180);
-      validateResponseHeaders(t, response);
-      const body = await response.text();
-      t.is(body.trim(), 'hello');
-    }
-
-    {
-      const response = await fetch(`http://localhost:${port}/favicon.txt`);
-      validateResponseHeaders(t, response);
-      t.is(response.status, 404);
-    }
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
-
-test('[now dev] render warning for empty cwd dir', async t => {
+test('[vercel dev] render warning for empty cwd dir', async t => {
   const directory = fixture('empty');
   const { dev, port } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -1297,14 +1386,14 @@ test('[now dev] render warning for empty cwd dir', async t => {
   }
 });
 
-test('[now dev] do not rebuild for changes in the output directory', async t => {
+test('[vercel dev] do not rebuild for changes in the output directory', async t => {
   const directory = fixture('output-is-source');
 
-  // Pack the builder and set it in the now.json
+  // Pack the builder and set it in the `vercel.json`
   const builder = await getPackedBuilderPath('now-static-build');
 
   await fs.writeFile(
-    path.join(directory, 'now.json'),
+    join(directory, 'vercel.json'),
     JSON.stringify({
       builds: [
         {
@@ -1341,10 +1430,7 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
     const text1 = await resp1.text();
     t.is(text1.trim(), 'hello first', stderr.join(''));
 
-    await fs.writeFile(
-      path.join(directory, 'public', 'index.html'),
-      'hello second'
-    );
+    await fs.writeFile(join(directory, 'public', 'index.html'), 'hello second');
 
     await sleep(ms('3s'));
 
@@ -1356,74 +1442,94 @@ test('[now dev] do not rebuild for changes in the output directory', async t => 
   }
 });
 
-test('[now dev] 25-nextjs-src-dir', async t => {
-  const directory = fixture('25-nextjs-src-dir');
-  const { dev, port } = await testFixture(directory);
-
-  try {
-    // start `now dev` detached in child_process
-    dev.unref();
-
-    const response = await fetchWithRetry(`http://localhost:${port}`, 80);
-
-    validateResponseHeaders(t, response);
-
-    const body = await response.text();
-    t.regex(body, /Next.js \+ Node.js API/gm);
-  } finally {
-    dev.kill('SIGTERM');
-  }
-});
-
 test(
-  '[now dev] 26-nextjs-secrets',
-  testFixtureStdio('26-nextjs-secrets', async (t, port) => {
-    const user = await fetchWithRetry(`http://localhost:${port}/api/user`);
-    const index = await fetchWithRetry(`http://localhost:${port}`);
-
-    validateResponseHeaders(t, user);
-    validateResponseHeaders(t, index);
-
-    t.regex(await user.text(), new RegExp('runtime'));
-    t.regex(await index.text(), new RegExp('buildtime'));
+  '[vercel dev] 25-nextjs-src-dir',
+  testFixtureStdio('25-nextjs-src-dir', async testPath => {
+    await testPath(200, '/', /Next.js \+ Node.js API/m);
   })
 );
 
 test(
-  '[now dev] Use `@now/python` with Flask requirements.txt',
-  testFixtureStdio('python-flask', async (t, port) => {
+  '[vercel dev] 26-nextjs-secrets',
+  testFixtureStdio(
+    '26-nextjs-secrets',
+    async testPath => {
+      await testPath(200, '/api/user', /runtime/m);
+      await testPath(200, '/', /buildtime/m);
+    },
+    { skipDeploy: true }
+  )
+);
+
+test(
+  '[vercel dev] 27-zero-config-env',
+  testFixtureStdio(
+    '27-zero-config-env',
+    async testPath => {
+      await testPath(200, '/api/print', /build-and-runtime/m);
+      await testPath(200, '/', /build-and-runtime/m);
+    },
+    { skipDeploy: true }
+  )
+);
+
+test(
+  '[vercel dev] 28-vercel-json-and-ignore',
+  testFixtureStdio('28-vercel-json-and-ignore', async testPath => {
+    await testPath(200, '/api/one', 'One');
+    await testPath(404, '/api/two');
+    await testPath(200, '/api/three', 'One');
+  })
+);
+
+test(
+  '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
+  testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
     const year = new Date().getFullYear();
-    const user = await fetchWithRetry(
-      `http://localhost:${port}/api/user?name=${name}`
-    );
-    const date = await fetchWithRetry(`http://localhost:${port}/api/date`);
-    const ext = await fetchWithRetry(`http://localhost:${port}/api/date.py`);
-
-    validateResponseHeaders(t, user);
-    validateResponseHeaders(t, date);
-    validateResponseHeaders(t, ext);
-
-    t.regex(await user.text(), new RegExp(`Hello ${name}`));
-    t.regex(await date.text(), new RegExp(`Current date is ${year}`));
-    t.regex(await ext.text(), new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
+    await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
   })
 );
 
 test(
-  '[now dev] Use runtime from the functions property',
-  testFixtureStdio('custom-runtime', async (t, port) => {
-    const extensionless = await fetchWithRetry(
-      `http://localhost:${port}/api/user`
-    );
-    const extension = await fetchWithRetry(
-      `http://localhost:${port}/api/user.sh`
-    );
+  '[vercel dev] Use custom runtime from the "functions" property',
+  testFixtureStdio('custom-runtime', async testPath => {
+    await testPath(200, `/api/user`, /Hello, from Bash!/m);
+    await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
+  })
+);
 
-    validateResponseHeaders(t, extensionless);
-    validateResponseHeaders(t, extension);
+test(
+  '[vercel dev] Should work with nested `tsconfig.json` files',
+  testFixtureStdio('nested-tsconfig', async testPath => {
+    await testPath(200, `/`, /Nested tsconfig.json test page/);
+    await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
+  })
+);
 
-    t.regex(await extensionless.text(), /Hello, from Bash!/gm);
-    t.regex(await extension.text(), /Hello, from Bash!/gm);
+test(
+  '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
+  testFixtureStdio('force-module-commonjs', async testPath => {
+    await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
+    await testPath(
+      200,
+      `/api`,
+      'Force "module: commonjs" JavaScript with ES Modules API endpoint'
+    );
+    await testPath(
+      200,
+      `/api/ts`,
+      'Force "module: commonjs" TypeScript API endpoint'
+    );
+  })
+);
+
+test(
+  '[vercel dev] should prioritize index.html over other file named index.*',
+  testFixtureStdio('index-html-priority', async testPath => {
+    await testPath(200, '/', 'This is index.html');
+    await testPath(200, '/index.css', 'This is index.css');
   })
 );

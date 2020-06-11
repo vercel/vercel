@@ -181,6 +181,15 @@ test('convertRedirects', () => {
       source: '/hello/:world*',
       destination: '/something#:world*',
     },
+    {
+      source: '/external/:id',
+      destination:
+        'https://example.com/?utm_source=google.com#/guides/:id/page?dynamic=code',
+    },
+    {
+      source: '/optional/:id?',
+      destination: '/api/optional/:id?',
+    },
   ]);
 
   const expected = [
@@ -211,7 +220,7 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/projects(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
-      headers: { Location: '/projects.html?id=$1&action=$2' },
+      headers: { Location: '/projects.html' },
       status: 308,
     },
     {
@@ -236,12 +245,25 @@ test('convertRedirects', () => {
     },
     {
       src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
-      headers: { Location: '/api/user?id=$1' },
+      headers: { Location: '/api/user' },
       status: 308,
     },
     {
       src: '^\\/hello(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
       headers: { Location: '/something#$1' },
+      status: 308,
+    },
+    {
+      src: '^\\/external(?:\\/([^\\/]+?))$',
+      headers: {
+        Location:
+          'https://example.com/?utm_source=google.com#/guides/$1/page?dynamic=code',
+      },
+      status: 308,
+    },
+    {
+      src: '^\\/optional(?:\\/([^\\/]+?))?$',
+      headers: { Location: '/api/optional/$1' },
       status: 308,
     },
   ];
@@ -261,6 +283,8 @@ test('convertRedirects', () => {
     ['/feedback/another'],
     ['/catchme/id-1', '/catchme/id/2'],
     ['/hello/world', '/hello/another/world'],
+    ['/external/1', '/external/2'],
+    ['/optional', '/optional/1'],
   ];
 
   const mustNotMatch = [
@@ -276,6 +300,8 @@ test('convertRedirects', () => {
     ['/feedback/general'],
     ['/catchm', '/random'],
     ['/not-this-one', '/helloo'],
+    ['/externalnope', '/externally'],
+    ['/optionalnope', '/optionally'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -321,6 +347,9 @@ test('convertRewrites', () => {
       destination: '/another-catch/:hello+',
     },
     { source: '/catchme/:id*', destination: '/api/user' },
+    { source: '/:path', destination: '/test?path=:path' },
+    { source: '/:path/:two', destination: '/test?path=:path' },
+    { source: '/(.*)-:id(\\d+).html', destination: '/blog/:id' },
   ]);
 
   const expected = [
@@ -386,6 +415,17 @@ test('convertRewrites', () => {
       dest: '/api/user?id=$1',
       check: true,
     },
+    {
+      src: '^(?:\\/([^\\/]+?))$',
+      dest: '/test?path=$1',
+      check: true,
+    },
+    {
+      check: true,
+      dest: '/test?path=$1&two=$2',
+      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+    },
+    { check: true, dest: '/blog/$2?id=$2', src: '^(?:\\/(.*))-(\\d+)\\.html$' },
   ];
 
   deepEqual(actual, expected);
@@ -404,6 +444,9 @@ test('convertRewrites', () => {
     ['/catchall/first/', '/catchall/first/second/'],
     ['/another-catch/first/', '/another-catch/first/second/'],
     ['/catchme/id-1', '/catchme/id/2'],
+    ['/first', '/another'],
+    ['/first/second', '/one/two'],
+    ['/hello/post-123.html', '/post-123.html'],
   ];
 
   const mustNotMatch = [
@@ -420,6 +463,9 @@ test('convertRewrites', () => {
     ['/random-catch/'],
     ['/another-catch/'],
     ['/catchm', '/random'],
+    ['/another/one'],
+    ['/not', '/these'],
+    ['/hello/post.html'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

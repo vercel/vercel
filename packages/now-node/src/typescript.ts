@@ -1,6 +1,7 @@
 import { relative, basename, resolve, dirname } from 'path';
 import _ts from 'typescript';
-import { NowBuildError } from '@now/build-utils';
+import buildUtils from './build-utils';
+const { NowBuildError } = buildUtils;
 
 /*
  * Fork of TS-Node - https://github.com/TypeStrong/ts-node
@@ -156,12 +157,12 @@ export function register(opts: Options = {}): Register {
       paths: [options.project || cwd, nowNodeBase],
     });
   } catch (e) {
-    compiler = require.resolve(eval('"./typescript"'));
+    compiler = require.resolve(eval('"typescript"'));
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require(compiler);
   if (compiler.startsWith(nowNodeBase)) {
-    console.log('Using TypeScript ' + ts.version + ' (now internal)');
+    console.log('Using TypeScript ' + ts.version + ' (no local tsconfig.json)');
   } else {
     console.log('Using TypeScript ' + ts.version + ' (local user-provided)');
   }
@@ -182,7 +183,7 @@ export function register(opts: Options = {}): Register {
 
   function createTSError(diagnostics: ReadonlyArray<_ts.Diagnostic>) {
     const message = formatDiagnostics(diagnostics, diagnosticHost);
-    return new NowBuildError({ code: 'NOW_NODE_TYPESCRIPT_ERROR', message });
+    return new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
   }
 
   function reportTSError(

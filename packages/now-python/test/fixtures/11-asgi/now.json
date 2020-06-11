@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "index.py",
-      "use": "@now/python"
+      "use": "@vercel/python"
     }
   ],
   "probes": [{ "path": "/", "mustContain": "asgi:RANDOMNESS_PLACEHOLDER" }]

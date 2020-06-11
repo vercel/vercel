@@ -3,7 +3,7 @@ import chalk from 'chalk';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors';
+import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
@@ -14,6 +14,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
+import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--ca': string;
@@ -80,7 +81,9 @@ export default async function issue(
       );
       output.print(
         `  ${chalk.cyan(
-          `now certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>`
+          getCommandName(
+            'certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>'
+          )
         )}\n`
       );
       return 1;
@@ -107,7 +110,9 @@ export default async function issue(
     output.error(
       `Invalid number of arguments to create a custom certificate entry. Usage:`
     );
-    output.print(`  ${chalk.cyan(`now certs issue <cn>[, <cn>]`)}\n`);
+    output.print(
+      `  ${chalk.cyan(getCommandName('certs issue <cn>[, <cn>]'))}\n`
+    );
     return 1;
   }
 
@@ -189,7 +194,9 @@ async function runStartOrder(
     output.print(
       `  There are no pending challenges. Finish the issuance by running: \n`
     );
-    output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
+    output.print(
+      `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`
+    );
     return 0;
   }
 
@@ -220,7 +227,9 @@ async function runStartOrder(
   output.print(`${header}\n`);
   process.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
-  output.print(`  ${chalk.cyan(`now certs issue ${cns.join(' ')}`)}\n`);
+  output.print(
+    `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`
+  );
   output.print('  Read more: https://err.sh/now/solve-challenges-manually\n');
   return 0;
 }

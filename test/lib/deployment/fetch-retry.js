@@ -1,17 +1,17 @@
 const fetch = require('node-fetch');
 const retryBailByDefault = require('./retry-bail-by-default.js');
 
-async function fetchRetry (...args) {
+async function fetchRetry(...args) {
   return await retryBailByDefault(
-    async (canRetry) => {
+    async canRetry => {
       try {
         return await fetch(...args);
       } catch (error) {
         if (error.code === 'ENOTFOUND') {
-          // getaddrinfo ENOTFOUND api.zeit.co like some transient dns issue
+          // getaddrinfo ENOTFOUND api.vercel.com like some transient dns issue
           throw canRetry(error);
         } else if (error.code === 'ETIMEDOUT') {
-          // request to https://api-gru1.zeit.co/v3/now/deployments/dpl_FBWWhpQomjgwjJLu396snLrGZYCm failed, reason:
+          // request to https://api-gru1.vercel.com/v3/now/deployments/dpl_FBWWhpQomjgwjJLu396snLrGZYCm failed, reason:
           // connect ETIMEDOUT 18.228.143.224:443
           throw canRetry(error);
         }

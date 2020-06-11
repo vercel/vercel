@@ -27,3 +27,5 @@ jobs:
       run: yarn publish-from-github
       env:
         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}

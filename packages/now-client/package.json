@@ -1,22 +1,22 @@
 {
-  "name": "now-client",
-  "version": "8.0.0-canary.2",
+  "name": "@vercel/client",
+  "version": "8.0.2-canary.3",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
-  "homepage": "https://zeit.co",
+  "homepage": "https://vercel.com",
   "license": "MIT",
   "files": [
     "dist"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-client"
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --verbose --forceExit",
-    "test-lint": "eslint . --ext .js,.ts --ignore-path ../../.eslintignore"
+    "test-integration-once": "jest --verbose --runInBand --bail tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
+    "test-unit": "jest --verbose --runInBand --bail tests/unit.*test.*"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",
@@ -27,7 +27,7 @@
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@zeit/ncc": "0.18.5",
-    "typescript": "3.5.1"
+    "typescript": "3.9.3"
   },
   "jest": {
     "preset": "ts-jest",
@@ -45,6 +45,7 @@
     "ignore": "4.0.6",
     "ms": "2.1.2",
     "node-fetch": "2.6.0",
+    "querystring": "^0.2.0",
     "recursive-readdir": "2.2.2",
     "sleep-promise": "8.0.1"
   }
