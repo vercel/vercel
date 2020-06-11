@@ -386,7 +386,9 @@ test('[vercel dev] prints `npm install` errors', async t => {
   t.truthy(
     result.stderr.includes('Failed to install `vercel dev` dependencies')
   );
-  t.truthy(result.stderr.includes('https://vercel.link/npm-install-error'));
+  t.truthy(
+    result.stderr.includes('https://vercel.link/npm-install-failed-dev')
+  );
 });
 
 test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
