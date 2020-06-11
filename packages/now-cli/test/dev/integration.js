@@ -242,19 +242,22 @@ function testFixtureStdio(
   fn,
   { expectedCode = 0, skipDeploy = process.env.__VERCEL_SKIP_DEV_CMD } = {}
 ) {
-  if (process.env.CI && process.platform === 'darwin') {
-    // See https://git.io/Jf9DN for more info
-    console.log('Skipping deploy since GH Actions has macOS concurrency limit');
-    skipDeploy = true;
-  }
-
   return async t => {
+    if (process.env.CI && process.platform === 'darwin') {
+      // See https://git.io/Jf9DN for more info
+      console.log(
+        `Skipping deploy for ${directory} since GH Actions has macOS concurrency limit`
+      );
+      skipDeploy = true;
+    }
+
     const cwd = fixtureAbsolute(directory);
-    const token = await fetchTokenWithRetry();
+    let token;
     let deploymentUrl;
 
     // Deploy fixture and link project
     if (!skipDeploy) {
+      token = await fetchTokenWithRetry();
       const project = join(cwd, '.vercel', 'project.json');
       if (await fs.exists(project)) {
         await fs.unlink(project);
@@ -292,7 +295,12 @@ function testFixtureStdio(
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
-      dev = execa(binaryPath, ['dev', '-l', port, '-t', token, '--debug'], {
+
+      const args = skipDeploy
+        ? ['dev', '-l', port, '--debug']
+        : ['dev', '-l', port, '--debug', '-t', token];
+
+      dev = execa(binaryPath, args, {
         cwd,
         env,
       });
