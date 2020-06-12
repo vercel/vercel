@@ -23,11 +23,11 @@ let processCounter = 0;
 const processList = new Map();
 
 function execa(...args) {
-  if (args[0] === binaryPath) {
-    console.log('vc ' + args.slice(1).join(' '));
-  } else {
-    console.log(args.join(' '));
+  let [cmd, options] = args;
+  if (cmd === binaryPath) {
+    cmd = 'vc';
   }
+  console.log(`${cmd} ${options.slice(1).join(' ')}`);
   const procId = ++processCounter;
   const child = _execa(...args);
 
