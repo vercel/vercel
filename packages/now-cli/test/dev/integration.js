@@ -1091,7 +1091,7 @@ test(
 );
 
 test('[vercel dev] 08-hugo', async t => {
-  if (process.platform === 'darwin') {
+  if (process.platform === 'linux') {
     // Update PATH to find the Hugo executable installed via GH Actions
     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
       process.env.PATH
