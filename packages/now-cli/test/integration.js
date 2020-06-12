@@ -31,6 +31,8 @@ function execa(file, args, options) {
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
+const example = name =>
+  path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
@@ -2935,4 +2937,37 @@ test('`vc --debug project ls` should output the projects listing', async t => {
     stdout.includes('> Projects found under'),
     formatOutput({ stderr, stdout })
   );
+});
+
+test('deploy gatsby twice and print cached directories', async t => {
+  const directory = example('gatsby');
+  const packageJsonPath = path.join(directory, 'package.json');
+  const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
+  const pkg = JSON.parse(packageJsonOriginal);
+
+  async function tryDeploy(cwd) {
+    await execa(binaryPath, [...defaultArgs, '--public', '--confirm'], {
+      cwd,
+      stdio: 'inherit',
+      reject: true,
+    });
+
+    t.true(true);
+  }
+
+  // Deploy once to populate the cache
+  await tryDeploy(directory);
+
+  // Wait because the cache is not available right away
+  // See https://codeburst.io/quick-explanation-of-the-s3-consistency-model-6c9f325e3f82
+  await sleep(60000);
+
+  // Update build script to ensure cached files were restored in the next deploy
+  pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
+  await writeFile(packageJsonPath, JSON.stringify(pkg));
+  try {
+    await tryDeploy(directory);
+  } finally {
+    await writeFile(packageJsonPath, packageJsonOriginal);
+  }
 });
