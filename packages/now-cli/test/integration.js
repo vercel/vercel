@@ -243,8 +243,10 @@ test.after.always(async () => {
     loginApiServer.close();
   }
 
-  // Make sure the token gets revoked
-  await execa(binaryPath, ['logout', ...defaultArgs]);
+  // Make sure the token gets revoked unless it's passed in via environment
+  if (!process.env.VERCEL_TOKEN) {
+    await execa(binaryPath, ['logout', ...defaultArgs]);
+  }
 
   if (tmpDir) {
     // Remove config directory entirely
