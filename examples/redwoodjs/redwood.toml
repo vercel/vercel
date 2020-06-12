@@ -4,4 +4,4 @@
 [api]
   port = 8911
 [browser]
-  open = true
+  open = false

@@ -67,7 +67,7 @@
       "every": [
         {
           "path": "package.json",
-          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@redwoodjs\/core\":\\s*\".+?\"[^}]*}"
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@redwoodjs\\/core\":\\s*\".+?\"[^}]*}"
         }
       ]
     },
