@@ -1503,16 +1503,15 @@ export default class DevServer {
     if (!match) {
       // If the dev command is started, then proxy to it
       if (this.devProcessPort) {
-        debug('Proxying to frontend dev server');
+        const upstream = `http://localhost:${this.devProcessPort}`;
+        debug(`Proxying to frontend dev server: ${upstream}`);
         this.setResponseHeaders(res, nowRequestId);
-        return proxyPass(
-          req,
-          res,
-          `http://localhost:${this.devProcessPort}`,
-          this,
-          nowRequestId,
-          false
-        );
+        const origUrl = url.parse(req.url || '/', true);
+        //delete origUrl.search;
+        origUrl.pathname = dest;
+        Object.assign(origUrl.query, uri_args);
+        req.url = url.format(origUrl);
+        return proxyPass(req, res, upstream, this, nowRequestId, false);
       }
 
       if (
