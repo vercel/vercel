@@ -1,10 +1,9 @@
 import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
-import readdir from 'recursive-readdir';
-import { relative, join, isAbsolute, basename } from 'path';
+import { relative, isAbsolute, basename } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
-import { getVercelIgnore, createDebug, parseNowJSON } from './utils';
+import { buildFileTree, createDebug, parseVercelConfig } from './utils';
 import { DeploymentError } from './errors';
 import {
   NowConfig,
@@ -81,43 +80,29 @@ export default function buildCreateDeployment(version: number) {
       rootFiles = [path];
     }
 
-    // Get .nowignore
-    let { ig, ignores } = await getVercelIgnore(path);
-
-    debug(`Found ${ig.ignores.length} rules in .nowignore`);
-
-    let fileList: string[];
-
-    debug('Building file tree...');
-
-    if (clientOptions.isDirectory && !Array.isArray(path)) {
-      // Directory path
-      const dirContents = await readdir(path, ignores);
-      const relativeFileList = dirContents.map(filePath =>
-        relative(process.cwd(), filePath)
-      );
-      fileList = ig
-        .filter(relativeFileList)
-        .map((relativePath: string) => join(process.cwd(), relativePath));
-
-      debug(`Read ${fileList.length} files in the specified directory`);
-    } else if (Array.isArray(path)) {
-      // Array of file paths
-      fileList = path;
-      debug(`Assigned ${fileList.length} files provided explicitly`);
-    } else {
-      // Single file
-      fileList = [path];
-      debug(`Deploying the provided path as single file`);
-    }
+    let fileList = await buildFileTree(path, clientOptions.isDirectory, debug);
 
     let configPath: string | undefined;
     if (!nowConfig) {
       // If the user did not provide a config file, use the one in the root directory.
-      configPath = fileList
-        .map(f => relative(cwd, f))
-        .find(f => f === 'vercel.json' || f === 'now.json');
-      nowConfig = await parseNowJSON(configPath);
+      const relativePaths = fileList.map(f => relative(cwd, f));
+      const hasVercelConfig = relativePaths.includes('vercel.json');
+      const hasNowConfig = relativePaths.includes('now.json');
+
+      if (hasVercelConfig) {
+        if (hasNowConfig) {
+          throw new DeploymentError({
+            code: 'conflicting_config',
+            message:
+              'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
+          });
+        }
+        configPath = 'vercel.json';
+      } else if (hasNowConfig) {
+        configPath = 'now.json';
+      }
+
+      nowConfig = await parseVercelConfig(configPath);
     }
 
     if (

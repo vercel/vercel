@@ -114,7 +114,7 @@ export interface BuildOptions {
   config: Config;
 
   /**
-   * Metadata related to the invoker of the builder, used by `now dev`.
+   * Metadata related to the invoker of the builder, used by `vercel dev`.
    * Builders may use the properties on this object to change behavior based
    * on the build environment.
    */
@@ -188,6 +188,11 @@ export interface ShouldServeOptions {
   config: Config;
 }
 
+/**
+ * `startDevServer()` is given the same parameters as `build()`.
+ */
+export type StartDevServerOptions = BuildOptions;
+
 export interface StartDevServerSuccess {
   /**
    * Port number where the dev server can be connected to, assumed to be running
@@ -196,7 +201,7 @@ export interface StartDevServerSuccess {
   port: number;
 
   /**
-   * Process ID number of the dev server. Useful for the `now dev` server to
+   * Process ID number of the dev server. Useful for the `vercel dev` server to
    * shut down the dev server once an HTTP request has been fulfilled.
    */
   pid: number;
@@ -213,7 +218,7 @@ export type StartDevServerResult = StartDevServerSuccess | null;
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
 // eslint-disable-next-line @typescript-eslint/no-namespace
-namespace PackageJson {
+export namespace PackageJson {
   /**
    * An author or contributor
    */

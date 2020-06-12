@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs-extra');
-const assert = require('assert');
+const assert = require('assert').strict;
 const { createZip } = require('../dist/lambda');
 const { glob, spawnAsync, download } = require('../');
 const { getSupportedNodeVersion } = require('../dist/fs/node-version');
@@ -9,6 +9,20 @@ const {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
 } = require('../dist');
+
+async function expectBuilderError(promise, pattern) {
+  let result;
+  try {
+    result = await promise;
+  } catch (error) {
+    result = error;
+  }
+  assert('message' in result, `Expected error message but found ${result}`);
+  assert(
+    pattern.test(result.message),
+    `Expected ${pattern} but found "${result.message}"`
+  );
+}
 
 it('should re-create symlinks properly', async () => {
   if (process.platform === 'win32') {
@@ -72,6 +86,16 @@ it('should only match supported node versions', async () => {
   expect(getSupportedNodeVersion('999.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('foo', false)).rejects.toThrow();
 
+  const autoMessage = /This project is using an invalid version of Node.js and must be changed/;
+  await expectBuilderError(
+    getSupportedNodeVersion('8.11.x', true),
+    autoMessage
+  );
+  await expectBuilderError(getSupportedNodeVersion('6.x', true), autoMessage);
+  await expectBuilderError(getSupportedNodeVersion('999.x', true), autoMessage);
+  await expectBuilderError(getSupportedNodeVersion('foo', true), autoMessage);
+  await expectBuilderError(getSupportedNodeVersion('=> 10', true), autoMessage);
+
   expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
     'major',
     10
@@ -80,10 +104,21 @@ it('should only match supported node versions', async () => {
     'major',
     12
   );
-  expect(getSupportedNodeVersion('8.11.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('6.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('999.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('foo', true)).rejects.toThrow();
+  const foundMessage = /Found `engines` in `package\.json` with an invalid Node\.js version range/;
+  await expectBuilderError(
+    getSupportedNodeVersion('8.11.x', false),
+    foundMessage
+  );
+  await expectBuilderError(getSupportedNodeVersion('6.x', false), foundMessage);
+  await expectBuilderError(
+    getSupportedNodeVersion('999.x', false),
+    foundMessage
+  );
+  await expectBuilderError(getSupportedNodeVersion('foo', false), foundMessage);
+  await expectBuilderError(
+    getSupportedNodeVersion('=> 10', false),
+    foundMessage
+  );
 });
 
 it('should match all semver ranges', async () => {
@@ -104,7 +139,7 @@ it('should match all semver ranges', async () => {
   expect(await getSupportedNodeVersion('^10.5.0')).toHaveProperty('major', 10);
 });
 
-it('should ignore node version in now dev getNodeVersion()', async () => {
+it('should ignore node version in vercel dev getNodeVersion()', async () => {
   expect(
     await getNodeVersion(
       '/tmp',

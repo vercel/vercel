@@ -169,7 +169,7 @@ export async function getNodeVersion(
   meta?: Meta
 ): Promise<NodeVersion> {
   if (meta && meta.isDev) {
-    // Use the system-installed version of `node` in PATH for `now dev`
+    // Use the system-installed version of `node` in PATH for `vercel dev`
     const latest = getLatestNodeVersion();
     return { ...latest, runtime: 'nodejs' };
   }
@@ -291,7 +291,7 @@ export async function runNpmInstall(
   } else {
     opts.prettyCommand = 'yarn install';
     command = 'yarn';
-    commandArgs = args.concat(['install', '--ignore-engines']);
+    commandArgs = ['install', ...args];
   }
 
   if (process.env.NPM_ONLY_PRODUCTION) {
@@ -375,7 +375,7 @@ export async function runPackageJsonScript(
   } else {
     const prettyCommand = `yarn run ${scriptName}`;
     console.log(`Running "${prettyCommand}"`);
-    await spawnAsync('yarn', ['--ignore-engines', 'run', scriptName], {
+    await spawnAsync('yarn', ['run', scriptName], {
       ...spawnOpts,
       cwd: destPath,
       prettyCommand,

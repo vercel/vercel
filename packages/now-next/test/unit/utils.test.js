@@ -187,8 +187,8 @@ describe('normalizePackageJson', () => {
     });
   });
 
-  // https://github.com/zeit/next.js/issues/5700
-  it('should normalize user report zeit/next.js#5700 correctly', () => {
+  // https://github.com/vercel/next.js/issues/5700
+  it('should normalize user report vercel/next.js#5700 correctly', () => {
     const defaultPackage = {
       version: '1.0.0',
       scripts: {

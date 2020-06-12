@@ -2,11 +2,16 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import { format } from 'util';
 import { Console } from 'console';
+import renderLink from './link';
 import wait from './wait';
 
 export type Output = ReturnType<typeof createOutput>;
 
 export default function createOutput({ debug: debugEnabled = false } = {}) {
+  function isDebugEnabled() {
+    return debugEnabled;
+  }
+
   function print(str: string) {
     process.stderr.write(str);
   }
@@ -37,7 +42,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       boxen(
         chalk.bold.yellow('WARN! ') +
           str +
-          (details ? `\nMore details: ${details}` : ''),
+          (details ? `\nMore details: ${renderLink(details)}` : ''),
         {
           padding: {
             top: 0,
@@ -60,14 +65,19 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
 
   function error(
     str: string,
-    slug: string | null = null,
-    link: string | null = null
+    slug?: string,
+    link?: string,
+    action = 'More details'
   ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
     const details = slug ? `https://err.sh/now/${slug}` : link;
     if (details) {
-      print(`More details: ${details}\n`);
+      print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }
+  }
+
+  function prettyError(err: Error & { link?: string; action?: string }) {
+    return error(err.message, undefined, err.link, err.action);
   }
 
   function ready(str: string) {
@@ -102,8 +112,6 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     return wait(message, delay);
   }
 
-  // This is pretty hacky, but since we control the version of Node.js
-  // being used because of `pkg` it's safe to do in this case.
   const c = {
     _times: new Map(),
     log(a: string, ...args: string[]) {
@@ -125,10 +133,12 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   }
 
   return {
+    isDebugEnabled,
     print,
     log,
     warn,
     error,
+    prettyError,
     ready,
     success,
     debug,

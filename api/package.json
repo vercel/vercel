@@ -2,7 +2,7 @@
   "name": "api",
   "private": true,
   "version": "0.0.0",
-  "description": "API for the zeit/now repo",
+  "description": "API for the vercel/vercel repo",
   "main": "index.js",
   "scripts": {
     "build": "yarn --cwd .. && node ../utils/run.js build all"

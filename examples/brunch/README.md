@@ -6,7 +6,7 @@ This directory is a brief example of a [Brunch](https://brunch.io/) site that ca
 
 Deploy your own Brunch project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/brunch)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/brunch)
 
 _Live Example: https://brunch.now-examples.now.sh_
 
@@ -20,8 +20,8 @@ $ brunch new project-name -s es6
 
 ### Deploying From Your Terminal
 
-You can deploy your new Brunch project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Brunch project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

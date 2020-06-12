@@ -38,7 +38,9 @@ const help = () => {
 
       ${chalk.cyan(`$ ${getPkgName()} dev --listen 8080`)}
 
-  ${chalk.gray('–')} Make the \`now dev\` server bind to localhost on port 5000
+  ${chalk.gray(
+    '–'
+  )} Make the \`vercel dev\` server bind to localhost on port 5000
 
       ${chalk.cyan(`$ ${getPkgName()} dev --listen 127.0.0.1:5000`)}
   `);
@@ -117,7 +119,7 @@ export default async function main(ctx: NowContext) {
   try {
     return await dev(ctx, argv, args, output);
   } catch (err) {
-    output.error(err.message);
+    output.prettyError(err);
     output.debug(stringifyError(err));
     return 1;
   }

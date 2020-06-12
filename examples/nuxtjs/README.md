@@ -6,7 +6,7 @@ This directory is a brief example of a [Nuxt.js](https://nuxtjs.org) app that ca
 
 Deploy your own Nuxt.js project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/nuxtjs)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/nuxtjs)
 
 _Live Example: https://nuxtjs.now-examples.now.sh_
 
@@ -22,8 +22,8 @@ $ npx create-nuxt-app my-app
 
 ### Deploying From Your Terminal
 
-You can deploy your new Nuxt.js project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Nuxt.js project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

@@ -345,8 +345,13 @@ export async function getRoutesManifest(
 
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new NowBuildError({
-      message: `A "routes-manifest.json" couldn't be found. Is the correct output directory configured? This setting does not need to be changed in most cases`,
-      link: 'https://err.sh/zeit/now/now-next-routes-manifest',
+      message:
+        `A "routes-manifest.json" couldn't be found. This is normally caused by a misconfiguration in your project.\n` +
+        'Please check the following, and reach out to support if you cannot resolve the problem:\n' +
+        '  1. If present, be sure your `build` script in "package.json" calls `next build`.' +
+        '  2. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Build Command" is not overridden, or that it calls `next build`.' +
+        '  3. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Output Directory" is not overridden. Note that `next export` does **not** require you change this setting, even if you customize the `next export` output directory.',
+      link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
       code: 'NEXT_NO_ROUTES_MANIFEST',
     });
   }
@@ -390,7 +395,7 @@ export async function getDynamicRoutes(
           .filter(({ page }) =>
             omittedRoutes ? !omittedRoutes.has(page) : true
           )
-          .map(({ page, regex, namedRegex, routeKeys }) => {
+          .map(({ page, namedRegex, regex, routeKeys }) => {
             return {
               src: namedRegex || regex,
               dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
@@ -462,7 +467,7 @@ export async function getDynamicRoutes(
 
   const routes: Source[] = [];
   pageMatchers.forEach(pageMatcher => {
-    // in `now dev` we don't need to prefix the destination
+    // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
       ? path.join('/', entryDirectory, pageMatcher.pageName)
       : pageMatcher.pageName;
@@ -525,23 +530,31 @@ const compressBuffer = (buf: Buffer): Promise<Buffer> => {
   });
 };
 
+export type PseudoLayerResult = {
+  pseudoLayer: PseudoLayer;
+  pseudoLayerBytes: number;
+};
+
 export async function createPseudoLayer(files: {
   [fileName: string]: FileFsRef;
-}): Promise<PseudoLayer> {
+}): Promise<PseudoLayerResult> {
   const pseudoLayer: PseudoLayer = {};
+  let pseudoLayerBytes = 0;
 
   for (const fileName of Object.keys(files)) {
     const file = files[fileName];
 
     if (isSymbolicLink(file.mode)) {
+      const symlinkTarget = await fs.readlink(file.fsPath);
       pseudoLayer[fileName] = {
         file,
         isSymlink: true,
-        symlinkTarget: await fs.readlink(file.fsPath),
+        symlinkTarget,
       };
     } else {
       const origBuffer = await streamToBuffer(file.toStream());
       const compBuffer = await compressBuffer(origBuffer);
+      pseudoLayerBytes += compBuffer.byteLength;
       pseudoLayer[fileName] = {
         compBuffer,
         isSymlink: false,
@@ -552,7 +565,7 @@ export async function createPseudoLayer(files: {
     }
   }
 
-  return pseudoLayer;
+  return { pseudoLayer, pseudoLayerBytes };
 }
 
 interface CreateLambdaFromPseudoLayersOptions {

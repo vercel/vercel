@@ -1,4 +1,4 @@
-![Eleventy Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/eleventy.svg)
+![Eleventy Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/eleventy.svg)
 
 # Eleventy Example
 
@@ -8,7 +8,7 @@ This directory is a brief example of a [Eleventy](https://www.11ty.io/) site tha
 
 Deploy your own Eleventy project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/eleventy)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/eleventy)
 
 _Live Example: https://eleventy.now-examples.now.sh_
 
@@ -22,8 +22,8 @@ $ npx degit 11ty/eleventy-base-blog my-11ty-project
 
 ### Deploying From Your Terminal
 
-You can deploy your new Eleventy project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Eleventy project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

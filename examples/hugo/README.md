@@ -6,7 +6,7 @@ This directory is a brief example of a [Hugo](https://gohugo.io/) app that can b
 
 Deploy your own Hugo project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/hugo)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/hugo)
 
 _Live Example: https://hugo.now-examples.now.sh_
 
@@ -20,8 +20,8 @@ $ hugo new site project-name
 
 ### Deploying From Your Terminal
 
-You can deploy your new Hugo project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Hugo project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

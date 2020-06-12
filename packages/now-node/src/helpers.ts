@@ -81,6 +81,7 @@ function setCharset(type: string, charset: string) {
   return format(parsed);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createETag(body: any, encoding: 'utf8' | undefined) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const etag = require('etag');
@@ -88,6 +89,7 @@ function createETag(body: any, encoding: 'utf8' | undefined) {
   return etag(buf, { weak: true });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function send(req: NowRequest, res: NowResponse, body: any): NowResponse {
   let chunk: unknown = body;
   let encoding: 'utf8' | undefined;
@@ -185,6 +187,7 @@ function send(req: NowRequest, res: NowResponse, body: any): NowResponse {
   return res;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function json(req: NowRequest, res: NowResponse, jsonBody: any): NowResponse {
   const body = JSON.stringify(jsonBody);
 
@@ -234,7 +237,7 @@ function setLazyProp<T>(req: NowRequest, prop: string, getter: () => T) {
 }
 
 export function createServerWithHelpers(
-  listener: (req: NowRequest, res: NowResponse) => void | Promise<void>,
+  handler: (req: NowRequest, res: NowResponse) => void | Promise<void>,
   bridge: Bridge
 ) {
   const server = new Server(async (_req, _res) => {
@@ -261,7 +264,7 @@ export function createServerWithHelpers(
       res.send = body => send(req, res, body);
       res.json = jsonBody => json(req, res, jsonBody);
 
-      await listener(req, res);
+      await handler(req, res);
     } catch (err) {
       if (err instanceof ApiError) {
         sendError(res, err.statusCode, err.message);

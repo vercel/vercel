@@ -4,8 +4,8 @@ contact_links:
     url: https://vercel.com/support/request
     about: Report a bug using the Vercel support form
   - name: Feature Request
-    url: https://github.com/zeit/now/discussions/new
-    about: Request a feature to be added to the platform
+    url: https://github.com/vercel/vercel/discussions/new?category_id=66161
+    about: Share ideas for new features
   - name: Ask a Question
-    url: https://github.com/zeit/now/discussions/new
-    about: Ask questions and discuss with other community members
+    url: https://github.com/vercel/vercel/discussions/new?category_id=66160
+    about: Ask the community for help

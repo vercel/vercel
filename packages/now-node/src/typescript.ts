@@ -157,12 +157,12 @@ export function register(opts: Options = {}): Register {
       paths: [options.project || cwd, nowNodeBase],
     });
   } catch (e) {
-    compiler = require.resolve(eval('"./typescript"'));
+    compiler = require.resolve(eval('"typescript"'));
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require(compiler);
   if (compiler.startsWith(nowNodeBase)) {
-    console.log('Using TypeScript ' + ts.version + ' (now internal)');
+    console.log('Using TypeScript ' + ts.version + ' (no local tsconfig.json)');
   } else {
     console.log('Using TypeScript ' + ts.version + ' (local user-provided)');
   }

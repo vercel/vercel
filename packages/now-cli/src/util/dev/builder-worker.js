@@ -1,10 +1,10 @@
 /**
- * This file gets copied out of the `pkg` snapshot filesystem into the `now dev`
+ * This file gets copied out of the `pkg` snapshot filesystem into the `vc dev`
  * builder cache directory, so it's very important that it does not rely on any
  * modules from npm that would not be available in that directory (so basically,
- * only Now builders and `@now/build-utils`.
+ * only Vercel Runtimes and `@vercel/build-utils`.
  */
-const { FileFsRef } = require('@now/build-utils');
+const { FileFsRef } = require('@vercel/build-utils');
 
 process.on('unhandledRejection', err => {
   console.error('Exiting builder due to build error:');
@@ -24,21 +24,21 @@ function onMessage(message) {
 }
 
 async function processMessage(message) {
-  const { builderName, buildParams } = message;
-  const builder = require(builderName);
+  const { requirePath, buildOptions } = message;
+  const builder = require(requirePath);
 
   // Convert the `files` to back into `FileFsRef` instances
-  for (const name of Object.keys(buildParams.files)) {
+  for (const name of Object.keys(buildOptions.files)) {
     const ref = Object.assign(
       Object.create(FileFsRef.prototype),
-      buildParams.files[name]
+      buildOptions.files[name]
     );
-    buildParams.files[name] = ref;
+    buildOptions.files[name] = ref;
   }
 
-  const result = await builder.build(buildParams);
+  const result = await builder.build(buildOptions);
 
-  // `@now/next` sets this, but it causes "Converting circular
+  // `@vercel/next` sets this, but it causes "Converting circular
   // structure to JSON" errors, so delete the property...
   delete result.childProcesses;
 

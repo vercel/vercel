@@ -31,7 +31,7 @@ function Index() {
       </h2>
       <p>
         <a
-          href="https://github.com/zeit/now-examples/blob/master/gatsby-functions"
+          href="https://github.com/vercel/vercel/blob/master/gatsby"
           target="_blank"
           rel="noreferrer noopener"
         >

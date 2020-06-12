@@ -6,7 +6,7 @@ This directory is a brief example of a [Middleman](https://middlemanapp.com/) si
 
 Deploy your own Middleman project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/zeit/now/tree/master/examples/middleman)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/middleman)
 
 _Live Example: https://middleman.now-examples.now.sh_
 
@@ -20,8 +20,8 @@ $ middleman init project-name
 
 ### Deploying From Your Terminal
 
-You can deploy your new Middleman project with a single command from your terminal using [Now CLI](https://vercel.com/download):
+You can deploy your new Middleman project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
 
 ```shell
-$ now
+$ vercel
 ```

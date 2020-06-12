@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { metrics, shouldCollectMetrics } from '../metrics';
 import { APIError } from '../errors-ts';
+import renderLink from './link';
 
 const metric = metrics();
 
@@ -9,10 +10,9 @@ export default function error(...input: string[] | [APIError]) {
   if (typeof input[0] === 'object') {
     const { slug, message, link } = input[0];
     messages = [message];
-    if (slug) {
-      messages.push(`> More details: https://err.sh/now/${slug}`);
-    } else if (link) {
-      messages.push(`> More details: ${link}`);
+    const details = slug ? `https://err.sh/now/${slug}` : link;
+    if (details) {
+      messages.push(`${chalk.bold('More details')}: ${renderLink(details)}`);
     }
   }
 
