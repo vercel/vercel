@@ -1213,7 +1213,6 @@ test(
     '18-marko',
     async testPath => {
       await testPath(200, '/', /Marko Starter/m);
-      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1225,7 +1224,6 @@ test(
     '19-mithril',
     async testPath => {
       await testPath(200, '/', /Mithril on Vercel/m);
-      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1237,7 +1235,6 @@ test(
     '20-riot',
     async testPath => {
       await testPath(200, '/', /Riot on Vercel/m);
-      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1249,7 +1246,6 @@ test(
     '21-charge',
     async testPath => {
       await testPath(200, '/', /Welcome to my new Charge site/m);
-      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1261,7 +1257,6 @@ test(
     '22-brunch',
     async testPath => {
       await testPath(200, '/', /Bon Appétit./m);
-      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1273,7 +1268,6 @@ test(
     '23-docusaurus',
     async testPath => {
       await testPath(200, '/', /My Site/m);
-      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1286,7 +1280,6 @@ test('[vercel dev] 24-ember', async t => {
     '24-ember',
     async testPath => {
       await testPath(200, '/', /HelloWorld/m);
-      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   );
