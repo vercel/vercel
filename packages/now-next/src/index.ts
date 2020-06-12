@@ -902,14 +902,16 @@ export const build = async ({
         }
       }
 
+      // TODO: update TS types
+      const nftOptions: any = { base: workPath, processCwd: process.cwd() };
       const {
         fileList: apiFileList,
         reasons: apiReasons,
-      } = await nodeFileTrace(apiPages, { base: workPath });
+      } = await nodeFileTrace(apiPages, nftOptions);
 
       const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
         nonApiPages,
-        { base: workPath }
+        nftOptions
       );
 
       debug(`node-file-trace result for pages: ${fileList}`);
