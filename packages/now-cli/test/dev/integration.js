@@ -23,6 +23,11 @@ let processCounter = 0;
 const processList = new Map();
 
 function execa(...args) {
+  if (args[0] === binaryPath) {
+    console.log('vc ' + args.slice(1).join(' '));
+  } else {
+    console.log(args.join(' '));
+  }
   const procId = ++processCounter;
   const child = _execa(...args);
 
@@ -291,14 +296,16 @@ function testFixtureStdio(
 
     try {
       let printedOutput = false;
+      const env = { ...process.env };
+      const args = ['dev', '-l', port, '--debug'];
 
-      const env = skipDeploy
-        ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
-        : process.env;
-
-      const args = skipDeploy
-        ? ['dev', '-l', port, '--debug']
-        : ['dev', '-l', port, '--debug', '-t', token];
+      if (skipDeploy) {
+        env.__VERCEL_SKIP_DEV_CMD = '1';
+        token = null;
+      } else {
+        args.push('-t');
+        args.push(token);
+      }
 
       dev = execa(binaryPath, args, {
         cwd,
