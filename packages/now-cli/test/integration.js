@@ -2953,7 +2953,7 @@ test('deploy gatsby twice and print cached directories', async t => {
     t.true(true);
   }
 
-  // Deploy once too populate the cache
+  // Deploy once to populate the cache
   await tryDeploy(directory);
 
   // Wait because the cache is not available right away
