@@ -1,4 +1,5 @@
 import ms from 'ms';
+import os from 'os';
 import fs from 'fs-extra';
 import test from 'ava';
 import { join, resolve, delimiter } from 'path';
@@ -523,6 +524,35 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
   } finally {
     await dev.kill('SIGTERM');
     await fs.writeJSON(configPath, originalConfig);
+  }
+});
+
+test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', async t => {
+  // The purpose of this test is to test that `@vercel/node` can properly
+  // resolve the default "typescript" module when the project doesn't include
+  // its own version. To properly test for this, a fixture needs to be created
+  // *outside* of the `vercel` repo, since otherwise the root-level
+  // "node_modules/typescript" is resolved as relative to the project, and
+  // not relative to `@vercel/node` which is what we are testing for here.
+  const dir = join(os.tmpdir(), 'vercel-node-typescript-resolve-test');
+  const apiDir = join(dir, 'api');
+  await fs.mkdirp(apiDir);
+  await fs.writeFile(
+    join(apiDir, 'hello.js'),
+    'export default (req, res) => { res.end("world"); }'
+  );
+
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/api/hello`);
+    const body = await res.text();
+    t.is(body, 'world');
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.remove(dir);
   }
 });
 
