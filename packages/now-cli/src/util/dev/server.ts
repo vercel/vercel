@@ -1507,7 +1507,7 @@ export default class DevServer {
         debug(`Proxying to frontend dev server: ${upstream}`);
         this.setResponseHeaders(res, nowRequestId);
         const origUrl = url.parse(req.url || '/', true);
-        //delete origUrl.search;
+        delete origUrl.search;
         origUrl.pathname = dest;
         Object.assign(origUrl.query, uri_args);
         req.url = url.format(origUrl);
