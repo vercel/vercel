@@ -1088,12 +1088,12 @@ test(
 test(
   '[vercel dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async testPath => {
-    await testPath(200, '/', /Gridsome on Vercel/m);
-    await testPath(200, '/about', /About us/m);
+    await testPath(200);
+    await testPath(200, '/about');
     await testPath(308, '/support', 'Redirecting to /about?ref=support (308)', {
       Location: '/about?ref=support',
     });
-    await testPath(404, '/nothing', /Custom Gridsome 404/);
+    await testPath(404, '/nothing');
   })
 );
 
