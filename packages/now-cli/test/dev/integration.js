@@ -1089,6 +1089,13 @@ test(
   '[vercel dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async testPath => {
     await testPath(200, '/');
+    await testPath(200, '/about');
+    await testPath(308, '/support', 'Redirecting to /about?ref=support (308)', {
+      Location: '/about?ref=support',
+    });
+    // Bug with gridsome's dev server: https://github.com/gridsome/gridsome/issues/831
+    // Works in prod only so leave out for now
+    // await testPath(404, '/nothing');
   })
 );
 
@@ -1096,6 +1103,9 @@ test(
   '[vercel dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async testPath => {
     await testPath(200, '/', /Hexo \+ Node.js API/m);
+    await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(200, '/contact.html', /Contact Us/m);
+    await testPath(200, '/support', /Contact Us/m);
   })
 );
 
@@ -1120,6 +1130,8 @@ test(
   testFixtureStdio('10-nextjs-node', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
     await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(200, '/contact', /Contact Page/);
+    await testPath(200, '/support', /Contact Page/);
     await testPath(404, '/nothing', /Custom Next 404/);
   })
 );
@@ -1130,6 +1142,7 @@ test(
     '12-polymer-node',
     async testPath => {
       await testPath(200, '/', /Polymer \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1141,6 +1154,7 @@ test(
     '13-preact-node',
     async testPath => {
       await testPath(200, '/', /Preact/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1152,6 +1166,7 @@ test(
     '14-svelte-node',
     async testPath => {
       await testPath(200, '/', /Svelte/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1163,6 +1178,7 @@ test(
     '16-vue-node',
     async testPath => {
       await testPath(200, '/', /Vue.js \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1174,6 +1190,7 @@ test(
     '17-vuepress-node',
     async testPath => {
       await testPath(200, '/', /VuePress \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
