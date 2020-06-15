@@ -19,6 +19,7 @@
     "dist"
   ],
   "devDependencies": {
+    "@tootallnate/once": "1.1.2",
     "@types/execa": "^0.9.0",
     "@types/fs-extra": "^5.0.5",
     "@types/node-fetch": "^2.3.0",
