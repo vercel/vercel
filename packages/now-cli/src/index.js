@@ -314,21 +314,6 @@ const main = async argv_ => {
     // need to migrate.
     if (authConfig.credentials) {
       authConfigExists = false;
-    } else if (
-      !authConfig.token &&
-      !subcommandsWithoutToken.includes(targetOrSubcommand) &&
-      !argv['--help'] &&
-      !argv['--token']
-    ) {
-      console.error(
-        error(
-          `The content of "${hp(VERCEL_AUTH_CONFIG_PATH)}" is invalid. ` +
-            `No \`token\` property found inside. Run ${getCommandName(
-              'login'
-            )} to authorize.`
-        )
-      );
-      return 1;
     }
   } else {
     const results = await getDefaultAuthConfig(authConfig);
