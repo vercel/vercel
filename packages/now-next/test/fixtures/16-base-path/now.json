@@ -19,6 +19,22 @@
     {
       "path": "/docs/another",
       "mustContain": "hello from another"
+    },
+    {
+      "path": "/",
+      "mustNotContain": "hello from index"
+    },
+    {
+      "path": "/another",
+      "mustNotContain": "hello from another"
+    },
+    {
+      "path": "/_next/static/testing-build-id/pages/index.js",
+      "mustNotContain": "hello from index"
+    },
+    {
+      "path": "/_next/static/testing-build-id/pages/another.js",
+      "mustNotContain": "hello from another"
     }
   ]
 }
