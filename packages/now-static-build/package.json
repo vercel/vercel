@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "0.17.1",
+  "version": "0.17.2",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/static-builds",
@@ -9,7 +9,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-static-build"
   },
   "scripts": {
@@ -27,6 +27,6 @@
     "is-port-reachable": "2.0.1",
     "ms": "2.1.2",
     "node-fetch": "2.6.0",
-    "typescript": "3.5.2"
+    "typescript": "3.9.3"
   }
 }

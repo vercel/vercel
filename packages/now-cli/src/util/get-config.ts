@@ -3,6 +3,7 @@ import { fileNameSymbol } from '@vercel/client';
 import {
   CantParseJSONFile,
   CantFindConfig,
+  ConflictingConfigFiles,
   WorkingDirectoryDoesNotExist,
 } from './errors-ts';
 import humanizePath from './humanize-path';
@@ -49,28 +50,31 @@ export default async function getConfig(
     }
   }
 
-  // Then try with vercel.json in the same directory
+  // Then try with `vercel.json` or `now.json` in the same directory
   const vercelFilePath = path.resolve(localPath, 'vercel.json');
-  const vercelConfig = await readJSONFile(vercelFilePath);
+  const nowFilePath = path.resolve(localPath, 'now.json');
+  const [vercelConfig, nowConfig] = await Promise.all([
+    readJSONFile(vercelFilePath),
+    readJSONFile(nowFilePath),
+  ]);
   if (vercelConfig instanceof CantParseJSONFile) {
     return vercelConfig;
   }
+  if (nowConfig instanceof CantParseJSONFile) {
+    return nowConfig;
+  }
+  if (vercelConfig && nowConfig) {
+    return new ConflictingConfigFiles([vercelFilePath, nowFilePath]);
+  }
   if (vercelConfig !== null) {
-    output.debug(`Found config in file ${vercelFilePath}`);
+    output.debug(`Found config in file "${vercelFilePath}"`);
     config = vercelConfig as NowConfig;
     config[fileNameSymbol] = 'vercel.json';
     return config;
   }
-
-  // Then try with now.json in the same directory
-  const nowFilePath = path.resolve(localPath, 'now.json');
-  const mainConfig = await readJSONFile(nowFilePath);
-  if (mainConfig instanceof CantParseJSONFile) {
-    return mainConfig;
-  }
-  if (mainConfig !== null) {
-    output.debug(`Found config in file ${nowFilePath}`);
-    config = mainConfig as NowConfig;
+  if (nowConfig !== null) {
+    output.debug(`Found config in file "${nowFilePath}"`);
+    config = nowConfig as NowConfig;
     config[fileNameSymbol] = 'now.json';
     return config;
   }

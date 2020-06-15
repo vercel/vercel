@@ -1,5 +1,6 @@
 import bytes from 'bytes';
 import { Response } from 'node-fetch';
+import { NowBuildError } from '@vercel/build-utils';
 import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
@@ -768,6 +769,20 @@ export class CantParseJSONFile extends NowError<
       meta: { file },
       message: `Can't parse json file`,
     });
+  }
+}
+
+export class ConflictingConfigFiles extends NowBuildError {
+  files: string[];
+
+  constructor(files: string[]) {
+    super({
+      code: 'CONFLICTING_CONFIG_FILES',
+      message:
+        'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
+      link: 'https://vercel.link/combining-old-and-new-config',
+    });
+    this.files = files;
   }
 }
 

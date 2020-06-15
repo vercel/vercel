@@ -6,7 +6,7 @@ process.chdir(join(__dirname, '..'));
 
 async function main() {
   const res = await fetch(
-    'https://api.github.com/repos/zeit/now/releases/latest'
+    'https://api.github.com/repos/vercel/vercel/releases/latest'
   );
   const { tag_name } = await res.json();
 

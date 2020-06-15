@@ -1,3 +1,13 @@
+const entrypoint = process.env.VERCEL_DEV_ENTRYPOINT;
+delete process.env.VERCEL_DEV_ENTRYPOINT;
+
+const tsconfig = process.env.VERCEL_DEV_TSCONFIG;
+delete process.env.VERCEL_DEV_TSCONFIG;
+
+if (!entrypoint) {
+  throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
+}
+
 import { register } from 'ts-node';
 
 // Use the project's version of TypeScript if available,
@@ -5,7 +15,7 @@ import { register } from 'ts-node';
 let compiler: string;
 try {
   compiler = require.resolve('typescript', {
-    paths: [process.cwd(), __dirname],
+    paths: [process.cwd()],
   });
 } catch (e) {
   compiler = 'typescript';
@@ -17,19 +27,19 @@ register({
     allowJs: true,
     esModuleInterop: true,
     jsx: 'react',
+    module: 'commonjs',
   },
+  project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
   transpileOnly: true,
 });
 
-import http from 'http';
-import path from 'path';
-import { createServerWithHelpers } from './helpers';
+import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
+import { join } from 'path';
+import { Readable } from 'stream';
+import { Bridge } from './bridge';
+import { getNowLauncher } from './launcher';
 
-function listen(
-  server: http.Server,
-  port: number,
-  host: string
-): Promise<void> {
+function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
     server.listen(port, host, () => {
       resolve();
@@ -37,36 +47,83 @@ function listen(
   });
 }
 
+let bridge: Bridge | undefined = undefined;
+
 async function main() {
-  const entrypoint = process.env.NOW_DEV_ENTRYPOINT;
-  delete process.env.NOW_DEV_ENTRYPOINT;
+  const config = JSON.parse(process.env.VERCEL_DEV_CONFIG || '{}');
+  delete process.env.VERCEL_DEV_CONFIG;
 
-  if (!entrypoint) {
-    throw new Error('`NOW_DEV_ENTRYPOINT` must be defined');
-  }
-
-  const config = JSON.parse(process.env.NOW_DEV_CONFIG || '{}');
-  delete process.env.NOW_DEV_CONFIG;
+  const buildEnv = JSON.parse(process.env.VERCEL_DEV_BUILD_ENV || '{}');
+  delete process.env.VERCEL_DEV_BUILD_ENV;
 
   const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
+    config.helpers === false || buildEnv.NODEJS_HELPERS === '0'
   );
 
-  const entrypointPath = path.join(process.cwd(), entrypoint);
-  const handler = await import(entrypointPath);
+  bridge = getNowLauncher({
+    entrypointPath: join(process.cwd(), entrypoint!),
+    helpersPath: './helpers',
+    shouldAddHelpers,
+    bridgePath: 'not used',
+    sourcemapSupportPath: 'not used',
+  })();
 
-  const server = shouldAddHelpers
-    ? createServerWithHelpers(handler.default)
-    : http.createServer(handler.default);
+  const proxyServer = createServer(onDevRequest);
+  await listen(proxyServer, 0, '127.0.0.1');
 
-  await listen(server, 0, '127.0.0.1');
-
-  const address = server.address();
+  const address = proxyServer.address();
   if (typeof process.send === 'function') {
     process.send(address);
   } else {
     console.log('Dev server listening:', address);
   }
+}
+
+export function rawBody(readable: Readable): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    let bytes = 0;
+    const chunks: Buffer[] = [];
+    readable.on('error', reject);
+    readable.on('data', chunk => {
+      chunks.push(chunk);
+      bytes += chunk.length;
+    });
+    readable.on('end', () => {
+      resolve(Buffer.concat(chunks, bytes));
+    });
+  });
+}
+
+export async function onDevRequest(
+  req: IncomingMessage,
+  res: ServerResponse
+): Promise<void> {
+  const body = await rawBody(req);
+  const event = {
+    Action: 'Invoke',
+    body: JSON.stringify({
+      method: req.method,
+      path: req.url,
+      headers: req.headers,
+      encoding: 'base64',
+      body: body.toString('base64'),
+    }),
+  };
+  if (!bridge) {
+    res.statusCode = 500;
+    res.end('Bridge is not defined');
+    return;
+  }
+  const result = await bridge.launcher(event, {
+    callbackWaitsForEmptyEventLoop: false,
+  });
+  res.statusCode = result.statusCode;
+  for (const [key, value] of Object.entries(result.headers)) {
+    if (typeof value !== 'undefined') {
+      res.setHeader(key, value);
+    }
+  }
+  res.end(Buffer.from(result.body, result.encoding));
 }
 
 main().catch(err => {

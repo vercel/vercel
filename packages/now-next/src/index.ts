@@ -70,6 +70,7 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
+// import findUp from 'find-up';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -204,7 +205,6 @@ export const build = async ({
 }> => {
   validateEntrypoint(entrypoint);
 
-  const isSharedLambdas = config.sharedLambdas;
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
 
@@ -228,6 +228,48 @@ export const build = async ({
         'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"',
     });
   }
+
+  // let nowJsonPath = Object.keys(files).find(file => {
+  //   return file.endsWith('now.json') || file.endsWith('vercel.json')
+  // })
+
+  // if (nowJsonPath) nowJsonPath = files[nowJsonPath].fsPath
+
+  // if (!nowJsonPath) {
+  //   nowJsonPath = await findUp(['now.json', 'vercel.json'], {
+  //     cwd: path.join(workPath, path.dirname(entrypoint))
+  //   })
+  // }
+
+  // let hasLegacyRoutes = false;
+  // const hasFunctionsConfig = !!config.functions;
+
+  // if (nowJsonPath) {
+  //   const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
+
+  //   if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
+  //     hasLegacyRoutes = true;
+  //     console.warn(
+  //       `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
+  //         nowJsonPath
+  //       )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
+  //     );
+  //   }
+  // }
+
+  // if (hasFunctionsConfig) {
+  //   console.warn(
+  //     `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
+  //   );
+  // }
+
+  // default to true but still allow opting out with the config
+  const isSharedLambdas = !!config.sharedLambdas;
+  // !hasLegacyRoutes &&
+  // !hasFunctionsConfig &&
+  // typeof config.sharedLambdas === 'undefined'
+  //   ? true
+  //   : !!config.sharedLambdas;
 
   if (meta.isDev) {
     let childProcess: ChildProcess | undefined;
@@ -291,7 +333,7 @@ export const build = async ({
     }
 
     console.warn(
-      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/zeit/now/now-next-legacy-mode"
+      "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/vercel/vercel/now-next-legacy-mode"
     );
 
     debug('Normalizing package.json');
@@ -610,6 +652,7 @@ export const build = async ({
 
   const pageLambdaRoutes: Route[] = [];
   const dynamicPageLambdaRoutes: Route[] = [];
+  const dynamicPageLambdaRoutesMap: { [page: string]: Route } = {};
   const pageLambdaMap: { [page: string]: string } = {};
 
   const lambdas: { [key: string]: Lambda } = {};
@@ -789,7 +832,7 @@ export const build = async ({
       throw new NowBuildError({
         code: 'NEXT_NO_SERVERLESS_PAGES',
         message: 'No serverless pages were built',
-        link: 'https://err.sh/zeit/now/now-next-no-serverless-pages-built',
+        link: 'https://err.sh/vercel/vercel/now-next-no-serverless-pages-built',
       });
     }
 
@@ -1027,6 +1070,7 @@ export const build = async ({
         // is enabled
         if (routeIsDynamic) {
           dynamicPageLambdaRoutes.push(pageLambdaRoute);
+          dynamicPageLambdaRoutesMap[outputName] = pageLambdaRoute;
         } else {
           pageLambdaRoutes.push(pageLambdaRoute);
         }
@@ -1143,50 +1187,6 @@ export const build = async ({
     );
 
     if (isSharedLambdas) {
-      // since we combine the pages into lambda groups we need to merge
-      // the lambda options into one this means they should only configure
-      // lambda options for one page or one API as doing it for
-      // another will override it
-      const getMergedLambdaOptions = async (pageKeys: string[]) => {
-        if (pageKeys.length === 0) return {};
-
-        const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({
-            workPath,
-            page: pageKeys[0],
-          }),
-          config,
-        });
-
-        for (const page of pageKeys) {
-          if (page === pageKeys[0]) continue;
-          const sourceFile = await getSourceFilePathFromPage({
-            workPath,
-            page,
-          });
-          const newOptions = await getLambdaOptionsFromFunction({
-            sourceFile,
-            config,
-          });
-
-          for (const key of Object.keys(newOptions)) {
-            // eslint-disable-next-line
-            if (typeof (newOptions as any)[key] !== 'undefined') {
-              // eslint-disable-next-line
-              (lambdaOptions as any)[key] = (newOptions as any)[key];
-            }
-          }
-        }
-        return lambdaOptions;
-      };
-
-      const mergedPageLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => !page.startsWith('api/'))
-      );
-      const mergedApiLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => page.startsWith('api/'))
-      );
-
       const launcherPath = path.join(__dirname, 'templated-launcher-shared.js');
       const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -1302,9 +1302,6 @@ export const build = async ({
                 ],
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...(group.isApiLambda
-                  ? mergedApiLambdaOptions
-                  : mergedPageLambdaOptions),
               });
             } else {
               lambdas[
@@ -1317,9 +1314,6 @@ export const build = async ({
                 layers: pageLayers,
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...(group.isApiLambda
-                  ? mergedApiLambdaOptions
-                  : mergedPageLambdaOptions),
               });
             }
           }
@@ -1537,6 +1531,27 @@ export const build = async ({
       delete lambdas[routeFileNoExt];
     });
   }
+  const mergedDynamicRoutesLambdaRoutes = [];
+
+  if (isSharedLambdas) {
+    // we need to define the page lambda route immediately after
+    // the dynamic route in handle: 'rewrite' so that a matching
+    // dynamic route doesn't catch it before the page lambda route
+    // e.g. /teams/[team]/[inviteCode] -> page lambda
+    // but we also have /[teamSlug]/[project]/[id] which could match it first
+
+    for (let i = 0; i < dynamicRoutes.length; i++) {
+      const route = dynamicRoutes[i];
+
+      mergedDynamicRoutesLambdaRoutes.push(route);
+
+      if (pageLambdaMap[route.dest!]) {
+        mergedDynamicRoutesLambdaRoutes.push(
+          dynamicPageLambdaRoutesMap[route.dest!]
+        );
+      }
+    }
+  }
 
   return {
     output: {
@@ -1612,10 +1627,7 @@ export const build = async ({
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
-      ...dynamicRoutes,
-
-      // finally add dynamic page mappings to their respective lambda
-      ...dynamicPageLambdaRoutes,
+      ...(isSharedLambdas ? mergedDynamicRoutesLambdaRoutes : dynamicRoutes),
 
       // routes to call after a file has been matched
       { handle: 'hit' },

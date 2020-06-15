@@ -1,4 +1,4 @@
-import { join, sep } from 'path';
+import { basename, join, sep } from 'path';
 import { send } from 'micro';
 import test from 'ava';
 import sinon from 'sinon';
@@ -24,6 +24,7 @@ import { isValidName } from '../src/util/is-valid-name';
 import preferV2Deployment from '../src/util/prefer-v2-deployment';
 import getUpdateCommand from '../src/util/get-update-command';
 import { isCanary } from '../src/util/is-canary';
+import { getVercelDirectory } from '../src/util/projects/link';
 
 const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}${sep}`;
@@ -68,7 +69,7 @@ const getStaticFiles = async (dir, isBuilds = false) => {
 
 const normalizeWindowsPaths = files => {
   if (process.platform === 'win32') {
-    const prefix = 'D:/a/now/now/packages/now-cli/test/fixtures/unit/';
+    const prefix = 'D:/a/vercel/vercel/packages/now-cli/test/fixtures/unit/';
     return files.map(f => f.replace(/\\/g, '/').slice(prefix.length));
   }
   return files;
@@ -1090,4 +1091,30 @@ test('check valid name', async t => {
 test('detect update command', async t => {
   const updateCommand = await getUpdateCommand();
   t.is(updateCommand, `yarn add vercel@${isCanary() ? 'canary' : 'latest'}`);
+});
+
+test('`getVercelDirectory()` returns ".vercel"', t => {
+  const cwd = fixture('get-vercel-directory');
+  const dir = getVercelDirectory(cwd);
+  t.is(basename(dir), '.vercel');
+});
+
+test('`getVercelDirectory()` returns ".now"', t => {
+  const cwd = fixture('get-vercel-directory-legacy');
+  const dir = getVercelDirectory(cwd);
+  t.is(basename(dir), '.now');
+});
+
+test('`getVercelDirectory()` throws an error if ".vercel" and ".now" exist', t => {
+  let err;
+  const cwd = fixture('get-vercel-directory-error');
+  try {
+    getVercelDirectory(cwd);
+  } catch (_err) {
+    err = _err;
+  }
+  t.is(
+    err.message,
+    'Both `.vercel` and `.now` directories exist. Please remove the `.now` directory.'
+  );
 });

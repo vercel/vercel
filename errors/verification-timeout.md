@@ -20,10 +20,10 @@ If you think your code is taking too long to instantiate, this can be due
 to slow boot up times. You can supply `--no-verify` to skip verification
 if you are confident your code runs properly.
 
-If your application is not listening on a HTTP port, we might be failing to 
+If your application is not listening on a HTTP port, we might be failing to
 instantiate your deployment as well. It might not be showing any errors,
 but the deployment instance is effectively not routable and cannot be
 verified.
 
 If your instances are crashing before an HTTP port is exposed, verification
-will fail as well. Double check your logs (e.g.: by running `now logs <url>`)
+will fail as well. Double check your logs (e.g.: by running `vercel logs <url>`)

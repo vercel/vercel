@@ -3,9 +3,9 @@ import semver from 'semver';
 import npa from 'npm-package-arg';
 import pluralize from 'pluralize';
 import { basename, join } from 'path';
-import { PackageJson } from '@vercel/build-utils';
 import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
+import { NowBuildError, PackageJson } from '@vercel/build-utils';
 import cliPkg from '../pkg';
 
 import { NoBuilderCacheError } from '../errors-ts';
@@ -232,21 +232,41 @@ async function npmInstall(
   output.debug(`Running npm install in ${cwd}`);
 
   try {
-    await execa(
-      'npm',
-      [
-        'install',
-        '--save-exact',
-        '--no-package-lock',
-        '--no-audit',
-        '--no-progress',
-        ...sortedPackages,
-      ],
-      {
-        cwd,
-        stdio: output.isDebugEnabled() ? 'inherit' : undefined,
+    const args = [
+      'install',
+      '--save-exact',
+      '--no-package-lock',
+      '--no-audit',
+      '--no-progress',
+    ];
+    if (process.stderr.isTTY) {
+      // Force colors in the npm child process
+      // https://docs.npmjs.com/misc/config#color
+      args.push('--color=always');
+    }
+    args.push(...sortedPackages);
+    const result = await execa('npm', args, {
+      cwd,
+      reject: false,
+      stdio: output.isDebugEnabled() ? 'inherit' : 'pipe',
+    });
+    if (result.failed) {
+      stopSpinner();
+      if (result.stdout) {
+        console.log(result.stdout);
       }
-    );
+      if (result.stderr) {
+        console.error(result.stderr);
+      }
+      throw new NowBuildError({
+        message:
+          (result as any).code === 'ENOENT'
+            ? '`npm` is not installed'
+            : 'Failed to install `vercel dev` dependencies',
+        code: 'NPM_INSTALL_ERROR',
+        link: 'https://vercel.link/npm-install-failed-dev',
+      });
+    }
   } finally {
     stopSpinner();
   }

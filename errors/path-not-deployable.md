@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-You either tried to run Now CLI inside a directory that should never be deployed, or you specified a directory that should never be deployed like this: `now <directory>`.
+You either tried to run Vercel CLI inside a directory that should never be deployed, or you specified a directory that should never be deployed like this: `vercel <directory>`.
 
 #### Possible Ways to Fix It
 
