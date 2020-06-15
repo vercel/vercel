@@ -312,9 +312,16 @@ export type RoutesManifest = {
   dynamicRoutes: {
     page: string;
     regex: string;
+    namedRegex?: string;
+    routeKeys?: { [named: string]: string };
   }[];
   version: number;
-  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
+  dataRoutes?: Array<{
+    page: string;
+    dataRouteRegex: string;
+    namedDataRouteRegex?: string;
+    routeKeys?: { [named: string]: string };
+  }>;
 };
 
 export async function getRoutesManifest(
@@ -352,6 +359,20 @@ export async function getRoutesManifest(
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const routesManifest: RoutesManifest = require(pathRoutesManifest);
 
+  // massage temporary array based routeKeys from v1/v2 of routes
+  // manifest into new object based
+  for (const route of [
+    ...(routesManifest.dataRoutes || []),
+    ...(routesManifest.dynamicRoutes || []),
+  ]) {
+    if (Array.isArray(route.routeKeys)) {
+      route.routeKeys = route.routeKeys.reduce((prev, cur) => {
+        prev[cur] = cur;
+        return prev;
+      }, {});
+    }
+  }
+
   return routesManifest;
 }
 
@@ -379,6 +400,25 @@ export async function getDynamicRoutes(
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              check: true,
+            };
+          });
+      }
+      case 3: {
+        return routesManifest.dynamicRoutes
+          .filter(({ page }) =>
+            omittedRoutes ? !omittedRoutes.has(page) : true
+          )
+          .map(({ page, namedRegex, regex, routeKeys }) => {
+            return {
+              src: namedRegex || regex,
+              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
+                routeKeys
+                  ? `?${Object.keys(routeKeys)
+                      .map(key => `${routeKeys[key]}=$${key}`)
+                      .join('&')}`
+                  : ''
+              }`,
               check: true,
             };
           });
