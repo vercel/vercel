@@ -1,4 +1,5 @@
 import ms from 'ms';
+import os from 'os';
 import fs from 'fs-extra';
 import test from 'ava';
 import { join, resolve, delimiter } from 'path';
@@ -523,6 +524,35 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
   } finally {
     await dev.kill('SIGTERM');
     await fs.writeJSON(configPath, originalConfig);
+  }
+});
+
+test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', async t => {
+  // The purpose of this test is to test that `@vercel/node` can properly
+  // resolve the default "typescript" module when the project doesn't include
+  // its own version. To properly test for this, a fixture needs to be created
+  // *outside* of the `vercel` repo, since otherwise the root-level
+  // "node_modules/typescript" is resolved as relative to the project, and
+  // not relative to `@vercel/node` which is what we are testing for here.
+  const dir = join(os.tmpdir(), 'vercel-node-typescript-resolve-test');
+  const apiDir = join(dir, 'api');
+  await fs.mkdirp(apiDir);
+  await fs.writeFile(
+    join(apiDir, 'hello.js'),
+    'export default (req, res) => { res.end("world"); }'
+  );
+
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/api/hello`);
+    const body = await res.text();
+    t.is(body, 'world');
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.remove(dir);
   }
 });
 
@@ -1059,6 +1089,13 @@ test(
   '[vercel dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async testPath => {
     await testPath(200, '/');
+    await testPath(200, '/about');
+    await testPath(308, '/support', 'Redirecting to /about?ref=support (308)', {
+      Location: '/about?ref=support',
+    });
+    // Bug with gridsome's dev server: https://github.com/gridsome/gridsome/issues/831
+    // Works in prod only so leave out for now
+    // await testPath(404, '/nothing');
   })
 );
 
@@ -1066,6 +1103,9 @@ test(
   '[vercel dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async testPath => {
     await testPath(200, '/', /Hexo \+ Node.js API/m);
+    await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(200, '/contact.html', /Contact Us/m);
+    await testPath(200, '/support', /Contact Us/m);
   })
 );
 
@@ -1090,6 +1130,8 @@ test(
   testFixtureStdio('10-nextjs-node', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
     await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(200, '/contact', /Contact Page/);
+    await testPath(200, '/support', /Contact Page/);
     await testPath(404, '/nothing', /Custom Next 404/);
   })
 );
@@ -1100,6 +1142,7 @@ test(
     '12-polymer-node',
     async testPath => {
       await testPath(200, '/', /Polymer \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1111,6 +1154,7 @@ test(
     '13-preact-node',
     async testPath => {
       await testPath(200, '/', /Preact/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1122,6 +1166,7 @@ test(
     '14-svelte-node',
     async testPath => {
       await testPath(200, '/', /Svelte/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1133,6 +1178,7 @@ test(
     '16-vue-node',
     async testPath => {
       await testPath(200, '/', /Vue.js \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1144,6 +1190,7 @@ test(
     '17-vuepress-node',
     async testPath => {
       await testPath(200, '/', /VuePress \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
