@@ -359,7 +359,8 @@ export async function getRoutesManifest(
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const routesManifest: RoutesManifest = require(pathRoutesManifest);
 
-  // massage old array based routeKeys into new object based
+  // massage temporary array based routeKeys from v1/v2 of routes
+  // manifest into new object based
   for (const route of [
     ...(routesManifest.dataRoutes || []),
     ...(routesManifest.dynamicRoutes || []),
@@ -391,6 +392,19 @@ export async function getDynamicRoutes(
     switch (routesManifest.version) {
       case 1:
       case 2: {
+        return routesManifest.dynamicRoutes
+          .filter(({ page }) =>
+            omittedRoutes ? !omittedRoutes.has(page) : true
+          )
+          .map(({ page, regex }: { page: string; regex: string }) => {
+            return {
+              src: regex,
+              dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              check: true,
+            };
+          });
+      }
+      case 3: {
         return routesManifest.dynamicRoutes
           .filter(({ page }) =>
             omittedRoutes ? !omittedRoutes.has(page) : true
