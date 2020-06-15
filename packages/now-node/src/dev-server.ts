@@ -15,7 +15,7 @@ import { register } from 'ts-node';
 let compiler: string;
 try {
   compiler = require.resolve('typescript', {
-    paths: [process.cwd(), __dirname],
+    paths: [process.cwd()],
   });
 } catch (e) {
   compiler = 'typescript';

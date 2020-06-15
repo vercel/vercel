@@ -208,7 +208,7 @@ export const build = async ({
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
 
-  const entryDirectory = path.dirname(entrypoint);
+  let entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
@@ -422,17 +422,16 @@ export const build = async ({
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
-  const nextBasePathRoute: Route[] = [];
   const dataRoutes: Route[] = [];
   let dynamicRoutes: Route[] = [];
-  let nextBasePath: string | undefined;
   // whether they have enabled pages/404.js as the custom 404 page
   let hasPages404 = false;
 
   if (routesManifest) {
     switch (routesManifest.version) {
       case 1:
-      case 2: {
+      case 2:
+      case 3: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
 
@@ -468,7 +467,14 @@ export const build = async ({
                 // make sure to route SSG data route to the data prerender
                 // output, we don't do this for SSP routes since they don't
                 // have a separate data output
-                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
+                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page,
+                `${
+                  dataRoute.routeKeys
+                    ? `?${Object.keys(dataRoute.routeKeys)
+                        .map(key => `${dataRoute.routeKeys![key]}=$${key}`)
+                        .join('&')}`
+                    : ''
+                }`
               ),
               check: true,
             });
@@ -480,7 +486,7 @@ export const build = async ({
         }
 
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
-          nextBasePath = routesManifest.basePath;
+          const nextBasePath = routesManifest.basePath;
 
           if (!nextBasePath.startsWith('/')) {
             throw new NowBuildError({
@@ -497,11 +503,7 @@ export const build = async ({
             });
           }
 
-          nextBasePathRoute.push({
-            src: `^${nextBasePath}(?:$|/(.*))$`,
-            dest: `/$1`,
-            continue: true,
-          });
+          entryDirectory = path.join(entryDirectory, nextBasePath);
         }
         break;
       }
@@ -564,9 +566,6 @@ export const build = async ({
       output,
       routes: [
         // TODO: low priority: handle trailingSlash
-
-        // Add top level rewrite for basePath if provided
-        ...nextBasePathRoute,
 
         // User headers
         ...headers,
@@ -1583,9 +1582,6 @@ export const build = async ({
       - Builder rewrites
     */
     routes: [
-      // Add top level rewrite for basePath if provided
-      ...nextBasePathRoute,
-
       // headers
       ...headers,
 
