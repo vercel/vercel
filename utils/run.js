@@ -4,7 +4,7 @@ const { readdirSync } = require('fs');
 
 if (
   process.env.GITHUB_REPOSITORY &&
-  process.env.GITHUB_REPOSITORY !== 'zeit/now'
+  process.env.GITHUB_REPOSITORY !== 'vercel/vercel'
 ) {
   console.log('Detected fork, skipping tests');
   return;

@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import * as ERRORS from '../errors-ts';
 import { Output } from '../output';
 import dnsTable from '../format-dns-table';
+import { getCommandName } from '../pkg-name';
 
 export default function handleCertError<T>(
   output: Output,
@@ -64,7 +65,7 @@ export default function handleCertError<T>(
         `Alternatively, you can issue a certificate solving DNS challenges manually after running:`
       );
       output.print(
-        `  ${chalk.cyan(`now certs issue --challenge-only <cns>`)}\n`
+        `  ${getCommandName(`certs issue --challenge-only <cns>`)}\n`
       );
       output.print('  Read more: https://err.sh/now/dns-configuration-error\n');
     } else {

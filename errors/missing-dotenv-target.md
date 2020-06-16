@@ -6,4 +6,4 @@ You specified a path as the value for the `--dotenv` flag, but the target of the
 
 #### Possible Ways to Fix It
 
-Make sure the target file you've specified exists and is readable by Now CLI. In addition, please ensure that the filename starts with a dot (example: `.env`) - then it should work.
+Make sure the target file you've specified exists and is readable by Vercel CLI. In addition, please ensure that the filename starts with a dot (example: `.env`) - then it should work.

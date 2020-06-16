@@ -138,7 +138,7 @@ export function getAwsLauncher({
     const { query } = parse(path, true);
     const queryStringParameters: { [i: string]: string } = {};
     for (const [key, value] of Object.entries(query)) {
-      if (!Array.isArray(value)) {
+      if (typeof value === 'string') {
         queryStringParameters[key] = value;
       }
     }

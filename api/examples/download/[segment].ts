@@ -45,8 +45,8 @@ export default withApiHandler(async function(req: NowRequest, res: NowResponse) 
 
   const example = segment.slice(0, -ext.length);
 
-  await extract('https://github.com/zeit/now/archive/master.zip', TMP_DIR);
-  const directory = `${TMP_DIR}/now-master/examples/${example}`;
+  await extract('https://github.com/vercel/vercel/archive/master.zip', TMP_DIR);
+  const directory = `${TMP_DIR}/vercel-master/examples/${example}`;
 
   if (!isDirectory(directory)) {
     return notFound(res, `Example '${example}' was not found.`);

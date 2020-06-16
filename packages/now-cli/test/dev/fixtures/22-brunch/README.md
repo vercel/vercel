@@ -15,5 +15,5 @@ $ brunch new project-name -s es6
 Once initialized, you can deploy the Brunch example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```

@@ -5,11 +5,11 @@ This example shows a [Angular](https://angular.io/) project (located in `package
 In order to deploy, run:
 
 ```
-now
+vercel
 ```
 
 When editing a file, you can run the following command to spawn a local development server:
 
 ```
-now dev
+vercel dev
 ```

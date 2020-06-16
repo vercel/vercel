@@ -38,6 +38,10 @@ module.exports = {
           destination: '/hello',
         },
         {
+          source: '/(.*)-:id(\\d+).html',
+          destination: '/blog/:id',
+        },
+        {
           source: '/blog/post-1',
           destination: '/blog/post-2',
         },

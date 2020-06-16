@@ -514,6 +514,11 @@ CMD ["node", "index.js"]`,
         ],
       }),
     },
+    'conflicting-now-json-vercel-json': {
+      'index.html': '<h1>I am a website.</h1>',
+      'vercel.json': getConfigFile(true),
+      'now.json': getConfigFile(true),
+    },
   };
 
   for (const typeName of Object.keys(spec)) {

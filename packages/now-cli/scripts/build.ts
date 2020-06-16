@@ -33,13 +33,13 @@ async function main() {
     // During local development, these secrets will be empty.
     await createConstants();
 
-    // `now dev` uses chokidar to watch the filesystem, but opts-out of the
+    // `vercel dev` uses chokidar to watch the filesystem, but opts-out of the
     // `fsevents` feature using `useFsEvents: false`, so delete the module here so
     // that it is not compiled by ncc, which makes the npm package size larger
     // than necessary.
     await remove(join(dirRoot, '../../node_modules/fsevents'));
 
-    // Compile the `doT.js` template files for `now dev`
+    // Compile the `doT.js` template files for `vercel dev`
     console.log();
     await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
       stdio: 'inherit',
@@ -74,6 +74,17 @@ async function main() {
   );
   const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
+
+  // Band-aid to delete stuff that `ncc` bundles, but it shouldn't:
+
+  // TypeScript definition files from `@vercel/build-utils`
+  await remove(join(dirRoot, 'dist', 'dist'));
+
+  // The Readme and `package.json` from "config-chain" module
+  await remove(join(dirRoot, 'dist', 'config-chain'));
+
+  // A bunch of source `.ts` files from CLI's `util` directory
+  await remove(join(dirRoot, 'dist', 'util'));
 
   console.log('Finished building `now-cli`');
 }

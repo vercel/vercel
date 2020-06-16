@@ -20,9 +20,9 @@ Legacy:
 Serverless:
 
 - Minimal lambda size of `49Kb` (approximately)
-- Uses Next.js build targets (`target: 'serverless'`) in `next.config.js`. [documentation](https://github.com/zeit/next.js#summary)
+- Uses Next.js build targets (`target: 'serverless'`) in `next.config.js`. [documentation](https://github.com/vercel/next.js#summary)
 - Does not make changes to your application dependencies
-- Does not load `next.config.js` ([as per the serverless target documentation](https://github.com/zeit/next.js#summary))
+- Does not load `next.config.js` ([as per the serverless target documentation](https://github.com/vercel/next.js#summary))
 - Runs `npm install`
 - Runs `npm run now-build`
 - Does not run `npm install --production` as the output from the build is all that's needed to bundle lambdas.
@@ -69,4 +69,4 @@ module.exports = {
 
 ### Useful Links
 
-- [Serverless target implementation](https://github.com/zeit/now-builders/pull/150)
+- [Serverless target implementation](https://github.com/vercel/now-builders/pull/150)

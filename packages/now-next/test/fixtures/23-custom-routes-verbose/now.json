@@ -182,7 +182,7 @@
 
     // should match /_next file after rewrite
     {
-      "path": "/hidden/_next/static/testing-build-id/pages/hello.js",
+      "path": "/hidden/_next/static/b09092d6eebe375caba5/pages/hello.js",
       "mustContain": "createElement"
     },
 
@@ -238,6 +238,20 @@
       "fetchOptions": {
         "redirect": "manual"
       }
+    },
+
+    // should apply un-named multi-match correctly
+    {
+      "path": "/hello/post-123.html",
+      "status": 200,
+      "mustContain": "123"
+    },
+
+    // should rewrite to catch-all with dash in segment name
+    {
+      "path": "/catchall-dash/hello/world",
+      "status": 200,
+      "mustContain": "hello/world"
     }
   ]
 }
