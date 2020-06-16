@@ -468,18 +468,13 @@ function isReadable(v: any): v is Readable {
   return v && v.readable === true;
 }
 
-async function copyDevFile(file: string, dest: string): Promise<void> {
-  const data = await readFile(file, 'utf8');
+async function copyEntrypoint(entrypoint: string, dest: string): Promise<void> {
+  const data = await readFile(entrypoint, 'utf8');
 
   // Modify package to `package main`
   const patched = data.replace(/\bpackage\W+\S+\b/, 'package main');
 
-  let destName = basename(file);
-  if (destName.startsWith('[')) {
-    destName = `vc${destName}`;
-  }
-
-  await writeFile(join(dest, destName), patched);
+  await writeFile(join(dest, 'entrypoint.go'), patched);
 }
 
 async function copyDevServer(
@@ -525,9 +520,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   const analyzed: Analyzed = JSON.parse(analyzedRaw);
 
   await Promise.all([
-    ...analyzed.watch.map(file =>
-      copyDevFile(join(entrypointDir, file), tmpPackage)
-    ),
+    copyEntrypoint(entrypoint, tmpPackage),
     copyDevServer(analyzed.functionName, tmpPackage),
   ]);
 
