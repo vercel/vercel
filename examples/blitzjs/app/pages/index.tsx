@@ -1,13 +1,5 @@
 import { Head, Link } from "blitz"
 
-const modelSnippet = `model Project {
-  id      Int      @default(autoincrement()) @id
-  name    String
-}`
-
-const migrateSnippet = `$ blitz db migrate
-$ blitz generate all project`
-
 const Home = () => (
   <div className="container">
     <Head>
@@ -19,15 +11,13 @@ const Home = () => (
       <div className="logo">
         <img src="/logo.png" alt="blitz.js" />
       </div>
-      <p>
-        1. Add this code to <strong>db/schema.prisma</strong>:
-      </p>
+      <p>1. Run this command in your terminal:</p>
       <pre>
-        <code>{modelSnippet}</code>
+        <code>blitz generate all project name:string</code>
       </pre>
-      <p>2. Run these commands in your terminal:</p>
+      <p>2. Then run this command:</p>
       <pre>
-        <code>{migrateSnippet}</code>
+        <code>blitz db migrate</code>
       </pre>
 
       <p>

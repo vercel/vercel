@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "blitz start",
+    "studio": "blitz db studio",
     "build": "blitz build",
     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
     "test": "echo \"No tests yet\""
@@ -22,8 +23,7 @@
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
-      "eslint --fix",
-      "git add"
+      "eslint --fix"
     ]
   },
   "dependencies": {
@@ -34,22 +34,22 @@
     "react-dom": "experimental"
   },
   "devDependencies": {
-    "@types/react": "16.9.35",
-    "@typescript-eslint/eslint-plugin": "2.34.1-alpha.2",
-    "@typescript-eslint/parser": "2.34.1-alpha.2",
+    "@types/react": "16.9.36",
+    "@typescript-eslint/eslint-plugin": "2.x",
+    "@typescript-eslint/parser": "2.x",
     "babel-eslint": "10.1.0",
     "eslint": "6.8.0",
     "eslint-config-react-app": "5.2.1",
     "eslint-plugin-flowtype": "4.7.0",
-    "eslint-plugin-import": "2.20.2",
+    "eslint-plugin-import": "2.21.2",
     "eslint-plugin-jsx-a11y": "6.2.3",
     "eslint-plugin-react": "7.20.0",
     "eslint-plugin-react-hooks": "3.0.0",
     "husky": "4.2.5",
-    "lint-staged": "10.2.6",
+    "lint-staged": "10.2.10",
     "prettier": "2.0.5",
     "pretty-quick": "2.0.1",
-    "typescript": "3.9.3"
+    "typescript": "3.9.5"
   },
   "private": true
 }
