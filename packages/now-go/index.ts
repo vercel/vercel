@@ -494,6 +494,7 @@ export async function startDevServer(
 ): Promise<StartDevServerResult> {
   const { entrypoint, workPath, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
+  const entrypointDir = dirname(entrypoint);
 
   const tmp = join(
     devCacheDir,
@@ -502,7 +503,7 @@ export async function startDevServer(
       .toString(32)
       .substring(2)
   );
-  const tmpPackage = join(tmp, dirname(entrypoint));
+  const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
 
   let goModAbsPathDir = '';
@@ -528,7 +529,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     ...meta.env,
   };
 
-  const tmpRelative = `.${sep}${dirname(entrypoint)}`;
+  const tmpRelative = `.${sep}${entrypointDir}`;
   const child = spawn('go', ['run', tmpRelative], {
     cwd: tmp,
     env,
