@@ -3,8 +3,18 @@ import { homedir } from 'os';
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
-import { join, sep, dirname, basename, normalize } from 'path';
-import { readFile, writeFile, pathExists, move } from 'fs-extra';
+import { join, dirname, basename, normalize, relative, sep } from 'path';
+import {
+  copyFile,
+  readFile,
+  writeFile,
+  pathExists,
+  mkdirp,
+  move,
+  readdir,
+  remove,
+  stat,
+} from 'fs-extra';
 import {
   BuildOptions,
   Meta,
@@ -461,10 +471,55 @@ function isReadable(v: any): v is Readable {
   return v && v.readable === true;
 }
 
+async function copyPackageDev(src: string, dest: string): Promise<void> {
+  const files = await readdir(src);
+  await Promise.all(files.map(f => copyFileDev(join(src, f), dest)));
+}
+
+async function copyFileDev(src: string, dest: string): Promise<void> {
+  let output = basename(src);
+  const s = await stat(src);
+  if (!s.isFile()) {
+    // Ignore directories and other non-files
+    return;
+  }
+  if (src.endsWith('.go')) {
+    if (output.startsWith('[')) {
+      // Path segment `.go` files need to be renamed with an alphanum
+      // prefix because files beginning with `[` are invalid.
+      // See: https://stackoverflow.com/a/60145673/376773
+      output = `go${output}`;
+    }
+    const data = await readFile(src, 'utf8');
+    // Modify package to `package main`
+    const patched = data.replace(/\bpackage\W+\S+\b/, 'package main');
+    await writeFile(join(dest, output), patched);
+  } else {
+    // If it's not a `.go` file then just copy it over directly
+    await copyFile(src, join(dest, output));
+  }
+}
+
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
   const { entrypoint, workPath, meta = {} } = opts;
+  const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
+
+  const tmp = join(
+    devCacheDir,
+    'go',
+    entrypoint,
+    Math.random()
+      .toString(32)
+      .substring(2)
+  );
+  const devServer = join(tmp, 'vercel-dev-server.go');
+  await mkdirp(tmp);
+  await Promise.all([
+    copyPackageDev(dirname(join(workPath, entrypoint)), tmp),
+    copyFile(join(__dirname, 'dev-server.go'), devServer),
+  ]);
 
   const env: typeof process.env = {
     ...process.env,
@@ -472,12 +527,16 @@ export async function startDevServer(
     VERCEL_DEV_ENTRYPOINT: join(workPath, entrypoint),
   };
 
-  const args: string[] = ['run', join(__dirname, 'dev-server.go')];
-
-  const child = spawn('go', args, {
+  const tmpRelative = `.${sep}${relative(workPath, tmp)}`;
+  console.log({ tmp, tmpRelative });
+  const child = spawn('go', ['run', tmpRelative], {
     cwd: workPath,
     env,
     stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+  });
+
+  child.once('exit', async () => {
+    await remove(tmp); // Cleanup
   });
 
   const portPipe = child.stdio[3];
