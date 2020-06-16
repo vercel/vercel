@@ -34,7 +34,7 @@
     "logo": "https://raw.githubusercontent.com/zeit/now/master/packages/frameworks/logos/blitz.svg",
     "tagline": "Blitz.js: Rails-like framework for fullstack React apps - built on Next.js",
     "description": "A brand new Blitz.js app: the output of running `blitz new`",
-    "website": "https://blitzjs.org",
+    "website": "https://blitzjs.com",
     "detectors": {
       "every": [
         {
