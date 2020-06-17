@@ -18,8 +18,8 @@
     "prepublishOnly": "./build.sh"
   },
   "devDependencies": {
+    "@netlify/zip-it-and-ship-it": "1.2.0",
     "@types/node": "*",
-    "@zeit/node-file-trace": "0.6.5",
     "typescript": "3.9.3"
   }
 }
