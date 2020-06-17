@@ -1,10 +1,28 @@
 # Runtime Developer Reference
 
-The following page is a reference for how to create a Runtime using the available Runtime API.
+The following page is a reference for how to create a Runtime by implementing
+the Runtime API interface.
 
-A Runtime is an npm module that exposes a `build` function and optionally an `analyze` function and `prepareCache` function.
-Official Runtimes are published to [npmjs.com](https://npmjs.com) as a package and referenced in the `use` property of the `vercel.json` configuration file.
-However, the `use` property will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo url which is useful for testing your Runtime.
+A Runtime is an npm module that implements the following interface:
+
+```typescript
+interface Runtime {
+  version: number;
+  build: (opts: BuildOptions) =>
+  analyze?: (opts: AnalyzeOptions) => string | Promise<string>;
+  prepareCache?: (opts: PrepareCacheOptions) =>
+  shouldServe?: (opts: ShouldServeOptions) => boolean | Promise<boolean>;
+  startDevServer?: (opts: StartDevServerOptions) => Promise<StartDevServerResult>;
+}
+```
+
+The `version` property and the `build()` are the only required fields. The rest
+are optional extensions that a Runtime _may_ implement in order to enhance
+functionality. These functions are documented in more detail below.
+
+Official Runtimes are published to [the npm registry](https://npmjs.com) as a package and referenced in the `use` property of the `vercel.json` configuration file.
+
+> **Note:** The `use` property in the `builds` array will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo URL, which is useful for testing your Runtime.
 
 See the [Runtimes Documentation](https://vercel.com/docs/runtimes) to view example usage.
 
