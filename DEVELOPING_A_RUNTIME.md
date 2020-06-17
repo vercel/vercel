@@ -8,17 +8,19 @@ A Runtime is an npm module that implements the following interface:
 ```typescript
 interface Runtime {
   version: number;
-  build: (opts: BuildOptions) =>
-  analyze?: (opts: AnalyzeOptions) => string | Promise<string>;
-  prepareCache?: (opts: PrepareCacheOptions) =>
-  shouldServe?: (opts: ShouldServeOptions) => boolean | Promise<boolean>;
-  startDevServer?: (opts: StartDevServerOptions) => Promise<StartDevServerResult>;
+  build: (options: BuildOptions) => Promise<BuildResult>;
+  analyze?: (options: AnalyzeOptions) => Promise<string>;
+  prepareCache?: (options: PrepareCacheOptions) => Promise<CacheOutputs>;
+  shouldServe?: (options: ShouldServeOptions) => Promise<boolean>;
+  startDevServer?: (
+    options: StartDevServerOptions
+  ) => Promise<StartDevServerResult>;
 }
 ```
 
-The `version` property and the `build()` are the only required fields. The rest
-are optional extensions that a Runtime _may_ implement in order to enhance
-functionality. These functions are documented in more detail below.
+The `version` property and the `build()` function are the only _required_ fields.
+The rest are optional extensions that a Runtime _may_ implement in order to
+enhance functionality. These functions are documented in more detail below.
 
 Official Runtimes are published to [the npm registry](https://npmjs.com) as a package and referenced in the `use` property of the `vercel.json` configuration file.
 
@@ -34,146 +36,161 @@ A **required** exported constant that decides which version of the Runtime API t
 
 The latest and suggested version is `3`.
 
-### `analyze`
+**Example:**
 
-An **optional** exported function that returns a unique fingerprint used for the purpose of [build de-duplication](https://vercel.com/docs/v2/platform/deployments#deduplication). If the `analyze` function is not supplied, a random fingerprint is assigned to each build.
-
-```js
-export analyze({
-  files: Files,
-  entrypoint: String,
-  workPath: String,
-  config: Object
-}) : String fingerprint
+```typescript
+export const version = 3;
 ```
 
-If you are using TypeScript, you should use the following types:
-
-```ts
-import { AnalyzeOptions } from '@vercel/build-utils'
-
-export analyze(options: AnalyzeOptions) {
-  return 'fingerprint goes here'
-}
-```
-
-### `build`
+### `build()`
 
 A **required** exported function that returns a [Serverless Function](#serverless-function).
 
 What's a Serverless Function? Read about [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction) to learn more.
 
-```js
-build({
-  files: Files,
-  entrypoint: String,
-  workPath: String,
-  config: Object,
-  meta?: {
-    isDev?: Boolean,
-    requestPath?: String,
-    filesChanged?: Array<String>,
-    filesRemoved?: Array<String>
-  }
-}) : {
-  watch?: Array<String>,
-  output: Lambda,
-  routes?: Object
+**Example:**
+
+```typescript
+import { BuildOptions, createLambda } from '@vercel/build-utils';
+
+export async function build(options: BuildOptions) {
+  // Build the code here…
+
+  const lambda = createLambda(/* … */);
+  return {
+    output: lambda,
+    watch: [
+      // Dependent files to trigger a rebuild in `vercel dev` go here…
+    ],
+    routes: [
+      // If your Runtime needs to define additional routing, define it here…
+    ],
+  };
 }
 ```
 
-If you are using TypeScript, you should use the following types:
+### `analyze()`
 
-```ts
-import { BuildOptions } from '@vercel/build-utils'
+An **optional** exported function that returns a unique fingerprint used for the
+purpose of [build
+de-duplication](https://vercel.com/docs/v2/platform/deployments#deduplication).
+If the `analyze()` function is not supplied, then a random fingerprint is
+assigned to each build.
 
-export build(options: BuildOptions) {
-  // Build the code here
+**Example:**
+
+```typescript
+import { AnalyzeOptions } from '@vercel/build-utils';
+
+export async function analyze(options: AnalyzeOptions) {
+  // Do calculations to generate a fingerprint based off the source code here…
+
+  return 'fingerprint goes here';
+}
+```
+
+### `prepareCache()`
+
+An **optional** exported function that is executed after [`build()`](#build) is
+completed. The implementation should return an object of `File`s that will be
+pre-populated in the working directory for the next build run in the user's
+project. An example use-case is that `@vercel/node` uses this function to cache
+the `node_modules` directory, making it faster to install npm dependencies for
+future builds.
+
+**Example:**
+
+```typescript
+import { PrepareCacheOptions } from '@vercel/build-utils';
+
+export async function prepareCache(options: PrepareCacheOptions) {
+  // Create a mapping of file names and `File` object instances to cache here…
 
   return {
-    output: {
-      'path-to-file': File,
-      'path-to-lambda': Lambda
-    },
-    watch: [],
-    routes: {}
-  }
+    'path-to-file': File,
+  };
 }
 ```
 
-### `prepareCache`
+### `shouldServe()`
 
-An **optional** exported function that is equivalent to [`build`](#build), but it executes the instructions necessary to prepare a cache for the next run.
+An **optional** exported function that is only used by `vercel dev` in [Vercel
+CLI](https://vercel.com/download) and indicates whether a
+[Runtime](https://vercel.com/docs/runtimes) wants to be responsible for responding
+to a certain request path.
 
-```js
-prepareCache({
-  files: Files,
-  entrypoint: String,
-  workPath: String,
-  cachePath: String,
-  config: Object
-}) : Files cacheOutput
-```
+**Example:**
 
-If you are using TypeScript, you can import the types for each of these functions by using the following:
+```typescript
+import { ShouldServeOptions } from '@vercel/build-utils';
 
-```ts
-import { PrepareCacheOptions } from '@vercel/build-utils'
+export async function shouldServe(options: ShouldServeOptions) {
+  // Determine whether or not the Runtime should respond to the request path here…
 
-export prepareCache(options: PrepareCacheOptions) {
-  return { 'path-to-file': File }
+  return options.requestPath === options.entrypoint;
 }
 ```
 
-### `shouldServe`
+If this function is not defined, Vercel CLI will use the [default implementation](https://github.com/vercel/vercel/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
 
-An **optional** exported function that is only used by `vercel dev` in [Vercel CLI](https:///download) and indicates whether a [Runtime](https://vercel.com/docs/runtimes) wants to be responsible for building a certain request path.
+### `startDevServer()`
 
-```js
-shouldServe({
-  entrypoint: String,
-  files: Files,
-  config: Object,
-  requestPath: String,
-  workPath: String
-}) : Boolean
-```
+An **optional** exported function that is only used by `vercel dev` in [Vercel
+CLI](https://vercel.com/download). If this function is defined, Vercel CLI will
+**not** invoke the `build()` function, and instead invoke this function for every
+HTTP request, so it is an opportunity to provide a faster development experience
+rather than going through the entire `build()` process that is used in production.
 
-If you are using TypeScript, you can import the types for each of these functions by using the following:
+This function is invoked _once per HTTP request_ and is expected to spawn a child
+process which creates an HTTP server that will execute the entrypoint code when
+an HTTP request is received. This child process is _single-serve_ (only used for
+a single HTTP request), so after `vercel dev` completes the HTTP request to the
+child process, it sends a shut down signal to the child process.
 
-```ts
-import { ShouldServeOptions } from '@vercel/build-utils'
+The `startDevServer()` function returns an object with the `port` number that the
+child process' HTTP server is listening on (which should be an [ephemeral
+port](https://stackoverflow.com/a/28050404/376773)) as well as the child process'
+Process ID, which `vercel dev` uses to send the shut down signal to.
 
-export shouldServe(options: ShouldServeOptions) {
-  return Boolean
+> **Hint:** To determine which ephemeral port the child process is listening on,
+> some form of [IPC](https://en.wikipedia.org/wiki/Inter-process_communication) is
+> required. For example, in `@vercel/go` the child process writes the port number
+> to _file descriptor 3_, which is read by the `startDevServer()` function
+> implementation.
+
+It may also return `null` to opt-out of this behavior for a particular request
+path or entrypoint.
+
+**Example:**
+
+```typescript
+import { spawn } from 'child_process';
+import { StartDevServerOptions } from '@vercel/build-utils';
+
+export async function startDevServer(options: StartDevServerOptions) {
+  // Create a child process which will create an HTTP server
+  const child = spawn('my-runtimes-dev-server', [options.entrypoint], {
+    stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+  });
+
+  // In this example, the child process will write the port number to FD 3…
+  const childPort = Number(await bufferStream(child.stdio[3]));
+
+  return { pid: child.pid, port: childPort };
 }
 ```
-
-If this method is not defined, Vercel CLI will default to [this function](https://github.com/vercel/vercel/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
-
-### Runtime Options
-
-The exported functions [`analyze`](#analyze), [`build`](#build), and [`prepareCache`](#preparecache) receive one argument with the following properties.
-
-**Properties:**
-
-- `files`: All source files of the project as a [Files](#files) data structure.
-- `entrypoint`: Name of entrypoint file for this particular build job. Value `files[entrypoint]` is guaranteed to exist and be a valid [File](#files) reference. `entrypoint` is always a discrete file and never a glob, since globs are expanded into separate builds at deployment time.
-- `workPath`: A writable temporary directory where you are encouraged to perform your build process. This directory will be populated with the restored cache from the previous run (if any) for [`analyze`](#analyze) and [`build`](#build).
-- `cachePath`: A writable temporary directory where you can build a cache for the next run. This is only passed to `prepareCache`.
-- `config`: An arbitrary object passed from by the user in the [Build definition](#defining-the-build-step) in `vercel.json`.
-
-## Examples
-
-Check out our [Node.js Runtime](https://github.com/vercel/vercel/tree/master/packages/now-node), [Go Runtime](https://github.com/vercel/vercel/tree/master/packages/now-go), [Python Runtime](https://github.com/vercel/vercel/tree/master/packages/now-python) or [Ruby Runtime](https://github.com/vercel/vercel/tree/master/packages/now-ruby) for examples of how to build one.
-
-## Technical Details
 
 ### Execution Context
 
-A [Serverless Function](https://vercel.com/docs/v2/serverless-functions/introduction) is created where the Runtime logic is executed. The lambda is run using the Node.js 8 runtime. A brand new sandbox is created for each deployment, for security reasons. The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
+- Runtimes are executed in a Linux container that closely matches the Servereless Function runtime environment.
+- The Runtime code is executed using Node.js version **12**.
+- A brand new sandbox is created for each deployment, for security reasons.
+- The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
 
-All the APIs you export ([`analyze`](#analyze), [`build`](#build) and [`prepareCache`](#preparecache)) are not guaranteed to be run in the same process, but the filesystem we expose (e.g.: `workPath` and the results of calling [`getWriteableDirectory`](#getWriteableDirectory) ) is retained.
+All the APIs you export ([`analyze()`](#analyze), [`build()`](#build),
+[`prepareCache()`](#preparecache), etc.) are not guaranteed to be run in the
+same process, but the filesystem we expose (e.g.: `workPath` and the results
+of calling [`getWritableDirectory`](#getWritableDirectory) ) is retained.
 
 If you need to share state between those steps, use the filesystem.
 
@@ -195,7 +212,7 @@ When you publish your Runtime to npm, make sure to not specify `@vercel/build-ut
 
 ### `Files`
 
-```ts
+```typescript
 import { File } from '@vercel/build-utils';
 type Files = { [filePath: string]: File };
 ```
@@ -217,7 +234,7 @@ An example of a valid output `Files` object is:
 
 This is an abstract type that can be imported if you are using TypeScript.
 
-```ts
+```typescript
 import { File } from '@vercel/build-utils';
 ```
 
@@ -229,7 +246,7 @@ Valid `File` types include:
 
 ### `FileRef`
 
-```ts
+```typescript
 import { FileRef } from '@vercel/build-utils';
 ```
 
@@ -246,7 +263,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 
 ### `FileFsRef`
 
-```ts
+```typescript
 import { FileFsRef } from '@vercel/build-utils';
 ```
 
@@ -264,7 +281,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 
 ### `FileBlob`
 
-```ts
+```typescript
 import { FileBlob } from '@vercel/build-utils';
 ```
 
@@ -282,7 +299,7 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 
 ### `Lambda`
 
-```ts
+```typescript
 import { Lambda } from '@vercel/build-utils';
 ```
 
@@ -313,11 +330,11 @@ This is an abstract enumeration type that is implemented by one of the following
 
 The following is exposed by `@vercel/build-utils` to simplify the process of writing Runtimes, manipulating the file system, using the above types, etc.
 
-### `createLambda`
+### `createLambda()`
 
-Signature: `createLambda(Object spec) : Lambda`
+Signature: `createLambda(Object spec): Lambda`
 
-```ts
+```typescript
 import { createLambda } from '@vercel/build-utils';
 ```
 
@@ -334,29 +351,33 @@ await createLambda({
 });
 ```
 
-### `download`
+### `download()`
 
-Signature: `download() : Files`
+Signature: `download(): Files`
 
-```ts
+```typescript
 import { download } from '@vercel/build-utils';
 ```
 
-This utility allows you to download the contents of a [`Files`](#files) data structure, therefore creating the filesystem represented in it.
+This utility allows you to download the contents of a [`Files`](#files) data
+structure, therefore creating the filesystem represented in it.
 
-Since `Files` is an abstract way of representing files, you can think of `download` as a way of making that virtual filesystem _real_.
+Since `Files` is an abstract way of representing files, you can think of
+`download()` as a way of making that virtual filesystem _real_.
 
-If the **optional** `meta` property is passed (the argument for [build](#build)), only the files that have changed are downloaded. This is decided using `filesRemoved` and `filesChanged` inside that object.
+If the **optional** `meta` property is passed (the argument for
+[`build()`](#build)), only the files that have changed are downloaded.
+This is decided using `filesRemoved` and `filesChanged` inside that object.
 
 ```js
 await download(files, workPath, meta);
 ```
 
-### `glob`
+### `glob()`
 
-Signature: `glob() : Files`
+Signature: `glob(): Files`
 
-```ts
+```typescript
 import { glob } from '@vercel/build-utils';
 ```
 
@@ -373,21 +394,21 @@ exports.build = ({ files, workPath }) => {
 }
 ```
 
-### `getWriteableDirectory`
+### `getWritableDirectory()`
 
-Signature: `getWriteableDirectory() : String`
+Signature: `getWritableDirectory(): String`
 
-```ts
-import { getWriteableDirectory } from '@vercel/build-utils';
+```typescript
+import { getWritableDirectory } from '@vercel/build-utils';
 ```
 
 In some occasions, you might want to write to a temporary directory.
 
-### `rename`
+### `rename()`
 
-Signature: `rename(Files) : Files`
+Signature: `rename(Files, Function): Files`
 
-```ts
+```typescript
 import { rename } from '@vercel/build-utils';
 ```
 
