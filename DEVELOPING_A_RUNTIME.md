@@ -208,7 +208,7 @@ The env and secrets specified by the user as `build.env` are passed to the Runti
 
 When you publish your Runtime to npm, make sure to not specify `@vercel/build-utils` (as seen below in the API definitions) as a dependency, but rather as part of `peerDependencies`.
 
-## Types
+## `@vercel/build-utils` Types
 
 ### `Files`
 
@@ -250,16 +250,16 @@ Valid `File` types include:
 import { FileRef } from '@vercel/build-utils';
 ```
 
-This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract file instance stored in our platform, based on the file identifier string (its checksum). When a `Files` object is passed as an input to `analyze` or `build`, all its values will be instances of `FileRef`.
+This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract file instance stored in our platform, based on the file identifier string (its checksum). When a `Files` object is passed as an input to `analyze` or `build`, all its values will be instances of `FileRef`.
 
 **Properties:**
 
-- `mode : Number` file mode
-- `digest : String` a checksum that represents the file
+- `mode: Number` file mode
+- `digest: String` a checksum that represents the file
 
 **Methods:**
 
-- `toStream() : Stream` creates a [Stream](https://nodejs.org/api/stream.html) of the file body
+- `toStream(): Stream` creates a [Stream](https://nodejs.org/api/stream.html) of the file body
 
 ### `FileFsRef`
 
@@ -267,17 +267,17 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 import { FileFsRef } from '@vercel/build-utils';
 ```
 
-This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract instance of a file present in the filesystem that the build process is executing in.
+This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract instance of a file present in the filesystem that the build process is executing in.
 
 **Properties:**
 
-- `mode : Number` file mode
-- `fsPath : String` the absolute path of the file in file system
+- `mode: Number` file mode
+- `fsPath: String` the absolute path of the file in file system
 
 **Methods:**
 
-- `static async fromStream({ mode : Number, stream : Stream, fsPath : String }) : FileFsRef` creates an instance of a [FileFsRef](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object) from `Stream`, placing file at `fsPath` with `mode`
-- `toStream() : Stream` creates a [Stream](https://nodejs.org/api/stream.html) of the file body
+- `static async fromStream({ mode: Number, stream: Stream, fsPath: String }): FileFsRef` creates an instance of a [FileFsRef](#FileFsRef) from `Stream`, placing file at `fsPath` with `mode`
+- `toStream(): Stream` creates a [Stream](https://nodejs.org/api/stream.html) of the file body
 
 ### `FileBlob`
 
@@ -285,17 +285,17 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 import { FileBlob } from '@vercel/build-utils';
 ```
 
-This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract instance of a file present in memory.
+This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents an abstract instance of a file present in memory.
 
 **Properties:**
 
-- `mode : Number` file mode
-- `data : String | Buffer` the body of the file
+- `mode: Number` file mode
+- `data: String | Buffer` the body of the file
 
 **Methods:**
 
-- `static async fromStream({ mode : Number, stream : Stream }) :FileBlob` creates an instance of a [FileBlob](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object) from [`Stream`](https://nodejs.org/api/stream.html) with `mode`
-- `toStream() : Stream` creates a [Stream](https://nodejs.org/api/stream.html) of the file body
+- `static async fromStream({ mode: Number, stream: Stream }): FileBlob` creates an instance of a [FileBlob](#FileBlob) from [`Stream`](https://nodejs.org/api/stream.html) with `mode`
+- `toStream(): Stream` creates a [Stream](https://nodejs.org/api/stream.html) of the file body
 
 ### `Lambda`
 
@@ -303,14 +303,14 @@ This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 import { Lambda } from '@vercel/build-utils';
 ```
 
-This is a [JavaScript class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes), called a Serverless Function, that can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper. The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
+This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents a Serverless Function. An instance is by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper. The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
 
 **Properties:**
 
-- `files : Files` the internal filesystem of the lambda
-- `handler : String` path to handler file and (optionally) a function name it exports
-- `runtime : LambdaRuntime` the name of the lambda runtime
-- `environment : Object` key-value map of handler-related (aside of those passed by user) environment variables
+- `files: Files` the internal filesystem of the lambda
+- `handler: String` path to handler file and (optionally) a function name it exports
+- `runtime: LambdaRuntime` the name of the lambda runtime
+- `environment: Object` key-value map of handler-related (aside of those passed by user) environment variables
 
 ### `LambdaRuntime`
 
@@ -326,7 +326,7 @@ This is an abstract enumeration type that is implemented by one of the following
 - `ruby2.5`
 - `provided`
 
-## JavaScript API
+## `@vercel/build-utils` Helper Functions
 
 The following is exposed by `@vercel/build-utils` to simplify the process of writing Runtimes, manipulating the file system, using the above types, etc.
 
