@@ -1,0 +1,25 @@
+{
+  "name": "@vercel/redwood",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "license": "MIT",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/redwood",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/redwood"
+  },
+  "scripts": {
+    "build": "./build.sh",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail",
+    "prepublishOnly": "./build.sh"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "@zeit/node-file-trace": "0.6.5",
+    "typescript": "3.9.3"
+  }
+}
