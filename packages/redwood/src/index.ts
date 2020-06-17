@@ -96,7 +96,10 @@ export async function build({
 
   const tracedFiles: { [filename: string]: File } = {};
   for (const filePath of fileList) {
-    tracedFiles[filePath] = fsCache.get(filePath);
+    const file = fsCache.get(filePath);
+    if (file) {
+      tracedFiles[filePath] = file;
+    }
   }
 
   for (const [filePath] of Object.entries(inputs)) {
