@@ -57,7 +57,7 @@ export default async function add(
   });
 
   if (project && args.length !== 1) {
-    output.error(`${cmd('now domains add <domain>')} expects one arguments.`);
+    output.error(`${getCommandName('domains add <domain>')} expects one arguments.`);
     return 1;
   } else if (!project && args.length !== 2) {
     output.error(
