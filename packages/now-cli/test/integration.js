@@ -256,6 +256,20 @@ test.after.always(async () => {
   }
 });
 
+test('default command should prompt login with empty auth.json', async t => {
+  await fs.writeFile(getConfigAuthPath(), JSON.stringify({}));
+  try {
+    await execa(binaryPath, [...defaultArgs]);
+    t.fail();
+  } catch (err) {
+    t.true(
+      err.stderr.includes(
+        'Error! No existing credentials found. Please run `vercel login` or pass "--token"'
+      )
+    );
+  }
+});
+
 test('login', async t => {
   t.timeout(ms('1m'));
 
