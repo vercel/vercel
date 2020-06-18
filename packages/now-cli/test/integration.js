@@ -515,10 +515,10 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(vercelVars.join('\n'), /production/gm);
   }
 
-  async function nowEnvPull(args) {
+  async function nowEnvPull() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
-      ['env', 'pull', ...defaultArgs, ...args],
+      ['env', 'pull', '-y', ...defaultArgs],
       {
         reject: false,
         cwd: target,
@@ -535,6 +535,21 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
     t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
     t.true(lines.has('VERCEL_URL=""'));
+  }
+
+  async function nowEnvPullOverwrite() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'pull', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /Overwriting existing .env file/gm);
+    t.regex(stderr, /Updated .env file/gm);
   }
 
   async function nowDeployWithVar() {
@@ -628,11 +643,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvAddFromStdin();
   await nowEnvAddSystemEnv();
   await nowEnvLsIncludesVar();
-  await nowEnvPull(['-y']);
-
-  // Should not confirm the next time
   await nowEnvPull();
-
+  await nowEnvPullOverwrite();
   await nowDeployWithVar();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
