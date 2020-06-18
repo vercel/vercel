@@ -552,6 +552,23 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(stderr, /Updated .env file/gm);
   }
 
+  async function nowEnvPullConfirm() {
+    fs.writeFileSync(path.join(target, '.env'), 'hahaha');
+
+    const vc = execa(binaryPath, ['env', 'pull', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    await waitForPrompt(vc, chunk =>
+      chunk.includes('Found existing file ".env". Do you want to overwrite?')
+    );
+    vc.stdin.write('y\n');
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
   async function nowDeployWithVar() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
@@ -645,6 +662,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvLsIncludesVar();
   await nowEnvPull();
   await nowEnvPullOverwrite();
+  await nowEnvPullConfirm();
   await nowDeployWithVar();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
