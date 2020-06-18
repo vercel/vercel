@@ -230,6 +230,7 @@ function createError(
   const errors = Array.isArray(allErrors) ? allErrors : [allErrors];
   const message = errors[0];
   const error: RouteApiError = {
+    name: 'RouteApiError',
     code,
     message,
     link,

@@ -31,6 +31,8 @@ function execa(file, args, options) {
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
+const example = name =>
+  path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
@@ -243,12 +245,28 @@ test.after.always(async () => {
     loginApiServer.close();
   }
 
-  // Make sure the token gets revoked
-  await execa(binaryPath, ['logout', ...defaultArgs]);
+  // Make sure the token gets revoked unless it's passed in via environment
+  if (!process.env.VERCEL_TOKEN) {
+    await execa(binaryPath, ['logout', ...defaultArgs]);
+  }
 
   if (tmpDir) {
     // Remove config directory entirely
     tmpDir.removeCallback();
+  }
+});
+
+test('default command should prompt login with empty auth.json', async t => {
+  await fs.writeFile(getConfigAuthPath(), JSON.stringify({}));
+  try {
+    await execa(binaryPath, [...defaultArgs]);
+    t.fail();
+  } catch (err) {
+    t.true(
+      err.stderr.includes(
+        'Error! No existing credentials found. Please run `vercel login` or pass "--token"'
+      )
+    );
   }
 });
 
@@ -1589,7 +1607,7 @@ test('create a staging deployment', async t => {
     /Setting target to staging/gm,
     formatOutput(targetCall)
   );
-
+  t.regex(targetCall.stdout, /https:\/\//gm);
   t.is(targetCall.exitCode, 0, formatOutput(targetCall));
 
   const { host } = new URL(targetCall.stdout);
@@ -1625,6 +1643,7 @@ test('create a production deployment', async t => {
     /Setting target to production/gm,
     formatOutput(targetCall)
   );
+  t.regex(targetCall.stdout, /https:\/\//gm);
 
   const { host: targetHost } = new URL(targetCall.stdout);
   const targetDeployment = await apiFetch(
@@ -1648,6 +1667,7 @@ test('create a production deployment', async t => {
     /Setting target to production/gm,
     formatOutput(targetCall)
   );
+  t.regex(call.stdout, /https:\/\//gm);
 
   const { host } = new URL(call.stdout);
   const deployment = await apiFetch(
@@ -2915,4 +2935,53 @@ test('reject conflicting `vercel.json` and `now.json` files', async t => {
     ),
     formatOutput({ stderr, stdout })
   );
+});
+
+test('`vc --debug project ls` should output the projects listing', async t => {
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--debug', 'project', 'ls'],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  t.true(
+    stdout.includes('> Projects found under'),
+    formatOutput({ stderr, stdout })
+  );
+});
+
+test('deploy gatsby twice and print cached directories', async t => {
+  const directory = example('gatsby');
+  const packageJsonPath = path.join(directory, 'package.json');
+  const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
+  const pkg = JSON.parse(packageJsonOriginal);
+
+  async function tryDeploy(cwd) {
+    await execa(binaryPath, [...defaultArgs, '--public', '--confirm'], {
+      cwd,
+      stdio: 'inherit',
+      reject: true,
+    });
+
+    t.true(true);
+  }
+
+  // Deploy once to populate the cache
+  await tryDeploy(directory);
+
+  // Wait because the cache is not available right away
+  // See https://codeburst.io/quick-explanation-of-the-s3-consistency-model-6c9f325e3f82
+  await sleep(60000);
+
+  // Update build script to ensure cached files were restored in the next deploy
+  pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
+  await writeFile(packageJsonPath, JSON.stringify(pkg));
+  try {
+    await tryDeploy(directory);
+  } finally {
+    await writeFile(packageJsonPath, packageJsonOriginal);
+  }
 });

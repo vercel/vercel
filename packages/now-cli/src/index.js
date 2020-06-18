@@ -24,6 +24,7 @@ import checkForUpdate from 'update-check';
 import ms from 'ms';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
+import { NowBuildError } from '@vercel/build-utils';
 import getGlobalPathConfig from './util/config/global-path';
 import {
   getDefaultConfig,
@@ -114,10 +115,10 @@ const main = async argv_ => {
   }
 
   if (
-    localConfig instanceof NowError &&
+    (localConfig instanceof NowError || localConfig instanceof NowBuildError) &&
     !(localConfig instanceof ERRORS.CantFindConfig)
   ) {
-    output.error(`Failed to load local config file: ${localConfig.message}`);
+    output.prettyError(localConfig);
     return 1;
   }
 
@@ -313,21 +314,6 @@ const main = async argv_ => {
     // need to migrate.
     if (authConfig.credentials) {
       authConfigExists = false;
-    } else if (
-      !authConfig.token &&
-      !subcommandsWithoutToken.includes(targetOrSubcommand) &&
-      !argv['--help'] &&
-      !argv['--token']
-    ) {
-      console.error(
-        error(
-          `The content of "${hp(VERCEL_AUTH_CONFIG_PATH)}" is invalid. ` +
-            `No \`token\` property found inside. Run ${getCommandName(
-              'login'
-            )} to authorize.`
-        )
-      );
-      return 1;
     }
   } else {
     const results = await getDefaultAuthConfig(authConfig);
@@ -644,27 +630,6 @@ const main = async argv_ => {
         )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
       );
       output.debug(err.stack);
-
-      return 1;
-    }
-
-    await reportError(Sentry, err, apiUrl, configFiles);
-
-    // If there is a code we should not consider the error unexpected
-    // but instead show the message. Any error that is handled by this should
-    // actually be handled in the sub command instead. Please make sure
-    // that happens for anything that lands here. It should NOT bubble up to here.
-    if (err.code) {
-      output.debug(err.stack);
-      output.error(err.message);
-
-      if (shouldCollectMetrics) {
-        metric
-          .event(eventCategory, '1', pkg.version)
-          .exception(err.message)
-          .send();
-      }
-
       return 1;
     }
 
@@ -675,9 +640,23 @@ const main = async argv_ => {
         .send();
     }
 
-    // Otherwise it is an unexpected error and we should show the trace
-    // and an unexpected error message
-    output.error(`An unexpected error occurred in ${subcommand}: ${err.stack}`);
+    // If there is a code we should not consider the error unexpected
+    // but instead show the message. Any error that is handled by this should
+    // actually be handled in the sub command instead. Please make sure
+    // that happens for anything that lands here. It should NOT bubble up to here.
+    if (err.code) {
+      output.debug(err.stack);
+      output.prettyError(err);
+    } else {
+      await reportError(Sentry, err, apiUrl, configFiles);
+
+      // Otherwise it is an unexpected error and we should show the trace
+      // and an unexpected error message
+      output.error(
+        `An unexpected error occurred in ${subcommand}: ${err.stack}`
+      );
+    }
+
     return 1;
   }
 
@@ -687,8 +666,6 @@ const main = async argv_ => {
 
   return exitCode;
 };
-
-debug('start');
 
 const handleRejection = async err => {
   debug('handling rejection');

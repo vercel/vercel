@@ -70,7 +70,7 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
-import findUp from 'find-up';
+// import findUp from 'find-up';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -205,34 +205,10 @@ export const build = async ({
 }> => {
   validateEntrypoint(entrypoint);
 
-  const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
-    type: 'file',
-  });
-  let hasLegacyRoutes = false;
-
-  if (nowJsonPath) {
-    const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
-
-    if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
-      hasLegacyRoutes = true;
-      console.warn(
-        `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
-          nowJsonPath
-        )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
-      );
-    }
-  }
-
-  // default to true but still allow opting out with the config
-  const isSharedLambdas =
-    !hasLegacyRoutes && typeof config.sharedLambdas === 'undefined'
-      ? true
-      : !!config.sharedLambdas;
-
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
 
-  const entryDirectory = path.dirname(entrypoint);
+  let entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
@@ -252,6 +228,48 @@ export const build = async ({
         'No Next.js version could be detected in "package.json". Make sure `"next"` is installed in "dependencies" or "devDependencies"',
     });
   }
+
+  // let nowJsonPath = Object.keys(files).find(file => {
+  //   return file.endsWith('now.json') || file.endsWith('vercel.json')
+  // })
+
+  // if (nowJsonPath) nowJsonPath = files[nowJsonPath].fsPath
+
+  // if (!nowJsonPath) {
+  //   nowJsonPath = await findUp(['now.json', 'vercel.json'], {
+  //     cwd: path.join(workPath, path.dirname(entrypoint))
+  //   })
+  // }
+
+  // let hasLegacyRoutes = false;
+  // const hasFunctionsConfig = !!config.functions;
+
+  // if (nowJsonPath) {
+  //   const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
+
+  //   if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
+  //     hasLegacyRoutes = true;
+  //     console.warn(
+  //       `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
+  //         nowJsonPath
+  //       )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
+  //     );
+  //   }
+  // }
+
+  // if (hasFunctionsConfig) {
+  //   console.warn(
+  //     `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
+  //   );
+  // }
+
+  // default to true but still allow opting out with the config
+  const isSharedLambdas = !!config.sharedLambdas;
+  // !hasLegacyRoutes &&
+  // !hasFunctionsConfig &&
+  // typeof config.sharedLambdas === 'undefined'
+  //   ? true
+  //   : !!config.sharedLambdas;
 
   if (meta.isDev) {
     let childProcess: ChildProcess | undefined;
@@ -404,17 +422,16 @@ export const build = async ({
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   const redirects: Route[] = [];
-  const nextBasePathRoute: Route[] = [];
   const dataRoutes: Route[] = [];
   let dynamicRoutes: Route[] = [];
-  let nextBasePath: string | undefined;
   // whether they have enabled pages/404.js as the custom 404 page
   let hasPages404 = false;
 
   if (routesManifest) {
     switch (routesManifest.version) {
       case 1:
-      case 2: {
+      case 2:
+      case 3: {
         redirects.push(...convertRedirects(routesManifest.redirects));
         rewrites.push(...convertRewrites(routesManifest.rewrites));
 
@@ -450,7 +467,14 @@ export const build = async ({
                 // make sure to route SSG data route to the data prerender
                 // output, we don't do this for SSP routes since they don't
                 // have a separate data output
-                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page
+                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page,
+                `${
+                  dataRoute.routeKeys
+                    ? `?${Object.keys(dataRoute.routeKeys)
+                        .map(key => `${dataRoute.routeKeys![key]}=$${key}`)
+                        .join('&')}`
+                    : ''
+                }`
               ),
               check: true,
             });
@@ -462,7 +486,7 @@ export const build = async ({
         }
 
         if (routesManifest.basePath && routesManifest.basePath !== '/') {
-          nextBasePath = routesManifest.basePath;
+          const nextBasePath = routesManifest.basePath;
 
           if (!nextBasePath.startsWith('/')) {
             throw new NowBuildError({
@@ -479,11 +503,7 @@ export const build = async ({
             });
           }
 
-          nextBasePathRoute.push({
-            src: `^${nextBasePath}(?:$|/(.*))$`,
-            dest: `/$1`,
-            continue: true,
-          });
+          entryDirectory = path.join(entryDirectory, nextBasePath);
         }
         break;
       }
@@ -546,9 +566,6 @@ export const build = async ({
       output,
       routes: [
         // TODO: low priority: handle trailingSlash
-
-        // Add top level rewrite for basePath if provided
-        ...nextBasePathRoute,
 
         // User headers
         ...headers,
@@ -1178,50 +1195,6 @@ export const build = async ({
     );
 
     if (isSharedLambdas) {
-      // since we combine the pages into lambda groups we need to merge
-      // the lambda options into one this means they should only configure
-      // lambda options for one page or one API as doing it for
-      // another will override it
-      const getMergedLambdaOptions = async (pageKeys: string[]) => {
-        if (pageKeys.length === 0) return {};
-
-        const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({
-            workPath,
-            page: pageKeys[0],
-          }),
-          config,
-        });
-
-        for (const page of pageKeys) {
-          if (page === pageKeys[0]) continue;
-          const sourceFile = await getSourceFilePathFromPage({
-            workPath,
-            page,
-          });
-          const newOptions = await getLambdaOptionsFromFunction({
-            sourceFile,
-            config,
-          });
-
-          for (const key of Object.keys(newOptions)) {
-            // eslint-disable-next-line
-            if (typeof (newOptions as any)[key] !== 'undefined') {
-              // eslint-disable-next-line
-              (lambdaOptions as any)[key] = (newOptions as any)[key];
-            }
-          }
-        }
-        return lambdaOptions;
-      };
-
-      const mergedPageLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => !page.startsWith('api/'))
-      );
-      const mergedApiLambdaOptions = await getMergedLambdaOptions(
-        pageKeys.filter(page => page.startsWith('api/'))
-      );
-
       const launcherPath = path.join(__dirname, 'templated-launcher-shared.js');
       const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -1337,9 +1310,6 @@ export const build = async ({
                 ],
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...(group.isApiLambda
-                  ? mergedApiLambdaOptions
-                  : mergedPageLambdaOptions),
               });
             } else {
               lambdas[
@@ -1352,9 +1322,6 @@ export const build = async ({
                 layers: pageLayers,
                 handler: 'now__launcher.launcher',
                 runtime: nodeVersion.runtime,
-                ...(group.isApiLambda
-                  ? mergedApiLambdaOptions
-                  : mergedPageLambdaOptions),
               });
             }
           }
@@ -1615,9 +1582,6 @@ export const build = async ({
       - Builder rewrites
     */
     routes: [
-      // Add top level rewrite for basePath if provided
-      ...nextBasePathRoute,
-
       // headers
       ...headers,
 

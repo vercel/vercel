@@ -14,7 +14,7 @@ import chalk from 'chalk';
 import { prependEmoji, emoji } from '../emoji';
 import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
-import { getPlatformEnv } from '@vercel/build-utils';
+import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -49,9 +49,12 @@ export function getVercelDirectory(cwd: string = process.cwd()): string {
   const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
   const existingDirs = possibleDirs.filter(d => isDirectory(d));
   if (existingDirs.length > 1) {
-    throw new Error(
-      'Both `.vercel` and `.now` directories exist. Please remove the `.now` directory.'
-    );
+    throw new NowBuildError({
+      code: 'CONFLICTING_CONFIG_DIRECTORIES',
+      message:
+        'Both `.vercel` and `.now` directories exist. Please remove the `.now` directory.',
+      link: 'https://vercel.link/combining-old-and-new-config',
+    });
   }
   return existingDirs[0] || possibleDirs[0];
 }

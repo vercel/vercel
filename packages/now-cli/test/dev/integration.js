@@ -1,4 +1,5 @@
 import ms from 'ms';
+import os from 'os';
 import fs from 'fs-extra';
 import test from 'ava';
 import { join, resolve, delimiter } from 'path';
@@ -161,7 +162,7 @@ async function testPath(
     Object.entries(headers).forEach(([key, expectedValue]) => {
       let actualValue = res.headers.get(key);
       if (key.toLowerCase() === 'location' && actualValue === '//') {
-        // HACK: `node-fetch` has strang behavior for location header so fix it
+        // HACK: `node-fetch` has strange behavior for location header so fix it
         // with `manual-dont-change` opt and convert double slash to single.
         // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
         actualValue = '/';
@@ -187,20 +188,29 @@ async function testFixture(directory, opts = {}, args = []) {
     }
   );
 
-  const stdoutList = [];
-  const stderrList = [];
-
+  let stdout = '';
+  let stderr = '';
+  const readyResolver = createResolver();
   const exitResolver = createResolver();
 
-  dev.stderr.on('data', data => stderrList.push(Buffer.from(data)));
-  dev.stdout.on('data', data => stdoutList.push(Buffer.from(data)));
+  dev.stdout.setEncoding('utf8');
+  dev.stderr.setEncoding('utf8');
+
+  dev.stdout.on('data', data => {
+    stdout += data;
+  });
+  dev.stderr.on('data', data => {
+    stderr += data;
+
+    if (stderr.includes('Ready! Available at')) {
+      readyResolver.resolve();
+    }
+  });
 
   let printedOutput = false;
 
   dev.on('exit', () => {
     if (!printedOutput) {
-      const stdout = Buffer.concat(stdoutList).toString();
-      const stderr = Buffer.concat(stderrList).toString();
       printOutput(directory, stdout, stderr);
       printedOutput = true;
     }
@@ -209,8 +219,6 @@ async function testFixture(directory, opts = {}, args = []) {
 
   dev.on('error', () => {
     if (!printedOutput) {
-      const stdout = Buffer.concat(stdoutList).toString();
-      const stderr = Buffer.concat(stderrList).toString();
       printOutput(directory, stdout, stderr);
       printedOutput = true;
     }
@@ -226,6 +234,7 @@ async function testFixture(directory, opts = {}, args = []) {
   return {
     dev,
     port,
+    readyResolver,
   };
 }
 
@@ -267,14 +276,12 @@ function testFixtureStdio(
 
     await runNpmInstall(cwd);
 
-    const stdoutList = [];
-    const stderrList = [];
-
+    let stdout = '';
+    let stderr = '';
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
     try {
-      let stderr = '';
       let printedOutput = false;
 
       const env = skipDeploy
@@ -285,17 +292,19 @@ function testFixtureStdio(
         env,
       });
 
+      dev.stdout.setEncoding('utf8');
+      dev.stderr.setEncoding('utf8');
+
       dev.stdout.pipe(process.stdout);
       dev.stderr.pipe(process.stderr);
 
       dev.stdout.on('data', data => {
-        stdoutList.push(data);
+        stdout += data;
       });
 
       dev.stderr.on('data', data => {
-        stderrList.push(data);
+        stderr += data;
 
-        stderr += data.toString();
         if (stderr.includes('Ready! Available at')) {
           readyResolver.resolve();
         }
@@ -315,8 +324,6 @@ function testFixtureStdio(
 
       dev.on('exit', () => {
         if (!printedOutput) {
-          const stdout = Buffer.concat(stdoutList).toString();
-          const stderr = Buffer.concat(stderrList).toString();
           printOutput(directory, stdout, stderr);
           printedOutput = true;
         }
@@ -325,8 +332,6 @@ function testFixtureStdio(
 
       dev.on('error', () => {
         if (!printedOutput) {
-          const stdout = Buffer.concat(stdoutList).toString();
-          const stderr = Buffer.concat(stderrList).toString();
           printOutput(directory, stdout, stderr);
           printedOutput = true;
         }
@@ -373,6 +378,182 @@ test.afterEach(async () => {
       }
     })
   );
+});
+
+test('[vercel dev] prints `npm install` errors', async t => {
+  const dir = fixture('runtime-not-installed');
+  const result = await exec(dir);
+  t.truthy(result.stderr.includes('npm ERR! 404'));
+  t.truthy(
+    result.stderr.includes('Failed to install `vercel dev` dependencies')
+  );
+  t.truthy(
+    result.stderr.includes('https://vercel.link/npm-install-failed-dev')
+  );
+});
+
+test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
+  const dir = fixture('invalidate-vercel-config');
+  const configPath = join(dir, 'vercel.json');
+  const originalConfig = await fs.readJSON(configPath);
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    {
+      // Env var should be set from `vercel.json`
+      const res = await fetch(`http://localhost:${port}/api`);
+      const body = await res.json();
+      t.is(body.FOO, 'bar');
+    }
+
+    {
+      // Env var should not be set after `vercel.json` is deleted
+      await fs.remove(configPath);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/api`);
+      const body = await res.json();
+      t.is(body.FOO, undefined);
+    }
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.writeJSON(configPath, originalConfig);
+  }
+});
+
+test('[vercel dev] reflects changes to config and env without restart', async t => {
+  const dir = fixture('node-helpers');
+  const configPath = join(dir, 'vercel.json');
+  const originalConfig = await fs.readJSON(configPath);
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    {
+      // Node.js helpers should be available by default
+      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'bar');
+    }
+
+    {
+      // Disable the helpers via `config.helpers = false`
+      const config = {
+        ...originalConfig,
+        builds: [
+          {
+            ...originalConfig.builds[0],
+            config: {
+              helpers: false,
+            },
+          },
+        ],
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const body = await res.json();
+      t.is(body.hasHelpers, false);
+      t.is(body.query, undefined);
+    }
+
+    {
+      // Enable the helpers via `config.helpers = true`
+      const config = {
+        ...originalConfig,
+        builds: [
+          {
+            ...originalConfig.builds[0],
+            config: {
+              helpers: true,
+            },
+          },
+        ],
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'baz');
+    }
+
+    {
+      // Disable the helpers via `NODEJS_HELPERS = '0'`
+      const config = {
+        ...originalConfig,
+        build: {
+          env: {
+            NODEJS_HELPERS: '0',
+          },
+        },
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const body = await res.json();
+      t.is(body.hasHelpers, false);
+      t.is(body.query, undefined);
+    }
+
+    {
+      // Enable the helpers via `NODEJS_HELPERS = '1'`
+      const config = {
+        ...originalConfig,
+        build: {
+          env: {
+            NODEJS_HELPERS: '1',
+          },
+        },
+      };
+      await fs.writeJSON(configPath, config);
+      await sleep(1000);
+
+      const res = await fetch(`http://localhost:${port}/?foo=boo`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'boo');
+    }
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.writeJSON(configPath, originalConfig);
+  }
+});
+
+test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', async t => {
+  // The purpose of this test is to test that `@vercel/node` can properly
+  // resolve the default "typescript" module when the project doesn't include
+  // its own version. To properly test for this, a fixture needs to be created
+  // *outside* of the `vercel` repo, since otherwise the root-level
+  // "node_modules/typescript" is resolved as relative to the project, and
+  // not relative to `@vercel/node` which is what we are testing for here.
+  const dir = join(os.tmpdir(), 'vercel-node-typescript-resolve-test');
+  const apiDir = join(dir, 'api');
+  await fs.mkdirp(apiDir);
+  await fs.writeFile(
+    join(apiDir, 'hello.js'),
+    'export default (req, res) => { res.end("world"); }'
+  );
+
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/api/hello`);
+    const body = await res.text();
+    t.is(body, 'world');
+  } finally {
+    await dev.kill('SIGTERM');
+    await fs.remove(dir);
+  }
 });
 
 test(
@@ -482,19 +663,15 @@ test(
 
 test(
   '[vercel dev] should serve the public directory and api functions',
-  testFixtureStdio(
-    'public-and-api',
-    async testPath => {
-      await testPath(200, '/', 'This is the home page');
-      await testPath(200, '/about.html', 'This is the about page');
-      await testPath(200, '/api/date', /current date/);
-      await testPath(200, '/api/rand', /random number/);
-      await testPath(200, '/api/rand.js', /random number/);
-      await testPath(404, '/api/api', /NOT_FOUND/m);
-      await testPath(404, '/nothing', /Custom 404 Page/);
-    },
-    { skipDeploy: true /** TODO: remove after prod goes live */ }
-  )
+  testFixtureStdio('public-and-api', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'This is the about page');
+    await testPath(200, '/api/date', /current date/);
+    await testPath(200, '/api/rand', /random number/);
+    await testPath(200, '/api/rand.js', /random number/);
+    await testPath(404, '/api/api', /NOT_FOUND/m);
+    await testPath(404, '/nothing', /Custom 404 Page/);
+  })
 );
 
 test(
@@ -694,17 +871,13 @@ test(
 
 test(
   '[vercel dev] should serve custom 404 when `cleanUrls: true`',
-  testFixtureStdio(
-    'test-clean-urls-custom-404',
-    async testPath => {
-      await testPath(200, '/', 'This is the home page');
-      await testPath(200, '/about', 'The about page');
-      await testPath(200, '/contact/me', 'Contact Me Subdirectory');
-      await testPath(404, '/nothing', 'Custom 404 Page');
-      await testPath(404, '/nothing/', 'Custom 404 Page');
-    },
-    { skipDeploy: true /** TODO: remove after prod goes live */ }
-  )
+  testFixtureStdio('test-clean-urls-custom-404', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about', 'The about page');
+    await testPath(200, '/contact/me', 'Contact Me Subdirectory');
+    await testPath(404, '/nothing', 'Custom 404 Page');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
 );
 
 test(
@@ -777,16 +950,12 @@ test(
 
 test(
   '[vercel dev] should serve custom 404 when `trailingSlash: true`',
-  testFixtureStdio(
-    'test-trailing-slash-custom-404',
-    async testPath => {
-      await testPath(200, '/', 'This is the home page');
-      await testPath(200, '/about.html', 'The about page');
-      await testPath(200, '/contact/', 'Contact Subdirectory');
-      await testPath(404, '/nothing/', 'Custom 404 Page');
-    },
-    { skipDeploy: true /** TODO: remove after prod goes live */ }
-  )
+  testFixtureStdio('test-trailing-slash-custom-404', async testPath => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'The about page');
+    await testPath(200, '/contact/', 'Contact Subdirectory');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
 );
 
 test(
@@ -920,6 +1089,13 @@ test(
   '[vercel dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async testPath => {
     await testPath(200, '/');
+    await testPath(200, '/about');
+    await testPath(308, '/support', 'Redirecting to /about?ref=support (308)', {
+      Location: '/about?ref=support',
+    });
+    // Bug with gridsome's dev server: https://github.com/gridsome/gridsome/issues/831
+    // Works in prod only so leave out for now
+    // await testPath(404, '/nothing');
   })
 );
 
@@ -927,6 +1103,9 @@ test(
   '[vercel dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async testPath => {
     await testPath(200, '/', /Hexo \+ Node.js API/m);
+    await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(200, '/contact.html', /Contact Us/m);
+    await testPath(200, '/support', /Contact Us/m);
   })
 );
 
@@ -951,6 +1130,8 @@ test(
   testFixtureStdio('10-nextjs-node', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
     await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
+    await testPath(200, '/contact', /Contact Page/);
+    await testPath(200, '/support', /Contact Page/);
     await testPath(404, '/nothing', /Custom Next 404/);
   })
 );
@@ -961,6 +1142,7 @@ test(
     '12-polymer-node',
     async testPath => {
       await testPath(200, '/', /Polymer \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -972,6 +1154,7 @@ test(
     '13-preact-node',
     async testPath => {
       await testPath(200, '/', /Preact/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -983,6 +1166,7 @@ test(
     '14-svelte-node',
     async testPath => {
       await testPath(200, '/', /Svelte/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -994,6 +1178,7 @@ test(
     '16-vue-node',
     async testPath => {
       await testPath(200, '/', /Vue.js \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1005,6 +1190,7 @@ test(
     '17-vuepress-node',
     async testPath => {
       await testPath(200, '/', /VuePress \+ Node.js API/m);
+      await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     },
     { skipDeploy: true }
   )
@@ -1400,6 +1586,23 @@ test(
   testFixtureStdio('nested-tsconfig', async testPath => {
     await testPath(200, `/`, /Nested tsconfig.json test page/);
     await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
+  })
+);
+
+test(
+  '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
+  testFixtureStdio('force-module-commonjs', async testPath => {
+    await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
+    await testPath(
+      200,
+      `/api`,
+      'Force "module: commonjs" JavaScript with ES Modules API endpoint'
+    );
+    await testPath(
+      200,
+      `/api/ts`,
+      'Force "module: commonjs" TypeScript API endpoint'
+    );
   })
 );
 

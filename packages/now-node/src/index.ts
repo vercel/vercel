@@ -445,9 +445,10 @@ export async function startDevServer(
     env: {
       ...process.env,
       ...meta.env,
-      NOW_DEV_ENTRYPOINT: entrypoint,
-      NOW_DEV_TSCONFIG: projectTsConfig || '',
-      NOW_DEV_CONFIG: JSON.stringify(config),
+      VERCEL_DEV_ENTRYPOINT: entrypoint,
+      VERCEL_DEV_TSCONFIG: projectTsConfig || '',
+      VERCEL_DEV_CONFIG: JSON.stringify(config),
+      VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
     },
   });
 
