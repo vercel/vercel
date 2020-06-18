@@ -515,10 +515,10 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(vercelVars.join('\n'), /production/gm);
   }
 
-  async function nowEnvPull() {
+  async function nowEnvPull(args) {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
-      ['env', 'pull', '-y', ...defaultArgs],
+      ['env', 'pull', ...defaultArgs, ...args],
       {
         reject: false,
         cwd: target,
@@ -529,6 +529,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    t.true(contents.startsWith('# Created by Vercel CLI\n'));
+
     const lines = new Set(contents.split('\n'));
     t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
     t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
@@ -626,7 +628,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvAddFromStdin();
   await nowEnvAddSystemEnv();
   await nowEnvLsIncludesVar();
+  await nowEnvPull(['-y']);
+
+  // Should not confirm the next time
   await nowEnvPull();
+
   await nowDeployWithVar();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();

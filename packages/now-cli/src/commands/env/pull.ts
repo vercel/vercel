@@ -9,15 +9,28 @@ import getDecryptedSecret from '../../util/env/get-decrypted-secret';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { join } from 'path';
-import { promises, existsSync } from 'fs';
+import { promises, openSync, closeSync, readSync } from 'fs';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { getCommandName } from '../../util/pkg-name';
 const { writeFile } = promises;
+
+const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
 type Options = {
   '--debug': boolean;
   '--yes': boolean;
 };
+
+function readHeadSync(path: string, length: number) {
+  const buffer = Buffer.alloc(length);
+  const fd = openSync(path, 'r');
+  try {
+    readSync(fd, buffer, 0, buffer.length, null);
+  } finally {
+    closeSync(fd);
+  }
+  return buffer.toString();
+}
 
 export default async function pull(
   client: Client,
@@ -35,10 +48,21 @@ export default async function pull(
 
   const [filename = '.env'] = args;
   const fullPath = join(process.cwd(), filename);
-  const exists = existsSync(fullPath);
   const skipConfirmation = opts['--yes'];
 
-  if (
+  let head;
+  try {
+    head = readHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+  const exists = typeof head !== 'undefined';
+
+  if (head === CONTENTS_PREFIX) {
+    output.print(`Overwriting existing ${chalk.bold(filename)} file\n`);
+  } else if (
     exists &&
     !skipConfirmation &&
     !(await promptBool(
@@ -83,6 +107,7 @@ export default async function pull(
   });
 
   const contents =
+    CONTENTS_PREFIX +
     records
       .filter(obj => {
         if (!obj.found) {
@@ -95,7 +120,8 @@ export default async function pull(
         return true;
       })
       .map(({ key, value }) => `${key}="${escapeValue(value)}"`)
-      .join('\n') + '\n';
+      .join('\n') +
+    '\n';
 
   await writeFile(fullPath, contents, 'utf8');
 
