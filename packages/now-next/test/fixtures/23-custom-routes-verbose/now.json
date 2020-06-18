@@ -182,7 +182,7 @@
 
     // should match /_next file after rewrite
     {
-      "path": "/hidden/_next/static/b09092d6eebe375caba5/pages/hello.js",
+      "path": "/hidden/_next/__NEXT_SCRIPT__(/hello)",
       "mustContain": "createElement"
     },
 
@@ -250,6 +250,13 @@
     // should rewrite to catch-all with dash in segment name
     {
       "path": "/catchall-dash/hello/world",
+      "status": 200,
+      "mustContain": "hello/world"
+    },
+
+    // should rewrite and normalize catch-all rewrite param
+    {
+      "path": "/a/catch-all/hello/world",
       "status": 200,
       "mustContain": "hello/world"
     }
