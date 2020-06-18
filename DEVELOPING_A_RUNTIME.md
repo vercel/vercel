@@ -303,7 +303,7 @@ This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 import { Lambda } from '@vercel/build-utils';
 ```
 
-This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents a Serverless Function. An instance is by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper. The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
+This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) that represents a Serverless Function. An instance can be created by supplying `files`, `handler`, `runtime`, and `environment` as an object to the [`createLambda`](#createlambda) helper. The instances of this class should not be created directly. Instead, invoke the [`createLambda`](#createlambda) helper function.
 
 **Properties:**
 
