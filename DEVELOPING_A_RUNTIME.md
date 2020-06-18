@@ -183,7 +183,7 @@ export async function startDevServer(options: StartDevServerOptions) {
 ### Execution Context
 
 - Runtimes are executed in a Linux container that closely matches the Servereless Function runtime environment.
-- The Runtime code is executed using Node.js version **12**.
+- The Runtime code is executed using Node.js version **12.x**.
 - A brand new sandbox is created for each deployment, for security reasons.
 - The sandbox is cleaned up between executions to ensure no lingering temporary files are shared from build to build.
 
