@@ -138,7 +138,7 @@ If this function is not defined, Vercel CLI will use the [default implementation
 An **optional** exported function that is only used by `vercel dev` in [Vercel
 CLI](https://vercel.com/download). If this function is defined, Vercel CLI will
 **not** invoke the `build()` function, and instead invoke this function for every
-HTTP request, so it is an opportunity to provide a faster development experience
+HTTP request. It is an opportunity to provide an optimized development experience
 rather than going through the entire `build()` process that is used in production.
 
 This function is invoked _once per HTTP request_ and is expected to spawn a child
