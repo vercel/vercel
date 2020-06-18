@@ -563,7 +563,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     await waitForPrompt(vc, chunk =>
       chunk.includes('Found existing file ".env". Do you want to overwrite?')
     );
-    vc.stdin.write('y\n');
+    vc.stdin.end('y\n');
 
     const { exitCode, stderr, stdout } = await vc;
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
