@@ -17,8 +17,11 @@
     "test-integration-once": "jest --env node --verbose --runInBand --bail",
     "prepublishOnly": "./build.sh"
   },
+  "dependencies": {
+    "@netlify/zip-it-and-ship-it": "1.2.0"
+  },
   "devDependencies": {
-    "@netlify/zip-it-and-ship-it": "1.2.0",
+    "@types/aws-lambda": "8.10.19",
     "@types/node": "*",
     "typescript": "3.9.3"
   }

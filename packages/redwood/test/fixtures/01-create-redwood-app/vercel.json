@@ -4,6 +4,6 @@
   "probes": [
     { "path": "/", "mustContain": "redwood-app" },
     { "path": "/about", "mustContain": "redwood-app" },
-    { "path": "/functions/graphql", "mustContain": "graphql" }
+    { "path": "/api/graphql", "mustContain": "graphql" }
   ]
 }

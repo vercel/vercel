@@ -1,6 +1,11 @@
-import { join, dirname, parse } from 'path';
+import { join, dirname, relative, parse as parsePath, sep } from 'path';
 import buildUtils from './build-utils';
-import { BuildOptions, Lambda as LambdaType } from '@vercel/build-utils';
+import {
+  BuildOptions,
+  Lambda as LambdaType,
+  createLambda,
+  Files,
+} from '@vercel/build-utils';
 const {
   download,
   glob,
@@ -10,11 +15,19 @@ const {
   getSpawnOptions,
   runNpmInstall,
   spawnAsync,
-  Lambda,
-  streamToBuffer,
+  FileBlob,
+  FileFsRef,
 } = buildUtils;
-// @ts-ignore
-import { zipFunctions } from '@netlify/zip-it-and-ship-it';
+import { makeAwsLauncher } from './launcher';
+const {
+  getDependencies,
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+} = require('@netlify/zip-it-and-ship-it/src/dependencies.js');
+
+const LAUNCHER_FILENAME = '___now_launcher';
+const BRIDGE_FILENAME = '___now_bridge';
+const HELPERS_FILENAME = '___now_helpers';
+const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support';
 
 export const version = 2;
 
@@ -50,37 +63,66 @@ export async function build({
     prettyCommand: 'yarn rw build',
   });
 
-  const lambdaOutputs: { [filePath: string]: LambdaType } = {};
-
-  const staticOutputs = await glob('**', {
-    cwd: join(workPath, 'web', 'dist'),
-  });
-
-  /*
-  const inputFsFiles = await glob('*.js', {
-    cwd: join(workPath, 'api', 'dist', 'functions'),
-  });
-  */
-
   const apiDistPath = join(workPath, 'api', 'dist', 'functions');
-  const zipBallPath = join(workPath, 'api', 'zipballs');
-  console.log(`zisi: zip ${apiDistPath} and ship ${zipBallPath}`);
-  await zipFunctions(apiDistPath, zipBallPath);
+  const webDistPath = join(workPath, 'web', 'dist');
+  const lambdaOutputs: { [filePath: string]: LambdaType } = {};
+  const staticOutputs = await glob('**', webDistPath);
 
-  const zipballs = await glob('*.zip', {
-    cwd: zipBallPath,
-  });
+  // Each file in the `functions` dir will become a lambda
+  const functionFiles = await glob('*.js', apiDistPath);
 
-  for (const [filePath, zipFile] of Object.entries(zipballs)) {
-    const functionName = parse(filePath).name;
-    const zipBuffer = await streamToBuffer(zipFile.toStream());
-    const lambda = new Lambda({
-      zipBuffer,
-      handler: `${functionName}.handler`,
+  console.log({ functionFiles });
+
+  for (const [funcName, fileFsRef] of Object.entries(functionFiles)) {
+    const outputName = join('api', parsePath(funcName).name); // remove `.js` extension
+    const absEntrypoint = fileFsRef.fsPath;
+    const dependencies: string[] = await getDependencies(
+      absEntrypoint,
+      workPath
+    );
+    const relativeEntrypoint = relative(workPath, absEntrypoint);
+    const awsLambdaHandler = getAWSLambdaHandler(relativeEntrypoint, 'handler');
+
+    console.log({
+      outputName,
+      absEntrypoint,
+      relativeEntrypoint,
+      awsLambdaHandler,
+    });
+
+    const lambdaFiles: Files = {
+      [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
+        data: makeAwsLauncher({
+          entrypointPath: `./${relativeEntrypoint}`,
+          bridgePath: `./${BRIDGE_FILENAME}`,
+          helpersPath: `./${HELPERS_FILENAME}`,
+          sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
+          shouldAddHelpers: false,
+          shouldAddSourcemapSupport: false,
+          awsLambdaHandler,
+        }),
+      }),
+      [`${BRIDGE_FILENAME}.js`]: new FileFsRef({
+        fsPath: join(__dirname, 'bridge.js'),
+      }),
+    };
+
+    dependencies.forEach(fsPath => {
+      lambdaFiles[relative(workPath, fsPath)] = new FileFsRef({ fsPath });
+    });
+
+    console.log(
+      'adding entrypoint file ' + relative(workPath, fileFsRef.fsPath)
+    );
+    lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
+
+    const lambda = await createLambda({
+      files: lambdaFiles,
+      handler: `${LAUNCHER_FILENAME}.launcher`,
       runtime: nodeVersion.runtime,
       environment: {},
     });
-    lambdaOutputs[join('api', functionName)] = lambda;
+    lambdaOutputs[outputName] = lambda;
   }
 
   return {
@@ -88,6 +130,11 @@ export async function build({
     routes: [{ handle: 'filesystem' }, { src: '/.*', dest: '/index.html' }],
     watch: [],
   };
+}
+
+function getAWSLambdaHandler(filePath: string, handlerName: string) {
+  const { dir, name } = parsePath(filePath);
+  return `${dir}${dir ? sep : ''}${name}.${handlerName}`;
 }
 
 export { shouldServe };
