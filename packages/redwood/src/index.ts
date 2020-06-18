@@ -5,6 +5,7 @@ import {
   Lambda as LambdaType,
   createLambda,
   Files,
+  PrepareCacheOptions,
 } from '@vercel/build-utils';
 const {
   download,
@@ -24,10 +25,10 @@ const {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
 } = require('@netlify/zip-it-and-ship-it/src/dependencies.js');
 
-const LAUNCHER_FILENAME = '___now_launcher';
-const BRIDGE_FILENAME = '___now_bridge';
-const HELPERS_FILENAME = '___now_helpers';
-const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support';
+const LAUNCHER_FILENAME = '___vc_launcher';
+const BRIDGE_FILENAME = '___vc_bridge';
+const HELPERS_FILENAME = '___vc_helpers';
+const SOURCEMAP_SUPPORT_FILENAME = '__vc_sourcemap_support';
 
 export const version = 2;
 
@@ -135,6 +136,13 @@ export async function build({
 function getAWSLambdaHandler(filePath: string, handlerName: string) {
   const { dir, name } = parsePath(filePath);
   return `${dir}${dir ? sep : ''}${name}.${handlerName}`;
+}
+
+export async function prepareCache({
+  workPath,
+}: PrepareCacheOptions): Promise<Files> {
+  const cache = await glob('node_modules/**', workPath);
+  return cache;
 }
 
 export { shouldServe };
