@@ -623,12 +623,18 @@ const main = async argv_ => {
         .send();
     }
   } catch (err) {
-    if (err.code === 'ENOTFOUND' && err.hostname === 'api.vercel.com') {
-      output.error(
-        `The hostname ${highlight(
-          'api.vercel.com'
-        )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
-      );
+    if (err.code === 'ENOTFOUND') {
+      // Error message will look like the following:
+      // "request to https://api.vercel.com/www/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
+      const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
+      if (matches && matches[1]) {
+        const hostname = matches[1];
+        output.error(
+          `The hostname ${highlight(
+            hostname
+          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+        );
+      }
       output.debug(err.stack);
       return 1;
     }
