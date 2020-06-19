@@ -7,6 +7,7 @@ import qs from 'querystring';
 import ignore from 'ignore';
 type Ignore = ReturnType<typeof ignore>;
 import { pkgVersion } from '../pkg';
+import { NowBuildError } from '@vercel/build-utils';
 import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
@@ -48,7 +49,7 @@ export function getApiDeploymentsUrl(
     return '/v10/now/deployments';
   }
 
-  return '/v12/now/deployments';
+  return '/v13/now/deployments';
 }
 
 export async function parseVercelConfig(filePath?: string): Promise<NowConfig> {
@@ -76,43 +77,22 @@ const maybeRead = async function<T>(path: string, default_: T) {
   }
 };
 
-export async function readdirRelative(
-  path: string,
-  ignores: string[],
-  cwd: string
-): Promise<string[]> {
-  const preprocessedIgnores = ignores.map(ignore => {
-    if (ignore.endsWith('/')) {
-      return ignore.slice(0, -1);
-    }
-    return ignore;
-  });
-  const dirContents = await readdir(path, preprocessedIgnores);
-  return dirContents.map(filePath => relative(cwd, filePath));
-}
-
 export async function buildFileTree(
   path: string | string[],
   isDirectory: boolean,
   debug: Debug
 ): Promise<string[]> {
-  // Get .nowignore
-  let { ig, ignores } = await getVercelIgnore(path);
-
-  debug(`Found ${ig.ignores.length} rules in .nowignore`);
-
   let fileList: string[];
+  let { ig } = await getVercelIgnore(path);
 
+  debug(`Found ${ig.ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
 
   if (isDirectory && !Array.isArray(path)) {
     // Directory path
     const cwd = process.cwd();
-    const relativeFileList = await readdirRelative(path, ignores, cwd);
-    fileList = ig
-      .filter(relativeFileList)
-      .map((relativePath: string) => join(cwd, relativePath));
-
+    const ignores = (absPath: string) => ig.ignores(relative(cwd, absPath));
+    fileList = await readdir(path, [ignores]);
     debug(`Read ${fileList.length} files in the specified directory`);
   } else if (Array.isArray(path)) {
     // Array of file paths
@@ -166,9 +146,12 @@ export async function getVercelIgnore(
         maybeRead(join(cwd, '.nowignore'), ''),
       ]);
       if (vercelignore && nowignore) {
-        throw new Error(
-          'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.'
-        );
+        throw new NowBuildError({
+          code: 'CONFLICTING_IGNORE_FILES',
+          message:
+            'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
+          link: 'https://vercel.link/combining-old-and-new-config',
+        });
       }
       return vercelignore || nowignore;
     })

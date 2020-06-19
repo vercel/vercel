@@ -117,7 +117,7 @@ describe('build meta dev', () => {
       {
         src: '^/(nested\\/([^/]+?)(?:\\/)?)$',
         dest: 'http://localhost:5000/$1',
-        check: true,
+        check: false /* We cannot check the filesystem for a url */,
       },
       { src: '/data.txt', dest: 'http://localhost:5000/data.txt' },
     ]);

@@ -7,11 +7,13 @@ export class NowBuildError extends Error {
   public hideStackTrace = true;
   public code: string;
   public link?: string;
+  public action?: string;
 
-  constructor({ message, code, link }: Props) {
+  constructor({ message, code, link, action }: Props) {
     super(message);
     this.code = code;
     this.link = link;
+    this.action = action;
   }
 }
 
@@ -31,4 +33,8 @@ interface Props {
    * link to more information about this error.
    */
   link?: string;
+  /**
+   * Optional "action" to display before the `link`, such as "More details".
+   */
+  action?: string;
 }
