@@ -635,7 +635,6 @@ const main = async argv_ => {
           )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
         );
       }
-
       output.debug(err.stack);
       return 1;
     }
