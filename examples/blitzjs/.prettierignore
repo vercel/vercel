@@ -2,4 +2,5 @@
 .env
 *.ico
 *.lock
+db/migrations
 
