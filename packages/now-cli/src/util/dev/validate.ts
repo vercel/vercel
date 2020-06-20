@@ -8,71 +8,69 @@ import {
   trailingSlashSchema,
 } from '@vercel/routing-utils';
 import { NowConfig } from './types';
-import { functionsSchema, buildsSchema } from '@vercel/build-utils';
+import {
+  functionsSchema,
+  buildsSchema,
+  NowBuildError,
+} from '@vercel/build-utils';
+
+const vercelConfigSchema = {
+  type: 'object',
+  // These are not all possibilities because `vc dev`
+  // doesn't need to know about `regions`, `public`, etc.
+  additionalProperties: true,
+  properties: {
+    builds: buildsSchema,
+    routes: routesSchema,
+    cleanUrls: cleanUrlsSchema,
+    headers: headersSchema,
+    redirects: redirectsSchema,
+    rewrites: rewritesSchema,
+    trailingSlash: trailingSlashSchema,
+    functions: functionsSchema,
+  },
+};
 
 const ajv = new Ajv();
 
-const validateBuilds = ajv.compile(buildsSchema);
-const validateRoutes = ajv.compile(routesSchema);
-const validateCleanUrls = ajv.compile(cleanUrlsSchema);
-const validateHeaders = ajv.compile(headersSchema);
-const validateRedirects = ajv.compile(redirectsSchema);
-const validateRewrites = ajv.compile(rewritesSchema);
-const validateTrailingSlash = ajv.compile(trailingSlashSchema);
-const validateFunctions = ajv.compile(functionsSchema);
-
-export function validateNowConfigBuilds(config: NowConfig) {
-  return validateKey(config, 'builds', validateBuilds);
-}
-
-export function validateNowConfigRoutes(config: NowConfig) {
-  return validateKey(config, 'routes', validateRoutes);
-}
-
-export function validateNowConfigCleanUrls(config: NowConfig) {
-  return validateKey(config, 'cleanUrls', validateCleanUrls);
-}
-
-export function validateNowConfigHeaders(config: NowConfig) {
-  return validateKey(config, 'headers', validateHeaders);
-}
-
-export function validateNowConfigRedirects(config: NowConfig) {
-  return validateKey(config, 'redirects', validateRedirects);
-}
-
-export function validateNowConfigRewrites(config: NowConfig) {
-  return validateKey(config, 'rewrites', validateRewrites);
-}
-
-export function validateNowConfigTrailingSlash(config: NowConfig) {
-  return validateKey(config, 'trailingSlash', validateTrailingSlash);
-}
-
-export function validateNowConfigFunctions(config: NowConfig) {
-  return validateKey(config, 'functions', validateFunctions);
-}
-
-function validateKey(
-  config: NowConfig,
-  key: keyof NowConfig,
-  validate: Ajv.ValidateFunction
-) {
-  const value = config[key];
-  if (!value) {
-    return null;
-  }
-
-  if (!validate(value)) {
+export function validateConfig(config: NowConfig) {
+  const validate = ajv.compile(vercelConfigSchema);
+  if (!validate(config)) {
     if (!validate.errors) {
       return null;
     }
 
     const error = validate.errors[0];
+    console.log({ error }); // TODO: remove
+    const { dataPath, schemaPath, message, params } = error;
+    const [hash, type, property] = schemaPath.split('/');
+    if (hash === '#' && type === 'properties' && property) {
+      return new NowBuildError({
+        code: 'DEV_VALIDATE_CONFIG',
+        message: `Configuration property \`${property}\` ${message} ${JSON.stringify(
+          params
+        )} ${dataPath}`,
+        link: `https://vercel.com/docs/configuration#project/${property.toLowerCase()}`,
+        action: 'Learn More',
+      });
+    }
+
+    return new NowBuildError({
+      code: 'DEV_VALIDATE_CONFIG',
+      message: `${dataPath} ${message} ${JSON.stringify(params)}`,
+    });
+
+    /*
+    if ('additionalProperty' in error.params) {
+      const { additionalProperty } = error.params;
+      return `Unknown property ${additionalProperty} at \`${String(key)}\`${error.dataPath}, ${
+        error.message
+      }`;
+    }
 
     return `Invalid \`${String(key)}\` property: ${error.dataPath} ${
       error.message
-    }`;
+    }`;*/
   }
 
   return null;

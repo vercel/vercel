@@ -50,17 +50,7 @@ import { MissingDotenvVarsError } from '../errors-ts';
 import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
-import {
-  validateNowConfigBuilds,
-  validateNowConfigRoutes,
-  validateNowConfigCleanUrls,
-  validateNowConfigHeaders,
-  validateNowConfigRedirects,
-  validateNowConfigRewrites,
-  validateNowConfigTrailingSlash,
-  validateNowConfigFunctions,
-} from './validate';
-
+import { validateConfig } from './validate';
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
@@ -693,14 +683,12 @@ export default class DevServer {
       return;
     }
 
-    await this.tryValidateOrExit(config, validateNowConfigBuilds);
-    await this.tryValidateOrExit(config, validateNowConfigRoutes);
-    await this.tryValidateOrExit(config, validateNowConfigCleanUrls);
-    await this.tryValidateOrExit(config, validateNowConfigHeaders);
-    await this.tryValidateOrExit(config, validateNowConfigRedirects);
-    await this.tryValidateOrExit(config, validateNowConfigRewrites);
-    await this.tryValidateOrExit(config, validateNowConfigTrailingSlash);
-    await this.tryValidateOrExit(config, validateNowConfigFunctions);
+    const error = validateConfig(config);
+
+    if (error) {
+      this.output.prettyError(error);
+      await this.exit(1);
+    }
   }
 
   validateEnvConfig(type: string, env: Env = {}, localEnv: Env = {}): Env {
