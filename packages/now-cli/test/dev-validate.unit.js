@@ -39,17 +39,43 @@ test('[dev-validate] should error with invalid rewrites due to additional proper
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Configuration property `rewrites` should NOT have additional property `src`'
+    'Configuration property `rewrites` should NOT have additional property `src`.'
   );
 });
 
-test('[dev-validate] should error with invalid routes type', async t => {
+test('[dev-validate] should error with invalid routes array type', async t => {
   const config = {
     routes: { src: '/(.*)', dest: '/api/index.js' },
   };
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Configuration property `routes` should be of type array but found type object'
+    'Configuration property `routes` should be of type array but found type object.'
+  );
+});
+
+test('[dev-validate] should error with invalid redirects array object', async t => {
+  const config = {
+    redirects: [
+      {
+        /* intentionally empty */
+      },
+    ],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `redirects` is missing property `source`.'
+  );
+});
+
+test('[dev-validate] should error with invalid redirects.permanent poperty', async t => {
+  const config = {
+    redirects: [{ source: '/', destination: '/go', permanent: 'yes' }],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `redirects` should have property `permanent` of type boolean.'
   );
 });

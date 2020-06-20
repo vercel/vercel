@@ -45,11 +45,17 @@ export function validateConfig(config: NowConfig) {
     const { dataPath, schemaPath, message, params } = error;
     const [hash, type, property] = schemaPath.split('/');
     if (hash === '#' && type === 'properties' && property) {
+      let prettyMessage = `Configuration property \`${property}\``;
+      if ('additionalProperty' in params) {
+        prettyMessage += ` should NOT have additional property \`${params.additionalProperty}\`.`;
+      } else if ('type' in params) {
+        prettyMessage += ` should be of type ${params.type} but found type object.`;
+      } else if ('missingProperty' in params) {
+        prettyMessage += ` is missing property \`${params.missingProperty}\`.`;
+      }
       return new NowBuildError({
         code: 'DEV_VALIDATE_CONFIG',
-        message: `Configuration property \`${property}\` ${message} ${JSON.stringify(
-          params
-        )} ${dataPath}`,
+        message: prettyMessage,
         link: `https://vercel.com/docs/configuration#project/${property.toLowerCase()}`,
         action: 'Learn More',
       });
