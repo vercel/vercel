@@ -10,6 +10,7 @@ test('[dev-validate] should not error with empty config', async t => {
 test('[dev-validate] should not error with complete config', async t => {
   const config = {
     version: 2,
+    public: true,
     regions: ['sfo1', 'iad1'],
     builds: [{ src: 'package.json', use: '@vercel/next' }],
     cleanUrls: true,
@@ -39,7 +40,11 @@ test('[dev-validate] should error with invalid rewrites due to additional proper
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Configuration property `rewrites` should NOT have additional property `src`.'
+    'Configuration property `rewrites[0]` should NOT have additional property `src`.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/rewrites'
   );
 });
 
@@ -50,7 +55,11 @@ test('[dev-validate] should error with invalid routes array type', async t => {
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Configuration property `routes` should be of type array but found type object.'
+    'Configuration property `routes` should be of type array.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/routes'
   );
 });
 
@@ -65,7 +74,11 @@ test('[dev-validate] should error with invalid redirects array object', async t 
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Configuration property `redirects` is missing property `source`.'
+    'Configuration property `redirects[0]` is missing property `source`.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/redirects'
   );
 });
 
@@ -76,6 +89,117 @@ test('[dev-validate] should error with invalid redirects.permanent poperty', asy
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Configuration property `redirects` should have property `permanent` of type boolean.'
+    'Configuration property `redirects[0].permanent` should be of type boolean.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/redirects'
+  );
+});
+
+test('[dev-validate] should error with invalid cleanUrls type', async t => {
+  const config = {
+    cleanUrls: 'true',
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `cleanUrls` should be of type boolean.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/cleanurls'
+  );
+});
+
+test('[dev-validate] should error with invalid trailingSlash type', async t => {
+  const config = {
+    trailingSlash: [true],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `trailingSlash` should be of type boolean.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/trailingslash'
+  );
+});
+
+test('[dev-validate] should error with invalid headers property', async t => {
+  const config = {
+    headers: [{ 'Content-Type': 'text/html' }],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `headers[0]` should NOT have additional property `Content-Type`.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/headers'
+  );
+});
+
+test('[dev-validate] should error with invalid headers.source type', async t => {
+  const config = {
+    headers: [{ source: [{ ' Content-Type': 'text/html' }] }],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `headers[0].source` should be of type string.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/headers'
+  );
+});
+
+test('[dev-validate] should error with invalid headers additional property', async t => {
+  const config = {
+    headers: [{ source: '/', stuff: [{ ' Content-Type': 'text/html' }] }],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `headers[0]` should NOT have additional property `stuff`.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/headers'
+  );
+});
+
+test('[dev-validate] should error with invalid headers wrong nested headers type', async t => {
+  const config = {
+    headers: [{ source: '/', headers: [{ ' Content-Type': 'text/html' }] }],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `headers[0].headers[0]` should NOT have additional property ` Content-Type`.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/headers'
+  );
+});
+
+test('[dev-validate] should error with invalid headers wrong nested headers additional property', async t => {
+  const config = {
+    headers: [
+      { source: '/', headers: [{ key: 'Content-Type', val: 'text/html' }] },
+    ],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Configuration property `headers[0].headers[0]` should NOT have additional property `val`.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/headers'
   );
 });
