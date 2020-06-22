@@ -17,10 +17,7 @@ export default function humanizeAjvError(
 
     if ('additionalProperty' in params) {
       const suggestion = getSuggestion(prop, params.additionalProperty);
-      const solution = suggestion
-        ? `Did you mean \`${suggestion}\`?`
-        : 'Please remove it.';
-      message += ` should NOT have additional property \`${params.additionalProperty}\`. ${solution}`;
+      message += ` should NOT have additional property \`${params.additionalProperty}\`. ${suggestion}`;
     } else if ('type' in params) {
       message += ` should be of type ${params.type}.`;
     } else if ('missingProperty' in params) {
@@ -61,7 +58,11 @@ function getTopLevelPropertyName(dataPath: string): string {
 }
 
 const mapTypoToSuggestion: { [key: string]: { [key: string]: string } } = {
-  '': { 'build.env': 'build', 'builds.env': 'build', builder: 'builds' },
+  '': {
+    builder: 'builds',
+    'build.env': '{ "build": { "env": {"name": "value"} } }',
+    'builds.env': '{ "build": { "env": {"name": "value"} } }',
+  },
   rewrites: { src: 'source', dest: 'destination' },
   redirects: { src: 'source', dest: 'destination', status: 'statusCode' },
   headers: { src: 'source', header: 'headers' },
@@ -75,5 +76,6 @@ const mapTypoToSuggestion: { [key: string]: { [key: string]: string } } = {
 
 function getSuggestion(topLevelProp: string, additionalProperty: string) {
   const choices = mapTypoToSuggestion[topLevelProp];
-  return choices ? choices[additionalProperty] : undefined;
+  const choice = choices ? choices[additionalProperty] : undefined;
+  return choice ? `Did you mean \`${choice}\`?` : 'Please remove it.';
 }

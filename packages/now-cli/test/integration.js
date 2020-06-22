@@ -1557,6 +1557,31 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
   t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
+test('try to create a builds deployments with wrong `build.env` property', async t => {
+  const directory = fixture('builds-wrong-build-env');
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    ['--public', ...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(
+    stderr.includes(
+      'Error! Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
+    ),
+    formatOutput({ stdout, stderr })
+  );
+  t.true(
+    stderr.includes('https://vercel.com/docs/configuration'),
+    formatOutput({ stdout, stderr })
+  );
+});
+
 test('create a builds deployments with no actual builds', async t => {
   const directory = fixture('builds-no-list');
 
