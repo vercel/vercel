@@ -33,18 +33,33 @@ test('[dev-validate] should not error with builds and routes', async t => {
   t.deepEqual(error, null);
 });
 
-test('[dev-validate] should error with invalid rewrites due to additional property', async t => {
+test('[dev-validate] should error with invalid rewrites due to additional property and offer suggestion', async t => {
   const config = {
     rewrites: [{ src: '/(.*)', dest: '/api/index.js' }],
   };
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `rewrites[0]` should NOT have additional property `src`. Please remove it.'
+    'Invalid vercel.json - property `rewrites[0]` should NOT have additional property `src`. Did you mean `source`?'
   );
   t.deepEqual(
     error.link,
     'https://vercel.com/docs/configuration#project/rewrites'
+  );
+});
+
+test('[dev-validate] should error with invalid routes due to additional property and offer suggestion', async t => {
+  const config = {
+    routes: [{ source: '/(.*)', destination: '/api/index.js' }],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Invalid vercel.json - property `routes[0]` should NOT have additional property `source`. Did you mean `src`?'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/routes'
   );
 });
 

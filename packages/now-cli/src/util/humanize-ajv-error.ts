@@ -8,13 +8,19 @@ export default function humanizeAjvError(
   const docsUrl = 'https://vercel.com/docs/configuration';
   try {
     const { dataPath, params } = error;
+    const prop = getTopLevelPropertyName(dataPath);
+
     let message = `Invalid ${fileName} -`;
     if (dataPath && dataPath.startsWith('.')) {
       message += ` property \`${dataPath.slice(1)}\``;
     }
 
     if ('additionalProperty' in params) {
-      message += ` should NOT have additional property \`${params.additionalProperty}\`. Please remove it.`;
+      const suggestion = getSuggestion(prop, params.additionalProperty);
+      const solution = suggestion
+        ? `Did you mean \`${suggestion}\`?`
+        : 'Please remove it.';
+      message += ` should NOT have additional property \`${params.additionalProperty}\`. ${solution}`;
     } else if ('type' in params) {
       message += ` should be of type ${params.type}.`;
     } else if ('missingProperty' in params) {
@@ -23,7 +29,6 @@ export default function humanizeAjvError(
       message += ' should match configuration schema.';
     }
 
-    const prop = getTopLevelPropertyName(dataPath);
     return new NowBuildError({
       code: 'DEV_VALIDATE_CONFIG',
       message: message,
@@ -53,4 +58,22 @@ function getTopLevelPropertyName(dataPath: string): string {
     return lastIndex > -1 ? dataPath.slice(1, lastIndex) : dataPath.slice(1);
   }
   return '';
+}
+
+const mapTypoToSuggestion: { [key: string]: { [key: string]: string } } = {
+  '': { 'build.env': 'build', 'builds.env': 'build', builder: 'builds' },
+  rewrites: { src: 'source', dest: 'destination' },
+  redirects: { src: 'source', dest: 'destination', status: 'statusCode' },
+  headers: { src: 'source', header: 'headers' },
+  routes: {
+    source: 'src',
+    destination: 'dest',
+    header: 'headers',
+    method: 'methods',
+  },
+};
+
+function getSuggestion(topLevelProp: string, additionalProperty: string) {
+  const choices = mapTypoToSuggestion[topLevelProp];
+  return choices ? choices[additionalProperty] : undefined;
 }
