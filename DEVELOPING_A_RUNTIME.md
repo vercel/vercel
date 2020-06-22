@@ -171,13 +171,22 @@ import { spawn } from 'child_process';
 import { StartDevServerOptions } from '@vercel/build-utils';
 
 export async function startDevServer(options: StartDevServerOptions) {
-  // Create a child process which will create an HTTP server
-  const child = spawn('my-runtimes-dev-server', [options.entrypoint], {
+  // Create a child process which will create an HTTP server.
+  //
+  // Note: `my-runtime-dev-server` is an example dev server program name.
+  // Your implementation will spawn a different program specific to your runtime.
+  const child = spawn('my-runtime-dev-server', [options.entrypoint], {
     stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
   });
 
   // In this example, the child process will write the port number to FD 3…
-  const childPort = Number(await bufferStream(child.stdio[3]));
+  const portPipe = child.stdio[3];
+  const childPort = await new Promise(resolve => {
+    portPipe.setEncoding('utf8');
+    portPipe.once('data', data => {
+      resolve(Number(data));
+    });
+  });
 
   return { pid: child.pid, port: childPort };
 }
