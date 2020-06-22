@@ -223,7 +223,7 @@ When used as an input, the `Files` object will only contain `FileRefs`. When `Fi
 
 An example of a valid output `Files` object is:
 
-```json
+```javascript
 {
   "index.html": FileRef,
   "api/index.js": Lambda
