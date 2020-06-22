@@ -24,7 +24,10 @@ enhance functionality. These functions are documented in more detail below.
 
 Official Runtimes are published to [the npm registry](https://npmjs.com) as a package and referenced in the `use` property of the `vercel.json` configuration file.
 
-> **Note:** The `use` property in the `builds` array will work with any [npm install argument](https://docs.npmjs.com/cli/install) such as a git repo URL, which is useful for testing your Runtime.
+> **Note:** The `use` property in the `builds` array will work with any [npm
+> install argument](https://docs.npmjs.com/cli/install) such as a git repo URL,
+> which is useful for testing your Runtime. Alternatively, the `functions` property
+> requires that you specify a specifc tag published to npm, for stability purposes.
 
 See the [Runtimes Documentation](https://vercel.com/docs/runtimes) to view example usage.
 
