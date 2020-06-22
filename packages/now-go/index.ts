@@ -542,7 +542,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
 
   const portPipe = child.stdio[3];
   if (!isReadable(portPipe)) {
-    throw new Error('Not readable');
+    throw new Error('File descriptor 3 is not readable');
   }
 
   // `dev-server.go` writes the ephemeral port number to FD 3 to be consumed here
