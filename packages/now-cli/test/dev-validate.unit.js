@@ -218,3 +218,48 @@ test('[dev-validate] should error with invalid headers wrong nested headers addi
     'https://vercel.com/docs/configuration#project/headers'
   );
 });
+
+test('[dev-validate] should error with too many redirects', async t => {
+  const config = {
+    redirects: Array.from({ length: 5000 }).map((_, i) => ({
+      source: `/${i}`,
+      destination: `/v/${i}`,
+    })),
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Invalid vercel.json - property `redirects` should NOT have more than 1024 items in the array.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/redirects'
+  );
+});
+
+test('[dev-validate] should error with too many nested headers', async t => {
+  const config = {
+    headers: [
+      {
+        source: '/',
+        headers: [{ key: `x-id`, value: `123` }],
+      },
+      {
+        source: '/too-many',
+        headers: Array.from({ length: 5000 }).map((_, i) => ({
+          key: `${i}`,
+          value: `${i}`,
+        })),
+      },
+    ],
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'Invalid vercel.json - property `headers[1].headers` should NOT have more than 1024 items in the array.'
+  );
+  t.deepEqual(
+    error.link,
+    'https://vercel.com/docs/configuration#project/headers'
+  );
+});

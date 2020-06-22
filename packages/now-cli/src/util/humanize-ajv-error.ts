@@ -22,6 +22,8 @@ export default function humanizeAjvError(
       message += ` should be of type ${params.type}.`;
     } else if ('missingProperty' in params) {
       message += ` is missing property \`${params.missingProperty}\`.`;
+    } else if ('limit' in params) {
+      message += ` should NOT have more than ${params.limit} items in the array.`;
     } else {
       message += ' should match configuration schema.';
     }
