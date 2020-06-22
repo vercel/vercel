@@ -158,7 +158,7 @@ Process ID, which `vercel dev` uses to send the shut down signal to.
 > **Hint:** To determine which ephemeral port the child process is listening on,
 > some form of [IPC](https://en.wikipedia.org/wiki/Inter-process_communication) is
 > required. For example, in `@vercel/go` the child process writes the port number
-> to _file descriptor 3_, which is read by the `startDevServer()` function
+> to [_file descriptor 3_](https://en.wikipedia.org/wiki/File_descriptor), which is read by the `startDevServer()` function
 > implementation.
 
 It may also return `null` to opt-out of this behavior for a particular request
