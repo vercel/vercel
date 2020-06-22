@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "19.1.2-canary.5",
+  "version": "19.1.2-canary.6",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -12,7 +12,7 @@
   },
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
-    "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js --serial --fail-fast --verbose",
+    "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js test/dev-validate.unit.js --serial --fail-fast --verbose",
     "test-integration-cli": "ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-v1": "ava test/integration-v1.js --serial --fail-fast",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
