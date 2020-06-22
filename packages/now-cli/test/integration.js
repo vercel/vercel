@@ -1527,9 +1527,10 @@ test('try to create a builds deployments with wrong now.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in now.json – please remove it.'
+      'Error! Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
     )
   );
+  t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
@@ -1550,8 +1551,34 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `fake` is not allowed in vercel.json – please remove it.'
+      'Error! Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
     )
+  );
+  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+});
+
+test('try to create a builds deployments with wrong `build.env` property', async t => {
+  const directory = fixture('builds-wrong-build-env');
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    ['--public', ...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(
+    stderr.includes(
+      'Error! Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
+    ),
+    formatOutput({ stdout, stderr })
+  );
+  t.true(
+    stderr.includes('https://vercel.com/docs/configuration'),
+    formatOutput({ stdout, stderr })
   );
 });
 
