@@ -532,7 +532,7 @@ export default class DevServer {
       configPath = getNowConfigPath(this.cwd);
       this.output.debug(`Reading ${configPath}`);
       config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-      config[fileNameSymbol] = configPath;
+      config[fileNameSymbol] = basename(configPath);
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(err.toString());

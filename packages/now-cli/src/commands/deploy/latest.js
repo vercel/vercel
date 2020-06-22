@@ -3,12 +3,12 @@ import bytes from 'bytes';
 import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
-import title from 'title';
 import { fileNameSymbol } from '@vercel/client';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
+import humanizeAjvError from '../../../src/util/humanize-ajv-error';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
 import createDeploy from '../../util/deploy/create-deploy';
@@ -738,16 +738,14 @@ function handleCreateDeployError(output, error, localConfig) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const { message, params, keyword, dataPath } = error.meta;
-
+    const ajvError = error.meta;
+    const fileName = localConfig[fileNameSymbol];
+    const humanError = humanizeAjvError(ajvError, fileName);
+    output.prettyError(humanError);
+    return 1;
+    /*
     if (params && params.additionalProperty) {
       const prop = params.additionalProperty;
-
-      output.error(
-        `The property ${code(prop)} is not allowed in ${highlight(
-          localConfig[fileNameSymbol]
-        )} – please remove it.`
-      );
 
       if (prop === 'build.env' || prop === 'builds.env') {
         output.note(
@@ -759,33 +757,7 @@ function handleCreateDeployError(output, error, localConfig) {
 
       return 1;
     }
-
-    if (dataPath === '.name') {
-      output.error(message);
-      return 1;
-    }
-
-    if (keyword === 'type') {
-      const prop = dataPath.substr(1, dataPath.length);
-
-      output.error(
-        `The property ${code(prop)} in ${highlight(
-          localConfig[fileNameSymbol]
-        )} can only be of type ${code(title(params.type))}.`
-      );
-
-      return 1;
-    }
-
-    const link = 'https://vercel.com/docs/configuration';
-
-    output.error(
-      `Failed to validate ${highlight(
-        localConfig[fileNameSymbol]
-      )}: ${message}\nDocumentation: ${link}`
-    );
-
-    return 1;
+    */
   }
   if (error instanceof TooManyRequests) {
     output.error(
