@@ -95,6 +95,7 @@ async function testDeployment(
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
   const { deploymentId, deploymentUrl } = await nowDeploy(bodies, randomness);
+  let nextBuildManifest;
 
   for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
@@ -102,6 +103,42 @@ async function testDeployment(
       await new Promise(resolve => setTimeout(resolve, probe.delay));
       continue;
     }
+
+    const nextScriptIndex = probe.path.indexOf('__NEXT_SCRIPT__(');
+
+    if (nextScriptIndex > -1) {
+      const scriptNameEnd = probe.path.lastIndexOf(')');
+      let scriptName = probe.path.substring(
+        nextScriptIndex + '__NEXT_SCRIPT__('.length,
+        scriptNameEnd
+      );
+      const scriptArgs = scriptName.split(',');
+
+      scriptName = scriptArgs.shift();
+      const manifestPrefix = scriptArgs.shift() || '';
+
+      if (!nextBuildManifest) {
+        const manifestUrl = `https://${deploymentUrl}${manifestPrefix}/_next/static/testing-build-id/_buildManifest.js`;
+
+        console.log('fetching buildManifest at', manifestUrl);
+        const { text: manifestContent } = await fetchDeploymentUrl(manifestUrl);
+
+        // we must eval it since we use devalue to stringify it
+        global.__BUILD_MANIFEST_CB = null;
+        nextBuildManifest = eval(
+          manifestContent
+            .replace('self.__BUILD_MANIFEST', 'manifest')
+            .replace(/self.__BUILD_MANIFEST_CB.*/, '')
+        );
+      }
+      const scriptRelativePath = nextBuildManifest[scriptName];
+
+      probe.path =
+        probe.path.substring(0, nextScriptIndex) +
+        scriptRelativePath +
+        probe.path.substr(scriptNameEnd + 1);
+    }
+
     const probeUrl = `https://${deploymentUrl}${probe.path}`;
     const fetchOpts = {
       ...probe.fetchOptions,

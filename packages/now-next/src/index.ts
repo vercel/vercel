@@ -596,7 +596,7 @@ export const build = async ({
           src: path.join(
             '/',
             entryDirectory,
-            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
           ),
           status: 404,
           check: true,
@@ -616,7 +616,7 @@ export const build = async ({
           src: path.join(
             '/',
             entryDirectory,
-            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
           ),
           // Next.js assets contain a hash or entropy in their filenames, so they
           // are guaranteed to be unique and cacheable indefinitely.
@@ -1616,7 +1616,7 @@ export const build = async ({
         src: path.join(
           '/',
           entryDirectory,
-          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
         ),
         status: 404,
         check: true,
@@ -1646,7 +1646,7 @@ export const build = async ({
         src: path.join(
           '/',
           entryDirectory,
-          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
