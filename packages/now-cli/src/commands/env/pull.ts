@@ -32,6 +32,16 @@ function readHeadSync(path: string, length: number) {
   return buffer.toString();
 }
 
+function tryReadHeadSync(path: string, length: number) {
+  try {
+    return readHeadSync(path, length);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+}
+
 export default async function pull(
   client: Client,
   project: Project,
@@ -50,14 +60,7 @@ export default async function pull(
   const fullPath = join(process.cwd(), filename);
   const skipConfirmation = opts['--yes'];
 
-  let head;
-  try {
-    head = readHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
+  const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
 
   if (head === CONTENTS_PREFIX) {
