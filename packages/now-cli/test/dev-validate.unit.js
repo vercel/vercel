@@ -40,7 +40,7 @@ test('[dev-validate] should error with invalid rewrites due to additional proper
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `rewrites[0]` should NOT have additional property `src`.'
+    'Invalid vercel.json - property `rewrites[0]` should NOT have additional property `src`. Please remove it.'
   );
   t.deepEqual(
     error.link,
@@ -134,7 +134,7 @@ test('[dev-validate] should error with invalid headers property', async t => {
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0]` should NOT have additional property `Content-Type`.'
+    'Invalid vercel.json - property `headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
   );
   t.deepEqual(
     error.link,
@@ -164,7 +164,7 @@ test('[dev-validate] should error with invalid headers additional property', asy
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0]` should NOT have additional property `stuff`.'
+    'Invalid vercel.json - property `headers[0]` should NOT have additional property `stuff`. Please remove it.'
   );
   t.deepEqual(
     error.link,
@@ -179,7 +179,7 @@ test('[dev-validate] should error with invalid headers wrong nested headers type
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0].headers[0]` should NOT have additional property `Content-Type`.'
+    'Invalid vercel.json - property `headers[0].headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
   );
   t.deepEqual(
     error.link,
@@ -196,7 +196,7 @@ test('[dev-validate] should error with invalid headers wrong nested headers addi
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0].headers[0]` should NOT have additional property `val`.'
+    'Invalid vercel.json - property `headers[0].headers[0]` should NOT have additional property `val`. Please remove it.'
   );
   t.deepEqual(
     error.link,

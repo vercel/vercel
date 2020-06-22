@@ -1491,9 +1491,10 @@ test('try to create a builds deployments with wrong now.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in now.json – please remove it.'
+      'Error! Invalid now.json - should NOT have additional property `builder`. Please remove it.'
     )
   );
+  t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
@@ -1514,9 +1515,10 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `fake` is not allowed in vercel.json – please remove it.'
+      'Error! Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
     )
   );
+  t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
 test('create a builds deployments with no actual builds', async t => {
