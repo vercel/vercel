@@ -22,10 +22,10 @@ it(
       filePath.match(/_error/)
     );
     const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-      filePath.match(/static.*\/pages\/_app\.js$/)
+      filePath.match(/static.*\/pages\/_app-.*\.js$/)
     );
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-      filePath.match(/static.*\/pages\/_error\.js$/)
+      filePath.match(/static.*\/pages\/_error-.*\.js$/)
     );
     expect(hasUnderScoreAppStaticFile).toBeTruthy();
     expect(hasUnderScoreErrorStaticFile).toBeTruthy();
