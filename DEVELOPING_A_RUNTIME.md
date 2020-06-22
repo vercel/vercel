@@ -147,8 +147,8 @@ rather than going through the entire `build()` process that is used in productio
 This function is invoked _once per HTTP request_ and is expected to spawn a child
 process which creates an HTTP server that will execute the entrypoint code when
 an HTTP request is received. This child process is _single-serve_ (only used for
-a single HTTP request), so after `vercel dev` completes the HTTP request to the
-child process, it sends a shut down signal to the child process.
+a single HTTP request). After the HTTP response is complete, `vercel dev` sends
+a shut down signal to the child process.
 
 The `startDevServer()` function returns an object with the `port` number that the
 child process' HTTP server is listening on (which should be an [ephemeral
