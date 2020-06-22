@@ -743,21 +743,6 @@ function handleCreateDeployError(output, error, localConfig) {
     const humanError = humanizeAjvError(ajvError, fileName);
     output.prettyError(humanError);
     return 1;
-    /*
-    if (params && params.additionalProperty) {
-      const prop = params.additionalProperty;
-
-      if (prop === 'build.env' || prop === 'builds.env') {
-        output.note(
-          `Do you mean ${code('build')} (object) with a property ${code(
-            'env'
-          )} (object) instead of ${code(prop)}?`
-        );
-      }
-
-      return 1;
-    }
-    */
   }
   if (error instanceof TooManyRequests) {
     output.error(
