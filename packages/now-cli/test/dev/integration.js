@@ -705,7 +705,7 @@ test('[vercel dev] validate routes', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid vercel\.json - property `routes[0].src` should be of type string/m
+    /Invalid vercel\.json - property `routes\[0\].src` should be of type string/m
   );
 });
 
