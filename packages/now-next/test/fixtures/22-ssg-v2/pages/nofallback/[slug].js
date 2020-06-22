@@ -1,7 +1,7 @@
 import React from 'react';
 
 // eslint-disable-next-line camelcase
-export async function unstable_getStaticPaths() {
+export async function getStaticPaths() {
   return {
     paths: ['/nofallback/one', { params: { slug: 'two' } }],
     fallback: false,
@@ -9,13 +9,13 @@ export async function unstable_getStaticPaths() {
 }
 
 // eslint-disable-next-line camelcase
-export async function unstable_getStaticProps({ params }) {
+export async function getStaticProps({ params }) {
   return {
     props: {
       slug: params.slug,
       time: (await import('perf_hooks')).performance.now(),
     },
-    revalidate: 10,
+    unstable_revalidate: 10,
   };
 }
 
