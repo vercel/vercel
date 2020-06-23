@@ -39,7 +39,7 @@ interface Props {
   action?: string;
 }
 
-export function getPrettyAjvMessage(obj: {
+export function getPrettyError(obj: {
   dataPath?: string;
   message?: string;
   params: any;

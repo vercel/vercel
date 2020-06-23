@@ -12,7 +12,7 @@ import {
   functionsSchema,
   buildsSchema,
   NowBuildError,
-  getPrettyAjvMessage,
+  getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
 
@@ -42,7 +42,7 @@ export function validateConfig(config: NowConfig): NowBuildError | null {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];
       const fileName = config[fileNameSymbol] || 'vercel.json';
-      const niceError = getPrettyAjvMessage(error);
+      const niceError = getPrettyError(error);
       niceError.message = `Invalid ${fileName} - ${niceError.message}`;
       return niceError;
     }

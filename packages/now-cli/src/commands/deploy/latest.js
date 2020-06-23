@@ -4,7 +4,7 @@ import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import { fileNameSymbol } from '@vercel/client';
-import { getPrettyAjvMessage } from '@vercel/build-utils';
+import { getPrettyError } from '@vercel/build-utils';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
@@ -738,7 +738,7 @@ function handleCreateDeployError(output, error, localConfig) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const niceError = getPrettyAjvMessage(error.meta);
+    const niceError = getPrettyError(error.meta);
     const fileName = localConfig[fileNameSymbol] || 'vercel.json';
     niceError.message = `Invalid ${fileName} - ${niceError.message}`;
     output.prettyError(niceError);
