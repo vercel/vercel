@@ -1208,77 +1208,86 @@ export const build = async ({
               `
               const url = require('url');
               page = function(req, res) {
-                const pages = {
-                  ${groupPageKeys
-                    .map(
-                      page =>
-                        `'${page}': require('./${path.join(
-                          './',
-                          group.pages[page].pageFileName
-                        )}')`
-                    )
-                    .join(',\n')}
-                  ${
-                    '' /*
-                    creates a mapping of the page and the page's module e.g.
-                    '/about': require('./.next/serverless/pages/about.js')
-                  */
+                try {
+                  const pages = {
+                    ${groupPageKeys
+                      .map(
+                        page =>
+                          `'${page}': require('./${path.join(
+                            './',
+                            group.pages[page].pageFileName
+                          )}')`
+                      )
+                      .join(',\n')}
+                    ${
+                      '' /*
+                      creates a mapping of the page and the page's module e.g.
+                      '/about': require('./.next/serverless/pages/about.js')
+                    */
+                    }
                   }
-                }
-                let toRender = req.headers['x-nextjs-page']
+                  let toRender = req.headers['x-nextjs-page']
 
-                if (!toRender) {
-                  try {
-                    const { pathname } = url.parse(req.url)
-                    toRender = pathname
-                  } catch (_) {
-                    // handle failing to parse url
-                    res.statusCode = 400
-                    return res.end('Bad Request')
+                  if (!toRender) {
+                    try {
+                      const { pathname } = url.parse(req.url)
+                      toRender = pathname
+                    } catch (_) {
+                      // handle failing to parse url
+                      res.statusCode = 400
+                      return res.end('Bad Request')
+                    }
                   }
-                }
 
-                let currentPage = pages[toRender]
+                  let currentPage = pages[toRender]
 
-                if (
-                  toRender &&
-                  !currentPage &&
-                  toRender.includes('/_next/data')
-                ) {
-                  toRender = toRender
-                    .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
-                    .replace(/\\.json$/, '')
+                  if (
+                    toRender &&
+                    !currentPage
+                  ) {
+                    if (toRender.includes('/_next/data')) {
+                      toRender = toRender
+                        .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
+                        .replace(/\\.json$/, '')
 
-                  currentPage = pages[toRender]
+                      currentPage = pages[toRender]
+                    }
 
-                  if (!currentPage) {
-                    // for prerendered dynamic routes (/blog/post-1) we need to
-                    // find the match since it won't match the page directly
-                    const dynamicRoutes = ${JSON.stringify(
-                      dynamicRoutes.map(route => ({
-                        src: route.src,
-                        dest: route.dest,
-                      }))
-                    )}
+                    if (!currentPage) {
+                      // for prerendered dynamic routes (/blog/post-1) we need to
+                      // find the match since it won't match the page directly
+                      const dynamicRoutes = ${JSON.stringify(
+                        dynamicRoutes.map(route => ({
+                          src: route.src,
+                          dest: route.dest,
+                        }))
+                      )}
 
-                    for (const route of dynamicRoutes) {
-                      const matcher = new RegExp(route.src)
+                      for (const route of dynamicRoutes) {
+                        const matcher = new RegExp(route.src)
 
-                      if (matcher.test(toRender)) {
-                        toRender = route.dest
-                        currentPage = pages[toRender]
-                        break
+                        if (matcher.test(toRender)) {
+                          toRender = url.parse(route.dest).pathname
+                          currentPage = pages[toRender]
+                          break
+                        }
                       }
                     }
                   }
-                }
 
-                if (!currentPage) {
-                  res.statusCode = 500
-                  return res.end('internal server error')
+                  if (!currentPage) {
+                    console.error(
+                      "Failed to find matching page for", toRender, "in lambda"
+                    )
+                    res.statusCode = 500
+                    return res.end('internal server error')
+                  }
+                  const method = currentPage.render || currentPage.default || currentPage
+                  return method(req, res)
+                } catch (err) {
+                  console.error('Unhandled error during request:', err)
+                  throw err
                 }
-                const method = currentPage.render || currentPage.default || currentPage
-                return method(req, res)
               }
               `
             );
