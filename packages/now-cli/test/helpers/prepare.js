@@ -138,6 +138,10 @@ module.exports = async session => {
       'vercel.json': '{"fake": 1}',
       'index.html': '<h1>Fake</h1>',
     },
+    'builds-wrong-build-env': {
+      'vercel.json': '{ "build.env": { "key": "value" } }',
+      'index.html': '<h1>Should fail</h1>',
+    },
     'builds-no-list': {
       'now.json': `{
   "version": 2,
