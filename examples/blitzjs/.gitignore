@@ -12,6 +12,7 @@ web_modules/
 /.next/
 *.sqlite
 .now
+.vercel
 .blitz-console-history
 blitz-log.log
 
