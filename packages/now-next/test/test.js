@@ -48,7 +48,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     console.log('updated context', context);
   });
 
-  const additionalTestsPath = path.join(fixturesPath, fixture, 'index.test.js');
+  const additionalTestsPath = path.join(fixturesPath, fixture, 'additional.js');
 
   if (fs.existsSync(additionalTestsPath)) {
     describe(`Additional ${fixture} tests`, () => {
