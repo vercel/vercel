@@ -12,9 +12,9 @@ import {
   functionsSchema,
   buildsSchema,
   NowBuildError,
+  getPrettyAjvMessage,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
-import humanizeAjvError from '../humanize-ajv-error';
 
 const vercelConfigSchema = {
   type: 'object',
@@ -41,8 +41,10 @@ export function validateConfig(config: NowConfig): NowBuildError | null {
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];
-      const fileName = config[fileNameSymbol];
-      return humanizeAjvError(error, fileName);
+      const fileName = config[fileNameSymbol] || 'vercel.json';
+      const niceError = getPrettyAjvMessage(error);
+      niceError.message = `Invalid ${fileName} - ${niceError.message}`;
+      return niceError;
     }
   }
 
