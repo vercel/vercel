@@ -1,4 +1,4 @@
-![Blitz Logo](https://github.com/zeit/now/blob/master/packages/frameworks/logos/blitz.svg)
+![Blitz Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/blitz.svg)
 
 This is a [Blitz.js](https://blitzjs.com/) project bootstrapped with `blitz new`.
 
