@@ -496,6 +496,13 @@ export async function startDevServer(
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
 
+  // For some reason, if `entrypoint` is a path segment (filename contains `[]`
+  // brackets) then the `.go` suffix on the entrypoint is missing. Fix that here…
+  let entrypointWithExt = entrypoint;
+  if (!entrypoint.endsWith('.go')) {
+    entrypointWithExt += '.go';
+  }
+
   const tmp = join(
     devCacheDir,
     'go',
@@ -510,17 +517,20 @@ export async function startDevServer(
   if (await pathExists(join(workPath, 'go.mod'))) {
     goModAbsPathDir = workPath;
   }
-  const analyzedRaw = await getAnalyzedEntrypoint(entrypoint, goModAbsPathDir);
+  const analyzedRaw = await getAnalyzedEntrypoint(
+    entrypointWithExt,
+    goModAbsPathDir
+  );
   if (!analyzedRaw) {
     throw new Error(
-      `Could not find an exported function in "${entrypoint}"
+      `Could not find an exported function in "${entrypointWithExt}"
 Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     );
   }
   const analyzed: Analyzed = JSON.parse(analyzedRaw);
 
   await Promise.all([
-    copyEntrypoint(entrypoint, tmpPackage),
+    copyEntrypoint(entrypointWithExt, tmpPackage),
     copyDevServer(analyzed.functionName, tmpPackage),
   ]);
 
@@ -564,7 +574,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   } else {
     // Got "exit" event from child process
     throw new Error(
-      `Failed to start dev server for "${entrypoint}" (code=${result[0]}, signal=${result[1]})`
+      `Failed to start dev server for "${entrypointWithExt}" (code=${result[0]}, signal=${result[1]})`
     );
   }
 }
