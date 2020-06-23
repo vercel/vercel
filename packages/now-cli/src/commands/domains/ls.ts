@@ -14,6 +14,8 @@ import { Domain, Project, NowContext } from '../../types';
 import { getProjectsWithDomains } from '../../util/projects/get-projects-with-domains';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import isDomainExternal from '../../util/domains/is-domain-external';
+import { isPublicSuffix } from '../../util/domains/is-public-suffix';
 
 type Options = {
   '--debug': boolean;
@@ -123,7 +125,7 @@ function createDomainsInfo(domains: Domain[], projects: Project[]) {
       expiresAt: domain.expiresAt || null,
       createdAt: domain.createdAt,
       configured: Boolean(domain.verified),
-      dns: domain.serviceType === 'zeit.world' ? 'Vercel' : 'External',
+      dns: isDomainExternal(domain) ? 'External' : 'Vercel',
     });
 
     projects.forEach(project => {
@@ -137,7 +139,7 @@ function createDomainsInfo(domains: Domain[], projects: Project[]) {
           expiresAt: domain.expiresAt || null,
           createdAt: domain.createdAt || target.createdAt || null,
           configured: Boolean(domain.verified),
-          dns: domain.serviceType === 'zeit.world' ? 'Vercel' : 'External',
+          dns: isDomainExternal(domain) ? 'External' : 'Vercel',
         });
       });
     });
@@ -157,8 +159,8 @@ function createDomainsInfo(domains: Domain[], projects: Project[]) {
         projectName: project.name,
         expiresAt: null,
         createdAt: target.createdAt || null,
-        configured: target.domain.endsWith('.now.sh') ? true : false,
-        dns: target.domain.endsWith('.now.sh') ? 'Vercel' : 'External',
+        configured: isPublicSuffix(target.domain) ? true : false,
+        dns: isPublicSuffix(target.domain) ? 'Vercel' : 'External',
       });
     });
   });
