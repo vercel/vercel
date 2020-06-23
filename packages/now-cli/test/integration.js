@@ -529,10 +529,44 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    t.true(contents.startsWith('# Created by Vercel CLI\n'));
+
     const lines = new Set(contents.split('\n'));
     t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
     t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
     t.true(lines.has('VERCEL_URL=""'));
+  }
+
+  async function nowEnvPullOverwrite() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'pull', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /Overwriting existing .env file/gm);
+    t.regex(stderr, /Updated .env file/gm);
+  }
+
+  async function nowEnvPullConfirm() {
+    fs.writeFileSync(path.join(target, '.env'), 'hahaha');
+
+    const vc = execa(binaryPath, ['env', 'pull', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    await waitForPrompt(vc, chunk =>
+      chunk.includes('Found existing file ".env". Do you want to overwrite?')
+    );
+    vc.stdin.end('y\n');
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
   async function nowDeployWithVar() {
@@ -627,6 +661,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvAddSystemEnv();
   await nowEnvLsIncludesVar();
   await nowEnvPull();
+  await nowEnvPullOverwrite();
+  await nowEnvPullConfirm();
   await nowDeployWithVar();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
@@ -1491,9 +1527,10 @@ test('try to create a builds deployments with wrong now.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in now.json – please remove it.'
+      'Error! Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
     )
   );
+  t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
@@ -1514,8 +1551,34 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `fake` is not allowed in vercel.json – please remove it.'
+      'Error! Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
     )
+  );
+  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+});
+
+test('try to create a builds deployments with wrong `build.env` property', async t => {
+  const directory = fixture('builds-wrong-build-env');
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    ['--public', ...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(
+    stderr.includes(
+      'Error! Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
+    ),
+    formatOutput({ stdout, stderr })
+  );
+  t.true(
+    stderr.includes('https://vercel.com/docs/configuration'),
+    formatOutput({ stdout, stderr })
   );
 });
 
