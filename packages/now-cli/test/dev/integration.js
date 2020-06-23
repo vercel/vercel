@@ -411,8 +411,6 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
     {
       // Env var should not be set after `vercel.json` is deleted
       await fs.remove(configPath);
-      await sleep(1000);
-
       const res = await fetch(`http://localhost:${port}/api`);
       const body = await res.json();
       t.is(body.FOO, undefined);
@@ -454,8 +452,6 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         ],
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
-
       const res = await fetch(`http://localhost:${port}/?foo=bar`);
       const body = await res.json();
       t.is(body.hasHelpers, false);
@@ -476,8 +472,6 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         ],
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
-
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
       t.is(body.hasHelpers, true);
@@ -495,8 +489,6 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         },
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
-
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
       t.is(body.hasHelpers, false);
@@ -514,8 +506,6 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         },
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
-
       const res = await fetch(`http://localhost:${port}/?foo=boo`);
       const body = await res.json();
       t.is(body.hasHelpers, true);
@@ -694,7 +684,7 @@ test('[vercel dev] validate builds', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `builds` property: \[0\]\.src should be string/m
+    /Invalid vercel\.json - property `builds\[0\].src` should be of type string/m
   );
 });
 
@@ -705,7 +695,7 @@ test('[vercel dev] validate routes', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `routes` property: \[0\]\.src should be string/m
+    /Invalid vercel\.json - property `routes\[0\].src` should be of type string/m
   );
 });
 
@@ -714,7 +704,10 @@ test('[vercel dev] validate cleanUrls', async t => {
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/m);
+  t.regex(
+    output.stderr,
+    /Invalid vercel\.json - property `cleanUrls` should be of type boolean/m
+  );
 });
 
 test('[vercel dev] validate trailingSlash', async t => {
@@ -724,7 +717,7 @@ test('[vercel dev] validate trailingSlash', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `trailingSlash` property:\s+should be boolean/m
+    /Invalid vercel\.json - property `trailingSlash` should be of type boolean/m
   );
 });
 
@@ -735,7 +728,7 @@ test('[vercel dev] validate rewrites', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `rewrites` property: \[0\]\.destination should be string/m
+    /Invalid vercel\.json - property `rewrites\[0\].destination` should be of type string/m
   );
 });
 
@@ -746,7 +739,7 @@ test('[vercel dev] validate redirects', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `redirects` property: \[0\]\.statusCode should be integer/m
+    /Invalid vercel\.json - property `redirects\[0\].statusCode` should be of type integer/m
   );
 });
 
@@ -757,7 +750,7 @@ test('[vercel dev] validate headers', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/m
+    /Invalid vercel\.json - property `headers\[0\].headers\[0\].value` should be of type string/m
   );
 });
 
@@ -1004,6 +997,19 @@ test(
   '[vercel dev] support legacy `@now` scope runtimes',
   testFixtureStdio('legacy-now-runtime', async testPath => {
     await testPath(200, '/', /A simple deployment with the Vercel API!/m);
+  })
+);
+
+test(
+  '[vercel dev] support dynamic next.js routes in monorepos',
+  testFixtureStdio('monorepo-dynamic-paths', async testPath => {
+    await testPath(200, '/', /This is our homepage/m);
+    await testPath(200, '/about', /This is the about static page./m);
+    await testPath(
+      200,
+      '/1/dynamic',
+      /This is the (.*)dynamic(.*) page with static props./m
+    );
   })
 );
 

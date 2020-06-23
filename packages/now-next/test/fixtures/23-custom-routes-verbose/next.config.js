@@ -85,6 +85,10 @@ module.exports = {
           source: '/:path/post-321',
           destination: '/with-params',
         },
+        {
+          source: '/a/catch-all/:path*',
+          destination: '/a/catch-all',
+        },
       ];
     },
     async redirects() {

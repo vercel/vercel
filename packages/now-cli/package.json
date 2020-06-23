@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "19.1.1-canary.2",
+  "version": "19.1.2-canary.7",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Now",
@@ -12,7 +12,7 @@
   },
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
-    "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js --serial --fail-fast --verbose",
+    "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js test/dev-validate.unit.js --serial --fail-fast --verbose",
     "test-integration-cli": "ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-v1": "ava test/integration-v1.js --serial --fail-fast",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
@@ -63,12 +63,12 @@
   },
   "dependencies": {
     "@vercel/build-utils": "2.4.0",
-    "@vercel/go": "1.1.2",
-    "@vercel/next": "2.6.7-canary.0",
-    "@vercel/node": "1.7.1-canary.0",
+    "@vercel/go": "1.1.3-canary.0",
+    "@vercel/next": "2.6.8-canary.2",
+    "@vercel/node": "1.7.2-canary.0",
     "@vercel/python": "1.2.2",
-    "@vercel/ruby": "1.2.2",
-    "@vercel/static-build": "0.17.2"
+    "@vercel/ruby": "1.2.3-canary.0",
+    "@vercel/static-build": "0.17.3"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
