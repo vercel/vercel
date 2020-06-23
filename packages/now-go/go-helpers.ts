@@ -130,23 +130,14 @@ export async function downloadGo(
   const { failed, stdout } = await execa('go', ['version'], { reject: false });
 
   if (!failed && parseInt(stdout.split('.')[1]) >= 11) {
-    debug(
-      'Using system installed version of `go`: %o',
-      stdout.trim(),
-    );
+    debug('Using system installed version of `go`: %o', stdout.trim());
     return createGo(dir, platform, arch);
   }
 
   // Check `go` bin in builder CWD
   const isGoExist = await pathExists(join(dir, 'bin'));
   if (!isGoExist) {
-    debug(
-      'Installing `go` v%s to %o for %s %s',
-      version,
-      dir,
-      platform,
-      arch
-    );
+    debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
     const url = getGoUrl(version, platform, arch);
     debug('Downloading `go` URL: %o', url);
     const res = await fetch(url);

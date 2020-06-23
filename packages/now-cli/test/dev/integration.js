@@ -1620,7 +1620,7 @@ test(
   })
 );
 
-test.only(
+test(
   '[vercel dev] Should support `*.go` API serverless functions',
   testFixtureStdio('go', async testPath => {
     await testPath(200, `/api`, 'This is the index page');
