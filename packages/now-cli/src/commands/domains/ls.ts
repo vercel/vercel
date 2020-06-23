@@ -159,7 +159,7 @@ function createDomainsInfo(domains: Domain[], projects: Project[]) {
         projectName: project.name,
         expiresAt: null,
         createdAt: target.createdAt || null,
-        configured: isPublicSuffix(target.domain) ? true : false,
+        configured: isPublicSuffix(target.domain),
         dns: isPublicSuffix(target.domain) ? 'Vercel' : 'External',
       });
     });
