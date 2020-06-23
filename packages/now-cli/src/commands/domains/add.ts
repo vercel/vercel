@@ -123,7 +123,7 @@ export default async function add(
     )} added to project ${chalk.bold(projectName)}. ${addStamp()}`
   );
 
-  if (domainName.endsWith('.now.sh')) {
+  if (isPublicSuffix(domainName)) {
     output.log(
       `The domain will automatically get assigned to your latest production deployment.`
     );
