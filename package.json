@@ -20,6 +20,7 @@
     "@zeit/ncc": "0.20.4",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
+    "cheerio": "1.0.0-rc.3",
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
     "eslint-plugin-jest": "23.8.2",

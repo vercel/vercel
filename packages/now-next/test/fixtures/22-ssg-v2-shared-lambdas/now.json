@@ -1,6 +1,14 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "sharedLambdas": true
+      }
+    }
+  ],
   "probes": [
     {
       "path": "/lambda",
