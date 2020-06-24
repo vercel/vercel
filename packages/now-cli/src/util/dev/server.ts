@@ -2163,7 +2163,9 @@ function isIndex(path: string): boolean {
 }
 
 function minimatches(files: string[], pattern: string): boolean {
-  return files.some(file => file === pattern || minimatch(file, pattern));
+  return files.some(
+    file => file === pattern || minimatch(file, pattern, { dot: true })
+  );
 }
 
 function fileChanged(
