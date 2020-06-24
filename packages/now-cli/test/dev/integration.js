@@ -1619,3 +1619,16 @@ test(
     await testPath(200, '/index.css', 'This is index.css');
   })
 );
+
+test(
+  '[vercel dev] Should support `*.go` API serverless functions',
+  testFixtureStdio('go', async testPath => {
+    await testPath(200, `/api`, 'This is the index page');
+    await testPath(200, `/api/index`, 'This is the index page');
+    await testPath(200, `/api/index.go`, 'This is the index page');
+    await testPath(200, `/api/another`, 'This is another page');
+    await testPath(200, '/api/another.go', 'This is another page');
+    await testPath(200, `/api/foo`, 'Req Path: /api/foo');
+    await testPath(200, `/api/bar`, 'Req Path: /api/bar');
+  })
+);
