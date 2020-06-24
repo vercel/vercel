@@ -9,6 +9,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
 import { getCommandName } from '../../util/pkg-name';
+import { ProjectSettings } from '../../types';
 
 type Options = {
   '--debug'?: boolean;
@@ -50,11 +51,14 @@ export default async function dev(
     return 1;
   }
 
-  let devCommand: undefined | string;
-  let frameworkSlug: null | string = null;
+  let devCommand: string | undefined;
+  let frameworkSlug: string | undefined;
+  let projectSettings: ProjectSettings | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;
     client.currentTeam = org.type === 'team' ? org.id : undefined;
+
+    projectSettings = project;
 
     if (project.devCommand) {
       devCommand = project.devCommand;
@@ -62,9 +66,11 @@ export default async function dev(
       const framework = frameworks.find(f => f.slug === project.framework);
 
       if (framework) {
-        frameworkSlug = framework.slug;
-        const defaults = framework.settings.devCommand;
+        if (framework.slug) {
+          frameworkSlug = framework.slug;
+        }
 
+        const defaults = framework.settings.devCommand;
         if (isSettingValue(defaults)) {
           devCommand = defaults.value;
         }
@@ -81,6 +87,7 @@ export default async function dev(
     debug,
     devCommand,
     frameworkSlug,
+    projectSettings,
   });
 
   process.once('SIGINT', () => devServer.stop());

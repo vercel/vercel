@@ -56,6 +56,8 @@ async function createBuildProcess(
   workPath: string,
   output: Output
 ): Promise<ChildProcess> {
+  output.debug(`Creating build process for "${match.entrypoint}"`);
+
   const builderWorkerPath = join(__dirname, 'builder-worker.js');
 
   // Ensure that `node` is in the builder's `PATH`
@@ -78,7 +80,7 @@ async function createBuildProcess(
 
   buildProcess.on('exit', (code, signal) => {
     output.debug(
-      `Build process for ${match.src} exited with ${signal || code}`
+      `Build process for "${match.entrypoint}" exited with ${signal || code}`
     );
     match.buildProcess = undefined;
   });
@@ -128,7 +130,6 @@ export async function executeBuild(
 
   let { buildProcess } = match;
   if (!runInProcess && !buildProcess) {
-    devServer.output.debug(`Creating build process for ${entrypoint}`);
     buildProcess = await createBuildProcess(
       match,
       envConfigs,
