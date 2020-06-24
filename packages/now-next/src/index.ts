@@ -34,7 +34,7 @@ import {
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import {
-  lstatSync,
+  lstat,
   pathExists,
   readFile,
   unlink as unlinkFile,
@@ -913,16 +913,23 @@ export const build = async ({
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
+      const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
+
       const collectTracedFiles = (
         reasons: NodeFileTraceReasons,
         files: { [filePath: string]: FileFsRef }
-      ) => (file: string) => {
+      ) => async (file: string) => {
         const reason = reasons[file];
         if (reason && reason.type === 'initial') {
           // Initial files are manually added to the lambda later
           return;
         }
-        const { mode } = lstatSync(path.join(workPath, file));
+        const filePath = path.join(workPath, file);
+
+        if (!lstatResults[filePath]) {
+          lstatResults[filePath] = lstat(filePath);
+        }
+        const { mode } = await lstatResults[filePath];
 
         files[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
@@ -930,8 +937,12 @@ export const build = async ({
         });
       };
 
-      fileList.forEach(collectTracedFiles(nonApiReasons, tracedFiles));
-      apiFileList.forEach(collectTracedFiles(apiReasons, apiTracedFiles));
+      await Promise.all(
+        fileList.map(collectTracedFiles(nonApiReasons, tracedFiles))
+      );
+      await Promise.all(
+        apiFileList.map(collectTracedFiles(apiReasons, apiTracedFiles))
+      );
       console.timeEnd(tracingLabel);
 
       const zippingLabel = 'Compressed shared serverless function files';
