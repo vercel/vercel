@@ -471,7 +471,7 @@ CMD ["node", "index.js"]`,
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'now-php@0.0.8',
+            runtime: 'vercel-php@0.1.0',
           },
         },
       }),
@@ -482,7 +482,7 @@ CMD ["node", "index.js"]`,
         functions: {
           'api/**/*.php': {
             memory: 128,
-            runtime: 'now-php@canary',
+            runtime: 'vercel-php@canary',
           },
         },
       }),
