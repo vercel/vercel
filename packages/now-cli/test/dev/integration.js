@@ -684,7 +684,7 @@ test('[vercel dev] validate builds', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid vercel\.json - property `builds\[0\].src` should be of type string/m
+    /Invalid vercel\.json - `builds\[0\].src` should be string/m
   );
 });
 
@@ -695,7 +695,7 @@ test('[vercel dev] validate routes', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid vercel\.json - property `routes\[0\].src` should be of type string/m
+    /Invalid vercel\.json - `routes\[0\].src` should be string/m
   );
 });
 
@@ -706,7 +706,7 @@ test('[vercel dev] validate cleanUrls', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid vercel\.json - property `cleanUrls` should be of type boolean/m
+    /Invalid vercel\.json - `cleanUrls` should be boolean/m
   );
 });
 
@@ -717,7 +717,7 @@ test('[vercel dev] validate trailingSlash', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid vercel\.json - property `trailingSlash` should be of type boolean/m
+    /Invalid vercel\.json - `trailingSlash` should be boolean/m
   );
 });
 
@@ -728,7 +728,7 @@ test('[vercel dev] validate rewrites', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid vercel\.json - property `rewrites\[0\].destination` should be of type string/m
+    /Invalid vercel\.json - `rewrites\[0\].destination` should be string/m
   );
 });
 
@@ -739,7 +739,7 @@ test('[vercel dev] validate redirects', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid vercel\.json - property `redirects\[0\].statusCode` should be of type integer/m
+    /Invalid vercel\.json - `redirects\[0\].statusCode` should be integer/m
   );
 });
 
@@ -750,7 +750,7 @@ test('[vercel dev] validate headers', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid vercel\.json - property `headers\[0\].headers\[0\].value` should be of type string/m
+    /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m
   );
 });
 
@@ -1617,5 +1617,18 @@ test(
   testFixtureStdio('index-html-priority', async testPath => {
     await testPath(200, '/', 'This is index.html');
     await testPath(200, '/index.css', 'This is index.css');
+  })
+);
+
+test(
+  '[vercel dev] Should support `*.go` API serverless functions',
+  testFixtureStdio('go', async testPath => {
+    await testPath(200, `/api`, 'This is the index page');
+    await testPath(200, `/api/index`, 'This is the index page');
+    await testPath(200, `/api/index.go`, 'This is the index page');
+    await testPath(200, `/api/another`, 'This is another page');
+    await testPath(200, '/api/another.go', 'This is another page');
+    await testPath(200, `/api/foo`, 'Req Path: /api/foo');
+    await testPath(200, `/api/bar`, 'Req Path: /api/bar');
   })
 );

@@ -5,19 +5,17 @@ export async function getStaticProps() {
   return {
     props: {
       world: 'world',
-      random: Math.random(),
       time: new Date().getTime(),
     },
-    unstable_revalidate: 1,
+    unstable_revalidate: 5,
   };
 }
 
-export default ({ world, time, random }) => {
+export default ({ world, time }) => {
   return (
     <>
-      <p id="hello">hello: {world}</p>
-      <span id="time">time: {time}</span>
-      <span id="random">random: {random}</span>
+      <p>hello: {world}</p>
+      <span>time: {time}</span>
     </>
   );
 };
