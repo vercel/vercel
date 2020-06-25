@@ -71,6 +71,7 @@ import {
   validateEntrypoint,
 } from './utils';
 // import findUp from 'find-up';
+import { Sema } from 'async-sema';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -913,6 +914,9 @@ export const build = async ({
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
+      const lstatSema = new Sema(25, {
+        capacity: fileList.length + apiFileList.length,
+      });
       const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
 
       const collectTracedFiles = (
@@ -925,11 +929,15 @@ export const build = async ({
           return;
         }
         const filePath = path.join(workPath, file);
+        let acquiredSema = false;
 
         if (!lstatResults[filePath]) {
+          await lstatSema.acquire();
+          acquiredSema = true;
           lstatResults[filePath] = lstat(filePath);
         }
         const { mode } = await lstatResults[filePath];
+        if (acquiredSema) lstatSema.release();
 
         files[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
