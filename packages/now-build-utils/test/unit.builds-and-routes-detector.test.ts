@@ -493,7 +493,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('use a custom runtime', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -501,11 +501,11 @@ describe('Test `detectBuilders`', () => {
 
     expect(errors).toBe(null);
     expect(builders!.length).toBe(1);
-    expect(builders![0].use).toBe('now-php@0.0.8');
+    expect(builders![0].use).toBe('vercel-php@0.1.0');
   });
 
   it('use a custom runtime but without a source', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/team.js'];
     const { errors } = await detectBuilders(files, null, {
       functions,
@@ -1538,7 +1538,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   });
 
   it('use a custom runtime', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -1547,11 +1547,11 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     expect(errors).toBe(null);
     expect(builders!.length).toBe(1);
-    expect(builders![0].use).toBe('now-php@0.0.8');
+    expect(builders![0].use).toBe('vercel-php@0.1.0');
   });
 
   it('use a custom runtime but without a source', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/team.js'];
     const { errors } = await detectBuilders(files, null, {
       functions,
@@ -2081,7 +2081,7 @@ it('Test `detectRoutes`', async () => {
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
     const { defaultRoutes } = await detectBuilders(files, null, { functions });
@@ -2393,7 +2393,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
     const { defaultRoutes, rewriteRoutes } = await detectBuilders(files, null, {
@@ -2692,7 +2692,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
     const {
@@ -2941,7 +2941,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
     const {
