@@ -1632,3 +1632,14 @@ test(
     await testPath(200, `/api/bar`, 'Req Path: /api/bar');
   })
 );
+
+test(
+  '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
+  testFixtureStdio(
+    'node-ts-node-target',
+    async testPath => {
+      await testPath(200, `/api`, '{"ok":true}');
+    },
+    { skipDeploy: true }
+  )
+);
