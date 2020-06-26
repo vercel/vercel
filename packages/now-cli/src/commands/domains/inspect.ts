@@ -164,7 +164,7 @@ export default async function inspect(
     output.print(
       `  We will run a verification for you and you will receive an email upon completion.\n`
     );
-    output.print('  Read more: https://err.sh/now/domain-verification\n\n');
+    output.print('  Read more: https://vercel.link/domain-configuration\n\n');
   }
 
   if (Array.isArray(projects) && projects.length > 0) {
