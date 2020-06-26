@@ -1358,7 +1358,7 @@ test('set platform version using `--platform-version` to `2`', async t => {
 });
 
 test('ensure we render a warning for deployments with no files', async t => {
-  const directory = fixture('single-dotfile');
+  const directory = fixture('empty-directory');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1381,11 +1381,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   console.log(exitCode);
 
   // Ensure the warning is printed
-  t.true(
-    stderr.includes(
-      'There are no files (or only files starting with a dot) inside your deployment.'
-    )
-  );
+  t.regex(stderr, /There are no files inside your deployment/);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1395,10 +1391,8 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(exitCode, 0);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/plain; charset=utf-8');
+  const res = await fetch(href);
+  t.is(res.status, 404);
 });
 
 test('ensure we render a prompt when deploying home directory', async t => {
@@ -2424,7 +2418,7 @@ test('deploy a Lambda with a specific runtime', async t => {
   const { host: url } = new URL(output.stdout);
 
   const [build] = await getDeploymentBuildsByUrl(url);
-  t.is(build.use, 'now-php@0.0.8', JSON.stringify(build, null, 2));
+  t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
 });
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {

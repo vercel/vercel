@@ -432,7 +432,7 @@ export async function getBuildMatches(
     }
 
     const files = fileList
-      .filter(name => name === src || minimatch(name, src))
+      .filter(name => name === src || minimatch(name, src, { dot: true }))
       .map(name => join(cwd, name));
 
     if (files.length === 0) {

@@ -4,11 +4,11 @@ import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import { fileNameSymbol } from '@vercel/client';
+import { getPrettyError } from '@vercel/build-utils';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
-import humanizeAjvError from '../../../src/util/humanize-ajv-error';
 import Now from '../../util';
 import stamp from '../../util/output/stamp.ts';
 import createDeploy from '../../util/deploy/create-deploy';
@@ -738,10 +738,10 @@ function handleCreateDeployError(output, error, localConfig) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const ajvError = error.meta;
-    const fileName = localConfig[fileNameSymbol];
-    const humanError = humanizeAjvError(ajvError, fileName);
-    output.prettyError(humanError);
+    const niceError = getPrettyError(error.meta);
+    const fileName = localConfig[fileNameSymbol] || 'vercel.json';
+    niceError.message = `Invalid ${fileName} - ${niceError.message}`;
+    output.prettyError(niceError);
     return 1;
   }
   if (error instanceof TooManyRequests) {

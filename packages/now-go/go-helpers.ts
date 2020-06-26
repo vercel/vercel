@@ -3,7 +3,6 @@ import execa from 'execa';
 import fetch from 'node-fetch';
 import { mkdirp, pathExists } from 'fs-extra';
 import { dirname, join } from 'path';
-import { homedir } from 'os';
 import buildUtils from './build-utils';
 import stringArgv from 'string-argv';
 const { debug } = buildUtils;
@@ -127,50 +126,35 @@ export async function downloadGo(
   platform = process.platform,
   arch = process.arch
 ) {
-  // Check default `Go` in user machine
-  const isUserGo = await pathExists(join(homedir(), 'go'));
+  // Check if `go` is already installed in user's `$PATH`
+  const { failed, stdout } = await execa('go', ['version'], { reject: false });
 
-  // If we found GOPATH in ENV, or default `Go` path exists
-  // asssume that user have `Go` installed
-  if (isUserGo || process.env.GOPATH !== undefined) {
-    const { stdout } = await execa('go', ['version']);
-
-    if (parseInt(stdout.split('.')[1]) >= 11) {
-      return createGo(dir, platform, arch);
-    }
-
-    throw new Error(
-      `Your current ${stdout} doesn't support Go Modules. Please update.`
-    );
-  } else {
-    // Check `Go` bin in builder CWD
-    const isGoExist = await pathExists(join(dir, 'bin'));
-    if (!isGoExist) {
-      debug(
-        'Installing `go` v%s to %o for %s %s',
-        version,
-        dir,
-        platform,
-        arch
-      );
-      const url = getGoUrl(version, platform, arch);
-      debug('Downloading `go` URL: %o', url);
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        throw new Error(`Failed to download: ${url} (${res.status})`);
-      }
-
-      // TODO: use a zip extractor when `ext === "zip"`
-      await mkdirp(dir);
-      await new Promise((resolve, reject) => {
-        res.body
-          .on('error', reject)
-          .pipe(tar.extract({ cwd: dir, strip: 1 }))
-          .on('error', reject)
-          .on('finish', resolve);
-      });
-    }
+  if (!failed && parseInt(stdout.split('.')[1]) >= 11) {
+    debug('Using system installed version of `go`: %o', stdout.trim());
     return createGo(dir, platform, arch);
   }
+
+  // Check `go` bin in builder CWD
+  const isGoExist = await pathExists(join(dir, 'bin'));
+  if (!isGoExist) {
+    debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
+    const url = getGoUrl(version, platform, arch);
+    debug('Downloading `go` URL: %o', url);
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      throw new Error(`Failed to download: ${url} (${res.status})`);
+    }
+
+    // TODO: use a zip extractor when `ext === "zip"`
+    await mkdirp(dir);
+    await new Promise((resolve, reject) => {
+      res.body
+        .on('error', reject)
+        .pipe(tar.extract({ cwd: dir, strip: 1 }))
+        .on('error', reject)
+        .on('finish', resolve);
+    });
+  }
+  return createGo(dir, platform, arch);
 }
