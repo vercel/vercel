@@ -145,6 +145,7 @@ export default class Now extends EventEmitter {
       regions,
       target: target || undefined,
       projectSettings,
+      source: 'cli',
     };
 
     // Ignore specific items from vercel.json
