@@ -39,6 +39,10 @@ const testsThatFailToBuild = new Map([
   ],
   ['07-nonzero-sh', 'Command "./build.sh" exited with 1'],
   [
+    '22-docusaurus-2-build-fail',
+    'No Output Directory named "build" found after the Build completed. You can configure the Output Directory in your project settings.',
+  ],
+  [
     '36-hugo-version-not-found',
     'Version 0.0.0 of Hugo does not exist. Please specify a different one.',
   ],
