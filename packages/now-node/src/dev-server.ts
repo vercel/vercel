@@ -21,6 +21,15 @@ try {
   compiler = 'typescript';
 }
 
+const nodeMajor = Number(process.versions.node.split('.')[0]);
+
+let target = 'es2018'; // For Node 10
+if (nodeMajor >= 14) {
+  target = 'es2020';
+} else if (nodeMajor >= 12) {
+  target = 'es2019';
+}
+
 register({
   compiler,
   compilerOptions: {
@@ -28,6 +37,7 @@ register({
     esModuleInterop: true,
     jsx: 'react',
     module: 'commonjs',
+    target,
   },
   project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
   transpileOnly: true,
