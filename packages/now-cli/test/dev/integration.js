@@ -656,6 +656,7 @@ test(
   testFixtureStdio('public-and-api', async testPath => {
     await testPath(200, '/', 'This is the home page');
     await testPath(200, '/about.html', 'This is the about page');
+    await testPath(200, '/.well-known/humans.txt', 'We come in peace');
     await testPath(200, '/api/date', /current date/);
     await testPath(200, '/api/rand', /random number/);
     await testPath(200, '/api/rand.js', /random number/);
@@ -1018,6 +1019,8 @@ test(
   testFixtureStdio('00-list-directory', async testPath => {
     await testPath(200, '/', /Files within/m);
     await testPath(200, '/', /test[0-3]\.txt/m);
+    await testPath(200, '/', /\.well-known/m);
+    await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
   })
 );
 
@@ -1450,13 +1453,10 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
 
     // Monitor `stderr` for the warning
     dev.stderr.setEncoding('utf8');
+    const msg = 'There are no files inside your deployment.';
     await new Promise(resolve => {
       dev.stderr.on('data', str => {
-        if (
-          str.includes(
-            'There are no files (or only files starting with a dot) inside your deployment'
-          )
-        ) {
+        if (str.includes(msg)) {
           resolve();
         }
       });
