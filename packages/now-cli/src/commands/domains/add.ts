@@ -5,13 +5,14 @@ import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
 import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
+import { getCommandName } from '../../util/pkg-name';
 import { getDomain } from '../../util/domains/get-domain';
 import { getLinkedProject } from '../../util/projects/link';
+import { isPublicSuffix } from '../../util/domains/is-public-suffix';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 
@@ -57,11 +58,15 @@ export default async function add(
   });
 
   if (project && args.length !== 1) {
-    output.error(`${getCommandName('domains add <domain>')} expects one arguments.`);
+    output.error(
+      `${getCommandName('domains add <domain>')} expects one arguments.`
+    );
     return 1;
   } else if (!project && args.length !== 2) {
     output.error(
-      `${getCommandName('domains add <domain> <project>')} expects two arguments.`
+      `${getCommandName(
+        'domains add <domain> <project>'
+      )} expects two arguments.`
     );
     return 1;
   }
