@@ -40,7 +40,7 @@ test('[dev-validate] should error with invalid rewrites due to additional proper
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `rewrites[0]` should NOT have additional property `src`. Did you mean `source`?'
+    'Invalid vercel.json - `rewrites[0]` should NOT have additional property `src`. Did you mean `source`?'
   );
   t.deepEqual(
     error.link,
@@ -55,7 +55,7 @@ test('[dev-validate] should error with invalid routes due to additional property
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `routes[0]` should NOT have additional property `source`. Did you mean `src`?'
+    'Invalid vercel.json - `routes[0]` should NOT have additional property `source`. Did you mean `src`?'
   );
   t.deepEqual(
     error.link,
@@ -68,10 +68,7 @@ test('[dev-validate] should error with invalid routes array type', async t => {
     routes: { src: '/(.*)', dest: '/api/index.js' },
   };
   const error = validateConfig(config);
-  t.deepEqual(
-    error.message,
-    'Invalid vercel.json - property `routes` should be of type array.'
-  );
+  t.deepEqual(error.message, 'Invalid vercel.json - `routes` should be array.');
   t.deepEqual(
     error.link,
     'https://vercel.com/docs/configuration#project/routes'
@@ -89,7 +86,7 @@ test('[dev-validate] should error with invalid redirects array object', async t 
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `redirects[0]` is missing property `source`.'
+    'Invalid vercel.json - `redirects[0]` missing required property `source`.'
   );
   t.deepEqual(
     error.link,
@@ -104,7 +101,7 @@ test('[dev-validate] should error with invalid redirects.permanent poperty', asy
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `redirects[0].permanent` should be of type boolean.'
+    'Invalid vercel.json - `redirects[0].permanent` should be boolean.'
   );
   t.deepEqual(
     error.link,
@@ -119,7 +116,7 @@ test('[dev-validate] should error with invalid cleanUrls type', async t => {
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `cleanUrls` should be of type boolean.'
+    'Invalid vercel.json - `cleanUrls` should be boolean.'
   );
   t.deepEqual(
     error.link,
@@ -134,7 +131,7 @@ test('[dev-validate] should error with invalid trailingSlash type', async t => {
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `trailingSlash` should be of type boolean.'
+    'Invalid vercel.json - `trailingSlash` should be boolean.'
   );
   t.deepEqual(
     error.link,
@@ -149,7 +146,7 @@ test('[dev-validate] should error with invalid headers property', async t => {
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
+    'Invalid vercel.json - `headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
   );
   t.deepEqual(
     error.link,
@@ -164,7 +161,7 @@ test('[dev-validate] should error with invalid headers.source type', async t => 
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0].source` should be of type string.'
+    'Invalid vercel.json - `headers[0].source` should be string.'
   );
   t.deepEqual(
     error.link,
@@ -179,7 +176,7 @@ test('[dev-validate] should error with invalid headers additional property', asy
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0]` should NOT have additional property `stuff`. Please remove it.'
+    'Invalid vercel.json - `headers[0]` should NOT have additional property `stuff`. Please remove it.'
   );
   t.deepEqual(
     error.link,
@@ -194,7 +191,7 @@ test('[dev-validate] should error with invalid headers wrong nested headers type
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0].headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
+    'Invalid vercel.json - `headers[0].headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
   );
   t.deepEqual(
     error.link,
@@ -211,7 +208,7 @@ test('[dev-validate] should error with invalid headers wrong nested headers addi
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[0].headers[0]` should NOT have additional property `val`. Please remove it.'
+    'Invalid vercel.json - `headers[0].headers[0]` should NOT have additional property `val`. Please remove it.'
   );
   t.deepEqual(
     error.link,
@@ -229,7 +226,7 @@ test('[dev-validate] should error with too many redirects', async t => {
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `redirects` should NOT have more than 1024 items in the array.'
+    'Invalid vercel.json - `redirects` should NOT have more than 1024 items.'
   );
   t.deepEqual(
     error.link,
@@ -256,7 +253,7 @@ test('[dev-validate] should error with too many nested headers', async t => {
   const error = validateConfig(config);
   t.deepEqual(
     error.message,
-    'Invalid vercel.json - property `headers[1].headers` should NOT have more than 1024 items in the array.'
+    'Invalid vercel.json - `headers[1].headers` should NOT have more than 1024 items.'
   );
   t.deepEqual(
     error.link,

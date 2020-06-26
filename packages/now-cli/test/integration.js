@@ -2468,7 +2468,7 @@ test('deploy a Lambda with a specific runtime', async t => {
   const { host: url } = new URL(output.stdout);
 
   const [build] = await getDeploymentBuildsByUrl(url);
-  t.is(build.use, 'now-php@0.0.8', JSON.stringify(build, null, 2));
+  t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
 });
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
