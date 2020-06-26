@@ -42,7 +42,6 @@ function fixture(name) {
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const example = name =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
@@ -2329,7 +2328,6 @@ test('create zero-config deployment', async t => {
   const data = JSON.parse(text);
 
   t.is(data.error, undefined, JSON.stringify(data, null, 2));
-  t.truthy(Array.isArray(data.builds), JSON.stringify(data, null, 2));
 
   const validBuilders = data.builds.every(build =>
     isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
