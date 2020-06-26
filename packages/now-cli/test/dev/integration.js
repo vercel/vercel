@@ -1453,13 +1453,10 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
 
     // Monitor `stderr` for the warning
     dev.stderr.setEncoding('utf8');
+    const msg = 'There are no files inside your deployment.';
     await new Promise(resolve => {
       dev.stderr.on('data', str => {
-        if (
-          str.includes(
-            'There are no files (or only files starting with a dot) inside your deployment'
-          )
-        ) {
+        if (str.includes(msg)) {
           resolve();
         }
       });

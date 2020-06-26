@@ -365,9 +365,7 @@ export default class DevServer {
     const sources = matches.map(m => m.src);
 
     if (isInitial && fileList.length === 0) {
-      this.output.warn(
-        'There are no files (or only files starting with a dot) inside your deployment.'
-      );
+      this.output.warn('There are no files inside your deployment.');
     }
 
     // Delete build matches that no longer exists
