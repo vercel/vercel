@@ -1569,6 +1569,14 @@ test(
 );
 
 test(
+  '[vercel dev] 29-vercel-region should assign VERCEL_REGION env var',
+  testFixtureStdio('29-vercel-region', async testPath => {
+    await testPath(200, `/api/now-region`, /NOW_REGION is (dev1|sfo1)/m);
+    await testPath(200, `/api/vercel-region`, /VERCEL_REGION is (dev1|sfo1)/m);
+  })
+);
+
+test(
   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
