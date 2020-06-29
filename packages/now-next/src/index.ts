@@ -14,18 +14,18 @@ const {
 } = buildUtils;
 
 import {
-  Lambda,
   BuildOptions,
   Config,
   FileBlob,
   FileFsRef,
   Files,
+  Lambda,
+  NowBuildError,
   PackageJson,
   PrepareCacheOptions,
   Prerender,
-  NowBuildError,
 } from '@vercel/build-utils';
-import { Route, Handler } from '@vercel/routing-utils';
+import { Handler, Route } from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
@@ -33,6 +33,7 @@ import {
 } from '@vercel/routing-utils/dist/superstatic';
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
+import escapeStringRegexp from 'escape-string-regexp';
 import {
   lstatSync,
   pathExists,
@@ -45,7 +46,6 @@ import path from 'path';
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import createServerlessConfig from './create-serverless-config';
-import escapeStringRegexp from 'escape-string-regexp';
 import nextLegacyVersions from './legacy-versions';
 import {
   createLambdaFromPseudoLayers,
@@ -145,33 +145,37 @@ async function writeNpmRc(workPath: string, token: string) {
 
 /**
  * Get the installed Next version.
- *
- * If you want to get the real installed Next version, you must first
- * run npm install before calling this function
  */
-async function getNextVersion(entryPath: string) {
-  let nextVersion;
-
+function getRealNextVersion(entryPath: string): string | false {
   try {
     // First try to resolve the `next` dependency and get the real version from its
     // package.json. This allows the builder to be used with frameworks like Blitz that
     // bundle Next but where Next isn't in the project root's package.json
-    nextVersion = require(resolveFrom(entryPath, 'next/package.json')).version;
-
+    const nextVersion: string = require(resolveFrom(
+      entryPath,
+      'next/package.json'
+    )).version;
     debug(`Detected Next.js version: ${nextVersion}`);
+    return nextVersion;
   } catch (_ignored) {
     debug(
-      `Could not identify real Next.js version, falling back to check root package.json`
+      `Could not identify real Next.js version, ensure it is defined as a project dependency.`
     );
-
-    const pkg = await readPackageJson(entryPath);
-    if (pkg.dependencies && pkg.dependencies.next) {
-      nextVersion = pkg.dependencies.next;
-    } else if (pkg.devDependencies && pkg.devDependencies.next) {
-      nextVersion = pkg.devDependencies.next;
-    }
+    return false;
   }
+}
 
+/**
+ * Get the package.json Next version.
+ */
+async function getNextVersionRange(entryPath: string): Promise<string | false> {
+  let nextVersion: string | false = false;
+  const pkg = await readPackageJson(entryPath);
+  if (pkg.dependencies && pkg.dependencies.next) {
+    nextVersion = pkg.dependencies.next;
+  } else if (pkg.devDependencies && pkg.devDependencies.next) {
+    nextVersion = pkg.devDependencies.next;
+  }
   return nextVersion;
 }
 
@@ -241,8 +245,7 @@ export const build = async ({
   await download(files, workPath, meta);
 
   const pkg = await readPackageJson(entryPath);
-  let nextVersion = await getNextVersion(entryPath);
-
+  const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
@@ -331,7 +334,7 @@ export const build = async ({
     console.warn('WARNING: You should not upload the `.next` directory.');
   }
 
-  const isLegacy = isLegacyNext(nextVersion);
+  const isLegacy = nextVersionRange && isLegacyNext(nextVersionRange);
   let shouldRunScript = 'now-build';
 
   debug(`MODE: ${isLegacy ? 'legacy' : 'serverless'}`);
@@ -388,8 +391,7 @@ export const build = async ({
   // Refetch Next version now that dependencies are installed.
   // This will now resolve the actual installed Next version,
   // even if Next isn't in the project package.json
-  nextVersion = await getNextVersion(entryPath);
-
+  const nextVersion = getRealNextVersion(entryPath);
   if (!nextVersion) {
     throw new NowBuildError({
       code: 'NEXT_NO_VERSION',
@@ -1727,13 +1729,8 @@ export const prepareCache = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
 
-  const nextVersion = await getNextVersion(entryPath);
-  if (!nextVersion)
-    throw new NowBuildError({
-      code: 'NEXT_VERSION_PARSE_FAILED',
-      message: 'Could not parse Next.js version',
-    });
-  const isLegacy = isLegacyNext(nextVersion);
+  const nextVersion = await getNextVersionRange(entryPath);
+  const isLegacy = nextVersion && isLegacyNext(nextVersion);
 
   if (isLegacy) {
     // skip caching legacy mode (swapping deps between all and production can get bug-prone)
