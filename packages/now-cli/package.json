@@ -3,7 +3,7 @@
   "version": "19.1.2-canary.12",
   "preferGlobal": true,
   "license": "Apache-2.0",
-  "description": "The command-line interface for Now",
+  "description": "The command-line interface for Vercel",
   "homepage": "https://vercel.com",
   "repository": {
     "type": "git",
