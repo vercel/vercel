@@ -8,71 +8,44 @@ import {
   trailingSlashSchema,
 } from '@vercel/routing-utils';
 import { NowConfig } from './types';
-import { functionsSchema, buildsSchema } from '@vercel/build-utils';
+import {
+  functionsSchema,
+  buildsSchema,
+  NowBuildError,
+  getPrettyError,
+} from '@vercel/build-utils';
+import { fileNameSymbol } from '@vercel/client';
+
+const vercelConfigSchema = {
+  type: 'object',
+  // These are not all possibilities because `vc dev`
+  // doesn't need to know about `regions`, `public`, etc.
+  additionalProperties: true,
+  properties: {
+    builds: buildsSchema,
+    routes: routesSchema,
+    cleanUrls: cleanUrlsSchema,
+    headers: headersSchema,
+    redirects: redirectsSchema,
+    rewrites: rewritesSchema,
+    trailingSlash: trailingSlashSchema,
+    functions: functionsSchema,
+  },
+};
 
 const ajv = new Ajv();
 
-const validateBuilds = ajv.compile(buildsSchema);
-const validateRoutes = ajv.compile(routesSchema);
-const validateCleanUrls = ajv.compile(cleanUrlsSchema);
-const validateHeaders = ajv.compile(headersSchema);
-const validateRedirects = ajv.compile(redirectsSchema);
-const validateRewrites = ajv.compile(rewritesSchema);
-const validateTrailingSlash = ajv.compile(trailingSlashSchema);
-const validateFunctions = ajv.compile(functionsSchema);
+export function validateConfig(config: NowConfig): NowBuildError | null {
+  const validate = ajv.compile(vercelConfigSchema);
 
-export function validateNowConfigBuilds(config: NowConfig) {
-  return validateKey(config, 'builds', validateBuilds);
-}
-
-export function validateNowConfigRoutes(config: NowConfig) {
-  return validateKey(config, 'routes', validateRoutes);
-}
-
-export function validateNowConfigCleanUrls(config: NowConfig) {
-  return validateKey(config, 'cleanUrls', validateCleanUrls);
-}
-
-export function validateNowConfigHeaders(config: NowConfig) {
-  return validateKey(config, 'headers', validateHeaders);
-}
-
-export function validateNowConfigRedirects(config: NowConfig) {
-  return validateKey(config, 'redirects', validateRedirects);
-}
-
-export function validateNowConfigRewrites(config: NowConfig) {
-  return validateKey(config, 'rewrites', validateRewrites);
-}
-
-export function validateNowConfigTrailingSlash(config: NowConfig) {
-  return validateKey(config, 'trailingSlash', validateTrailingSlash);
-}
-
-export function validateNowConfigFunctions(config: NowConfig) {
-  return validateKey(config, 'functions', validateFunctions);
-}
-
-function validateKey(
-  config: NowConfig,
-  key: keyof NowConfig,
-  validate: Ajv.ValidateFunction
-) {
-  const value = config[key];
-  if (!value) {
-    return null;
-  }
-
-  if (!validate(value)) {
-    if (!validate.errors) {
-      return null;
+  if (!validate(config)) {
+    if (validate.errors && validate.errors[0]) {
+      const error = validate.errors[0];
+      const fileName = config[fileNameSymbol] || 'vercel.json';
+      const niceError = getPrettyError(error);
+      niceError.message = `Invalid ${fileName} - ${niceError.message}`;
+      return niceError;
     }
-
-    const error = validate.errors[0];
-
-    return `Invalid \`${String(key)}\` property: ${error.dataPath} ${
-      error.message
-    }`;
   }
 
   return null;

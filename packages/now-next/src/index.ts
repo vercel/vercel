@@ -35,7 +35,7 @@ import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import escapeStringRegexp from 'escape-string-regexp';
 import {
-  lstatSync,
+  lstat,
   pathExists,
   readFile,
   unlink as unlinkFile,
@@ -71,6 +71,7 @@ import {
   validateEntrypoint,
 } from './utils';
 // import findUp from 'find-up';
+import { Sema } from 'async-sema';
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -618,7 +619,7 @@ export const build = async ({
           src: path.join(
             '/',
             entryDirectory,
-            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
           ),
           status: 404,
           check: true,
@@ -638,7 +639,7 @@ export const build = async ({
           src: path.join(
             '/',
             entryDirectory,
-            '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
           ),
           // Next.js assets contain a hash or entropy in their filenames, so they
           // are guaranteed to be unique and cacheable indefinitely.
@@ -932,16 +933,29 @@ export const build = async ({
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
+      const lstatSema = new Sema(25, {
+        capacity: fileList.length + apiFileList.length,
+      });
+      const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
+
       const collectTracedFiles = (
         reasons: NodeFileTraceReasons,
         files: { [filePath: string]: FileFsRef }
-      ) => (file: string) => {
+      ) => async (file: string) => {
         const reason = reasons[file];
         if (reason && reason.type === 'initial') {
           // Initial files are manually added to the lambda later
           return;
         }
-        const { mode } = lstatSync(path.join(workPath, file));
+        const filePath = path.join(workPath, file);
+
+        if (!lstatResults[filePath]) {
+          lstatResults[filePath] = lstatSema
+            .acquire()
+            .then(() => lstat(filePath))
+            .finally(() => lstatSema.release());
+        }
+        const { mode } = await lstatResults[filePath];
 
         files[file] = new FileFsRef({
           fsPath: path.join(workPath, file),
@@ -949,8 +963,12 @@ export const build = async ({
         });
       };
 
-      fileList.forEach(collectTracedFiles(nonApiReasons, tracedFiles));
-      apiFileList.forEach(collectTracedFiles(apiReasons, apiTracedFiles));
+      await Promise.all(
+        fileList.map(collectTracedFiles(nonApiReasons, tracedFiles))
+      );
+      await Promise.all(
+        apiFileList.map(collectTracedFiles(apiReasons, apiTracedFiles))
+      );
       console.timeEnd(tracingLabel);
 
       const zippingLabel = 'Compressed shared serverless function files';
@@ -1227,77 +1245,86 @@ export const build = async ({
               `
               const url = require('url');
               page = function(req, res) {
-                const pages = {
-                  ${groupPageKeys
-                    .map(
-                      page =>
-                        `'${page}': require('./${path.join(
-                          './',
-                          group.pages[page].pageFileName
-                        )}')`
-                    )
-                    .join(',\n')}
-                  ${
-                    '' /*
-                    creates a mapping of the page and the page's module e.g.
-                    '/about': require('./.next/serverless/pages/about.js')
-                  */
+                try {
+                  const pages = {
+                    ${groupPageKeys
+                      .map(
+                        page =>
+                          `'${page}': require('./${path.join(
+                            './',
+                            group.pages[page].pageFileName
+                          )}')`
+                      )
+                      .join(',\n')}
+                    ${
+                      '' /*
+                      creates a mapping of the page and the page's module e.g.
+                      '/about': require('./.next/serverless/pages/about.js')
+                    */
+                    }
                   }
-                }
-                let toRender = req.headers['x-nextjs-page']
+                  let toRender = req.headers['x-nextjs-page']
 
-                if (!toRender) {
-                  try {
-                    const { pathname } = url.parse(req.url)
-                    toRender = pathname
-                  } catch (_) {
-                    // handle failing to parse url
-                    res.statusCode = 400
-                    return res.end('Bad Request')
+                  if (!toRender) {
+                    try {
+                      const { pathname } = url.parse(req.url)
+                      toRender = pathname
+                    } catch (_) {
+                      // handle failing to parse url
+                      res.statusCode = 400
+                      return res.end('Bad Request')
+                    }
                   }
-                }
 
-                let currentPage = pages[toRender]
+                  let currentPage = pages[toRender]
 
-                if (
-                  toRender &&
-                  !currentPage &&
-                  toRender.includes('/_next/data')
-                ) {
-                  toRender = toRender
-                    .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
-                    .replace(/\\.json$/, '')
+                  if (
+                    toRender &&
+                    !currentPage
+                  ) {
+                    if (toRender.includes('/_next/data')) {
+                      toRender = toRender
+                        .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
+                        .replace(/\\.json$/, '')
 
-                  currentPage = pages[toRender]
+                      currentPage = pages[toRender]
+                    }
 
-                  if (!currentPage) {
-                    // for prerendered dynamic routes (/blog/post-1) we need to
-                    // find the match since it won't match the page directly
-                    const dynamicRoutes = ${JSON.stringify(
-                      dynamicRoutes.map(route => ({
-                        src: route.src,
-                        dest: route.dest,
-                      }))
-                    )}
+                    if (!currentPage) {
+                      // for prerendered dynamic routes (/blog/post-1) we need to
+                      // find the match since it won't match the page directly
+                      const dynamicRoutes = ${JSON.stringify(
+                        dynamicRoutes.map(route => ({
+                          src: route.src,
+                          dest: route.dest,
+                        }))
+                      )}
 
-                    for (const route of dynamicRoutes) {
-                      const matcher = new RegExp(route.src)
+                      for (const route of dynamicRoutes) {
+                        const matcher = new RegExp(route.src)
 
-                      if (matcher.test(toRender)) {
-                        toRender = route.dest
-                        currentPage = pages[toRender]
-                        break
+                        if (matcher.test(toRender)) {
+                          toRender = url.parse(route.dest).pathname
+                          currentPage = pages[toRender]
+                          break
+                        }
                       }
                     }
                   }
-                }
 
-                if (!currentPage) {
-                  res.statusCode = 500
-                  return res.end('internal server error')
+                  if (!currentPage) {
+                    console.error(
+                      "Failed to find matching page for", toRender, "in lambda"
+                    )
+                    res.statusCode = 500
+                    return res.end('internal server error')
+                  }
+                  const method = currentPage.render || currentPage.default || currentPage
+                  return method(req, res)
+                } catch (err) {
+                  console.error('Unhandled error during request:', err)
+                  throw err
                 }
-                const method = currentPage.render || currentPage.default || currentPage
-                return method(req, res)
               }
               `
             );
@@ -1635,7 +1662,7 @@ export const build = async ({
         src: path.join(
           '/',
           entryDirectory,
-          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
         ),
         status: 404,
         check: true,
@@ -1665,7 +1692,7 @@ export const build = async ({
         src: path.join(
           '/',
           entryDirectory,
-          '_next/static/(?:[^/]+/pages|chunks|runtime|css|media)/.+'
+          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.

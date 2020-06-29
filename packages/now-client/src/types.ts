@@ -176,6 +176,7 @@ export interface DeploymentOptions extends LegacyDeploymentOptions {
   build?: {
     env: Dictionary<string>;
   };
+  source?: string;
   target?: string;
   name?: string;
   public?: boolean;

@@ -529,10 +529,44 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    t.true(contents.startsWith('# Created by Vercel CLI\n'));
+
     const lines = new Set(contents.split('\n'));
     t.true(lines.has('MY_ENV_VAR="MY_VALUE"'));
     t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
     t.true(lines.has('VERCEL_URL=""'));
+  }
+
+  async function nowEnvPullOverwrite() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'pull', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /Overwriting existing .env file/gm);
+    t.regex(stderr, /Updated .env file/gm);
+  }
+
+  async function nowEnvPullConfirm() {
+    fs.writeFileSync(path.join(target, '.env'), 'hahaha');
+
+    const vc = execa(binaryPath, ['env', 'pull', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    await waitForPrompt(vc, chunk =>
+      chunk.includes('Found existing file ".env". Do you want to overwrite?')
+    );
+    vc.stdin.end('y\n');
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
   async function nowDeployWithVar() {
@@ -627,6 +661,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvAddSystemEnv();
   await nowEnvLsIncludesVar();
   await nowEnvPull();
+  await nowEnvPullOverwrite();
+  await nowEnvPullConfirm();
   await nowDeployWithVar();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
@@ -1322,7 +1358,7 @@ test('set platform version using `--platform-version` to `2`', async t => {
 });
 
 test('ensure we render a warning for deployments with no files', async t => {
-  const directory = fixture('single-dotfile');
+  const directory = fixture('empty-directory');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1345,11 +1381,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   console.log(exitCode);
 
   // Ensure the warning is printed
-  t.true(
-    stderr.includes(
-      'There are no files (or only files starting with a dot) inside your deployment.'
-    )
-  );
+  t.regex(stderr, /There are no files inside your deployment/);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1359,10 +1391,8 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(exitCode, 0);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/plain; charset=utf-8');
+  const res = await fetch(href);
+  t.is(res.status, 404);
 });
 
 test('ensure we render a prompt when deploying home directory', async t => {
@@ -1491,9 +1521,10 @@ test('try to create a builds deployments with wrong now.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `builder` is not allowed in now.json – please remove it.'
+      'Error! Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
     )
   );
+  t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
@@ -1514,8 +1545,34 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! The property `fake` is not allowed in vercel.json – please remove it.'
+      'Error! Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
     )
+  );
+  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+});
+
+test('try to create a builds deployments with wrong `build.env` property', async t => {
+  const directory = fixture('builds-wrong-build-env');
+
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    ['--public', ...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(
+    stderr.includes(
+      'Error! Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
+    ),
+    formatOutput({ stdout, stderr })
+  );
+  t.true(
+    stderr.includes('https://vercel.com/docs/configuration'),
+    formatOutput({ stdout, stderr })
   );
 });
 
@@ -2361,7 +2418,7 @@ test('deploy a Lambda with a specific runtime', async t => {
   const { host: url } = new URL(output.stdout);
 
   const [build] = await getDeploymentBuildsByUrl(url);
-  t.is(build.use, 'now-php@0.0.8', JSON.stringify(build, null, 2));
+  t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
 });
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
@@ -2471,7 +2528,7 @@ test('should show prompts to set up project', async t => {
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Development Command?`)
   );
-  now.stdin.write(`yarn dev\n`);
+  now.stdin.write(`\n`);
 
   await waitForPrompt(now, chunk => chunk.includes('Linked to'));
 
@@ -2502,6 +2559,41 @@ test('should show prompts to set up project', async t => {
   const response = await fetch(new URL(output.stdout).href);
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
+
+  // Ensure that `vc dev` also uses the configured build command
+  // and output directory
+  let stderr = '';
+  const port = 58351;
+  const dev = execa(binaryPath, [
+    'dev',
+    '--listen',
+    port,
+    directory,
+    ...defaultArgs,
+  ]);
+  dev.stderr.setEncoding('utf8');
+
+  try {
+    dev.stdout.pipe(process.stdout);
+    dev.stderr.pipe(process.stderr);
+    await new Promise((resolve, reject) => {
+      dev.once('exit', (code, signal) => {
+        reject(`"vc dev" failed with ${signal || code}`);
+      });
+      dev.stderr.on('data', data => {
+        stderr += data;
+        if (stderr.includes('Ready! Available at')) {
+          resolve();
+        }
+      });
+    });
+
+    const res2 = await fetch(`http://localhost:${port}/`);
+    const text2 = await res2.text();
+    t.is(text2.includes('<h1>custom hello</h1>'), true, text2);
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
+  }
 });
 
 test('should prefill "project name" prompt with folder name', async t => {
