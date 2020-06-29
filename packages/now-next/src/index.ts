@@ -1729,8 +1729,8 @@ export const prepareCache = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
 
-  const nextVersion = await getNextVersionRange(entryPath);
-  const isLegacy = nextVersion && isLegacyNext(nextVersion);
+  const nextVersionRange = await getNextVersionRange(entryPath);
+  const isLegacy = nextVersionRange && isLegacyNext(nextVersionRange);
 
   if (isLegacy) {
     // skip caching legacy mode (swapping deps between all and production can get bug-prone)
