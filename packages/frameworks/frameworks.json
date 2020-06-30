@@ -640,7 +640,7 @@
     },
     "settings": {
       "buildCommand": {
-        "placeholder": "`npm run build` or `nuxt build`"
+        "placeholder": "`npm run build` or `nuxt generate`"
       },
       "devCommand": {
         "value": "nuxt"
