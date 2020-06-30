@@ -1,19 +1,15 @@
-import { readdir, stat, readFile, unlink } from 'fs';
-import { promisify } from 'util';
+import { promises } from 'fs';
 import { join } from 'path';
-import { readConfigFile } from '@vercel/build-utils';
+import { readConfigFile, debug } from '@vercel/build-utils';
 import { Route } from '@vercel/routing-utils';
 import NowFrameworks, {
   Framework as NowFramework,
   SettingValue,
 } from '@vercel/frameworks';
 
-const readirPromise = promisify(readdir);
-const readFilePromise = promisify(readFile);
-const statPromise = promisify(stat);
-const unlinkPromise = promisify(unlink);
+const { readdir, stat, readFile, unlink } = promises;
 const isDir = async (file: string): Promise<boolean> =>
-  (await statPromise(file)).isDirectory();
+  (await stat(file)).isDirectory();
 
 export interface Framework {
   name: string;
@@ -50,10 +46,10 @@ const frameworkList: Framework[] = [
           'public',
           '__now_routes_g4t5bY.json'
         );
-        const content = await readFilePromise(nowRoutesPath, 'utf8');
+        const content = await readFile(nowRoutesPath, 'utf8');
         const nowRoutes = JSON.parse(content);
         try {
-          await unlinkPromise(nowRoutesPath);
+          await unlink(nowRoutesPath);
         } catch (err) {
           // do nothing if deleting the file fails
         }
@@ -104,6 +100,7 @@ const frameworkList: Framework[] = [
     dependency: '@11ty/eleventy',
     buildCommand: 'npx @11ty/eleventy',
     getOutputDirName: async () => '_site',
+    cachePattern: '.cache/**',
   },
   {
     name: 'Docusaurus 2',
@@ -112,12 +109,16 @@ const frameworkList: Framework[] = [
     buildCommand: 'docusaurus build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
-      const location = join(dirPrefix, base);
-      const content = await readirPromise(location);
+      try {
+        const location = join(dirPrefix, base);
+        const content = await readdir(location);
 
-      // If there is only one file in it that is a dir we'll use it as dist dir
-      if (content.length === 1 && (await isDir(join(location, content[0])))) {
-        return join(base, content[0]);
+        // If there is only one file in it that is a dir we'll use it as dist dir
+        if (content.length === 1 && (await isDir(join(location, content[0])))) {
+          return join(base, content[0]);
+        }
+      } catch (error) {
+        debug(`Error detecting output directory: `, error);
       }
 
       return base;
@@ -247,14 +248,17 @@ const frameworkList: Framework[] = [
     buildCommand: 'ng build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'dist';
-      const location = join(dirPrefix, base);
-      const content = await readirPromise(location);
+      try {
+        const location = join(dirPrefix, base);
+        const content = await readdir(location);
 
-      // If there is only one file in it that is a dir we'll use it as dist dir
-      if (content.length === 1 && (await isDir(join(location, content[0])))) {
-        return join(base, content[0]);
+        // If there is only one file in it that is a dir we'll use it as dist dir
+        if (content.length === 1 && (await isDir(join(location, content[0])))) {
+          return join(base, content[0]);
+        }
+      } catch (error) {
+        debug(`Error detecting output directory: `, error);
       }
-
       return base;
     },
     defaultRoutes: [
@@ -274,11 +278,15 @@ const frameworkList: Framework[] = [
     buildCommand: 'polymer build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
-      const location = join(dirPrefix, base);
-      const content = await readirPromise(location);
-      const paths = content.filter(item => !item.includes('.'));
-
-      return join(base, paths[0]);
+      try {
+        const location = join(dirPrefix, base);
+        const content = await readdir(location);
+        const paths = content.filter(item => !item.includes('.'));
+        return join(base, paths[0]);
+      } catch (error) {
+        debug(`Error detecting output directory: `, error);
+      }
+      return base;
     },
     defaultRoutes: [
       {
@@ -429,14 +437,17 @@ const frameworkList: Framework[] = [
     buildCommand: 'docusaurus-build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
-      const location = join(dirPrefix, base);
-      const content = await readirPromise(location);
+      try {
+        const location = join(dirPrefix, base);
+        const content = await readdir(location);
 
-      // If there is only one file in it that is a dir we'll use it as dist dir
-      if (content.length === 1 && (await isDir(join(location, content[0])))) {
-        return join(base, content[0]);
+        // If there is only one file in it that is a dir we'll use it as dist dir
+        if (content.length === 1 && (await isDir(join(location, content[0])))) {
+          return join(base, content[0]);
+        }
+      } catch (error) {
+        debug(`Error detecting output directory: `, error);
       }
-
       return base;
     },
   },

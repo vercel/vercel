@@ -2528,7 +2528,7 @@ test('should show prompts to set up project', async t => {
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Development Command?`)
   );
-  now.stdin.write(`yarn dev\n`);
+  now.stdin.write(`\n`);
 
   await waitForPrompt(now, chunk => chunk.includes('Linked to'));
 
@@ -2559,6 +2559,41 @@ test('should show prompts to set up project', async t => {
   const response = await fetch(new URL(output.stdout).href);
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
+
+  // Ensure that `vc dev` also uses the configured build command
+  // and output directory
+  let stderr = '';
+  const port = 58351;
+  const dev = execa(binaryPath, [
+    'dev',
+    '--listen',
+    port,
+    directory,
+    ...defaultArgs,
+  ]);
+  dev.stderr.setEncoding('utf8');
+
+  try {
+    dev.stdout.pipe(process.stdout);
+    dev.stderr.pipe(process.stderr);
+    await new Promise((resolve, reject) => {
+      dev.once('exit', (code, signal) => {
+        reject(`"vc dev" failed with ${signal || code}`);
+      });
+      dev.stderr.on('data', data => {
+        stderr += data;
+        if (stderr.includes('Ready! Available at')) {
+          resolve();
+        }
+      });
+    });
+
+    const res2 = await fetch(`http://localhost:${port}/`);
+    const text2 = await res2.text();
+    t.is(text2.includes('<h1>custom hello</h1>'), true, text2);
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
+  }
 });
 
 test('should prefill "project name" prompt with folder name', async t => {

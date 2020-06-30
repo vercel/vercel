@@ -1,9 +1,9 @@
 {
   "name": "vercel",
-  "version": "19.1.2-canary.11",
+  "version": "19.1.2-canary.13",
   "preferGlobal": true,
   "license": "Apache-2.0",
-  "description": "The command-line interface for Now",
+  "description": "The command-line interface for Vercel",
   "homepage": "https://vercel.com",
   "repository": {
     "type": "git",
@@ -68,7 +68,7 @@
     "@vercel/node": "1.7.2-canary.0",
     "@vercel/python": "1.2.2",
     "@vercel/ruby": "1.2.3-canary.0",
-    "@vercel/static-build": "0.17.3"
+    "@vercel/static-build": "0.17.4-canary.1"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
