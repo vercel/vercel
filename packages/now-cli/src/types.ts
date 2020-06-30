@@ -254,7 +254,15 @@ export interface ProjectEnvVariable {
   system?: boolean;
 }
 
-export interface Project {
+export interface ProjectSettings {
+  framework?: string | null;
+  devCommand?: string | null;
+  buildCommand?: string | null;
+  outputDirectory?: string | null;
+  rootDirectory?: string | null;
+}
+
+export interface Project extends ProjectSettings {
   id: string;
   name: string;
   accountId: string;

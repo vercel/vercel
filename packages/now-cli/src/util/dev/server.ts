@@ -83,6 +83,7 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
+import { ProjectSettings } from '../../types';
 
 interface FSEvent {
   type: string;
@@ -107,7 +108,7 @@ export default class DevServer {
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
-  public frameworkSlug: string | null;
+  public frameworkSlug?: string;
   public files: BuilderInputs;
   public address: string;
   public devCacheDir: string;
@@ -129,6 +130,7 @@ export default class DevServer {
   private devProcess?: ChildProcess;
   private devProcessPort?: number;
   private devServerPids: Set<number>;
+  private projectSettings?: ProjectSettings;
 
   private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
@@ -142,6 +144,7 @@ export default class DevServer {
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
+    this.projectSettings = options.projectSettings;
     this.frameworkSlug = options.frameworkSlug;
     this.caseSensitive = false;
     this.apiDir = null;
@@ -365,9 +368,7 @@ export default class DevServer {
     const sources = matches.map(m => m.src);
 
     if (isInitial && fileList.length === 0) {
-      this.output.warn(
-        'There are no files (or only files starting with a dot) inside your deployment.'
-      );
+      this.output.warn('There are no files inside your deployment.');
     }
 
     // Delete build matches that no longer exists
@@ -423,6 +424,9 @@ export default class DevServer {
             `Cleaning up "blockingBuildsPromise" after error: ${err}`
           );
           this.blockingBuildsPromise = null;
+          if (err) {
+            this.output.prettyError(err);
+          }
         });
     }
 
@@ -550,7 +554,7 @@ export default class DevServer {
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
-        ...(projectSettings ? { projectSettings } : {}),
+        projectSettings: projectSettings || this.projectSettings,
         featHandleMiss,
         cleanUrls,
         trailingSlash,
@@ -2163,7 +2167,9 @@ function isIndex(path: string): boolean {
 }
 
 function minimatches(files: string[], pattern: string): boolean {
-  return files.some(file => file === pattern || minimatch(file, pattern));
+  return files.some(
+    file => file === pattern || minimatch(file, pattern, { dot: true })
+  );
 }
 
 function fileChanged(
