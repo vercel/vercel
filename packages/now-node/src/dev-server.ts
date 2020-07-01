@@ -8,6 +8,7 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
+import fs from 'fs';
 import { register } from 'ts-node';
 
 // Use the project's version of TypeScript if available,
@@ -21,6 +22,33 @@ try {
   compiler = 'typescript';
 }
 
+// Assume Node 10
+let target = 'es2018';
+
+const nodeMajor = Number(process.versions.node.split('.')[0]);
+if (nodeMajor >= 14) {
+  target = 'es2020';
+} else if (nodeMajor >= 12) {
+  target = 'es2019';
+}
+
+if (tsconfig) {
+  try {
+    const tsconfigParsed = JSON.parse(fs.readFileSync(tsconfig, 'utf8'));
+    if (
+      tsconfigParsed.compilerOptions &&
+      tsconfigParsed.compilerOptions.target
+    ) {
+      target = tsconfigParsed.compilerOptions.target;
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      console.error(`Error while parsing "${tsconfig}"`);
+      throw err;
+    }
+  }
+}
+
 register({
   compiler,
   compilerOptions: {
@@ -28,6 +56,7 @@ register({
     esModuleInterop: true,
     jsx: 'react',
     module: 'commonjs',
+    target,
   },
   project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
   transpileOnly: true,
