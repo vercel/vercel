@@ -1,4 +1,5 @@
 import buildUtils from './build-utils';
+import url from 'url';
 const {
   createLambda,
   debug,
@@ -1580,9 +1581,11 @@ export const build = async ({
 
       mergedDynamicRoutesLambdaRoutes.push(route);
 
-      if (pageLambdaMap[route.dest!]) {
+      const { pathname } = url.parse(route.dest!);
+
+      if (pathname && pageLambdaMap[pathname]) {
         mergedDynamicRoutesLambdaRoutes.push(
-          dynamicPageLambdaRoutesMap[route.dest!]
+          dynamicPageLambdaRoutesMap[pathname]
         );
       }
     }
