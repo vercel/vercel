@@ -516,6 +516,21 @@ const frameworkList: Framework[] = [
     dependency: 'nuxt',
     buildCommand: 'nuxt generate',
     getOutputDirName: async () => 'dist',
+    cachePattern: '.nuxt/**',
+    defaultRoutes: [
+      {
+        src: '/sw.js',
+        headers: { 'cache-control': 'no-cache' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/200.html',
+      },
+    ],
   },
   {
     name: 'Hugo',
