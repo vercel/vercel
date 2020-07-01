@@ -35,6 +35,20 @@ it(
 );
 
 it(
+  'Should not deploy preview lambdas for static site',
+  async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'static-site'));
+    expect(output['index']).toBeDefined();
+    expect(output['another']).toBeDefined();
+    expect(output['index'].type).toBe('FileFsRef');
+    expect(output['another'].type).toBe('FileFsRef');
+  },
+  FOUR_MINUTES
+);
+
+it(
   'Should opt-out of shared lambdas when routes are detected',
   async () => {
     const {
