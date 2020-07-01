@@ -1358,7 +1358,7 @@ test('set platform version using `--platform-version` to `2`', async t => {
 });
 
 test('ensure we render a warning for deployments with no files', async t => {
-  const directory = fixture('single-dotfile');
+  const directory = fixture('empty-directory');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1381,11 +1381,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   console.log(exitCode);
 
   // Ensure the warning is printed
-  t.true(
-    stderr.includes(
-      'There are no files (or only files starting with a dot) inside your deployment.'
-    )
-  );
+  t.regex(stderr, /There are no files inside your deployment/);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1395,10 +1391,8 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(exitCode, 0);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/plain; charset=utf-8');
+  const res = await fetch(href);
+  t.is(res.status, 404);
 });
 
 test('ensure we render a prompt when deploying home directory', async t => {
@@ -2424,7 +2418,7 @@ test('deploy a Lambda with a specific runtime', async t => {
   const { host: url } = new URL(output.stdout);
 
   const [build] = await getDeploymentBuildsByUrl(url);
-  t.is(build.use, 'now-php@0.0.8', JSON.stringify(build, null, 2));
+  t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
 });
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
@@ -2534,7 +2528,7 @@ test('should show prompts to set up project', async t => {
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Development Command?`)
   );
-  now.stdin.write(`yarn dev\n`);
+  now.stdin.write(`\n`);
 
   await waitForPrompt(now, chunk => chunk.includes('Linked to'));
 
@@ -2565,6 +2559,41 @@ test('should show prompts to set up project', async t => {
   const response = await fetch(new URL(output.stdout).href);
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
+
+  // Ensure that `vc dev` also uses the configured build command
+  // and output directory
+  let stderr = '';
+  const port = 58351;
+  const dev = execa(binaryPath, [
+    'dev',
+    '--listen',
+    port,
+    directory,
+    ...defaultArgs,
+  ]);
+  dev.stderr.setEncoding('utf8');
+
+  try {
+    dev.stdout.pipe(process.stdout);
+    dev.stderr.pipe(process.stderr);
+    await new Promise((resolve, reject) => {
+      dev.once('exit', (code, signal) => {
+        reject(`"vc dev" failed with ${signal || code}`);
+      });
+      dev.stderr.on('data', data => {
+        stderr += data;
+        if (stderr.includes('Ready! Available at')) {
+          resolve();
+        }
+      });
+    });
+
+    const res2 = await fetch(`http://localhost:${port}/`);
+    const text2 = await res2.text();
+    t.is(text2.includes('<h1>custom hello</h1>'), true, text2);
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
+  }
 });
 
 test('should prefill "project name" prompt with folder name', async t => {
