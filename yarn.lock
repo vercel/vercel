@@ -2190,6 +2190,11 @@
     semver "^7.3.2"
     tsutils "^3.17.1"
 
+"@vercel/static-build@0.17.4-canary.1":
+  version "0.17.4-canary.1"
+  resolved "https://registry.yarnpkg.com/@vercel/static-build/-/static-build-0.17.4-canary.1.tgz#42ba89d5dee7ced3a20ec0a3a2986d293405530a"
+  integrity sha512-SWvu9zm6sQGuQeouHDnxOYxDlgvKSk7pb4m2QuVufFXrhOkx7OL6e91riHXCpmscv8Pb9mD7DFVl2o78FK7viA==
+
 "@zeit/dns-cached-resolve@2.1.0":
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/@zeit/dns-cached-resolve/-/dns-cached-resolve-2.1.0.tgz#78583010df1683fdb7b05949b75593c9a8641bc1"

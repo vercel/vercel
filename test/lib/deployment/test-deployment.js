@@ -57,6 +57,8 @@ async function testDeployment(
 
   // we use json5 to allow comments for probes
   const nowJson = json5.parse(bodies[configName]);
+  const uploadNowJson = nowJson.uploadNowJson;
+  delete nowJson.uploadNowJson;
 
   if (process.env.VERCEL_BUILDER_DEBUG) {
     if (!nowJson.build) {
@@ -94,14 +96,74 @@ async function testDeployment(
 
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
-  const { deploymentId, deploymentUrl } = await nowDeploy(bodies, randomness);
+
+  const { deploymentId, deploymentUrl } = await nowDeploy(
+    bodies,
+    randomness,
+    uploadNowJson
+  );
   let nextBuildManifest;
+  let deploymentLogs;
 
   for (const probe of nowJson.probes || []) {
     console.log('testing', JSON.stringify(probe));
     if (probe.delay) {
       await new Promise(resolve => setTimeout(resolve, probe.delay));
       continue;
+    }
+
+    if (probe.logMustContain || probe.logMustNotContain) {
+      const shouldContain = !!probe.logMustContain;
+      const toCheck = probe.logMustContain || probe.logMustNotContain;
+
+      if (probe.logMustContain && probe.logMustNotContain) {
+        throw new Error(
+          `probe can not check logMustContain and logMustNotContain in the same check`
+        );
+      }
+
+      if (!deploymentLogs) {
+        try {
+          const logsRes = await fetch(
+            `https://vercel.com/api/v1/now/deployments/${deploymentId}/events?limit=-1`
+          );
+
+          if (!logsRes.ok) {
+            throw new Error(
+              `fetching logs failed with status ${logsRes.status}`
+            );
+          }
+          deploymentLogs = await logsRes.json();
+        } catch (err) {
+          throw new Error(
+            `Failed to get deployment logs for probe: ${err.message}`
+          );
+        }
+      }
+
+      let found = false;
+
+      for (const log of deploymentLogs) {
+        if (log.text && log.text.includes(toCheck)) {
+          if (shouldContain) {
+            found = true;
+            break;
+          } else {
+            throw new Error(
+              `Expected deployment logs not to contain ${toCheck}, but found ${log.text}`
+            );
+          }
+        }
+      }
+
+      if (!found && shouldContain) {
+        throw new Error(
+          `Expected deployment logs to contain ${toCheck}, it was not found`
+        );
+      } else {
+        console.log('finished testing', JSON.stringify(probe));
+        continue;
+      }
     }
 
     const nextScriptIndex = probe.path.indexOf('__NEXT_SCRIPT__(');
