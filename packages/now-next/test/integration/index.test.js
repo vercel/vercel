@@ -41,9 +41,15 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'static-site'));
     expect(output['index']).toBeDefined();
-    expect(output['another']).toBeDefined();
     expect(output['index'].type).toBe('FileFsRef');
+
+    expect(output['another']).toBeDefined();
+
     expect(output['another'].type).toBe('FileFsRef');
+
+    expect(output['dynamic']).toBeDefined();
+    expect(output['dynamic'].type).toBe('Prerender');
+    expect(output['dynamic'].lambda).toBeDefined();
   },
   FOUR_MINUTES
 );
