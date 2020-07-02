@@ -531,11 +531,6 @@ export default class DevServer {
       this.readJsonFile<NowConfig>(configPath),
     ]);
 
-    if (!config) {
-      // This is just here for TypeScript
-      throw new Error('`config` not defined');
-    }
-
     const allFiles = await getAllProjectFiles(this.cwd, this.output);
     const files = allFiles.filter(this.filter);
 
