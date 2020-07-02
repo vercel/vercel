@@ -863,6 +863,7 @@ export const build = async ({
           [filePath: string]: FileFsRef;
         };
 
+    let canUsePreviewMode = false;
     let pseudoLayerBytes = 0;
     let apiPseudoLayerBytes = 0;
     const pseudoLayers: PseudoLayer[] = [];
@@ -890,6 +891,7 @@ export const build = async ({
       for (const page of allPagePaths) {
         if (isApiPage(page)) {
           apiPages.push(page);
+          canUsePreviewMode = true;
         } else {
           nonApiPages.push(page);
         }
@@ -1454,24 +1456,32 @@ export const build = async ({
             message: 'invariant: htmlFsRef != null && jsonFsRef != null',
           });
         }
+
+        if (!canUsePreviewMode) {
+          htmlFsRef.contentType = htmlContentType;
+          prerenders[outputPathPage] = htmlFsRef;
+          prerenders[outputPathData] = jsonFsRef;
+        }
       }
 
-      prerenders[outputPathPage] = new Prerender({
-        expiration: initialRevalidate,
-        lambda,
-        fallback: htmlFsRef,
-        group: prerenderGroup,
-        bypassToken: prerenderManifest.bypassToken,
-      });
-      prerenders[outputPathData] = new Prerender({
-        expiration: initialRevalidate,
-        lambda,
-        fallback: jsonFsRef,
-        group: prerenderGroup,
-        bypassToken: prerenderManifest.bypassToken,
-      });
+      if (prerenders[outputPathPage] == null) {
+        prerenders[outputPathPage] = new Prerender({
+          expiration: initialRevalidate,
+          lambda,
+          fallback: htmlFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+        });
+        prerenders[outputPathData] = new Prerender({
+          expiration: initialRevalidate,
+          lambda,
+          fallback: jsonFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+        });
 
-      ++prerenderGroup;
+        ++prerenderGroup;
+      }
     };
 
     Object.keys(prerenderManifest.staticRoutes).forEach(route =>
