@@ -286,6 +286,7 @@ export default class DevServer {
             match,
             requestPath,
             null,
+            nowConfig,
             result,
             filesChangedArray,
             filesRemovedArray
@@ -1126,6 +1127,7 @@ export default class DevServer {
     match: BuildMatch,
     requestPath: string | null,
     req: http.IncomingMessage | null,
+    nowConfig: NowConfig,
     previousBuildResult?: BuildResult,
     filesChanged?: string[],
     filesRemoved?: string[]
@@ -1141,10 +1143,11 @@ export default class DevServer {
       // A build for `buildKey` is already in progress, so don't trigger
       // another rebuild for this request - just wait on the existing one.
       let msg = `De-duping build "${buildKey}"`;
-      if (req) msg += ` for "${req.method} ${req.url}"`;
+      if (req) {
+        msg += ` for "${req.method} ${req.url}"`;
+      }
       this.output.debug(msg);
     } else {
-      const nowConfig = await this.getNowConfig();
       if (previousBuildResult) {
         // Tear down any `output` assets from a previous build, so that they
         // are not available to be served while the rebuild is in progress.
@@ -1155,7 +1158,9 @@ export default class DevServer {
         }
       }
       let msg = `Building asset "${buildKey}"`;
-      if (req) msg += ` for "${req.method} ${req.url}"`;
+      if (req) {
+        msg += ` for "${req.method} ${req.url}"`;
+      }
       this.output.debug(msg);
       buildPromise = executeBuild(
         nowConfig,
@@ -1623,7 +1628,7 @@ export default class DevServer {
     let foundAsset = findAsset(match, requestPath, nowConfig);
 
     if (!foundAsset && callLevel === 0) {
-      await this.triggerBuild(match, buildRequestPath, req);
+      await this.triggerBuild(match, buildRequestPath, req, nowConfig);
 
       // Since the `asset` was just built, resolve again to get the new asset
       foundAsset = findAsset(match, requestPath, nowConfig);
