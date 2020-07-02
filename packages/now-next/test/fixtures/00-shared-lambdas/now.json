@@ -1,12 +1,10 @@
 {
   "version": 2,
+  "uploadNowJson": true,
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/next",
-      "config": {
-        "sharedLambdas": true
-      }
+      "use": "@vercel/next"
     }
   ],
   "probes": [
@@ -29,6 +27,12 @@
     {
       "path": "/another/invite/hello",
       "mustContain": "hello from /[teamSlug]/[project]/[id]"
+    },
+    {
+      "logMustNotContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
+    },
+    {
+      "logMustNotContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
     }
   ]
 }
