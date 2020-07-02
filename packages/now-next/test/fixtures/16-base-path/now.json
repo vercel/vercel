@@ -35,6 +35,26 @@
     {
       "path": "/_next/__NEXT_SCRIPT__(/another)",
       "mustNotContain": "hello from another"
+    },
+    {
+      "path": "/docs/api/my-slug",
+      "mustContain": "index slug: my-slug"
+    },
+    {
+      "path": "/docs/api/my-slug/another",
+      "mustContain": "another slug: my-slug"
+    },
+    {
+      "path": "/docs/api/hello",
+      "mustContain": "hello from hello"
+    },
+    {
+      "path": "/docs/blog/post-1",
+      "mustContain": "index post: post-1"
+    },
+    {
+      "path": "/docs/blog/post-1/comments",
+      "mustContain": "comments post: post-1"
     }
   ]
 }
