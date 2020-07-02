@@ -632,7 +632,7 @@ export default class DevServer {
     return config;
   }
 
-  async readJsonFile<T>(filePath: string): Promise<T | null> {
+  async readJsonFile<T>(filePath: string): Promise<T | void> {
     let rel, abs;
     if (isAbsolute(filePath)) {
       rel = path.relative(this.cwd, filePath);
@@ -641,12 +641,10 @@ export default class DevServer {
       rel = filePath;
       abs = join(this.cwd, filePath);
     }
-    let parsed: T | null = null;
-
     this.output.debug(`Reading \`${rel}\` file`);
 
     try {
-      parsed = JSON.parse(await fs.readFile(abs, 'utf8'));
+      return JSON.parse(await fs.readFile(abs, 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`No \`${rel}\` file present`);
@@ -658,8 +656,6 @@ export default class DevServer {
         throw err;
       }
     }
-
-    return parsed;
   }
 
   async tryValidateOrExit(
