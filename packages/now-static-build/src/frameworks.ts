@@ -524,6 +524,11 @@ const frameworkList: Framework[] = [
         continue: true,
       },
       {
+        src: '/_nuxt/(.*)',
+        headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+        continue: true,
+      },
+      {
         handle: 'filesystem',
       },
       {
