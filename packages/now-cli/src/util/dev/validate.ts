@@ -34,10 +34,9 @@ const vercelConfigSchema = {
 };
 
 const ajv = new Ajv();
+const validate = ajv.compile(vercelConfigSchema);
 
 export function validateConfig(config: NowConfig): NowBuildError | null {
-  const validate = ajv.compile(vercelConfigSchema);
-
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];
