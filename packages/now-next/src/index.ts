@@ -460,8 +460,7 @@ export const build = async ({
                 // make sure to route SSG data route to the data prerender
                 // output, we don't do this for SSP routes since they don't
                 // have a separate data output
-                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page,
-                `${
+                `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
                   dataRoute.routeKeys
                     ? `?${Object.keys(dataRoute.routeKeys)
                         .map((key) => `${dataRoute.routeKeys![key]}=$${key}`)
@@ -1568,6 +1567,7 @@ export const build = async ({
       delete lambdas[routeFileNoExt];
     });
   }
+  const mergedDataRoutesLambdaRoutes = [];
   const mergedDynamicRoutesLambdaRoutes = [];
 
   if (isSharedLambdas) {
@@ -1588,6 +1588,22 @@ export const build = async ({
         mergedDynamicRoutesLambdaRoutes.push(
           dynamicPageLambdaRoutesMap[pathname]
         );
+      }
+    }
+
+    for (let i = 0; i < dataRoutes.length; i++) {
+      const route = dataRoutes[i];
+
+      mergedDataRoutesLambdaRoutes.push(route);
+
+      const { pathname } = url.parse(route.dest!);
+
+      if (
+        pathname &&
+        pageLambdaMap[pathname] &&
+        dynamicPageLambdaRoutesMap[pathname]
+      ) {
+        mergedDataRoutesLambdaRoutes.push(dynamicPageLambdaRoutesMap[pathname]);
       }
     }
   }
@@ -1659,7 +1675,7 @@ export const build = async ({
       { handle: 'rewrite' },
 
       // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
+      ...(isSharedLambdas ? mergedDataRoutesLambdaRoutes : dataRoutes),
 
       // re-check page routes to map them to the lambda
       ...pageLambdaRoutes,
