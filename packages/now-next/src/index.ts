@@ -71,7 +71,6 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
-import findUp from 'find-up';
 import { Sema } from 'async-sema';
 
 interface BuildParamsMeta {
@@ -231,23 +230,25 @@ export const build = async ({
     });
   }
 
-  const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
-    cwd: path.join(workPath, path.dirname(entrypoint)),
-  });
+  const nowJsonPaths = Object.keys(files)
+    .filter((file) => file.endsWith('now.json') || file.endsWith('vercel.json'))
+    .map((file) => path.join(workPath, file));
 
   let hasLegacyRoutes = false;
   const hasFunctionsConfig = !!config.functions;
 
-  if (nowJsonPath) {
+  for (const nowJsonPath of nowJsonPaths) {
     const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
 
     if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
-      hasLegacyRoutes = true;
       console.warn(
-        `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
+        `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.relative(
+          workPath,
           nowJsonPath
         )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
       );
+      hasLegacyRoutes = true;
+      break;
     }
   }
 
