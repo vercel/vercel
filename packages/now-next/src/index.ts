@@ -238,7 +238,7 @@ export const build = async ({
   while (possibleNowJsonPath.length >= workPath.length) {
     const curFiles = await readdir(possibleNowJsonPath);
     const nowJsonFile = curFiles.find(
-      (file) => file.endsWith('now.json') || file.endsWith('vercel.json')
+      (file) => file === 'now.json' || file === 'vercel.json'
     );
 
     if (nowJsonFile) {
