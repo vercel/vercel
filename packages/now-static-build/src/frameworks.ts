@@ -100,6 +100,7 @@ const frameworkList: Framework[] = [
     dependency: '@11ty/eleventy',
     buildCommand: 'npx @11ty/eleventy',
     getOutputDirName: async () => '_site',
+    cachePattern: '.cache/**',
   },
   {
     name: 'Docusaurus 2',
