@@ -4,7 +4,7 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { HttpHeadersConfig, RouteResult } from './types';
+import { NowConfig, HttpHeadersConfig, RouteResult } from './types';
 import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
@@ -29,7 +29,7 @@ export function resolveRouteParameters(
 export function getRoutesTypes(routes: Route[] = []) {
   const handleMap = new Map<HandleValue | null, Route[]>();
   let prevHandle: HandleValue | null = null;
-  routes.forEach(route => {
+  routes.forEach((route) => {
     if (isHandler(route)) {
       prevHandle = route.handle;
     } else {
@@ -50,6 +50,7 @@ export async function devRouter(
   reqMethod?: string,
   routes?: Route[],
   devServer?: DevServer,
+  nowConfig?: NowConfig,
   previousHeaders?: HttpHeadersConfig,
   missRoutes?: Route[],
   phase?: HandleValue | null
@@ -117,9 +118,12 @@ export async function devRouter(
           continue;
         }
 
-        if (routeConfig.check && devServer && phase !== 'hit') {
+        if (routeConfig.check && devServer && nowConfig && phase !== 'hit') {
           const { pathname = '/' } = url.parse(destPath);
-          const hasDestFile = await devServer.hasFilesystem(pathname);
+          const hasDestFile = await devServer.hasFilesystem(
+            pathname,
+            nowConfig
+          );
 
           if (!hasDestFile) {
             if (routeConfig.status && phase !== 'miss') {
@@ -131,6 +135,7 @@ export async function devRouter(
                 reqMethod,
                 missRoutes,
                 devServer,
+                nowConfig,
                 combinedHeaders,
                 [],
                 'miss'

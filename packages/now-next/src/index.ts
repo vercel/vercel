@@ -1,4 +1,5 @@
 import buildUtils from './build-utils';
+import url from 'url';
 const {
   createLambda,
   debug,
@@ -70,7 +71,7 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
-// import findUp from 'find-up';
+import findUp from 'find-up';
 import { Sema } from 'async-sema';
 
 interface BuildParamsMeta {
@@ -90,7 +91,7 @@ export const version = 2;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
 
-['SIGINT', 'SIGTERM'].forEach(signal => {
+['SIGINT', 'SIGTERM'].forEach((signal) => {
   process.once(signal as NodeJS.Signals, () => {
     for (const child of nowDevChildProcesses) {
       debug(
@@ -250,47 +251,39 @@ export const build = async ({
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-  // let nowJsonPath = Object.keys(files).find(file => {
-  //   return file.endsWith('now.json') || file.endsWith('vercel.json')
-  // })
+  const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
+    cwd: path.join(workPath, path.dirname(entrypoint)),
+  });
 
-  // if (nowJsonPath) nowJsonPath = files[nowJsonPath].fsPath
+  let hasLegacyRoutes = false;
+  const hasFunctionsConfig = !!config.functions;
 
-  // if (!nowJsonPath) {
-  //   nowJsonPath = await findUp(['now.json', 'vercel.json'], {
-  //     cwd: path.join(workPath, path.dirname(entrypoint))
-  //   })
-  // }
+  if (nowJsonPath) {
+    const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
 
-  // let hasLegacyRoutes = false;
-  // const hasFunctionsConfig = !!config.functions;
+    if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
+      hasLegacyRoutes = true;
+      console.warn(
+        `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
+          nowJsonPath
+        )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
+      );
+    }
+  }
 
-  // if (nowJsonPath) {
-  //   const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
-
-  //   if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
-  //     hasLegacyRoutes = true;
-  //     console.warn(
-  //       `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.basename(
-  //         nowJsonPath
-  //       )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
-  //     );
-  //   }
-  // }
-
-  // if (hasFunctionsConfig) {
-  //   console.warn(
-  //     `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
-  //   );
-  // }
+  if (hasFunctionsConfig) {
+    console.warn(
+      `WARNING: Your application is being opted out of "@vercel/next" optimized lambdas mode due to \`functions\` config.\nMore info: http://err.sh/vercel/vercel/next-functions-config-optimized-lambdas`
+    );
+  }
 
   // default to true but still allow opting out with the config
-  const isSharedLambdas = !!config.sharedLambdas;
-  // !hasLegacyRoutes &&
-  // !hasFunctionsConfig &&
-  // typeof config.sharedLambdas === 'undefined'
-  //   ? true
-  //   : !!config.sharedLambdas;
+  const isSharedLambdas =
+    !hasLegacyRoutes &&
+    !hasFunctionsConfig &&
+    typeof config.sharedLambdas === 'undefined'
+      ? true
+      : !!config.sharedLambdas;
 
   if (meta.isDev) {
     let childProcess: ChildProcess | undefined;
@@ -480,21 +473,19 @@ export const build = async ({
             }
 
             dataRoutes.push({
-              src: dataRoute.dataRouteRegex.replace(
-                /^\^/,
-                `^${appMountPrefixNoTrailingSlash}`
-              ),
+              src: (
+                dataRoute.namedDataRouteRegex || dataRoute.dataRouteRegex
+              ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
               dest: path.join(
                 '/',
                 entryDirectory,
                 // make sure to route SSG data route to the data prerender
                 // output, we don't do this for SSP routes since they don't
                 // have a separate data output
-                (ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page,
-                `${
+                `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
                   dataRoute.routeKeys
                     ? `?${Object.keys(dataRoute.routeKeys)
-                        .map(key => `${dataRoute.routeKeys![key]}=$${key}`)
+                        .map((key) => `${dataRoute.routeKeys![key]}=$${key}`)
                         .join('&')}`
                     : ''
                 }`
@@ -725,7 +716,7 @@ export const build = async ({
     );
     const nodeModules = excludeFiles(
       await glob('node_modules/**', entryPath),
-      file => file.startsWith('node_modules/.cache')
+      (file) => file.startsWith('node_modules/.cache')
     );
     const launcherFiles = {
       'now__bridge.js': new FileFsRef({
@@ -754,7 +745,7 @@ export const build = async ({
     const launcherData = await readFile(launcherPath, 'utf8');
 
     await Promise.all(
-      Object.keys(pages).map(async page => {
+      Object.keys(pages).map(async (page) => {
         // These default pages don't have to be handled as they'd always 404
         if (['_app.js', '_error.js', '_document.js'].includes(page)) {
           return;
@@ -889,6 +880,7 @@ export const build = async ({
           [filePath: string]: FileFsRef;
         };
 
+    let canUsePreviewMode = false;
     let pseudoLayerBytes = 0;
     let apiPseudoLayerBytes = 0;
     const pseudoLayers: PseudoLayer[] = [];
@@ -911,11 +903,12 @@ export const build = async ({
 
       const apiPages: string[] = [];
       const nonApiPages: string[] = [];
-      const allPagePaths = Object.keys(pages).map(page => pages[page].fsPath);
+      const allPagePaths = Object.keys(pages).map((page) => pages[page].fsPath);
 
       for (const page of allPagePaths) {
         if (isApiPage(page)) {
           apiPages.push(page);
+          canUsePreviewMode = true;
         } else {
           nonApiPages.push(page);
         }
@@ -926,10 +919,10 @@ export const build = async ({
         reasons: apiReasons,
       } = await nodeFileTrace(apiPages, { base: workPath });
 
-      const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
-        nonApiPages,
-        { base: workPath }
-      );
+      const {
+        fileList,
+        reasons: nonApiReasons,
+      } = await nodeFileTrace(nonApiPages, { base: workPath });
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
@@ -1003,7 +996,7 @@ export const build = async ({
         debug(
           'detected (legacy) assets to be bundled with serverless function:'
         );
-        assetKeys.forEach(assetFile => debug(`\t${assetFile}`));
+        assetKeys.forEach((assetFile) => debug(`\t${assetFile}`));
         debug(
           '\nPlease upgrade to Next.js 9.1 to leverage modern asset handling.'
         );
@@ -1143,7 +1136,7 @@ export const build = async ({
       }
     } else {
       await Promise.all(
-        pageKeys.map(async page => {
+        pageKeys.map(async (page) => {
           // These default pages don't have to be handled as they'd always 404
           if (['_app.js', '_document.js'].includes(page)) {
             return;
@@ -1224,8 +1217,8 @@ export const build = async ({
       false,
       routesManifest,
       new Set(prerenderManifest.omittedRoutes)
-    ).then(arr =>
-      arr.map(route => {
+    ).then((arr) =>
+      arr.map((route) => {
         route.src = route.src.replace('^', `^${dynamicPrefix}`);
         return route;
       })
@@ -1249,7 +1242,7 @@ export const build = async ({
                   const pages = {
                     ${groupPageKeys
                       .map(
-                        page =>
+                        (page) =>
                           `'${page}': require('./${path.join(
                             './',
                             group.pages[page].pageFileName
@@ -1294,7 +1287,7 @@ export const build = async ({
                       // for prerendered dynamic routes (/blog/post-1) we need to
                       // find the match since it won't match the page directly
                       const dynamicRoutes = ${JSON.stringify(
-                        dynamicRoutes.map(route => ({
+                        dynamicRoutes.map((route) => ({
                           src: route.src,
                           dest: route.dest,
                         }))
@@ -1480,33 +1473,41 @@ export const build = async ({
             message: 'invariant: htmlFsRef != null && jsonFsRef != null',
           });
         }
+
+        if (!canUsePreviewMode) {
+          htmlFsRef.contentType = htmlContentType;
+          prerenders[outputPathPage] = htmlFsRef;
+          prerenders[outputPathData] = jsonFsRef;
+        }
       }
 
-      prerenders[outputPathPage] = new Prerender({
-        expiration: initialRevalidate,
-        lambda,
-        fallback: htmlFsRef,
-        group: prerenderGroup,
-        bypassToken: prerenderManifest.bypassToken,
-      });
-      prerenders[outputPathData] = new Prerender({
-        expiration: initialRevalidate,
-        lambda,
-        fallback: jsonFsRef,
-        group: prerenderGroup,
-        bypassToken: prerenderManifest.bypassToken,
-      });
+      if (prerenders[outputPathPage] == null) {
+        prerenders[outputPathPage] = new Prerender({
+          expiration: initialRevalidate,
+          lambda,
+          fallback: htmlFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+        });
+        prerenders[outputPathData] = new Prerender({
+          expiration: initialRevalidate,
+          lambda,
+          fallback: jsonFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+        });
 
-      ++prerenderGroup;
+        ++prerenderGroup;
+      }
     };
 
-    Object.keys(prerenderManifest.staticRoutes).forEach(route =>
+    Object.keys(prerenderManifest.staticRoutes).forEach((route) =>
       onPrerenderRoute(route, { isBlocking: false, isFallback: false })
     );
-    Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
+    Object.keys(prerenderManifest.fallbackRoutes).forEach((route) =>
       onPrerenderRoute(route, { isBlocking: false, isFallback: true })
     );
-    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach(route =>
+    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach((route) =>
       onPrerenderRoute(route, { isBlocking: true, isFallback: false })
     );
 
@@ -1570,7 +1571,7 @@ export const build = async ({
     // We need to delete lambdas from output instead of omitting them from the
     // start since we rely on them for powering Preview Mode (read above in
     // onPrerenderRoute).
-    prerenderManifest.omittedRoutes.forEach(routeKey => {
+    prerenderManifest.omittedRoutes.forEach((routeKey) => {
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = path.posix.join(
         entryDirectory,
@@ -1585,6 +1586,7 @@ export const build = async ({
       delete lambdas[routeFileNoExt];
     });
   }
+  const mergedDataRoutesLambdaRoutes = [];
   const mergedDynamicRoutesLambdaRoutes = [];
 
   if (isSharedLambdas) {
@@ -1599,10 +1601,28 @@ export const build = async ({
 
       mergedDynamicRoutesLambdaRoutes.push(route);
 
-      if (pageLambdaMap[route.dest!]) {
+      const { pathname } = url.parse(route.dest!);
+
+      if (pathname && pageLambdaMap[pathname]) {
         mergedDynamicRoutesLambdaRoutes.push(
-          dynamicPageLambdaRoutesMap[route.dest!]
+          dynamicPageLambdaRoutesMap[pathname]
         );
+      }
+    }
+
+    for (let i = 0; i < dataRoutes.length; i++) {
+      const route = dataRoutes[i];
+
+      mergedDataRoutesLambdaRoutes.push(route);
+
+      const { pathname } = url.parse(route.dest!);
+
+      if (
+        pathname &&
+        pageLambdaMap[pathname] &&
+        dynamicPageLambdaRoutesMap[pathname]
+      ) {
+        mergedDataRoutesLambdaRoutes.push(dynamicPageLambdaRoutesMap[pathname]);
       }
     }
   }
@@ -1674,7 +1694,7 @@ export const build = async ({
       { handle: 'rewrite' },
 
       // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
+      ...(isSharedLambdas ? mergedDataRoutesLambdaRoutes : dataRoutes),
 
       // re-check page routes to map them to the lambda
       ...pageLambdaRoutes,
@@ -1714,9 +1734,12 @@ export const build = async ({
                   src: path.join('/', entryDirectory, '.*'),
                   // if static 404 is not present but we have pages/404.js
                   // it is a lambda due to _app getInitialProps
-                  dest: path.join('/', (static404Page
-                    ? static404Page
-                    : pageLambdaMap[page404Path]) as string),
+                  dest: path.join(
+                    '/',
+                    (static404Page
+                      ? static404Page
+                      : pageLambdaMap[page404Path]) as string
+                  ),
 
                   status: 404,
                   headers: {
