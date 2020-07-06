@@ -392,17 +392,6 @@ test('[vercel dev] prints `npm install` errors', async (t) => {
   );
 });
 
-test('[vercel dev] prints "build" and "functions" error', async (t) => {
-  const dir = fixture('functions-and-builds');
-  const result = await exec(dir);
-  t.truthy(
-    result.stderr.includes(
-      'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.'
-    )
-  );
-  t.truthy(result.stderr.includes('https://vercel.link/functions-and-builds'));
-});
-
 test('[vercel dev] `vercel.json` should be invalidated if deleted', async (t) => {
   const dir = fixture('invalidate-vercel-config');
   const configPath = join(dir, 'vercel.json');
