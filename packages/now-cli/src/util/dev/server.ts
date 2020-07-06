@@ -536,6 +536,7 @@ export default class DevServer {
       this.readJsonFile<NowConfig>(configPath),
     ]);
 
+    await this.validateNowConfig(config);
     const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
       nowConfig: config,
     });
