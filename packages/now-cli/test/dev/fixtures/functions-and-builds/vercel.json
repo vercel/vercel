@@ -1,0 +1,13 @@
+{
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "functions": {
+    "api/test.js": {
+      "memory": 1024
+    }
+  }
+}
