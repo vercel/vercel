@@ -1,19 +1,19 @@
-import React from 'react'
+import React from 'react';
 
 // eslint-disable-next-line camelcase
-export async function unstable_getServerProps ({ params }) {
+export async function getServerSideProps({ params }) {
   if (params.post === 'post-10') {
-    await new Promise(resolve => {
-      setTimeout(() => resolve(), 1000)
-    })
+    await new Promise((resolve) => {
+      setTimeout(() => resolve(), 1000);
+    });
   }
 
   return {
     props: {
       post: params.post,
-      time: (await import('perf_hooks')).performance.now()
+      time: (await import('perf_hooks')).performance.now(),
     },
-  }
+  };
 }
 
 export default ({ post, time }) => {
@@ -22,5 +22,5 @@ export default ({ post, time }) => {
       <p>Post: {post}</p>
       <span>time: {time}</span>
     </>
-  )
-}
+  );
+};
