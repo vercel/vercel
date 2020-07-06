@@ -40,6 +40,7 @@ import {
   readFile,
   unlink as unlinkFile,
   writeFile,
+  readdir,
 } from 'fs-extra';
 import os from 'os';
 import path from 'path';
@@ -230,26 +231,32 @@ export const build = async ({
     });
   }
 
-  const nowJsonPaths = Object.keys(files)
-    .filter((file) => file.endsWith('now.json') || file.endsWith('vercel.json'))
-    .map((file) => path.join(workPath, file));
-
   let hasLegacyRoutes = false;
+  let possibleNowJsonPath = entryPath;
   const hasFunctionsConfig = !!config.functions;
 
-  for (const nowJsonPath of nowJsonPaths) {
-    const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
+  while (possibleNowJsonPath.length >= workPath.length) {
+    const curFiles = await readdir(possibleNowJsonPath);
+    const nowJsonFile = curFiles.find(
+      (file) => file.endsWith('now.json') || file.endsWith('vercel.json')
+    );
 
-    if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
-      console.warn(
-        `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.relative(
-          workPath,
-          nowJsonPath
-        )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
-      );
-      hasLegacyRoutes = true;
-      break;
+    if (nowJsonFile) {
+      const nowJsonPath = path.join(possibleNowJsonPath, nowJsonFile);
+      const nowJsonData = JSON.parse(await readFile(nowJsonPath, 'utf8'));
+
+      if (Array.isArray(nowJsonData.routes) && nowJsonData.routes.length > 0) {
+        console.warn(
+          `WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes in ${path.relative(
+            workPath,
+            nowJsonPath
+          )}. http://err.sh/vercel/vercel/next-legacy-routes-optimized-lambdas`
+        );
+        hasLegacyRoutes = true;
+        break;
+      }
     }
+    possibleNowJsonPath = path.join(possibleNowJsonPath, '..');
   }
 
   if (hasFunctionsConfig) {
