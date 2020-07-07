@@ -1132,7 +1132,7 @@ export class MissingDotenvVarsError extends NowError<
     } else {
       message = [
         `The following env vars are not defined in ${code(type)} file:`,
-        ...missing.map(name => `  - ${JSON.stringify(name)}`),
+        ...missing.map((name) => `  - ${JSON.stringify(name)}`),
       ].join('\n');
     }
 
@@ -1175,6 +1175,16 @@ export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
       code: 'PROJECT_NOT_FOUND',
       meta: {},
       message: `There is no project for "${nameOrId}"`,
+    });
+  }
+}
+
+export class ProjectUnauthorized extends NowError<'PROJECT_UNAUTHORIZED', {}> {
+  constructor(nameOrId: string) {
+    super({
+      code: 'PROJECT_UNAUTHORIZED',
+      meta: {},
+      message: `Could not retrieve project "${nameOrId}"`,
     });
   }
 }

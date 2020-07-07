@@ -4,7 +4,7 @@ import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
-import { ProjectNotFound } from '../errors-ts';
+import { ProjectNotFound, ProjectUnauthorized } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
@@ -47,7 +47,7 @@ const linkSchema = {
  */
 export function getVercelDirectory(cwd: string = process.cwd()): string {
   const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
-  const existingDirs = possibleDirs.filter(d => isDirectory(d));
+  const existingDirs = possibleDirs.filter((d) => isDirectory(d));
   if (existingDirs.length > 1) {
     throw new NowBuildError({
       code: 'CONFLICTING_CONFIG_DIRECTORIES',
@@ -141,13 +141,25 @@ export async function getLinkedProject(
   }
 
   const spinner = output.spinner('Retrieving project…', 1000);
-  let org: Org | null;
-  let project: Project | ProjectNotFound | null;
+  let org: Org | null = null;
+  let project: Project | ProjectNotFound | null = null;
   try {
     [org, project] = await Promise.all([
       getOrgById(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
+  } catch (error) {
+    if (error instanceof ProjectUnauthorized) {
+      output.error(
+        `Could not retrieve Project Settings. To link your project again, run ${chalk.gray(
+          `\`rm -rf .vercel\``
+        )} and ${chalk.gray(`\`vercel\``)}.`,
+        undefined,
+        'https://vercel.link/cannot-load-project-settings'
+      );
+
+      return { status: 'error', exitCode: 1 };
+    }
   } finally {
     spinner();
   }
@@ -230,7 +242,7 @@ export async function linkFolderToProject(
     const gitIgnorePath = join(path, '.gitignore');
 
     const gitIgnore = await readFile(gitIgnorePath)
-      .then(buf => buf.toString())
+      .then((buf) => buf.toString())
       .catch(() => null);
 
     if (!gitIgnore || !gitIgnore.split('\n').includes(VERCEL_DIR)) {
