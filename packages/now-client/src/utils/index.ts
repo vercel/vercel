@@ -35,7 +35,7 @@ const EVENTS_ARRAY = [
   'canceled',
 ] as const;
 
-export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
+export type DeploymentEventType = typeof EVENTS_ARRAY[number];
 export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl(
@@ -69,7 +69,7 @@ export async function parseVercelConfig(filePath?: string): Promise<NowConfig> {
   }
 }
 
-const maybeRead = async function<T>(path: string, default_: T) {
+const maybeRead = async function <T>(path: string, default_: T) {
   try {
     return await readFile(path, 'utf8');
   } catch (err) {
@@ -111,14 +111,14 @@ export async function getVercelIgnore(
   cwd: string | string[]
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ignores: string[] = [
-    '.hg/',
-    '.git/',
+    '.hg',
+    '.git',
     '.gitmodules',
-    '.svn/',
+    '.svn',
     '.cache',
-    '.next/',
-    '.now/',
-    '.vercel/',
+    '.next',
+    '.now',
+    '.vercel',
     '.npmignore',
     '.dockerignore',
     '.gitignore',
@@ -131,16 +131,16 @@ export async function getVercelIgnore(
     '.venv',
     'npm-debug.log',
     'config.gypi',
-    'node_modules/',
-    '__pycache__/',
-    'venv/',
+    'node_modules',
+    '__pycache__',
+    'venv',
     'CVS',
   ];
 
   const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
   const files = await Promise.all(
-    cwds.map(async cwd => {
+    cwds.map(async (cwd) => {
       const [vercelignore, nowignore] = await Promise.all([
         maybeRead(join(cwd, '.vercelignore'), ''),
         maybeRead(join(cwd, '.nowignore'), ''),
