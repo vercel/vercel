@@ -159,6 +159,9 @@ export async function getLinkedProject(
         link: 'https://vercel.link/cannot-load-project-settings',
       });
     }
+
+    // Not a special case 403, we should still throw it
+    throw err;
   } finally {
     spinner();
   }
