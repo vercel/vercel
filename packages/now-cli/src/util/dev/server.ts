@@ -589,6 +589,8 @@ export default class DevServer {
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
+
+        delete config.functions;
       }
 
       let routes: Route[] = [];
