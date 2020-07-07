@@ -520,6 +520,7 @@ CMD ["node", "index.js"]`,
       'now.json': getConfigFile(true),
     },
     'unauthorized-vercel-config': {
+      // This project is under the testing-internal team
       '.vercel/project.json': JSON.stringify({
         orgId: 'team_JgimPl9u9uauL7E4MjMLt605',
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
