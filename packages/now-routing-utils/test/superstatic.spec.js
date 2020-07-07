@@ -14,12 +14,12 @@ function routesToRegExps(routeArray) {
   if (error) {
     throw error;
   }
-  return routes.map(r => new RegExp(r.src));
+  return routes.map((r) => new RegExp(r.src));
 }
 
 function assertMatches(actual, matches, isExpectingMatch) {
   routesToRegExps(actual).forEach((r, i) => {
-    matches[i].forEach(text => {
+    matches[i].forEach((text) => {
       deepEqual(r.test(text), isExpectingMatch, `${text} ${r.source}`);
     });
   });
@@ -194,67 +194,67 @@ test('convertRedirects', () => {
 
   const expected = [
     {
-      src: '^\\/some\\/old\\/path$',
+      src: '^\\/some\\/old\\/path[\\/]?$',
       headers: { Location: '/some/new/path' },
       status: 308,
     },
     {
-      src: '^\\/next(\\.js)?$',
+      src: '^\\/next(\\.js)?[\\/]?$',
       headers: { Location: 'https://nextjs.org' },
       status: 308,
     },
     {
-      src: '^\\/proxy(?:\\/(.*))$',
+      src: '^\\/proxy(?:\\/(.*))[\\/]?$',
       headers: { Location: 'https://www.firebase.com' },
       status: 302,
     },
     {
-      src: '^\\/proxy-regex(?:\\/([a-zA-Z]{1,}))$',
+      src: '^\\/proxy-regex(?:\\/([a-zA-Z]{1,}))[\\/]?$',
       headers: { Location: 'https://firebase.com/$1' },
       status: 308,
     },
     {
-      src: '^\\/proxy-port(?:\\/([a-zA-Z]{1,}))$',
+      src: '^\\/proxy-port(?:\\/([a-zA-Z]{1,}))[\\/]?$',
       headers: { Location: 'https://firebase.com:8080/$1' },
       status: 308,
     },
     {
-      src: '^\\/projects(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+      src: '^\\/projects(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))[\\/]?$',
       headers: { Location: '/projects.html' },
       status: 308,
     },
     {
-      src: '^\\/old(?:\\/([^\\/]+?))\\/path$',
+      src: '^\\/old(?:\\/([^\\/]+?))\\/path[\\/]?$',
       headers: { Location: '/new/path/$1' },
       status: 308,
     },
     {
-      src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?[\\/]?$',
       headers: { Location: '/catchall/$1/' },
       status: 308,
     },
     {
-      src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))$',
+      src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))[\\/]?$',
       headers: { Location: '/another-catch/$1/' },
       status: 308,
     },
     {
-      src: '^\\/feedback(?:\\/((?!general).*))$',
+      src: '^\\/feedback(?:\\/((?!general).*))[\\/]?$',
       headers: { Location: '/feedback/general' },
       status: 308,
     },
     {
-      src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?[\\/]?$',
       headers: { Location: '/api/user' },
       status: 308,
     },
     {
-      src: '^\\/hello(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      src: '^\\/hello(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?[\\/]?$',
       headers: { Location: '/something#$1' },
       status: 308,
     },
     {
-      src: '^\\/external(?:\\/([^\\/]+?))$',
+      src: '^\\/external(?:\\/([^\\/]+?))[\\/]?$',
       headers: {
         Location:
           'https://example.com/?utm_source=google.com#/guides/$1/page?dynamic=code',
@@ -262,7 +262,7 @@ test('convertRedirects', () => {
       status: 308,
     },
     {
-      src: '^\\/optional(?:\\/([^\\/]+?))?$',
+      src: '^\\/optional(?:\\/([^\\/]+?))?[\\/]?$',
       headers: { Location: '/api/optional/$1' },
       status: 308,
     },
@@ -353,79 +353,88 @@ test('convertRewrites', () => {
   ]);
 
   const expected = [
-    { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
     {
-      src: '^\\/proxy(?:\\/(.*))$',
+      src: '^\\/some\\/old\\/path[\\/]?$',
+      dest: '/some/new/path',
+      check: true,
+    },
+    {
+      src: '^\\/proxy(?:\\/(.*))[\\/]?$',
       dest: 'https://www.firebase.com',
       check: true,
     },
     {
-      src: '^\\/proxy-regex(?:\\/([a-zA-Z]{1,}))$',
+      src: '^\\/proxy-regex(?:\\/([a-zA-Z]{1,}))[\\/]?$',
       dest: 'https://firebase.com/$1',
       check: true,
     },
     {
-      src: '^\\/proxy-port(?:\\/([a-zA-Z]{1,}))$',
+      src: '^\\/proxy-port(?:\\/([a-zA-Z]{1,}))[\\/]?$',
       dest: 'https://firebase.com:8080/$1',
       check: true,
     },
     {
-      src: '^\\/projects(?:\\/([^\\/]+?))\\/edit$',
+      src: '^\\/projects(?:\\/([^\\/]+?))\\/edit[\\/]?$',
       dest: '/projects.html?id=$1',
       check: true,
     },
     {
-      src: '^\\/users(?:\\/([^\\/]+?))$',
+      src: '^\\/users(?:\\/([^\\/]+?))[\\/]?$',
       dest: '/api/user?identifier=$1&version=v2&id=$1',
       check: true,
     },
     {
-      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))[\\/]?$',
       dest: '/$1/get?identifier=$2&file=$1&id=$2',
       check: true,
     },
     {
-      src: '^\\/qs-and-hash(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+      src: '^\\/qs-and-hash(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))[\\/]?$',
       dest: '/api/get?identifier=$1&id=$1&hash=$2#$2',
       check: true,
     },
     {
-      src: '^\\/fullurl$',
+      src: '^\\/fullurl[\\/]?$',
       dest:
         'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
       check: true,
     },
     {
-      src: '^\\/dont-override-qs(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+      src: '^\\/dont-override-qs(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))[\\/]?$',
       dest: '/final?name=bob&age=',
       check: true,
     },
     {
-      src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?\\/$',
+      src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?\\/[\\/]?$',
       dest: '/catchall/$1?hello=$1',
       check: true,
     },
     {
-      src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/$',
+      src:
+        '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/[\\/]?$',
       dest: '/another-catch/$1?hello=$1',
       check: true,
     },
     {
-      src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      src: '^\\/catchme(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?[\\/]?$',
       dest: '/api/user?id=$1',
       check: true,
     },
     {
-      src: '^(?:\\/([^\\/]+?))$',
+      src: '^(?:\\/([^\\/]+?))[\\/]?$',
       dest: '/test?path=$1',
       check: true,
     },
     {
       check: true,
       dest: '/test?path=$1&two=$2',
-      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))[\\/]?$',
     },
-    { check: true, dest: '/blog/$2?id=$2', src: '^(?:\\/(.*))-(\\d+)\\.html$' },
+    {
+      check: true,
+      dest: '/blog/$2?id=$2',
+      src: '^(?:\\/(.*))-(\\d+)\\.html[\\/]?$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -512,17 +521,17 @@ test('convertHeaders', () => {
 
   const expected = [
     {
-      src: '^(.*)+(?:\\/(.*))\\.(eot|otf|ttf|ttc|woff|font\\.css)$',
+      src: '^(.*)+(?:\\/(.*))\\.(eot|otf|ttf|ttc|woff|font\\.css)[\\/]?$',
       headers: { 'Access-Control-Allow-Origin': '*' },
       continue: true,
     },
     {
-      src: '^404\\.html$',
+      src: '^404\\.html[\\/]?$',
       headers: { 'Cache-Control': 'max-age=300', 'Set-Cookie': 'error=404' },
       continue: true,
     },
     {
-      src: '^\\/blog(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+      src: '^\\/blog(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?[\\/]?$',
       headers: { 'on-blog': '$1', $1: 'blog' },
       continue: true,
     },

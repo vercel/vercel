@@ -13,8 +13,8 @@ export function getCleanUrls(
 ): { html: string; clean: string }[] {
   const htmlFiles = filePaths
     .map(toRoute)
-    .filter(f => f.endsWith('.html'))
-    .map(f => ({
+    .filter((f) => f.endsWith('.html'))
+    .map((f) => ({
       html: f,
       clean: f.slice(0, -5),
     }));
@@ -48,7 +48,7 @@ export function convertRedirects(
   redirects: NowRedirect[],
   defaultStatus = 308
 ): Route[] {
-  return redirects.map(r => {
+  return redirects.map((r) => {
     const { src, segments } = sourceToRegex(r.source);
     try {
       const loc = replaceSegments(segments, r.destination, true);
@@ -73,7 +73,7 @@ export function convertRedirects(
 }
 
 export function convertRewrites(rewrites: NowRewrite[]): Route[] {
-  return rewrites.map(r => {
+  return rewrites.map((r) => {
     const { src, segments } = sourceToRegex(r.source);
     try {
       const dest = replaceSegments(segments, r.destination);
@@ -86,10 +86,10 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
 }
 
 export function convertHeaders(headers: NowHeader[]): Route[] {
-  return headers.map(h => {
+  return headers.map((h) => {
     const obj: { [key: string]: string } = {};
     const { src, segments } = sourceToRegex(h.source);
-    const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
+    const namedSegments = segments.filter((name) => name !== UN_NAMED_SEGMENT);
     const indexes: { [k: string]: string } = {};
 
     segments.forEach((name, index) => {
@@ -144,13 +144,13 @@ export function sourceToRegex(
 ): { src: string; segments: string[] } {
   const keys: Key[] = [];
   const r = pathToRegexp(source, keys, {
-    strict: true,
+    strict: false,
     sensitive: true,
     delimiter: '/',
   });
   const segments = keys
-    .map(k => k.name)
-    .map(name => {
+    .map((k) => k.name)
+    .map((name) => {
       if (typeof name !== 'string') {
         return UN_NAMED_SEGMENT;
       }
@@ -173,7 +173,7 @@ function replaceSegments(
   pathname = pathname || '';
   hash = hash || '';
 
-  const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
+  const namedSegments = segments.filter((name) => name !== UN_NAMED_SEGMENT);
 
   if (namedSegments.length > 0) {
     const indexes: { [k: string]: string } = {};
@@ -225,7 +225,7 @@ function safelyCompile(str: string, indexes: { [k: string]: string }): string {
   // path-to-regexp cannot compile question marks
   return str
     .split('?')
-    .map(part => {
+    .map((part) => {
       const compiler = compile(part);
       return compiler(indexes);
     })

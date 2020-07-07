@@ -96,7 +96,7 @@ describe('normalizeRoutes', () => {
     assert.notEqual(normalized.routes, null);
 
     if (normalized.routes) {
-      normalized.routes.forEach(route => {
+      normalized.routes.forEach((route) => {
         if (isHandler(route)) {
           assert.fail(
             `Normalizer returned: { handle: ${route.handle} } instead of { src: ${expected} }`
@@ -772,17 +772,17 @@ describe('getTransformedRoutes', () => {
         status: 308,
       },
       {
-        src: '^/help$',
+        src: '^/help[/]?$',
         headers: { Location: '/support' },
         status: 302,
       },
       {
-        src: '^/bug$',
+        src: '^/bug[/]?$',
         headers: { Location: 'https://example.com/bug' },
         status: 308,
       },
       { handle: 'filesystem' },
-      { src: '^/v1$', dest: '/v2/api.py', check: true },
+      { src: '^/v1[/]?$', dest: '/v2/api.py', check: true },
     ];
     assert.deepEqual(actual.error, null);
     assert.deepEqual(actual.routes, expected);
@@ -972,7 +972,7 @@ describe('getTransformedRoutes', () => {
           'x-frame-options': 'sameorigin',
           'x-xss-protection': '1; mode=block',
         },
-        src: '^(?:/(.*))$',
+        src: '^(?:/(.*))[/]?$',
       },
     ]);
   });
