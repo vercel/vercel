@@ -47,5 +47,14 @@ export function validateConfig(config: NowConfig): NowBuildError | null {
     }
   }
 
+  if (config.functions && config.builds) {
+    return new NowBuildError({
+      code: 'FUNCTIONS_AND_BUILDS',
+      message:
+        'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+      link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
   return null;
 }
