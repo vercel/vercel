@@ -4,7 +4,7 @@ import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
-import { ProjectNotFound, ProjectUnauthorized } from '../errors-ts';
+import { ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
@@ -141,25 +141,13 @@ export async function getLinkedProject(
   }
 
   const spinner = output.spinner('Retrieving project…', 1000);
-  let org: Org | null = null;
-  let project: Project | ProjectNotFound | null = null;
+  let org: Org | null;
+  let project: Project | ProjectNotFound | null;
   try {
     [org, project] = await Promise.all([
       getOrgById(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
-  } catch (error) {
-    if (error instanceof ProjectUnauthorized) {
-      output.error(
-        `Could not retrieve Project Settings. To link your project again, run ${chalk.gray(
-          `\`rm -rf .vercel\``
-        )} and ${chalk.gray(`\`vercel\``)}.`,
-        undefined,
-        'https://vercel.link/cannot-load-project-settings'
-      );
-
-      return { status: 'error', exitCode: 1 };
-    }
   } finally {
     spinner();
   }

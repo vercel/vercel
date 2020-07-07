@@ -1179,16 +1179,6 @@ export class ProjectNotFound extends NowError<'PROJECT_NOT_FOUND', {}> {
   }
 }
 
-export class ProjectUnauthorized extends NowError<'PROJECT_UNAUTHORIZED', {}> {
-  constructor(nameOrId: string) {
-    super({
-      code: 'PROJECT_UNAUTHORIZED',
-      meta: {},
-      message: `Could not retrieve project "${nameOrId}"`,
-    });
-  }
-}
-
 export class AliasDomainConfigured extends NowError<'DOMAIN_CONFIGURED', {}> {
   constructor({ message }: { message: string }) {
     super({
