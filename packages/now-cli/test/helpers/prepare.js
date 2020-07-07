@@ -6,7 +6,7 @@ const { join, dirname } = require('path');
 const { imageSync: getImageFile } = require('qr-image');
 const { mkdirp, writeFile } = require('fs-extra');
 
-const getDockerFile = session => `
+const getDockerFile = (session) => `
   FROM mhart/alpine-node:latest
 
   LABEL name "now-cli-dockerfile-${session}"
@@ -21,7 +21,7 @@ const getDockerFile = session => `
   CMD ["yarn", "start"]
 `;
 
-const getPackageFile = session => `
+const getPackageFile = (session) => `
   {
     "name": "node-test-${session}",
     "main": "index.js",
@@ -35,13 +35,13 @@ const getPackageFile = session => `
   }
 `;
 
-const getIndexFile = session => `
+const getIndexFile = (session) => `
   module.exports = () => ({
     id: '${session}'
   })
 `;
 
-const getConfigFile = builds =>
+const getConfigFile = (builds) =>
   builds
     ? `{
   "version": 2,
@@ -53,7 +53,7 @@ const getConfigFile = builds =>
   "version": 1
 }`;
 
-const getIndexHTMLFile = session => `
+const getIndexHTMLFile = (session) => `
 <form action="/contact.php" method="POST">
   Post message for ${session} right here:
   <textarea name="Message" />
@@ -61,7 +61,7 @@ const getIndexHTMLFile = session => `
 </form>
 `;
 
-const getContactFile = session => `
+const getContactFile = (session) => `
 <?php
 if (empty($_ENV["AIRTABLE_KEY"])) {
   die("This is a test for ${session}");
@@ -96,7 +96,7 @@ const getRevertAliasConfigFile = () => {
   });
 };
 
-module.exports = async session => {
+module.exports = async (session) => {
   const files = {
     Dockerfile: getDockerFile(session),
     'index.js': getIndexFile(session),
@@ -518,6 +518,12 @@ CMD ["node", "index.js"]`,
       'index.html': '<h1>I am a website.</h1>',
       'vercel.json': getConfigFile(true),
       'now.json': getConfigFile(true),
+    },
+    'unauthorized-vercel-config': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: 'team_JgimPl9u9uauL7E4MjMLt605',
+        projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
+      }),
     },
   };
 
