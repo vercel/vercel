@@ -699,7 +699,7 @@ test('[vercel dev] validate builds', async (t) => {
   );
 });
 
-test.only('[vercel dev] validate routes', async (t) => {
+test('[vercel dev] validate routes', async (t) => {
   const directory = fixture('invalid-routes');
   const output = await exec(directory);
 
