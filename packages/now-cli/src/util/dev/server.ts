@@ -49,7 +49,7 @@ import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
 import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
-import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
+import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from './validate';
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
@@ -89,6 +89,10 @@ interface FSEvent {
   type: string;
   path: string;
 }
+
+type WithFileNameSymbol<T> = T & {
+  [fileNameSymbol]: string;
+};
 
 function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && isOfficialRuntime('static-build', buildA.use)) {
@@ -292,7 +296,7 @@ export default class DevServer {
             filesRemovedArray
           ).catch((err: Error) => {
             this.output.warn(
-              `An error occurred while rebuilding ${match.src}:`
+              `An error occurred while rebuilding \`${match.src}\`:`
             );
             console.error(err.stack);
           });
@@ -532,14 +536,6 @@ export default class DevServer {
       this.readJsonFile<NowConfig>(configPath),
     ]);
 
-    const allFiles = await getAllProjectFiles(this.cwd, this.output);
-    const files = allFiles.filter(this.filter);
-
-    this.output.debug(
-      `Found ${allFiles.length} and ` +
-        `filtered out ${allFiles.length - files.length} files`
-    );
-
     await this.validateNowConfig(config);
     const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
       nowConfig: config,
@@ -554,6 +550,11 @@ export default class DevServer {
     if (!config.builds || config.builds.length === 0) {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
+
+      const opts = { output: this.output, isBuilds: true };
+      const files = (await getFiles(this.cwd, config, opts)).map((f) =>
+        relative(this.cwd, f)
+      );
 
       let {
         builders,
@@ -588,6 +589,8 @@ export default class DevServer {
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
+
+        delete config.functions;
       }
 
       let routes: Route[] = [];
@@ -628,7 +631,9 @@ export default class DevServer {
     return config;
   }
 
-  async readJsonFile<T>(filePath: string): Promise<T | void> {
+  async readJsonFile<T>(
+    filePath: string
+  ): Promise<WithFileNameSymbol<T> | void> {
     let rel, abs;
     if (isAbsolute(filePath)) {
       rel = path.relative(this.cwd, filePath);
@@ -640,7 +645,10 @@ export default class DevServer {
     this.output.debug(`Reading \`${rel}\` file`);
 
     try {
-      return JSON.parse(await fs.readFile(abs, 'utf8'));
+      const raw = await fs.readFile(abs, 'utf8');
+      const parsed: WithFileNameSymbol<T> = JSON.parse(raw);
+      parsed[fileNameSymbol] = rel;
+      return parsed;
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`No \`${rel}\` file present`);
