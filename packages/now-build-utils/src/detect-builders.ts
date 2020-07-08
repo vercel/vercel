@@ -462,7 +462,7 @@ function detectFrontBuilder(
     });
   }
 
-  if (framework === 'nextjs') {
+  if (framework === 'nextjs' || framework === 'blitzjs') {
     return { src: 'package.json', use: `@vercel/next${withTag}`, config };
   }
 
