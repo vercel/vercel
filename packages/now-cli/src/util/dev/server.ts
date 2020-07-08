@@ -509,7 +509,7 @@ export default class DevServer {
 
     // Clean up the promise once it has resolved
     const clear = this.clearNowConfigPromise;
-    this.getNowConfigPromise.then(clear, clear);
+    this.getNowConfigPromise.finally(clear);
 
     return this.getNowConfigPromise;
   }
