@@ -411,7 +411,6 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async (t) =>
     {
       // Env var should not be set after `vercel.json` is deleted
       await fs.remove(configPath);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/api`);
       const body = await res.json();
@@ -454,7 +453,6 @@ test('[vercel dev] reflects changes to config and env without restart', async (t
         ],
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=bar`);
       const body = await res.json();
@@ -476,7 +474,6 @@ test('[vercel dev] reflects changes to config and env without restart', async (t
         ],
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
@@ -495,7 +492,6 @@ test('[vercel dev] reflects changes to config and env without restart', async (t
         },
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
@@ -514,7 +510,6 @@ test('[vercel dev] reflects changes to config and env without restart', async (t
         },
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=boo`);
       const body = await res.json();
