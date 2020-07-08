@@ -1209,6 +1209,21 @@ export const build = async ({
       const launcherPath = path.join(__dirname, 'templated-launcher-shared.js');
       const launcherData = await readFile(launcherPath, 'utf8');
 
+      // we need to include the prerenderManifest.omittedRoutes here
+      // for the page to be able to be matched in the lambda for preview mode
+      const completeDynamicRoutes = await getDynamicRoutes(
+        entryPath,
+        entryDirectory,
+        dynamicPages,
+        false,
+        routesManifest
+      ).then((arr) =>
+        arr.map((route) => {
+          route.src = route.src.replace('^', `^${dynamicPrefix}`);
+          return route;
+        })
+      );
+
       await Promise.all(
         [...apiLambdaGroups, ...pageLambdaGroups].map(
           async function buildLambdaGroup(group: LambdaGroup) {
@@ -1268,7 +1283,7 @@ export const build = async ({
                       // for prerendered dynamic routes (/blog/post-1) we need to
                       // find the match since it won't match the page directly
                       const dynamicRoutes = ${JSON.stringify(
-                        dynamicRoutes.map((route) => ({
+                        completeDynamicRoutes.map((route) => ({
                           src: route.src,
                           dest: route.dest,
                         }))
