@@ -152,9 +152,7 @@ export async function getLinkedProject(
     if (err?.status === 403) {
       spinner();
       throw new NowBuildError({
-        message: `Could not retrieve Project Settings. To link your project again, run ${chalk.gray(
-          `\`rm -rf .vercel\``
-        )} and ${chalk.gray(`\`vercel\``)}.`,
+        message: `Could not retrieve Project Settings. To link your project, remove the .vercel directory and deploy again.`,
         code: 'PROJECT_UNAUTHORIZED',
         link: 'https://vercel.link/cannot-load-project-settings',
       });
