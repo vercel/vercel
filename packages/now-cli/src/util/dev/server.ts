@@ -117,7 +117,6 @@ export default class DevServer {
   public address: string;
   public devCacheDir: string;
 
-  private cachedNowConfig: NowConfig | null;
   private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
@@ -152,7 +151,6 @@ export default class DevServer {
     this.devCommand = options.devCommand;
     this.projectSettings = options.projectSettings;
     this.frameworkSlug = options.frameworkSlug;
-    this.cachedNowConfig = null;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -230,15 +228,7 @@ export default class DevServer {
       }
     }
 
-    const nowConfig = await this.getNowConfig(false);
-
-    // Update the env vars configuration
-    const [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfig.build?.env),
-    ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    const nowConfig = await this.getNowConfig();
 
     // Update the build matches in case an entrypoint was created or deleted
     await this.updateBuildMatches(nowConfig);
@@ -507,23 +497,24 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+  clearNowConfigPromise = () => {
+    this.getNowConfigPromise = null;
+  };
+
+  getNowConfig(): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache);
-    try {
-      return await this.getNowConfigPromise;
-    } finally {
-      this.getNowConfigPromise = null;
-    }
+    this.getNowConfigPromise = this._getNowConfig();
+
+    // Clean up the promise once it has resolved
+    const clear = this.clearNowConfigPromise;
+    this.getNowConfigPromise.finally(clear);
+
+    return this.getNowConfigPromise;
   }
 
-  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
-    if (canUseCache && this.cachedNowConfig) {
-      return this.cachedNowConfig;
-    }
-
+  async _getNowConfig(): Promise<NowConfig> {
     const configPath = getNowConfigPath(this.cwd);
 
     const [
@@ -624,10 +615,18 @@ export default class DevServer {
 
     await this.validateNowConfig(config);
 
-    this.cachedNowConfig = config;
     this.caseSensitive = hasNewRoutingProperties(config);
     this.apiDir = detectApiDirectory(config.builds || []);
     this.apiExtensions = detectApiExtensions(config.builds || []);
+
+    // Update the env vars configuration
+    const [runEnv, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env', config.env),
+      this.getLocalEnv('.env.build', config.build?.env),
+    ]);
+    const allEnv = { ...buildEnv, ...runEnv };
+    this.envConfigs = { buildEnv, runEnv, allEnv };
+
     return config;
   }
 
@@ -755,14 +754,7 @@ export default class DevServer {
     const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
-    // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false);
-    const [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfig.build?.env),
-    ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    const nowConfig = await this.getNowConfig();
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
