@@ -2,6 +2,7 @@
   {
     "name": "Blitz.js",
     "slug": "blitzjs",
+    "demo": "https://blitzjs.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg",
     "tagline": "Blitz.js: The Fullstack React Framework",
     "description": "A brand new Blitz.js app: the output of running `blitz new`",
