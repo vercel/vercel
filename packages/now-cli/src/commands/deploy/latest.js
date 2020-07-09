@@ -354,7 +354,7 @@ export default async function main(
       path,
       sourcePath,
       project
-        ? `To change your project settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
+        ? `To change your Project Settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
