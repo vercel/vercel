@@ -27,7 +27,8 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   function warn(
     str: string,
     slug: string | null = null,
-    link: string | null = null
+    link: string | null = null,
+    action: string = 'Learn More'
   ) {
     const prevTerm = process.env.TERM;
 
@@ -42,7 +43,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       boxen(
         chalk.bold.yellow('WARN! ') +
           str +
-          (details ? `\nMore details: ${renderLink(details)}` : ''),
+          (details ? `\n${action}: ${renderLink(details)}` : ''),
         {
           padding: {
             top: 0,
@@ -67,7 +68,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     str: string,
     slug?: string,
     link?: string,
-    action = 'More details'
+    action = 'Learn More'
   ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
     const details = slug ? `https://err.sh/now/${slug}` : link;
