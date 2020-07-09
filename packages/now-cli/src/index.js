@@ -191,10 +191,9 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        `${
-          'An unexpected error occurred while trying to find the ' +
-          'global directory: '
-        }${err.message}`
+        `An unexpected error occurred while trying to find the global directory: ${
+          err.message
+        }`
       )
     );
 
