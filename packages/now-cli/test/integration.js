@@ -219,9 +219,7 @@ const createUser = async () => {
 
       email = user.email;
       contextName = user.username;
-      session = Math.random()
-        .toString(36)
-        .split('.')[1];
+      session = Math.random().toString(36).split('.')[1];
     },
     { retries: 3, factor: 1 }
   );
@@ -2365,7 +2363,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /steps of 64/gm, formatOutput(output));
-  t.regex(output.stderr, /More details/gm, formatOutput(output));
+  t.regex(output.stderr, /Learn More/gm, formatOutput(output));
 });
 
 test('deploy a Lambda with 3 seconds of maxDuration', async t => {
@@ -2470,9 +2468,7 @@ test('change user', async t => {
 test('should show prompts to set up project', async t => {
   const directory = fixture('project-link');
   const projectName = `project-link-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
+    Math.random().toString(36).split('.')[1]
   }`;
 
   // remove previously linked project if it exists
@@ -2598,9 +2594,7 @@ test('should show prompts to set up project', async t => {
 
 test('should prefill "project name" prompt with folder name', async t => {
   const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
+    Math.random().toString(36).split('.')[1]
   }`;
 
   const src = fixture('static-deployment');
@@ -2648,9 +2642,7 @@ test('should prefill "project name" prompt with folder name', async t => {
 test('should prefill "project name" prompt with --name', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
+    Math.random().toString(36).split('.')[1]
   }`;
 
   // remove previously linked project if it exists
@@ -2708,9 +2700,7 @@ test('should prefill "project name" prompt with --name', async t => {
 test('should prefill "project name" prompt with now.json `name`', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
+    Math.random().toString(36).split('.')[1]
   }`;
 
   // remove previously linked project if it exists
