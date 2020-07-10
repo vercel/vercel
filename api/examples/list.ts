@@ -1,10 +1,10 @@
 import { extract } from '../_lib/examples/extract';
 import { summary } from '../_lib/examples/summary';
-import { NowRequest, NowResponse } from '@now/node';
+import { NowRequest, NowResponse } from '@vercel/node';
 import { mapOldToNew } from '../_lib/examples/map-old-to-new';
 import { withApiHandler } from '../_lib/util/with-api-handler';
 
-export default withApiHandler(async function(
+export default withApiHandler(async function (
   req: NowRequest,
   res: NowResponse
 ) {
