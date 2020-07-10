@@ -516,6 +516,7 @@ const frameworkList: Framework[] = [
     dependency: 'nuxt',
     buildCommand: 'nuxt generate',
     getOutputDirName: async () => 'dist',
+    cachePattern: '.nuxt/**',
   },
   {
     name: 'Hugo',
