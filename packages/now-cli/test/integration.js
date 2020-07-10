@@ -30,22 +30,22 @@ function execa(file, args, options) {
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-const fixture = (name) => path.join(__dirname, 'fixtures', 'integration', name);
-const example = (name) =>
+const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
+const example = name =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
 const isCanary = pkg.version.includes('canary');
 
-const pickUrl = (stdout) => {
+const pickUrl = stdout => {
   const lines = stdout.split('\n');
   return lines[lines.length - 1];
 };
 
-const createFile = (dest) => fs.closeSync(fs.openSync(dest, 'w'));
+const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
 
-const waitForDeployment = async (href) => {
+const waitForDeployment = async href => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
@@ -180,7 +180,7 @@ const waitForPrompt = (cp, assertion) =>
   new Promise((resolve, reject) => {
     console.log('Waiting for prompt...');
     setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
-    const listener = (chunk) => {
+    const listener = chunk => {
       console.log('> ' + chunk);
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
@@ -193,7 +193,7 @@ const waitForPrompt = (cp, assertion) =>
     cp.stderr.on('data', listener);
   });
 
-const getDeploymentBuildsByUrl = async (url) => {
+const getDeploymentBuildsByUrl = async url => {
   const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
   const { id } = await hostRes.json();
   const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
@@ -254,7 +254,7 @@ test.after.always(async () => {
   }
 });
 
-test('default command should prompt login with empty auth.json', async (t) => {
+test('default command should prompt login with empty auth.json', async t => {
   await fs.writeFile(getConfigAuthPath(), JSON.stringify({}));
   try {
     await execa(binaryPath, [...defaultArgs]);
@@ -268,7 +268,7 @@ test('default command should prompt login with empty auth.json', async (t) => {
   }
 });
 
-test('login', async (t) => {
+test('login', async t => {
   t.timeout(ms('1m'));
 
   const loginOutput = await execa(binaryPath, [
@@ -294,7 +294,7 @@ test('login', async (t) => {
   t.is(auth.token, token);
 });
 
-test('deploy using only now.json with `redirects` defined', async (t) => {
+test('deploy using only now.json with `redirects` defined', async t => {
   const target = fixture('redirects-v2');
 
   const { exitCode, stderr, stdout } = await execa(
@@ -313,7 +313,7 @@ test('deploy using only now.json with `redirects` defined', async (t) => {
   t.is(location, 'https://example.com/foo/bar');
 });
 
-test('deploy using --local-config flag v2', async (t) => {
+test('deploy using --local-config flag v2', async t => {
   const target = fixture('local-config-v2');
   const configPath = path.join(target, 'now-test.json');
 
@@ -352,7 +352,7 @@ test('deploy using --local-config flag v2', async (t) => {
   t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
 });
 
-test('deploy using --local-config flag above target', async (t) => {
+test('deploy using --local-config flag above target', async t => {
   const root = fixture('local-config-above-target');
   const target = path.join(root, 'dir');
 
@@ -387,7 +387,7 @@ test('deploy using --local-config flag above target', async (t) => {
   t.regex(host, /root-level/gm, `Expected "root-level" but received "${host}"`);
 });
 
-test('Deploy `api-env` fixture and test `vercel env` command', async (t) => {
+test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   const target = fixture('api-env');
 
   async function nowDeploy() {
@@ -422,20 +422,20 @@ test('Deploy `api-env` fixture and test `vercel env` command', async (t) => {
       reject: false,
       cwd: target,
     });
-    await waitForPrompt(now, (chunk) =>
+    await waitForPrompt(now, chunk =>
       chunk.includes('What’s the name of the variable?')
     );
     now.stdin.write('MY_ENV_VAR\n');
     await waitForPrompt(
       now,
-      (chunk) =>
+      chunk =>
         chunk.includes('What’s the value of') && chunk.includes('MY_ENV_VAR')
     );
     now.stdin.write('MY_VALUE\n');
 
     await waitForPrompt(
       now,
-      (chunk) =>
+      chunk =>
         chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
     );
     now.stdin.write('a\n'); // select all
@@ -471,7 +471,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async (t) => {
 
     await waitForPrompt(
       now,
-      (chunk) =>
+      chunk =>
         chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
     );
     now.stdin.write('a\n'); // select all
@@ -496,17 +496,17 @@ test('Deploy `api-env` fixture and test `vercel env` command', async (t) => {
 
     const lines = stdout.split('\n');
 
-    const myEnvVars = lines.filter((line) => line.includes('MY_ENV_VAR'));
+    const myEnvVars = lines.filter(line => line.includes('MY_ENV_VAR'));
     t.is(myEnvVars.length, 3);
     t.regex(myEnvVars.join('\n'), /development/gm);
     t.regex(myEnvVars.join('\n'), /preview/gm);
     t.regex(myEnvVars.join('\n'), /production/gm);
 
-    const myStdinVars = lines.filter((line) => line.includes('MY_STDIN_VAR'));
+    const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
     t.is(myStdinVars.length, 1);
     t.regex(myStdinVars.join('\n'), /development/gm);
 
-    const vercelVars = lines.filter((line) => line.includes('VERCEL_URL'));
+    const vercelVars = lines.filter(line => line.includes('VERCEL_URL'));
     t.is(vercelVars.length, 3);
     t.regex(vercelVars.join('\n'), /development/gm);
     t.regex(vercelVars.join('\n'), /preview/gm);
@@ -558,7 +558,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async (t) => {
       cwd: target,
     });
 
-    await waitForPrompt(vc, (chunk) =>
+    await waitForPrompt(vc, chunk =>
       chunk.includes('Found existing file ".env". Do you want to overwrite?')
     );
     vc.stdin.end('y\n');
@@ -601,14 +601,14 @@ test('Deploy `api-env` fixture and test `vercel env` command', async (t) => {
       reject: false,
       cwd: target,
     });
-    await waitForPrompt(now, (chunk) =>
+    await waitForPrompt(now, chunk =>
       chunk.includes('What’s the name of the variable?')
     );
     now.stdin.write('MY_ENV_VAR\n');
 
     await waitForPrompt(
       now,
-      (chunk) =>
+      chunk =>
         chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
     );
     now.stdin.write('a\n'); // select all
@@ -643,7 +643,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async (t) => {
 
     await waitForPrompt(
       vc,
-      (chunk) =>
+      chunk =>
         chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
     );
     vc.stdin.write('a\n'); // select all
@@ -669,7 +669,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async (t) => {
   fs.unlinkSync(path.join(target, '.env'));
 });
 
-test('deploy with metadata containing "=" in the value', async (t) => {
+test('deploy with metadata containing "=" in the value', async t => {
   const target = fixture('static-v2-meta');
 
   const { exitCode, stderr, stdout } = await execa(
@@ -689,7 +689,7 @@ test('deploy with metadata containing "=" in the value', async (t) => {
   t.is(deployment.meta.someKey, '=');
 });
 
-test('print the deploy help message', async (t) => {
+test('print the deploy help message', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['help', ...defaultArgs],
@@ -710,7 +710,7 @@ test('print the deploy help message', async (t) => {
   );
 });
 
-test('output the version', async (t) => {
+test('output the version', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['--version', ...defaultArgs],
@@ -730,7 +730,7 @@ test('output the version', async (t) => {
   t.is(version, pkg.version);
 });
 
-test('should error with suggestion for secrets subcommand', async (t) => {
+test('should error with suggestion for secrets subcommand', async t => {
   const target = fixture('subdirectory-secret');
 
   const { exitCode, stderr, stdout } = await execa(
@@ -754,7 +754,7 @@ test('should error with suggestion for secrets subcommand', async (t) => {
   );
 });
 
-test('should add secret with hyphen prefix', async (t) => {
+test('should add secret with hyphen prefix', async t => {
   const target = fixture('build-secret');
   const key = 'mysecret';
   const value = '-foo_bar';
@@ -798,7 +798,7 @@ test('should add secret with hyphen prefix', async (t) => {
   );
 });
 
-test('login with unregistered user', async (t) => {
+test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['login', `${session}@${session}.com`, ...defaultArgs],
@@ -819,7 +819,7 @@ test('login with unregistered user', async (t) => {
   t.is(last, goal);
 });
 
-test('test invalid json alias rules', async (t) => {
+test('test invalid json alias rules', async t => {
   const fixturePath = fixture('alias-rules');
   const output = await execute(['alias', '-r', 'invalid-json-rules.json'], {
     cwd: fixturePath,
@@ -829,7 +829,7 @@ test('test invalid json alias rules', async (t) => {
   t.regex(output.stderr, /Error parsing/, formatOutput(output));
 });
 
-test('test invalid alias rules', async (t) => {
+test('test invalid alias rules', async t => {
   const fixturePath = fixture('alias-rules');
   const output = await execute(['alias', '-r', 'invalid-rules.json'], {
     cwd: fixturePath,
@@ -839,7 +839,7 @@ test('test invalid alias rules', async (t) => {
   t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
 });
 
-test('test invalid type for alias rules', async (t) => {
+test('test invalid type for alias rules', async t => {
   const fixturePath = fixture('alias-rules');
   const output = await execute(['alias', '-r', 'invalid-type-rules.json'], {
     cwd: fixturePath,
@@ -849,7 +849,7 @@ test('test invalid type for alias rules', async (t) => {
   t.regex(output.stderr, /Path Alias validation error/, formatOutput(output));
 });
 
-test('ignore files specified in .nowignore', async (t) => {
+test('ignore files specified in .nowignore', async t => {
   const directory = fixture('nowignore');
 
   const args = [
@@ -877,7 +877,7 @@ test('ignore files specified in .nowignore', async (t) => {
   t.is(presentFile.status, 200);
 });
 
-test('ignore files specified in .nowignore via allowlist', async (t) => {
+test('ignore files specified in .nowignore via allowlist', async t => {
   const directory = fixture('nowignore-allowlist');
 
   const args = [
@@ -905,7 +905,7 @@ test('ignore files specified in .nowignore via allowlist', async (t) => {
   t.is(presentFile.status, 200);
 });
 
-test('list the scopes', async (t) => {
+test('list the scopes', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['teams', 'ls', ...defaultArgs],
@@ -927,7 +927,7 @@ test('list the scopes', async (t) => {
   );
 });
 
-test('list the payment methods', async (t) => {
+test('list the payment methods', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['billing', 'ls', ...defaultArgs],
@@ -944,7 +944,7 @@ test('list the payment methods', async (t) => {
   t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
-test('domains inspect', async (t) => {
+test('domains inspect', async t => {
   const domainName = `inspect-${contextName}.org`;
 
   const addRes = await execa(
@@ -973,7 +973,7 @@ test('domains inspect', async (t) => {
   t.true(!stderr.includes(`Renewal Price`));
 });
 
-test('try to purchase a domain', async (t) => {
+test('try to purchase a domain', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
@@ -995,7 +995,7 @@ test('try to purchase a domain', async (t) => {
   );
 });
 
-test('try to transfer-in a domain with "--code" option', async (t) => {
+test('try to transfer-in a domain with "--code" option', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [
@@ -1023,7 +1023,7 @@ test('try to transfer-in a domain with "--code" option', async (t) => {
   t.is(exitCode, 1);
 });
 
-test('try to move an invalid domain', async (t) => {
+test('try to move an invalid domain', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     [
@@ -1046,7 +1046,7 @@ test('try to move an invalid domain', async (t) => {
   t.is(exitCode, 1);
 });
 
-test('try to set default without existing payment method', async (t) => {
+test('try to set default without existing payment method', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['billing', 'set-default', ...defaultArgs],
@@ -1063,7 +1063,7 @@ test('try to set default without existing payment method', async (t) => {
   t.true(stderr.includes('You have no credit cards to choose from'));
 });
 
-test('try to remove a non-existing payment method', async (t) => {
+test('try to remove a non-existing payment method', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
@@ -1084,7 +1084,7 @@ test('try to remove a non-existing payment method', async (t) => {
   );
 });
 
-test('set platform version using `-V` to invalid number', async (t) => {
+test('set platform version using `-V` to invalid number', async t => {
   const directory = fixture('builds');
   const goal =
     'Error! The "--platform-version" option must be either `1` or `2`.';
@@ -1108,7 +1108,7 @@ test('set platform version using `-V` to invalid number', async (t) => {
   t.true(stderr.includes(goal));
 });
 
-test('set platform version using `--platform-version` to invalid number', async (t) => {
+test('set platform version using `--platform-version` to invalid number', async t => {
   const directory = fixture('builds');
   const goal =
     'Error! The "--platform-version" option must be either `1` or `2`.';
@@ -1140,7 +1140,7 @@ test('set platform version using `--platform-version` to invalid number', async 
   t.true(stderr.includes(goal));
 });
 
-test('set platform version using `-V` to `2`', async (t) => {
+test('set platform version using `-V` to `2`', async t => {
   const directory = fixture('builds');
 
   const { stdout, stderr, exitCode } = await execa(
@@ -1185,7 +1185,7 @@ test('set platform version using `-V` to `2`', async (t) => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('output logs of a 2.0 deployment', async (t) => {
+test('output logs of a 2.0 deployment', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
@@ -1202,7 +1202,7 @@ test('output logs of a 2.0 deployment', async (t) => {
   t.is(exitCode, 0);
 });
 
-test('output logs of a 2.0 deployment without annotate', async (t) => {
+test('output logs of a 2.0 deployment without annotate', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
@@ -1291,7 +1291,7 @@ test('remove the wildcard alias', async t => {
 });
 */
 
-test('ensure username in list is right', async (t) => {
+test('ensure username in list is right', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['ls', ...defaultArgs],
@@ -1309,14 +1309,14 @@ test('ensure username in list is right', async (t) => {
 
   const line = stdout
     .split('\n')
-    .find((line) => line.includes('.now.sh') || line.includes('.vercel.app'));
+    .find(line => line.includes('.now.sh') || line.includes('.vercel.app'));
   const columns = line.split(/\s+/);
 
   // Ensure username column have username
   t.truthy(columns.pop().includes(contextName));
 });
 
-test('set platform version using `--platform-version` to `2`', async (t) => {
+test('set platform version using `--platform-version` to `2`', async t => {
   const directory = fixture('builds');
 
   const { stdout, stderr, exitCode } = await execa(
@@ -1355,7 +1355,7 @@ test('set platform version using `--platform-version` to `2`', async (t) => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('ensure we render a warning for deployments with no files', async (t) => {
+test('ensure we render a warning for deployments with no files', async t => {
   const directory = fixture('empty-directory');
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1393,7 +1393,7 @@ test('ensure we render a warning for deployments with no files', async (t) => {
   t.is(res.status, 404);
 });
 
-test('ensure we render a prompt when deploying home directory', async (t) => {
+test('ensure we render a prompt when deploying home directory', async t => {
   const directory = homedir();
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1420,7 +1420,7 @@ test('ensure we render a prompt when deploying home directory', async (t) => {
   t.true(stderr.includes('Aborted'));
 });
 
-test('ensure the `scope` property works with email', async (t) => {
+test('ensure the `scope` property works with email', async t => {
   const directory = fixture('config-scope-property-email');
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1460,7 +1460,7 @@ test('ensure the `scope` property works with email', async (t) => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('ensure the `scope` property works with username', async (t) => {
+test('ensure the `scope` property works with username', async t => {
   const directory = fixture('config-scope-property-username');
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1500,7 +1500,7 @@ test('ensure the `scope` property works with username', async (t) => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('try to create a builds deployments with wrong now.json', async (t) => {
+test('try to create a builds deployments with wrong now.json', async t => {
   const directory = fixture('builds-wrong');
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1525,7 +1525,7 @@ test('try to create a builds deployments with wrong now.json', async (t) => {
   t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
-test('try to create a builds deployments with wrong vercel.json', async (t) => {
+test('try to create a builds deployments with wrong vercel.json', async t => {
   const directory = fixture('builds-wrong-vercel');
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1549,7 +1549,7 @@ test('try to create a builds deployments with wrong vercel.json', async (t) => {
   t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
-test('try to create a builds deployments with wrong `build.env` property', async (t) => {
+test('try to create a builds deployments with wrong `build.env` property', async t => {
   const directory = fixture('builds-wrong-build-env');
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1574,7 +1574,7 @@ test('try to create a builds deployments with wrong `build.env` property', async
   );
 });
 
-test('create a builds deployments with no actual builds', async (t) => {
+test('create a builds deployments with no actual builds', async t => {
   const directory = fixture('builds-no-list');
 
   const { stdout, stderr, exitCode } = await execa(
@@ -1605,7 +1605,7 @@ test('create a builds deployments with no actual builds', async (t) => {
   t.is(host.split('-')[0], session);
 });
 
-test('create a builds deployments without platform version flag', async (t) => {
+test('create a builds deployments without platform version flag', async t => {
   const directory = fixture('builds');
 
   const { stdout, stderr, exitCode } = await execa(
@@ -1642,7 +1642,7 @@ test('create a builds deployments without platform version flag', async (t) => {
   t.is(contentType, 'text/html; charset=utf-8');
 });
 
-test('create a staging deployment', async (t) => {
+test('create a staging deployment', async t => {
   const directory = fixture('static-deployment');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
@@ -1668,11 +1668,11 @@ test('create a staging deployment', async (t) => {
   const { host } = new URL(targetCall.stdout);
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then((resp) => resp.json());
+  ).then(resp => resp.json());
   t.is(deployment.target, 'staging', JSON.stringify(deployment, null, 2));
 });
 
-test('create a production deployment', async (t) => {
+test('create a production deployment', async t => {
   const directory = fixture('static-deployment');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
@@ -1703,7 +1703,7 @@ test('create a production deployment', async (t) => {
   const { host: targetHost } = new URL(targetCall.stdout);
   const targetDeployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${targetHost}`
-  ).then((resp) => resp.json());
+  ).then(resp => resp.json());
   t.is(
     targetDeployment.target,
     'production',
@@ -1727,11 +1727,11 @@ test('create a production deployment', async (t) => {
   const { host } = new URL(call.stdout);
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then((resp) => resp.json());
+  ).then(resp => resp.json());
   t.is(deployment.target, 'production', JSON.stringify(deployment, null, 2));
 });
 
-test('deploying a file should not show prompts and display deprecation', async (t) => {
+test('deploying a file should not show prompts and display deprecation', async t => {
   const file = fixture('static-single-file/first.png');
 
   const output = await execute([file], {
@@ -1763,7 +1763,7 @@ test('deploying a file should not show prompts and display deprecation', async (
   t.deepEqual(await readFile(file), await response.buffer());
 });
 
-test('deploying more than 1 path should fail', async (t) => {
+test('deploying more than 1 path should fail', async t => {
   const file1 = fixture('static-multiple-files/first.png');
   const file2 = fixture('static-multiple-files/second.png');
 
@@ -1784,7 +1784,7 @@ test('deploying more than 1 path should fail', async (t) => {
   t.true(stderr.trim().endsWith(`Can't deploy more than one path.`));
 });
 
-test('use `--debug` CLI flag', async (t) => {
+test('use `--debug` CLI flag', async t => {
   const directory = fixture('build-env-debug');
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1823,7 +1823,7 @@ test('use `--debug` CLI flag', async (t) => {
   t.is(content.trim(), 'off');
 });
 
-test('try to deploy non-existing path', async (t) => {
+test('try to deploy non-existing path', async t => {
   const goal = `Error! The specified file or directory "${session}" does not exist.`;
 
   const { stderr, stdout, exitCode } = await execa(
@@ -1842,7 +1842,7 @@ test('try to deploy non-existing path', async (t) => {
   t.true(stderr.trim().endsWith(goal));
 });
 
-test('try to deploy with non-existing team', async (t) => {
+test('try to deploy with non-existing team', async t => {
   const target = fixture('node');
   const goal = `Error! The specified scope does not exist`;
 
@@ -1872,7 +1872,7 @@ const verifyExampleAmp = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'logo.png')) &&
   fs.existsSync(path.join(cwd, dir, 'favicon.png'));
 
-test('initialize example "angular"', async (t) => {
+test('initialize example "angular"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
@@ -1893,7 +1893,7 @@ test('initialize example "angular"', async (t) => {
   );
 });
 
-test('initialize example ("angular") to specified directory', async (t) => {
+test('initialize example ("angular") to specified directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
@@ -1914,7 +1914,7 @@ test('initialize example ("angular") to specified directory', async (t) => {
   t.true(verifyExampleAngular(cwd, 'ang'));
 });
 
-test('initialize selected example ("amp")', async (t) => {
+test('initialize selected example ("amp")', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "amp" example in';
@@ -1933,7 +1933,7 @@ test('initialize selected example ("amp")', async (t) => {
   t.true(verifyExampleAmp(cwd, 'amp'), formatOutput({ stdout, stderr }));
 });
 
-test('initialize example to existing directory with "-f"', async (t) => {
+test('initialize example to existing directory with "-f"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
@@ -1956,7 +1956,7 @@ test('initialize example to existing directory with "-f"', async (t) => {
   t.true(verifyExampleAngular(cwd, 'angular'));
 });
 
-test('try to initialize example to existing directory', async (t) => {
+test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
@@ -1977,7 +1977,7 @@ test('try to initialize example to existing directory', async (t) => {
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
-test('try to initialize misspelled example (noce) in non-tty', async (t) => {
+test('try to initialize misspelled example (noce) in non-tty', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
@@ -1993,7 +1993,7 @@ test('try to initialize misspelled example (noce) in non-tty', async (t) => {
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
-test('try to initialize example "example-404"', async (t) => {
+test('try to initialize example "example-404"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
@@ -2011,7 +2011,7 @@ test('try to initialize example "example-404"', async (t) => {
   t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
 });
 
-test('try to revert a deployment and assign the automatic aliases', async (t) => {
+test('try to revert a deployment and assign the automatic aliases', async t => {
   const firstDeployment = fixture('now-revert-alias-1');
   const secondDeployment = fixture('now-revert-alias-2');
 
@@ -2031,7 +2031,7 @@ test('try to revert a deployment and assign the automatic aliases', async (t) =>
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
 
-    const result = await fetch(url).then((r) => r.json());
+    const result = await fetch(url).then(r => r.json());
 
     t.is(
       result.name,
@@ -2053,7 +2053,7 @@ test('try to revert a deployment and assign the automatic aliases', async (t) =>
     await fetch(url);
     await sleep(5000);
 
-    const result = await fetch(url).then((r) => r.json());
+    const result = await fetch(url).then(r => r.json());
 
     t.is(
       result.name,
@@ -2075,7 +2075,7 @@ test('try to revert a deployment and assign the automatic aliases', async (t) =>
     await fetch(url);
     await sleep(5000);
 
-    const result = await fetch(url).then((r) => r.json());
+    const result = await fetch(url).then(r => r.json());
 
     t.is(
       result.name,
@@ -2085,7 +2085,7 @@ test('try to revert a deployment and assign the automatic aliases', async (t) =>
   }
 });
 
-test('whoami', async (t) => {
+test('whoami', async t => {
   const { exitCode, stdout, stderr } = await execute(['whoami']);
 
   console.log(stderr);
@@ -2096,7 +2096,7 @@ test('whoami', async (t) => {
   t.is(stdout, contextName, formatOutput({ stdout, stderr }));
 });
 
-test('fail `now dev` dev script without now.json', async (t) => {
+test('fail `now dev` dev script without now.json', async t => {
   const deploymentPath = fixture('now-dev-fail-dev-script');
   const { exitCode, stderr } = await execute(['dev', deploymentPath]);
 
@@ -2107,7 +2107,7 @@ test('fail `now dev` dev script without now.json', async (t) => {
   );
 });
 
-test('print correct link in legacy warning', async (t) => {
+test('print correct link in legacy warning', async t => {
   const deploymentPath = fixture('v1-warning-link');
   const { exitCode, stderr, stdout } = await execute([
     deploymentPath,
@@ -2124,7 +2124,7 @@ test('print correct link in legacy warning', async (t) => {
   t.regex(stderr, /migrate-to-vercel/);
 });
 
-test('`vercel rm` removes a deployment', async (t) => {
+test('`vercel rm` removes a deployment', async t => {
   const directory = fixture('builds');
 
   const { stdout } = await execa(
@@ -2156,7 +2156,7 @@ test('`vercel rm` removes a deployment', async (t) => {
   t.is(exitCode, 0);
 });
 
-test('`vercel rm` 404 exits quickly', async (t) => {
+test('`vercel rm` 404 exits quickly', async t => {
   const start = Date.now();
   const { exitCode, stderr, stdout } = await execute([
     'rm',
@@ -2181,7 +2181,7 @@ test('`vercel rm` 404 exits quickly', async (t) => {
   t.truthy(delta < 5000);
 });
 
-test('render build errors', async (t) => {
+test('render build errors', async t => {
   const deploymentPath = fixture('failing-build');
   const output = await execute([deploymentPath, '--confirm']);
 
@@ -2193,7 +2193,7 @@ test('render build errors', async (t) => {
   t.regex(output.stderr, /Build failed/gm, formatOutput(output));
 });
 
-test('invalid deployment, projects and alias names', async (t) => {
+test('invalid deployment, projects and alias names', async t => {
   const check = async (...args) => {
     const output = await execute(args);
 
@@ -2214,7 +2214,7 @@ test('invalid deployment, projects and alias names', async (t) => {
   ]);
 });
 
-test('vercel certs ls', async (t) => {
+test('vercel certs ls', async t => {
   const output = await execute(['certs', 'ls']);
 
   console.log(output.stderr);
@@ -2225,7 +2225,7 @@ test('vercel certs ls', async (t) => {
   t.regex(output.stderr, /certificates? found under/gm, formatOutput(output));
 });
 
-test('vercel certs ls --next=123456', async (t) => {
+test('vercel certs ls --next=123456', async t => {
   const output = await execute(['certs', 'ls', '--next=123456']);
 
   console.log(output.stderr);
@@ -2236,7 +2236,7 @@ test('vercel certs ls --next=123456', async (t) => {
   t.regex(output.stderr, /No certificates found under/gm, formatOutput(output));
 });
 
-test('vercel hasOwnProperty not a valid subcommand', async (t) => {
+test('vercel hasOwnProperty not a valid subcommand', async t => {
   const output = await execute(['hasOwnProperty']);
 
   console.log(output.stderr);
@@ -2251,7 +2251,7 @@ test('vercel hasOwnProperty not a valid subcommand', async (t) => {
   );
 });
 
-test('create zero-config deployment', async (t) => {
+test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
   const output = await execute([
     fixturePath,
@@ -2277,7 +2277,7 @@ test('create zero-config deployment', async (t) => {
 
   t.is(data.error, undefined, JSON.stringify(data, null, 2));
 
-  const validBuilders = data.builds.every((build) =>
+  const validBuilders = data.builds.every(build =>
     isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
   );
 
@@ -2287,7 +2287,7 @@ test('create zero-config deployment', async (t) => {
   );
 });
 
-test('vercel secret add', async (t) => {
+test('vercel secret add', async t => {
   context.secretName = `my-secret-${Date.now().toString(36)}`;
   const value = 'https://my-secret-endpoint.com';
 
@@ -2300,7 +2300,7 @@ test('vercel secret add', async (t) => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('vercel secret ls', async (t) => {
+test('vercel secret ls', async t => {
   const output = await execute(['secret', 'ls']);
 
   console.log(output.stderr);
@@ -2312,7 +2312,7 @@ test('vercel secret ls', async (t) => {
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
 
-test('vercel secret rename', async (t) => {
+test('vercel secret rename', async t => {
   const nextName = `renamed-secret-${Date.now().toString(36)}`;
   const output = await execute([
     'secret',
@@ -2330,7 +2330,7 @@ test('vercel secret rename', async (t) => {
   context.secretName = nextName;
 });
 
-test('vercel secret rm', async (t) => {
+test('vercel secret rm', async t => {
   const output = await execute(['secret', 'rm', context.secretName, '-y']);
 
   console.log(output.stderr);
@@ -2340,7 +2340,7 @@ test('vercel secret rm', async (t) => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('deploy a Lambda with 128MB of memory', async (t) => {
+test('deploy a Lambda with 128MB of memory', async t => {
   const directory = fixture('lambda-with-128-memory');
   const output = await execute([directory, '--confirm']);
 
@@ -2357,7 +2357,7 @@ test('deploy a Lambda with 128MB of memory', async (t) => {
   t.is(memory, 128, `Lambda has ${memory} bytes of memory`);
 });
 
-test('fail to deploy a Lambda with an incorrect value for of memory', async (t) => {
+test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
   const directory = fixture('lambda-with-200-memory');
   const output = await execute([directory, '--confirm']);
 
@@ -2366,7 +2366,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async (t) 
   t.regex(output.stderr, /Learn More/gm, formatOutput(output));
 });
 
-test('deploy a Lambda with 3 seconds of maxDuration', async (t) => {
+test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   const directory = fixture('lambda-with-3-second-timeout');
   const output = await execute([directory, '--confirm']);
 
@@ -2383,7 +2383,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async (t) => {
   t.is(response2.status, 502, url);
 });
 
-test('fail to deploy a Lambda with an incorrect value for maxDuration', async (t) => {
+test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {
   const directory = fixture('lambda-with-1000-second-timeout');
   const output = await execute([directory, '--confirm']);
 
@@ -2395,7 +2395,7 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async (t
   );
 });
 
-test('invalid `--token`', async (t) => {
+test('invalid `--token`', async t => {
   const output = await execute(['--token', 'he\nl,o.']);
 
   t.is(output.exitCode, 1, formatOutput(output));
@@ -2407,7 +2407,7 @@ test('invalid `--token`', async (t) => {
 });
 
 // We need to skip this test until `now-php` supports Runtime version 3
-test('deploy a Lambda with a specific runtime', async (t) => {
+test('deploy a Lambda with a specific runtime', async t => {
   const directory = fixture('lambda-with-php-runtime');
   const output = await execute([directory, '--public', '--confirm']);
 
@@ -2419,7 +2419,7 @@ test('deploy a Lambda with a specific runtime', async (t) => {
   t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
 });
 
-test('fail to deploy a Lambda with a specific runtime but without a locked version', async (t) => {
+test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory, '--confirm']);
 
@@ -2431,14 +2431,14 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
   );
 });
 
-test('ensure `github` and `scope` are not sent to the API', async (t) => {
+test('ensure `github` and `scope` are not sent to the API', async t => {
   const directory = fixture('github-and-scope-config');
   const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('change user', async (t) => {
+test('change user', async t => {
   t.timeout(ms('1m'));
 
   const { stdout: prevUser } = await execute(['whoami']);
@@ -2465,7 +2465,7 @@ test('change user', async (t) => {
   t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
 });
 
-test('should show prompts to set up project', async (t) => {
+test('should show prompts to set up project', async t => {
   const directory = fixture('project-link');
   const projectName = `project-link-${
     Math.random().toString(36).split('.')[1]
@@ -2476,57 +2476,57 @@ test('should show prompts to set up project', async (t) => {
 
   const now = execa(binaryPath, [directory, ...defaultArgs]);
 
-  await waitForPrompt(now, (chunk) => /Set up and deploy [^?]+\?/.test(chunk));
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
   now.stdin.write('yes\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
   );
   now.stdin.write('\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Link to existing project?')
   );
   now.stdin.write('no\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('What’s your project’s name?')
   );
   now.stdin.write(`${projectName}\n`);
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('In which directory is your code located?')
   );
   now.stdin.write('\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Want to override the settings?')
   );
   now.stdin.write('yes\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes(
       'Which settings would you like to overwrite (select multiple)?'
     )
   );
   now.stdin.write('a\n'); // 'a' means select all
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Build Command?`)
   );
   now.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Output Directory?`)
   );
   now.stdin.write(`o\n`);
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Development Command?`)
   );
   now.stdin.write(`\n`);
 
-  await waitForPrompt(now, (chunk) => chunk.includes('Linked to'));
+  await waitForPrompt(now, chunk => chunk.includes('Linked to'));
 
   const output = await now;
 
@@ -2576,7 +2576,7 @@ test('should show prompts to set up project', async (t) => {
       dev.once('exit', (code, signal) => {
         reject(`"vc dev" failed with ${signal || code}`);
       });
-      dev.stderr.on('data', (data) => {
+      dev.stderr.on('data', data => {
         stderr += data;
         if (stderr.includes('Ready! Available at')) {
           resolve();
@@ -2592,7 +2592,7 @@ test('should show prompts to set up project', async (t) => {
   }
 });
 
-test('should prefill "project name" prompt with folder name', async (t) => {
+test('should prefill "project name" prompt with folder name', async t => {
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
   }`;
@@ -2607,30 +2607,30 @@ test('should prefill "project name" prompt with folder name', async (t) => {
 
   const now = execa(binaryPath, [directory, ...defaultArgs]);
 
-  await waitForPrompt(now, (chunk) => /Set up and deploy [^?]+\?/.test(chunk));
+  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
   now.stdin.write('yes\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
   );
   now.stdin.write('\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Link to existing project?')
   );
   now.stdin.write('no\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes(`What’s your project’s name? (${projectName})`)
   );
   now.stdin.write(`\n`);
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('In which directory is your code located?')
   );
   now.stdin.write('\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Want to override the settings?')
   );
   now.stdin.write('no\n');
@@ -2639,7 +2639,7 @@ test('should prefill "project name" prompt with folder name', async (t) => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('should prefill "project name" prompt with --name', async (t) => {
+test('should prefill "project name" prompt with --name', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
@@ -2657,7 +2657,7 @@ test('should prefill "project name" prompt with --name', async (t) => {
 
   let isDeprecated = false;
 
-  await waitForPrompt(now, (chunk) => {
+  await waitForPrompt(now, chunk => {
     if (chunk.includes('The "--name" option is deprecated')) {
       isDeprecated = true;
     }
@@ -2668,27 +2668,27 @@ test('should prefill "project name" prompt with --name', async (t) => {
 
   t.is(isDeprecated, true);
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
   );
   now.stdin.write('\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Link to existing project?')
   );
   now.stdin.write('no\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes(`What’s your project’s name? (${projectName})`)
   );
   now.stdin.write(`\n`);
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('In which directory is your code located?')
   );
   now.stdin.write('\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Want to override the settings?')
   );
   now.stdin.write('no\n');
@@ -2697,7 +2697,7 @@ test('should prefill "project name" prompt with --name', async (t) => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('should prefill "project name" prompt with now.json `name`', async (t) => {
+test('should prefill "project name" prompt with now.json `name`', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
@@ -2716,7 +2716,7 @@ test('should prefill "project name" prompt with now.json `name`', async (t) => {
 
   let isDeprecated = false;
 
-  now.stderr.on('data', (data) => {
+  now.stderr.on('data', data => {
     if (
       data
         .toString()
@@ -2726,32 +2726,32 @@ test('should prefill "project name" prompt with now.json `name`', async (t) => {
     }
   });
 
-  await waitForPrompt(now, (chunk) => {
+  await waitForPrompt(now, chunk => {
     return /Set up and deploy [^?]+\?/.test(chunk);
   });
   now.stdin.write('yes\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
   );
   now.stdin.write('\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Link to existing project?')
   );
   now.stdin.write('no\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes(`What’s your project’s name? (${projectName})`)
   );
   now.stdin.write(`\n`);
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('In which directory is your code located?')
   );
   now.stdin.write('\n');
 
-  await waitForPrompt(now, (chunk) =>
+  await waitForPrompt(now, chunk =>
     chunk.includes('Want to override the settings?')
   );
   now.stdin.write('no\n');
@@ -2765,7 +2765,7 @@ test('should prefill "project name" prompt with now.json `name`', async (t) => {
   await remove(path.join(directory, 'vercel.json'));
 });
 
-test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async (t) => {
+test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -2780,7 +2780,7 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async (t) => {
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async (t) => {
+test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -2798,7 +2798,7 @@ test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', 
   );
 });
 
-test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', async (t) => {
+test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', async t => {
   const directory = fixture('static-deployment');
 
   const output = await execute([directory], {
@@ -2815,7 +2815,7 @@ test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', 
   );
 });
 
-test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async (t) => {
+test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async t => {
   const directory = fixture('static-deployment');
 
   // generate `.vercel`
@@ -2835,7 +2835,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async (t) => {
   t.is(output.stdout.includes('Linked to'), false);
 });
 
-test('deploy shows notice when project in `.vercel` does not exists', async (t) => {
+test('deploy shows notice when project in `.vercel` does not exists', async t => {
   const directory = fixture('static-deployment');
 
   // overwrite .vercel with unexisting project
@@ -2853,7 +2853,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async (t) 
   let detectedNotice = false;
 
   // kill after first prompt
-  await waitForPrompt(now, (chunk) => {
+  await waitForPrompt(now, chunk => {
     detectedNotice =
       detectedNotice ||
       chunk.includes(
@@ -2867,7 +2867,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async (t) 
   t.is(detectedNotice, true, 'did not detect notice');
 });
 
-test('use `rootDirectory` from project when deploying', async (t) => {
+test('use `rootDirectory` from project when deploying', async t => {
   const directory = fixture('project-root-directory');
 
   const firstResult = await execute([directory, '--confirm', '--public']);
@@ -2905,7 +2905,7 @@ test('use `rootDirectory` from project when deploying', async (t) => {
   });
 });
 
-test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async (t) => {
+test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
   const output = await execute(['deploy'], {
     env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
@@ -2914,7 +2914,7 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async (t) => {
+test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async t => {
   const output = await execute(['env'], {
     env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
@@ -2923,7 +2923,7 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
   t.is(output.stderr.includes('Project not found'), true, formatOutput(output));
 });
 
-test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async (t) => {
+test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async t => {
   const user = await fetchTokenInformation(token);
 
   const output = await execute(['whoami', '--scope', 'asdf'], {
@@ -2938,7 +2938,7 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
   );
 });
 
-test('whoami with local .vercel scope', async (t) => {
+test('whoami with local .vercel scope', async t => {
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -2960,7 +2960,7 @@ test('whoami with local .vercel scope', async (t) => {
   await remove(path.join(directory, '.vercel'));
 });
 
-test('deploys with only now.json and README.md', async (t) => {
+test('deploys with only now.json and README.md', async t => {
   const directory = fixture('deploy-with-only-readme-now-json');
 
   const { exitCode, stderr, stdout } = await execa(
@@ -2979,7 +2979,7 @@ test('deploys with only now.json and README.md', async (t) => {
   t.regex(text, /readme contents/);
 });
 
-test('deploys with only vercel.json and README.md', async (t) => {
+test('deploys with only vercel.json and README.md', async t => {
   const directory = fixture('deploy-with-only-readme-vercel-json');
 
   const { exitCode, stderr, stdout } = await execa(
@@ -2998,7 +2998,7 @@ test('deploys with only vercel.json and README.md', async (t) => {
   t.regex(text, /readme contents/);
 });
 
-test('reject conflicting `vercel.json` and `now.json` files', async (t) => {
+test('reject conflicting `vercel.json` and `now.json` files', async t => {
   const directory = fixture('conflicting-now-json-vercel-json');
 
   const { exitCode, stderr, stdout } = await execa(
@@ -3019,7 +3019,7 @@ test('reject conflicting `vercel.json` and `now.json` files', async (t) => {
   );
 });
 
-test('`vc --debug project ls` should output the projects listing', async (t) => {
+test('`vc --debug project ls` should output the projects listing', async t => {
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
     [...defaultArgs, '--debug', 'project', 'ls'],
@@ -3035,7 +3035,7 @@ test('`vc --debug project ls` should output the projects listing', async (t) => 
   );
 });
 
-test('deploy gatsby twice and print cached directories', async (t) => {
+test('deploy gatsby twice and print cached directories', async t => {
   const directory = example('gatsby');
   const packageJsonPath = path.join(directory, 'package.json');
   const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
@@ -3068,7 +3068,7 @@ test('deploy gatsby twice and print cached directories', async (t) => {
   }
 });
 
-test('reject deploying with wrong team .vercel config', async (t) => {
+test('reject deploying with wrong team .vercel config', async t => {
   const directory = fixture('unauthorized-vercel-config');
 
   const { exitCode, stderr, stdout } = await execa(

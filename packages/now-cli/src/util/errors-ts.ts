@@ -1133,7 +1133,7 @@ export class MissingDotenvVarsError extends NowError<
     } else {
       message = [
         `The following env vars are not defined in ${code(type)} file:`,
-        ...missing.map((name) => `  - ${JSON.stringify(name)}`),
+        ...missing.map(name => `  - ${JSON.stringify(name)}`),
       ].join('\n');
     }
 

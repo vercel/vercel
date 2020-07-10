@@ -47,7 +47,7 @@ const linkSchema = {
  */
 export function getVercelDirectory(cwd: string = process.cwd()): string {
   const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
-  const existingDirs = possibleDirs.filter((d) => isDirectory(d));
+  const existingDirs = possibleDirs.filter(d => isDirectory(d));
   if (existingDirs.length > 1) {
     throw new NowBuildError({
       code: 'CONFLICTING_CONFIG_DIRECTORIES',
@@ -242,7 +242,7 @@ export async function linkFolderToProject(
     const gitIgnorePath = join(path, '.gitignore');
 
     const gitIgnore = await readFile(gitIgnorePath)
-      .then((buf) => buf.toString())
+      .then(buf => buf.toString())
       .catch(() => null);
 
     if (!gitIgnore || !gitIgnore.split('\n').includes(VERCEL_DIR)) {
