@@ -13,7 +13,7 @@ func main() {
 	handler := http.HandlerFunc(__HANDLER_FUNC_NAME)
 
 	// https://stackoverflow.com/a/43425461/376773
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		panic(err)
 	}
