@@ -29,7 +29,7 @@
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.0",
     "npm-package-arg": "6.1.0",
-    "prettier": "1.18.2"
+    "prettier": "2.0.5"
   },
   "scripts": {
     "lerna": "lerna",
@@ -64,7 +64,8 @@
   },
   "prettier": {
     "trailingComma": "es5",
-    "singleQuote": true
+    "singleQuote": true,
+    "arrowParens": "avoid"
   },
   "eslintConfig": {
     "root": true,

@@ -1,5 +1,33 @@
 [
   {
+    "name": "Blitz.js",
+    "slug": "blitzjs",
+    "demo": "https://blitzjs.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg",
+    "tagline": "Blitz.js: The Fullstack React Framework",
+    "description": "A brand new Blitz.js app: the output of running `blitz new`",
+    "website": "https://blitzjs.com",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"blitz\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `blitz build`"
+      },
+      "devCommand": {
+        "value": "blitz start"
+      },
+      "outputDirectory": {
+        "placeholder": "Next.js default"
+      }
+    }
+  },
+  {
     "name": "Next.js",
     "slug": "nextjs",
     "demo": "https://nextjs.now-examples.now.sh",

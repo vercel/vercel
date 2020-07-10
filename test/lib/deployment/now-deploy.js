@@ -5,9 +5,11 @@ const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry.js');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(bodies, randomness) {
+async function nowDeploy(bodies, randomness, uploadNowJson) {
   const files = Object.keys(bodies)
-    .filter(n => n !== 'vercel.json' && n !== 'now.json')
+    .filter(n =>
+      uploadNowJson ? true : n !== 'vercel.json' && n !== 'now.json'
+    )
     .map(n => ({
       sha: digestOfFile(bodies[n]),
       size: bodies[n].length,

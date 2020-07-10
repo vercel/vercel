@@ -1,7 +1,7 @@
 import React from 'react';
 
 // eslint-disable-next-line camelcase
-export async function unstable_getServerProps() {
+export async function getServerSideProps() {
   return {
     props: {
       world: 'world',
