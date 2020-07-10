@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@sentry/node": "5.11.1",
-    "@vercel/node": "1.7.1",
     "got": "10.2.1",
     "node-fetch": "2.6.0",
     "parse-github-url": "1.0.2",
@@ -19,6 +18,7 @@
   "devDependencies": {
     "@types/node": "13.1.4",
     "@types/node-fetch": "2.5.4",
+    "@vercel/node": "1.7.2",
     "typescript": "3.9.6"
   }
 }

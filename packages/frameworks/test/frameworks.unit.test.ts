@@ -1,12 +1,9 @@
 import Ajv from 'ajv';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { isString } from 'util';
 import { Framework } from '../';
 const frameworkList = require('../frameworks.json') as Framework[];
-
-function isString(arg: any): arg is string {
-  return typeof arg === 'string';
-}
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
