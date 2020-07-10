@@ -584,7 +584,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
       `Failed to start dev server for "${entrypointWithExt}" (code=${result[0]}, signal=${result[1]})`
     );
   } else {
-    throw new Error('Unexpected error');
+    throw new Error(`Unexpected result type: ${typeof result}`);
   }
 }
 
