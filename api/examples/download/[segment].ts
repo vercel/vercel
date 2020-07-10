@@ -2,7 +2,7 @@ import fs from 'fs';
 // @ts-ignore
 import tar from 'tar-fs';
 import { extract } from '../../_lib/examples/extract';
-import { NowRequest, NowResponse } from '@now/node';
+import { NowRequest, NowResponse } from '@vercel/node';
 import { withApiHandler } from '../../_lib/util/with-api-handler';
 
 const TMP_DIR = '/tmp';
@@ -15,8 +15,8 @@ function notFound(res: NowResponse, message: string) {
   return res.status(404).send({
     error: {
       code: 'not_found',
-      message
-    }
+      message,
+    },
   });
 }
 
@@ -35,7 +35,10 @@ function streamToBuffer(stream: any) {
   });
 }
 
-export default withApiHandler(async function(req: NowRequest, res: NowResponse) {
+export default withApiHandler(async function (
+  req: NowRequest,
+  res: NowResponse
+) {
   const ext = '.tar.gz';
   const { segment = '' } = req.query;
 
