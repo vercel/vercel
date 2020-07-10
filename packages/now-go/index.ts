@@ -1,4 +1,5 @@
 import execa from 'execa';
+import retry from 'async-retry';
 import { homedir, tmpdir } from 'os';
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
@@ -548,8 +549,10 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
   });
 
-  child.once('exit', async () => {
-    await remove(tmp); // Cleanup
+  child.once('exit', () => {
+    retry(() => remove(tmp)).catch((err: Error) => {
+      console.error('Could not delete tmp directory: %j: %s', tmp, err);
+    });
   });
 
   const portPipe = child.stdio[3];
@@ -606,10 +609,9 @@ async function waitForPortFile_(opts: {
     await new Promise(resolve => setTimeout(resolve, 100));
     try {
       const port = Number(await readFile(opts.portFile, 'ascii'));
-      remove(opts.portFile).catch((err: Error) => {
+      retry(() => remove(opts.portFile)).catch((err: Error) => {
         console.error('Could not delete port file: %j: %s', opts.portFile, err);
       });
-      console.log({ portFile: opts.portFile, port });
       return { port };
     } catch (err) {
       if (err.code !== 'ENOENT') {
