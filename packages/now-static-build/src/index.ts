@@ -63,7 +63,7 @@ function validateDistDir(distDir: string) {
   if (!exists()) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_NO_OUT_DIR',
-      message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your project settings.`,
+      message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your Project Settings.`,
       link,
     });
   }
@@ -445,8 +445,9 @@ export async function build({
 
       if (!found) {
         throw new Error(
-          `Missing required "${buildCommand ||
-            buildScript}" script in "${entrypoint}"`
+          `Missing required "${
+            buildCommand || buildScript
+          }" script in "${entrypoint}"`
         );
       }
 

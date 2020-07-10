@@ -49,7 +49,7 @@ import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
 import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
-import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
+import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from './validate';
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
@@ -90,6 +90,10 @@ interface FSEvent {
   path: string;
 }
 
+type WithFileNameSymbol<T> = T & {
+  [fileNameSymbol]: string;
+};
+
 function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && isOfficialRuntime('static-build', buildA.use)) {
     return 1;
@@ -113,7 +117,6 @@ export default class DevServer {
   public address: string;
   public devCacheDir: string;
 
-  private cachedNowConfig: NowConfig | null;
   private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
@@ -148,7 +151,6 @@ export default class DevServer {
     this.devCommand = options.devCommand;
     this.projectSettings = options.projectSettings;
     this.frameworkSlug = options.frameworkSlug;
-    this.cachedNowConfig = null;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -226,15 +228,7 @@ export default class DevServer {
       }
     }
 
-    const nowConfig = await this.getNowConfig(false);
-
-    // Update the env vars configuration
-    const [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfig.build?.env),
-    ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    const nowConfig = await this.getNowConfig();
 
     // Update the build matches in case an entrypoint was created or deleted
     await this.updateBuildMatches(nowConfig);
@@ -292,7 +286,7 @@ export default class DevServer {
             filesRemovedArray
           ).catch((err: Error) => {
             this.output.warn(
-              `An error occurred while rebuilding ${match.src}:`
+              `An error occurred while rebuilding \`${match.src}\`:`
             );
             console.error(err.stack);
           });
@@ -503,23 +497,24 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+  clearNowConfigPromise = () => {
+    this.getNowConfigPromise = null;
+  };
+
+  getNowConfig(): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache);
-    try {
-      return await this.getNowConfigPromise;
-    } finally {
-      this.getNowConfigPromise = null;
-    }
+    this.getNowConfigPromise = this._getNowConfig();
+
+    // Clean up the promise once it has resolved
+    const clear = this.clearNowConfigPromise;
+    this.getNowConfigPromise.finally(clear);
+
+    return this.getNowConfigPromise;
   }
 
-  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
-    if (canUseCache && this.cachedNowConfig) {
-      return this.cachedNowConfig;
-    }
-
+  async _getNowConfig(): Promise<NowConfig> {
     const configPath = getNowConfigPath(this.cwd);
 
     const [
@@ -531,14 +526,6 @@ export default class DevServer {
       this.readJsonFile<PackageJson>('package.json'),
       this.readJsonFile<NowConfig>(configPath),
     ]);
-
-    const allFiles = await getAllProjectFiles(this.cwd, this.output);
-    const files = allFiles.filter(this.filter);
-
-    this.output.debug(
-      `Found ${allFiles.length} and ` +
-        `filtered out ${allFiles.length - files.length} files`
-    );
 
     await this.validateNowConfig(config);
     const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
@@ -554,6 +541,11 @@ export default class DevServer {
     if (!config.builds || config.builds.length === 0) {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
+
+      const opts = { output: this.output, isBuilds: true };
+      const files = (await getFiles(this.cwd, config, opts)).map((f) =>
+        relative(this.cwd, f)
+      );
 
       let {
         builders,
@@ -588,6 +580,8 @@ export default class DevServer {
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
+
+        delete config.functions;
       }
 
       let routes: Route[] = [];
@@ -621,14 +615,24 @@ export default class DevServer {
 
     await this.validateNowConfig(config);
 
-    this.cachedNowConfig = config;
     this.caseSensitive = hasNewRoutingProperties(config);
     this.apiDir = detectApiDirectory(config.builds || []);
     this.apiExtensions = detectApiExtensions(config.builds || []);
+
+    // Update the env vars configuration
+    const [runEnv, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env', config.env),
+      this.getLocalEnv('.env.build', config.build?.env),
+    ]);
+    const allEnv = { ...buildEnv, ...runEnv };
+    this.envConfigs = { buildEnv, runEnv, allEnv };
+
     return config;
   }
 
-  async readJsonFile<T>(filePath: string): Promise<T | void> {
+  async readJsonFile<T>(
+    filePath: string
+  ): Promise<WithFileNameSymbol<T> | void> {
     let rel, abs;
     if (isAbsolute(filePath)) {
       rel = path.relative(this.cwd, filePath);
@@ -640,7 +644,10 @@ export default class DevServer {
     this.output.debug(`Reading \`${rel}\` file`);
 
     try {
-      return JSON.parse(await fs.readFile(abs, 'utf8'));
+      const raw = await fs.readFile(abs, 'utf8');
+      const parsed: WithFileNameSymbol<T> = JSON.parse(raw);
+      parsed[fileNameSymbol] = rel;
+      return parsed;
     } catch (err) {
       if (err.code === 'ENOENT') {
         this.output.debug(`No \`${rel}\` file present`);
@@ -747,14 +754,7 @@ export default class DevServer {
     const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
-    // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false);
-    const [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfig.build?.env),
-    ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    const nowConfig = await this.getNowConfig();
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);

@@ -73,7 +73,7 @@ async function getLinkFromDir(dir: string): Promise<ProjectLink | null> {
 
     if (!ajv.validate(linkSchema, link)) {
       throw new Error(
-        `Project settings are invalid. To link your project again, remove the ${dir} directory.`
+        `Project Settings are invalid. To link your project again, remove the ${dir} directory.`
       );
     }
 
@@ -87,7 +87,7 @@ async function getLinkFromDir(dir: string): Promise<ProjectLink | null> {
     // link file can't be read
     if (error.name === 'SyntaxError') {
       throw new Error(
-        `Project settings could not be retrieved. To link your project again, remove the ${dir} directory.`
+        `Project Settings could not be retrieved. To link your project again, remove the ${dir} directory.`
       );
     }
 

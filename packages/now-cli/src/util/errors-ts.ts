@@ -14,6 +14,7 @@ export class APIError extends Error {
   status: number;
   serverMessage: string;
   link?: string;
+  action?: string;
   retryAfter: number | null | 'never';
   [key: string]: any;
 

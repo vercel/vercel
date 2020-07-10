@@ -29,7 +29,7 @@ export function resolveRouteParameters(
 export function getRoutesTypes(routes: Route[] = []) {
   const handleMap = new Map<HandleValue | null, Route[]>();
   let prevHandle: HandleValue | null = null;
-  routes.forEach((route) => {
+  routes.forEach(route => {
     if (isHandler(route)) {
       prevHandle = route.handle;
     } else {
