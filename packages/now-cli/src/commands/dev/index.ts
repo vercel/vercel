@@ -97,7 +97,7 @@ export default async function main(ctx: NowContext) {
             'package.json'
           )} must not contain ${cmd('now dev')}`
         );
-        output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
+        output.error(`Learn More: http://err.sh/now/now-dev-as-dev-script`);
         return 1;
       }
       if (scripts && scripts.dev && /\bvercel\b\W+\bdev\b/.test(scripts.dev)) {
@@ -106,7 +106,7 @@ export default async function main(ctx: NowContext) {
             'package.json'
           )} must not contain ${cmd('vercel dev')}`
         );
-        output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
+        output.error(`Learn More: http://err.sh/now/now-dev-as-dev-script`);
         return 1;
       }
     }
