@@ -1,4 +1,4 @@
-import { NowRequest, NowResponse } from '@now/node';
+import { NowRequest, NowResponse } from '@vercel/node';
 import { errorHandler } from './error-handler';
 
 type Handler = (req: NowRequest, res: NowResponse) => Promise<any>;

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "0.0.16-canary.1",
+  "version": "0.0.17-canary.0",
   "main": "frameworks.json",
   "license": "UNLICENSED",
   "scripts": {
