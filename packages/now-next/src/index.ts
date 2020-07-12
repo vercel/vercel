@@ -897,9 +897,15 @@ export const build = async ({
       // Get the route file as it'd be mounted in the builder output
       const pr = prerenderManifest.staticRoutes[routeKey];
       const { initialRevalidate, srcRoute } = pr;
+      const route = srcRoute || routeKey;
 
-      if (initialRevalidate === false && !canUsePreviewMode) {
-        nonLambdaSsgPages.add(srcRoute || routeKey);
+      if (
+        initialRevalidate === false &&
+        !canUsePreviewMode &&
+        !prerenderManifest.fallbackRoutes[route] &&
+        !prerenderManifest.legacyBlockingRoutes[route]
+      ) {
+        nonLambdaSsgPages.add(route);
       }
     };
 
@@ -1100,6 +1106,11 @@ export const build = async ({
         if (routeIsDynamic) {
           dynamicPages.push(normalizePage(pathname));
         }
+
+        if (nonLambdaSsgPages.has(`/${pathname}`)) {
+          continue;
+        }
+
         const outputName = path.join('/', entryDirectory, pathname);
 
         const lambdaGroups = routeIsApi ? apiLambdaGroups : pageLambdaGroups;
@@ -1509,13 +1520,6 @@ export const build = async ({
         lambda = lambdas[outputSrcPathPage];
       }
 
-      if (lambda == null) {
-        throw new NowBuildError({
-          code: 'NEXT_MISSING_LAMBDA',
-          message: `Unable to find lambda for route: ${routeFileNoExt}`,
-        });
-      }
-
       if (initialRevalidate === false) {
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new NowBuildError({
@@ -1532,6 +1536,13 @@ export const build = async ({
       }
 
       if (prerenders[outputPathPage] == null) {
+        if (lambda == null) {
+          throw new NowBuildError({
+            code: 'NEXT_MISSING_LAMBDA',
+            message: `Unable to find lambda for route: ${routeFileNoExt}`,
+          });
+        }
+
         prerenders[outputPathPage] = new Prerender({
           expiration: initialRevalidate,
           lambda,
