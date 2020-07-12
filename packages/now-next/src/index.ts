@@ -880,7 +880,13 @@ export const build = async ({
           [filePath: string]: FileFsRef;
         };
 
-    let canUsePreviewMode = false;
+    const isApiPage = (page: string) =>
+      page.replace(/\\/g, '/').match(/serverless\/pages\/api/);
+
+    const canUsePreviewMode = Object.keys(pages).some(page =>
+      isApiPage(pages[page].fsPath)
+    );
+
     let pseudoLayerBytes = 0;
     let apiPseudoLayerBytes = 0;
     const pseudoLayers: PseudoLayer[] = [];
@@ -900,9 +906,6 @@ export const build = async ({
     Object.keys(prerenderManifest.staticRoutes).forEach(route =>
       onPrerenderRouteInitial(route)
     );
-
-    const isApiPage = (page: string) =>
-      page.replace(/\\/g, '/').match(/serverless\/pages\/api/);
 
     const tracedFiles: {
       [filePath: string]: FileFsRef;
@@ -924,7 +927,6 @@ export const build = async ({
 
         if (isApiPage(pagePath)) {
           apiPages.push(pagePath);
-          canUsePreviewMode = true;
         } else if (!nonLambdaSsgPages.has(route)) {
           nonApiPages.push(pagePath);
         }
