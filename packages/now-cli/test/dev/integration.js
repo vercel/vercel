@@ -411,7 +411,6 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
     {
       // Env var should not be set after `vercel.json` is deleted
       await fs.remove(configPath);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/api`);
       const body = await res.json();
@@ -454,7 +453,6 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         ],
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=bar`);
       const body = await res.json();
@@ -476,7 +474,6 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         ],
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
@@ -495,7 +492,6 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         },
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
@@ -514,7 +510,6 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         },
       };
       await fs.writeJSON(configPath, config);
-      await sleep(1000);
 
       const res = await fetch(`http://localhost:${port}/?foo=boo`);
       const body = await res.json();
@@ -666,6 +661,7 @@ test(
   testFixtureStdio('public-and-api', async testPath => {
     await testPath(200, '/', 'This is the home page');
     await testPath(200, '/about.html', 'This is the about page');
+    await testPath(200, '/.well-known/humans.txt', 'We come in peace');
     await testPath(200, '/api/date', /current date/);
     await testPath(200, '/api/rand', /random number/);
     await testPath(200, '/api/rand.js', /random number/);
@@ -694,7 +690,7 @@ test('[vercel dev] validate builds', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `builds` property: \[0\]\.src should be string/m
+    /Invalid vercel\.json - `builds\[0\].src` should be string/m
   );
 });
 
@@ -705,7 +701,7 @@ test('[vercel dev] validate routes', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `routes` property: \[0\]\.src should be string/m
+    /Invalid vercel\.json - `routes\[0\].src` should be string/m
   );
 });
 
@@ -714,7 +710,10 @@ test('[vercel dev] validate cleanUrls', async t => {
   const output = await exec(directory);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Invalid `cleanUrls` property:\s+should be boolean/m);
+  t.regex(
+    output.stderr,
+    /Invalid vercel\.json - `cleanUrls` should be boolean/m
+  );
 });
 
 test('[vercel dev] validate trailingSlash', async t => {
@@ -724,7 +723,7 @@ test('[vercel dev] validate trailingSlash', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `trailingSlash` property:\s+should be boolean/m
+    /Invalid vercel\.json - `trailingSlash` should be boolean/m
   );
 });
 
@@ -735,7 +734,7 @@ test('[vercel dev] validate rewrites', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `rewrites` property: \[0\]\.destination should be string/m
+    /Invalid vercel\.json - `rewrites\[0\].destination` should be string/m
   );
 });
 
@@ -746,7 +745,7 @@ test('[vercel dev] validate redirects', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `redirects` property: \[0\]\.statusCode should be integer/m
+    /Invalid vercel\.json - `redirects\[0\].statusCode` should be integer/m
   );
 });
 
@@ -757,7 +756,7 @@ test('[vercel dev] validate headers', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Invalid `headers` property: \[0\]\.headers\[0\]\.value should be string/m
+    /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m
   );
 });
 
@@ -1008,10 +1007,25 @@ test(
 );
 
 test(
+  '[vercel dev] support dynamic next.js routes in monorepos',
+  testFixtureStdio('monorepo-dynamic-paths', async testPath => {
+    await testPath(200, '/', /This is our homepage/m);
+    await testPath(200, '/about', /This is the about static page./m);
+    await testPath(
+      200,
+      '/1/dynamic',
+      /This is the (.*)dynamic(.*) page with static props./m
+    );
+  })
+);
+
+test(
   '[vercel dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async testPath => {
     await testPath(200, '/', /Files within/m);
     await testPath(200, '/', /test[0-3]\.txt/m);
+    await testPath(200, '/', /\.well-known/m);
+    await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
   })
 );
 
@@ -1444,13 +1458,10 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
 
     // Monitor `stderr` for the warning
     dev.stderr.setEncoding('utf8');
+    const msg = 'There are no files inside your deployment.';
     await new Promise(resolve => {
       dev.stderr.on('data', str => {
-        if (
-          str.includes(
-            'There are no files (or only files starting with a dot) inside your deployment'
-          )
-        ) {
+        if (str.includes(msg)) {
           resolve();
         }
       });
@@ -1611,5 +1622,30 @@ test(
   testFixtureStdio('index-html-priority', async testPath => {
     await testPath(200, '/', 'This is index.html');
     await testPath(200, '/index.css', 'This is index.css');
+  })
+);
+
+test(
+  '[vercel dev] Should support `*.go` API serverless functions',
+  testFixtureStdio('go', async testPath => {
+    await testPath(200, `/api`, 'This is the index page');
+    await testPath(200, `/api/index`, 'This is the index page');
+    await testPath(200, `/api/index.go`, 'This is the index page');
+    await testPath(200, `/api/another`, 'This is another page');
+    await testPath(200, '/api/another.go', 'This is another page');
+    await testPath(200, `/api/foo`, 'Req Path: /api/foo');
+    await testPath(200, `/api/bar`, 'Req Path: /api/bar');
+  })
+);
+
+test(
+  '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
+  testFixtureStdio('node-ts-node-target', async testPath => {
+    await testPath(200, `/api/subclass`, '{"ok":true}');
+    await testPath(
+      200,
+      `/api/array`,
+      '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}'
+    );
   })
 );

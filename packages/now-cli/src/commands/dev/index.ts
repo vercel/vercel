@@ -10,6 +10,7 @@ import handleError from '../../util/handle-error';
 import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
+import highlight from '../../util/output/highlight';
 import dev from './dev';
 import readPackage from '../../util/read-package';
 import readConfig from '../../util/config/read-config';
@@ -96,7 +97,7 @@ export default async function main(ctx: NowContext) {
             'package.json'
           )} must not contain ${cmd('now dev')}`
         );
-        output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
+        output.error(`Learn More: http://err.sh/now/now-dev-as-dev-script`);
         return 1;
       }
       if (scripts && scripts.dev && /\bvercel\b\W+\bdev\b/.test(scripts.dev)) {
@@ -105,7 +106,7 @@ export default async function main(ctx: NowContext) {
             'package.json'
           )} must not contain ${cmd('vercel dev')}`
         );
-        output.error(`More details: http://err.sh/now/now-dev-as-dev-script`);
+        output.error(`Learn More: http://err.sh/now/now-dev-as-dev-script`);
         return 1;
       }
     }
@@ -119,6 +120,21 @@ export default async function main(ctx: NowContext) {
   try {
     return await dev(ctx, argv, args, output);
   } catch (err) {
+    if (err.code === 'ENOTFOUND') {
+      // Error message will look like the following:
+      // "request to https://api.vercel.com/www/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
+      const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
+      if (matches && matches[1]) {
+        const hostname = matches[1];
+        output.error(
+          `The hostname ${highlight(
+            hostname
+          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+        );
+      }
+      output.debug(err.stack);
+      return 1;
+    }
     output.prettyError(err);
     output.debug(stringifyError(err));
     return 1;

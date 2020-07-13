@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "uploadNowJson": true,
   "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
     {
@@ -61,6 +62,12 @@
         "x-hello": "world",
         "x-another": "value"
       }
+    },
+    {
+      "logMustNotContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
+    },
+    {
+      "logMustNotContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
     }
   ]
 }

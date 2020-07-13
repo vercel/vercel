@@ -44,8 +44,8 @@ export default async function editProjectSettings(
 
   output.print(
     !framework.slug
-      ? `No framework detected. Default project settings:\n`
-      : `Auto-detected project settings (${chalk.bold(framework.name)}):\n`
+      ? `No framework detected. Default Project Settings:\n`
+      : `Auto-detected Project Settings (${chalk.bold(framework.name)}):\n`
   );
 
   settings.framework = framework.slug;

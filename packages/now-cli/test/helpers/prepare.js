@@ -122,6 +122,7 @@ module.exports = async session => {
     'single-dotfile': {
       '.testing': 'i am a dotfile',
     },
+    'empty-directory': {},
     'config-scope-property-email': {
       'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }`,
       'index.html': '<span>test scope email</span',
@@ -137,6 +138,10 @@ module.exports = async session => {
     'builds-wrong-vercel': {
       'vercel.json': '{"fake": 1}',
       'index.html': '<h1>Fake</h1>',
+    },
+    'builds-wrong-build-env': {
+      'vercel.json': '{ "build.env": { "key": "value" } }',
+      'index.html': '<h1>Should fail</h1>',
     },
     'builds-no-list': {
       'now.json': `{
@@ -467,7 +472,7 @@ CMD ["node", "index.js"]`,
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'now-php@0.0.8',
+            runtime: 'vercel-php@0.1.0',
           },
         },
       }),
@@ -478,7 +483,7 @@ CMD ["node", "index.js"]`,
         functions: {
           'api/**/*.php': {
             memory: 128,
-            runtime: 'now-php@canary',
+            runtime: 'vercel-php@canary',
           },
         },
       }),
@@ -496,12 +501,7 @@ CMD ["node", "index.js"]`,
       }),
     },
     'project-link': {
-      'pages/index.js': 'export default () => <div><h1>Now CLI test</h1></div>',
-      'package.json': JSON.stringify({
-        dependencies: {
-          gatsby: 'latest',
-        },
-      }),
+      'package.json': JSON.stringify({}),
     },
     'project-root-directory': {
       'src/index.html': '<h1>I am a website.</h1>',
@@ -518,6 +518,13 @@ CMD ["node", "index.js"]`,
       'index.html': '<h1>I am a website.</h1>',
       'vercel.json': getConfigFile(true),
       'now.json': getConfigFile(true),
+    },
+    'unauthorized-vercel-config': {
+      // This project is under the testing-internal team
+      '.vercel/project.json': JSON.stringify({
+        orgId: 'team_JgimPl9u9uauL7E4MjMLt605',
+        projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
+      }),
     },
   };
 

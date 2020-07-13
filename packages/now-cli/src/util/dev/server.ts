@@ -12,7 +12,7 @@ import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
-import { basename, dirname, extname, join } from 'path';
+import path, { isAbsolute, basename, dirname, extname, join } from 'path';
 import once from '@tootallnate/once';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
@@ -49,18 +49,8 @@ import getNowConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
 import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
-import { staticFiles as getFiles, getAllProjectFiles } from '../get-files';
-import {
-  validateNowConfigBuilds,
-  validateNowConfigRoutes,
-  validateNowConfigCleanUrls,
-  validateNowConfigHeaders,
-  validateNowConfigRedirects,
-  validateNowConfigRewrites,
-  validateNowConfigTrailingSlash,
-  validateNowConfigFunctions,
-} from './validate';
-
+import { staticFiles as getFiles } from '../get-files';
+import { validateConfig } from './validate';
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
@@ -93,11 +83,16 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
+import { ProjectSettings } from '../../types';
 
 interface FSEvent {
   type: string;
   path: string;
 }
+
+type WithFileNameSymbol<T> = T & {
+  [fileNameSymbol]: string;
+};
 
 function sortBuilders(buildA: Builder, buildB: Builder) {
   if (buildA && buildA.use && isOfficialRuntime('static-build', buildA.use)) {
@@ -117,12 +112,11 @@ export default class DevServer {
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
-  public frameworkSlug: string | null;
+  public frameworkSlug?: string;
   public files: BuilderInputs;
   public address: string;
   public devCacheDir: string;
 
-  private cachedNowConfig: NowConfig | null;
   private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
@@ -140,6 +134,7 @@ export default class DevServer {
   private devProcess?: ChildProcess;
   private devProcessPort?: number;
   private devServerPids: Set<number>;
+  private projectSettings?: ProjectSettings;
 
   private getNowConfigPromise: Promise<NowConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
@@ -154,8 +149,8 @@ export default class DevServer {
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
+    this.projectSettings = options.projectSettings;
     this.frameworkSlug = options.frameworkSlug;
-    this.cachedNowConfig = null;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -179,10 +174,8 @@ export default class DevServer {
     this.watchAggregationEvents = [];
     this.watchAggregationTimeout = 500;
 
-    this.filter = path => Boolean(path);
-    this.podId = Math.random()
-      .toString(32)
-      .slice(-5);
+    this.filter = (path) => Boolean(path);
+    this.podId = Math.random().toString(32).slice(-5);
 
     this.devServerPids = new Set();
   }
@@ -220,8 +213,8 @@ export default class DevServer {
       }
     }
 
-    events = events.filter(event =>
-      distPaths.every(distPath => !event.path.startsWith(distPath))
+    events = events.filter((event) =>
+      distPaths.every((distPath) => !event.path.startsWith(distPath))
     );
 
     // First, update the `files` mapping of source files
@@ -235,16 +228,7 @@ export default class DevServer {
       }
     }
 
-    const nowConfig = await this.getNowConfig(false);
-
-    // Update the env vars configuration
-    const nowConfigBuild = nowConfig.build || {};
-    const [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfigBuild.env),
-    ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    const nowConfig = await this.getNowConfig();
 
     // Update the build matches in case an entrypoint was created or deleted
     await this.updateBuildMatches(nowConfig);
@@ -290,18 +274,19 @@ export default class DevServer {
       for (const [result, [requestPath, match]] of needsRebuild) {
         if (
           requestPath === null ||
-          (await shouldServe(match, this.files, requestPath, this))
+          (await shouldServe(match, this.files, requestPath, this, nowConfig))
         ) {
           this.triggerBuild(
             match,
             requestPath,
             null,
+            nowConfig,
             result,
             filesChangedArray,
             filesRemovedArray
           ).catch((err: Error) => {
             this.output.warn(
-              `An error occurred while rebuilding ${match.src}:`
+              `An error occurred while rebuilding \`${match.src}\`:`
             );
             console.error(err.stack);
           });
@@ -385,12 +370,10 @@ export default class DevServer {
       this,
       fileList
     );
-    const sources = matches.map(m => m.src);
+    const sources = matches.map((m) => m.src);
 
     if (isInitial && fileList.length === 0) {
-      this.output.warn(
-        'There are no files (or only files starting with a dot) inside your deployment.'
-      );
+      this.output.warn('There are no files inside your deployment.');
     }
 
     // Delete build matches that no longer exists
@@ -446,6 +429,9 @@ export default class DevServer {
             `Cleaning up "blockingBuildsPromise" after error: ${err}`
           );
           this.blockingBuildsPromise = null;
+          if (err) {
+            this.output.prettyError(err);
+          }
         });
     }
 
@@ -511,57 +497,35 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+  clearNowConfigPromise = () => {
+    this.getNowConfigPromise = null;
+  };
+
+  getNowConfig(): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache);
-    try {
-      return await this.getNowConfigPromise;
-    } finally {
-      this.getNowConfigPromise = null;
-    }
+    this.getNowConfigPromise = this._getNowConfig();
+
+    // Clean up the promise once it has resolved
+    const clear = this.clearNowConfigPromise;
+    this.getNowConfigPromise.finally(clear);
+
+    return this.getNowConfigPromise;
   }
 
-  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
-    if (canUseCache && this.cachedNowConfig) {
-      return this.cachedNowConfig;
-    }
+  async _getNowConfig(): Promise<NowConfig> {
+    const configPath = getNowConfigPath(this.cwd);
 
-    const pkg = await this.getPackageJson();
-
-    // The default empty `vercel.json` is used to serve all files as static
-    // when no `vercel.json` is present
-    let configPath = 'vercel.json';
-    let config: NowConfig = {
-      version: 2,
-      [fileNameSymbol]: configPath,
-    };
-
-    try {
-      configPath = getNowConfigPath(this.cwd);
-      this.output.debug(`Reading ${configPath}`);
-      config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-      config[fileNameSymbol] = configPath;
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        this.output.debug(err.toString());
-      } else if (err.name === 'SyntaxError') {
-        this.output.warn(
-          `There is a syntax error in ${configPath}: ${err.message}`
-        );
-      } else {
-        throw err;
-      }
-    }
-
-    const allFiles = await getAllProjectFiles(this.cwd, this.output);
-    const files = allFiles.filter(this.filter);
-
-    this.output.debug(
-      `Found ${allFiles.length} and ` +
-        `filtered out ${allFiles.length - files.length} files`
-    );
+    const [
+      pkg = null,
+      // The default empty `vercel.json` is used to serve all
+      // files as static when no `vercel.json` is present
+      config = { version: 2, [fileNameSymbol]: 'vercel.json' },
+    ] = await Promise.all([
+      this.readJsonFile<PackageJson>('package.json'),
+      this.readJsonFile<NowConfig>(configPath),
+    ]);
 
     await this.validateNowConfig(config);
     const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
@@ -578,6 +542,11 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
+      const opts = { output: this.output, isBuilds: true };
+      const files = (await getFiles(this.cwd, config, opts)).map((f) =>
+        relative(this.cwd, f)
+      );
+
       let {
         builders,
         warnings,
@@ -589,7 +558,7 @@ export default class DevServer {
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
         functions: config.functions,
-        ...(projectSettings ? { projectSettings } : {}),
+        projectSettings: projectSettings || this.projectSettings,
         featHandleMiss,
         cleanUrls,
         trailingSlash,
@@ -601,7 +570,7 @@ export default class DevServer {
       }
 
       if (warnings && warnings.length > 0) {
-        warnings.forEach(warning => this.output.warn(warning.message));
+        warnings.forEach((warning) => this.output.warn(warning.message));
       }
 
       if (builders) {
@@ -611,6 +580,8 @@ export default class DevServer {
 
         config.builds = config.builds || [];
         config.builds.push(...builders);
+
+        delete config.functions;
       }
 
       let routes: Route[] = [];
@@ -644,34 +615,50 @@ export default class DevServer {
 
     await this.validateNowConfig(config);
 
-    this.cachedNowConfig = config;
     this.caseSensitive = hasNewRoutingProperties(config);
     this.apiDir = detectApiDirectory(config.builds || []);
     this.apiExtensions = detectApiExtensions(config.builds || []);
+
+    // Update the env vars configuration
+    const [runEnv, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env', config.env),
+      this.getLocalEnv('.env.build', config.build?.env),
+    ]);
+    const allEnv = { ...buildEnv, ...runEnv };
+    this.envConfigs = { buildEnv, runEnv, allEnv };
+
     return config;
   }
 
-  async getPackageJson(): Promise<PackageJson | null> {
-    const pkgPath = join(this.cwd, 'package.json');
-    let pkg: PackageJson | null = null;
-
-    this.output.debug('Reading `package.json` file');
+  async readJsonFile<T>(
+    filePath: string
+  ): Promise<WithFileNameSymbol<T> | void> {
+    let rel, abs;
+    if (isAbsolute(filePath)) {
+      rel = path.relative(this.cwd, filePath);
+      abs = filePath;
+    } else {
+      rel = filePath;
+      abs = join(this.cwd, filePath);
+    }
+    this.output.debug(`Reading \`${rel}\` file`);
 
     try {
-      pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+      const raw = await fs.readFile(abs, 'utf8');
+      const parsed: WithFileNameSymbol<T> = JSON.parse(raw);
+      parsed[fileNameSymbol] = rel;
+      return parsed;
     } catch (err) {
       if (err.code === 'ENOENT') {
-        this.output.debug('No `package.json` file present');
+        this.output.debug(`No \`${rel}\` file present`);
       } else if (err.name === 'SyntaxError') {
         this.output.warn(
-          `There is a syntax error in the \`package.json\` file: ${err.message}`
+          `There is a syntax error in the \`${rel}\` file: ${err.message}`
         );
       } else {
         throw err;
       }
     }
-
-    return pkg;
   }
 
   async tryValidateOrExit(
@@ -693,14 +680,12 @@ export default class DevServer {
       return;
     }
 
-    await this.tryValidateOrExit(config, validateNowConfigBuilds);
-    await this.tryValidateOrExit(config, validateNowConfigRoutes);
-    await this.tryValidateOrExit(config, validateNowConfigCleanUrls);
-    await this.tryValidateOrExit(config, validateNowConfigHeaders);
-    await this.tryValidateOrExit(config, validateNowConfigRedirects);
-    await this.tryValidateOrExit(config, validateNowConfigRewrites);
-    await this.tryValidateOrExit(config, validateNowConfigTrailingSlash);
-    await this.tryValidateOrExit(config, validateNowConfigFunctions);
+    const error = validateConfig(config);
+
+    if (error) {
+      this.output.prettyError(error);
+      await this.exit(1);
+    }
   }
 
   validateEnvConfig(type: string, env: Env = {}, localEnv: Env = {}): Env {
@@ -769,15 +754,7 @@ export default class DevServer {
     const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
-    // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false);
-    const nowConfigBuild = nowConfig.build || {};
-    const [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfigBuild.env),
-    ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    const nowConfig = await this.getNowConfig();
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
@@ -805,11 +782,11 @@ export default class DevServer {
     // get their "build matches" invalidated so that the new version is used.
     this.updateBuildersTimeout = setTimeout(() => {
       this.updateBuildersPromise = updateBuilders(builders, this.output)
-        .then(updatedBuilders => {
+        .then((updatedBuilders) => {
           this.updateBuildersPromise = null;
           this.invalidateBuildMatches(nowConfig, updatedBuilders);
         })
-        .catch(err => {
+        .catch((err) => {
           this.updateBuildersPromise = null;
           this.output.error(`Failed to update builders: ${err.message}`);
           this.output.debug(err.stack);
@@ -1150,6 +1127,7 @@ export default class DevServer {
     match: BuildMatch,
     requestPath: string | null,
     req: http.IncomingMessage | null,
+    nowConfig: NowConfig,
     previousBuildResult?: BuildResult,
     filesChanged?: string[],
     filesRemoved?: string[]
@@ -1165,10 +1143,11 @@ export default class DevServer {
       // A build for `buildKey` is already in progress, so don't trigger
       // another rebuild for this request - just wait on the existing one.
       let msg = `De-duping build "${buildKey}"`;
-      if (req) msg += ` for "${req.method} ${req.url}"`;
+      if (req) {
+        msg += ` for "${req.method} ${req.url}"`;
+      }
       this.output.debug(msg);
     } else {
-      const nowConfig = await this.getNowConfig();
       if (previousBuildResult) {
         // Tear down any `output` assets from a previous build, so that they
         // are not available to be served while the rebuild is in progress.
@@ -1179,7 +1158,9 @@ export default class DevServer {
         }
       }
       let msg = `Building asset "${buildKey}"`;
-      if (req) msg += ` for "${req.method} ${req.url}"`;
+      if (req) {
+        msg += ` for "${req.method} ${req.url}"`;
+      }
       this.output.debug(msg);
       buildPromise = executeBuild(
         nowConfig,
@@ -1260,7 +1241,7 @@ export default class DevServer {
     const { status, headers, dest } = routeResult;
     const location = headers['location'] || dest;
 
-    if (status && location && (300 <= status && status <= 399)) {
+    if (status && location && 300 <= status && status <= 399) {
       this.output.debug(`Route found with redirect status code ${status}`);
       await this.sendRedirect(req, res, nowRequestId, location, status);
       return true;
@@ -1350,6 +1331,7 @@ export default class DevServer {
         req.method,
         phaseRoutes,
         this,
+        nowConfig,
         prevHeaders,
         missRoutes,
         phase
@@ -1377,7 +1359,8 @@ export default class DevServer {
         this.buildMatches,
         this.files,
         routeResult.dest,
-        this
+        this,
+        nowConfig
       );
 
       if (
@@ -1400,6 +1383,7 @@ export default class DevServer {
           req.method,
           missRoutes,
           this,
+          nowConfig,
           routeResult.headers,
           [],
           'miss'
@@ -1409,7 +1393,8 @@ export default class DevServer {
           this.buildMatches,
           this.files,
           routeResult.dest,
-          this
+          this,
+          nowConfig
         );
         if (
           await this.exitWithStatus(
@@ -1432,6 +1417,7 @@ export default class DevServer {
           req.method,
           hitRoutes,
           this,
+          nowConfig,
           routeResult.headers,
           [],
           'hit'
@@ -1446,6 +1432,7 @@ export default class DevServer {
           req.method,
           errorRoutes,
           this,
+          nowConfig,
           routeResult.headers,
           [],
           'error'
@@ -1455,7 +1442,8 @@ export default class DevServer {
           this.buildMatches,
           this.files,
           routeResultForError.dest,
-          this
+          this,
+          nowConfig
         );
 
         if (matchForError) {
@@ -1543,7 +1531,8 @@ export default class DevServer {
         newUrl,
         req.method,
         buildResult.routes,
-        this
+        this,
+        nowConfig
       );
       if (matchedRoute.found && callLevel === 0) {
         debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
@@ -1639,7 +1628,7 @@ export default class DevServer {
     let foundAsset = findAsset(match, requestPath, nowConfig);
 
     if (!foundAsset && callLevel === 0) {
-      await this.triggerBuild(match, buildRequestPath, req);
+      await this.triggerBuild(match, buildRequestPath, req, nowConfig);
 
       // Since the `asset` was just built, resolve again to get the new asset
       foundAsset = findAsset(match, requestPath, nowConfig);
@@ -1671,8 +1660,9 @@ export default class DevServer {
 
     const { asset, assetKey } = foundAsset;
     debug(
-      `Serving asset: [${asset.type}] ${assetKey} ${(asset as any)
-        .contentType || ''}`
+      `Serving asset: [${asset.type}] ${assetKey} ${
+        (asset as any).contentType || ''
+      }`
     );
 
     /* eslint-disable no-case-declarations */
@@ -1791,7 +1781,7 @@ export default class DevServer {
 
     const dirs: Set<string> = new Set();
     const files = Array.from(this.buildMatches.keys())
-      .filter(p => {
+      .filter((p) => {
         const base = basename(p);
         if (
           base === 'now.json' ||
@@ -1812,7 +1802,7 @@ export default class DevServer {
         }
         return true;
       })
-      .map(p => {
+      .map((p) => {
         let base = basename(p);
         let ext = '';
         let type = 'file';
@@ -1864,8 +1854,17 @@ export default class DevServer {
     return true;
   }
 
-  async hasFilesystem(dest: string): Promise<boolean> {
-    if (await findBuildMatch(this.buildMatches, this.files, dest, this, true)) {
+  async hasFilesystem(dest: string, nowConfig: NowConfig): Promise<boolean> {
+    if (
+      await findBuildMatch(
+        this.buildMatches,
+        this.files,
+        dest,
+        this,
+        nowConfig,
+        true
+      )
+    ) {
       return true;
     }
     return false;
@@ -2046,13 +2045,23 @@ async function findBuildMatch(
   files: BuilderInputs,
   requestPath: string,
   devServer: DevServer,
-  isFilesystem?: boolean
+  nowConfig: NowConfig,
+  isFilesystem = false
 ): Promise<BuildMatch | null> {
   requestPath = requestPath.replace(/^\//, '');
 
   let bestIndexMatch: undefined | BuildMatch;
   for (const match of matches.values()) {
-    if (await shouldServe(match, files, requestPath, devServer, isFilesystem)) {
+    if (
+      await shouldServe(
+        match,
+        files,
+        requestPath,
+        devServer,
+        nowConfig,
+        isFilesystem
+      )
+    ) {
       if (!isIndex(match.src)) {
         return match;
       } else {
@@ -2074,14 +2083,14 @@ async function shouldServe(
   files: BuilderInputs,
   requestPath: string,
   devServer: DevServer,
-  isFilesystem?: boolean
+  nowConfig: NowConfig,
+  isFilesystem = false
 ): Promise<boolean> {
   const {
     src,
     config,
     builderWithPkg: { builder },
   } = match;
-  const nowConfig = await devServer.getNowConfig();
   const cleanSrc = src.endsWith('.html') ? src.slice(0, -5) : src;
   const trimmedPath = requestPath.endsWith('/')
     ? requestPath.slice(0, -1)
@@ -2125,7 +2134,7 @@ async function shouldServe(
     return true;
   } else if (
     !isFilesystem &&
-    (await findMatchingRoute(match, requestPath, devServer))
+    (await findMatchingRoute(match, requestPath, devServer, nowConfig))
   ) {
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
@@ -2138,7 +2147,8 @@ async function shouldServe(
 async function findMatchingRoute(
   match: BuildMatch,
   requestPath: string,
-  devServer: DevServer
+  devServer: DevServer,
+  nowConfig: NowConfig
 ): Promise<RouteResult | void> {
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
@@ -2147,7 +2157,8 @@ async function findMatchingRoute(
       reqUrl,
       undefined,
       buildResult.routes,
-      devServer
+      devServer,
+      nowConfig
     );
     if (route.found) {
       return route;
@@ -2202,7 +2213,9 @@ function isIndex(path: string): boolean {
 }
 
 function minimatches(files: string[], pattern: string): boolean {
-  return files.some(file => file === pattern || minimatch(file, pattern));
+  return files.some(
+    (file) => file === pattern || minimatch(file, pattern, { dot: true })
+  );
 }
 
 function fileChanged(
@@ -2231,7 +2244,7 @@ function needsBlockingBuild(buildMatch: BuildMatch): boolean {
 }
 
 async function sleep(n: number) {
-  return new Promise(resolve => setTimeout(resolve, n));
+  return new Promise((resolve) => setTimeout(resolve, n));
 }
 
 async function checkForPort(

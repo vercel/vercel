@@ -3,7 +3,7 @@
   "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
     {
-      "path": "/_next/static/9dc4d2c93491d81eead3/pages/index.js",
+      "path": "/_next/__NEXT_SCRIPT__(/)",
       "responseHeaders": {
         "cache-control": "public,max-age=31536000,immutable"
       }

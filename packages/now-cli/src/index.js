@@ -46,6 +46,7 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
+import { APIError } from './util/errors-ts.ts';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
@@ -190,8 +191,9 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        `${'An unexpected error occurred while trying to find the ' +
-          'global directory: '}${err.message}`
+        `An unexpected error occurred while trying to find the global directory: ${
+          err.message
+        }`
       )
     );
 
@@ -204,8 +206,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to create the ' +
-            `global directory "${hp(VERCEL_DIR)}" `}${err.message}`
+          `${
+            'An unexpected error occurred while trying to create the ' +
+            `global directory "${hp(VERCEL_DIR)}" `
+          }${err.message}`
         )
       );
     }
@@ -219,8 +223,10 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        `${'An unexpected error occurred while trying to find the ' +
-          `config file "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+        `${
+          'An unexpected error occurred while trying to find the ' +
+          `config file "${hp(VERCEL_CONFIG_PATH)}" `
+        }${err.message}`
       )
     );
 
@@ -235,8 +241,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to read the ' +
-            `config in "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+          `${
+            'An unexpected error occurred while trying to read the ' +
+            `config in "${hp(VERCEL_CONFIG_PATH)}" `
+          }${err.message}`
         )
       );
 
@@ -267,8 +275,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to write the ' +
-            `default config to "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+          `${
+            'An unexpected error occurred while trying to write the ' +
+            `default config to "${hp(VERCEL_CONFIG_PATH)}" `
+          }${err.message}`
         )
       );
 
@@ -283,8 +293,10 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        `${'An unexpected error occurred while trying to find the ' +
-          `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
+        `${
+          'An unexpected error occurred while trying to find the ' +
+          `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
+        }${err.message}`
       )
     );
 
@@ -301,8 +313,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to read the ' +
-            `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
+          `${
+            'An unexpected error occurred while trying to read the ' +
+            `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
+          }${err.message}`
         )
       );
 
@@ -326,10 +340,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to write the ' +
-            `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${
-            err.message
-          }`
+          `${
+            'An unexpected error occurred while trying to write the ' +
+            `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
+          }${err.message}`
         )
       );
       return 1;
@@ -623,13 +637,25 @@ const main = async argv_ => {
         .send();
     }
   } catch (err) {
-    if (err.code === 'ENOTFOUND' && err.hostname === 'api.vercel.com') {
-      output.error(
-        `The hostname ${highlight(
-          'api.vercel.com'
-        )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
-      );
+    if (err.code === 'ENOTFOUND') {
+      // Error message will look like the following:
+      // "request to https://api.vercel.com/www/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
+      const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
+      if (matches && matches[1]) {
+        const hostname = matches[1];
+        output.error(
+          `The hostname ${highlight(
+            hostname
+          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+        );
+      }
       output.debug(err.stack);
+      return 1;
+    }
+
+    if (err instanceof APIError && 400 <= err.status && err.status <= 499) {
+      err.message = err.serverMessage;
+      output.prettyError(err);
       return 1;
     }
 

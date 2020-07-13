@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "uploadNowJson": true,
   "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
     {
@@ -19,51 +20,6 @@
     { "delay": 2000 },
     {
       "path": "/forever",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "HIT"
-      }
-    },
-    {
-      "path": "/another",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "PRERENDER"
-      }
-    },
-    { "delay": 2000 },
-    {
-      "path": "/another",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "HIT"
-      }
-    },
-    {
-      "path": "/blog/post-1",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "PRERENDER"
-      }
-    },
-    { "delay": 2000 },
-    {
-      "path": "/blog/post-1",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "HIT"
-      }
-    },
-    {
-      "path": "/blog/post-2",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "PRERENDER"
-      }
-    },
-    { "delay": 2000 },
-    {
-      "path": "/blog/post-2",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "HIT"
@@ -103,20 +59,6 @@
       "mustContain": "post-3"
     },
     {
-      "path": "/blog/post-1/comment-1",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "PRERENDER"
-      }
-    },
-    {
-      "path": "/blog/post-2/comment-2",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "PRERENDER"
-      }
-    },
-    {
       "path": "/blog/post-3/comment-3",
       "status": 200,
       "mustContain": "loading..."
@@ -146,13 +88,6 @@
       }
     },
     {
-      "path": "/_next/data/testing-build-id/another.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "/HIT|STALE/"
-      }
-    },
-    {
       "path": "/_next/data/testing-build-id/another2.json",
       "status": 200,
       "responseHeaders": {
@@ -165,20 +100,6 @@
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "HIT"
-      }
-    },
-    {
-      "path": "/_next/data/testing-build-id/blog/post-1.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "/HIT|STALE|PRERENDER/"
-      }
-    },
-    {
-      "path": "/_next/data/testing-build-id/blog/post-1337/comment-1337.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-vercel-cache": "PRERENDER"
       }
     },
     {
@@ -213,6 +134,12 @@
     {
       "path": "/_next/data/testing-build-id/nofallback/nope.json",
       "status": 404
+    },
+    {
+      "logMustNotContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
+    },
+    {
+      "logMustNotContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
     }
   ]
 }

@@ -1,15 +1,19 @@
 import React from 'react';
 
 // eslint-disable-next-line camelcase
-export async function unstable_getStaticPaths() {
+export async function getStaticPaths() {
   return {
-    paths: ['/blog/post-1', { params: { post: 'post-2' } }],
+    paths: [
+      '/blog/post-1',
+      { params: { post: 'post-2' } },
+      '/blog/post-123',
+    ],
     fallback: true,
   };
 }
 
 // eslint-disable-next-line camelcase
-export async function unstable_getStaticProps({ params }) {
+export async function getStaticProps({ params }) {
   if (params.post === 'post-10') {
     await new Promise(resolve => {
       setTimeout(() => resolve(), 1000);
@@ -19,19 +23,21 @@ export async function unstable_getStaticProps({ params }) {
   return {
     props: {
       post: params.post,
+      random: Math.random(),
       time: (await import('perf_hooks')).performance.now(),
     },
-    revalidate: 10,
+    unstable_revalidate: 1,
   };
 }
 
-export default ({ post, time }) => {
+export default ({ post, time, random }) => {
   if (!post) return <p>loading...</p>;
 
   return (
     <>
-      <p>Post: {post}</p>
-      <span>time: {time}</span>
+      <p id='post'>Post: {post}</p>
+      <span id='time'>time: {time}</span>
+      <span id='random'>random: {random}</span>
     </>
   );
 };
