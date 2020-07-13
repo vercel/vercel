@@ -72,8 +72,6 @@ export async function build({
   // Each file in the `functions` dir will become a lambda
   const functionFiles = await glob('*.js', apiDistPath);
 
-  console.log({ functionFiles });
-
   for (const [funcName, fileFsRef] of Object.entries(functionFiles)) {
     const outputName = join('api', parsePath(funcName).name); // remove `.js` extension
     const absEntrypoint = fileFsRef.fsPath;
@@ -83,13 +81,6 @@ export async function build({
     );
     const relativeEntrypoint = relative(workPath, absEntrypoint);
     const awsLambdaHandler = getAWSLambdaHandler(relativeEntrypoint, 'handler');
-
-    console.log({
-      outputName,
-      absEntrypoint,
-      relativeEntrypoint,
-      awsLambdaHandler,
-    });
 
     const lambdaFiles: Files = {
       [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
@@ -112,9 +103,6 @@ export async function build({
       lambdaFiles[relative(workPath, fsPath)] = new FileFsRef({ fsPath });
     });
 
-    console.log(
-      'adding entrypoint file ' + relative(workPath, fileFsRef.fsPath)
-    );
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
 
     const lambda = await createLambda({
