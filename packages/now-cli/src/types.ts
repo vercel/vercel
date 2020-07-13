@@ -83,6 +83,16 @@ export type Domain = {
   };
 };
 
+export type DomainConfig = {
+  configuredBy: null | 'CNAME' | 'A' | 'http';
+  misconfigured: boolean;
+  serviceType: 'zeit.world' | 'external' | 'na';
+  nameservers: string[];
+  cnames: string[] & { traceString?: string };
+  aValues: string[] & { traceString?: string };
+  dnssecEnabled?: boolean;
+};
+
 export type Cert = {
   uid: string;
   autoRenew: boolean;

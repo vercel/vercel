@@ -12,6 +12,8 @@ import formatTable from '../../util/format-table';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import { getCommandName } from '../../util/pkg-name';
+import { getDomainConfig } from '../../util/domains/get-domain-config';
+import code from '../../util/output/code';
 
 type Options = {
   '--debug': boolean;
@@ -96,6 +98,8 @@ export default async function inspect(
     return 1;
   }
 
+  const domainConfig = await getDomainConfig(client, contextName, domainName);
+
   output.log(
     `Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(
       inspectStamp()
@@ -154,12 +158,19 @@ export default async function inspect(
   );
   output.print('\n');
 
-  if (!domain.verified) {
-    output.warn(`This domain is not verified. `);
+  if (domainConfig.misconfigured) {
+    output.warn(
+      `This domain is not configured properly. To configure it you should either:`
+    );
     output.print(
-      `  To verify it you should, change your domain nameservers to the intended set detailed above. ${chalk.gray(
-        '[recommended]'
-      )}\n`
+      `  ${chalk.grey('a)')} ` +
+        `Set the following record on your DNS provider to continue: ` +
+        `${code(`A ${domainName} 76.76.21.21`)} ` +
+        `${chalk.grey('[recommended]')}\n`
+    );
+    output.print(
+      `  ${chalk.grey('b)')} ` +
+        `Change your domain nameservers to the intended set detailed above.\n\n`
     );
     output.print(
       `  We will run a verification for you and you will receive an email upon completion.\n`

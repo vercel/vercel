@@ -13,8 +13,10 @@ import { getCommandName } from '../../util/pkg-name';
 import { getDomain } from '../../util/domains/get-domain';
 import { getLinkedProject } from '../../util/projects/link';
 import { isPublicSuffix } from '../../util/domains/is-public-suffix';
+import { getDomainConfig } from '../../util/domains/get-domain-config';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
+import code from '../../util/output/code';
 
 type Options = {
   '--debug': boolean;
@@ -142,10 +144,21 @@ export default async function add(
     return 1;
   }
 
-  if (!domainResponse.verified) {
+  const domainConfig = await getDomainConfig(client, contextName, domainName);
+
+  if (domainConfig.misconfigured) {
     output.warn(
-      `The domain was added but it is not verified. ` +
-        `To verify it, you should change your domain nameservers to the following intended set`
+      `This domain is not configured properly. To configure it you should either:`
+    );
+    output.print(
+      `  ${chalk.grey('a)')} ` +
+        `Set the following record on your DNS provider to continue: ` +
+        `${code(`A ${domainName} 76.76.21.21`)} ` +
+        `${chalk.grey('[recommended]')}\n`
+    );
+    output.print(
+      `  ${chalk.grey('b)')} ` +
+        `Change your domain nameservers to the intended set`
     );
     output.print(
       `\n${formatNSTable(
@@ -157,7 +170,7 @@ export default async function add(
     output.print(
       `  We will run a verification for you and you will receive an email upon completion.\n`
     );
-    output.print('  Read more: https://err.sh/now/domain-verification\n\n');
+    output.print('  Read more: https://vercel.link/domain-configuration\n\n');
   } else {
     output.log(
       `The domain will automatically get assigned to your latest production deployment.`
