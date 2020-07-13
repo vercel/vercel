@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import psl from 'psl';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
@@ -8,7 +7,6 @@ import Client from '../../util/client';
 import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import { getDomain } from '../../util/domains/get-domain';
 import { getLinkedProject } from '../../util/projects/link';
@@ -75,20 +73,6 @@ export default async function add(
 
   const domainName = String(args[0]);
   const projectName = project ? project.name : String(args[1]);
-
-  const parsedDomain = psl.parse(domainName);
-
-  if (parsedDomain.error) {
-    output.error(`The provided domain name ${param(domainName)} is invalid.`);
-    return 1;
-  }
-
-  const { domain } = parsedDomain;
-
-  if (!domain) {
-    output.error(`The provided domain '${param(domainName)}' is not valid.`);
-    return 1;
-  }
 
   const addStamp = stamp();
 
