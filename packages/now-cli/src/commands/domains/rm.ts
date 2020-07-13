@@ -68,7 +68,7 @@ export default async function rm(
   }
 
   const domain = await getDomainByName(client, contextName, domainName);
-  if (domain instanceof DomainNotFound) {
+  if (domain instanceof DomainNotFound || domain.name !== domainName) {
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
