@@ -96,6 +96,10 @@ export default async function rm(
         true
       )}.`
     );
+    for (const project of projects) {
+      output.print(` - ${chalk.bold(project.name)}\n`);
+    }
+    output.print('\n');
   }
 
   const skipConfirmation = opts['--yes'];
