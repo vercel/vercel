@@ -1,18 +1,17 @@
 import test from 'ava';
 import { validateConfig } from '../src/util/dev/validate';
 
-test('[dev-validate] should not error with empty config', async t => {
+test('[dev-validate] should not error with empty config', async (t) => {
   const config = {};
   const error = validateConfig(config);
   t.deepEqual(error, null);
 });
 
-test('[dev-validate] should not error with complete config', async t => {
+test('[dev-validate] should not error with complete config', async (t) => {
   const config = {
     version: 2,
     public: true,
     regions: ['sfo1', 'iad1'],
-    builds: [{ src: 'package.json', use: '@vercel/next' }],
     cleanUrls: true,
     headers: [{ source: '/', headers: [{ key: 'x-id', value: '123' }] }],
     rewrites: [{ source: '/help', destination: '/support' }],
@@ -24,7 +23,7 @@ test('[dev-validate] should not error with complete config', async t => {
   t.deepEqual(error, null);
 });
 
-test('[dev-validate] should not error with builds and routes', async t => {
+test('[dev-validate] should not error with builds and routes', async (t) => {
   const config = {
     builds: [{ src: 'api/index.js', use: '@vercel/node' }],
     routes: [{ src: '/(.*)', dest: '/api/index.js' }],
@@ -33,7 +32,7 @@ test('[dev-validate] should not error with builds and routes', async t => {
   t.deepEqual(error, null);
 });
 
-test('[dev-validate] should error with invalid rewrites due to additional property and offer suggestion', async t => {
+test('[dev-validate] should error with invalid rewrites due to additional property and offer suggestion', async (t) => {
   const config = {
     rewrites: [{ src: '/(.*)', dest: '/api/index.js' }],
   };
@@ -48,7 +47,7 @@ test('[dev-validate] should error with invalid rewrites due to additional proper
   );
 });
 
-test('[dev-validate] should error with invalid routes due to additional property and offer suggestion', async t => {
+test('[dev-validate] should error with invalid routes due to additional property and offer suggestion', async (t) => {
   const config = {
     routes: [{ source: '/(.*)', destination: '/api/index.js' }],
   };
@@ -63,7 +62,7 @@ test('[dev-validate] should error with invalid routes due to additional property
   );
 });
 
-test('[dev-validate] should error with invalid routes array type', async t => {
+test('[dev-validate] should error with invalid routes array type', async (t) => {
   const config = {
     routes: { src: '/(.*)', dest: '/api/index.js' },
   };
@@ -75,7 +74,7 @@ test('[dev-validate] should error with invalid routes array type', async t => {
   );
 });
 
-test('[dev-validate] should error with invalid redirects array object', async t => {
+test('[dev-validate] should error with invalid redirects array object', async (t) => {
   const config = {
     redirects: [
       {
@@ -94,7 +93,7 @@ test('[dev-validate] should error with invalid redirects array object', async t 
   );
 });
 
-test('[dev-validate] should error with invalid redirects.permanent poperty', async t => {
+test('[dev-validate] should error with invalid redirects.permanent poperty', async (t) => {
   const config = {
     redirects: [{ source: '/', destination: '/go', permanent: 'yes' }],
   };
@@ -109,7 +108,7 @@ test('[dev-validate] should error with invalid redirects.permanent poperty', asy
   );
 });
 
-test('[dev-validate] should error with invalid cleanUrls type', async t => {
+test('[dev-validate] should error with invalid cleanUrls type', async (t) => {
   const config = {
     cleanUrls: 'true',
   };
@@ -124,7 +123,7 @@ test('[dev-validate] should error with invalid cleanUrls type', async t => {
   );
 });
 
-test('[dev-validate] should error with invalid trailingSlash type', async t => {
+test('[dev-validate] should error with invalid trailingSlash type', async (t) => {
   const config = {
     trailingSlash: [true],
   };
@@ -139,7 +138,7 @@ test('[dev-validate] should error with invalid trailingSlash type', async t => {
   );
 });
 
-test('[dev-validate] should error with invalid headers property', async t => {
+test('[dev-validate] should error with invalid headers property', async (t) => {
   const config = {
     headers: [{ 'Content-Type': 'text/html' }],
   };
@@ -154,7 +153,7 @@ test('[dev-validate] should error with invalid headers property', async t => {
   );
 });
 
-test('[dev-validate] should error with invalid headers.source type', async t => {
+test('[dev-validate] should error with invalid headers.source type', async (t) => {
   const config = {
     headers: [{ source: [{ 'Content-Type': 'text/html' }] }],
   };
@@ -169,7 +168,7 @@ test('[dev-validate] should error with invalid headers.source type', async t => 
   );
 });
 
-test('[dev-validate] should error with invalid headers additional property', async t => {
+test('[dev-validate] should error with invalid headers additional property', async (t) => {
   const config = {
     headers: [{ source: '/', stuff: [{ 'Content-Type': 'text/html' }] }],
   };
@@ -184,7 +183,7 @@ test('[dev-validate] should error with invalid headers additional property', asy
   );
 });
 
-test('[dev-validate] should error with invalid headers wrong nested headers type', async t => {
+test('[dev-validate] should error with invalid headers wrong nested headers type', async (t) => {
   const config = {
     headers: [{ source: '/', headers: [{ 'Content-Type': 'text/html' }] }],
   };
@@ -199,7 +198,7 @@ test('[dev-validate] should error with invalid headers wrong nested headers type
   );
 });
 
-test('[dev-validate] should error with invalid headers wrong nested headers additional property', async t => {
+test('[dev-validate] should error with invalid headers wrong nested headers additional property', async (t) => {
   const config = {
     headers: [
       { source: '/', headers: [{ key: 'Content-Type', val: 'text/html' }] },
@@ -216,7 +215,7 @@ test('[dev-validate] should error with invalid headers wrong nested headers addi
   );
 });
 
-test('[dev-validate] should error with too many redirects', async t => {
+test('[dev-validate] should error with too many redirects', async (t) => {
   const config = {
     redirects: Array.from({ length: 5000 }).map((_, i) => ({
       source: `/${i}`,
@@ -234,7 +233,7 @@ test('[dev-validate] should error with too many redirects', async t => {
   );
 });
 
-test('[dev-validate] should error with too many nested headers', async t => {
+test('[dev-validate] should error with too many nested headers', async (t) => {
   const config = {
     headers: [
       {
@@ -259,4 +258,26 @@ test('[dev-validate] should error with too many nested headers', async t => {
     error.link,
     'https://vercel.com/docs/configuration#project/headers'
   );
+});
+
+test('[dev-validate] should error with "functions" and "builds"', async (t) => {
+  const config = {
+    builds: [
+      {
+        src: 'index.html',
+        use: '@vercel/static',
+      },
+    ],
+    functions: {
+      'api/test.js': {
+        memory: 1024,
+      },
+    },
+  };
+  const error = validateConfig(config);
+  t.deepEqual(
+    error.message,
+    'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.'
+  );
+  t.deepEqual(error.link, 'https://vercel.link/functions-and-builds');
 });

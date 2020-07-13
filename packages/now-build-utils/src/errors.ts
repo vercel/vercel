@@ -34,7 +34,7 @@ interface Props {
    */
   link?: string;
   /**
-   * Optional "action" to display before the `link`, such as "More details".
+   * Optional "action" to display before the `link`, such as "Learn More".
    */
   action?: string;
 }
