@@ -137,6 +137,7 @@ async function getPackedBuilderPath(builderDirName) {
 
 async function testPath(
   t,
+  isDev,
   origin,
   status,
   path,
@@ -156,7 +157,7 @@ async function testPath(
     t.is(actualText.trim(), expectedText.trim(), msg);
   } else if (typeof expectedText === 'function') {
     const actualText = await res.text();
-    expectedText(t, actualText, res);
+    await expectedText(t, actualText, res, isDev);
   } else if (expectedText instanceof RegExp) {
     const actualText = await res.text();
     expectedText.lastIndex = 0; // reset since we test twice
@@ -346,9 +347,9 @@ function testFixtureStdio(
 
       const helperTestPath = async (...args) => {
         if (!skipDeploy) {
-          await testPath(t, `https://${deploymentUrl}`, ...args);
+          await testPath(t, false, `https://${deploymentUrl}`, ...args);
         }
-        await testPath(t, `http://localhost:${port}`, ...args);
+        await testPath(t, true, `http://localhost:${port}`, ...args);
       };
       await fn(helperTestPath, t, port);
     } finally {
@@ -1656,7 +1657,7 @@ test(
       '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}'
     );
 
-    await testPath(200, `/api/dump`, (t, body, res) => {
+    await testPath(200, `/api/dump`, (t, body, res, isDev) => {
       const { host } = new URL(res.url);
       const { env, headers } = JSON.parse(body);
 
@@ -1667,11 +1668,14 @@ test(
       t.truthy(isIP(headers['x-forwarded-for']));
       t.truthy(isIP(headers['x-vercel-forwarded-for']));
 
-      // Test that the API endpoint has the Vercel platform env vars defined
+      // Test that the API endpoint has the Vercel platform env vars defined.
       t.is(env.NOW_URL, host);
-      t.is(env.NOW_REGION, 'dev1');
-      t.is(env.VERCEL_URL, host);
-      t.is(env.VERCEL_REGION, 'dev1');
+      if (isDev) {
+        // Only dev is tested because in production these are opt-in.
+        t.is(env.NOW_REGION, 'dev1');
+        t.is(env.VERCEL_URL, host);
+        t.is(env.VERCEL_REGION, 'dev1');
+      }
     });
   })
 );
