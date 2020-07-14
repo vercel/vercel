@@ -141,13 +141,25 @@ export async function getLinkedProject(
   }
 
   const spinner = output.spinner('Retrieving project…', 1000);
-  let org: Org | null;
-  let project: Project | ProjectNotFound | null;
+  let org: Org | null = null;
+  let project: Project | ProjectNotFound | null = null;
   try {
     [org, project] = await Promise.all([
       getOrgById(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
+  } catch (err) {
+    if (err?.status === 403) {
+      spinner();
+      throw new NowBuildError({
+        message: `Could not retrieve Project Settings. To link your project, remove the .vercel directory and deploy again.`,
+        code: 'PROJECT_UNAUTHORIZED',
+        link: 'https://vercel.link/cannot-load-project-settings',
+      });
+    }
+
+    // Not a special case 403, we should still throw it
+    throw err;
   } finally {
     spinner();
   }
