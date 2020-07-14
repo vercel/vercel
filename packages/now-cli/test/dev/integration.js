@@ -2,6 +2,7 @@ import ms from 'ms';
 import os from 'os';
 import fs from 'fs-extra';
 import test from 'ava';
+import { isIP } from 'net';
 import { join, resolve, delimiter } from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
@@ -1654,6 +1655,17 @@ test(
       `/api/array`,
       '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}'
     );
-    await testPath(200, `/api/headers`, /"x-vercel-deployment-url"/);
+
+    // Test that the API endpoint receives the Vercel proxy request headers
+    await testPath(200, `/api/headers`, (t, body, res) => {
+      const { host } = new URL(res.url);
+      const { headers } = JSON.parse(body);
+      console.log({ headers });
+      t.is(headers['x-forwarded-host'], host);
+      t.is(headers['x-vercel-deployment-url'], host);
+      t.truthy(isIP(headers['x-real-ip']));
+      t.truthy(isIP(headers['x-forwarded-for']));
+      t.truthy(isIP(headers['x-vercel-forwarded-for']));
+    });
   })
 );
