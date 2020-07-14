@@ -153,6 +153,9 @@ async function testPath(
   if (typeof expectedText === 'string') {
     const actualText = await res.text();
     t.is(actualText.trim(), expectedText.trim(), msg);
+  } else if (typeof expectedText === 'function') {
+    const actualText = await res.text();
+    expectedText(t, actualText, res);
   } else if (expectedText instanceof RegExp) {
     const actualText = await res.text();
     expectedText.lastIndex = 0; // reset since we test twice
@@ -1581,6 +1584,10 @@ test(
     await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/headers`, (t, body, res) => {
+      const { host } = new URL(res.url);
+      t.is(body, host);
+    });
   })
 );
 
