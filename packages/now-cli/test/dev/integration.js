@@ -1669,10 +1669,10 @@ test(
       t.truthy(isIP(headers['x-vercel-forwarded-for']));
 
       // Test that the API endpoint has the Vercel platform env vars defined.
-      t.is(env.NOW_URL, host);
+      t.is(env.NOW_REGION, 'dev1');
       if (isDev) {
         // Only dev is tested because in production these are opt-in.
-        t.is(env.NOW_REGION, 'dev1');
+        t.is(env.NOW_URL, host);
         t.is(env.VERCEL_URL, host);
         t.is(env.VERCEL_REGION, 'dev1');
       }
