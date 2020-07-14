@@ -1576,7 +1576,7 @@ export const build = async ({
       ...mappedFiles,
       [path.join(
         entryDirectory,
-        file.replace(/public[/\\]+/, '')
+        file.replace(/^public[/\\]+/, '')
       )]: publicFolderFiles[file],
     }),
     {}

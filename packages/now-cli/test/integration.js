@@ -3067,3 +3067,24 @@ test('deploy gatsby twice and print cached directories', async t => {
     await writeFile(packageJsonPath, packageJsonOriginal);
   }
 });
+
+test('reject deploying with wrong team .vercel config', async t => {
+  const directory = fixture('unauthorized-vercel-config');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+  t.true(
+    stderr.includes(
+      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
+    ),
+    formatOutput({ stderr, stdout })
+  );
+});

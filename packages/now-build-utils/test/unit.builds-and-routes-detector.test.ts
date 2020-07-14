@@ -775,8 +775,9 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toEqual([
       {
         code: 'unused_function',
-        message:
-          "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
+        message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
       },
     ]);
   });
@@ -1878,8 +1879,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toEqual([
       {
         code: 'unused_function',
-        message:
-          "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
+        message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
       },
     ]);
   });
