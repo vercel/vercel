@@ -1657,11 +1657,10 @@ test(
     );
 
     await testPath(200, `/api/dump`, (t, body, res) => {
+      const { host } = new URL(res.url);
       const { env, headers } = JSON.parse(body);
 
       // Test that the API endpoint receives the Vercel proxy request headers
-      const { host } = new URL(res.url);
-      console.log({ headers });
       t.is(headers['x-forwarded-host'], host);
       t.is(headers['x-vercel-deployment-url'], host);
       t.truthy(isIP(headers['x-real-ip']));
@@ -1669,10 +1668,10 @@ test(
       t.truthy(isIP(headers['x-vercel-forwarded-for']));
 
       // Test that the API endpoint has the Vercel platform env vars defined
-      t.is(typeof env.NOW_URL, 'string');
-      t.is(typeof env.NOW_REGION, 'string');
-      t.is(typeof env.VERCEL_URL, 'string');
-      t.is(typeof env.VERCEL_REGION, 'string');
+      t.is(env.NOW_URL, host);
+      t.is(env.NOW_REGION, 'dev1');
+      t.is(env.VERCEL_URL, host);
+      t.is(env.VERCEL_REGION, 'dev1');
     });
   })
 );
