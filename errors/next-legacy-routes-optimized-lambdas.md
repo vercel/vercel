@@ -7,7 +7,7 @@ When legacy `routes` are added in `now.json` or `vercel.json`, they cause confli
 
 #### Possible Ways to Fix It
 
-Migrate from using legacy `routes` to the new `rewrites`, `redirects`, and `headers` configurations in your `now.json` or `vercel.json` file or leverage them directly in your `next.config.js` with the built-in [custom routes support](https://github.com/zeit/next.js/issues/9081)
+Migrate from using legacy `routes` to the new `rewrites`, `redirects`, and `headers` configurations in your `now.json` or `vercel.json` file or leverage them directly in your `next.config.js` with the built-in [custom routes support](https://github.com/zeit/next.js/issues/9081) under the `experimental` key.
 
 ### Useful Links
 
