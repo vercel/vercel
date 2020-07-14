@@ -6,7 +6,7 @@
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
   "scripts": {
     "build": "./build.sh",
-    "test-unit": "jest --env node --verbose --runInBand --bail test/unit/*test.js",
+    "test-unit": "jest --env node --verbose --runInBand --bail test/unit/*.test.js",
     "test-integration-once": "jest --env node --verbose --runInBand --bail test/test.js",
     "prepublishOnly": "./build.sh"
   },
