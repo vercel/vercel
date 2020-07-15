@@ -3188,7 +3188,7 @@ test('reject deploying with wrong team .vercel config', async t => {
   t.is(exitCode, 1, formatOutput({ stderr, stdout }));
   t.true(
     stderr.includes(
-      'Could not retrieve Project Settings. To link your project, remove the .vercel directory and deploy again.'
+      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
     ),
     formatOutput({ stderr, stdout })
   );
