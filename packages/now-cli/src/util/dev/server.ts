@@ -485,7 +485,17 @@ export default class DevServer {
       }
     }
     try {
-      return this.validateEnvConfig(fileName, base || {}, env);
+      let host = '';
+      if (this.address) {
+        host = new URL(this.address).host;
+      }
+      return {
+        ...this.validateEnvConfig(fileName, base || {}, env),
+        NOW_REGION: 'dev1',
+        NOW_URL: host,
+        VERCEL_REGION: 'dev1',
+        VERCEL_URL: host,
+      };
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
         this.output.error(err.message);
@@ -1904,8 +1914,6 @@ export default class DevServer {
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
       ...this.envConfigs.allEnv,
-      NOW_REGION: 'dev1',
-      VERCEL_REGION: 'dev1',
       PORT: `${port}`,
     };
 
