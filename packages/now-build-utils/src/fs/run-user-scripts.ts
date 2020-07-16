@@ -183,10 +183,14 @@ export async function getNodeVersion(
   return getSupportedNodeVersion(range, isAuto);
 }
 
-async function scanParentDirs(destPath: string, readPackageJson = false) {
+export type CliType = 'yarn' | 'npm';
+
+export async function scanParentDirs(
+  destPath: string,
+  readPackageJson = false
+) {
   assert(path.isAbsolute(destPath));
 
-  type CliType = 'yarn' | 'npm';
   let cliType: CliType = 'yarn';
   let packageJson: PackageJson | undefined;
   let currentDestPath = destPath;
@@ -349,20 +353,43 @@ export async function runPipInstall(
   );
 }
 
+function getScriptName(
+  baseScriptName: string,
+  pkg?: PackageJson
+): string | null {
+  if (pkg && pkg.scripts) {
+    const vercelScriptName = `vercel-${baseScriptName}`;
+    if (vercelScriptName in pkg.scripts) {
+      return vercelScriptName;
+    }
+
+    const nowScriptName = `now-${baseScriptName}`;
+    if (nowScriptName in pkg.scripts) {
+      return nowScriptName;
+    }
+
+    if (baseScriptName in pkg.scripts) {
+      return baseScriptName;
+    }
+  }
+
+  return null;
+}
+
 export async function runPackageJsonScript(
   destPath: string,
-  scriptName: string,
+  baseScriptName: string,
   spawnOpts?: SpawnOptions
 ) {
   assert(path.isAbsolute(destPath));
   const { packageJson, cliType } = await scanParentDirs(destPath, true);
-  const hasScript = Boolean(
-    packageJson &&
-      packageJson.scripts &&
-      scriptName &&
-      packageJson.scripts[scriptName]
-  );
-  if (!hasScript) return false;
+  const scriptName = getScriptName(baseScriptName, packageJson);
+  console.error({ scriptName });
+
+  if (!scriptName) return false;
+
+  debug('Running user script...');
+  const runScriptTime = Date.now();
 
   if (cliType === 'npm') {
     const prettyCommand = `npm run ${scriptName}`;
@@ -382,6 +409,7 @@ export async function runPackageJsonScript(
     });
   }
 
+  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
   return true;
 }
 
