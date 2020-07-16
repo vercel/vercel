@@ -353,9 +353,9 @@ export async function runPipInstall(
   );
 }
 
-function getScriptName(
+export function getScriptName(
   baseScriptName: string,
-  pkg?: PackageJson
+  pkg?: Pick<PackageJson, 'scripts'>
 ): string | null {
   if (pkg && pkg.scripts) {
     const vercelScriptName = `vercel-${baseScriptName}`;
