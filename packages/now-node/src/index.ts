@@ -361,7 +361,10 @@ export async function build({
     meta,
   });
 
-  await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
+  await runPackageJsonScript(entrypointFsDirname, 'build', {
+    ...spawnOpts,
+    allowPlatformName: true,
+  });
 
   debug('Tracing input files...');
   const traceTime = Date.now();

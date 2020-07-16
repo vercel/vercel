@@ -438,7 +438,10 @@ export async function build({
               ...spawnOpts,
               cwd: entrypointDir,
             })
-          : await runPackageJsonScript(entrypointDir, 'build', spawnOpts);
+          : await runPackageJsonScript(entrypointDir, 'build', {
+              ...spawnOpts,
+              allowPlatformName: true,
+            });
 
       if (!found) {
         throw new Error(

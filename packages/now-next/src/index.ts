@@ -336,7 +336,9 @@ export const build = async ({
     await writePackageJson(entryPath, packageJson);
   }
 
-  const buildScriptName = getScriptName('build', pkg);
+  const buildScriptName = getScriptName('build', pkg, {
+    allowPlatformName: true,
+  });
   let { buildCommand } = config;
 
   if (!buildScriptName && !buildCommand) {
