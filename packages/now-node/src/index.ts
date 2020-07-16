@@ -361,12 +361,12 @@ export async function build({
     meta,
   });
 
-  await runPackageJsonScript(entrypointFsDirname, 'build', {
-    ...spawnOpts,
-    // Check for only "vercel-build" or "now-build", but not "build"
-    allowPlatformName: true,
-    allowBaseName: false,
-  });
+  await runPackageJsonScript(
+    entrypointFsDirname,
+    // Don't consider "build" script since its intended for frontend code
+    ['vercel-build', 'now-build'],
+    spawnOpts
+  );
 
   debug('Tracing input files...');
   const traceTime = Date.now();

@@ -353,49 +353,31 @@ export async function runPipInstall(
   );
 }
 
-export interface GetScriptNameOptions {
-  allowBaseName?: boolean;
-  allowPlatformName?: boolean;
-}
-
 export function getScriptName(
-  baseScriptName: string,
-  pkg?: Pick<PackageJson, 'scripts'>,
-  opts?: GetScriptNameOptions
+  pkg: Pick<PackageJson, 'scripts'> | null | undefined,
+  possibleNames: Iterable<string>
 ): string | null {
   if (pkg && pkg.scripts) {
-    if (opts && opts.allowPlatformName) {
-      const vercelScriptName = `vercel-${baseScriptName}`;
-      if (vercelScriptName in pkg.scripts) {
-        return vercelScriptName;
-      }
-
-      const nowScriptName = `now-${baseScriptName}`;
-      if (nowScriptName in pkg.scripts) {
-        return nowScriptName;
-      }
-    }
-
-    if (!opts || opts.allowBaseName !== false) {
-      if (baseScriptName in pkg.scripts) {
-        return baseScriptName;
+    for (const name of possibleNames) {
+      if (name in pkg.scripts) {
+        return name;
       }
     }
   }
-
   return null;
 }
 
-export type RunPackageJsonScriptOptions = GetScriptNameOptions & SpawnOptions;
-
 export async function runPackageJsonScript(
   destPath: string,
-  baseScriptName: string,
-  spawnOpts?: RunPackageJsonScriptOptions
+  scriptNames: string | Iterable<string>,
+  spawnOpts?: SpawnOptions
 ) {
   assert(path.isAbsolute(destPath));
   const { packageJson, cliType } = await scanParentDirs(destPath, true);
-  const scriptName = getScriptName(baseScriptName, packageJson, spawnOpts);
+  const scriptName = getScriptName(
+    packageJson,
+    typeof scriptNames === 'string' ? [scriptNames] : scriptNames
+  );
   if (!scriptName) return false;
 
   debug('Running user script...');

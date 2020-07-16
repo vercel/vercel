@@ -438,10 +438,11 @@ export async function build({
               ...spawnOpts,
               cwd: entrypointDir,
             })
-          : await runPackageJsonScript(entrypointDir, 'build', {
-              ...spawnOpts,
-              allowPlatformName: true,
-            });
+          : await runPackageJsonScript(
+              entrypointDir,
+              ['vercel-build', 'now-build', 'build'],
+              spawnOpts
+            );
 
       if (!found) {
         throw new Error(

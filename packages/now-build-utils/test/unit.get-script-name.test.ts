@@ -12,15 +12,15 @@ describe('Test `getScriptName()`', () => {
       },
     };
     assert.equal(
-      getScriptName('dev', pkg, { allowPlatformName: true }),
+      getScriptName(pkg, ['vercel-dev', 'now-dev', 'dev']),
       'vercel-dev'
     );
     assert.equal(
-      getScriptName('build', pkg, { allowPlatformName: true }),
+      getScriptName(pkg, ['vercel-build', 'now-build', 'build']),
       'vercel-build'
     );
-    assert.equal(getScriptName('dev', pkg), 'dev');
-    assert.equal(getScriptName('build', pkg), 'build');
+    assert.equal(getScriptName(pkg, ['dev']), 'dev');
+    assert.equal(getScriptName(pkg, ['build']), 'build');
   });
 
   it('should return "now-*"', () => {
@@ -33,15 +33,15 @@ describe('Test `getScriptName()`', () => {
       },
     };
     assert.equal(
-      getScriptName('dev', pkg, { allowPlatformName: true }),
+      getScriptName(pkg, ['vercel-dev', 'now-dev', 'dev']),
       'now-dev'
     );
     assert.equal(
-      getScriptName('build', pkg, { allowPlatformName: true }),
+      getScriptName(pkg, ['vercel-build', 'now-build', 'build']),
       'now-build'
     );
-    assert.equal(getScriptName('dev', pkg), 'dev');
-    assert.equal(getScriptName('build', pkg), 'build');
+    assert.equal(getScriptName(pkg, ['dev']), 'dev');
+    assert.equal(getScriptName(pkg, ['build']), 'build');
   });
 
   it('should return base script name', () => {
@@ -51,19 +51,14 @@ describe('Test `getScriptName()`', () => {
         build: '',
       },
     };
-    assert.equal(getScriptName('dev', pkg, { allowPlatformName: true }), 'dev');
-    assert.equal(
-      getScriptName('build', pkg, { allowPlatformName: true }),
-      'build'
-    );
-    assert.equal(getScriptName('dev', pkg), 'dev');
-    assert.equal(getScriptName('build', pkg), 'build');
+    assert.equal(getScriptName(pkg, ['dev']), 'dev');
+    assert.equal(getScriptName(pkg, ['build']), 'build');
   });
 
   it('should return `null`', () => {
-    assert.equal(getScriptName('build', undefined), null);
-    assert.equal(getScriptName('build', {}), null);
-    assert.equal(getScriptName('build', { scripts: {} }), null);
+    assert.equal(getScriptName(undefined, ['build']), null);
+    assert.equal(getScriptName({}, ['build']), null);
+    assert.equal(getScriptName({ scripts: {} }, ['build']), null);
 
     const pkg = {
       scripts: {
@@ -71,7 +66,7 @@ describe('Test `getScriptName()`', () => {
         build: '',
       },
     };
-    assert.equal(getScriptName('dev', pkg, { allowBaseName: false }), null);
-    assert.equal(getScriptName('build', pkg, { allowBaseName: false }), null);
+    assert.equal(getScriptName(pkg, ['vercel-dev', 'now-dev']), null);
+    assert.equal(getScriptName(pkg, ['vercel-build', 'now-build']), null);
   });
 });

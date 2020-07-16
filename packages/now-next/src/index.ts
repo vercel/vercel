@@ -336,9 +336,11 @@ export const build = async ({
     await writePackageJson(entryPath, packageJson);
   }
 
-  const buildScriptName = getScriptName('build', pkg, {
-    allowPlatformName: true,
-  });
+  const buildScriptName = getScriptName(pkg, [
+    'vercel-build',
+    'now-build',
+    'build',
+  ]);
   let { buildCommand } = config;
 
   if (!buildScriptName && !buildCommand) {
