@@ -384,8 +384,6 @@ export async function runPackageJsonScript(
   assert(path.isAbsolute(destPath));
   const { packageJson, cliType } = await scanParentDirs(destPath, true);
   const scriptName = getScriptName(baseScriptName, packageJson);
-  console.error({ scriptName });
-
   if (!scriptName) return false;
 
   debug('Running user script...');
