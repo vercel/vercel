@@ -264,7 +264,6 @@ export async function build({
   const pkg = getPkg(entrypoint, workPath);
 
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
-  const buildScript = pkg ? getScriptName(pkg, 'build', config) : null;
 
   const framework = getFramework(config, pkg);
 
@@ -431,8 +430,6 @@ export async function build({
 
       if (buildCommand) {
         debug(`Executing "${buildCommand}"`);
-      } else {
-        debug(`Running "${buildScript}" in "${entrypoint}"`);
       }
 
       const found =
@@ -441,12 +438,12 @@ export async function build({
               ...spawnOpts,
               cwd: entrypointDir,
             })
-          : await runPackageJsonScript(entrypointDir, buildScript!, spawnOpts);
+          : await runPackageJsonScript(entrypointDir, 'build', spawnOpts);
 
       if (!found) {
         throw new Error(
           `Missing required "${
-            buildCommand || buildScript
+            buildCommand || 'build'
           }" script in "${entrypoint}"`
         );
       }
