@@ -183,14 +183,10 @@ export async function getNodeVersion(
   return getSupportedNodeVersion(range, isAuto);
 }
 
-export type CliType = 'yarn' | 'npm';
-
-export async function scanParentDirs(
-  destPath: string,
-  readPackageJson = false
-) {
+async function scanParentDirs(destPath: string, readPackageJson = false) {
   assert(path.isAbsolute(destPath));
 
+  type CliType = 'yarn' | 'npm';
   let cliType: CliType = 'yarn';
   let packageJson: PackageJson | undefined;
   let currentDestPath = destPath;
