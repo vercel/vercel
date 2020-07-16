@@ -7,6 +7,7 @@ const {
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getSpawnOptions,
+  getScriptName,
   glob,
   runNpmInstall,
   runPackageJsonScript,
@@ -35,13 +36,7 @@ import {
 import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import escapeStringRegexp from 'escape-string-regexp';
-import {
-  lstat,
-  pathExists,
-  readFile,
-  unlink as unlinkFile,
-  writeFile,
-} from 'fs-extra';
+import { lstat, pathExists, readFile, remove, writeFile } from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
@@ -91,7 +86,7 @@ export const version = 2;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
 
-['SIGINT', 'SIGTERM'].forEach((signal) => {
+['SIGINT', 'SIGTERM'].forEach(signal => {
   process.once(signal as NodeJS.Signals, () => {
     for (const child of nowDevChildProcesses) {
       debug(
@@ -108,13 +103,7 @@ const MAX_AGE_ONE_YEAR = 31536000;
 /**
  * Read package.json from files
  */
-async function readPackageJson(
-  entryPath: string
-): Promise<{
-  scripts?: { [key: string]: string };
-  dependencies?: { [key: string]: string };
-  devDependencies?: { [key: string]: string };
-}> {
+async function readPackageJson(entryPath: string): Promise<PackageJson> {
   const packagePath = path.join(entryPath, 'package.json');
 
   try {
@@ -329,49 +318,34 @@ export const build = async ({
   }
 
   const isLegacy = nextVersionRange && isLegacyNext(nextVersionRange);
-  let shouldRunScript = 'now-build';
-
   debug(`MODE: ${isLegacy ? 'legacy' : 'serverless'}`);
 
   if (isLegacy) {
-    try {
-      await unlinkFile(path.join(entryPath, 'yarn.lock'));
-    } catch (err) {
-      debug('no yarn.lock removed');
-    }
-
-    try {
-      await unlinkFile(path.join(entryPath, 'package-lock.json'));
-    } catch (err) {
-      debug('no package-lock.json removed');
-    }
-
     console.warn(
       "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/vercel/vercel/now-next-legacy-mode"
     );
+
+    await Promise.all([
+      remove(path.join(entryPath, 'yarn.lock')),
+      remove(path.join(entryPath, 'package-lock.json')),
+    ]);
 
     debug('Normalizing package.json');
     const packageJson = normalizePackageJson(pkg);
     debug('Normalized package.json result: ', packageJson);
     await writePackageJson(entryPath, packageJson);
-  } else if (pkg.scripts && pkg.scripts['now-build']) {
-    debug('Found user `now-build` script');
-    shouldRunScript = 'now-build';
-  } else if (pkg.scripts && pkg.scripts['build']) {
-    debug('Found user `build` script');
-    shouldRunScript = 'build';
-  } else if (!pkg.scripts || !pkg.scripts['now-build']) {
-    debug(
+  }
+
+  const buildScriptName = getScriptName('build', pkg);
+  let { buildCommand } = config;
+
+  if (!buildScriptName && !buildCommand) {
+    console.log(
       'Your application is being built using `next build`. ' +
-        'If you need to define a different build step, please create a `now-build` script in your `package.json` ' +
-        '(e.g. `{ "scripts": { "now-build": "npm run prepare && next build" } }`).'
+        'If you need to define a different build step, please create a `vercel-build` script in your `package.json` ' +
+        '(e.g. `{ "scripts": { "vercel-build": "npm run prepare && next build" } }`).'
     );
-    pkg.scripts = {
-      'now-build': 'next build',
-      ...(pkg.scripts || {}),
-    };
-    shouldRunScript = 'now-build';
-    await writePackageJson(entryPath, pkg);
+    buildCommand = 'next build';
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
@@ -398,12 +372,11 @@ export const build = async ({
     await createServerlessConfig(workPath, entryPath, nextVersion);
   }
 
-  debug('Running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
   const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
 
-  if (config.buildCommand) {
+  if (buildCommand) {
     // Add `node_modules/.bin` to PATH
     const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
@@ -412,14 +385,14 @@ export const build = async ({
       `Added "${nodeBinPath}" to PATH env because a build command was used.`
     );
 
-    console.log(`Running "${config.buildCommand}"`);
-    await execCommand(config.buildCommand, {
+    console.log(`Running "${buildCommand}"`);
+    await execCommand(buildCommand, {
       ...spawnOpts,
       cwd: entryPath,
       env,
     });
-  } else {
-    await runPackageJsonScript(entryPath, shouldRunScript, {
+  } else if (buildScriptName) {
+    await runPackageJsonScript(entryPath, buildScriptName, {
       ...spawnOpts,
       env,
     });
@@ -485,7 +458,7 @@ export const build = async ({
                 `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
                   dataRoute.routeKeys
                     ? `?${Object.keys(dataRoute.routeKeys)
-                        .map((key) => `${dataRoute.routeKeys![key]}=$${key}`)
+                        .map(key => `${dataRoute.routeKeys![key]}=$${key}`)
                         .join('&')}`
                     : ''
                 }`
@@ -669,7 +642,7 @@ export const build = async ({
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
-    await unlinkFile(path.join(entryPath, '.npmrc'));
+    await remove(path.join(entryPath, '.npmrc'));
   }
 
   const pageLambdaRoutes: Route[] = [];
@@ -716,7 +689,7 @@ export const build = async ({
     );
     const nodeModules = excludeFiles(
       await glob('node_modules/**', entryPath),
-      (file) => file.startsWith('node_modules/.cache')
+      file => file.startsWith('node_modules/.cache')
     );
     const launcherFiles = {
       'now__bridge.js': new FileFsRef({
@@ -745,7 +718,7 @@ export const build = async ({
     const launcherData = await readFile(launcherPath, 'utf8');
 
     await Promise.all(
-      Object.keys(pages).map(async (page) => {
+      Object.keys(pages).map(async page => {
         // These default pages don't have to be handled as they'd always 404
         if (['_app.js', '_error.js', '_document.js'].includes(page)) {
           return;
@@ -903,7 +876,7 @@ export const build = async ({
 
       const apiPages: string[] = [];
       const nonApiPages: string[] = [];
-      const allPagePaths = Object.keys(pages).map((page) => pages[page].fsPath);
+      const allPagePaths = Object.keys(pages).map(page => pages[page].fsPath);
 
       for (const page of allPagePaths) {
         if (isApiPage(page)) {
@@ -996,7 +969,7 @@ export const build = async ({
         debug(
           'detected (legacy) assets to be bundled with serverless function:'
         );
-        assetKeys.forEach((assetFile) => debug(`\t${assetFile}`));
+        assetKeys.forEach(assetFile => debug(`\t${assetFile}`));
         debug(
           '\nPlease upgrade to Next.js 9.1 to leverage modern asset handling.'
         );
@@ -1136,7 +1109,7 @@ export const build = async ({
       }
     } else {
       await Promise.all(
-        pageKeys.map(async (page) => {
+        pageKeys.map(async page => {
           // These default pages don't have to be handled as they'd always 404
           if (['_app.js', '_document.js'].includes(page)) {
             return;
@@ -1217,8 +1190,8 @@ export const build = async ({
       false,
       routesManifest,
       new Set(prerenderManifest.omittedRoutes)
-    ).then((arr) =>
-      arr.map((route) => {
+    ).then(arr =>
+      arr.map(route => {
         route.src = route.src.replace('^', `^${dynamicPrefix}`);
         return route;
       })
@@ -1236,8 +1209,8 @@ export const build = async ({
         dynamicPages,
         false,
         routesManifest
-      ).then((arr) =>
-        arr.map((route) => {
+      ).then(arr =>
+        arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
           return route;
         })
@@ -1257,7 +1230,7 @@ export const build = async ({
                   const pages = {
                     ${groupPageKeys
                       .map(
-                        (page) =>
+                        page =>
                           `'${page}': require('./${path.join(
                             './',
                             group.pages[page].pageFileName
@@ -1302,7 +1275,7 @@ export const build = async ({
                       // for prerendered dynamic routes (/blog/post-1) we need to
                       // find the match since it won't match the page directly
                       const dynamicRoutes = ${JSON.stringify(
-                        completeDynamicRoutes.map((route) => ({
+                        completeDynamicRoutes.map(route => ({
                           src: route.src,
                           dest: route.dest,
                         }))
@@ -1516,13 +1489,13 @@ export const build = async ({
       }
     };
 
-    Object.keys(prerenderManifest.staticRoutes).forEach((route) =>
+    Object.keys(prerenderManifest.staticRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: false, isFallback: false })
     );
-    Object.keys(prerenderManifest.fallbackRoutes).forEach((route) =>
+    Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: false, isFallback: true })
     );
-    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach((route) =>
+    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: true, isFallback: false })
     );
 
@@ -1586,7 +1559,7 @@ export const build = async ({
     // We need to delete lambdas from output instead of omitting them from the
     // start since we rely on them for powering Preview Mode (read above in
     // onPrerenderRoute).
-    prerenderManifest.omittedRoutes.forEach((routeKey) => {
+    prerenderManifest.omittedRoutes.forEach(routeKey => {
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = path.posix.join(
         entryDirectory,
