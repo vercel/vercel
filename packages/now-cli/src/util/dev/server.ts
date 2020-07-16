@@ -485,7 +485,17 @@ export default class DevServer {
       }
     }
     try {
-      return this.validateEnvConfig(fileName, base || {}, env);
+      let host = '';
+      if (this.address) {
+        host = new URL(this.address).host;
+      }
+      return {
+        ...this.validateEnvConfig(fileName, base || {}, env),
+        NOW_REGION: 'dev1',
+        NOW_URL: host,
+        VERCEL_REGION: 'dev1',
+        VERCEL_URL: host,
+      };
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
         this.output.error(err.message);
@@ -1087,10 +1097,7 @@ export default class DevServer {
     const allHeaders = {
       'cache-control': 'public, max-age=0, must-revalidate',
       ...headers,
-      server: 'now',
-      'x-now-trace': 'dev1',
-      'x-now-id': nowRequestId,
-      'x-now-cache': 'MISS',
+      server: 'Vercel',
       'x-vercel-id': nowRequestId,
       'x-vercel-cache': 'MISS',
     };
@@ -1904,8 +1911,6 @@ export default class DevServer {
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
       ...this.envConfigs.allEnv,
-      NOW_REGION: 'dev1',
-      VERCEL_REGION: 'dev1',
       PORT: `${port}`,
     };
 
