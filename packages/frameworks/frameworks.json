@@ -5,7 +5,7 @@
     "demo": "https://blitzjs.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg",
     "tagline": "Blitz.js: The Fullstack React Framework",
-    "description": "A Blitz.js app, created with the `blitz new` command.",
+    "description": "A brand new Blitz.js app - the result of running `npx blitz new`.",
     "website": "https://blitzjs.com",
     "detectors": {
       "every": [
