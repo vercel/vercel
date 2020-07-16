@@ -119,22 +119,6 @@ async function runNpmInstall(fixturePath) {
   }
 }
 
-async function getPackedBuilderPath(builderDirName) {
-  const packagePath = join(__dirname, '..', '..', '..', builderDirName);
-  const output = await execa('npm', ['pack'], {
-    cwd: packagePath,
-    shell: true,
-  });
-
-  if (output.exitCode !== 0 || output.stdout.trim() === '') {
-    throw new Error(
-      `Failed to pack ${builderDirName}: ${formatOutput(output)}`
-    );
-  }
-
-  return join(packagePath, output.stdout.trim());
-}
-
 async function testPath(
   t,
   isDev,
@@ -1484,22 +1468,6 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
 
 test('[vercel dev] do not rebuild for changes in the output directory', async t => {
   const directory = fixture('output-is-source');
-
-  // Pack the builder and set it in the `vercel.json`
-  const builder = await getPackedBuilderPath('now-static-build');
-
-  await fs.writeFile(
-    join(directory, 'vercel.json'),
-    JSON.stringify({
-      builds: [
-        {
-          src: 'package.json',
-          use: `file://${builder}`,
-          config: { zeroConfig: true },
-        },
-      ],
-    })
-  );
 
   const { dev, port } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
