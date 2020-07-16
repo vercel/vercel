@@ -361,10 +361,7 @@ export async function build({
     meta,
   });
 
-  debug('Running user script...');
-  const runScriptTime = Date.now();
-  await runPackageJsonScript(entrypointFsDirname, 'now-build', spawnOpts);
-  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
+  await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
 
   debug('Tracing input files...');
   const traceTime = Date.now();
