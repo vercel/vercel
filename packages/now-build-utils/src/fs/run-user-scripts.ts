@@ -354,6 +354,7 @@ export async function runPipInstall(
 }
 
 export interface GetScriptNameOptions {
+  allowBaseName?: boolean;
   allowPlatformName?: boolean;
 }
 
@@ -375,8 +376,10 @@ export function getScriptName(
       }
     }
 
-    if (baseScriptName in pkg.scripts) {
-      return baseScriptName;
+    if (!opts || opts.allowBaseName !== false) {
+      if (baseScriptName in pkg.scripts) {
+        return baseScriptName;
+      }
     }
   }
 

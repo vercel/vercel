@@ -363,7 +363,9 @@ export async function build({
 
   await runPackageJsonScript(entrypointFsDirname, 'build', {
     ...spawnOpts,
+    // Check for only "vercel-build" or "now-build", but not "build"
     allowPlatformName: true,
+    allowBaseName: false,
   });
 
   debug('Tracing input files...');

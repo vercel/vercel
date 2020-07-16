@@ -64,5 +64,14 @@ describe('Test `getScriptName()`', () => {
     assert.equal(getScriptName('build', undefined), null);
     assert.equal(getScriptName('build', {}), null);
     assert.equal(getScriptName('build', { scripts: {} }), null);
+
+    const pkg = {
+      scripts: {
+        dev: '',
+        build: '',
+      },
+    };
+    assert.equal(getScriptName('dev', pkg, { allowBaseName: false }), null);
+    assert.equal(getScriptName('build', pkg, { allowBaseName: false }), null);
   });
 });
