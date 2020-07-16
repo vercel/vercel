@@ -1097,10 +1097,7 @@ export default class DevServer {
     const allHeaders = {
       'cache-control': 'public, max-age=0, must-revalidate',
       ...headers,
-      server: 'now',
-      'x-now-trace': 'dev1',
-      'x-now-id': nowRequestId,
-      'x-now-cache': 'MISS',
+      server: 'Vercel',
       'x-vercel-id': nowRequestId,
       'x-vercel-cache': 'MISS',
     };
