@@ -1,6 +1,6 @@
 ![Blitz Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/blitz.svg)
 
-This is a [Blitz.js](https://blitzjs.com/) project bootstrapped with `blitz new`.
+This is a [Blitz.js](https://blitzjs.com/) project bootstrapped with `npx blitz new`.
 
 ## Getting Started
 
