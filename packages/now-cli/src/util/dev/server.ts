@@ -1476,9 +1476,9 @@ export default class DevServer {
     const { dest, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
-    Object.entries(headers).forEach(([name, value]) => {
+    for (const [name, value] of Object.entries(headers)) {
       res.setHeader(name, value);
-    });
+    }
 
     if (statusCode) {
       // Set the `statusCode` as read-only so that `http-proxy`
@@ -1501,12 +1501,22 @@ export default class DevServer {
       if (this.devProcessPort) {
         const upstream = `http://localhost:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
+
+        // Mix in the routing based query parameters
+        const parsed = url.parse(req.url || '/', true);
+        Object.assign(parsed.query, uri_args);
+        req.url = url.format({
+          pathname: parsed.pathname,
+          query: parsed.query,
+        });
+
+        // Add the Vercel platform proxy request headers
+        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+        for (const [name, value] of Object.entries(headers)) {
+          req.headers[name] = value;
+        }
+
         this.setResponseHeaders(res, nowRequestId);
-        const origUrl = url.parse(req.url || '/', true);
-        delete origUrl.search;
-        origUrl.pathname = dest;
-        Object.assign(origUrl.query, uri_args);
-        req.url = url.format(origUrl);
         return proxyPass(req, res, upstream, this, nowRequestId, false);
       }
 
@@ -1656,6 +1666,21 @@ export default class DevServer {
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
+
+      // Mix in the routing based query parameters
+      const parsed = url.parse(req.url || '/', true);
+      Object.assign(parsed.query, uri_args);
+      req.url = url.format({
+        pathname: parsed.pathname,
+        query: parsed.query,
+      });
+
+      // Add the Vercel platform proxy request headers
+      const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+      for (const [name, value] of Object.entries(headers)) {
+        req.headers[name] = value;
+      }
+
       this.setResponseHeaders(res, nowRequestId);
       return proxyPass(
         req,
