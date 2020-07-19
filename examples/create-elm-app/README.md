@@ -21,8 +21,8 @@ $ npx create-elm-app my-app
 $ cd my-app
 $ npm init
 $ npm install --save-dev create-elm-app
-& npx dot-json package.json scripts.build "elm-app build"
-& npx dot-json package.json scripts.start "elm-app start"
+$ npx dot-json package.json scripts.build "elm-app build"
+$ npx dot-json package.json scripts.start "elm-app start"
 ```
 
 ### Deploying From Your Terminal
