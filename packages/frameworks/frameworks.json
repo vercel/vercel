@@ -798,6 +798,34 @@
     }
   },
   {
+    "name": "Create Elm App",
+    "slug": "create-elm-app",
+    "demo": "https://create-elm-app.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/elm.svg",
+    "tagline": "Create Elm apps with no build configuration.",
+    "description": "An Elm app, bootstrapped with create-elm-app.",
+    "website": "https://github.com/halfzebra/create-elm-app",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"create-elm-app\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `elm-app build`"
+      },
+      "devCommand": {
+        "value": "elm-app start"
+      },
+      "outputDirectory": {
+        "value": "build"
+      }
+    }
+  },
+  {
     "name": "Other",
     "slug": null,
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/other.svg",

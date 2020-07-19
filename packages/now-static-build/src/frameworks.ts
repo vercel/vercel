@@ -573,6 +573,13 @@ const frameworkList: Framework[] = [
     getOutputDirName: async () => 'build',
   },
   {
+    name: 'Create Elm App',
+    slug: 'create-elm-app',
+    dependency: 'create-elm-app',
+    buildCommand: 'elm-app build',
+    getOutputDirName: async () => 'build',
+  },
+  {
     name: 'Zola',
     slug: 'zola',
     buildCommand: 'zola build',

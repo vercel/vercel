@@ -1,0 +1,12 @@
+{
+  "name": "61-create-elm-app",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "start": "elm-app start",
+    "build": "elm-app build"
+  },
+  "devDependencies": {
+    "create-elm-app": "^4.2.26"
+  }
+}
