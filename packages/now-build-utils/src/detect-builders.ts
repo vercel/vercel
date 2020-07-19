@@ -8,6 +8,8 @@ import { isOfficialRuntime } from './';
 interface ErrorResponse {
   code: string;
   message: string;
+  action?: string;
+  link?: string;
 }
 
 interface Options {
@@ -608,20 +610,22 @@ function checkUnusedFunctions(
       } else {
         return {
           code: 'unused_function',
-          message: `The function for ${fnKey} can't be handled by any builder`,
+          message: `The pattern "${fnKey}" defined in \`functions\` doesn't match any Serverless Functions.`,
+          action: 'Learn More',
+          link: 'https://vercel.link/unmatched-function-pattern',
         };
       }
     }
   }
 
   if (unusedFunctions.size) {
-    const [unusedFunction] = Array.from(unusedFunctions);
+    const [fnKey] = Array.from(unusedFunctions);
 
     return {
       code: 'unused_function',
-      message:
-        `The function for ${unusedFunction} can't be handled by any builder. ` +
-        `Make sure it is inside the api/ directory.`,
+      message: `The pattern "${fnKey}" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+      action: 'Learn More',
+      link: 'https://vercel.link/unmatched-function-pattern',
     };
   }
 

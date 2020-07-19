@@ -2,6 +2,7 @@ import ms from 'ms';
 import os from 'os';
 import fs from 'fs-extra';
 import test from 'ava';
+import { isIP } from 'net';
 import { join, resolve, delimiter } from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
@@ -118,24 +119,9 @@ async function runNpmInstall(fixturePath) {
   }
 }
 
-async function getPackedBuilderPath(builderDirName) {
-  const packagePath = join(__dirname, '..', '..', '..', builderDirName);
-  const output = await execa('npm', ['pack'], {
-    cwd: packagePath,
-    shell: true,
-  });
-
-  if (output.exitCode !== 0 || output.stdout.trim() === '') {
-    throw new Error(
-      `Failed to pack ${builderDirName}: ${formatOutput(output)}`
-    );
-  }
-
-  return join(packagePath, output.stdout.trim());
-}
-
 async function testPath(
   t,
+  isDev,
   origin,
   status,
   path,
@@ -153,6 +139,9 @@ async function testPath(
   if (typeof expectedText === 'string') {
     const actualText = await res.text();
     t.is(actualText.trim(), expectedText.trim(), msg);
+  } else if (typeof expectedText === 'function') {
+    const actualText = await res.text();
+    await expectedText(t, actualText, res, isDev);
   } else if (expectedText instanceof RegExp) {
     const actualText = await res.text();
     expectedText.lastIndex = 0; // reset since we test twice
@@ -342,9 +331,9 @@ function testFixtureStdio(
 
       const helperTestPath = async (...args) => {
         if (!skipDeploy) {
-          await testPath(t, `https://${deploymentUrl}`, ...args);
+          await testPath(t, false, `https://${deploymentUrl}`, ...args);
         }
-        await testPath(t, `http://localhost:${port}`, ...args);
+        await testPath(t, true, `http://localhost:${port}`, ...args);
       };
       await fn(helperTestPath, t, port);
     } finally {
@@ -1480,22 +1469,6 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
 test('[vercel dev] do not rebuild for changes in the output directory', async t => {
   const directory = fixture('output-is-source');
 
-  // Pack the builder and set it in the `vercel.json`
-  const builder = await getPackedBuilderPath('now-static-build');
-
-  await fs.writeFile(
-    join(directory, 'vercel.json'),
-    JSON.stringify({
-      builds: [
-        {
-          src: 'package.json',
-          use: `file://${builder}`,
-          config: { zeroConfig: true },
-        },
-      ],
-    })
-  );
-
   const { dev, port } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -1581,6 +1554,10 @@ test(
     await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/headers`, (t, body, res) => {
+      const { host } = new URL(res.url);
+      t.is(body, host);
+    });
   })
 );
 
@@ -1647,5 +1624,26 @@ test(
       `/api/array`,
       '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}'
     );
+
+    await testPath(200, `/api/dump`, (t, body, res, isDev) => {
+      const { host } = new URL(res.url);
+      const { env, headers } = JSON.parse(body);
+
+      // Test that the API endpoint receives the Vercel proxy request headers
+      t.is(headers['x-forwarded-host'], host);
+      t.is(headers['x-vercel-deployment-url'], host);
+      t.truthy(isIP(headers['x-real-ip']));
+      t.truthy(isIP(headers['x-forwarded-for']));
+      t.truthy(isIP(headers['x-vercel-forwarded-for']));
+
+      // Test that the API endpoint has the Vercel platform env vars defined.
+      t.regex(env.NOW_REGION, /^[a-z]{3}\d$/);
+      if (isDev) {
+        // Only dev is tested because in production these are opt-in.
+        t.is(env.NOW_URL, host);
+        t.is(env.VERCEL_URL, host);
+        t.is(env.VERCEL_REGION, 'dev1');
+      }
+    });
   })
 );

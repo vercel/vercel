@@ -15,6 +15,7 @@ import { prependEmoji, emoji } from '../emoji';
 import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
+import outputCode from '../output/code';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -152,7 +153,9 @@ export async function getLinkedProject(
     if (err?.status === 403) {
       spinner();
       throw new NowBuildError({
-        message: `Could not retrieve Project Settings. To link your project, remove the .vercel directory and deploy again.`,
+        message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
+          '.vercel'
+        )} directory and deploy again.`,
         code: 'PROJECT_UNAUTHORIZED',
         link: 'https://vercel.link/cannot-load-project-settings',
       });
