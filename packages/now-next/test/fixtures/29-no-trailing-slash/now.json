@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    { "path": "/foo", "status": 200, "mustContain": "foo page" },
+    {
+      "path": "/foo/",
+      "status": 308,
+      "responseHeaders": {
+        "location": "/foo"
+      }
+    },
+    { "path": "/abc/def", "status": 200, "mustContain": "nested page" },
+    {
+      "path": "/abc/def/",
+      "status": 308,
+      "responseHeaders": {
+        "location": "/abc/def"
+      }
+    }
+  ]
+}
