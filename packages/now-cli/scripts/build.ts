@@ -49,7 +49,13 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const args = ['@zeit/ncc', 'build', '--source-map'];
+  const args = [
+    '@zeit/ncc',
+    'build',
+    '--source-map',
+    '--external',
+    'update-notifier',
+  ];
   if (!isDev) {
     args.push('--minify');
   }
@@ -86,7 +92,7 @@ async function main() {
   // A bunch of source `.ts` files from CLI's `util` directory
   await remove(join(dirRoot, 'dist', 'util'));
 
-  console.log('Finished building `now-cli`');
+  console.log('Finished building Vercel CLI');
 }
 
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
