@@ -3,5 +3,5 @@ export default function Page() {
 }
 
 export function getStaticProps() {
-  return { props: {}, revalidate: 10 };
+  return { props: {}, unstable_revalidate: 10 };
 }

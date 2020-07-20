@@ -15,7 +15,7 @@ export async function getStaticProps({ params }) {
       slug: params.slug,
       time: (await import('perf_hooks')).performance.now(),
     },
-    revalidate: 10,
+    unstable_revalidate: 10,
   };
 }
 

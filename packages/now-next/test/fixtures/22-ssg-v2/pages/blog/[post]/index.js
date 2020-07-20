@@ -22,7 +22,7 @@ export async function getStaticProps({ params }) {
       random: Math.random(),
       time: (await import('perf_hooks')).performance.now(),
     },
-    revalidate: 1,
+    unstable_revalidate: 1,
   };
 }
 
