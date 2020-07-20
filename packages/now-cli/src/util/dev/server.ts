@@ -494,7 +494,7 @@ export default class DevServer {
       }
       return {
         ...this.validateEnvConfig(fileName, base || {}, env),
-        ...this.populateEnvConfig(this.environmentVars, host),
+        ...this.populateVercelEnvVars(this.environmentVars, host),
       };
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
@@ -742,7 +742,11 @@ export default class DevServer {
     return merged;
   }
 
-  populateEnvConfig(env: Env | undefined, address = '', region = 'dev1'): Env {
+  populateVercelEnvVars(
+    env: Env | undefined,
+    address = '',
+    region = 'dev1'
+  ): Env {
     if (!env) {
       return {};
     }
