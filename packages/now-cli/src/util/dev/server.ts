@@ -140,6 +140,7 @@ export default class DevServer {
   private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
   private updateBuildersTimeout: NodeJS.Timeout | undefined;
+  private startPromise: Promise<void> | null;
 
   private environmentVars: Env | undefined;
 
@@ -172,6 +173,7 @@ export default class DevServer {
     this.getNowConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.updateBuildersPromise = null;
+    this.startPromise = null;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -772,10 +774,18 @@ export default class DevServer {
     return Object.keys(files).filter(this.filter);
   }
 
+  start(...listenSpec: ListenSpec): void {
+    this.startPromise = this._start(...listenSpec);
+    this.startPromise.catch(err => {
+      this.stop();
+      throw err;
+    });
+  }
+
   /**
    * Launches the `vercel dev` server.
    */
-  async start(...listenSpec: ListenSpec): Promise<void> {
+  async _start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
       throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
@@ -1232,6 +1242,8 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
+    await this.startPromise;
+
     let nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
