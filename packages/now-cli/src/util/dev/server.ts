@@ -774,16 +774,14 @@ export default class DevServer {
     return Object.keys(files).filter(this.filter);
   }
 
-  start(...listenSpec: ListenSpec): void {
-    if (this.startPromise) {
-      return;
+  start(...listenSpec: ListenSpec): Promise<void> {
+    if (!this.startPromise) {
+      this.startPromise = this._start(...listenSpec).catch(err => {
+        this.stop();
+        throw err;
+      });
     }
-
-    this.startPromise = this._start(...listenSpec);
-    this.startPromise.catch(err => {
-      this.stop();
-      throw err;
-    });
+    return this.startPromise;
   }
 
   /**
