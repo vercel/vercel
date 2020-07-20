@@ -19,7 +19,7 @@ import {
 // @ts-ignore - `@types/mkdirp-promise` is broken
 import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
-import nodeFileTrace from '@zeit/node-file-trace';
+import { nodeFileTrace } from '@zeit/node-file-trace';
 import buildUtils from './build-utils';
 import {
   File,
