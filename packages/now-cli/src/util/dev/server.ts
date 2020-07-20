@@ -476,25 +476,22 @@ export default class DevServer {
   async getLocalEnv(fileName: string, base?: Env): Promise<Env> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
+    this.output.debug(`getlocalenv ${base}`);
     const filePath = join(this.cwd, fileName);
     let env: Env = {};
     try {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
+      env = this.populateVercelEnvVars(env);
     } catch (err) {
       if (err.code !== 'ENOENT') {
         throw err;
       }
     }
     try {
-      let host = '';
-      if (this.address) {
-        host = new URL(this.address).host;
-      }
       return {
         ...this.validateEnvConfig(fileName, base || {}, env),
-        ...this.populateVercelEnvVars(this.environmentVars, host),
       };
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
@@ -630,12 +627,18 @@ export default class DevServer {
     this.apiExtensions = detectApiExtensions(config.builds || []);
 
     // Update the env vars configuration
-    const [runEnv, buildEnv] = await Promise.all([
+    let [runEnv, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', config.env),
       this.getLocalEnv('.env.build', config.build?.env),
     ]);
 
-    const allEnv = { ...buildEnv, ...runEnv };
+    let allEnv = { ...buildEnv, ...runEnv };
+
+    // If no .env/.build.env is present, fetch and use cloud environment variables
+    if (Object.keys(allEnv).length === 0) {
+      const cloudEnv = this.populateVercelEnvVars(this.environmentVars);
+      allEnv = runEnv = buildEnv = cloudEnv;
+    }
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
     return config;
@@ -742,25 +745,23 @@ export default class DevServer {
     return merged;
   }
 
-  populateVercelEnvVars(
-    env: Env | undefined,
-    address = '',
-    region = 'dev1'
-  ): Env {
+  populateVercelEnvVars(env: Env | undefined): Env {
     if (!env) {
       return {};
     }
 
+    const host = new URL(this.address).host;
     for (const name of Object.keys(env)) {
       if (name === 'VERCEL_URL') {
-        env[name] = address;
+        env['VERCEL_URL'] = host;
       } else if (name === 'VERCEL_REGION') {
-        env[name] = region;
+        env['VERCEL_REGION'] = 'dev1';
       }
     }
 
-    // Always set NOW_REGION
-    env['NOW_REGION'] = region;
+    // Always set NOW_REGION to match production
+    env['NOW_REGION'] = 'dev1';
+
     return env;
   }
 
