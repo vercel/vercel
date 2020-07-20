@@ -749,9 +749,9 @@ export default class DevServer {
       return {};
     }
 
-    const host = new URL(this.address).host;
     for (const name of Object.keys(env)) {
       if (name === 'VERCEL_URL') {
+        const host = new URL(this.address).host;
         env['VERCEL_URL'] = host;
       } else if (name === 'VERCEL_REGION') {
         env['VERCEL_REGION'] = 'dev1';
