@@ -148,7 +148,7 @@ export default class DevServer {
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.environmentVars = options.environmentVars || {};
+    this.environmentVars = options.environmentVars;
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
