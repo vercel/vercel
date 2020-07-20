@@ -1,0 +1,25 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "src/pages/api/memory.js": {
+            "memory": 128
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/api/memory",
+      "status": 200,
+      "mustContain": "128"
+    },
+    {
+      "logMustContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
+    }
+  ]
+}
