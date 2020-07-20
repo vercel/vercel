@@ -1,1 +1,1 @@
-module.exports = { experimental: { trailingSlash: true } };
+module.exports = { trailingSlash: true };
