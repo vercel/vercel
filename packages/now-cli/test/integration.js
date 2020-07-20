@@ -969,9 +969,7 @@ test('domains inspect', async t => {
     .slice(2, 8)}.org`;
 
   const directory = fixture('static-multiple-files');
-  const projectName = Math.random()
-    .toString()
-    .slice(2);
+  const projectName = Math.random().toString().slice(2);
 
   const output = await execute([
     directory,
@@ -2481,6 +2479,33 @@ test('fail to add a domain without a project', async t => {
   t.regex(output.stderr, /expects two arguments/gm, formatOutput(output));
 });
 
+test('change user', async t => {
+  t.timeout(ms('1m'));
+
+  const { stdout: prevUser } = await execute(['whoami']);
+
+  // Delete the current token
+  await execute(['logout', '--debug'], { stdio: 'inherit' });
+
+  await createUser();
+
+  await execute(['login', email, '--api', loginApiUrl, '--debug'], {
+    stdio: 'inherit',
+  });
+
+  const auth = await fs.readJSON(getConfigAuthPath());
+  t.is(auth.token, token);
+
+  const { stdout: nextUser } = await execute(['whoami']);
+
+  console.log('prev user', prevUser);
+  console.log('next user', nextUser);
+
+  t.is(typeof prevUser, 'string', prevUser);
+  t.is(typeof nextUser, 'string', nextUser);
+  t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
+});
+
 test('assign a domain to a project', async t => {
   const domain = `project-domain.${contextName}.now.sh`;
   const directory = fixture('static-deployment');
@@ -2541,33 +2566,6 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
   const output = await execute([directory, '--confirm']);
 
   t.is(output.exitCode, 0, formatOutput(output));
-});
-
-test('change user', async t => {
-  t.timeout(ms('1m'));
-
-  const { stdout: prevUser } = await execute(['whoami']);
-
-  // Delete the current token
-  await execute(['logout', '--debug'], { stdio: 'inherit' });
-
-  await createUser();
-
-  await execute(['login', email, '--api', loginApiUrl, '--debug'], {
-    stdio: 'inherit',
-  });
-
-  const auth = await fs.readJSON(getConfigAuthPath());
-  t.is(auth.token, token);
-
-  const { stdout: nextUser } = await execute(['whoami']);
-
-  console.log('prev user', prevUser);
-  console.log('next user', nextUser);
-
-  t.is(typeof prevUser, 'string', prevUser);
-  t.is(typeof nextUser, 'string', nextUser);
-  t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
 });
 
 test('should show prompts to set up project', async t => {
