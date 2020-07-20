@@ -19,6 +19,20 @@
       "responseHeaders": {
         "refresh": "/url=/abc/def$/"
       }
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/text.txt/",
+      "status": 308,
+      "responseHeaders": {
+        "refresh": "/url=/text\\.txt$/"
+      }
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/text.txt",
+      "status": 200,
+      "mustContain": "this is a file"
     }
   ]
 }
