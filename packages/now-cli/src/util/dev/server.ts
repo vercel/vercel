@@ -775,6 +775,10 @@ export default class DevServer {
   }
 
   start(...listenSpec: ListenSpec): void {
+    if (this.startPromise) {
+      return;
+    }
+
     this.startPromise = this._start(...listenSpec);
     this.startPromise.catch(err => {
       this.stop();
