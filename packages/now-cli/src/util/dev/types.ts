@@ -27,6 +27,7 @@ export interface DevServerOptions {
   devCommand?: string;
   frameworkSlug?: string;
   projectSettings?: ProjectSettings;
+  environmentVars?: Env;
 }
 
 export interface EnvConfigs {

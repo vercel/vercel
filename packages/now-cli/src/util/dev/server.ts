@@ -83,10 +83,7 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectEnvTarget, ProjectSettings, Project } from '../../types';
-
-import Client from '../../util/client';
-import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
+import { ProjectSettings } from '../../types';
 
 interface FSEvent {
   type: string;
@@ -144,13 +141,14 @@ export default class DevServer {
   private updateBuildersPromise: Promise<void> | null;
   private updateBuildersTimeout: NodeJS.Timeout | undefined;
 
-  private cachedEnvVars: Env | null;
+  private environmentVars: Env | undefined;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
+    this.environmentVars = options.environmentVars || {};
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
@@ -174,8 +172,6 @@ export default class DevServer {
     this.getNowConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.updateBuildersPromise = null;
-
-    this.cachedEnvVars = null;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -498,10 +494,7 @@ export default class DevServer {
       }
       return {
         ...this.validateEnvConfig(fileName, base || {}, env),
-        NOW_REGION: 'dev1',
-        NOW_URL: host,
-        VERCEL_REGION: 'dev1',
-        VERCEL_URL: host,
+        ...this.populateEnvConfig(this.environmentVars, host),
       };
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
@@ -518,11 +511,11 @@ export default class DevServer {
     this.getNowConfigPromise = null;
   };
 
-  getNowConfig(client?: Client, project?: Project): Promise<NowConfig> {
+  getNowConfig(): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(client, project);
+    this.getNowConfigPromise = this._getNowConfig();
 
     // Clean up the promise once it has resolved
     const clear = this.clearNowConfigPromise;
@@ -531,7 +524,7 @@ export default class DevServer {
     return this.getNowConfigPromise;
   }
 
-  async _getNowConfig(client?: Client, project?: Project): Promise<NowConfig> {
+  async _getNowConfig(): Promise<NowConfig> {
     const configPath = getNowConfigPath(this.cwd);
 
     const [
@@ -637,39 +630,12 @@ export default class DevServer {
     this.apiExtensions = detectApiExtensions(config.builds || []);
 
     // Update the env vars configuration
-    let [runEnv, buildEnv] = await Promise.all([
+    const [runEnv, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', config.env),
       this.getLocalEnv('.env.build', config.build?.env),
     ]);
-    let allEnv = { ...buildEnv, ...runEnv };
 
-    const VERCEL_ENVS = [
-      'VERCEL_URL',
-      'VERCEL_REGION',
-      'NOW_URL',
-      'NOW_REGION',
-    ];
-
-    // if there are no env vars (minus vercel-added ones), use cloud variables
-    if (
-      Object.keys(allEnv).filter(e => !VERCEL_ENVS.includes(e)).length === 0
-    ) {
-      if (this.cachedEnvVars) {
-        allEnv = runEnv = buildEnv = this.cachedEnvVars;
-      } else if (client && project) {
-        const decryptedEnvRecords = await getDecryptedEnvRecords(
-          this.output,
-          client,
-          project,
-          ProjectEnvTarget.Development
-        );
-
-        if (decryptedEnvRecords) {
-          allEnv = runEnv = buildEnv = { ...decryptedEnvRecords, ...allEnv };
-          this.cachedEnvVars = { ...decryptedEnvRecords, ...allEnv };
-        }
-      }
-    }
+    const allEnv = { ...buildEnv, ...runEnv };
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
     return config;
@@ -776,6 +742,24 @@ export default class DevServer {
     return merged;
   }
 
+  populateEnvConfig(env: Env | undefined, address = '', region = 'dev1'): Env {
+    if (!env) {
+      return {};
+    }
+
+    for (const name of Object.keys(env)) {
+      if (name === 'VERCEL_URL') {
+        env[name] = address;
+      } else if (name === 'VERCEL_REGION') {
+        env[name] = region;
+      }
+    }
+
+    // Always set NOW_REGION
+    env['NOW_REGION'] = region;
+    return env;
+  }
+
   /**
    * Create an array of from builder inputs
    * and filter them
@@ -787,11 +771,7 @@ export default class DevServer {
   /**
    * Launches the `vercel dev` server.
    */
-  async start(
-    client: Client,
-    project: Project | undefined,
-    ...listenSpec: ListenSpec
-  ): Promise<void> {
+  async start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
       throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
@@ -802,8 +782,6 @@ export default class DevServer {
 
     const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
-
-    const devCommandPromise = this.runDevCommand();
 
     let address: string | null = null;
     while (typeof address !== 'string') {
@@ -836,7 +814,8 @@ export default class DevServer {
       .replace('[::]', 'localhost')
       .replace('127.0.0.1', 'localhost');
 
-    const nowConfig = await this.getNowConfig(client, project);
+    const nowConfig = await this.getNowConfig();
+    const devCommandPromise = this.runDevCommand();
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);

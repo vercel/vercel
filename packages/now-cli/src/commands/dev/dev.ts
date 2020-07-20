@@ -9,7 +9,9 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
 import { getCommandName } from '../../util/pkg-name';
-import { ProjectSettings } from '../../types';
+import { ProjectSettings, ProjectEnvTarget } from '../../types';
+import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
+import { Env } from '@vercel/build-utils';
 
 type Options = {
   '--debug'?: boolean;
@@ -54,6 +56,7 @@ export default async function dev(
   let devCommand: string | undefined;
   let frameworkSlug: string | undefined;
   let projectSettings: ProjectSettings | undefined;
+  let environmentVars: Env | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;
     client.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -80,6 +83,13 @@ export default async function dev(
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
     }
+
+    environmentVars = await getDecryptedEnvRecords(
+      output,
+      client,
+      project,
+      ProjectEnvTarget.Development
+    );
   }
 
   const devServer = new DevServer(cwd, {
@@ -88,10 +98,11 @@ export default async function dev(
     devCommand,
     frameworkSlug,
     projectSettings,
+    environmentVars,
   });
 
   process.once('SIGINT', () => devServer.stop());
   process.once('SIGTERM', () => devServer.stop());
 
-  await devServer.start(client, link.project || undefined, ...listen);
+  await devServer.start(...listen);
 }
