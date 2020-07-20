@@ -9,13 +9,9 @@ import { Env } from '@vercel/build-utils';
 export default async function getDecryptedEnvRecords(
   output: Output,
   client: Client,
-  project: null | Project,
+  project: Project,
   target: ProjectEnvTarget
 ): Promise<Env> {
-  if (!project) {
-    return {};
-  }
-
   const envs = await getEnvVariables(output, client, project.id, 4, target);
   const decryptedValues = await Promise.all(
     envs.map(async env => {
