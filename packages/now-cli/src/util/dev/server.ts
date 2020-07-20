@@ -476,7 +476,6 @@ export default class DevServer {
   async getLocalEnv(fileName: string, base?: Env): Promise<Env> {
     // TODO: use the file watcher to only invalidate the env `dotfile`
     // once a change to the `fileName` occurs
-    this.output.debug(`getlocalenv ${base}`);
     const filePath = join(this.cwd, fileName);
     let env: Env = {};
     try {
