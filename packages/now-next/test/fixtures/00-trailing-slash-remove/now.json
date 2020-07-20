@@ -4,6 +4,7 @@
   "probes": [
     { "path": "/foo", "status": 200, "mustContain": "foo page" },
     {
+      "fetchOptions": { "redirect": "manual" },
       "path": "/foo/",
       "status": 308,
       "responseHeaders": {
@@ -12,6 +13,7 @@
     },
     { "path": "/abc/def", "status": 200, "mustContain": "nested page" },
     {
+      "fetchOptions": { "redirect": "manual" },
       "path": "/abc/def/",
       "status": 308,
       "responseHeaders": {
