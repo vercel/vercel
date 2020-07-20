@@ -68,7 +68,8 @@
     "@vercel/node": "1.7.3-canary.0",
     "@vercel/python": "1.2.2",
     "@vercel/ruby": "1.2.3",
-    "@vercel/static-build": "0.17.6-canary.1"
+    "@vercel/static-build": "0.17.6-canary.1",
+    "update-notifier": "4.1.0"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
@@ -185,7 +186,6 @@
     "ts-node": "8.3.0",
     "typescript": "3.9.3",
     "universal-analytics": "0.4.20",
-    "update-check": "1.5.3",
     "utility-types": "2.1.0",
     "which": "2.0.2",
     "which-promise": "1.0.0",
