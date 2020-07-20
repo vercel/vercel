@@ -83,7 +83,10 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectSettings } from '../../types';
+import { ProjectEnvTarget, ProjectSettings, Project } from '../../types';
+
+import Client from '../../util/client';
+import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 
 interface FSEvent {
   type: string;
@@ -141,6 +144,8 @@ export default class DevServer {
   private updateBuildersPromise: Promise<void> | null;
   private updateBuildersTimeout: NodeJS.Timeout | undefined;
 
+  private cachedEnvVars: Env | null;
+
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
@@ -169,6 +174,8 @@ export default class DevServer {
     this.getNowConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.updateBuildersPromise = null;
+
+    this.cachedEnvVars = null;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -511,11 +518,11 @@ export default class DevServer {
     this.getNowConfigPromise = null;
   };
 
-  getNowConfig(): Promise<NowConfig> {
+  getNowConfig(client?: Client, project?: Project): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig();
+    this.getNowConfigPromise = this._getNowConfig(client, project);
 
     // Clean up the promise once it has resolved
     const clear = this.clearNowConfigPromise;
@@ -524,7 +531,7 @@ export default class DevServer {
     return this.getNowConfigPromise;
   }
 
-  async _getNowConfig(): Promise<NowConfig> {
+  async _getNowConfig(client?: Client, project?: Project): Promise<NowConfig> {
     const configPath = getNowConfigPath(this.cwd);
 
     const [
@@ -630,13 +637,41 @@ export default class DevServer {
     this.apiExtensions = detectApiExtensions(config.builds || []);
 
     // Update the env vars configuration
-    const [runEnv, buildEnv] = await Promise.all([
+    let [runEnv, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', config.env),
       this.getLocalEnv('.env.build', config.build?.env),
     ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    let allEnv = { ...buildEnv, ...runEnv };
 
+    const VERCEL_ENVS = [
+      'VERCEL_URL',
+      'VERCEL_REGION',
+      'NOW_URL',
+      'NOW_REGION',
+    ];
+
+    // if there are no env vars (minus vercel-added ones), use cloud variables
+    if (
+      Object.keys(allEnv).filter(e => !VERCEL_ENVS.includes(e)).length === 0
+    ) {
+      if (this.cachedEnvVars) {
+        allEnv = runEnv = buildEnv = this.cachedEnvVars;
+      } else if (client && project) {
+        const decryptedEnvRecords = await getDecryptedEnvRecords(
+          this.output,
+          client,
+          project,
+          ProjectEnvTarget.Development
+        );
+
+        if (decryptedEnvRecords) {
+          allEnv = runEnv = buildEnv = { ...decryptedEnvRecords, ...allEnv };
+          this.cachedEnvVars = { ...decryptedEnvRecords, ...allEnv };
+        }
+      }
+    }
+
+    this.envConfigs = { buildEnv, runEnv, allEnv };
     return config;
   }
 
@@ -752,7 +787,11 @@ export default class DevServer {
   /**
    * Launches the `vercel dev` server.
    */
-  async start(...listenSpec: ListenSpec): Promise<void> {
+  async start(
+    client: Client,
+    project: Project | undefined,
+    ...listenSpec: ListenSpec
+  ): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
       throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
@@ -764,7 +803,40 @@ export default class DevServer {
     const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
-    const nowConfig = await this.getNowConfig();
+    const devCommandPromise = this.runDevCommand();
+
+    let address: string | null = null;
+    while (typeof address !== 'string') {
+      try {
+        address = await listen(this.server, ...listenSpec);
+      } catch (err) {
+        this.output.debug(`Got listen error: ${err.code}`);
+        if (err.code === 'EADDRINUSE') {
+          if (typeof listenSpec[0] === 'number') {
+            // Increase port and try again
+            this.output.note(
+              `Requested port ${chalk.yellow(
+                String(listenSpec[0])
+              )} is already in use`
+            );
+            listenSpec[0]++;
+          } else {
+            this.output.error(
+              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
+            );
+            process.exit(1);
+          }
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    this.address = address
+      .replace('[::]', 'localhost')
+      .replace('127.0.0.1', 'localhost');
+
+    const nowConfig = await this.getNowConfig(client, project);
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
@@ -855,39 +927,6 @@ export default class DevServer {
       this.output.debug(`Detected upgrade event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
-
-    const devCommandPromise = this.runDevCommand();
-
-    let address: string | null = null;
-    while (typeof address !== 'string') {
-      try {
-        address = await listen(this.server, ...listenSpec);
-      } catch (err) {
-        this.output.debug(`Got listen error: ${err.code}`);
-        if (err.code === 'EADDRINUSE') {
-          if (typeof listenSpec[0] === 'number') {
-            // Increase port and try again
-            this.output.note(
-              `Requested port ${chalk.yellow(
-                String(listenSpec[0])
-              )} is already in use`
-            );
-            listenSpec[0]++;
-          } else {
-            this.output.error(
-              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
-            );
-            process.exit(1);
-          }
-        } else {
-          throw err;
-        }
-      }
-    }
-
-    this.address = address
-      .replace('[::]', 'localhost')
-      .replace('127.0.0.1', 'localhost');
 
     await devCommandPromise;
 
