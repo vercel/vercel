@@ -789,7 +789,7 @@ export default class DevServer {
    */
   async start(
     client: Client,
-    project: Project,
+    project: Project | undefined,
     ...listenSpec: ListenSpec
   ): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
