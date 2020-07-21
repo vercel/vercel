@@ -6,13 +6,13 @@ import { Framework } from '@vercel/frameworks';
 import { isSettingValue } from '../is-setting-value';
 import { ProjectSettings } from '../../types';
 
-export interface PartialSettings {
+export interface PartialProjectSettings {
   buildCommand: string | null;
   outputDirectory: string | null;
   devCommand: string | null;
 }
 
-const fields: { name: string; value: keyof PartialSettings }[] = [
+const fields: { name: string; value: keyof PartialProjectSettings }[] = [
   { name: 'Build Command', value: 'buildCommand' },
   { name: 'Output Directory', value: 'outputDirectory' },
   { name: 'Development Command', value: 'devCommand' },
@@ -20,7 +20,7 @@ const fields: { name: string; value: keyof PartialSettings }[] = [
 
 export default async function editProjectSettings(
   output: Output,
-  projectSettings: PartialSettings | null,
+  projectSettings: PartialProjectSettings | null,
   framework: Framework | null
 ): Promise<ProjectSettings> {
   // create new settings object, missing values will be filled with `null`
@@ -73,7 +73,7 @@ export default async function editProjectSettings(
     choices: fields,
   });
 
-  for (let setting of settingFields as (keyof PartialSettings)[]) {
+  for (let setting of settingFields as (keyof PartialProjectSettings)[]) {
     const field = fields.find(f => f.value === setting);
     const name = `${Date.now()}`;
     const answers = await inquirer.prompt({
