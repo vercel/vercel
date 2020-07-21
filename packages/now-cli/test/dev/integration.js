@@ -2,7 +2,6 @@ import ms from 'ms';
 import os from 'os';
 import fs from 'fs-extra';
 import test from 'ava';
-import { isIP } from 'net';
 import { join, resolve, delimiter } from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
@@ -1599,50 +1598,5 @@ test(
   testFixtureStdio('index-html-priority', async testPath => {
     await testPath(200, '/', 'This is index.html');
     await testPath(200, '/index.css', 'This is index.css');
-  })
-);
-
-test(
-  '[vercel dev] Should support `*.go` API serverless functions',
-  testFixtureStdio('go', async testPath => {
-    await testPath(200, `/api`, 'This is the index page');
-    await testPath(200, `/api/index`, 'This is the index page');
-    await testPath(200, `/api/index.go`, 'This is the index page');
-    await testPath(200, `/api/another`, 'This is another page');
-    await testPath(200, '/api/another.go', 'This is another page');
-    await testPath(200, `/api/foo`, 'Req Path: /api/foo');
-    await testPath(200, `/api/bar`, 'Req Path: /api/bar');
-  })
-);
-
-test(
-  '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
-  testFixtureStdio('node-ts-node-target', async testPath => {
-    await testPath(200, `/api/subclass`, '{"ok":true}');
-    await testPath(
-      200,
-      `/api/array`,
-      '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}'
-    );
-
-    await testPath(200, `/api/dump`, (t, body, res, isDev) => {
-      const { host } = new URL(res.url);
-      const { env, headers } = JSON.parse(body);
-
-      // Test that the API endpoint receives the Vercel proxy request headers
-      t.is(headers['x-forwarded-host'], host);
-      t.is(headers['x-vercel-deployment-url'], host);
-      t.truthy(isIP(headers['x-real-ip']));
-      t.truthy(isIP(headers['x-forwarded-for']));
-      t.truthy(isIP(headers['x-vercel-forwarded-for']));
-
-      // Test that the API endpoint has the Vercel platform env vars defined.
-      t.regex(env.NOW_REGION, /^[a-z]{3}\d$/);
-      if (isDev) {
-        // Only dev is tested because in production these are opt-in.
-        t.is(env.VERCEL_URL, host);
-        t.is(env.VERCEL_REGION, 'dev1');
-      }
-    });
   })
 );

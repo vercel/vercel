@@ -1,8 +1,8 @@
 package main
 
 import (
-	vc "github.com/vercel/go-bridge/go/bridge"
 	"net/http"
+	vc "github.com/vercel/go-bridge/go/bridge"
 )
 
 func main() {
