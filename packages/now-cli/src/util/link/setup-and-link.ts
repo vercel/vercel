@@ -4,7 +4,11 @@ import { remove } from 'fs-extra';
 import { NowContext, Project, ProjectLinkResult } from '../../types';
 import { NowConfig } from '../dev/types';
 import { Output } from '../output';
-import { getLinkedProject, linkFolderToProject } from '../projects/link';
+import {
+  getLinkedProject,
+  linkFolderToProject,
+  getVercelDirectory,
+} from '../projects/link';
 import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
@@ -56,12 +60,13 @@ export default async function setupAndLink(
   let project = null;
   let org;
 
-  if (link.status === 'linked') {
-    if (force) {
-      await remove(path);
-    } else {
-      return link;
-    }
+  if (!force && link.status === 'linked') {
+    return link;
+  }
+
+  if (force) {
+    const vercelDir = getVercelDirectory(path);
+    remove(vercelDir);
   }
 
   const shouldStartSetup =
@@ -163,8 +168,6 @@ export default async function setupAndLink(
       skipAutoDetectionConfirmation: autoConfirm,
     };
 
-    console.log({ createArgs }); // TODO: remove
-
     deployment = await createDeploy(
       output,
       now,
@@ -175,8 +178,6 @@ export default async function setupAndLink(
       !project && !isFile,
       path
     );
-
-    console.log({ deployment }); // TODO: remove
 
     if (
       !deployment ||
