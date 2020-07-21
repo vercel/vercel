@@ -81,8 +81,10 @@ export default async function main(ctx: NowContext) {
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    // User aborted project linking questions
     return 0;
   } else if (link.status === 'linked') {
+    // Successfully linked
     return 0;
   } else {
     const err: never = link;
