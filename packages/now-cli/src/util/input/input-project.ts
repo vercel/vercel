@@ -15,10 +15,6 @@ export default async function inputProject(
   detectedProjectName: string,
   autoConfirm: boolean
 ): Promise<Project | string> {
-  if (autoConfirm) {
-    return detectedProjectName;
-  }
-
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
@@ -41,6 +37,10 @@ export default async function inputProject(
       : null;
   } catch (error) {}
   existingProjectSpinner();
+
+  if (autoConfirm) {
+    return detectedProject || detectedProjectName;
+  }
 
   let shouldLinkProject;
 
