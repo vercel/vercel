@@ -349,7 +349,7 @@ test('deploy using --local-config flag v2', async t => {
   t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
 
   const anotherMainRes = await fetch(`https://${host}/another-main`);
-  t.is(anotherMainRes.status, 'break intentionally', 'Should not deploy/build main now.json');
+  t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
 });
 
 test('deploy using --local-config flag above target', async t => {
@@ -1842,6 +1842,7 @@ test('deploying a file should not show prompts and display deprecation', async t
 
   t.is(contentType, 'image/png');
   t.deepEqual(await readFile(file), await response.buffer());
+  console.log('>>>>>', stdout);
 });
 
 test('deploying more than 1 path should fail', async t => {
