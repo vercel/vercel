@@ -3178,6 +3178,8 @@ test('[vc link] should show prompts to set up project', async t => {
 
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
+  // remove output directory if it exists
+  await remove(path.join(dir, 'o'));
 
   const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
 
@@ -3261,6 +3263,8 @@ test('[vc dev] should show prompts to set up project', async t => {
 
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
+  // remove output directory if it exists
+  await remove(path.join(dir, 'o'));
 
   const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
     cwd: dir,
