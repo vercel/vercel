@@ -32,6 +32,7 @@ const help = () => {
     -d, --debug            Debug mode [off]
     -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
     -t, --token   [token]  Specify an Authorization Token
+    --confirm              Skip questions and use defaults when setting up a new project
 
   ${chalk.dim('Examples:')}
 
@@ -56,6 +57,7 @@ export default async function main(ctx: NowContext) {
     argv = getArgs(ctx.argv.slice(2), {
       '--listen': String,
       '-l': '--listen',
+      '--confirm': Boolean,
 
       // Deprecated
       '--port': Number,

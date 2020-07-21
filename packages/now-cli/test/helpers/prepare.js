@@ -503,6 +503,12 @@ CMD ["node", "index.js"]`,
     'project-link': {
       'package.json': JSON.stringify({}),
     },
+    'project-link-confirm': {
+      'package.json': JSON.stringify({}),
+    },
+    'project-link-dev': {
+      'package.json': JSON.stringify({}),
+    },
     'project-root-directory': {
       'src/index.html': '<h1>I am a website.</h1>',
       'src/now.json': JSON.stringify({
