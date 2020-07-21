@@ -3251,3 +3251,96 @@ test('[vc link] should show prompts to set up project', async t => {
     'README.txt should be created'
   );
 });
+
+test('[vc dev] should show prompts to set up project', async t => {
+  const dir = fixture('project-link');
+  const port = 58352;
+  const projectName = `project-link-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
+    cwd: dir,
+  });
+
+  await waitForPrompt(dev, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  dev.stdin.write('no\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  dev.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  dev.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  dev.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  dev.stdin.write(`o\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  dev.stdin.write(`\n`);
+
+  await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+
+  await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
+
+  // Ensure that `vc dev` also works
+  try {
+    const response = await fetch(`http://localhost:${port}/`);
+    const text = await response.text();
+    t.is(text.includes('<h1>custom hello</h1>'), true, text);
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
+  }
+});
