@@ -1502,14 +1502,6 @@ export default class DevServer {
         const upstream = `http://localhost:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
 
-        // Mix in the routing based query parameters
-        const parsed = url.parse(req.url || '/', true);
-        Object.assign(parsed.query, uri_args);
-        req.url = url.format({
-          pathname: parsed.pathname,
-          query: parsed.query,
-        });
-
         // Add the Vercel platform proxy request headers
         const headers = this.getNowProxyHeaders(req, nowRequestId, false);
         for (const [name, value] of Object.entries(headers)) {
@@ -1517,6 +1509,11 @@ export default class DevServer {
         }
 
         this.setResponseHeaders(res, nowRequestId);
+        const origUrl = url.parse(req.url || '/', true);
+        delete origUrl.search;
+        origUrl.pathname = dest;
+        Object.assign(origUrl.query, uri_args);
+        req.url = url.format(origUrl);
         return proxyPass(req, res, upstream, this, nowRequestId, false);
       }
 
@@ -1666,14 +1663,6 @@ export default class DevServer {
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
-
-      // Mix in the routing based query parameters
-      const parsed = url.parse(req.url || '/', true);
-      Object.assign(parsed.query, uri_args);
-      req.url = url.format({
-        pathname: parsed.pathname,
-        query: parsed.query,
-      });
 
       // Add the Vercel platform proxy request headers
       const headers = this.getNowProxyHeaders(req, nowRequestId, false);
