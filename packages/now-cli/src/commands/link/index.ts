@@ -1,6 +1,6 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
-import { NowContext } from '../../types';
+import { NowContext, Project } from '../../types';
 import { NowConfig } from '../../util/dev/types';
 import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
@@ -15,7 +15,6 @@ import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
 import confirm from '../../util/input/confirm';
 import toHumanPath from '../../util/humanize-path';
-import { emoji, prependEmoji } from '../../util/emoji';
 import { isDirectory } from '../../util/config/global-path';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
@@ -83,10 +82,13 @@ export default async function main(ctx: NowContext) {
     authConfig: { token },
     config,
   } = ctx;
-  const { currentTeam } = config;
   const { apiUrl } = ctx;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
-  //client.currentTeam = org.type === 'team' ? org.id : undefined;
+  const client = new Client({
+    apiUrl,
+    token,
+    currentTeam: config.currentTeam,
+    debug,
+  });
 
   const path = args[0] || process.cwd();
   if (!isDirectory(path)) {
@@ -98,7 +100,6 @@ export default async function main(ctx: NowContext) {
   const isFile = false;
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
-  const contextName = currentTeam || 'current user';
   let rootDirectory = null;
   let newProjectName = null;
   let project = null;
@@ -154,7 +155,7 @@ export default async function main(ctx: NowContext) {
     newProjectName = projectOrNewProjectName;
     rootDirectory = await inputRootDirectory(path, output, autoConfirm);
   } else {
-    project = projectOrNewProjectName;
+    const project = projectOrNewProjectName;
 
     await linkFolderToProject(
       output,
@@ -164,9 +165,9 @@ export default async function main(ctx: NowContext) {
         orgId: org.id,
       },
       project.name,
-      org.slug
+      org.slug,
+      'success'
     );
-    output.log(`Linked to project ${project.name}`);
     return 0;
   }
   const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
@@ -182,7 +183,13 @@ export default async function main(ctx: NowContext) {
   if (ctx.localConfig && !(ctx.localConfig instanceof Error)) {
     localConfig = ctx.localConfig;
   }
-  const now = new Now({ apiUrl, token, debug, currentTeam: undefined });
+  client.currentTeam = org.type === 'team' ? org.id : undefined;
+  const now = new Now({
+    apiUrl,
+    token,
+    debug,
+    currentTeam: client.currentTeam,
+  });
   let deployment = null;
 
   try {
@@ -202,7 +209,6 @@ export default async function main(ctx: NowContext) {
       deployStamp: stamp(),
       target: undefined,
       skipAutoDetectionConfirmation: autoConfirm,
-      createProjectAndSkipDeploy: '1', // TODO: implement backend
     };
 
     console.log({ createArgs }); // TODO: remove
@@ -210,7 +216,7 @@ export default async function main(ctx: NowContext) {
     deployment = await createDeploy(
       output,
       now,
-      contextName,
+      client.currentTeam || 'current user',
       [sourcePath],
       createArgs,
       org,
@@ -221,61 +227,49 @@ export default async function main(ctx: NowContext) {
     console.log({ deployment }); // TODO: remove
 
     if (
-      'code' in deployment &&
-      deployment.code === 'missing_project_settings'
+      !deployment ||
+      !('code' in deployment) ||
+      deployment.code !== 'missing_project_settings'
     ) {
-      const { projectSettings, framework } = deployment;
-
-      if (rootDirectory) {
-        projectSettings.rootDirectory = rootDirectory;
-      }
-
-      const settings = await editProjectSettings(
-        output,
-        projectSettings,
-        framework
-      );
-
-      // deploy again, but send projectSettings this time
-      createArgs.projectSettings = settings;
-
-      createArgs.deployStamp = stamp();
-
-      console.log({ createArgs }); // TODO: remove
-
-      deployment = await createDeploy(
-        output,
-        now,
-        contextName,
-        [sourcePath],
-        createArgs,
-        org,
-        false,
-        path
-      );
-
-      console.log({ deployment }); // TODO: remove
-    }
-
-    if (deployment instanceof Error) {
-      (deployment.message =
-        deployment.message ||
-        'An unexpected error occurred while creating your project'),
-        output.prettyError(deployment);
+      output.error('Failed to detect project settings. Please try again.');
+      output.debug(`Deployment result ${deployment}`);
       return 1;
     }
 
-    if (deployment === null) {
-      output.error('Link failed. Please try again.');
-      return 1;
+    const { projectSettings, framework } = deployment;
+
+    if (rootDirectory) {
+      projectSettings.rootDirectory = rootDirectory;
     }
 
-    output.print(
-      `${prependEmoji(
-        `Linked to project ${chalk.bold(deployment.name)}`,
-        emoji('success')
-      )}\n`
+    const settings = await editProjectSettings(
+      output,
+      projectSettings,
+      framework
     );
+
+    const newProject = await client.fetch<Project>('/v1/projects', {
+      method: 'POST',
+      body: JSON.stringify({ name: newProjectName }),
+    });
+
+    await client.fetch(`/v2/projects/${newProject.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(settings),
+    });
+
+    await linkFolderToProject(
+      output,
+      path,
+      {
+        projectId: newProject.id,
+        orgId: org.id,
+      },
+      newProject.name,
+      org.slug,
+      'success'
+    );
+
     return 0;
   } catch (err) {
     handleError(err);

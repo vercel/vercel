@@ -11,7 +11,7 @@ import { Output } from '../output';
 import { Project } from '../../types';
 import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
-import { prependEmoji, emoji } from '../emoji';
+import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
@@ -196,7 +196,8 @@ export async function linkFolderToProject(
   path: string,
   projectLink: ProjectLink,
   projectName: string,
-  orgSlug: string
+  orgSlug: string,
+  successEmoji: EmojiLabel = 'link'
 ) {
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
@@ -266,7 +267,7 @@ export async function linkFolderToProject(
       )} (created ${VERCEL_DIR}${
         isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
       })`,
-      emoji('link')
+      emoji(successEmoji)
     ) + '\n'
   );
 }
