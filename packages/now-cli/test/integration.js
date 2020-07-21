@@ -3169,3 +3169,85 @@ test('reject deploying with wrong team .vercel config', async t => {
     formatOutput({ stderr, stdout })
   );
 });
+
+test('[vc link] should show prompts to set up project', async t => {
+  const dir = fixture('project-link');
+  const projectName = `project-link-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+
+  await waitForPrompt(vc, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  vc.stdin.write('yes\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  vc.stdin.write('\n');
+
+  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  vc.stdin.write('no\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  vc.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  vc.stdin.write('\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  vc.stdin.write('yes\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  vc.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  vc.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  vc.stdin.write(`o\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  vc.stdin.write(`\n`);
+
+  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+
+  const output = await vc;
+
+  // Ensure the exit code is right
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+});
