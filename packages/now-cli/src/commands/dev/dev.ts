@@ -8,10 +8,10 @@ import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
-import { getCommandName } from '../../util/pkg-name';
 import { ProjectSettings, ProjectEnvTarget } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import { Env } from '@vercel/build-utils';
+import setupAndLink from '../../util/link/setup-and-link';
 
 type Options = {
   '--debug'?: boolean;
@@ -37,22 +37,21 @@ export default async function dev(
   });
 
   // retrieve dev command
-  const [link, frameworks] = await Promise.all([
+  let [link, frameworks] = await Promise.all([
     getLinkedProject(output, client, cwd),
     getFrameworks(client),
   ]);
 
-  if (link.status === 'error') {
-    return link.exitCode;
+  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
+    link = await setupAndLink(ctx, output, cwd, false, 'link');
+
+    if (link.status === 'not_linked') {
+      return 0;
+    }
   }
 
-  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
-        'link'
-      )} to begin.`
-    );
-    return 1;
+  if (link.status === 'error') {
+    return link.exitCode;
   }
 
   let devCommand: string | undefined;

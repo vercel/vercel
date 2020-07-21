@@ -8,7 +8,7 @@ import { ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
-import { Project } from '../../types';
+import { Project, ProjectLinkResult } from '../../types';
 import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
 import { prependEmoji, emoji, EmojiLabel } from '../emoji';
@@ -112,11 +112,7 @@ export async function getLinkedProject(
   output: Output,
   client: Client,
   path?: string
-): Promise<
-  | { status: 'linked'; org: Org; project: Project }
-  | { status: 'not_linked'; org: null; project: null }
-  | { status: 'error'; exitCode: number }
-> {
+): Promise<ProjectLinkResult> {
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
