@@ -16,6 +16,7 @@ import setupAndLink from '../../util/link/setup-and-link';
 type Options = {
   '--debug'?: boolean;
   '--listen'?: string;
+  '--confirm': boolean;
 };
 
 export default async function dev(
@@ -43,9 +44,20 @@ export default async function dev(
   ]);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    link = await setupAndLink(ctx, output, cwd, false, 'link');
+    const autoConfirm = opts['--confirm'];
+    const forceDelete = false;
+
+    link = await setupAndLink(
+      ctx,
+      output,
+      cwd,
+      forceDelete,
+      autoConfirm,
+      'link'
+    );
 
     if (link.status === 'not_linked') {
+      // User aborted project linking questions
       return 0;
     }
   }

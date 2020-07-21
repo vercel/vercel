@@ -25,12 +25,19 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
+  --confirm                  Confirm default options and skip questions
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Link current directory to a Vercel Project
 
       ${chalk.cyan(`$ ${getPkgName()} link`)}
+
+  ${chalk.gray(
+    '–'
+  )} Link current directory with default options and skip questions
+
+      ${chalk.cyan(`$ ${getPkgName()} link --confirm`)}
 `);
 };
 
@@ -43,8 +50,7 @@ export default async function main(ctx: NowContext) {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
-      '--yes': Boolean,
-      '-y': '--yes',
+      '--confirm': Boolean,
     });
   } catch (error) {
     handleError(error);
@@ -60,7 +66,18 @@ export default async function main(ctx: NowContext) {
   const output = createOutput({ debug });
   const { args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   const path = args[0] || process.cwd();
-  const link = await setupAndLink(ctx, output, path, true, 'success');
+  const autoConfirm = argv['--confirm'];
+  const forceDelete = true;
+
+  const link = await setupAndLink(
+    ctx,
+    output,
+    path,
+    forceDelete,
+    autoConfirm,
+    'success'
+  );
+
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {

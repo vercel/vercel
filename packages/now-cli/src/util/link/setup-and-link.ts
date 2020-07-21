@@ -32,7 +32,8 @@ export default async function setupAndLink(
   ctx: NowContext,
   output: Output,
   path: string,
-  force: boolean,
+  forceDelete: boolean,
+  autoConfirm: boolean,
   successEmoji: EmojiLabel
 ): Promise<ProjectLinkResult> {
   const {
@@ -48,24 +49,23 @@ export default async function setupAndLink(
     debug,
   });
 
-  if (!isDirectory(path)) {
+  const isFile = !isDirectory(path);
+  if (isFile) {
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1 };
   }
   const link = await getLinkedProject(output, client, path);
-  const autoConfirm = false;
-  const isFile = false;
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
-  let rootDirectory = null;
-  let newProjectName = null;
+  let rootDirectory: string | null = null;
+  let newProjectName: string;
   let org;
 
-  if (!force && link.status === 'linked') {
+  if (!forceDelete && link.status === 'linked') {
     return link;
   }
 
-  if (force) {
+  if (forceDelete) {
     const vercelDir = getVercelDirectory(path);
     remove(vercelDir);
   }
@@ -166,7 +166,7 @@ export default async function setupAndLink(
       meta: {},
       deployStamp: stamp(),
       target: undefined,
-      skipAutoDetectionConfirmation: autoConfirm,
+      skipAutoDetectionConfirmation: false,
     };
 
     deployment = await createDeploy(
@@ -186,7 +186,9 @@ export default async function setupAndLink(
       deployment.code !== 'missing_project_settings'
     ) {
       output.error('Failed to detect project settings. Please try again.');
-      output.debug(`Deployment result ${deployment}`);
+      if (output.isDebugEnabled()) {
+        console.log(deployment);
+      }
       return { status: 'error', exitCode: 1 };
     }
 
