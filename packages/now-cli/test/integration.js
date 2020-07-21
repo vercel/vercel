@@ -3255,7 +3255,7 @@ test('[vc link] should show prompts to set up project', async t => {
 });
 
 test('[vc link --confirm] should not show prompts and autolink', async t => {
-  const dir = fixture('project-link');
+  const dir = fixture('project-link-confirm');
 
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
@@ -3289,9 +3289,9 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
 });
 
 test('[vc dev] should show prompts to set up project', async t => {
-  const dir = fixture('project-link');
+  const dir = fixture('project-link-dev');
   const port = 58352;
-  const projectName = `project-link-${
+  const projectName = `project-link-dev-${
     Math.random().toString(36).split('.')[1]
   }`;
 
