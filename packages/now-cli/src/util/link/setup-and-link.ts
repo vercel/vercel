@@ -59,7 +59,6 @@ export default async function setupAndLink(
   const quiet = !isTTY;
   let rootDirectory = null;
   let newProjectName = null;
-  let project = null;
   let org;
 
   if (!force && link.status === 'linked') {
@@ -177,7 +176,7 @@ export default async function setupAndLink(
       [sourcePath],
       createArgs,
       org,
-      !project && !isFile,
+      !isFile,
       path
     );
 
@@ -202,22 +201,23 @@ export default async function setupAndLink(
       projectSettings,
       framework
     );
-    const newProject = await createProject(client, newProjectName);
-    await updateProject(client, newProject.id, settings);
+    const project = await createProject(client, newProjectName);
+    await updateProject(client, project.id, settings);
+    Object.assign(project, settings);
 
     await linkFolderToProject(
       output,
       path,
       {
-        projectId: newProject.id,
+        projectId: project.id,
         orgId: org.id,
       },
-      newProject.name,
+      project.name,
       org.slug,
       successEmoji
     );
 
-    return { status: 'linked', org, project: newProject };
+    return { status: 'linked', org, project };
   } catch (err) {
     handleError(err);
     return { status: 'error', exitCode: 1 };
