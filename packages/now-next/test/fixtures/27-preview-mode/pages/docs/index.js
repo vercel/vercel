@@ -1,4 +1,4 @@
-export const getStaticProps = (ctx) => {
+export const getStaticProps = ctx => {
   console.log('previewData', ctx.previewData);
 
   return {
