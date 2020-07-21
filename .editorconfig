@@ -19,11 +19,6 @@ indent_style = space
 [*.py]
 indent_size = 4
 
-[*.go]
-indent_style = tab
-indent_size = 4
-tab_width = 4
-
 [*.asm]
 indent_size = 8
 
