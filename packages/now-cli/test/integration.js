@@ -3254,6 +3254,42 @@ test('[vc link] should show prompts to set up project', async t => {
   );
 });
 
+test('[vc link --confirm] should not show prompts and autolink', async t => {
+  const dir = fixture('project-link');
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+  // remove output directory if it exists
+  await remove(path.join(dir, 'o'));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    { cwd: dir, reject: false }
+  );
+
+  // Ensure the exit code is right
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  // Ensure the message is correct pattern
+  t.regex(stderr, /Linked to /m);
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+});
+
 test('[vc dev] should show prompts to set up project', async t => {
   const dir = fixture('project-link');
   const port = 58352;

@@ -201,7 +201,8 @@ export default async function setupAndLink(
     const settings = await editProjectSettings(
       output,
       projectSettings,
-      framework
+      framework,
+      autoConfirm
     );
     const project = await createProject(client, newProjectName);
     await updateProject(client, project.id, settings);

@@ -21,7 +21,8 @@ const fields: { name: string; value: keyof PartialProjectSettings }[] = [
 export default async function editProjectSettings(
   output: Output,
   projectSettings: PartialProjectSettings | null,
-  framework: Framework | null
+  framework: Framework | null,
+  autoConfirm: boolean
 ): Promise<ProjectSettings> {
   // create new settings object, missing values will be filled with `null`
   const settings: ProjectSettings = Object.assign(
@@ -62,7 +63,10 @@ export default async function editProjectSettings(
     );
   }
 
-  if (!(await confirm(`Want to override the settings?`, false))) {
+  if (
+    autoConfirm ||
+    !(await confirm(`Want to override the settings?`, false))
+  ) {
     return settings;
   }
 
