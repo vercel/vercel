@@ -4,7 +4,6 @@ import { NowContext } from '../../types';
 import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -20,6 +19,12 @@ import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
 import { validateRootDirectory } from '../../util/validate-paths';
 import { inputRootDirectory } from '../../util/input/input-root-directory';
+import editProjectSettings from '../../util/input/edit-project-settings';
+import stamp from '../../util/output/stamp';
+//@ts-expect-error
+import createDeploy from '../../util/deploy/create-deploy';
+//@ts-expect-error
+import Now from '../../util';
 
 const help = () => {
   console.log(`
@@ -71,9 +76,10 @@ export default async function main(ctx: NowContext) {
 
   const debug = argv['--debug'];
   const output = createOutput({ debug });
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
+  const { args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   const {
     authConfig: { token },
+    localConfig,
     config,
   } = ctx;
   const { currentTeam } = config;
@@ -81,14 +87,17 @@ export default async function main(ctx: NowContext) {
   const client = new Client({ apiUrl, token, currentTeam, debug });
   //client.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const pathDir = args[0] || process.cwd();
-  if (!isDirectory(pathDir)) {
-    output.error(`Expected directory but found file: ${pathDir}`);
+  const path = args[0] || process.cwd();
+  if (!isDirectory(path)) {
+    output.error(`Expected directory but found file: ${path}`);
     return 1;
   }
-  const link = await getLinkedProject(output, client, pathDir);
+  const link = await getLinkedProject(output, client, path);
   const autoConfirm = false;
   const isFile = false;
+  const isTTY = process.stdout.isTTY;
+  const quiet = !isTTY;
+  const contextName = currentTeam || 'current user';
   let rootDirectory = null;
   let newProjectName = null;
   let project = null;
@@ -104,7 +113,7 @@ export default async function main(ctx: NowContext) {
   const shouldStartSetup =
     autoConfirm ||
     (await confirm(
-      `Set up and deploy ${chalk.cyan(`“${toHumanPath(pathDir)}”`)}?`,
+      `Set up and develop ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
     ));
 
@@ -116,7 +125,7 @@ export default async function main(ctx: NowContext) {
   try {
     org = await selectOrg(
       output,
-      'Which scope do you want to deploy to?',
+      'Which scope should contain your project?',
       client,
       ctx.config.currentTeam,
       autoConfirm
@@ -130,7 +139,7 @@ export default async function main(ctx: NowContext) {
     throw err;
   }
 
-  const detectedProjectName = basename(pathDir);
+  const detectedProjectName = basename(path);
 
   const projectOrNewProjectName = await inputProject(
     output,
@@ -140,17 +149,15 @@ export default async function main(ctx: NowContext) {
     autoConfirm
   );
 
-  console.log({ projectOrNewProjectName }); // todo: remove
-
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
-    rootDirectory = await inputRootDirectory(pathDir, output, autoConfirm);
+    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
   } else {
     project = projectOrNewProjectName;
 
     await linkFolderToProject(
       output,
-      pathDir,
+      path,
       {
         projectId: project.id,
         orgId: org.id,
@@ -158,22 +165,102 @@ export default async function main(ctx: NowContext) {
       project.name,
       org.slug
     );
+    output.log(`Linked to project ${project.name}`);
     return 0;
   }
-  /*
-    const sourcePath = rootDirectory ? join(pathDir, rootDirectory) : pathDir;
+  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+
+  if (
+    rootDirectory &&
+    !(await validateRootDirectory(output, path, sourcePath, ''))
+  ) {
+    return 1;
+  }
+
+  const now = new Now({ apiUrl, token, debug, currentTeam: undefined });
+  let deployment = null;
+
+  try {
+    const createArgs: any = {
+      name: newProjectName,
+      env: {},
+      build: { env: {} },
+      forceNew: undefined,
+      withCache: undefined,
+      quiet,
+      wantsPublic: localConfig.public,
+      isFile,
+      type: null,
+      nowConfig: localConfig,
+      regions: [],
+      meta: {},
+      deployStamp: stamp(),
+      target: undefined,
+      skipAutoDetectionConfirmation: autoConfirm,
+      createProjectAndSkipDeploy: '1', // TODO: implement backend
+    };
+
+    deployment = await createDeploy(
+      output,
+      now,
+      contextName,
+      [sourcePath],
+      createArgs,
+      org,
+      !project && !isFile,
+      path
+    );
 
     if (
-      (await validateRootDirectory(
-        output,
-        pathDir,
-        sourcePath,
-        project
-          ? `To change your Project Settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
-          : ''
-      )) === false
+      'code' in deployment &&
+      deployment.code === 'missing_project_settings'
     ) {
+      const { projectSettings, framework } = deployment;
+
+      if (rootDirectory) {
+        projectSettings.rootDirectory = rootDirectory;
+      }
+
+      const settings = await editProjectSettings(
+        output,
+        projectSettings,
+        framework
+      );
+
+      // deploy again, but send projectSettings this time
+      createArgs.projectSettings = settings;
+
+      createArgs.deployStamp = stamp();
+
+      deployment = await createDeploy(
+        output,
+        now,
+        contextName,
+        [sourcePath],
+        createArgs,
+        org,
+        false,
+        path
+      );
+    }
+
+    if (deployment instanceof Error) {
+      (deployment.message =
+        deployment.message ||
+        'An unexpected error occurred while creating your project'),
+        output.prettyError(deployment);
       return 1;
     }
-    */
+
+    if (deployment === null) {
+      output.error('Link failed. Please try again.');
+      return 1;
+    }
+    console.log(deployment);
+    output.log('Done!');
+    return 0;
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
 }
