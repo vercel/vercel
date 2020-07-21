@@ -4,18 +4,15 @@ import chalk from 'chalk';
 import { Output } from '../output';
 import { Framework } from '@vercel/frameworks';
 import { isSettingValue } from '../is-setting-value';
+import { ProjectSettings } from '../../types';
 
-export interface ProjectSettings {
+export interface PartialSettings {
   buildCommand: string | null;
   outputDirectory: string | null;
   devCommand: string | null;
 }
 
-export interface ProjectSettingsWithFramework extends ProjectSettings {
-  framework: string | null;
-}
-
-const fields: { name: string; value: keyof ProjectSettings }[] = [
+const fields: { name: string; value: keyof PartialSettings }[] = [
   { name: 'Build Command', value: 'buildCommand' },
   { name: 'Output Directory', value: 'outputDirectory' },
   { name: 'Development Command', value: 'devCommand' },
@@ -23,13 +20,14 @@ const fields: { name: string; value: keyof ProjectSettings }[] = [
 
 export default async function editProjectSettings(
   output: Output,
-  projectSettings: ProjectSettings | null,
+  projectSettings: PartialSettings | null,
   framework: Framework | null
-) {
+): Promise<ProjectSettings> {
   // create new settings object, missing values will be filled with `null`
-  const settings: Partial<ProjectSettingsWithFramework> = {
-    ...projectSettings,
-  };
+  const settings: ProjectSettings = Object.assign(
+    { framework: null },
+    projectSettings
+  );
 
   for (let field of fields) {
     settings[field.value] =
@@ -75,7 +73,7 @@ export default async function editProjectSettings(
     choices: fields,
   });
 
-  for (let setting of settingFields as (keyof ProjectSettings)[]) {
+  for (let setting of settingFields as (keyof PartialSettings)[]) {
     const field = fields.find(f => f.value === setting);
     const name = `${Date.now()}`;
     const answers = await inquirer.prompt({

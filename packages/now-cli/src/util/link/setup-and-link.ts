@@ -1,7 +1,7 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
-import { NowContext, Project, ProjectLinkResult } from '../../types';
+import { NowContext, ProjectLinkResult } from '../../types';
 import { NowConfig } from '../dev/types';
 import { Output } from '../output';
 import {
@@ -9,6 +9,8 @@ import {
   linkFolderToProject,
   getVercelDirectory,
 } from '../projects/link';
+import createProject from '../projects/create-project';
+import updateProject from '../projects/update-project';
 import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
@@ -200,16 +202,8 @@ export default async function setupAndLink(
       projectSettings,
       framework
     );
-
-    const newProject = await client.fetch<Project>('/v1/projects', {
-      method: 'POST',
-      body: JSON.stringify({ name: newProjectName }),
-    });
-
-    await client.fetch(`/v2/projects/${newProject.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(settings),
-    });
+    const newProject = await createProject(client, newProjectName);
+    await updateProject(client, newProject.id, settings);
 
     await linkFolderToProject(
       output,
