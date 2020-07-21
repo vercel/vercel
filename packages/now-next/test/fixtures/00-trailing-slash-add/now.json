@@ -22,15 +22,15 @@
     },
     {
       "fetchOptions": { "redirect": "manual" },
-      "path": "/text.txt/",
+      "path": "/test.txt/",
       "status": 308,
       "responseHeaders": {
-        "refresh": "/url=/text\\.txt$/"
+        "refresh": "/url=/test\\.txt$/"
       }
     },
     {
       "fetchOptions": { "redirect": "manual" },
-      "path": "/text.txt",
+      "path": "/test.txt",
       "status": 200,
       "mustContain": "this is a file"
     }
