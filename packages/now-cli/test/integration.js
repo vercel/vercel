@@ -2595,7 +2595,9 @@ test('should show prompts to set up project', async t => {
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Build Command?`)
   );
-  now.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+  now.stdin.write(
+    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
+  );
 
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Output Directory?`)
@@ -3178,8 +3180,6 @@ test('[vc link] should show prompts to set up project', async t => {
 
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
-  // remove output directory if it exists
-  await remove(path.join(dir, 'o'));
 
   const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
 
@@ -3219,7 +3219,7 @@ test('[vc link] should show prompts to set up project', async t => {
   await waitForPrompt(vc, chunk =>
     chunk.includes(`What's your Build Command?`)
   );
-  vc.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+  vc.stdin.write(`mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`);
 
   await waitForPrompt(vc, chunk =>
     chunk.includes(`What's your Output Directory?`)
@@ -3259,8 +3259,6 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
 
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
-  // remove output directory if it exists
-  await remove(path.join(dir, 'o'));
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
@@ -3299,8 +3297,6 @@ test('[vc dev] should show prompts to set up project', async t => {
 
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
-  // remove output directory if it exists
-  await remove(path.join(dir, 'o'));
 
   const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
     cwd: dir,
@@ -3344,7 +3340,9 @@ test('[vc dev] should show prompts to set up project', async t => {
   await waitForPrompt(dev, chunk =>
     chunk.includes(`What's your Build Command?`)
   );
-  dev.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+  dev.stdin.write(
+    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
+  );
 
   await waitForPrompt(dev, chunk =>
     chunk.includes(`What's your Output Directory?`)
