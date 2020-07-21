@@ -1,9 +1,9 @@
 export const getServerSideProps = ({ params }) => ({
   props: {
-    post: params.post
-  }
-})
+    post: params.post,
+  },
+});
 
 export default function Post({ post }) {
-  return `index post: ${post}`
+  return `index post: ${post}`;
 }

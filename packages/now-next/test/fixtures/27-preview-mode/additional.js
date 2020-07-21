@@ -14,10 +14,10 @@ module.exports = function (ctx) {
       setCookieParser.splitCookiesString(res.headers.get('set-cookie'))
     );
     const bypassCookie = cookies.find(
-      (cookie) => cookie.name === '__prerender_bypass'
+      cookie => cookie.name === '__prerender_bypass'
     );
     const previewDataCookie = cookies.find(
-      (cookie) => cookie.name === '__next_preview_data'
+      cookie => cookie.name === '__next_preview_data'
     );
 
     expect(bypassCookie).toBeDefined();
@@ -38,10 +38,10 @@ module.exports = function (ctx) {
       setCookieParser.splitCookiesString(res.headers.get('set-cookie'))
     );
     const bypassCookie = cookies.find(
-      (cookie) => cookie.name === '__prerender_bypass'
+      cookie => cookie.name === '__prerender_bypass'
     );
     const previewDataCookie = cookies.find(
-      (cookie) => cookie.name === '__next_preview_data'
+      cookie => cookie.name === '__next_preview_data'
     );
 
     expect(bypassCookie).toBeDefined();

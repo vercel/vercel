@@ -1,1 +1,1 @@
-export default () => 'hello from /[teamSlug]/[project]/[id]'
+export default () => 'hello from /[teamSlug]/[project]/[id]';

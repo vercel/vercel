@@ -1,5 +1,5 @@
-const Page = ({ data }) => <p>{data} world</p>
+const Page = ({ data }) => <p>{data} world</p>;
 
-Page.getInitialProps = () => ({ data: 'hello' })
+Page.getInitialProps = () => ({ data: 'hello' });
 
-export default Page
+export default Page;
