@@ -1,6 +1,7 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { NowContext } from '../../types';
+import { NowConfig } from '../../util/dev/types';
 import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
@@ -14,6 +15,7 @@ import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
 import confirm from '../../util/input/confirm';
 import toHumanPath from '../../util/humanize-path';
+import { emoji, prependEmoji } from '../../util/emoji';
 import { isDirectory } from '../../util/config/global-path';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
@@ -79,7 +81,6 @@ export default async function main(ctx: NowContext) {
   const { args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   const {
     authConfig: { token },
-    localConfig,
     config,
   } = ctx;
   const { currentTeam } = config;
@@ -177,6 +178,10 @@ export default async function main(ctx: NowContext) {
     return 1;
   }
 
+  let localConfig: NowConfig = {};
+  if (ctx.localConfig && !(ctx.localConfig instanceof Error)) {
+    localConfig = ctx.localConfig;
+  }
   const now = new Now({ apiUrl, token, debug, currentTeam: undefined });
   let deployment = null;
 
@@ -192,13 +197,15 @@ export default async function main(ctx: NowContext) {
       isFile,
       type: null,
       nowConfig: localConfig,
-      regions: [],
+      regions: undefined,
       meta: {},
       deployStamp: stamp(),
       target: undefined,
       skipAutoDetectionConfirmation: autoConfirm,
       createProjectAndSkipDeploy: '1', // TODO: implement backend
     };
+
+    console.log({ createArgs }); // TODO: remove
 
     deployment = await createDeploy(
       output,
@@ -210,6 +217,8 @@ export default async function main(ctx: NowContext) {
       !project && !isFile,
       path
     );
+
+    console.log({ deployment }); // TODO: remove
 
     if (
       'code' in deployment &&
@@ -232,6 +241,8 @@ export default async function main(ctx: NowContext) {
 
       createArgs.deployStamp = stamp();
 
+      console.log({ createArgs }); // TODO: remove
+
       deployment = await createDeploy(
         output,
         now,
@@ -242,6 +253,8 @@ export default async function main(ctx: NowContext) {
         false,
         path
       );
+
+      console.log({ deployment }); // TODO: remove
     }
 
     if (deployment instanceof Error) {
@@ -256,8 +269,13 @@ export default async function main(ctx: NowContext) {
       output.error('Link failed. Please try again.');
       return 1;
     }
-    console.log(deployment);
-    output.log('Done!');
+
+    output.print(
+      `${prependEmoji(
+        `Linked to project ${chalk.bold(deployment.name)}`,
+        emoji('success')
+      )}\n`
+    );
     return 0;
   } catch (err) {
     handleError(err);
