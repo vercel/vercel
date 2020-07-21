@@ -365,7 +365,7 @@ CMD ["node", "index.js"]`,
       'package.json': JSON.stringify({
         private: true,
         scripts: {
-          build: 'mkdir public && node print.js > public/index.json',
+          build: 'mkdir -p public && node print.js > public/index.json',
         },
       }),
     },

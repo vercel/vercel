@@ -1,9 +1,9 @@
 export const getServerSideProps = ({ params }) => {
   return {
     props: {
-      code: params.inviteCode
-    }
-  }
-}
+      code: params.inviteCode,
+    },
+  };
+};
 
-export default ({ code }) => `hello from /teams/invite/[inviteCode] ${code}`
+export default ({ code }) => `hello from /teams/invite/[inviteCode] ${code}`;

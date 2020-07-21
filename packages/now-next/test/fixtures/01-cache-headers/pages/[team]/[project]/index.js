@@ -1,1 +1,1 @@
-export default () => 'hi from project route'
+export default () => 'hi from project route';

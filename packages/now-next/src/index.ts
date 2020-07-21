@@ -556,8 +556,6 @@ export const build = async ({
     return {
       output,
       routes: [
-        // TODO: low priority: handle trailingSlash
-
         // User headers
         ...headers,
 
