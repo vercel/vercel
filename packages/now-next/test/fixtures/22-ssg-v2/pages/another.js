@@ -8,7 +8,7 @@ export async function getStaticProps() {
       random: Math.random(),
       time: new Date().getTime(),
     },
-    unstable_revalidate: 1,
+    revalidate: 1,
   };
 }
 

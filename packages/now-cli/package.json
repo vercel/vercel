@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "19.1.3-canary.3",
+  "version": "19.2.1-canary.0",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -62,13 +62,14 @@
     "node": ">= 10"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.4.2-canary.0",
-    "@vercel/go": "1.1.4-canary.0",
-    "@vercel/next": "2.6.13-canary.0",
-    "@vercel/node": "1.7.2",
+    "@vercel/build-utils": "2.4.2",
+    "@vercel/go": "1.1.4",
+    "@vercel/next": "2.6.13",
+    "@vercel/node": "1.7.3",
     "@vercel/python": "1.2.2",
     "@vercel/ruby": "1.2.3",
-    "@vercel/static-build": "0.17.6-canary.1"
+    "@vercel/static-build": "0.17.6",
+    "update-notifier": "4.1.0"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
@@ -119,7 +120,7 @@
     "chalk": "2.4.2",
     "chokidar": "3.3.1",
     "clipboardy": "2.1.0",
-    "codecov": "3.6.5",
+    "codecov": "3.7.1",
     "cpy": "7.2.0",
     "credit-card": "3.0.1",
     "date-fns": "1.29.0",
@@ -185,7 +186,6 @@
     "ts-node": "8.3.0",
     "typescript": "3.9.3",
     "universal-analytics": "0.4.20",
-    "update-check": "1.5.3",
     "utility-types": "2.1.0",
     "which": "2.0.2",
     "which-promise": "1.0.0",

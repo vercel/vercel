@@ -32,7 +32,7 @@ import {
   convertRedirects,
   convertRewrites,
 } from '@vercel/routing-utils/dist/superstatic';
-import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
+import { nodeFileTrace, NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import escapeStringRegexp from 'escape-string-regexp';
 import {
@@ -91,7 +91,7 @@ export const version = 2;
 const htmlContentType = 'text/html; charset=utf-8';
 const nowDevChildProcesses = new Set<ChildProcess>();
 
-['SIGINT', 'SIGTERM'].forEach((signal) => {
+['SIGINT', 'SIGTERM'].forEach(signal => {
   process.once(signal as NodeJS.Signals, () => {
     for (const child of nowDevChildProcesses) {
       debug(
@@ -485,7 +485,7 @@ export const build = async ({
                 `${(ssgDataRoute && ssgDataRoute.dataRoute) || dataRoute.page}${
                   dataRoute.routeKeys
                     ? `?${Object.keys(dataRoute.routeKeys)
-                        .map((key) => `${dataRoute.routeKeys![key]}=$${key}`)
+                        .map(key => `${dataRoute.routeKeys![key]}=$${key}`)
                         .join('&')}`
                     : ''
                 }`
@@ -579,8 +579,6 @@ export const build = async ({
     return {
       output,
       routes: [
-        // TODO: low priority: handle trailingSlash
-
         // User headers
         ...headers,
 
@@ -716,7 +714,7 @@ export const build = async ({
     );
     const nodeModules = excludeFiles(
       await glob('node_modules/**', entryPath),
-      (file) => file.startsWith('node_modules/.cache')
+      file => file.startsWith('node_modules/.cache')
     );
     const launcherFiles = {
       'now__bridge.js': new FileFsRef({
@@ -745,7 +743,7 @@ export const build = async ({
     const launcherData = await readFile(launcherPath, 'utf8');
 
     await Promise.all(
-      Object.keys(pages).map(async (page) => {
+      Object.keys(pages).map(async page => {
         // These default pages don't have to be handled as they'd always 404
         if (['_app.js', '_error.js', '_document.js'].includes(page)) {
           return;
@@ -903,7 +901,7 @@ export const build = async ({
 
       const apiPages: string[] = [];
       const nonApiPages: string[] = [];
-      const allPagePaths = Object.keys(pages).map((page) => pages[page].fsPath);
+      const allPagePaths = Object.keys(pages).map(page => pages[page].fsPath);
 
       for (const page of allPagePaths) {
         if (isApiPage(page)) {
@@ -996,7 +994,7 @@ export const build = async ({
         debug(
           'detected (legacy) assets to be bundled with serverless function:'
         );
-        assetKeys.forEach((assetFile) => debug(`\t${assetFile}`));
+        assetKeys.forEach(assetFile => debug(`\t${assetFile}`));
         debug(
           '\nPlease upgrade to Next.js 9.1 to leverage modern asset handling.'
         );
@@ -1136,7 +1134,7 @@ export const build = async ({
       }
     } else {
       await Promise.all(
-        pageKeys.map(async (page) => {
+        pageKeys.map(async page => {
           // These default pages don't have to be handled as they'd always 404
           if (['_app.js', '_document.js'].includes(page)) {
             return;
@@ -1217,8 +1215,8 @@ export const build = async ({
       false,
       routesManifest,
       new Set(prerenderManifest.omittedRoutes)
-    ).then((arr) =>
-      arr.map((route) => {
+    ).then(arr =>
+      arr.map(route => {
         route.src = route.src.replace('^', `^${dynamicPrefix}`);
         return route;
       })
@@ -1236,8 +1234,8 @@ export const build = async ({
         dynamicPages,
         false,
         routesManifest
-      ).then((arr) =>
-        arr.map((route) => {
+      ).then(arr =>
+        arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
           return route;
         })
@@ -1257,7 +1255,7 @@ export const build = async ({
                   const pages = {
                     ${groupPageKeys
                       .map(
-                        (page) =>
+                        page =>
                           `'${page}': require('./${path.join(
                             './',
                             group.pages[page].pageFileName
@@ -1302,7 +1300,7 @@ export const build = async ({
                       // for prerendered dynamic routes (/blog/post-1) we need to
                       // find the match since it won't match the page directly
                       const dynamicRoutes = ${JSON.stringify(
-                        completeDynamicRoutes.map((route) => ({
+                        completeDynamicRoutes.map(route => ({
                           src: route.src,
                           dest: route.dest,
                         }))
@@ -1516,13 +1514,13 @@ export const build = async ({
       }
     };
 
-    Object.keys(prerenderManifest.staticRoutes).forEach((route) =>
+    Object.keys(prerenderManifest.staticRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: false, isFallback: false })
     );
-    Object.keys(prerenderManifest.fallbackRoutes).forEach((route) =>
+    Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: false, isFallback: true })
     );
-    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach((route) =>
+    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: true, isFallback: false })
     );
 
@@ -1586,7 +1584,7 @@ export const build = async ({
     // We need to delete lambdas from output instead of omitting them from the
     // start since we rely on them for powering Preview Mode (read above in
     // onPrerenderRoute).
-    prerenderManifest.omittedRoutes.forEach((routeKey) => {
+    prerenderManifest.omittedRoutes.forEach(routeKey => {
       // Get the route file as it'd be mounted in the builder output
       const routeFileNoExt = path.posix.join(
         entryDirectory,

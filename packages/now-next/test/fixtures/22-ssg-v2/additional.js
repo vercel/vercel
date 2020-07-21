@@ -2,7 +2,7 @@
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 
-module.exports = function(ctx) {
+module.exports = function (ctx) {
   it('should revalidate content properly from pathname', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/another`);
     expect(res.status).toBe(200);
