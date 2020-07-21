@@ -349,7 +349,7 @@ test('deploy using --local-config flag v2', async t => {
   t.is(mainRes.status, 404, 'Should not deploy/build main now.json');
 
   const anotherMainRes = await fetch(`https://${host}/another-main`);
-  t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
+  t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json. break intentionally');
 });
 
 test('deploy using --local-config flag above target', async t => {
