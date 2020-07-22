@@ -978,7 +978,7 @@ test('try to purchase a domain', async t => {
     console.log(
       'Skipping test `try to purchase a domain` because a personal VERCEL_TOKEN was provided.'
     );
-    t.true(true);
+    t.pass();
     return;
   }
 
