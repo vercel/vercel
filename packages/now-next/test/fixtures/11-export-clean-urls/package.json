@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "next build && next export"
+    "vercel-build": "next build && next export"
   },
   "dependencies": {
     "next": "canary",

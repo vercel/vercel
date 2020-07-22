@@ -361,10 +361,12 @@ export async function build({
     meta,
   });
 
-  debug('Running user script...');
-  const runScriptTime = Date.now();
-  await runPackageJsonScript(entrypointFsDirname, 'now-build', spawnOpts);
-  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
+  await runPackageJsonScript(
+    entrypointFsDirname,
+    // Don't consider "build" script since its intended for frontend code
+    ['vercel-build', 'now-build'],
+    spawnOpts
+  );
 
   debug('Tracing input files...');
   const traceTime = Date.now();
