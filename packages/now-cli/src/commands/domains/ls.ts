@@ -81,7 +81,7 @@ export default async function ls(
   ] as const);
 
   if (projects instanceof Error) {
-    output.error(projects.message);
+    output.prettyError(projects);
     return 1;
   }
 

@@ -93,7 +93,7 @@ export default async function add(
         );
 
         if (removeResponse instanceof Error) {
-          output.error(removeResponse.message);
+          output.prettyError(removeResponse);
           return 1;
         }
 
@@ -102,7 +102,7 @@ export default async function add(
     }
 
     if (aliasTarget instanceof Error) {
-      output.error(aliasTarget.message);
+      output.prettyError(aliasTarget);
       return 1;
     }
   }
@@ -124,7 +124,7 @@ export default async function add(
   const domainResponse = await getDomain(client, contextName, domainName);
 
   if (domainResponse instanceof Error) {
-    output.error(domainResponse.message);
+    output.prettyError(domainResponse);
     return 1;
   }
 
