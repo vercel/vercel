@@ -75,7 +75,8 @@ export default async function main(ctx: NowContext) {
     path,
     forceDelete,
     autoConfirm,
-    'success'
+    'success',
+    'Set up'
   );
 
   if (link.status === 'error') {

@@ -34,7 +34,8 @@ export default async function setupAndLink(
   path: string,
   forceDelete: boolean,
   autoConfirm: boolean,
-  successEmoji: EmojiLabel
+  successEmoji: EmojiLabel,
+  setupMsg: string
 ): Promise<ProjectLinkResult> {
   const {
     authConfig: { token },
@@ -73,7 +74,7 @@ export default async function setupAndLink(
   const shouldStartSetup =
     autoConfirm ||
     (await confirm(
-      `Set up and develop ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+      `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
     ));
 
