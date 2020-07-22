@@ -593,7 +593,86 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(homeRes.status, 200, formatOutput({ stderr, stdout }));
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
-    t.is(apiJson['VERCEL_URL'], host);
+    t.is(homeJson['VERCEL_URL'], host);
+  }
+
+  async function nowDevWithEnv() {
+    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    let localhost = undefined;
+    await waitForPrompt(vc, chunk => {
+      if (chunk.includes('Ready! Available at')) {
+        localhost = /(https?:[^\s]+)/g.exec(chunk);
+        return true;
+      }
+      return false;
+    });
+
+    const localhostNoProtocol = localhost[0].slice('http://'.length);
+
+    const apiUrl = `${localhost[0]}/api/get-env`;
+    const apiRes = await fetch(apiUrl);
+
+    t.is(apiRes.status, 200);
+
+    const apiJson = await apiRes.json();
+
+    t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
+
+    const homeUrl = localhost[0];
+
+    const homeRes = await fetch(homeUrl);
+    const homeJson = await homeRes.json();
+    t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+
+    vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowDevAndFetchCloudVars() {
+    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    let localhost = undefined;
+    await waitForPrompt(vc, chunk => {
+      if (chunk.includes('Ready! Available at')) {
+        localhost = /(https?:[^\s]+)/g.exec(chunk);
+        return true;
+      }
+      return false;
+    });
+
+    const apiUrl = `${localhost[0]}/api/get-env`;
+    const apiRes = await fetch(apiUrl);
+
+    const localhostNoProtocol = localhost[0].slice('http://'.length);
+
+    t.is(apiRes.status, 200);
+
+    const apiJson = await apiRes.json();
+
+    t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+
+    const homeUrl = localhost[0];
+    const homeRes = await fetch(homeUrl);
+    const homeJson = await homeRes.json();
+    t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+
+    vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
   async function nowEnvRemove() {
@@ -662,11 +741,13 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvPullOverwrite();
   await nowEnvPullConfirm();
   await nowDeployWithVar();
+  await nowDevWithEnv();
+  fs.unlinkSync(path.join(target, '.env'));
+  await nowDevAndFetchCloudVars();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
   await nowEnvRemoveWithNameOnly();
   await nowEnvLsIsEmpty();
-  fs.unlinkSync(path.join(target, '.env'));
 });
 
 test('deploy with metadata containing "=" in the value', async t => {
@@ -2514,7 +2595,9 @@ test('should show prompts to set up project', async t => {
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Build Command?`)
   );
-  now.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+  now.stdin.write(
+    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
+  );
 
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Output Directory?`)
@@ -3087,4 +3170,295 @@ test('reject deploying with wrong team .vercel config', async t => {
     ),
     formatOutput({ stderr, stdout })
   );
+});
+
+test('[vc link] should show prompts to set up project', async t => {
+  const dir = fixture('project-link');
+  const projectName = `project-link-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+
+  await waitForPrompt(vc, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  vc.stdin.write('yes\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  vc.stdin.write('\n');
+
+  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  vc.stdin.write('no\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  vc.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  vc.stdin.write('\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  vc.stdin.write('yes\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  vc.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  vc.stdin.write(`mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  vc.stdin.write(`o\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  vc.stdin.write(`\n`);
+
+  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+
+  const output = await vc;
+
+  // Ensure the exit code is right
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+});
+
+test('[vc link --confirm] should not show prompts and autolink', async t => {
+  const dir = fixture('project-link-confirm');
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    { cwd: dir, reject: false }
+  );
+
+  // Ensure the exit code is right
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  // Ensure the message is correct pattern
+  t.regex(stderr, /Linked to /m);
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+});
+
+test('[vc dev] should show prompts to set up project', async t => {
+  const dir = fixture('project-link-dev');
+  const port = 58352;
+  const projectName = `project-link-dev-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
+    cwd: dir,
+  });
+
+  await waitForPrompt(dev, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  dev.stdin.write('no\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  dev.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  dev.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  dev.stdin.write(
+    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
+  );
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  dev.stdin.write(`o\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  dev.stdin.write(`\n`);
+
+  await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+
+  await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
+
+  // Ensure that `vc dev` also works
+  try {
+    const response = await fetch(`http://localhost:${port}/`);
+    const text = await response.text();
+    t.is(text.includes('<h1>custom hello</h1>'), true, text);
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
+  }
+});
+
+test('[vc dev] should send the platform proxy request headers to frontend dev server ', async t => {
+  const dir = fixture('dev-proxy-headers-and-env');
+  const port = 58353;
+  const projectName = `dev-proxy-headers-and-env-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
+    cwd: dir,
+  });
+
+  await waitForPrompt(dev, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  dev.stdin.write('no\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  dev.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  dev.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  dev.stdin.write(
+    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
+  );
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  dev.stdin.write(`o\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  dev.stdin.write(`node server.js\n`);
+
+  await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
+  await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
+
+  // Ensure that `vc dev` also works
+  try {
+    const response = await fetch(`http://localhost:${port}/`);
+    const body = await response.json();
+    t.is(body.headers['x-vercel-deployment-url'], `localhost:${port}`);
+    t.is(body.env.NOW_REGION, 'dev1');
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
+  }
 });

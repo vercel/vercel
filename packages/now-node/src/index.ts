@@ -19,7 +19,7 @@ import {
 // @ts-ignore - `@types/mkdirp-promise` is broken
 import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
-import nodeFileTrace from '@zeit/node-file-trace';
+import { nodeFileTrace } from '@zeit/node-file-trace';
 import buildUtils from './build-utils';
 import {
   File,
@@ -361,10 +361,12 @@ export async function build({
     meta,
   });
 
-  debug('Running user script...');
-  const runScriptTime = Date.now();
-  await runPackageJsonScript(entrypointFsDirname, 'now-build', spawnOpts);
-  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
+  await runPackageJsonScript(
+    entrypointFsDirname,
+    // Don't consider "build" script since its intended for frontend code
+    ['vercel-build', 'now-build'],
+    spawnOpts
+  );
 
   debug('Tracing input files...');
   const traceTime = Date.now();

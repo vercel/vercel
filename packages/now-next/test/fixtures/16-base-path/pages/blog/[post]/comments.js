@@ -1,9 +1,9 @@
 export const getServerSideProps = ({ params }) => ({
   props: {
-    post: params.post
-  }
-})
+    post: params.post,
+  },
+});
 
 export default function Comment({ post }) {
-  return `comments post: ${post}`
+  return `comments post: ${post}`;
 }
