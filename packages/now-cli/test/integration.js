@@ -3183,7 +3183,7 @@ test('[vc link] should show prompts to set up project', async t => {
 
   const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
 
-  await waitForPrompt(vc, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
   vc.stdin.write('yes\n');
 
   await waitForPrompt(vc, chunk =>
