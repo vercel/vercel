@@ -1512,9 +1512,9 @@ export default class DevServer {
     const { dest, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
-    Object.entries(headers).forEach(([name, value]) => {
+    for (const [name, value] of Object.entries(headers)) {
       res.setHeader(name, value);
-    });
+    }
 
     if (statusCode) {
       // Set the `statusCode` as read-only so that `http-proxy`
@@ -1537,6 +1537,13 @@ export default class DevServer {
       if (this.devProcessPort) {
         const upstream = `http://localhost:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
+
+        // Add the Vercel platform proxy request headers
+        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+        for (const [name, value] of Object.entries(headers)) {
+          req.headers[name] = value;
+        }
+
         this.setResponseHeaders(res, nowRequestId);
         const origUrl = url.parse(req.url || '/', true);
         delete origUrl.search;
@@ -1692,6 +1699,13 @@ export default class DevServer {
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
+
+      // Add the Vercel platform proxy request headers
+      const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+      for (const [name, value] of Object.entries(headers)) {
+        req.headers[name] = value;
+      }
+
       this.setResponseHeaders(res, nowRequestId);
       return proxyPass(
         req,
