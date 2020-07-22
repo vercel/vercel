@@ -94,7 +94,7 @@ export default async function inspect(
   const projects = await findProjectsForDomain(client, domainName);
 
   if (projects instanceof Error) {
-    output.error(projects.message);
+    output.prettyError(projects);
     return 1;
   }
 
