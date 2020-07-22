@@ -815,7 +815,7 @@ export const build = async ({
 
     // > 1 because _error is a lambda but isn't used if a static 404 is available
     const pageKeys = Object.keys(pages);
-    const hasLambdas = !static404Page || pageKeys.length > 1;
+    let hasLambdas = !static404Page || pageKeys.length > 1;
 
     if (pageKeys.length === 0) {
       const nextConfig = await getNextConfig(workPath, entryPath);
@@ -855,14 +855,38 @@ export const build = async ({
           [filePath: string]: FileFsRef;
         };
 
-    let canUsePreviewMode = false;
+    const isApiPage = (page: string) =>
+      page.replace(/\\/g, '/').match(/serverless\/pages\/api/);
+
+    const canUsePreviewMode = Object.keys(pages).some(page =>
+      isApiPage(pages[page].fsPath)
+    );
+
     let pseudoLayerBytes = 0;
     let apiPseudoLayerBytes = 0;
     const pseudoLayers: PseudoLayer[] = [];
     const apiPseudoLayers: PseudoLayer[] = [];
+    const nonLambdaSsgPages = new Set<string>();
 
-    const isApiPage = (page: string) =>
-      page.replace(/\\/g, '/').match(/serverless\/pages\/api/);
+    const onPrerenderRouteInitial = (routeKey: string) => {
+      // Get the route file as it'd be mounted in the builder output
+      const pr = prerenderManifest.staticRoutes[routeKey];
+      const { initialRevalidate, srcRoute } = pr;
+      const route = srcRoute || routeKey;
+
+      if (
+        initialRevalidate === false &&
+        !canUsePreviewMode &&
+        !prerenderManifest.fallbackRoutes[route] &&
+        !prerenderManifest.legacyBlockingRoutes[route]
+      ) {
+        nonLambdaSsgPages.add(route);
+      }
+    };
+
+    Object.keys(prerenderManifest.staticRoutes).forEach(route =>
+      onPrerenderRouteInitial(route)
+    );
 
     const tracedFiles: {
       [filePath: string]: FileFsRef;
@@ -872,21 +896,30 @@ export const build = async ({
     } = {};
 
     if (requiresTracing) {
-      const tracingLabel =
-        'Traced Next.js serverless functions for external files in';
-      console.time(tracingLabel);
-
       const apiPages: string[] = [];
       const nonApiPages: string[] = [];
-      const allPagePaths = Object.keys(pages).map(page => pages[page].fsPath);
+      const pageKeys = Object.keys(pages);
 
-      for (const page of allPagePaths) {
-        if (isApiPage(page)) {
-          apiPages.push(page);
-          canUsePreviewMode = true;
-        } else {
-          nonApiPages.push(page);
+      for (const page of pageKeys) {
+        const pagePath = pages[page].fsPath;
+        const route = `/${page.replace(/\.js$/, '')}`;
+
+        if (route === '/_error' && static404Page) continue;
+
+        if (isApiPage(pagePath)) {
+          apiPages.push(pagePath);
+        } else if (!nonLambdaSsgPages.has(route)) {
+          nonApiPages.push(pagePath);
         }
+      }
+      hasLambdas =
+        !static404Page || apiPages.length > 0 || nonApiPages.length > 0;
+
+      const tracingLabel =
+        'Traced Next.js serverless functions for external files in';
+
+      if (hasLambdas) {
+        console.time(tracingLabel);
       }
 
       const {
@@ -937,10 +970,16 @@ export const build = async ({
       await Promise.all(
         apiFileList.map(collectTracedFiles(apiReasons, apiTracedFiles))
       );
-      console.timeEnd(tracingLabel);
+
+      if (hasLambdas) {
+        console.timeEnd(tracingLabel);
+      }
 
       const zippingLabel = 'Compressed shared serverless function files';
-      console.time(zippingLabel);
+
+      if (hasLambdas) {
+        console.time(zippingLabel);
+      }
 
       let pseudoLayer;
       let apiPseudoLayer;
@@ -955,7 +994,9 @@ export const build = async ({
       pseudoLayers.push(pseudoLayer);
       apiPseudoLayers.push(apiPseudoLayer);
 
-      console.timeEnd(zippingLabel);
+      if (hasLambdas) {
+        console.timeEnd(zippingLabel);
+      }
     } else {
       // An optional assets folder that is placed alongside every page
       // entrypoint.
@@ -1040,6 +1081,11 @@ export const build = async ({
         if (routeIsDynamic) {
           dynamicPages.push(normalizePage(pathname));
         }
+
+        if (nonLambdaSsgPages.has(`/${pathname}`)) {
+          continue;
+        }
+
         const outputName = path.join('/', entryDirectory, pathname);
 
         const lambdaGroups = routeIsApi ? apiLambdaGroups : pageLambdaGroups;
@@ -1449,13 +1495,6 @@ export const build = async ({
         lambda = lambdas[outputSrcPathPage];
       }
 
-      if (lambda == null) {
-        throw new NowBuildError({
-          code: 'NEXT_MISSING_LAMBDA',
-          message: `Unable to find lambda for route: ${routeFileNoExt}`,
-        });
-      }
-
       if (initialRevalidate === false) {
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new NowBuildError({
@@ -1472,6 +1511,13 @@ export const build = async ({
       }
 
       if (prerenders[outputPathPage] == null) {
+        if (lambda == null) {
+          throw new NowBuildError({
+            code: 'NEXT_MISSING_LAMBDA',
+            message: `Unable to find lambda for route: ${routeFileNoExt}`,
+          });
+        }
+
         prerenders[outputPathPage] = new Prerender({
           expiration: initialRevalidate,
           lambda,
