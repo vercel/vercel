@@ -21,7 +21,7 @@ export async function findProjectsForDomain(
       domain: domainName,
     });
 
-    for (;;) {
+    for (let i = 0; i < 1000; i++) {
       const response = await client.fetch<Project[]>(`/v2/projects/?${query}`);
       result.push(...response);
 

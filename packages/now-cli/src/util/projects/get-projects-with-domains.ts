@@ -16,7 +16,7 @@ export async function getProjectsWithDomains(
       limit: limit.toString(),
     });
 
-    for (;;) {
+    for (let i = 0; i < 1000; i++) {
       const response = await client.fetch<Project[]>(`/v2/projects/?${query}`);
       result.push(...response);
 
