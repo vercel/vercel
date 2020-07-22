@@ -25,7 +25,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-  --confirm                  Confirm default options and skip questions
+    --confirm                      Confirm default options and skip questions
 
   ${chalk.dim('Examples:')}
 
@@ -38,6 +38,10 @@ const help = () => {
   )} Link current directory with default options and skip questions
 
       ${chalk.cyan(`$ ${getPkgName()} link --confirm`)}
+
+  ${chalk.gray('–')} Link a specific directory to a Vercel Project
+
+      ${chalk.cyan(`$ ${getPkgName()} link /usr/src/project`)}
 `);
 };
 
@@ -75,7 +79,8 @@ export default async function main(ctx: NowContext) {
     path,
     forceDelete,
     autoConfirm,
-    'success'
+    'success',
+    'Set up'
   );
 
   if (link.status === 'error') {
