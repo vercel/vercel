@@ -974,7 +974,7 @@ test('domains inspect', async t => {
 });
 
 test('try to purchase a domain', async t => {
-  if (process.env.VERCEL_TOKEN) {
+  if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
     console.log(
       'Skipping test `try to purchase a domain` because a personal VERCEL_TOKEN was provided.'
     );
