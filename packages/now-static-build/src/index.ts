@@ -447,7 +447,7 @@ export async function build({
       if (!found) {
         throw new Error(
           `Missing required "${
-            buildCommand || 'build'
+            buildCommand || 'vercel-build'
           }" script in "${entrypoint}"`
         );
       }
