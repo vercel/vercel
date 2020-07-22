@@ -14,7 +14,7 @@
       "method": "POST",
       "headers": { "Accept": "application/json" },
       "body": { "query": "{ redwood { version } }" },
-      "mustContain": "0.13.1-canary.19+7d6a9f5a"
+      "mustContain": "0.14.0"
     }
   ]
 }

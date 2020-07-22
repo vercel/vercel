@@ -7,7 +7,7 @@
     ]
   },
   "devDependencies": {
-    "@redwoodjs/core": "0.13.1-canary.19"
+    "@redwoodjs/core": "0.14.0"
   },
   "engines": {
     "node": ">=12",
