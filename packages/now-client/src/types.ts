@@ -112,6 +112,7 @@ export interface NowConfig extends LegacyNowConfig {
   [fileNameSymbol]?: string;
   name?: string;
   version?: number;
+  public?: boolean;
   env?: Dictionary<string>;
   build?: {
     env?: Dictionary<string>;
