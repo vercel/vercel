@@ -365,7 +365,7 @@ CMD ["node", "index.js"]`,
       'package.json': JSON.stringify({
         private: true,
         scripts: {
-          build: 'mkdir public && node print.js > public/index.json',
+          build: 'mkdir -p public && node print.js > public/index.json',
         },
       }),
     },
@@ -502,6 +502,18 @@ CMD ["node", "index.js"]`,
     },
     'project-link': {
       'package.json': JSON.stringify({}),
+    },
+    'project-link-confirm': {
+      'package.json': JSON.stringify({}),
+    },
+    'project-link-dev': {
+      'package.json': JSON.stringify({}),
+    },
+    'dev-proxy-headers-and-env': {
+      'package.json': JSON.stringify({}),
+      'server.js': `require('http').createServer((req, res) => {
+                      res.end(JSON.stringify({ headers: req.headers, env: process.env }));
+                    }).listen(process.env.PORT);`,
     },
     'project-root-directory': {
       'src/index.html': '<h1>I am a website.</h1>',

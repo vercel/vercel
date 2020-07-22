@@ -7,6 +7,7 @@ const {
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getSpawnOptions,
+  getScriptName,
   glob,
   runNpmInstall,
   runPackageJsonScript,
@@ -32,16 +33,10 @@ import {
   convertRedirects,
   convertRewrites,
 } from '@vercel/routing-utils/dist/superstatic';
-import nodeFileTrace, { NodeFileTraceReasons } from '@zeit/node-file-trace';
+import { nodeFileTrace, NodeFileTraceReasons } from '@zeit/node-file-trace';
 import { ChildProcess, fork } from 'child_process';
 import escapeStringRegexp from 'escape-string-regexp';
-import {
-  lstat,
-  pathExists,
-  readFile,
-  unlink as unlinkFile,
-  writeFile,
-} from 'fs-extra';
+import { lstat, pathExists, readFile, remove, writeFile } from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
@@ -108,13 +103,7 @@ const MAX_AGE_ONE_YEAR = 31536000;
 /**
  * Read package.json from files
  */
-async function readPackageJson(
-  entryPath: string
-): Promise<{
-  scripts?: { [key: string]: string };
-  dependencies?: { [key: string]: string };
-  devDependencies?: { [key: string]: string };
-}> {
+async function readPackageJson(entryPath: string): Promise<PackageJson> {
   const packagePath = path.join(entryPath, 'package.json');
 
   try {
@@ -329,49 +318,38 @@ export const build = async ({
   }
 
   const isLegacy = nextVersionRange && isLegacyNext(nextVersionRange);
-  let shouldRunScript = 'now-build';
-
   debug(`MODE: ${isLegacy ? 'legacy' : 'serverless'}`);
 
   if (isLegacy) {
-    try {
-      await unlinkFile(path.join(entryPath, 'yarn.lock'));
-    } catch (err) {
-      debug('no yarn.lock removed');
-    }
-
-    try {
-      await unlinkFile(path.join(entryPath, 'package-lock.json'));
-    } catch (err) {
-      debug('no package-lock.json removed');
-    }
-
     console.warn(
       "WARNING: your application is being deployed in @vercel/next's legacy mode. http://err.sh/vercel/vercel/now-next-legacy-mode"
     );
+
+    await Promise.all([
+      remove(path.join(entryPath, 'yarn.lock')),
+      remove(path.join(entryPath, 'package-lock.json')),
+    ]);
 
     debug('Normalizing package.json');
     const packageJson = normalizePackageJson(pkg);
     debug('Normalized package.json result: ', packageJson);
     await writePackageJson(entryPath, packageJson);
-  } else if (pkg.scripts && pkg.scripts['now-build']) {
-    debug('Found user `now-build` script');
-    shouldRunScript = 'now-build';
-  } else if (pkg.scripts && pkg.scripts['build']) {
-    debug('Found user `build` script');
-    shouldRunScript = 'build';
-  } else if (!pkg.scripts || !pkg.scripts['now-build']) {
-    debug(
+  }
+
+  const buildScriptName = getScriptName(pkg, [
+    'vercel-build',
+    'now-build',
+    'build',
+  ]);
+  let { buildCommand } = config;
+
+  if (!buildScriptName && !buildCommand) {
+    console.log(
       'Your application is being built using `next build`. ' +
-        'If you need to define a different build step, please create a `now-build` script in your `package.json` ' +
-        '(e.g. `{ "scripts": { "now-build": "npm run prepare && next build" } }`).'
+        'If you need to define a different build step, please create a `vercel-build` script in your `package.json` ' +
+        '(e.g. `{ "scripts": { "vercel-build": "npm run prepare && next build" } }`).'
     );
-    pkg.scripts = {
-      'now-build': 'next build',
-      ...(pkg.scripts || {}),
-    };
-    shouldRunScript = 'now-build';
-    await writePackageJson(entryPath, pkg);
+    buildCommand = 'next build';
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
@@ -398,12 +376,11 @@ export const build = async ({
     await createServerlessConfig(workPath, entryPath, nextVersion);
   }
 
-  debug('Running user script...');
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
   const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
 
-  if (config.buildCommand) {
+  if (buildCommand) {
     // Add `node_modules/.bin` to PATH
     const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
@@ -412,14 +389,14 @@ export const build = async ({
       `Added "${nodeBinPath}" to PATH env because a build command was used.`
     );
 
-    console.log(`Running "${config.buildCommand}"`);
-    await execCommand(config.buildCommand, {
+    console.log(`Running "${buildCommand}"`);
+    await execCommand(buildCommand, {
       ...spawnOpts,
       cwd: entryPath,
       env,
     });
-  } else {
-    await runPackageJsonScript(entryPath, shouldRunScript, {
+  } else if (buildScriptName) {
+    await runPackageJsonScript(entryPath, buildScriptName, {
       ...spawnOpts,
       env,
     });
@@ -579,8 +556,6 @@ export const build = async ({
     return {
       output,
       routes: [
-        // TODO: low priority: handle trailingSlash
-
         // User headers
         ...headers,
 
@@ -669,7 +644,7 @@ export const build = async ({
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
-    await unlinkFile(path.join(entryPath, '.npmrc'));
+    await remove(path.join(entryPath, '.npmrc'));
   }
 
   const pageLambdaRoutes: Route[] = [];
