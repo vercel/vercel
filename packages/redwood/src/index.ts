@@ -1,13 +1,10 @@
 import { join, dirname, relative, parse as parsePath, sep } from 'path';
-import buildUtils from './build-utils';
 import {
   BuildOptions,
-  Lambda as LambdaType,
-  createLambda,
+  Lambda,
   Files,
   PrepareCacheOptions,
-} from '@vercel/build-utils';
-const {
+  createLambda,
   download,
   glob,
   shouldServe,
@@ -16,9 +13,10 @@ const {
   getSpawnOptions,
   runNpmInstall,
   spawnAsync,
+  execCommand,
   FileBlob,
   FileFsRef,
-} = buildUtils;
+} from '@vercel/build-utils';
 import { makeAwsLauncher } from './launcher';
 const {
   getDependencies,
@@ -64,9 +62,18 @@ export async function build({
     prettyCommand: 'yarn rw build',
   });
 
+  const {
+    buildCommand = 'yarn rw db up --no-db-client --auto-approve && yarn rw build',
+  } = config;
+
+  await execCommand(buildCommand, {
+    ...spawnOpts,
+    cwd: workPath,
+  });
+
   const apiDistPath = join(workPath, 'api', 'dist', 'functions');
   const webDistPath = join(workPath, 'web', 'dist');
-  const lambdaOutputs: { [filePath: string]: LambdaType } = {};
+  const lambdaOutputs: { [filePath: string]: Lambda } = {};
   const staticOutputs = await glob('**', webDistPath);
 
   // Each file in the `functions` dir will become a lambda
