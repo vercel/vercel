@@ -2271,7 +2271,7 @@ test('render build errors', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Build failed/gm, formatOutput(output));
+  t.regex(output.stderr, /Command "yarn run build" exited with 1/gm, formatOutput(output));
 });
 
 test('invalid deployment, projects and alias names', async t => {
