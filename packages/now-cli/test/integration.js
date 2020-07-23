@@ -29,8 +29,19 @@ function execa(file, args, options) {
   return _execa(file, args, options);
 }
 
+function fixture(name) {
+  const directory = path.join(__dirname, 'fixtures', 'integration', name);
+  const config = path.join(directory, 'project.json');
+
+  // We need to remove it, otherwise we can't re-use fixtures
+  if (fs.existsSync(config)) {
+    fs.unlinkSync(config);
+  }
+
+  return directory;
+}
+
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const example = name =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
@@ -95,7 +106,19 @@ function fetchTokenInformation(token, retries = 3) {
 }
 
 function formatOutput({ stderr, stdout }) {
-  return `Received:\n"${stderr}"\n"${stdout}"`;
+  return `
+-----
+
+Stderr:
+${stderr}
+
+-----
+
+Stdout:
+${stdout}
+
+-----
+  `;
 }
 
 // AVA's `t.context` can only be set before the tests,
@@ -278,10 +301,6 @@ test('login', async t => {
     loginApiUrl,
     ...defaultArgs,
   ]);
-
-  console.log(loginOutput.stderr);
-  console.log(loginOutput.stdout);
-  console.log(loginOutput.exitCode);
 
   t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
   t.regex(
@@ -1026,16 +1045,35 @@ test('list the payment methods', async t => {
 });
 
 test('domains inspect', async t => {
-  const domainName = `inspect-${contextName}.org`;
+  const domainName = `inspect-${contextName}-${Math.random()
+    .toString()
+    .slice(2, 8)}.org`;
 
-  const addRes = await execa(
-    binaryPath,
-    [`domains`, `add`, domainName, ...defaultArgs],
-    { reject: false }
-  );
-  t.is(addRes.exitCode, 0);
+  const directory = fixture('static-multiple-files');
+  const projectName = Math.random().toString().slice(2);
 
-  const { stderr, exitCode } = await execa(
+  const output = await execute([
+    directory,
+    `-V`,
+    `2`,
+    `--name=${projectName}`,
+    '--confirm',
+    '--public',
+  ]);
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  {
+    // Add a domain that can be inspected
+    const result = await execa(
+      binaryPath,
+      [`domains`, `add`, domainName, projectName, ...defaultArgs],
+      { reject: false }
+    );
+
+    t.is(result.exitCode, 0, formatOutput(result));
+  }
+
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['domains', 'inspect', domainName, ...defaultArgs],
     {
@@ -1043,15 +1081,19 @@ test('domains inspect', async t => {
     }
   );
 
-  const rmRes = await execa(
-    binaryPath,
-    [`domains`, `rm`, domainName, ...defaultArgs],
-    { reject: false, input: 'y' }
-  );
-  t.is(rmRes.exitCode, 0);
-
-  t.is(exitCode, 0);
   t.true(!stderr.includes(`Renewal Price`));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+
+  {
+    // Remove the domain again
+    const result = await execa(
+      binaryPath,
+      [`domains`, `rm`, domainName, ...defaultArgs],
+      { reject: false, input: 'y' }
+    );
+
+    t.is(result.exitCode, 0, formatOutput(result));
+  }
 });
 
 test('try to purchase a domain', async t => {
@@ -2520,11 +2562,10 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
   );
 });
 
-test('ensure `github` and `scope` are not sent to the API', async t => {
-  const directory = fixture('github-and-scope-config');
-  const output = await execute([directory, '--confirm']);
-
-  t.is(output.exitCode, 0, formatOutput(output));
+test('fail to add a domain without a project', async t => {
+  const output = await execute(['domains', 'add', 'my-domain.now.sh']);
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.regex(output.stderr, /expects two arguments/gm, formatOutput(output));
 });
 
 test('change user', async t => {
@@ -2552,6 +2593,68 @@ test('change user', async t => {
   t.is(typeof prevUser, 'string', prevUser);
   t.is(typeof nextUser, 'string', nextUser);
   t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
+});
+
+test('assign a domain to a project', async t => {
+  const domain = `project-domain.${contextName}.now.sh`;
+  const directory = fixture('static-deployment');
+
+  const deploymentOutput = await execute([directory, '--public', '--confirm']);
+  t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
+
+  const host = deploymentOutput.stdout.trim().replace('https://', '');
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
+
+  t.is(typeof deployment.name, 'string', JSON.stringify(deployment, null, 2));
+  const project = deployment.name;
+
+  const output = await execute(['domains', 'add', domain, project, '--force']);
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  const removeResponse = await execute(['rm', project, '-y']);
+  t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
+});
+
+test('list project domains', async t => {
+  const domain = `project-domain.${contextName}.now.sh`;
+  const directory = fixture('static-deployment');
+
+  const deploymentOutput = await execute([directory, '--public', '--confirm']);
+  t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
+
+  const host = deploymentOutput.stdout.trim().replace('https://', '');
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
+
+  t.is(typeof deployment.name, 'string', JSON.stringify(deployment, null, 2));
+  const project = deployment.name;
+
+  const addOutput = await execute([
+    'domains',
+    'add',
+    domain,
+    project,
+    '--force',
+  ]);
+  t.is(addOutput.exitCode, 0, formatOutput(addOutput));
+
+  const output = await execute(['domains', 'ls']);
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, new RegExp(domain), formatOutput(output));
+  t.regex(output.stderr, new RegExp(project), formatOutput(output));
+
+  const removeResponse = await execute(['rm', project, '-y']);
+  t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
+});
+
+test('ensure `github` and `scope` are not sent to the API', async t => {
+  const directory = fixture('github-and-scope-config');
+  const output = await execute([directory, '--confirm']);
+
+  t.is(output.exitCode, 0, formatOutput(output));
 });
 
 test('should show prompts to set up project', async t => {
