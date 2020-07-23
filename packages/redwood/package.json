@@ -1,0 +1,29 @@
+{
+  "name": "@vercel/redwood",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "license": "MIT",
+  "homepage": "https://vercel.com/docs",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/redwood"
+  },
+  "scripts": {
+    "build": "./build.sh",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail",
+    "prepublishOnly": "./build.sh"
+  },
+  "dependencies": {
+    "@netlify/zip-it-and-ship-it": "1.2.0",
+    "is-port-reachable": "3.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.19",
+    "@types/node": "*",
+    "typescript": "3.9.3"
+  }
+}
