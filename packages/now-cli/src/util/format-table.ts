@@ -20,7 +20,7 @@ import strlen from './strlen';
 export default function formatTable(
   header: string[],
   align: Array<'l' | 'r' | 'c' | '.'>,
-  blocks: { name: string; rows: string[][] }[],
+  blocks: { name?: string; rows: string[][] }[],
   hsep = '    '
 ) {
   const nrCols = header.length;
@@ -50,8 +50,10 @@ export default function formatTable(
         for (let j = 0; j < nrCols; j++) {
           const col = `${row[j]}`;
           const al = align[j] || 'l';
-          const spaces = Math.max(padding[j] * 8 - strlen(col), 0);
-          const pad = ' '.repeat(spaces);
+
+          const repeat = padding[j] > 1 ? padding[j] * 8 - strlen(col) : 0;
+          const pad = repeat > 0 ? ' '.repeat(repeat) : '';
+
           rows[i][j] = al === 'l' ? col + pad : pad + col;
         }
       }
