@@ -88,22 +88,6 @@ const frameworkList: Framework[] = [
     cachePattern: '{.cache,public}/**',
   },
   {
-    name: 'RedwoodJS',
-    slug: 'redwoodjs',
-    dependency: '@redwoodjs/core',
-    buildCommand: 'yarn rw db up --no-db-client && yarn rw build',
-    getOutputDirName: async () => 'web/dist',
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/index.html',
-      },
-    ],
-  },
-  {
     name: 'Hexo',
     slug: 'hexo',
     dependency: 'hexo',

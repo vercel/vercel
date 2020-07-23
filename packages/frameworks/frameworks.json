@@ -86,34 +86,6 @@
     }
   },
   {
-    "name": "RedwoodJS",
-    "slug": "redwoodjs",
-    "demo": "https://redwoodjs.now-examples.now.sh",
-    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/redwood.svg",
-    "tagline": "Bringing full-stack to the Jamstack.",
-    "description": "A RedwoodJS app and a Serverless Function API.",
-    "website": "https://redwoodjs.com",
-    "detectors": {
-      "every": [
-        {
-          "path": "package.json",
-          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@redwoodjs\\/core\":\\s*\".+?\"[^}]*}"
-        }
-      ]
-    },
-    "settings": {
-      "buildCommand": {
-        "value": "yarn rw db up --no-db-client && yarn rw build"
-      },
-      "devCommand": {
-        "value": "yarn rw dev --port $PORT"
-      },
-      "outputDirectory": {
-        "value": "web/dist"
-      }
-    }
-  },
-  {
     "name": "Hexo",
     "slug": "hexo",
     "demo": "https://hexo.now-examples.now.sh",
@@ -707,6 +679,33 @@
       },
       "outputDirectory": {
         "value": "dist"
+      }
+    }
+  },
+  {
+    "name": "RedwoodJS",
+    "slug": "redwoodjs",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/redwood.svg",
+    "tagline": "RedwoodJS is a full-stack framework for the Jamstack.",
+    "description": "A RedwoodJS app, bootstraped with create-redwood-app.",
+    "website": "https://redwoodjs.com",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@redwoodjs\\/core\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "value": "yarn rw db up --no-db-client --auto-approve && yarn rw build"
+      },
+      "devCommand": {
+        "value": "yarn rw dev"
+      },
+      "outputDirectory": {
+        "value": "RedwoodJS default"
       }
     }
   },
