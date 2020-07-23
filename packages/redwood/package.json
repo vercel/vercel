@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "0.0.1",
+  "version": "0.0.2-canary.0",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs",
