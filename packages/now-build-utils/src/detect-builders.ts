@@ -468,6 +468,10 @@ function detectFrontBuilder(
     return { src: 'package.json', use: `@vercel/next${withTag}`, config };
   }
 
+  if (framework === 'redwoodjs') {
+    return { src: 'package.json', use: `@vercel/redwood${withTag}`, config };
+  }
+
   // Entrypoints for other frameworks
   // TODO - What if just a build script is provided, but no entrypoint.
   const entrypoints = new Set([
