@@ -175,6 +175,18 @@ test(
     t.is(parsed.query['route-param'], 'b');
   })
 );
+test(
+  '[DevServer] Maintains query when builder defines routes through rewrites',
+  testFixture('vc-dev-next-rewrites', async (t, server) => {
+    const res = await fetch(`${server.address}/something?url-param=a`);
+    validateResponseHeaders(t, res);
+
+    const parsed = await res.json();
+
+    t.is(parsed.query['url-param'], 'a');
+    t.is(parsed.query['routeparam'], 'something');
+  })
+);
 
 test(
   '[DevServer] Allow `cache-control` to be overwritten',

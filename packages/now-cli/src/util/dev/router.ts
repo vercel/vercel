@@ -150,7 +150,9 @@ export async function devRouter(
               if (routeConfig.status && phase === 'miss') {
                 status = routeConfig.status;
               }
-              reqPathname = destPath;
+              const destParsed = url.parse(destPath, true);
+              query = Object.assign(destParsed.query, query);
+              reqPathname = destParsed.pathname || '/';
               continue;
             }
           }
