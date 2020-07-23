@@ -53,7 +53,8 @@ export default async function dev(
       cwd,
       forceDelete,
       autoConfirm,
-      'link'
+      'link',
+      'Set up and develop'
     );
 
     if (link.status === 'not_linked') {

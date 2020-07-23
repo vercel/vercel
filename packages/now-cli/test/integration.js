@@ -1055,6 +1055,14 @@ test('domains inspect', async t => {
 });
 
 test('try to purchase a domain', async t => {
+  if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
+    console.log(
+      'Skipping test `try to purchase a domain` because a personal VERCEL_TOKEN was provided.'
+    );
+    t.pass();
+    return;
+  }
+
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
@@ -3183,7 +3191,7 @@ test('[vc link] should show prompts to set up project', async t => {
 
   const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
 
-  await waitForPrompt(vc, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
   vc.stdin.write('yes\n');
 
   await waitForPrompt(vc, chunk =>
