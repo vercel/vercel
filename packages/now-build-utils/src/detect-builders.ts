@@ -309,6 +309,13 @@ export async function detectBuilders(
     options
   );
 
+  if (frontendBuilder && framework === 'redwoodjs') {
+    // RedwoodJS uses the /api directory differently so we must
+    // clear any existing builders and only use `@vercel/redwood`.
+    builders.length = 0;
+    builders.push(frontendBuilder);
+  }
+
   return {
     warnings,
     builders: builders.length ? builders : null,
