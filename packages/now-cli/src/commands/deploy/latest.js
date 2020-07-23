@@ -3,8 +3,8 @@ import bytes from 'bytes';
 import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
-import title from 'title';
 import { fileNameSymbol } from '@vercel/client';
+import { getPrettyError } from '@vercel/build-utils';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
@@ -39,7 +39,6 @@ import {
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
-import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';
 import {
@@ -56,6 +55,7 @@ import validatePaths, {
 } from '../../util/validate-paths';
 import { readLocalConfig } from '../../util/config/files';
 import { getCommandName } from '../../util/pkg-name.ts';
+import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url.ts';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -87,6 +87,7 @@ const addProcessEnv = async (log, env) => {
 
 const printDeploymentStatus = async (
   output,
+  client,
   {
     readyState,
     alias: aliasList,
@@ -119,18 +120,14 @@ const printDeploymentStatus = async (
     let previewUrl;
     let isWildcard;
     if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
-      // search for a non now.sh/non wildcard domain
-      // but fallback to the first alias in the list
-      const mainAlias =
-        aliasList.find(
-          alias =>
-            !alias.endsWith('.now.sh') &&
-            !alias.endsWith('.vercel.app') &&
-            !isWildcardAlias(alias)
-        ) || aliasList[0];
-
-      isWildcard = isWildcardAlias(mainAlias);
-      previewUrl = isWildcard ? mainAlias : `https://${mainAlias}`;
+      const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
+      if (previewUrlInfo) {
+        isWildcard = previewUrlInfo.isWildcard;
+        previewUrl = previewUrlInfo.previewUrl;
+      } else {
+        isWildcard = false;
+        previewUrl = `https://${deploymentUrl}`;
+      }
     } else {
       // fallback to deployment url
       isWildcard = false;
@@ -357,7 +354,7 @@ export default async function main(
       path,
       sourcePath,
       project
-        ? `To change your project settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
+        ? `To change your Project Settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -706,6 +703,12 @@ export default async function main(
 
   return printDeploymentStatus(
     output,
+    new Client({
+      apiUrl: ctx.apiUrl,
+      token: ctx.authConfig.token,
+      currentTeam: org.type === 'team' ? org.id : null,
+      debug: debugEnabled,
+    }),
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
@@ -735,53 +738,10 @@ function handleCreateDeployError(output, error, localConfig) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const { message, params, keyword, dataPath } = error.meta;
-
-    if (params && params.additionalProperty) {
-      const prop = params.additionalProperty;
-
-      output.error(
-        `The property ${code(prop)} is not allowed in ${highlight(
-          localConfig[fileNameSymbol]
-        )} – please remove it.`
-      );
-
-      if (prop === 'build.env' || prop === 'builds.env') {
-        output.note(
-          `Do you mean ${code('build')} (object) with a property ${code(
-            'env'
-          )} (object) instead of ${code(prop)}?`
-        );
-      }
-
-      return 1;
-    }
-
-    if (dataPath === '.name') {
-      output.error(message);
-      return 1;
-    }
-
-    if (keyword === 'type') {
-      const prop = dataPath.substr(1, dataPath.length);
-
-      output.error(
-        `The property ${code(prop)} in ${highlight(
-          localConfig[fileNameSymbol]
-        )} can only be of type ${code(title(params.type))}.`
-      );
-
-      return 1;
-    }
-
-    const link = 'https://vercel.com/docs/configuration';
-
-    output.error(
-      `Failed to validate ${highlight(
-        localConfig[fileNameSymbol]
-      )}: ${message}\nDocumentation: ${link}`
-    );
-
+    const niceError = getPrettyError(error.meta);
+    const fileName = localConfig[fileNameSymbol] || 'vercel.json';
+    niceError.message = `Invalid ${fileName} - ${niceError.message}`;
+    output.prettyError(niceError);
     return 1;
   }
   if (error instanceof TooManyRequests) {

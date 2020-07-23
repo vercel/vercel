@@ -4,18 +4,15 @@ import chalk from 'chalk';
 import { Output } from '../output';
 import { Framework } from '@vercel/frameworks';
 import { isSettingValue } from '../is-setting-value';
+import { ProjectSettings } from '../../types';
 
-export interface ProjectSettings {
+export interface PartialProjectSettings {
   buildCommand: string | null;
   outputDirectory: string | null;
   devCommand: string | null;
 }
 
-export interface ProjectSettingsWithFramework extends ProjectSettings {
-  framework: string | null;
-}
-
-const fields: { name: string; value: keyof ProjectSettings }[] = [
+const fields: { name: string; value: keyof PartialProjectSettings }[] = [
   { name: 'Build Command', value: 'buildCommand' },
   { name: 'Output Directory', value: 'outputDirectory' },
   { name: 'Development Command', value: 'devCommand' },
@@ -23,13 +20,15 @@ const fields: { name: string; value: keyof ProjectSettings }[] = [
 
 export default async function editProjectSettings(
   output: Output,
-  projectSettings: ProjectSettings | null,
-  framework: Framework | null
-) {
+  projectSettings: PartialProjectSettings | null,
+  framework: Framework | null,
+  autoConfirm: boolean
+): Promise<ProjectSettings> {
   // create new settings object, missing values will be filled with `null`
-  const settings: Partial<ProjectSettingsWithFramework> = {
-    ...projectSettings,
-  };
+  const settings: ProjectSettings = Object.assign(
+    { framework: null },
+    projectSettings
+  );
 
   for (let field of fields) {
     settings[field.value] =
@@ -44,8 +43,8 @@ export default async function editProjectSettings(
 
   output.print(
     !framework.slug
-      ? `No framework detected. Default project settings:\n`
-      : `Auto-detected project settings (${chalk.bold(framework.name)}):\n`
+      ? `No framework detected. Default Project Settings:\n`
+      : `Auto-detected Project Settings (${chalk.bold(framework.name)}):\n`
   );
 
   settings.framework = framework.slug;
@@ -64,7 +63,10 @@ export default async function editProjectSettings(
     );
   }
 
-  if (!(await confirm(`Want to override the settings?`, false))) {
+  if (
+    autoConfirm ||
+    !(await confirm(`Want to override the settings?`, false))
+  ) {
     return settings;
   }
 
@@ -75,7 +77,7 @@ export default async function editProjectSettings(
     choices: fields,
   });
 
-  for (let setting of settingFields as (keyof ProjectSettings)[]) {
+  for (let setting of settingFields as (keyof PartialProjectSettings)[]) {
     const field = fields.find(f => f.value === setting);
     const name = `${Date.now()}`;
     const answers = await inquirer.prompt({

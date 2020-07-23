@@ -8,11 +8,15 @@ import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
-import { getCommandName } from '../../util/pkg-name';
+import { ProjectSettings, ProjectEnvTarget } from '../../types';
+import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
+import { Env } from '@vercel/build-utils';
+import setupAndLink from '../../util/link/setup-and-link';
 
 type Options = {
   '--debug'?: boolean;
   '--listen'?: string;
+  '--confirm': boolean;
 };
 
 export default async function dev(
@@ -34,27 +38,44 @@ export default async function dev(
   });
 
   // retrieve dev command
-  const [link, frameworks] = await Promise.all([
+  let [link, frameworks] = await Promise.all([
     getLinkedProject(output, client, cwd),
     getFrameworks(client),
   ]);
+
+  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
+    const autoConfirm = opts['--confirm'];
+    const forceDelete = false;
+
+    link = await setupAndLink(
+      ctx,
+      output,
+      cwd,
+      forceDelete,
+      autoConfirm,
+      'link',
+      'Set up and develop'
+    );
+
+    if (link.status === 'not_linked') {
+      // User aborted project linking questions
+      return 0;
+    }
+  }
 
   if (link.status === 'error') {
     return link.exitCode;
   }
 
-  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName()} to link it.`
-    );
-    return 1;
-  }
-
-  let devCommand: undefined | string;
-  let frameworkSlug: null | string = null;
+  let devCommand: string | undefined;
+  let frameworkSlug: string | undefined;
+  let projectSettings: ProjectSettings | undefined;
+  let environmentVars: Env | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;
     client.currentTeam = org.type === 'team' ? org.id : undefined;
+
+    projectSettings = project;
 
     if (project.devCommand) {
       devCommand = project.devCommand;
@@ -62,9 +83,11 @@ export default async function dev(
       const framework = frameworks.find(f => f.slug === project.framework);
 
       if (framework) {
-        frameworkSlug = framework.slug;
-        const defaults = framework.settings.devCommand;
+        if (framework.slug) {
+          frameworkSlug = framework.slug;
+        }
 
+        const defaults = framework.settings.devCommand;
         if (isSettingValue(defaults)) {
           devCommand = defaults.value;
         }
@@ -74,6 +97,13 @@ export default async function dev(
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
     }
+
+    environmentVars = await getDecryptedEnvRecords(
+      output,
+      client,
+      project,
+      ProjectEnvTarget.Development
+    );
   }
 
   const devServer = new DevServer(cwd, {
@@ -81,6 +111,8 @@ export default async function dev(
     debug,
     devCommand,
     frameworkSlug,
+    projectSettings,
+    environmentVars,
   });
 
   process.once('SIGINT', () => devServer.stop());

@@ -13,6 +13,7 @@ import {
   execCommand,
   spawnCommand,
   walkParentDirs,
+  getScriptName,
   installDependencies,
   runPackageJsonScript,
   runNpmInstall,
@@ -27,6 +28,7 @@ import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
 } from './fs/node-version';
+import { NowBuildError } from './errors';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import debug from './debug';
@@ -46,6 +48,7 @@ export {
   rename,
   execAsync,
   spawnAsync,
+  getScriptName,
   installDependencies,
   runPackageJsonScript,
   execCommand,
@@ -111,9 +114,11 @@ export const getPlatformEnv = (name: string): string | undefined => {
   const n = process.env[nName];
   if (typeof v === 'string') {
     if (typeof n === 'string') {
-      throw new Error(
-        `Both "${vName}" and "${nName}" env vars are defined. Please only define the "${vName}" env var`
-      );
+      throw new NowBuildError({
+        code: 'CONFLICTING_ENV_VAR_NAMES',
+        message: `Both "${vName}" and "${nName}" env vars are defined. Please only define the "${vName}" env var.`,
+        link: 'https://vercel.link/combining-old-and-new-config',
+      });
     }
     return v;
   }

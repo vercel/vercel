@@ -1,7 +1,7 @@
 import React from 'react';
 
 // eslint-disable-next-line camelcase
-export async function unstable_getStaticPaths () {
+export async function unstable_getStaticPaths() {
   return [
     '/blog/post-1/comment-1',
     { params: { post: 'post-2', comment: 'comment-2' } },
@@ -10,7 +10,7 @@ export async function unstable_getStaticPaths () {
 }
 
 // eslint-disable-next-line camelcase
-export async function unstable_getStaticProps ({ params }) {
+export async function unstable_getStaticProps({ params }) {
   return {
     props: {
       post: params.post,

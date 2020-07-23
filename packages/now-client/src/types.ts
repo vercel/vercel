@@ -112,6 +112,7 @@ export interface NowConfig extends LegacyNowConfig {
   [fileNameSymbol]?: string;
   name?: string;
   version?: number;
+  public?: boolean;
   env?: Dictionary<string>;
   build?: {
     env?: Dictionary<string>;
@@ -176,6 +177,7 @@ export interface DeploymentOptions extends LegacyDeploymentOptions {
   build?: {
     env: Dictionary<string>;
   };
+  source?: string;
   target?: string;
   name?: string;
   public?: boolean;

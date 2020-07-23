@@ -5,9 +5,11 @@ const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry.js');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(bodies, randomness) {
+async function nowDeploy(bodies, randomness, uploadNowJson) {
   const files = Object.keys(bodies)
-    .filter(n => n !== 'vercel.json' && n !== 'now.json')
+    .filter(n =>
+      uploadNowJson ? true : n !== 'vercel.json' && n !== 'now.json'
+    )
     .map(n => ({
       sha: digestOfFile(bodies[n]),
       size: bodies[n].length,
@@ -59,10 +61,18 @@ async function nowDeploy(bodies, randomness) {
   console.log('deploymentUrl', `https://${deploymentUrl}`);
 
   for (let i = 0; i < 750; i += 1) {
-    const { state } = await deploymentGet(deploymentId);
-    if (state === 'ERROR')
-      throw new Error(`State of ${deploymentUrl} is ${state}`);
-    if (state === 'READY') break;
+    const deployment = await deploymentGet(deploymentId);
+    const { readyState } = deployment;
+    if (readyState === 'ERROR') {
+      const error = new Error(
+        `State of https://${deploymentUrl} is ${readyState}`
+      );
+      error.deployment = deployment;
+      throw error;
+    }
+    if (readyState === 'READY') {
+      break;
+    }
     await new Promise(r => setTimeout(r, 1000));
   }
 
@@ -123,7 +133,7 @@ async function deploymentPost(payload) {
 }
 
 async function deploymentGet(deploymentId) {
-  const url = `/v3/now/deployments/${deploymentId}`;
+  const url = `/v12/now/deployments/${deploymentId}`;
   const resp = await fetchWithAuth(url);
   const json = await resp.json();
   if (json.error) {
@@ -186,7 +196,10 @@ async function fetchTokenWithRetry(retries = 5) {
       },
     });
     if (!res.ok) {
-      throw new Error(`Unexpected status from registration: ${res.status}`);
+      const text = await res.text();
+      throw new Error(
+        `Unexpected status (${res.status}) from registration: ${text}`
+      );
     }
     const data = await res.json();
     if (!data) {

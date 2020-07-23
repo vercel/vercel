@@ -89,7 +89,7 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
   return headers.map(h => {
     const obj: { [key: string]: string } = {};
     const { src, segments } = sourceToRegex(h.source);
-    const hasSegments = segments.length > 0;
+    const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
     const indexes: { [k: string]: string } = {};
 
     segments.forEach((name, index) => {
@@ -97,7 +97,7 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
     });
 
     h.headers.forEach(({ key, value }) => {
-      if (hasSegments) {
+      if (namedSegments.length > 0) {
         if (key.includes(':')) {
           key = safelyCompile(key, indexes);
         }

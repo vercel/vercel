@@ -60,9 +60,19 @@ def webrick_handler(httpMethod, path, body, headers)
   server.shutdown
   Thread.kill(th)
 
+  # Net::HTTP doesnt read the set the encoding so we must set manually.
+  # Bug: https://bugs.ruby-lang.org/issues/15517
+  # More: https://yehudakatz.com/2010/05/17/encodings-unabridged/
+  res_headers = res.each_capitalized.to_h
+  if res_headers["Content-Type"] && res_headers["Content-Type"].include?("charset=")
+    res_encoding = res_headers["Content-Type"].match(/charset=([^;]*)/)[1]
+    res.body.force_encoding(res_encoding)
+    res.body = res.body.encode(res_encoding)
+  end
+
   {
     :statusCode => res.code.to_i,
-    :headers => res.each_capitalized.to_h,
+    :headers => res_headers,
     :body => res.body,
   }
 end

@@ -1,3 +1,4 @@
+/* eslint-env jest */
 const fs = require('fs');
 const path = require('path');
 
@@ -23,22 +24,38 @@ beforeAll(async () => {
   }
 
   process.env.NEXT_TELEMETRY_DISABLED = '1';
-  const builderPath = path.resolve(__dirname, '..');
-  builderUrl = await packAndDeploy(builderPath);
-  console.log('builderUrl', builderUrl);
+
+  if (!builderUrl) {
+    const builderPath = path.resolve(__dirname, '..');
+    builderUrl = await packAndDeploy(builderPath);
+    console.log('builderUrl', builderUrl);
+  }
 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
+  const context = {};
+
   // eslint-disable-next-line no-loop-func
   it(`Should build "${fixture}"`, async () => {
-    await expect(
-      testDeployment(
-        { builderUrl, buildUtilsUrl },
-        path.join(fixturesPath, fixture)
-      )
-    ).resolves.toBeDefined();
+    const { deploymentId, deploymentUrl } = await testDeployment(
+      { builderUrl, buildUtilsUrl },
+      path.join(fixturesPath, fixture)
+    );
+
+    context.deploymentId = deploymentId;
+    context.deploymentUrl = `https://${deploymentUrl}`;
+
+    console.log('updated context', context);
   });
+
+  const additionalTestsPath = path.join(fixturesPath, fixture, 'additional.js');
+
+  if (fs.existsSync(additionalTestsPath)) {
+    describe(`Additional ${fixture} tests`, () => {
+      require(additionalTestsPath)(context);
+    });
+  }
 }

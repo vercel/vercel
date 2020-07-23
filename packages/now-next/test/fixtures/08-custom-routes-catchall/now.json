@@ -3,7 +3,7 @@
   "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
     {
-      "path": "/_next/static/build-id/pages/hello.js",
+      "path": "/_next/__NEXT_SCRIPT__(/hello)",
       "mustContain": "hello world"
     },
     {

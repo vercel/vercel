@@ -1,8 +1,25 @@
-import { join, sep, dirname, basename, normalize } from 'path';
-import { readFile, writeFile, pathExists, move } from 'fs-extra';
-import { homedir } from 'os';
 import execa from 'execa';
-import { BuildOptions, Meta, Files } from '@vercel/build-utils';
+import retry from 'async-retry';
+import { homedir, tmpdir } from 'os';
+import { spawn } from 'child_process';
+import { Readable } from 'stream';
+import once from '@tootallnate/once';
+import { join, dirname, basename, normalize, sep } from 'path';
+import {
+  readFile,
+  writeFile,
+  pathExists,
+  mkdirp,
+  move,
+  remove,
+} from 'fs-extra';
+import {
+  BuildOptions,
+  Meta,
+  Files,
+  StartDevServerOptions,
+  StartDevServerResult,
+} from '@vercel/build-utils';
 import buildUtils from './build-utils';
 
 const {
@@ -14,8 +31,12 @@ const {
   debug,
 } = buildUtils;
 
+const TMP = tmpdir();
+
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
 const handlerFileName = `handler${OUT_EXTENSION}`;
+
+export { shouldServe };
 
 interface Analyzed {
   found?: boolean;
@@ -24,16 +45,22 @@ interface Analyzed {
   watch: string[];
 }
 
+interface PortInfo {
+  port: number;
+}
+
 // Initialize private git repo for Go Modules
 async function initPrivateGit(credentials: string) {
+  const gitCredentialsPath = join(homedir(), '.git-credentials');
+
   await execa('git', [
     'config',
     '--global',
     'credential.helper',
-    `store --file ${join(homedir(), '.git-credentials')}`,
+    `store --file ${gitCredentialsPath}`,
   ]);
 
-  await writeFile(join(homedir(), '.git-credentials'), credentials);
+  await writeFile(gitCredentialsPath, credentials);
 }
 
 /**
@@ -436,4 +463,160 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
   };
 }
 
-export { shouldServe };
+function isPortInfo(v: any): v is PortInfo {
+  return v && typeof v.port === 'number';
+}
+
+function isReadable(v: any): v is Readable {
+  return v && v.readable === true;
+}
+
+async function copyEntrypoint(entrypoint: string, dest: string): Promise<void> {
+  const data = await readFile(entrypoint, 'utf8');
+
+  // Modify package to `package main`
+  const patched = data.replace(/\bpackage\W+\S+\b/, 'package main');
+
+  await writeFile(join(dest, 'entrypoint.go'), patched);
+}
+
+async function copyDevServer(
+  functionName: string,
+  dest: string
+): Promise<void> {
+  const data = await readFile(join(__dirname, 'dev-server.go'), 'utf8');
+
+  // Populate the handler function name
+  const patched = data.replace('__HANDLER_FUNC_NAME', functionName);
+
+  await writeFile(join(dest, 'vercel-dev-server-main.go'), patched);
+}
+
+export async function startDevServer(
+  opts: StartDevServerOptions
+): Promise<StartDevServerResult> {
+  const { entrypoint, workPath, meta = {} } = opts;
+  const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
+  const entrypointDir = dirname(entrypoint);
+
+  // For some reason, if `entrypoint` is a path segment (filename contains `[]`
+  // brackets) then the `.go` suffix on the entrypoint is missing. Fix that here…
+  let entrypointWithExt = entrypoint;
+  if (!entrypoint.endsWith('.go')) {
+    entrypointWithExt += '.go';
+  }
+
+  const tmp = join(devCacheDir, 'go', Math.random().toString(32).substring(2));
+  const tmpPackage = join(tmp, entrypointDir);
+  await mkdirp(tmpPackage);
+
+  let goModAbsPathDir = '';
+  if (await pathExists(join(workPath, 'go.mod'))) {
+    goModAbsPathDir = workPath;
+  }
+  const analyzedRaw = await getAnalyzedEntrypoint(
+    entrypointWithExt,
+    goModAbsPathDir
+  );
+  if (!analyzedRaw) {
+    throw new Error(
+      `Could not find an exported function in "${entrypointWithExt}"
+Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
+    );
+  }
+  const analyzed: Analyzed = JSON.parse(analyzedRaw);
+
+  await Promise.all([
+    copyEntrypoint(entrypointWithExt, tmpPackage),
+    copyDevServer(analyzed.functionName, tmpPackage),
+  ]);
+
+  const portFile = join(
+    TMP,
+    `vercel-dev-port-${Math.random().toString(32).substring(2)}`
+  );
+
+  const env: typeof process.env = {
+    ...process.env,
+    ...meta.env,
+    VERCEL_DEV_PORT_FILE: portFile,
+  };
+
+  const tmpRelative = `.${sep}${entrypointDir}`;
+  const child = spawn('go', ['run', tmpRelative], {
+    cwd: tmp,
+    env,
+    stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+  });
+
+  child.once('exit', () => {
+    retry(() => remove(tmp)).catch((err: Error) => {
+      console.error('Could not delete tmp directory: %j: %s', tmp, err);
+    });
+  });
+
+  const portPipe = child.stdio[3];
+  if (!isReadable(portPipe)) {
+    throw new Error('File descriptor 3 is not readable');
+  }
+
+  // `dev-server.go` writes the ephemeral port number to FD 3 to be consumed here
+  const onPort = new Promise<PortInfo>(resolve => {
+    portPipe.setEncoding('utf8');
+    portPipe.once('data', d => {
+      resolve({ port: Number(d) });
+    });
+  });
+  const onPortFile = waitForPortFile(portFile);
+  const onExit = once.spread<[number, string | null]>(child, 'exit');
+  const result = await Promise.race([onPort, onPortFile, onExit]);
+  onExit.cancel();
+  onPortFile.cancel();
+
+  if (isPortInfo(result)) {
+    return {
+      port: result.port,
+      pid: child.pid,
+    };
+  } else if (Array.isArray(result)) {
+    // Got "exit" event from child process
+    throw new Error(
+      `Failed to start dev server for "${entrypointWithExt}" (code=${result[0]}, signal=${result[1]})`
+    );
+  } else {
+    throw new Error(`Unexpected result type: ${typeof result}`);
+  }
+}
+
+export interface CancelablePromise<T> extends Promise<T> {
+  cancel: () => void;
+}
+
+function waitForPortFile(portFile: string) {
+  const opts = { portFile, canceled: false };
+  const promise = waitForPortFile_(opts) as CancelablePromise<PortInfo | void>;
+  promise.cancel = () => {
+    opts.canceled = true;
+  };
+  return promise;
+}
+
+async function waitForPortFile_(opts: {
+  portFile: string;
+  canceled: boolean;
+}): Promise<PortInfo | void> {
+  while (!opts.canceled) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      const port = Number(await readFile(opts.portFile, 'ascii'));
+      retry(() => remove(opts.portFile)).catch((err: Error) => {
+        console.error('Could not delete port file: %j: %s', opts.portFile, err);
+      });
+      return { port };
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
+  }
+}

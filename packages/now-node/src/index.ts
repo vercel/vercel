@@ -19,7 +19,7 @@ import {
 // @ts-ignore - `@types/mkdirp-promise` is broken
 import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
-import nodeFileTrace from '@zeit/node-file-trace';
+import { nodeFileTrace } from '@zeit/node-file-trace';
 import buildUtils from './build-utils';
 import {
   File,
@@ -361,10 +361,12 @@ export async function build({
     meta,
   });
 
-  debug('Running user script...');
-  const runScriptTime = Date.now();
-  await runPackageJsonScript(entrypointFsDirname, 'now-build', spawnOpts);
-  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
+  await runPackageJsonScript(
+    entrypointFsDirname,
+    // Don't consider "build" script since its intended for frontend code
+    ['vercel-build', 'now-build'],
+    spawnOpts
+  );
 
   debug('Tracing input files...');
   const traceTime = Date.now();
@@ -430,6 +432,14 @@ export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
   const { entrypoint, workPath, config, meta = {} } = opts;
+
+  // Find the `tsconfig.json` file closest to the entrypoint file
+  const projectTsConfig = await walkParentDirs({
+    base: workPath,
+    start: join(workPath, dirname(entrypoint)),
+    filename: 'tsconfig.json',
+  });
+
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
     cwd: workPath,
@@ -437,8 +447,10 @@ export async function startDevServer(
     env: {
       ...process.env,
       ...meta.env,
-      NOW_DEV_ENTRYPOINT: entrypoint,
-      NOW_DEV_CONFIG: JSON.stringify(config),
+      VERCEL_DEV_ENTRYPOINT: entrypoint,
+      VERCEL_DEV_TSCONFIG: projectTsConfig || '',
+      VERCEL_DEV_CONFIG: JSON.stringify(config),
+      VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
     },
   });
 
@@ -456,7 +468,7 @@ export async function startDevServer(
     if (ext === '.ts' || ext === '.tsx') {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck(opts).catch((err: Error) => {
+      doTypeCheck(opts, projectTsConfig).catch((err: Error) => {
         console.error('Type check for %j failed:', entrypoint, err);
       });
     }
@@ -470,23 +482,17 @@ export async function startDevServer(
   }
 }
 
-async function doTypeCheck({
-  entrypoint,
-  workPath,
-  meta = {},
-}: StartDevServerOptions): Promise<void> {
+async function doTypeCheck(
+  { entrypoint, workPath, meta = {} }: StartDevServerOptions,
+  projectTsConfig: string | null
+): Promise<void> {
   const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
   const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
 
   // In order to type-check a single file, a standalone tsconfig
   // file needs to be created that inherits from the base one :(
   // See: https://stackoverflow.com/a/44748041/376773
-  const projectTsConfig = await walkParentDirs({
-    base: workPath,
-    start: join(workPath, dirname(entrypoint)),
-    filename: 'tsconfig.json',
-  });
-
+  //
   // A different filename needs to be used for different `extends` tsconfig.json
   const tsconfigName = projectTsConfig
     ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(

@@ -20,10 +20,10 @@ import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import checkForUpdate from 'update-check';
-import ms from 'ms';
+import updateNotifier from 'update-notifier';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
+import { NowBuildError } from '@vercel/build-utils';
 import getGlobalPathConfig from './util/config/global-path';
 import {
   getDefaultConfig,
@@ -45,10 +45,19 @@ import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
+import { APIError } from './util/errors-ts.ts';
 import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 import { getCommandName, getTitleName } from './util/pkg-name.ts';
+
+const isCanary = pkg.version.includes('canary');
+
+// Checks for available update and returns an instance
+const notifier = updateNotifier({
+  pkg,
+  distTag: isCanary ? 'canary' : 'latest',
+});
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -64,7 +73,7 @@ sourceMap.install();
 Sentry.init({
   dsn: SENTRY_DSN,
   release: `vercel-cli@${pkg.version}`,
-  environment: pkg.version.includes('canary') ? 'canary' : 'stable',
+  environment: isCanary ? 'canary' : 'stable',
 });
 
 let debug = () => {};
@@ -114,10 +123,10 @@ const main = async argv_ => {
   }
 
   if (
-    localConfig instanceof NowError &&
+    (localConfig instanceof NowError || localConfig instanceof NowBuildError) &&
     !(localConfig instanceof ERRORS.CantFindConfig)
   ) {
-    output.error(`Failed to load local config file: ${localConfig.message}`);
+    output.prettyError(localConfig);
     return 1;
   }
 
@@ -126,38 +135,20 @@ const main = async argv_ => {
   // (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  let update = null;
-
-  try {
-    if (targetOrSubcommand !== 'update') {
-      update = await checkForUpdate(pkg, {
-        interval: ms('1d'),
-        distTag: pkg.version.includes('canary') ? 'canary' : 'latest',
-      });
-    }
-  } catch (err) {
-    console.error(
-      error(`Checking for updates failed${isDebugging ? ':' : ''}`)
-    );
-
-    if (isDebugging) {
-      console.error(err);
-    }
-  }
-
-  if (update && isTTY) {
+  if (notifier.update && isTTY) {
+    const { latest } = notifier.update;
     console.log(
       info(
         `${chalk.bgRed('UPDATE AVAILABLE')} ` +
           `Run ${cmd(
             await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${update.latest}`
+          )} to install ${getTitleName()} CLI ${latest}`
       )
     );
 
     console.log(
       info(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${update.latest}`
+        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
       )
     );
   }
@@ -167,7 +158,7 @@ const main = async argv_ => {
       `${getTitleName()} CLI ${pkg.version}${
         targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
       }${
-        pkg.version.includes('canary') || targetOrSubcommand === 'dev'
+        isCanary || targetOrSubcommand === 'dev'
           ? ' — https://vercel.com/feedback'
           : ''
       }`
@@ -189,8 +180,7 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        `${'An unexpected error occurred while trying to find the ' +
-          'global directory: '}${err.message}`
+        `An unexpected error occurred while trying to find the global directory: ${err.message}`
       )
     );
 
@@ -203,8 +193,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to create the ' +
-            `global directory "${hp(VERCEL_DIR)}" `}${err.message}`
+          `${
+            'An unexpected error occurred while trying to create the ' +
+            `global directory "${hp(VERCEL_DIR)}" `
+          }${err.message}`
         )
       );
     }
@@ -218,8 +210,10 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        `${'An unexpected error occurred while trying to find the ' +
-          `config file "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+        `${
+          'An unexpected error occurred while trying to find the ' +
+          `config file "${hp(VERCEL_CONFIG_PATH)}" `
+        }${err.message}`
       )
     );
 
@@ -234,8 +228,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to read the ' +
-            `config in "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+          `${
+            'An unexpected error occurred while trying to read the ' +
+            `config in "${hp(VERCEL_CONFIG_PATH)}" `
+          }${err.message}`
         )
       );
 
@@ -266,8 +262,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to write the ' +
-            `default config to "${hp(VERCEL_CONFIG_PATH)}" `}${err.message}`
+          `${
+            'An unexpected error occurred while trying to write the ' +
+            `default config to "${hp(VERCEL_CONFIG_PATH)}" `
+          }${err.message}`
         )
       );
 
@@ -282,8 +280,10 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        `${'An unexpected error occurred while trying to find the ' +
-          `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
+        `${
+          'An unexpected error occurred while trying to find the ' +
+          `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
+        }${err.message}`
       )
     );
 
@@ -300,8 +300,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to read the ' +
-            `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${err.message}`
+          `${
+            'An unexpected error occurred while trying to read the ' +
+            `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
+          }${err.message}`
         )
       );
 
@@ -313,21 +315,6 @@ const main = async argv_ => {
     // need to migrate.
     if (authConfig.credentials) {
       authConfigExists = false;
-    } else if (
-      !authConfig.token &&
-      !subcommandsWithoutToken.includes(targetOrSubcommand) &&
-      !argv['--help'] &&
-      !argv['--token']
-    ) {
-      console.error(
-        error(
-          `The content of "${hp(VERCEL_AUTH_CONFIG_PATH)}" is invalid. ` +
-            `No \`token\` property found inside. Run ${getCommandName(
-              'login'
-            )} to authorize.`
-        )
-      );
-      return 1;
     }
   } else {
     const results = await getDefaultAuthConfig(authConfig);
@@ -340,10 +327,10 @@ const main = async argv_ => {
     } catch (err) {
       console.error(
         error(
-          `${'An unexpected error occurred while trying to write the ' +
-            `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `}${
-            err.message
-          }`
+          `${
+            'An unexpected error occurred while trying to write the ' +
+            `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
+          }${err.message}`
         )
       );
       return 1;
@@ -637,34 +624,25 @@ const main = async argv_ => {
         .send();
     }
   } catch (err) {
-    if (err.code === 'ENOTFOUND' && err.hostname === 'api.vercel.com') {
-      output.error(
-        `The hostname ${highlight(
-          'api.vercel.com'
-        )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
-      );
+    if (err.code === 'ENOTFOUND') {
+      // Error message will look like the following:
+      // "request to https://api.vercel.com/www/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
+      const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
+      if (matches && matches[1]) {
+        const hostname = matches[1];
+        output.error(
+          `The hostname ${highlight(
+            hostname
+          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+        );
+      }
       output.debug(err.stack);
-
       return 1;
     }
 
-    await reportError(Sentry, err, apiUrl, configFiles);
-
-    // If there is a code we should not consider the error unexpected
-    // but instead show the message. Any error that is handled by this should
-    // actually be handled in the sub command instead. Please make sure
-    // that happens for anything that lands here. It should NOT bubble up to here.
-    if (err.code) {
-      output.debug(err.stack);
-      output.error(err.message);
-
-      if (shouldCollectMetrics) {
-        metric
-          .event(eventCategory, '1', pkg.version)
-          .exception(err.message)
-          .send();
-      }
-
+    if (err instanceof APIError && 400 <= err.status && err.status <= 499) {
+      err.message = err.serverMessage;
+      output.prettyError(err);
       return 1;
     }
 
@@ -675,9 +653,23 @@ const main = async argv_ => {
         .send();
     }
 
-    // Otherwise it is an unexpected error and we should show the trace
-    // and an unexpected error message
-    output.error(`An unexpected error occurred in ${subcommand}: ${err.stack}`);
+    // If there is a code we should not consider the error unexpected
+    // but instead show the message. Any error that is handled by this should
+    // actually be handled in the sub command instead. Please make sure
+    // that happens for anything that lands here. It should NOT bubble up to here.
+    if (err.code) {
+      output.debug(err.stack);
+      output.prettyError(err);
+    } else {
+      await reportError(Sentry, err, apiUrl, configFiles);
+
+      // Otherwise it is an unexpected error and we should show the trace
+      // and an unexpected error message
+      output.error(
+        `An unexpected error occurred in ${subcommand}: ${err.stack}`
+      );
+    }
+
     return 1;
   }
 
@@ -687,8 +679,6 @@ const main = async argv_ => {
 
   return exitCode;
 };
-
-debug('start');
 
 const handleRejection = async err => {
   debug('handling rejection');

@@ -1,21 +1,23 @@
 import React from 'react';
 
 // eslint-disable-next-line camelcase
-export async function unstable_getStaticProps() {
+export async function getStaticProps() {
   return {
     props: {
       world: 'world',
+      random: Math.random(),
       time: new Date().getTime(),
     },
-    revalidate: 5,
+    revalidate: 1,
   };
 }
 
-export default ({ world, time }) => {
+export default ({ world, time, random }) => {
   return (
     <>
-      <p>hello: {world}</p>
-      <span>time: {time}</span>
+      <p id="hello">hello: {world}</p>
+      <span id="time">time: {time}</span>
+      <span id="random">random: {random}</span>
     </>
   );
 };

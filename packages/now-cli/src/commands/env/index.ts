@@ -124,7 +124,9 @@ export default async function main(ctx: NowContext) {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName()} to link it.`
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
     );
     return 1;
   } else {

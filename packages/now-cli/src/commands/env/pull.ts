@@ -4,20 +4,43 @@ import { Output } from '../../util/output';
 import promptBool from '../../util/prompt-bool';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
-import getEnvVariables from '../../util/env/get-env-records';
-import getDecryptedSecret from '../../util/env/get-decrypted-secret';
+import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { join } from 'path';
-import { promises, existsSync } from 'fs';
+import { promises, openSync, closeSync, readSync } from 'fs';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { getCommandName } from '../../util/pkg-name';
 const { writeFile } = promises;
+import { Env } from '@vercel/build-utils';
+
+const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
 type Options = {
   '--debug': boolean;
   '--yes': boolean;
 };
+
+function readHeadSync(path: string, length: number) {
+  const buffer = Buffer.alloc(length);
+  const fd = openSync(path, 'r');
+  try {
+    readSync(fd, buffer, 0, buffer.length, null);
+  } finally {
+    closeSync(fd);
+  }
+  return buffer.toString();
+}
+
+function tryReadHeadSync(path: string, length: number) {
+  try {
+    return readHeadSync(path, length);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+}
 
 export default async function pull(
   client: Client,
@@ -35,10 +58,14 @@ export default async function pull(
 
   const [filename = '.env'] = args;
   const fullPath = join(process.cwd(), filename);
-  const exists = existsSync(fullPath);
   const skipConfirmation = opts['--yes'];
 
-  if (
+  const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
+  const exists = typeof head !== 'undefined';
+
+  if (head === CONTENTS_PREFIX) {
+    output.print(`Overwriting existing ${chalk.bold(filename)} file\n`);
+  } else if (
     exists &&
     !skipConfirmation &&
     !(await promptBool(
@@ -57,45 +84,23 @@ export default async function pull(
   );
   const pullStamp = stamp();
 
-  const records = await withSpinner('Downloading', async () => {
-    const dev = ProjectEnvTarget.Development;
-    const envs = await getEnvVariables(output, client, project.id, 4, dev);
-    const decryptedValues = await Promise.all(
-      envs.map(async env => {
-        try {
-          const value = await getDecryptedSecret(output, client, env.value);
-          return { value, found: true };
-        } catch (error) {
-          if (error && error.status === 404) {
-            return { value: '', found: false };
-          }
-          throw error;
-        }
-      })
-    );
-    const results: { key: string; value: string; found: boolean }[] = [];
-    for (let i = 0; i < decryptedValues.length; i++) {
-      const { key } = envs[i];
-      const { value, found } = decryptedValues[i];
-      results.push({ key, value, found });
-    }
-    return results;
-  });
+  const records: Env = await withSpinner(
+    'Downloading',
+    async () =>
+      await getDecryptedEnvRecords(
+        output,
+        client,
+        project,
+        ProjectEnvTarget.Development
+      )
+  );
 
   const contents =
-    records
-      .filter(obj => {
-        if (!obj.found) {
-          output.print('');
-          output.warn(
-            `Unable to download variable ${obj.key} because associated secret was deleted`
-          );
-          return false;
-        }
-        return true;
-      })
-      .map(({ key, value }) => `${key}="${escapeValue(value)}"`)
-      .join('\n') + '\n';
+    CONTENTS_PREFIX +
+    Object.entries(records)
+      .map(([key, value]) => `${key}="${escapeValue(value)}"`)
+      .join('\n') +
+    '\n';
 
   await writeFile(fullPath, contents, 'utf8');
 
@@ -110,8 +115,10 @@ export default async function pull(
   return 0;
 }
 
-function escapeValue(value: string) {
+function escapeValue(value: string | undefined) {
   return value
-    .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
-    .replace(new RegExp('\r', 'g'), '\\r'); // combine newlines (windows) into one line
+    ? value
+        .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
+        .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
+    : '';
 }

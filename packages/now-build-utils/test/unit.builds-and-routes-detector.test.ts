@@ -493,7 +493,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('use a custom runtime', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -501,11 +501,11 @@ describe('Test `detectBuilders`', () => {
 
     expect(errors).toBe(null);
     expect(builders!.length).toBe(1);
-    expect(builders![0].use).toBe('now-php@0.0.8');
+    expect(builders![0].use).toBe('vercel-php@0.1.0');
   });
 
   it('use a custom runtime but without a source', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/team.js'];
     const { errors } = await detectBuilders(files, null, {
       functions,
@@ -531,6 +531,7 @@ describe('Test `detectBuilders`', () => {
     const files = ['api/user.php'];
     // @ts-ignore
     const { errors } = await detectBuilders(files, null, {
+      // @ts-ignore
       functions,
     });
 
@@ -774,8 +775,9 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toEqual([
       {
         code: 'unused_function',
-        message:
-          "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
+        message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
       },
     ]);
   });
@@ -867,12 +869,14 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, pkg, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/next');
     expect(errors).toBe(null);
     expect(defaultRoutes).toStrictEqual([]);
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([]);
+    expect(errorRoutes).toStrictEqual([]);
   });
 
   it('package.json + no build + next', async () => {
@@ -887,12 +891,14 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, pkg, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/next');
     expect(errors).toBe(null);
     expect(defaultRoutes).toStrictEqual([]);
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([]);
+    expect(errorRoutes).toStrictEqual([]);
   });
 
   it('package.json + no build', async () => {
@@ -913,12 +919,15 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, null, { featHandleMiss });
     expect(builders).toBe(null);
     expect(errors).toBe(null);
     expect(defaultRoutes).toStrictEqual([]);
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('no package.json + public', async () => {
@@ -929,6 +938,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, null, { featHandleMiss });
     expect(builders![1].use).toBe('@vercel/static');
     expect(errors).toBe(null);
@@ -939,6 +949,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('no package.json + no build + raw static + api', async () => {
@@ -949,6 +961,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, null, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/users.js');
@@ -963,6 +976,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('package.json + no build + root + api', async () => {
@@ -990,6 +1005,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, undefined, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/[endpoint]/[id].js');
@@ -1002,6 +1018,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(rewriteRoutes!.length).toBe(2);
     expect((rewriteRoutes![0] as Source).src).toBe('^/api/([^/]+)/([^/]+)$');
     expect((rewriteRoutes![1] as Source).status).toBe(404);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('api + next + public', async () => {
@@ -1016,6 +1034,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, pkg, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
@@ -1029,6 +1048,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([]);
   });
 
   it('api + next + raw static', async () => {
@@ -1043,6 +1063,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, pkg, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
@@ -1056,6 +1077,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([]);
   });
 
   it('api + raw static', async () => {
@@ -1066,6 +1088,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, null, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
@@ -1079,6 +1102,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('api + raw static + package.json no build script', async () => {
@@ -1093,6 +1118,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, pkg, { featHandleMiss });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/version.js');
@@ -1106,6 +1132,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('api + public', async () => {
@@ -1116,7 +1144,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       'README.md',
     ];
 
-    const { builders } = await detectBuilders(files, undefined, {
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
       featHandleMiss,
     });
     expect(builders![0].use).toBe('@vercel/node');
@@ -1124,6 +1152,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('public/**/*');
     expect(builders!.length).toBe(2);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('api go with test files', async () => {
@@ -1142,21 +1172,26 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       'api/src/controllers/user.module_test.go',
     ];
 
-    const { builders } = await detectBuilders(files, undefined, {
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
       featHandleMiss,
     });
     expect(builders!.length).toBe(7);
     expect(builders!.some(b => b.src.endsWith('_test.go'))).toBe(false);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
-    const { builders } = await detectBuilders(files, undefined, {
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
       featHandleMiss,
     });
     expect(builders![0].src).toBe('public/**/*');
+    expect(builders![0].use).toBe('@vercel/static');
     expect(builders!.length).toBe(1);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('next + public', async () => {
@@ -1166,10 +1201,13 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     };
     const files = ['package.json', 'public/index.html', 'README.md'];
 
-    const { builders } = await detectBuilders(files, pkg, { featHandleMiss });
+    const { builders, errorRoutes } = await detectBuilders(files, pkg, {
+      featHandleMiss,
+    });
     expect(builders![0].use).toBe('@vercel/next');
     expect(builders![0].src).toBe('package.json');
     expect(builders!.length).toBe(1);
+    expect(errorRoutes!.length).toBe(0);
   });
 
   it('nuxt', async () => {
@@ -1179,10 +1217,14 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     };
     const files = ['package.json', 'pages/index.js'];
 
-    const { builders } = await detectBuilders(files, pkg, { featHandleMiss });
+    const { builders, errorRoutes } = await detectBuilders(files, pkg, {
+      featHandleMiss,
+    });
     expect(builders![0].use).toBe('@vercel/static-build');
     expect(builders![0].src).toBe('package.json');
     expect(builders!.length).toBe(1);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('nuxt + tag canary', async () => {
@@ -1192,23 +1234,29 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     };
     const files = ['package.json', 'pages/index.js'];
 
-    const { builders } = await detectBuilders(files, pkg, {
+    const { builders, errorRoutes } = await detectBuilders(files, pkg, {
       tag: 'canary',
       featHandleMiss,
     });
     expect(builders![0].use).toBe('@vercel/static-build@canary');
     expect(builders![0].src).toBe('package.json');
     expect(builders!.length).toBe(1);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('package.json with no build + api', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'api/[endpoint].js'];
 
-    const { builders } = await detectBuilders(files, pkg, { featHandleMiss });
+    const { builders, errorRoutes } = await detectBuilders(files, pkg, {
+      featHandleMiss,
+    });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/[endpoint].js');
     expect(builders!.length).toBe(1);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('package.json with no build + public directory', async () => {
@@ -1327,7 +1375,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   it('many static files + one api file', async () => {
     const files = Array.from({ length: 5000 }).map((_, i) => `file${i}.html`);
     files.push('api/index.ts');
-    const { builders } = await detectBuilders(files, undefined, {
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
       featHandleMiss,
     });
 
@@ -1336,6 +1384,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].src).toBe('api/index.ts');
     expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('functions with nextjs', async () => {
@@ -1489,7 +1539,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   });
 
   it('use a custom runtime', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -1498,11 +1548,11 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     expect(errors).toBe(null);
     expect(builders!.length).toBe(1);
-    expect(builders![0].use).toBe('now-php@0.0.8');
+    expect(builders![0].use).toBe('vercel-php@0.1.0');
   });
 
   it('use a custom runtime but without a source', async () => {
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/team.js'];
     const { errors } = await detectBuilders(files, null, {
       functions,
@@ -1530,6 +1580,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     const files = ['api/user.php'];
     // @ts-ignore
     const { errors } = await detectBuilders(files, null, {
+      // @ts-ignore
       functions,
       featHandleMiss,
     });
@@ -1630,6 +1681,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     // @ts-ignore
     const { errors } = await detectBuilders(files, null, {
+      // @ts-ignore
       functions,
       featHandleMiss,
     });
@@ -1646,6 +1698,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
     // @ts-ignore: Since we test an invalid type
     const { errors } = await detectBuilders(files, null, {
+      // @ts-ignore
       functions,
       featHandleMiss,
     });
@@ -1681,6 +1734,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, null, {
       projectSettings,
       featHandleMiss,
@@ -1693,6 +1747,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(defaultRoutes).toStrictEqual([]);
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('Custom static output directory with api', async () => {
@@ -1707,6 +1763,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, null, {
       projectSettings,
       featHandleMiss,
@@ -1722,6 +1779,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('Framework with non-package.json entrypoint', async () => {
@@ -1730,7 +1789,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       framework: 'hugo',
     };
 
-    const { builders } = await detectBuilders(files, null, {
+    const { builders, errorRoutes } = await detectBuilders(files, null, {
       projectSettings,
       featHandleMiss,
     });
@@ -1745,6 +1804,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         },
       },
     ]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('No framework, only package.json', async () => {
@@ -1755,7 +1816,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       },
     };
 
-    const { builders } = await detectBuilders(files, pkg, { featHandleMiss });
+    const { builders, errorRoutes } = await detectBuilders(files, pkg, {
+      featHandleMiss,
+    });
 
     expect(builders).toEqual([
       {
@@ -1766,13 +1829,15 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         },
       },
     ]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('Framework with an API', async () => {
     const files = ['config.rb', 'api/date.rb'];
     const projectSettings = { framework: 'middleman' };
 
-    const { builders } = await detectBuilders(files, null, {
+    const { builders, errorRoutes } = await detectBuilders(files, null, {
       projectSettings,
       featHandleMiss,
     });
@@ -1794,6 +1859,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         },
       },
     ]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('Error for non-api functions', async () => {
@@ -1812,8 +1879,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toEqual([
       {
         code: 'unused_function',
-        message:
-          "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
+        message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
       },
     ]);
   });
@@ -1843,13 +1911,19 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   it('All static if `buildCommand` is an empty string with an `outputDirectory`', async () => {
     const files = ['out/index.html'];
     const projectSettings = { buildCommand: '', outputDirectory: 'out' };
-    const { builders, errors } = await detectBuilders(files, null, {
-      projectSettings,
-      featHandleMiss,
-    });
+    const { builders, errors, errorRoutes } = await detectBuilders(
+      files,
+      null,
+      {
+        projectSettings,
+        featHandleMiss,
+      }
+    );
     expect(errors).toBe(null);
     expect(builders![0]!.use).toBe('@vercel/static');
     expect(builders![0]!.src).toBe('out/**/*');
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
   it('do not require build script when `buildCommand` is an empty string', async () => {
@@ -2009,7 +2083,7 @@ it('Test `detectRoutes`', async () => {
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
     const { defaultRoutes } = await detectBuilders(files, null, { functions });
@@ -2025,9 +2099,13 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
-    const { defaultRoutes, rewriteRoutes } = await detectBuilders(files, null, {
-      featHandleMiss,
-    });
+    const { defaultRoutes, rewriteRoutes, errorRoutes } = await detectBuilders(
+      files,
+      null,
+      {
+        featHandleMiss,
+      }
+    );
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -2043,6 +2121,44 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         continue: true,
       },
     ]);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
+
+    const pattern = new RegExp(errorRoutes![0].src!);
+
+    [
+      '/',
+      '/index.html',
+      '/page.html',
+      '/page',
+      '/another/index.html',
+      '/another/page.html',
+      '/another/page',
+      '/another/sub/index.html',
+      '/another/sub/page.html',
+      '/another/sub/page',
+    ].forEach(file => {
+      expect(file).toMatch(pattern);
+    });
+
+    [
+      '/api',
+      '/api/',
+      '/api/index.html',
+      '/api/page.html',
+      '/api/page',
+      '/api/sub',
+      '/api/sub/index.html',
+      '/api/sub/page.html',
+      '/api/sub/page',
+    ].forEach(file => {
+      expect(file).not.toMatch(pattern);
+    });
   }
 
   {
@@ -2279,7 +2395,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
     const { defaultRoutes, rewriteRoutes } = await detectBuilders(files, null, {
@@ -2326,6 +2442,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       defaultRoutes,
       redirectRoutes,
       rewriteRoutes,
+      errorRoutes,
     } = await detectBuilders(files, null, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
@@ -2334,6 +2451,13 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         status: 404,
         src: '^/api(/.*)?$',
         continue: true,
+      },
+    ]);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404',
       },
     ]);
 
@@ -2570,7 +2694,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
     const {
@@ -2819,7 +2943,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
 
   {
     // use a custom runtime
-    const functions = { 'api/user.php': { runtime: 'now-php@0.0.8' } };
+    const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
     const {

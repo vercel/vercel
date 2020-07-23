@@ -15,11 +15,57 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'standard'));
     expect(output['index']).toBeDefined();
-    expect(output.goodbye).toBeDefined();
+    expect(output.goodbye).not.toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
     );
+    const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_app-.*\.js$/)
+    );
+    const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_error-.*\.js$/)
+    );
+    expect(hasUnderScoreAppStaticFile).toBeTruthy();
+    expect(hasUnderScoreErrorStaticFile).toBeTruthy();
+    expect(serverlessError).toBeTruthy();
+  },
+  FOUR_MINUTES
+);
+
+it(
+  'Should not deploy preview lambdas for static site',
+  async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'static-site'));
+    expect(output['index']).toBeDefined();
+    expect(output['index'].type).toBe('FileFsRef');
+
+    expect(output['another']).toBeDefined();
+
+    expect(output['another'].type).toBe('FileFsRef');
+
+    expect(output['dynamic']).toBeDefined();
+    expect(output['dynamic'].type).toBe('Prerender');
+    expect(output['dynamic'].lambda).toBeDefined();
+  },
+  FOUR_MINUTES
+);
+
+it(
+  'Should opt-out of shared lambdas when routes are detected',
+  async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/26-mono-repo-404-lambda')
+    );
+    expect(output['packages/webapp/404']).toBeDefined();
+    expect(output['packages/webapp/index']).toBeDefined();
+    expect(output['packages/webapp/__NEXT_PAGE_LAMBDA_0']).not.toBeDefined();
+    const filePaths = Object.keys(output);
     const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
       filePath.match(/static.*\/pages\/_app\.js$/)
     );
@@ -28,7 +74,6 @@ it(
     );
     expect(hasUnderScoreAppStaticFile).toBeTruthy();
     expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-    expect(serverlessError).toBeTruthy();
   },
   FOUR_MINUTES
 );
@@ -39,7 +84,9 @@ it(
     const {
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'monorepo'));
-    expect(output['www/index']).toBeDefined();
+
+    expect(output['www/index']).not.toBeDefined();
+    expect(output['www/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
     expect(output['www/static/test.txt']).toBeDefined();
     expect(output['www/data.txt']).toBeDefined();
     const filePaths = Object.keys(output);
@@ -139,8 +186,9 @@ it(
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'serverless-config'));
 
-    expect(output.index).toBeDefined();
-    expect(output.goodbye).toBeDefined();
+    expect(output.index).not.toBeDefined();
+    expect(output.goodbye).not.toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -175,8 +223,9 @@ it(
       path.join(__dirname, 'serverless-config-monorepo-missing')
     );
 
-    expect(output['nested/index']).toBeDefined();
-    expect(output['nested/goodbye']).toBeDefined();
+    expect(output['nested/index']).not.toBeDefined();
+    expect(output['nested/goodbye']).not.toBeDefined();
+    expect(output['nested/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -208,8 +257,9 @@ it(
       path.join(__dirname, 'serverless-config-monorepo-present')
     );
 
-    expect(output['nested/index']).toBeDefined();
-    expect(output['nested/goodbye']).toBeDefined();
+    expect(output['nested/index']).not.toBeDefined();
+    expect(output['nested/goodbye']).not.toBeDefined();
+    expect(output['nested/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
@@ -275,16 +325,17 @@ it(
     } = await runBuildLambda(path.join(__dirname, 'serverless-config-object'));
 
     expect(output['index']).toBeDefined();
-    expect(output.goodbye).toBeDefined();
+    expect(output.goodbye).not.toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
     );
     const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-      filePath.match(/static.*\/pages\/_app\.js$/)
+      filePath.match(/static.*\/pages\/_app-.*\.js$/)
     );
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-      filePath.match(/static.*\/pages\/_error\.js$/)
+      filePath.match(/static.*\/pages\/_error-.*\.js$/)
     );
     expect(hasUnderScoreAppStaticFile).toBeTruthy();
     expect(hasUnderScoreErrorStaticFile).toBeTruthy();
@@ -309,16 +360,17 @@ it(
     } = await runBuildLambda(path.join(__dirname, 'serverless-no-config'));
 
     expect(output['index']).toBeDefined();
-    expect(output.goodbye).toBeDefined();
+    expect(output.goodbye).not.toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
     const filePaths = Object.keys(output);
     const serverlessError = filePaths.some(filePath =>
       filePath.match(/_error/)
     );
     const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-      filePath.match(/static.*\/pages\/_app\.js$/)
+      filePath.match(/static.*\/pages\/_app-.*\.js$/)
     );
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-      filePath.match(/static.*\/pages\/_error\.js$/)
+      filePath.match(/static.*\/pages\/_error-.*\.js$/)
     );
     expect(hasUnderScoreAppStaticFile).toBeTruthy();
     expect(hasUnderScoreErrorStaticFile).toBeTruthy();
@@ -350,10 +402,10 @@ it(
       filePath.match(/_error/)
     );
     const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-      filePath.match(/static.*\/pages\/_app\.js$/)
+      filePath.match(/static.*\/pages\/_app-.*\.js$/)
     );
     const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-      filePath.match(/static.*\/pages\/_error\.js$/)
+      filePath.match(/static.*\/pages\/_error-.*\.js$/)
     );
     const hasBuildFile = await fs.pathExists(
       path.join(__dirname, 'serverless-no-config-build'),

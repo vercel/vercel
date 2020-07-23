@@ -6,10 +6,9 @@ export default async function responseError(
   fallbackMessage = null,
   parsedBody = {}
 ) {
-  let message;
   let bodyError;
 
-  if (res.status >= 400 && res.status < 500) {
+  if (!res.ok) {
     let body;
 
     try {
@@ -20,12 +19,9 @@ export default async function responseError(
 
     // Some APIs wrongly return `err` instead of `error`
     bodyError = body.error || body.err || body;
-    message = bodyError.message;
   }
 
-  if (message == null) {
-    message = fallbackMessage === null ? 'Response Error' : fallbackMessage;
-  }
+  const msg = bodyError?.message || fallbackMessage || 'Response Error';
 
-  return new APIError(message, res, bodyError);
+  return new APIError(msg, res, bodyError);
 }

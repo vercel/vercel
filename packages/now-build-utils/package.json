@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "2.3.2-canary.2",
+  "version": "2.4.3-canary.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
@@ -45,7 +45,7 @@
     "node-fetch": "2.2.0",
     "semver": "6.1.1",
     "ts-jest": "24.1.0",
-    "typescript": "3.5.2",
+    "typescript": "3.9.3",
     "yazl": "2.4.3"
   }
 }

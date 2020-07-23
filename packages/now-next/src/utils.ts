@@ -198,7 +198,7 @@ async function getRoutes(
   // If default pages dir isn't found check for `src/pages`
   if (
     !pagesDir &&
-    fileKeys.some(file =>
+    fileKeys.some((file) =>
       file.startsWith(path.join(entryDirectory, 'src/pages'))
     )
   ) {
@@ -255,17 +255,21 @@ async function getRoutes(
   }
 
   routes.push(
-    ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
-      arr =>
-        arr.map((route: Source) => {
-          // convert to make entire RegExp match as one group
-          route.src = route.src
-            .replace('^', `^${prefix}(`)
-            .replace('(\\/', '(')
-            .replace('$', ')$');
-          route.dest = `${url}/$1`;
-          return route;
-        })
+    ...(await getDynamicRoutes(
+      entryPath,
+      entryDirectory,
+      dynamicPages,
+      true
+    ).then((arr) =>
+      arr.map((route: Source) => {
+        // convert to make entire RegExp match as one group
+        route.src = route.src
+          .replace('^', `^${prefix}(`)
+          .replace('(\\/', '(')
+          .replace('$', ')$');
+        route.dest = `${url}/$1`;
+        return route;
+      })
     ))
   );
 
@@ -283,7 +287,7 @@ async function getRoutes(
     };
 
     // Only add the route if a page is not already using it
-    if (!routes.some(r => (r as Source).src === route.src)) {
+    if (!routes.some((r) => (r as Source).src === route.src)) {
       routes.push(route);
     }
   }
@@ -312,9 +316,16 @@ export type RoutesManifest = {
   dynamicRoutes: {
     page: string;
     regex: string;
+    namedRegex?: string;
+    routeKeys?: { [named: string]: string };
   }[];
   version: number;
-  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
+  dataRoutes?: Array<{
+    page: string;
+    dataRouteRegex: string;
+    namedDataRouteRegex?: string;
+    routeKeys?: { [named: string]: string };
+  }>;
 };
 
 export async function getRoutesManifest(
@@ -352,6 +363,21 @@ export async function getRoutesManifest(
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const routesManifest: RoutesManifest = require(pathRoutesManifest);
 
+  // remove temporary array based routeKeys from v1/v2 of routes
+  // manifest since it can result in invalid routes
+  for (const route of routesManifest.dataRoutes || []) {
+    if (Array.isArray(route.routeKeys)) {
+      delete route.routeKeys;
+      delete route.namedDataRouteRegex;
+    }
+  }
+  for (const route of routesManifest.dynamicRoutes || []) {
+    if (Array.isArray(route.routeKeys)) {
+      delete route.routeKeys;
+      delete route.namedRegex;
+    }
+  }
+
   return routesManifest;
 }
 
@@ -379,6 +405,25 @@ export async function getDynamicRoutes(
             return {
               src: regex,
               dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              check: true,
+            };
+          });
+      }
+      case 3: {
+        return routesManifest.dynamicRoutes
+          .filter(({ page }) =>
+            omittedRoutes ? !omittedRoutes.has(page) : true
+          )
+          .map(({ page, namedRegex, regex, routeKeys }) => {
+            return {
+              src: namedRegex || regex,
+              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
+                routeKeys
+                  ? `?${Object.keys(routeKeys)
+                      .map((key) => `${routeKeys[key]}=$${key}`)
+                      .join('&')}`
+                  : ''
+              }`,
               check: true,
             };
           });
@@ -434,13 +479,13 @@ export async function getDynamicRoutes(
     });
   }
 
-  const pageMatchers = getSortedRoutes(dynamicPages).map(pageName => ({
+  const pageMatchers = getSortedRoutes(dynamicPages).map((pageName) => ({
     pageName,
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
   const routes: Source[] = [];
-  pageMatchers.forEach(pageMatcher => {
+  pageMatchers.forEach((pageMatcher) => {
     // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
       ? path.join('/', entryDirectory, pageMatcher.pageName)
@@ -450,7 +495,7 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
-        check: true,
+        check: !isDev,
       });
     }
   });
@@ -817,7 +862,7 @@ export async function getPrerenderManifest(
         omittedRoutes: [],
       };
 
-      routes.forEach(route => {
+      routes.forEach((route) => {
         const {
           initialRevalidateSeconds,
           dataRoute,
@@ -833,7 +878,7 @@ export async function getPrerenderManifest(
         };
       });
 
-      lazyRoutes.forEach(lazyRoute => {
+      lazyRoutes.forEach((lazyRoute) => {
         const {
           routeRegex,
           fallback,
@@ -871,7 +916,7 @@ export async function getPrerenderManifest(
         omittedRoutes: [],
       };
 
-      routes.forEach(route => {
+      routes.forEach((route) => {
         const {
           initialRevalidateSeconds,
           dataRoute,
@@ -887,7 +932,7 @@ export async function getPrerenderManifest(
         };
       });
 
-      lazyRoutes.forEach(lazyRoute => {
+      lazyRoutes.forEach((lazyRoute) => {
         const {
           routeRegex,
           fallback,
