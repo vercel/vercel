@@ -13,6 +13,6 @@
     "outDir": "dist",
     "types": ["node"],
     "strict": true,
-    "target": "esnext"
+    "target": "es2019"
   }
 }

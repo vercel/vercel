@@ -18,12 +18,12 @@
     "prepublishOnly": "./build.sh"
   },
   "dependencies": {
-    "@netlify/zip-it-and-ship-it": "1.2.0"
+    "@netlify/zip-it-and-ship-it": "1.2.0",
+    "is-port-reachable": "3.0.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/node": "*",
-    "is-port-reachable": "3.0.0",
     "typescript": "3.9.3"
   }
 }
