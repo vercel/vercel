@@ -1595,7 +1595,7 @@
   dependencies:
     "@types/retry" "*"
 
-"@types/async-retry@^1.2.1":
+"@types/async-retry@1.4.2", "@types/async-retry@^1.2.1":
   version "1.4.2"
   resolved "https://registry.yarnpkg.com/@types/async-retry/-/async-retry-1.4.2.tgz#7f910188cd3893b51e32df51765ee8d5646053e3"
   integrity sha512-GUDuJURF0YiJZ+CBjNQA0+vbP/VHlJbB0sFqkzsV7EcOPRfurVonXpXKAt3w8qIjM1TEzpz6hc6POocPvHOS3w==

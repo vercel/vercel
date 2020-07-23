@@ -67,6 +67,7 @@
     "@vercel/next": "2.6.14-canary.1",
     "@vercel/node": "1.7.4-canary.0",
     "@vercel/python": "1.2.2",
+    "@vercel/redwood": "0.0.1",
     "@vercel/ruby": "1.2.3",
     "@vercel/static-build": "0.17.7-canary.0",
     "update-notifier": "4.1.0"
