@@ -15,7 +15,9 @@ async function readFileOrNull(file: string) {
   return null;
 }
 
-export async function readConfigFile<T>(files: string | string[]) {
+export async function readConfigFile<T>(
+  files: string | string[]
+): Promise<T | null> {
   files = Array.isArray(files) ? files : [files];
 
   for (const name of files) {
@@ -24,11 +26,11 @@ export async function readConfigFile<T>(files: string | string[]) {
     if (data) {
       const str = data.toString('utf8');
       if (name.endsWith('.json')) {
-        return JSON.parse(str);
+        return JSON.parse(str) as T;
       } else if (name.endsWith('.toml')) {
         return (toml.parse(str) as unknown) as T;
       } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
-        return yaml.safeLoad(str, { filename: name });
+        return yaml.safeLoad(str, { filename: name }) as T;
       }
     }
   }
