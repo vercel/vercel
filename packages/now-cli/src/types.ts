@@ -83,6 +83,16 @@ export type Domain = {
   };
 };
 
+export type DomainConfig = {
+  configuredBy: null | 'CNAME' | 'A' | 'http';
+  misconfigured: boolean;
+  serviceType: 'zeit.world' | 'external' | 'na';
+  nameservers: string[];
+  cnames: string[] & { traceString?: string };
+  aValues: string[] & { traceString?: string };
+  dnssecEnabled?: boolean;
+};
+
 export type Cert = {
   uid: string;
   autoRenew: boolean;
@@ -217,6 +227,16 @@ export type DNSRecordData =
   | SRVRecordData
   | MXRecordData;
 
+export interface ProjectAliasTarget {
+  createdAt?: number;
+  domain: string;
+  redirect?: string | null;
+  target: 'PRODUCTION' | 'STAGING';
+  configuredBy?: null | 'CNAME' | 'A';
+  configuredChangedAt?: null | number;
+  configuredChangeAttempts?: [number, number];
+}
+
 export interface Secret {
   uid: string;
   name: string;
@@ -258,6 +278,10 @@ export interface Project extends ProjectSettings {
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  alias?: ProjectAliasTarget[];
+  devCommand?: string | null;
+  framework?: string | null;
+  rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
 }
 

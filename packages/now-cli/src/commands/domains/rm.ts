@@ -15,6 +15,7 @@ import * as ERRORS from '../../util/errors-ts';
 import param from '../../util/output/param';
 import promptBool from '../../util/input/prompt-bool';
 import setCustomSuffix from '../../util/domains/set-custom-suffix';
+import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
@@ -67,7 +68,7 @@ export default async function rm(
   }
 
   const domain = await getDomainByName(client, contextName, domainName);
-  if (domain instanceof DomainNotFound) {
+  if (domain instanceof DomainNotFound || domain.name !== domainName) {
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
@@ -83,6 +84,18 @@ export default async function rm(
     );
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
+  }
+
+  const projects = await findProjectsForDomain(client, domain.name);
+
+  if (Array.isArray(projects) && projects.length > 0) {
+    output.warn(
+      `The domain is currently used by ${plural(
+        'project',
+        projects.length,
+        true
+      )}.`
+    );
   }
 
   const skipConfirmation = opts['--yes'];
