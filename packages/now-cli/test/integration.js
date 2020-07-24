@@ -2558,7 +2558,7 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Function Runtimes must have a valid version/gim,
+    /Build failed/gim,
     formatOutput(output)
   );
 });
