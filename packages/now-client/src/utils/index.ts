@@ -100,7 +100,7 @@ export async function buildFileTree(
       return ignored;
     };
     fileList = await readdir(path, [ignores]);
-    debug(`Read ${fileList.length} files in the specified directory`);
+    debug(`Found ${fileList.length} files in the specified directory`);
   } else if (Array.isArray(path)) {
     // Array of file paths
     fileList = path;

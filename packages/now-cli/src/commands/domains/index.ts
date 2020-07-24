@@ -13,7 +13,6 @@ import transferIn from './transfer-in';
 import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
-import verify from './verify';
 import move from './move';
 import { getPkgName } from '../../util/pkg-name';
 
@@ -25,17 +24,17 @@ const help = () => {
 
     ls                                  Show all domains in a list
     inspect      [name]                 Displays information related to a domain
-    add          [name]                 Add a new domain that you already own
+    add          [name] [project]       Add a new domain that you already own
     rm           [name]                 Remove a domain
     buy          [name]                 Buy a domain that you don't yet own
     move         [name] [destination]   Move a domain to another user or team.
     transfer-in  [name]                 Transfer in a domain to Vercel
-    verify       [name]                 Run a verification for a domain
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     -d, --debug                    Debug mode [off]
+    -f, --force                    Force a domain on a project and remove it from an existing one
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -82,7 +81,6 @@ const COMMAND_CONFIG = {
   move: ['move'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
-  verify: ['verify'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -90,10 +88,9 @@ export default async function main(ctx: NowContext) {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
-      '--cdn': Boolean,
       '--code': String,
-      '--no-cdn': Boolean,
       '--yes': Boolean,
+      '--force': Boolean,
       '--next': Number,
       '-N': '--next',
     });
@@ -122,8 +119,6 @@ export default async function main(ctx: NowContext) {
       return rm(ctx, argv, args, output);
     case 'transferIn':
       return transferIn(ctx, argv, args, output);
-    case 'verify':
-      return verify(ctx, argv, args, output);
     default:
       return ls(ctx, argv, args, output);
   }

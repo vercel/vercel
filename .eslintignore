@@ -34,3 +34,6 @@ packages/now-node-bridge/bridge.*
 
 # now-static-build
 packages/now-static-build/test/fixtures
+
+# redwood
+packages/redwood/test/fixtures
