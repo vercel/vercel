@@ -669,7 +669,7 @@ export default async function main(
     }
 
     if (err instanceof BuildError) {
-      error(err.message || 'Build failed');
+      output.error(err.message || 'Build failed');
       output.error(
         `Check your logs at https://${now.url}/_logs or run ${getCommandName(
           `logs ${now.url}`,
