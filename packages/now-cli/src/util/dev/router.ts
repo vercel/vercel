@@ -118,7 +118,16 @@ export async function devRouter(
           continue;
         }
 
-        if (routeConfig.check && devServer && nowConfig && phase !== 'hit') {
+        // if the destination is an external URL (rewrite or redirect)
+        const isDestUrl = isURL(destPath);
+
+        if (
+          routeConfig.check &&
+          devServer &&
+          nowConfig &&
+          phase !== 'hit' &&
+          !isDestUrl
+        ) {
           const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(
             pathname,
@@ -156,7 +165,6 @@ export async function devRouter(
           }
         }
 
-        const isDestUrl = isURL(destPath);
         if (isDestUrl) {
           result = {
             found: true,
