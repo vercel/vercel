@@ -2551,18 +2551,6 @@ test('deploy a Lambda with a specific runtime', async t => {
   t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
 });
 
-test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
-  const directory = fixture('lambda-with-invalid-runtime');
-  const output = await execute([directory, '--confirm']);
-
-  t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(
-    output.stderr,
-    /Build failed/gim,
-    formatOutput(output)
-  );
-});
-
 test('fail to add a domain without a project', async t => {
   const output = await execute(['domains', 'add', 'my-domain.now.sh']);
   t.is(output.exitCode, 1, formatOutput(output));
