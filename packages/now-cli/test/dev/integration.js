@@ -821,7 +821,7 @@ test(
   '[vercel dev] test rewrites and redirects serve correct external content',
   testFixtureStdio(
     'test-external-rewrites-and-redirects',
-    async (testPath, t) => {
+    async testPath => {
       const vcRobots = `https://vercel.com/robots.txt`;
       await testPath(200, '/rewrite', /User-Agent: \*/m);
       await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
@@ -830,8 +830,6 @@ test(
       await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
         Location: vcRobots,
       });
-
-      t.pass();
     },
     { skipDeploy: true }
   )
