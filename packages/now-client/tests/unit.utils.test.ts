@@ -18,7 +18,7 @@ describe('buildFileTree', () => {
   it('should exclude files using `.nowignore` blocklist', async () => {
     const cwd = fixture('nowignore');
     const expected = toAbsolutePaths(cwd, ['.nowignore', 'index.txt']);
-    const actual = await buildFileTree(cwd, true, noop);
+    const { fileList: actual } = await buildFileTree(cwd, true, noop);
     expect(normalizeWindowsPaths(expected).sort()).toEqual(
       normalizeWindowsPaths(actual).sort()
     );
@@ -33,7 +33,7 @@ describe('buildFileTree', () => {
       '.vercelignore',
       'hello.txt',
     ]);
-    const actual = await buildFileTree(cwd, true, noop);
+    const { fileList: actual } = await buildFileTree(cwd, true, noop);
     expect(normalizeWindowsPaths(expected).sort()).toEqual(
       normalizeWindowsPaths(actual).sort()
     );
