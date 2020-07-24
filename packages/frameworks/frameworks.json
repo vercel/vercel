@@ -685,6 +685,7 @@
   {
     "name": "RedwoodJS",
     "slug": "redwoodjs",
+    "demo": "https://redwoodjs.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/redwood.svg",
     "tagline": "RedwoodJS is a full-stack framework for the Jamstack.",
     "description": "A RedwoodJS app, bootstraped with create-redwood-app.",
