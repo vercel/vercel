@@ -15,7 +15,7 @@
   },
   "headers": [
     {
-      "source": "/api/frameworks",
+      "source": "/api(/v[0-9]+)?/frameworks",
       "headers": [
         {
           "key": "cache-control",

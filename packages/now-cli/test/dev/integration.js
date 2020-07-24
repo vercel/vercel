@@ -1654,7 +1654,6 @@ test(
       t.regex(env.NOW_REGION, /^[a-z]{3}\d$/);
       if (isDev) {
         // Only dev is tested because in production these are opt-in.
-        t.is(env.NOW_URL, host);
         t.is(env.VERCEL_URL, host);
         t.is(env.VERCEL_REGION, 'dev1');
       }

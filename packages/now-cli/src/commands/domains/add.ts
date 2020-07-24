@@ -1,23 +1,24 @@
 import chalk from 'chalk';
-import psl from 'psl';
 
 import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
-import addDomain from '../../util/domains/add-domain';
 import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
-import formatDnsTable from '../../util/format-dns-table';
 import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import { getCommandName, getTitleName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
+import { getDomain } from '../../util/domains/get-domain';
+import { getLinkedProject } from '../../util/projects/link';
+import { isPublicSuffix } from '../../util/domains/is-public-suffix';
+import { getDomainConfig } from '../../util/domains/get-domain-config';
+import { addDomainToProject } from '../../util/projects/add-domain-to-project';
+import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
+import code from '../../util/output/code';
 
 type Options = {
-  '--cdn': boolean;
   '--debug': boolean;
-  '--no-cdn': boolean;
+  '--force': boolean;
 };
 
 export default async function add(
@@ -33,6 +34,7 @@ export default async function add(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
+  const force = opts['--force'];
   const client = new Client({ apiUrl, token, currentTeam, debug });
   let contextName = null;
 
@@ -47,105 +49,116 @@ export default async function add(
     throw err;
   }
 
-  if (opts['--cdn'] !== undefined || opts['--no-cdn'] !== undefined) {
-    output.error(`Toggling CF from ${getTitleName()} CLI is deprecated.`);
-    return 1;
-  }
+  const project = await getLinkedProject(output, client).then(result => {
+    if (result.status === 'linked') {
+      return result.project;
+    }
 
-  if (args.length !== 1) {
+    return null;
+  });
+
+  if (project && args.length !== 1) {
     output.error(
-      `${getCommandName('domains add <domain>')} expects one argument`
+      `${getCommandName('domains add <domain>')} expects one argument.`
+    );
+    return 1;
+  } else if (!project && args.length !== 2) {
+    output.error(
+      `${getCommandName(
+        'domains add <domain> <project>'
+      )} expects two arguments.`
     );
     return 1;
   }
 
   const domainName = String(args[0]);
-  const parsedDomain = psl.parse(domainName);
-  if (parsedDomain.error) {
-    output.error(`The provided domain name ${param(domainName)} is invalid`);
-    return 1;
-  }
-
-  const { domain, subdomain } = parsedDomain;
-  if (!domain) {
-    output.error(`The provided domain '${param(domainName)}' is not valid.`);
-    return 1;
-  }
-
-  if (subdomain) {
-    output.error(
-      `You are adding '${domainName}' as a domain name containing a subdomain part '${subdomain}'\n` +
-        `  This feature is deprecated, please add just the root domain: ${chalk.cyan(
-          `${getCommandName(`domain add ${domain}`)}`
-        )}`
-    );
-    return 1;
-  }
+  const projectName = project ? project.name : String(args[1]);
 
   const addStamp = stamp();
-  const addedDomain = await addDomain(client, domainName, contextName);
 
-  if (addedDomain instanceof ERRORS.InvalidDomain) {
-    output.error(
-      `The provided domain name "${addedDomain.meta.domain}" is invalid`
-    );
-    return 1;
-  }
+  let aliasTarget = await addDomainToProject(client, projectName, domainName);
 
-  if (addedDomain instanceof ERRORS.DomainAlreadyExists) {
-    output.error(
-      `The domain ${chalk.underline(
-        addedDomain.meta.domain
-      )} is already registered by a different account.\n` +
-        `  If this seems like a mistake, please contact us at support@vercel.com`
-    );
-    return 1;
+  if (aliasTarget instanceof Error) {
+    if (
+      aliasTarget instanceof ERRORS.APIError &&
+      aliasTarget.code === 'ALIAS_DOMAIN_EXIST' &&
+      aliasTarget.project &&
+      aliasTarget.project.id
+    ) {
+      if (force) {
+        const removeResponse = await removeDomainFromProject(
+          client,
+          aliasTarget.project.id,
+          domainName
+        );
+
+        if (removeResponse instanceof Error) {
+          output.prettyError(removeResponse);
+          return 1;
+        }
+
+        aliasTarget = await addDomainToProject(client, projectName, domainName);
+      }
+    }
+
+    if (aliasTarget instanceof Error) {
+      output.prettyError(aliasTarget);
+      return 1;
+    }
   }
 
   // We can cast the information because we've just added the domain and it should be there
   console.log(
     `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-      addedDomain.name
-    )} added correctly. ${addStamp()}\n`
+      domainName
+    )} added to project ${chalk.bold(projectName)}. ${addStamp()}`
   );
 
-  if (!addedDomain.verified) {
+  if (isPublicSuffix(domainName)) {
+    output.log(
+      `The domain will automatically get assigned to your latest production deployment.`
+    );
+    return 0;
+  }
+
+  const domainResponse = await getDomain(client, contextName, domainName);
+
+  if (domainResponse instanceof Error) {
+    output.prettyError(domainResponse);
+    return 1;
+  }
+
+  const domainConfig = await getDomainConfig(client, contextName, domainName);
+
+  if (domainConfig.misconfigured) {
     output.warn(
-      `The domain was added but it is not verified. To verify it, you should either:`
+      `This domain is not configured properly. To configure it you should either:`
     );
     output.print(
-      `  ${chalk.gray(
-        'a)'
-      )} Change your domain nameservers to the following intended set: ${chalk.gray(
-        '[recommended]'
-      )}\n`
+      `  ${chalk.grey('a)')} ` +
+        `Set the following record on your DNS provider to continue: ` +
+        `${code(`A ${domainName} 76.76.21.21`)} ` +
+        `${chalk.grey('[recommended]')}\n`
+    );
+    output.print(
+      `  ${chalk.grey('b)')} ` +
+        `Change your domain nameservers to the intended set`
     );
     output.print(
       `\n${formatNSTable(
-        addedDomain.intendedNameservers,
-        addedDomain.nameservers,
+        domainResponse.intendedNameservers,
+        domainResponse.nameservers,
         { extraSpace: '     ' }
       )}\n\n`
     );
     output.print(
-      `  ${chalk.gray(
-        'b)'
-      )} Add a DNS TXT record with the name and value shown below.\n`
-    );
-    output.print(
-      `\n${formatDnsTable([['_now', 'TXT', addedDomain.verificationRecord]], {
-        extraSpace: '     ',
-      })}\n\n`
-    );
-    output.print(
       `  We will run a verification for you and you will receive an email upon completion.\n`
     );
-    output.print(
-      `  If you want to force running a verification, you can run ${cmd(
-        `${getCommandName('domains verify <domain>')}`
-      )}\n`
+    output.print('  Read more: https://vercel.link/domain-configuration\n\n');
+  } else {
+    output.log(
+      `The domain will automatically get assigned to your latest production deployment.`
     );
-    output.print('  Read more: https://err.sh/now/domain-verification\n\n');
   }
 
   return 0;

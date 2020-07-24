@@ -1,1 +1,1 @@
-export default () => 'hi from team route'
+export default () => 'hi from team route';

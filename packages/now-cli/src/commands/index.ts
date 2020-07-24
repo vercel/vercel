@@ -17,6 +17,7 @@ export default new Map([
   ['help', 'help'],
   ['init', 'init'],
   ['inspect', 'inspect'],
+  ['link', 'link'],
   ['list', 'list'],
   ['ln', 'alias'],
   ['log', 'logs'],
