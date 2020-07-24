@@ -1885,6 +1885,7 @@ test('deploying a file should not show prompts and display deprecation', async t
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], 'files');
+  console.log('static-single-file/first.png: stdout', stdout);
 
   // Send a test request to the deployment
   const response = await fetch(href);
