@@ -1891,7 +1891,7 @@ test('deploying a file should not show prompts and display deprecation', async t
   const response = await fetch(href);
   const contentType = response.headers.get('content-type');
 
-  t.is(contentType, 'image/png');
+  t.is(contentType, 'image/png/break');
   t.deepEqual(await readFile(file), await response.buffer());
 });
 
