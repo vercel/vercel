@@ -80,7 +80,11 @@ export default function buildCreateDeployment(version: number) {
       rootFiles = [path];
     }
 
-    let fileList = await buildFileTree(path, clientOptions.isDirectory, debug);
+    let { fileList } = await buildFileTree(
+      path,
+      clientOptions.isDirectory,
+      debug
+    );
 
     let configPath: string | undefined;
     if (!nowConfig) {
