@@ -1,3 +1,8 @@
+export const string256Schema = {
+  type: 'string',
+  maxLength: 256,
+};
+
 export const functionsSchema = {
   type: 'object',
   minProperties: 1,
@@ -8,10 +13,7 @@ export const functionsSchema = {
       type: 'object',
       additionalProperties: false,
       properties: {
-        runtime: {
-          type: 'string',
-          maxLength: 256,
-        },
+        runtime: string256Schema,
         memory: {
           // Number between 128 and 3008 in steps of 64
           enum: Object.keys(Array.from({ length: 50 }))
@@ -24,12 +26,26 @@ export const functionsSchema = {
           maximum: 900,
         },
         includeFiles: {
-          type: 'string',
-          maxLength: 256,
+          oneOf: [
+            string256Schema,
+            {
+              type: 'array',
+              minItems: 1,
+              maxItems: 50,
+              items: string256Schema,
+            },
+          ],
         },
         excludeFiles: {
-          type: 'string',
-          maxLength: 256,
+          oneOf: [
+            string256Schema,
+            {
+              type: 'array',
+              minItems: 1,
+              maxItems: 50,
+              items: string256Schema,
+            },
+          ],
         },
       },
     },
