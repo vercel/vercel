@@ -832,7 +832,7 @@
     "description": "No framework or a unoptimized framework.",
     "settings": {
       "buildCommand": {
-        "placeholder": "`npm run now-build` or `npm run build`"
+        "placeholder": "`npm run vercel-build` or `npm run build`"
       },
       "devCommand": {
         "placeholder": "None"
