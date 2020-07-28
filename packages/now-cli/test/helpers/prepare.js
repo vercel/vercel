@@ -509,6 +509,12 @@ CMD ["node", "index.js"]`,
     'project-link-dev': {
       'package.json': JSON.stringify({}),
     },
+    'project-link-builds': {
+      'index.html': 'Hello',
+      'vercel.json': JSON.stringify({
+        builds: [{ src: '*.html', use: '@vercel/static' }],
+      }),
+    },
     'dev-proxy-headers-and-env': {
       'package.json': JSON.stringify({}),
       'server.js': `require('http').createServer((req, res) => {
