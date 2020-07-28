@@ -501,19 +501,17 @@ CMD ["node", "index.js"]`,
       }),
     },
     'project-link-zeroconf': {
-      'package.json': JSON.stringify({}),
+      'package.json': '{}',
     },
     'project-link-confirm': {
-      'package.json': JSON.stringify({}),
+      'package.json': '{}',
     },
     'project-link-dev': {
-      'package.json': JSON.stringify({}),
+      'package.json': '{}',
     },
-    'project-link-builds': {
+    'project-link-legacy': {
       'index.html': 'Hello',
-      'vercel.json': JSON.stringify({
-        builds: [{ src: '*.html', use: '@vercel/static' }],
-      }),
+      'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
     },
     'dev-proxy-headers-and-env': {
       'package.json': JSON.stringify({}),

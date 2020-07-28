@@ -3499,8 +3499,8 @@ test('[vc dev] should show prompts to set up project', async t => {
 });
 
 test('[vc link] should show project prompts but not framework when `builds` defined', async t => {
-  const dir = fixture('project-link-builds');
-  const projectName = `project-link-builds-${
+  const dir = fixture('project-link-legacy');
+  const projectName = `project-link-legacy-${
     Math.random().toString(36).split('.')[1]
   }`;
 
