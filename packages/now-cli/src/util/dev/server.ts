@@ -2032,15 +2032,16 @@ export default class DevServer {
 function proxyPass(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  dest: string,
+  target: string,
   devServer: DevServer,
   nowRequestId: string,
-  ignorePath: boolean = true
+  ignorePath = true
 ): void {
+  devServer.output.debug(`Proxying ${req.url} to upstream ${target}`);
   return devServer.proxy.web(
     req,
     res,
-    { target: dest, ignorePath },
+    { target, ignorePath },
     (error: NodeJS.ErrnoException) => {
       devServer.output.error(
         `Failed to complete request to ${req.url}: ${error}`

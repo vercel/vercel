@@ -177,7 +177,7 @@ export async function staticFiles(
   nowConfig: NowConfig = {},
   { output, isBuilds, src }: StaticFilesOptions
 ) {
-  const { debug, time } = output;
+  const { time } = output;
   let files: string[] = [];
 
   if (!isBuilds && nowConfig.files && Array.isArray(nowConfig.files)) {
@@ -209,10 +209,6 @@ export async function staticFiles(
       }
 
       const accepted = filter(relativePath);
-
-      if (!accepted) {
-        debug(`Ignoring ${file}`);
-      }
 
       return accepted;
     };
@@ -254,7 +250,7 @@ export async function npm(
   nowConfig: NowConfig = {},
   { hasNowJson = false, output }: NpmOptions
 ) {
-  const { debug, time } = output;
+  const { time } = output;
   const whitelist = nowConfig.files || pkg.files || (pkg.now && pkg.now.files);
   let files: string[] = [];
 
@@ -268,7 +264,7 @@ export async function npm(
     const search = Array.prototype.concat.apply(
       [],
       await Promise.all(
-        search_.map((file) =>
+        search_.map(file =>
           glob(file, { cwd: path, absolute: true, dot: true })
         )
       )
@@ -297,9 +293,6 @@ export async function npm(
       }
 
       const accepted = filter(relativePath);
-      if (!accepted) {
-        debug(`Ignoring ${file}`);
-      }
       return accepted;
     };
 
@@ -348,7 +341,7 @@ export async function docker(
   nowConfig: NowConfig = {},
   { hasNowJson = false, output }: DockerOptions
 ) {
-  const { debug, time } = output;
+  const { time } = output;
   let files: string[] = [];
 
   if (nowConfig.files) {
@@ -360,7 +353,7 @@ export async function docker(
     const search_ = ['.'];
 
     // Convert all filenames into absolute paths
-    const search = search_.map((file) => asAbsolute(file, path));
+    const search = search_.map(file => asAbsolute(file, path));
 
     // Compile list of ignored patterns and files
     const dockerIgnore = await maybeRead(resolve(path, '.dockerignore'), null);
@@ -386,9 +379,6 @@ export async function docker(
       }
 
       const accepted = filter(relativePath);
-      if (!accepted) {
-        debug(`Ignoring ${file}`);
-      }
       return accepted;
     };
 
@@ -460,7 +450,7 @@ async function explode(
     if (s.isDirectory()) {
       const all = await fs.readdir(file);
       /* eslint-disable no-use-before-define */
-      const recursive = many(all.map((subdir) => asAbsolute(subdir, file)));
+      const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
       return (recursive as any) as Promise<string | null>;
       /* eslint-enable no-use-before-define */
     }
@@ -472,7 +462,7 @@ async function explode(
     return path;
   };
 
-  const many = (all: string[]) => Promise.all(all.map((file) => list(file)));
+  const many = (all: string[]) => Promise.all(all.map(file => list(file)));
   const arrayOfArrays = await many(paths);
   return flatten(arrayOfArrays).filter(notNull);
 }
