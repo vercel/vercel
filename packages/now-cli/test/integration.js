@@ -2661,9 +2661,9 @@ test('ensure `github` and `scope` are not sent to the API', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 });
 
-test('should show prompts to set up project', async t => {
-  const directory = fixture('project-link');
-  const projectName = `project-link-${
+test('should show prompts to set up project during first deploy', async t => {
+  const directory = fixture('project-link-deploy');
+  const projectName = `project-link-deploy-${
     Math.random().toString(36).split('.')[1]
   }`;
 
