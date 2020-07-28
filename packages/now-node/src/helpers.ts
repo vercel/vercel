@@ -73,6 +73,18 @@ function status(res: NowResponse, statusCode: number): NowResponse {
   return res;
 }
 
+function redirect(
+  res: NowResponse,
+  url: string,
+  // justification: more explicit code for easy compression
+  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+  status: number = 307
+): NowResponse {
+  res.writeHead(status, { Location: url });
+  res.end();
+  return res;
+}
+
 function setCharset(type: string, charset: string) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { parse, format } = require('content-type');
@@ -261,6 +273,7 @@ export function createServerWithHelpers(
       setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, event.body));
 
       res.status = statusCode => status(res, statusCode);
+      res.redirect = (url, status) => redirect(res, url, status);
       res.send = body => send(req, res, body);
       res.json = jsonBody => json(req, res, jsonBody);
 
