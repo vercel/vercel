@@ -125,12 +125,7 @@ function readConfirmation(output: Output, msg: string, certs: Cert[]) {
     process.stdin
       .on('data', d => {
         process.stdin.pause();
-        resolve(
-          d
-            .toString()
-            .trim()
-            .toLowerCase() === 'y'
-        );
+        resolve(d.toString().trim().toLowerCase() === 'y');
       })
       .resume();
   });
