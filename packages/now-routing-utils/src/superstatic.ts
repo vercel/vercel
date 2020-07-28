@@ -218,18 +218,42 @@ function replaceSegments(
   return destination;
 }
 
-function safelyCompile(str: string, indexes: { [k: string]: string }): string {
-  if (!str) {
-    return str;
+function safelyCompile(
+  value: string,
+  indexes: { [k: string]: string }
+): string {
+  if (!value) {
+    return value;
   }
-  // path-to-regexp cannot compile question marks
-  return str
-    .split('?')
-    .map(part => {
-      const compiler = compile(part);
-      return compiler(indexes);
-    })
-    .join('?');
+
+  for (const key of Object.keys(indexes)) {
+    if (value.includes(`:${key}`)) {
+      value = value
+        .replace(
+          new RegExp(`:${key}\\*`, 'g'),
+          `:${key}--ESCAPED_PARAM_ASTERISKS`
+        )
+        .replace(
+          new RegExp(`:${key}\\?`, 'g'),
+          `:${key}--ESCAPED_PARAM_QUESTION`
+        )
+        .replace(new RegExp(`:${key}\\+`, 'g'), `:${key}--ESCAPED_PARAM_PLUS`)
+        .replace(
+          new RegExp(`:${key}(?!\\w)`, 'g'),
+          `--ESCAPED_PARAM_COLON${key}`
+        );
+    }
+  }
+  value = value
+    .replace(/(:|\*|\?|\+|\(|\)|\{|\})/g, '\\$1')
+    .replace(/--ESCAPED_PARAM_PLUS/g, '+')
+    .replace(/--ESCAPED_PARAM_COLON/g, ':')
+    .replace(/--ESCAPED_PARAM_QUESTION/g, '?')
+    .replace(/--ESCAPED_PARAM_ASTERISKS/g, '*');
+
+  // the value needs to start with a forward-slash to be compiled
+  // correctly
+  return compile(`/${value}`, { validate: false })(indexes).substr(1);
 }
 
 function toSegmentDest(index: number): string {

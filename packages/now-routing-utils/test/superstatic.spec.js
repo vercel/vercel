@@ -508,6 +508,60 @@ test('convertHeaders', () => {
         },
       ],
     },
+    {
+      source: '/like/params/:path',
+      headers: [
+        {
+          key: 'x-path',
+          value: ':path',
+        },
+        {
+          key: 'some:path',
+          value: 'hi',
+        },
+        {
+          key: 'x-test',
+          value: 'some:value*',
+        },
+        {
+          key: 'x-test-2',
+          value: 'value*',
+        },
+        {
+          key: 'x-test-3',
+          value: ':value?',
+        },
+        {
+          key: 'x-test-4',
+          value: ':value+',
+        },
+        {
+          key: 'x-test-5',
+          value: 'something https:',
+        },
+        {
+          key: 'x-test-6',
+          value: ':hello(world)',
+        },
+        {
+          key: 'x-test-7',
+          value: 'hello(world)',
+        },
+        {
+          key: 'x-test-8',
+          value: 'hello{1,}',
+        },
+        {
+          key: 'x-test-9',
+          value: ':hello{1,2}',
+        },
+        {
+          key: 'content-security-policy',
+          value:
+            "default-src 'self'; img-src *; media-src media1.com media2.com; script-src userscripts.example.com/:path",
+        },
+      ],
+    },
   ]);
 
   const expected = [
@@ -526,6 +580,25 @@ test('convertHeaders', () => {
       headers: { 'on-blog': '$1', $1: 'blog' },
       continue: true,
     },
+    {
+      continue: true,
+      headers: {
+        'content-security-policy':
+          "default-src 'self'; img-src *; media-src media1.com media2.com; script-src userscripts.example.com/$1",
+        some$1: 'hi',
+        'x-path': '$1',
+        'x-test': 'some:value*',
+        'x-test-2': 'value*',
+        'x-test-3': ':value?',
+        'x-test-4': ':value+',
+        'x-test-5': 'something https:',
+        'x-test-6': ':hello(world)',
+        'x-test-7': 'hello(world)',
+        'x-test-8': 'hello{1,}',
+        'x-test-9': ':hello{1,2}',
+      },
+      src: '^\\/like\\/params(?:\\/([^\\/]+?))$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -534,12 +607,14 @@ test('convertHeaders', () => {
     ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
     ['404.html'],
     ['/blog/first-post', '/blog/another/one'],
+    ['/like/params/first', '/like/params/second'],
   ];
 
   const mustNotMatch = [
     ['hello/file.jpg', 'hello/font-css', 'dir/arial.font-css'],
     ['403.html', '500.html'],
     ['/blogg', '/random'],
+    ['/non-match', '/like/params'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
