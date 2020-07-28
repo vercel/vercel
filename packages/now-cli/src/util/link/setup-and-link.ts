@@ -1,7 +1,7 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
-import { NowContext, ProjectLinkResult } from '../../types';
+import { NowContext, ProjectLinkResult, ProjectSettings } from '../../types';
 import { NowConfig } from '../dev/types';
 import { Output } from '../output';
 import {
@@ -142,69 +142,75 @@ export default async function setupAndLink(
   if (ctx.localConfig && !(ctx.localConfig instanceof Error)) {
     localConfig = ctx.localConfig;
   }
+
   client.currentTeam = org.type === 'team' ? org.id : undefined;
-  const now = new Now({
-    apiUrl,
-    token,
-    debug,
-    currentTeam: client.currentTeam,
-  });
-  let deployment = null;
+  const isZeroConfig = !localConfig.builds || localConfig.builds.length === 0;
 
   try {
-    const createArgs: any = {
-      name: newProjectName,
-      env: {},
-      build: { env: {} },
-      forceNew: undefined,
-      withCache: undefined,
-      quiet,
-      wantsPublic: localConfig.public,
-      isFile,
-      type: null,
-      nowConfig: localConfig,
-      regions: undefined,
-      meta: {},
-      deployStamp: stamp(),
-      target: undefined,
-      skipAutoDetectionConfirmation: false,
-    };
+    let settings: ProjectSettings = {};
 
-    deployment = await createDeploy(
-      output,
-      now,
-      client.currentTeam || 'current user',
-      [sourcePath],
-      createArgs,
-      org,
-      !isFile,
-      path
-    );
+    if (isZeroConfig) {
+      const now = new Now({
+        apiUrl,
+        token,
+        debug,
+        currentTeam: client.currentTeam,
+      });
+      const createArgs: any = {
+        name: newProjectName,
+        env: {},
+        build: { env: {} },
+        forceNew: undefined,
+        withCache: undefined,
+        quiet,
+        wantsPublic: localConfig.public,
+        isFile,
+        type: null,
+        nowConfig: localConfig,
+        regions: undefined,
+        meta: {},
+        deployStamp: stamp(),
+        target: undefined,
+        skipAutoDetectionConfirmation: false,
+      };
 
-    if (
-      !deployment ||
-      !('code' in deployment) ||
-      deployment.code !== 'missing_project_settings'
-    ) {
-      output.error('Failed to detect project settings. Please try again.');
-      if (output.isDebugEnabled()) {
-        console.log(deployment);
+      const deployment = await createDeploy(
+        output,
+        now,
+        client.currentTeam || 'current user',
+        [sourcePath],
+        createArgs,
+        org,
+        !isFile,
+        path
+      );
+
+      if (
+        !deployment ||
+        !('code' in deployment) ||
+        deployment.code !== 'missing_project_settings'
+      ) {
+        output.error('Failed to detect project settings. Please try again.');
+        if (output.isDebugEnabled()) {
+          console.log(deployment);
+        }
+        return { status: 'error', exitCode: 1 };
       }
-      return { status: 'error', exitCode: 1 };
-    }
 
-    const { projectSettings, framework } = deployment;
+      const { projectSettings, framework } = deployment;
+
+      settings = await editProjectSettings(
+        output,
+        projectSettings,
+        framework,
+        autoConfirm
+      );
+    }
 
     if (rootDirectory) {
-      projectSettings.rootDirectory = rootDirectory;
+      settings.rootDirectory = rootDirectory;
     }
 
-    const settings = await editProjectSettings(
-      output,
-      projectSettings,
-      framework,
-      autoConfirm
-    );
     const project = await createProject(client, newProjectName);
     await updateProject(client, project.id, settings);
     Object.assign(project, settings);
