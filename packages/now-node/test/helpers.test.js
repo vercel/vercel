@@ -65,6 +65,7 @@ describe('all helpers', () => {
     ['cookies', 0],
     ['body', 0],
     ['status', 1],
+    ['redirect', 1],
     ['send', 1],
     ['json', 1],
   ];
@@ -304,6 +305,14 @@ describe('res.status', () => {
 
     const [a, b] = spy.mock.calls[0];
     expect(a).toBe(b);
+  });
+});
+
+describe('res.redirect', () => {
+  test('res.redirect() should redirect without statusCode', () => {
+    mockListener.mockImplementation((req, res) => {
+      res.redirect('example.com');
+    });
   });
 });
 
