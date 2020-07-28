@@ -500,7 +500,7 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
-    'project-link': {
+    'project-link-zeroconf': {
       'package.json': JSON.stringify({}),
     },
     'project-link-confirm': {

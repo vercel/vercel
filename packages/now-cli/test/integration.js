@@ -3288,8 +3288,8 @@ test('reject deploying with wrong team .vercel config', async t => {
 });
 
 test('[vc link] should show prompts to set up project', async t => {
-  const dir = fixture('project-link');
-  const projectName = `project-link-${
+  const dir = fixture('project-link-zeroconf');
+  const projectName = `project-link-zeroconf-${
     Math.random().toString(36).split('.')[1]
   }`;
 
