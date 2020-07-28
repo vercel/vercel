@@ -1,13 +1,13 @@
 {
-  "name": "nextjs",
-  "license": "MIT",
+  "name": "10-nextjs-node",
+  "private": true,
   "scripts": {
     "dev": "next",
     "build": "next build"
   },
   "dependencies": {
-    "next": "^9.0.0",
-    "react": "^16.7.0",
-    "react-dom": "^16.7.0"
+    "next": "9.5.0",
+    "react": "16.13.1",
+    "react-dom": "16.13.1"
   }
 }
