@@ -231,7 +231,7 @@ function safelyCompile(
       value = value
         .replace(
           new RegExp(`:${key}\\*`, 'g'),
-          `:${key}--ESCAPED_PARAM_ASTERISKS`
+          `:${key}--ESCAPED_PARAM_ASTERISK`
         )
         .replace(
           new RegExp(`:${key}\\?`, 'g'),
@@ -249,7 +249,7 @@ function safelyCompile(
     .replace(/--ESCAPED_PARAM_PLUS/g, '+')
     .replace(/--ESCAPED_PARAM_COLON/g, ':')
     .replace(/--ESCAPED_PARAM_QUESTION/g, '?')
-    .replace(/--ESCAPED_PARAM_ASTERISKS/g, '*');
+    .replace(/--ESCAPED_PARAM_ASTERISK/g, '*');
 
   // the value needs to start with a forward-slash to be compiled
   // correctly

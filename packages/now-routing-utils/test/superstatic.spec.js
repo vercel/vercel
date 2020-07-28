@@ -614,7 +614,7 @@ test('convertHeaders', () => {
     ['hello/file.jpg', 'hello/font-css', 'dir/arial.font-css'],
     ['403.html', '500.html'],
     ['/blogg', '/random'],
-    ['/non-match', '/like/params'],
+    ['/non-match', '/like/params', '/like/params/'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
