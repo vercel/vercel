@@ -929,10 +929,6 @@ export default class DevServer {
       this.output.debug(
         'Proxy response from target: ' + JSON.stringify(payload, null, 2)
       );
-      proxyRes.on('data', data => this.output.debug(data.toString()));
-      proxyRes.on('error', error =>
-        this.output.debug('Error from proxy res: ' + error)
-      );
     });
 
     await devCommandPromise;
@@ -1553,12 +1549,6 @@ export default class DevServer {
         const upstream = `http://localhost:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
 
-        // Add the Vercel platform proxy request headers
-        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
-        for (const [name, value] of Object.entries(headers)) {
-          req.headers[name] = value;
-        }
-
         this.setResponseHeaders(res, nowRequestId);
         const origUrl = url.parse(req.url || '/', true);
         delete origUrl.search;
@@ -1679,12 +1669,6 @@ export default class DevServer {
           query: parsed.query,
         });
 
-        // Add the Vercel platform proxy request headers
-        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
-        for (const [name, value] of Object.entries(headers)) {
-          req.headers[name] = value;
-        }
-
         this.setResponseHeaders(res, nowRequestId);
         return proxyPass(
           req,
@@ -1715,12 +1699,6 @@ export default class DevServer {
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
-
-      // Add the Vercel platform proxy request headers
-      const headers = this.getNowProxyHeaders(req, nowRequestId, false);
-      for (const [name, value] of Object.entries(headers)) {
-        req.headers[name] = value;
-      }
 
       this.setResponseHeaders(res, nowRequestId);
       return proxyPass(
