@@ -1142,14 +1142,10 @@ test('[vercel dev] 08-hugo', async t => {
   }
 });
 
-test(
+test.only(
   '[vercel dev] 10-nextjs-node',
   testFixtureStdio('10-nextjs-node', async testPath => {
     await testPath(404, '/nothing', /Custom Next 404/);
-    await testPath(200, '/', /Next.js \+ Node.js API/m);
-    await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
-    await testPath(200, '/contact', /Contact Page/);
-    await testPath(200, '/support', /Contact Page/);
   })
 );
 
