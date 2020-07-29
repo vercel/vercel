@@ -880,7 +880,7 @@ export const build = async ({
         !prerenderManifest.fallbackRoutes[route] &&
         !prerenderManifest.legacyBlockingRoutes[route]
       ) {
-        nonLambdaSsgPages.add(route);
+        nonLambdaSsgPages.add(route === '/' ? '/index' : route);
       }
     };
 
