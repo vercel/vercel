@@ -23,7 +23,7 @@ jobs:
       - run: git fetch origin master --depth=10
       - run: git fetch origin ${{ github.ref }} --depth=10
       - uses: actions/setup-node@v1
-      - run: yarn install
+      - run: yarn install --network-timeout 1000000
       - run: yarn run build
       - run: yarn run lint
         if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run lint once
