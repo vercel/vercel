@@ -929,6 +929,10 @@ export default class DevServer {
       this.output.debug(
         'Proxy response from target: ' + JSON.stringify(payload, null, 2)
       );
+      proxyRes.on('data', data => this.output.debug(data));
+      proxyRes.on('error', error =>
+        this.output.debug('Error from proxy res: ' + error)
+      );
     });
 
     await devCommandPromise;
