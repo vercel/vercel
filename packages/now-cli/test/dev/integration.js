@@ -1149,7 +1149,8 @@ test(
     await testPath(200, '/api/date', new RegExp(new Date().getFullYear()));
     await testPath(200, '/contact', /Contact Page/);
     await testPath(200, '/support', /Contact Page/);
-    await testPath(404, '/nothing', /Custom Next 404/);
+    await testPath(404, '/nothing', /o/im); // first try
+    await testPath(404, '/nothing', /Custom Next 404/); // second try
   })
 );
 
