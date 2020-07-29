@@ -1024,6 +1024,7 @@ export default class DevServer {
     res: http.ServerResponse,
     nowRequestId: string
   ): Promise<void> {
+    this.output.debug(`${req.url} called send404()`);
     return this.sendError(req, res, nowRequestId, 'NOT_FOUND', 404);
   }
 
@@ -1035,6 +1036,7 @@ export default class DevServer {
     statusCode: number = 500,
     headers: HttpHeadersConfig = {}
   ): Promise<void> {
+    this.output.debug(`${req.url} called sendError(${statusCode})`);
     res.statusCode = statusCode;
     this.setResponseHeaders(res, nowRequestId, headers);
 
@@ -1258,6 +1260,7 @@ export default class DevServer {
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
+      this.output.debug(`${req.url} server is stopping, closing connection`);
       await this.send404(req, res, nowRequestId);
       return;
     }
@@ -1565,6 +1568,7 @@ export default class DevServer {
         (statusCode === 404 && routeResult.phase === 'miss') ||
         !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
       ) {
+        this.output.debug(`${req.url} status code was 404 in miss phase`);
         await this.send404(req, res, nowRequestId);
       }
       return;
@@ -1726,6 +1730,7 @@ export default class DevServer {
     }
 
     if (!foundAsset) {
+      this.output.debug(`${req.url} asset not found`);
       await this.send404(req, res, nowRequestId);
       return;
     }
