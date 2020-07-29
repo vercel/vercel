@@ -1,6 +1,6 @@
 {
   "name": "@vercel/next",
-  "version": "2.6.14-canary.2",
+  "version": "2.6.14",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
