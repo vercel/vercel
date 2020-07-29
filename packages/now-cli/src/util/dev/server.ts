@@ -923,6 +923,14 @@ export default class DevServer {
       this.proxy.ws(req, socket, head, { target });
     });
 
+    this.proxy.on('proxyRes', proxyRes => {
+      const { statusCode, url, method, rawHeaders } = proxyRes;
+      const payload = { statusCode, url, method, rawHeaders };
+      this.output.debug(
+        'Proxy response from target: ' + JSON.stringify(payload, null, 2)
+      );
+    });
+
     await devCommandPromise;
 
     this.output.ready(`Available at ${link(this.address)}`);
