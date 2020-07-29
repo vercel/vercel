@@ -7,11 +7,10 @@ setting. This isn't supported yet.
 
 #### Possible Ways to Fix It
 
-Ensure your scale settings (in `now.json`, the command you're running 
+Ensure your scale settings (in `vercel.json`, the command you're running
 or from a previous deployment who's alias you're trying to overwrite) has
-the `min` scale setting set to `0`. You can do this by running 
+the `min` scale setting set to `0`. You can do this by running
 
 ```
-now scale <deployment> 0 10
+vercel scale <deployment> 0 10
 ```
-

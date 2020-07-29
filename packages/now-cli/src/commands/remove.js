@@ -7,7 +7,6 @@ import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
 import createOutput from '../util/output';
 import logo from '../util/output/logo';
-import cmd from '../util/output/cmd.ts';
 import elapsed from '../util/output/elapsed.ts';
 import { normalizeURL } from '../util/url';
 import Client from '../util/client.ts';
@@ -18,20 +17,23 @@ import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
 import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now remove`)} [...deploymentId|deploymentName]
+  ${chalk.bold(
+    `${logo} ${getPkgName()} remove`
+  )} [...deploymentId|deploymentName]
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -46,17 +48,17 @@ const help = () => {
     '`deploymentId`'
   )}
 
-    ${chalk.cyan('$ now rm deploymentId')}
+    ${chalk.cyan(`$ ${getPkgName()} rm deploymentId`)}
 
   ${chalk.gray('–')} Remove all deployments with name ${chalk.dim('`my-app`')}
 
-    ${chalk.cyan('$ now rm my-app')}
+    ${chalk.cyan(`$ ${getPkgName()} rm my-app`)}
 
   ${chalk.gray('–')} Remove two deployments with IDs ${chalk.dim(
     '`eyWt6zuSdeus`'
   )} and ${chalk.dim('`uWHoA9RQ1d1o`')}
 
-    ${chalk.cyan('$ now rm eyWt6zuSdeus uWHoA9RQ1d1o')}
+    ${chalk.cyan(`$ ${getPkgName()} rm eyWt6zuSdeus uWHoA9RQ1d1o`)}
 `);
 };
 
@@ -91,7 +93,7 @@ export default async function main(ctx) {
   }
 
   if (ids.length < 1) {
-    error(`${cmd('now rm')} expects at least one argument`);
+    error(`${getCommandName('rm')} expects at least one argument`);
     help();
     return 1;
   }
@@ -190,7 +192,10 @@ export default async function main(ctx) {
     }
 
     aliases = await Promise.all(
-      deployments.map(depl => getAliases(client, depl.uid))
+      deployments.map(async depl => {
+        const { aliases } = await getAliases(client, depl.uid);
+        return aliases;
+      })
     );
   } finally {
     cancelWait();
@@ -209,9 +214,9 @@ export default async function main(ctx) {
     log(
       `Could not find ${argv.safe ? 'unaliased' : 'any'} deployments ` +
         `or projects matching ` +
-        `${ids.map(id => chalk.bold(`"${id}"`)).join(', ')}. Run ${cmd(
-          'now ls'
-        )} to list.`
+        `${ids
+          .map(id => chalk.bold(`"${id}"`))
+          .join(', ')}. Run ${getCommandName('ls')} to list.`
     );
     client.close();
     return 1;

@@ -19,6 +19,7 @@ export interface Framework {
   tagline?: string;
   website?: string;
   description: string;
+  sort?: number;
   detectors?: {
     every?: FrameworkDetectionItem[];
     some?: FrameworkDetectionItem[];

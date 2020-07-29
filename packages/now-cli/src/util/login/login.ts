@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import { hostname } from 'os';
 import { InvalidEmail, AccountNotFound } from '../errors-ts';
 import ua from '../ua';
+import { getTitleName } from '../pkg-name';
 
 type LoginData = {
   token: string;
@@ -17,7 +18,7 @@ export default async function login(
   const host = hostname()
     .replace(hyphens, ' ')
     .replace('.local', '');
-  const tokenName = `Now CLI on ${host}`;
+  const tokenName = `${getTitleName()} CLI on ${host}`;
 
   const response = await fetch(`${apiUrl}/now/registration?mode=${mode}`, {
     method: 'POST',
@@ -37,7 +38,7 @@ export default async function login(
     if (error.code === 'not_exists') {
       throw new AccountNotFound(
         email,
-        `Please sign up: https://zeit.co/signup`
+        `Please sign up: https://vercel.com/signup`
       );
     }
 

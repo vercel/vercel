@@ -1,11 +1,12 @@
 /**
- * This converts Superstatic configuration to Now.json Routes
+ * This converts Superstatic configuration to vercel.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
-import { isString } from 'util';
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
+
+const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
 export function getCleanUrls(
   filePaths: string[]
@@ -49,22 +50,38 @@ export function convertRedirects(
 ): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const loc = replaceSegments(segments, r.destination, true);
-    const route: Route = {
-      src,
-      headers: { Location: loc },
-      status: r.statusCode || defaultStatus,
-    };
-    return route;
+    try {
+      const loc = replaceSegments(segments, r.destination, true);
+      let status: number;
+      if (typeof r.permanent === 'boolean') {
+        status = r.permanent ? 308 : 307;
+      } else if (r.statusCode) {
+        status = r.statusCode;
+      } else {
+        status = defaultStatus;
+      }
+      const route: Route = {
+        src,
+        headers: { Location: loc },
+        status,
+      };
+      return route;
+    } catch (e) {
+      throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
+    }
   });
 }
 
 export function convertRewrites(rewrites: NowRewrite[]): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
-    const dest = replaceSegments(segments, r.destination);
-    const route: Route = { src, dest, check: true };
-    return route;
+    try {
+      const dest = replaceSegments(segments, r.destination);
+      const route: Route = { src, dest, check: true };
+      return route;
+    } catch (e) {
+      throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
+    }
   });
 }
 
@@ -72,7 +89,7 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
   return headers.map(h => {
     const obj: { [key: string]: string } = {};
     const { src, segments } = sourceToRegex(h.source);
-    const hasSegments = segments.length > 0;
+    const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
     const indexes: { [k: string]: string } = {};
 
     segments.forEach((name, index) => {
@@ -80,14 +97,12 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
     });
 
     h.headers.forEach(({ key, value }) => {
-      if (hasSegments) {
+      if (namedSegments.length > 0) {
         if (key.includes(':')) {
-          const keyCompiler = compile(key);
-          key = keyCompiler(indexes);
+          key = safelyCompile(key, indexes);
         }
         if (value.includes(':')) {
-          const valueCompiler = compile(value);
-          value = valueCompiler(indexes);
+          value = safelyCompile(value, indexes);
         }
       }
       obj[key] = value;
@@ -133,7 +148,14 @@ export function sourceToRegex(
     sensitive: true,
     delimiter: '/',
   });
-  const segments = keys.map(k => k.name).filter(isString);
+  const segments = keys
+    .map(k => k.name)
+    .map(name => {
+      if (typeof name !== 'string') {
+        return UN_NAMED_SEGMENT;
+      }
+      return name;
+    });
   return { src: r.source, segments };
 }
 
@@ -150,23 +172,23 @@ function replaceSegments(
   let { pathname, hash, query, ...rest } = parsedDestination;
   pathname = pathname || '';
   hash = hash || '';
-  if (segments.length > 0) {
+
+  const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
+
+  if (namedSegments.length > 0) {
     const indexes: { [k: string]: string } = {};
     segments.forEach((name, index) => {
       indexes[name] = toSegmentDest(index);
     });
 
     if (destination.includes(':') && segments.length > 0) {
-      const pathnameCompiler = compile(pathname);
-      const hashCompiler = compile(hash);
-      pathname = pathnameCompiler(indexes);
-      hash = hash ? `${hashCompiler(indexes)}` : null;
+      pathname = safelyCompile(pathname, indexes);
+      hash = hash ? safelyCompile(hash, indexes) : null;
 
       for (const [key, strOrArray] of Object.entries(query)) {
         let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
         if (value) {
-          const queryCompiler = compile(value);
-          value = queryCompiler(indexes);
+          value = safelyCompile(value, indexes);
         }
         query[key] = value;
       }
@@ -176,7 +198,7 @@ function replaceSegments(
     // specified
     if (!isRedirect) {
       for (const [name, value] of Object.entries(indexes)) {
-        if (!(name in query)) {
+        if (!(name in query) && name !== UN_NAMED_SEGMENT) {
           query[name] = value;
         }
       }
@@ -189,11 +211,25 @@ function replaceSegments(
       hash,
     });
 
-    // url.format() escapes the query string but we must preserve dollar signs
-    destination = destination.replace(/=%24/g, '=$');
+    // url.format() escapes the dollar sign but it must be preserved for now-proxy
+    destination = destination.replace(/%24/g, '$');
   }
 
   return destination;
+}
+
+function safelyCompile(str: string, indexes: { [k: string]: string }): string {
+  if (!str) {
+    return str;
+  }
+  // path-to-regexp cannot compile question marks
+  return str
+    .split('?')
+    .map(part => {
+      const compiler = compile(part);
+      return compiler(indexes);
+    })
+    .join('?');
 }
 
 function toSegmentDest(index: number): string {

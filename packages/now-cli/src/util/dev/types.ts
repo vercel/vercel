@@ -3,27 +3,48 @@ import { ChildProcess } from 'child_process';
 import { Lambda as FunLambda } from '@zeit/fun';
 import {
   Builder as BuildConfig,
+  BuildOptions,
+  PrepareCacheOptions,
+  ShouldServeOptions,
+  StartDevServerOptions,
+  StartDevServerResult,
+  Env,
   FileBlob,
   FileFsRef,
   Lambda,
   PackageJson,
-  Config,
-} from '@now/build-utils';
-import { NowConfig } from 'now-client';
-import { HandleValue, Route } from '@now/routing-utils';
+} from '@vercel/build-utils';
+import { NowConfig } from '@vercel/client';
+import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
+import { ProjectSettings } from '../../types';
 
 export { NowConfig };
 
 export interface DevServerOptions {
   output: Output;
   debug: boolean;
-  devCommand: string | undefined;
-  frameworkSlug: string | null;
+  devCommand?: string;
+  frameworkSlug?: string;
+  projectSettings?: ProjectSettings;
+  environmentVars?: Env;
 }
 
-export interface EnvConfig {
-  [name: string]: string | undefined;
+export interface EnvConfigs {
+  /**
+   * environment variables from `.env.build` file
+   */
+  buildEnv: Env;
+
+  /**
+   * environment variables from `.env` file
+   */
+  runEnv: Env;
+
+  /**
+   * environment variables from `.env` and `.env.build`
+   */
+  allEnv: Env;
 }
 
 export interface BuildMatch extends BuildConfig {
@@ -35,8 +56,6 @@ export interface BuildMatch extends BuildConfig {
   buildProcess?: ChildProcess;
 }
 
-export type RouteConfig = Route;
-
 export interface HttpHandler {
   (req: http.IncomingMessage, res: http.ServerResponse): void;
 }
@@ -45,9 +64,9 @@ export interface BuilderInputs {
   [path: string]: FileFsRef;
 }
 
-export type BuiltLambda = Lambda & {
+export interface BuiltLambda extends Lambda {
   fn?: FunLambda;
-};
+}
 
 export type BuilderOutput = BuiltLambda | FileFsRef | FileBlob;
 
@@ -61,28 +80,6 @@ export interface CacheOutputs {
   [path: string]: CacheOutput;
 }
 
-export interface BuilderParamsBase {
-  files: BuilderInputs;
-  entrypoint: string;
-  config: Config;
-  meta?: {
-    isDev?: boolean;
-    requestPath?: string | null;
-    filesChanged?: string[];
-    filesRemoved?: string[];
-    env?: EnvConfig;
-    buildEnv?: EnvConfig;
-  };
-}
-
-export interface BuilderParams extends BuilderParamsBase {
-  workPath: string;
-}
-
-export interface PrepareCacheParams extends BuilderParams {
-  cachePath: string;
-}
-
 export interface BuilderConfigAttr {
   maxLambdaSize?: string | number;
 }
@@ -91,49 +88,43 @@ export interface Builder {
   version?: 1 | 2 | 3 | 4;
   config?: BuilderConfigAttr;
   build(
-    params: BuilderParams
+    opts: BuildOptions
   ):
     | BuilderOutputs
     | BuildResult
     | Promise<BuilderOutputs>
     | Promise<BuildResult>;
-  shouldServe?(params: ShouldServeParams): boolean | Promise<boolean>;
   prepareCache?(
-    params: PrepareCacheParams
+    opts: PrepareCacheOptions
   ): CacheOutputs | Promise<CacheOutputs>;
+  shouldServe?(params: ShouldServeOptions): boolean | Promise<boolean>;
+  startDevServer?(opts: StartDevServerOptions): Promise<StartDevServerResult>;
 }
 
 export interface BuildResult {
   output: BuilderOutputs;
-  routes: RouteConfig[];
+  routes: Route[];
   watch: string[];
   distPath?: string;
 }
 
 export interface BuildResultV3 {
   output: Lambda;
-  routes: RouteConfig[];
+  routes: Route[];
   watch: string[];
   distPath?: string;
 }
 
 export interface BuildResultV4 {
   output: { [filePath: string]: Lambda };
-  routes: RouteConfig[];
+  routes: Route[];
   watch: string[];
   distPath?: string;
 }
 
-export interface ShouldServeParams {
-  files: BuilderInputs;
-  entrypoint: string;
-  config?: Config;
-  requestPath: string;
-  workPath: string;
-}
-
 export interface BuilderWithPackage {
   runInProcess?: boolean;
+  requirePath: string;
   builder: Readonly<Builder>;
   package: Readonly<PackageJson>;
 }
@@ -147,6 +138,8 @@ export interface RouteResult {
   found: boolean;
   // "dest": <string of the dest, either file for lambda or full url for remote>
   dest: string;
+  // `true` if last route in current phase matched but set `continue: true`
+  continue: boolean;
   // "status": <integer in case exit code is intended to be changed>
   status?: number;
   // "headers": <object of the added response header values>
@@ -154,7 +147,7 @@ export interface RouteResult {
   // "uri_args": <object (key=value) list of new uri args to be passed along to dest >
   uri_args?: { [key: string]: any };
   // "matched_route": <object of the route spec that matched>
-  matched_route?: RouteConfig;
+  matched_route?: Route;
   // "matched_route_idx": <integer of the index of the route matched>
   matched_route_idx?: number;
   // "userDest": <boolean in case the destination was user defined>

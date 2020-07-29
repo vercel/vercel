@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import table from 'text-table';
 import mri from 'mri';
 import ms from 'ms';
-import plural from 'pluralize';
 import strlen from '../util/strlen.ts';
 import { handleError, error } from '../util/error';
 import NowSecrets from '../util/secrets';
@@ -12,10 +11,13 @@ import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import createOutput from '../util/output';
 import confirm from '../util/input/confirm';
+import getCommandFlags from '../util/get-command-flags';
+import getPrefixedFlags from '../util/get-prefixed-flags';
+import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now secrets`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} secrets`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -29,21 +31,22 @@ const help = () => {
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
+    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Add a new secret
 
-    ${chalk.cyan('$ now secrets add my-secret "my value"')}
+    ${chalk.cyan(`$ ${getPkgName()} secrets add my-secret "my value"`)}
 
     ${chalk.gray(
       '–'
@@ -59,7 +62,13 @@ const help = () => {
     '`@`'
   )} symbol)
 
-    ${chalk.cyan(`$ now -e MY_SECRET=${chalk.bold('@my-secret')}`)}
+    ${chalk.cyan(`$ ${getPkgName()} -e MY_SECRET=${chalk.bold('@my-secret')}`)}
+
+  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
+    '`1584722256178`'
+  )} is the time in milliseconds since the UNIX epoch.
+
+    ${chalk.cyan(`$ ${getPkgName()} secrets ls --next 1584722256178`)}
 `);
 };
 
@@ -68,6 +77,7 @@ let argv;
 let debug;
 let apiUrl;
 let subcommand;
+let nextTimestamp;
 
 const main = async ctx => {
   argv = mri(ctx.argv.slice(2), {
@@ -76,6 +86,7 @@ const main = async ctx => {
       help: 'h',
       debug: 'd',
       yes: 'y',
+      next: 'N',
     },
   });
 
@@ -84,6 +95,7 @@ const main = async ctx => {
   debug = argv.debug;
   apiUrl = ctx.apiUrl;
   subcommand = argv._[0];
+  nextTimestamp = argv.next;
 
   if (argv.help || !subcommand) {
     help();
@@ -132,20 +144,22 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
   const start = Date.now();
 
   if (subcommand === 'ls' || subcommand === 'list') {
-    if (args.length !== 0) {
+    if (args.length > 1) {
       console.error(
         error(
-          `Invalid number of arguments. Usage: ${chalk.cyan('`now secret ls`')}`
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            `${getCommandName('secret ls')}`
+          )}`
         )
       );
       return exit(1);
     }
 
-    const list = await secrets.ls();
-    const elapsed = ms(new Date() - start);
+    const { secrets: list, pagination } = await secrets.ls(nextTimestamp);
+    const elapsed = ms(Date.now() - start);
 
     console.log(
-      `${plural('secret', list.length, true)} found under ${chalk.bold(
+      `${list.length > 0 ? 'Secrets' : 'No secrets'} found under ${chalk.bold(
         contextName
       )} ${chalk.gray(`[${elapsed}]`)}`
     );
@@ -172,6 +186,19 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
         console.log(`\n${out}\n`);
       }
     }
+
+    if (pagination && pagination.count === 20) {
+      const prefixedArgs = getPrefixedFlags(argv);
+      const flags = getCommandFlags(prefixedArgs, [
+        '_',
+        '--next',
+        '-N',
+        '-d',
+        '-y',
+      ]);
+      const nextCmd = `secrets ${subcommand}${flags} --next ${pagination.next}`;
+      output.log(`To display the next page run ${getCommandName(nextCmd)}`);
+    }
     return secrets.close();
   }
 
@@ -180,14 +207,14 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now secret rm <name>`'
+            `${getCommandName('secret rm <name>')}`
           )}`
         )
       );
       return exit(1);
     }
-    const list = await secrets.ls();
-    const theSecret = list.find(secret => secret.name === args[0]);
+
+    const theSecret = await secrets.getSecretByNameOrId(args[0]);
 
     if (theSecret) {
       const yes =
@@ -222,7 +249,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now secret rename <old-name> <new-name>`'
+            `${getCommandName('secret rename <old-name> <new-name>')}`
           )}`
         )
       );
@@ -245,13 +272,15 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            '`now secret add <name> <value>`'
+            `${getCommandName('secret add <name> <value>')}`
           )}`
         )
       );
 
       if (args.length > 2) {
-        const example = chalk.cyan(`$ now secret add -- "${args[0]}"`);
+        const example = chalk.cyan(
+          `$ ${getCommandName('secret add -- "${args[0]}"')}`
+        );
         console.log(
           `If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
         );
@@ -275,7 +304,9 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
     }
 
     if (typeof value === 'boolean') {
-      const example = chalk.cyan(`$ now secret add -- "${name}"`);
+      const example = chalk.cyan(
+        `$ ${getCommandName('secret add -- "${name}"')}`
+      );
       console.log(
         `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
       );

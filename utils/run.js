@@ -1,21 +1,30 @@
 const { execSync, spawn } = require('child_process');
-const { join, relative } = require('path');
-const { readdirSync } = require('fs');
+const { join, relative, sep } = require('path');
 
-if (
-  process.env.GITHUB_REPOSITORY &&
-  process.env.GITHUB_REPOSITORY !== 'zeit/now'
-) {
-  console.log('Detected fork, skipping tests');
-  return;
-}
+// The order matters because we must build dependencies first
+const allPackages = [
+  'frameworks',
+  'now-routing-utils',
+  'now-build-utils',
+  'now-cgi',
+  'now-client',
+  'now-node-bridge',
+  'now-next',
+  'now-node',
+  'redwood',
+  'now-static-build',
+  'now-go',
+  'now-python',
+  'now-ruby',
+  'now-cli',
+];
 
 process.chdir(join(__dirname, '..'));
 
 async function main() {
   const script = process.argv[2];
   const all = process.argv[3];
-  let matches = [];
+  let modifiedPackages = new Set(allPackages);
 
   if (!script) {
     console.error('Please provide at least one argument');
@@ -23,70 +32,40 @@ async function main() {
   }
 
   if (all === 'all') {
-    matches = readdirSync(join(__dirname, '..', 'packages'));
     console.log(`Running script "${script}" for all packages`);
   } else {
-    const branch = execSync('git branch | grep "*" | cut -d " " -f2')
-      .toString()
-      .trim();
+    const branch =
+      process.env.GITHUB_HEAD_REF ||
+      execSync('git branch --show-current')
+        .toString()
+        .trim();
 
     const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
 
     const changed = diff
       .split('\n')
-      .filter(item => Boolean(item) && item.includes('packages/'))
-      .map(item => relative('packages', item).split('/')[0])
+      .filter(item => Boolean(item) && item.startsWith('packages'))
+      .map(item => relative('packages', item).split(sep)[0])
       .concat('now-cli'); // Always run tests for Now CLI
 
-    matches = Array.from(new Set(changed));
-
-    if (matches.length === 0) {
-      matches.push('now-node');
-      console.log('No packages changed. Using default packages.');
-    }
+    modifiedPackages = new Set(changed);
 
     console.log(
-      `Running "${script}" on branch "${branch}" with the following packages:`
+      `Running "${script}" on branch "${branch}" with the following packages:\n`
     );
   }
 
-  // Sort the matches such that `utils` modules are compiled first,
-  // because other packages (such as builders) depend on them.
-  // We also need to ensure that `now-cli` is built last.
-
-  matches.sort((a, b) => {
-    if (a === 'now-routing-utils' && b !== 'now-routing-utils') {
-      return -1;
+  for (const pkgName of allPackages) {
+    if (modifiedPackages.has(pkgName)) {
+      console.log(` - ${pkgName}`);
     }
-    if (b === 'now-routing-utils' && a !== 'now-routing-utils') {
-      return 1;
-    }
-    if (a === 'now-build-utils' && b !== 'now-build-utils') {
-      return -1;
-    }
-    if (b === 'now-build-utils' && a !== 'now-build-utils') {
-      return 1;
-    }
-    if (a === 'now-cli' && b !== 'now-cli') {
-      return 1;
-    }
-    if (b === 'now-cli' && a !== 'now-cli') {
-      return -1;
-    }
-    return b - a;
-  });
-
-  console.log(matches.join('\n') + '\n');
-
-  for (const pkgName of matches) {
-    await runScript(pkgName, script);
   }
 
-  if (process.env.NOW_GITHUB_DEPLOYMENT) {
-    execSync(
-      `rm -rf public && mkdir public && echo '<a href="https://zeit.co/import">https://zeit.co/import</a>' > public/output.html`
-    );
+  for (const pkgName of allPackages) {
+    if (modifiedPackages.has(pkgName)) {
+      await runScript(pkgName, script);
+    }
   }
 }
 

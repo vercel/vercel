@@ -1,10 +1,9 @@
 import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
-import readdir from 'recursive-readdir';
-import { relative, join, isAbsolute, basename } from 'path';
+import { relative, isAbsolute } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
-import { getNowIgnore, createDebug, parseNowJSON } from './utils';
+import { buildFileTree, createDebug, parseVercelConfig } from './utils';
 import { DeploymentError } from './errors';
 import {
   NowConfig,
@@ -81,43 +80,33 @@ export default function buildCreateDeployment(version: number) {
       rootFiles = [path];
     }
 
-    // Get .nowignore
-    let { ig, ignores } = await getNowIgnore(path);
+    let { fileList } = await buildFileTree(
+      path,
+      clientOptions.isDirectory,
+      debug
+    );
 
-    debug(`Found ${ig.ignores.length} rules in .nowignore`);
-
-    let fileList: string[];
-
-    debug('Building file tree...');
-
-    if (clientOptions.isDirectory && !Array.isArray(path)) {
-      // Directory path
-      const dirContents = await readdir(path, ignores);
-      const relativeFileList = dirContents.map(filePath =>
-        relative(process.cwd(), filePath)
-      );
-      fileList = ig
-        .filter(relativeFileList)
-        .map((relativePath: string) => join(process.cwd(), relativePath));
-
-      debug(`Read ${fileList.length} files in the specified directory`);
-    } else if (Array.isArray(path)) {
-      // Array of file paths
-      fileList = path;
-      debug(`Assigned ${fileList.length} files provided explicitly`);
-    } else {
-      // Single file
-      fileList = [path];
-      debug(`Deploying the provided path as single file`);
-    }
-
+    let configPath: string | undefined;
     if (!nowConfig) {
-      // If the user did not provide a nowConfig,
-      // then use the now.json file in the root.
-      const fileName = 'now.json';
-      const absolutePath = fileList.find(f => relative(cwd, f) === fileName);
-      debug(absolutePath ? `Found ${fileName}` : `Missing ${fileName}`);
-      nowConfig = await parseNowJSON(absolutePath);
+      // If the user did not provide a config file, use the one in the root directory.
+      const relativePaths = fileList.map(f => relative(cwd, f));
+      const hasVercelConfig = relativePaths.includes('vercel.json');
+      const hasNowConfig = relativePaths.includes('now.json');
+
+      if (hasVercelConfig) {
+        if (hasNowConfig) {
+          throw new DeploymentError({
+            code: 'conflicting_config',
+            message:
+              'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
+          });
+        }
+        configPath = 'vercel.json';
+      } else if (hasNowConfig) {
+        configPath = 'now.json';
+      }
+
+      nowConfig = await parseVercelConfig(configPath);
     }
 
     if (
@@ -126,8 +115,8 @@ export default function buildCreateDeployment(version: number) {
       Array.isArray(nowConfig.files) &&
       nowConfig.files.length > 0
     ) {
-      // See the docs: https://zeit.co/docs/v1/features/configuration/#files-(array)
-      debug('Filtering file list based on `files` key in now.json');
+      // See the docs: https://vercel.com/docs/v1/features/configuration/#files-(array)
+      debug(`Filtering file list based on \`files\` key in "${configPath}"`);
       const allowedFiles = new Set<string>(['Dockerfile']);
       const allowedDirs = new Set<string>();
       nowConfig.files.forEach(relPath => {
@@ -154,17 +143,11 @@ export default function buildCreateDeployment(version: number) {
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
-    if (
-      fileList.length === 0 ||
-      fileList.every(f => (f ? basename(f).startsWith('.') : true))
-    ) {
-      debug(
-        `Deployment path has no files (or only dotfiles). Yielding a warning event`
-      );
+    if (fileList.length === 0) {
+      debug('Deployment path has no files. Yielding a warning event');
       yield {
         type: 'warning',
-        payload:
-          'There are no files (or only files starting with a dot) inside your deployment.',
+        payload: 'There are no files inside your deployment.',
       };
     }
 

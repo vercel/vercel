@@ -122,6 +122,7 @@ module.exports = async session => {
     'single-dotfile': {
       '.testing': 'i am a dotfile',
     },
+    'empty-directory': {},
     'config-scope-property-email': {
       'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ], "version": 2 }`,
       'index.html': '<span>test scope email</span',
@@ -133,6 +134,14 @@ module.exports = async session => {
     'builds-wrong': {
       'now.json': '{"builder": 1, "type": "static"}',
       'index.html': '<span>test</span',
+    },
+    'builds-wrong-vercel': {
+      'vercel.json': '{"fake": 1}',
+      'index.html': '<h1>Fake</h1>',
+    },
+    'builds-wrong-build-env': {
+      'vercel.json': '{ "build.env": { "key": "value" } }',
+      'index.html': '<h1>Should fail</h1>',
     },
     'builds-no-list': {
       'now.json': `{
@@ -172,7 +181,8 @@ fs.writeFileSync(
   'index.js',
   fs
     .readFileSync('index.js', 'utf8')
-    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
+    .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off')
+    .replace('BUILD_ENV_DEBUG', process.env.VERCEL_BUILDER_DEBUG ? 'on' : 'off'),
 );
       `,
       'index.js': `
@@ -232,7 +242,7 @@ module.exports = (req, res) => {
     },
     'failing-alias': {
       'now.json': JSON.stringify(
-        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'zeit.co' })
+        Object.assign(JSON.parse(getConfigFile(true)), { alias: 'vercel.com' })
       ),
     },
     'local-config-cloud-v1': {
@@ -284,12 +294,23 @@ CMD ["node", "index.js"]`,
         files: ['.gitignore', 'folder', 'index.js', 'test.html'],
       }),
     },
+    'static-v2-meta': {
+      'index.html': 'Static V2',
+    },
     'redirects-v2': {
       'now.json': JSON.stringify({
         version: 2,
         name: 'redirects-v2',
         redirects: [{ source: `/(.*)`, destination: 'https://example.com/$1' }],
       }),
+    },
+    'deploy-with-only-readme-now-json': {
+      'now.json': JSON.stringify({ version: 2 }),
+      'README.md': 'readme contents',
+    },
+    'deploy-with-only-readme-vercel-json': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      'README.md': 'readme contents',
     },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
@@ -335,6 +356,16 @@ CMD ["node", "index.js"]`,
           env: {
             MY_SECRET: '@mysecret',
           },
+        },
+      }),
+    },
+    'api-env': {
+      'api/get-env.js': 'module.exports = (_, res) => res.json(process.env)',
+      'print.js': 'console.log(JSON.stringify(process.env))',
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'mkdir -p public && node print.js > public/index.json',
         },
       }),
     },
@@ -441,7 +472,7 @@ CMD ["node", "index.js"]`,
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'now-php@0.0.8',
+            runtime: 'vercel-php@0.1.0',
           },
         },
       }),
@@ -452,7 +483,7 @@ CMD ["node", "index.js"]`,
         functions: {
           'api/**/*.php': {
             memory: 128,
-            runtime: 'now-php@canary',
+            runtime: 'vercel-php@canary',
           },
         },
       }),
@@ -469,13 +500,27 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
-    'project-link': {
-      'pages/index.js': 'export default () => <div><h1>Now CLI test</h1></div>',
-      'package.json': JSON.stringify({
-        dependencies: {
-          gatsby: 'latest',
-        },
-      }),
+    'project-link-deploy': {
+      'package.json': '{}',
+    },
+    'project-link-zeroconf': {
+      'package.json': '{}',
+    },
+    'project-link-confirm': {
+      'package.json': '{}',
+    },
+    'project-link-dev': {
+      'package.json': '{}',
+    },
+    'project-link-legacy': {
+      'index.html': 'Hello',
+      'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
+    },
+    'dev-proxy-headers-and-env': {
+      'package.json': JSON.stringify({}),
+      'server.js': `require('http').createServer((req, res) => {
+                      res.end(JSON.stringify({ headers: req.headers, env: process.env }));
+                    }).listen(process.env.PORT);`,
     },
     'project-root-directory': {
       'src/index.html': '<h1>I am a website.</h1>',
@@ -486,6 +531,18 @@ CMD ["node", "index.js"]`,
             destination: '/',
           },
         ],
+      }),
+    },
+    'conflicting-now-json-vercel-json': {
+      'index.html': '<h1>I am a website.</h1>',
+      'vercel.json': getConfigFile(true),
+      'now.json': getConfigFile(true),
+    },
+    'unauthorized-vercel-config': {
+      // This project is under the testing-internal team
+      '.vercel/project.json': JSON.stringify({
+        orgId: 'team_JgimPl9u9uauL7E4MjMLt605',
+        projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
       }),
     },
   };

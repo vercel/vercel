@@ -5,9 +5,11 @@ const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry.js');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(bodies, randomness) {
+async function nowDeploy(bodies, randomness, uploadNowJson) {
   const files = Object.keys(bodies)
-    .filter(n => n !== 'now.json')
+    .filter(n =>
+      uploadNowJson ? true : n !== 'vercel.json' && n !== 'now.json'
+    )
     .map(n => ({
       sha: digestOfFile(bodies[n]),
       size: bodies[n].length,
@@ -15,8 +17,8 @@ async function nowDeploy(bodies, randomness) {
       mode: path.extname(n) === '.sh' ? 0o100755 : 0o100644,
     }));
 
-  const { FORCE_BUILD_IN_REGION, NOW_DEBUG } = process.env;
-  const nowJson = JSON.parse(bodies['now.json']);
+  const { FORCE_BUILD_IN_REGION, NOW_DEBUG, VERCEL_DEBUG } = process.env;
+  const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
 
   const nowDeployPayload = {
     version: 2,
@@ -28,6 +30,7 @@ async function nowDeploy(bodies, randomness) {
         RANDOMNESS_BUILD_ENV_VAR: randomness,
         FORCE_BUILD_IN_REGION,
         NOW_DEBUG,
+        VERCEL_DEBUG,
       },
     },
     name: 'test2020',
@@ -58,10 +61,18 @@ async function nowDeploy(bodies, randomness) {
   console.log('deploymentUrl', `https://${deploymentUrl}`);
 
   for (let i = 0; i < 750; i += 1) {
-    const { state } = await deploymentGet(deploymentId);
-    if (state === 'ERROR')
-      throw new Error(`State of ${deploymentUrl} is ${state}`);
-    if (state === 'READY') break;
+    const deployment = await deploymentGet(deploymentId);
+    const { readyState } = deployment;
+    if (readyState === 'ERROR') {
+      const error = new Error(
+        `State of https://${deploymentUrl} is ${readyState}`
+      );
+      error.deployment = deployment;
+      throw error;
+    }
+    if (readyState === 'READY') {
+      break;
+    }
     await new Promise(r => setTimeout(r, 1000));
   }
 
@@ -122,7 +133,7 @@ async function deploymentPost(payload) {
 }
 
 async function deploymentGet(deploymentId) {
-  const url = `/v3/now/deployments/${deploymentId}`;
+  const url = `/v12/now/deployments/${deploymentId}`;
   const resp = await fetchWithAuth(url);
   const json = await resp.json();
   if (json.error) {
@@ -145,10 +156,9 @@ async function fetchWithAuth(url, opts = {}) {
     currentCount += 1;
     if (!token || currentCount === MAX_COUNT) {
       currentCount = 0;
-      if (process.env.NOW_TOKEN) {
-        // used for health checks
-        token = process.env.NOW_TOKEN;
-      } else {
+      // used for health checks
+      token = process.env.VERCEL_TOKEN || process.env.NOW_TOKEN;
+      if (!token) {
         // used by GH Actions
         token = await fetchTokenWithRetry();
       }
@@ -161,25 +171,35 @@ async function fetchWithAuth(url, opts = {}) {
 }
 
 async function fetchTokenWithRetry(retries = 5) {
-  const { NOW_TOKEN, ZEIT_TEAM_TOKEN, ZEIT_REGISTRATION_URL } = process.env;
-  if (NOW_TOKEN) {
-    console.log('Using NOW_TOKEN for test deployment');
-    return NOW_TOKEN;
+  const {
+    NOW_TOKEN,
+    VERCEL_TOKEN,
+    VERCEL_TEAM_TOKEN,
+    VERCEL_REGISTRATION_URL,
+  } = process.env;
+  if (VERCEL_TOKEN || NOW_TOKEN) {
+    console.log('Your personal token will be used to make test deployments.');
+    return VERCEL_TOKEN || NOW_TOKEN;
   }
-  if (!ZEIT_TEAM_TOKEN || !ZEIT_REGISTRATION_URL) {
+  if (!VERCEL_TEAM_TOKEN || !VERCEL_REGISTRATION_URL) {
     throw new Error(
-      'Failed to create test deployment. Did you forget to set NOW_TOKEN?'
+      process.env.CI
+        ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
+        : 'Failed to create test deployment. Please set `VERCEL_TOKEN` environment variable and run again.'
     );
   }
   try {
-    const res = await _fetch(ZEIT_REGISTRATION_URL, {
+    const res = await _fetch(VERCEL_REGISTRATION_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${ZEIT_TEAM_TOKEN}`,
+        Authorization: `Bearer ${VERCEL_TEAM_TOKEN}`,
       },
     });
     if (!res.ok) {
-      throw new Error(`Unexpected status from registration: ${res.status}`);
+      const text = await res.text();
+      throw new Error(
+        `Unexpected status (${res.status}) from registration: ${text}`
+      );
     }
     const data = await res.json();
     if (!data) {
@@ -202,7 +222,7 @@ async function fetchTokenWithRetry(retries = 5) {
 }
 
 async function fetchApi(url, opts = {}) {
-  const apiHost = process.env.API_HOST || 'api.zeit.co';
+  const apiHost = process.env.API_HOST || 'api.vercel.com';
   const urlWithHost = `https://${apiHost}${url}`;
   const { method = 'GET', body } = opts;
 

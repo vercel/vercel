@@ -3,7 +3,8 @@ import bytes from 'bytes';
 import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
-import title from 'title';
+import { fileNameSymbol } from '@vercel/client';
+import { getPrettyError } from '@vercel/build-utils';
 import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
@@ -38,7 +39,6 @@ import {
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
-import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';
 import {
@@ -54,6 +54,8 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { readLocalConfig } from '../../util/config/files';
+import { getCommandName } from '../../util/pkg-name.ts';
+import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url.ts';
 
 const addProcessEnv = async (log, env) => {
   let val;
@@ -85,6 +87,7 @@ const addProcessEnv = async (log, env) => {
 
 const printDeploymentStatus = async (
   output,
+  client,
   {
     readyState,
     alias: aliasList,
@@ -101,9 +104,7 @@ const printDeploymentStatus = async (
 
   if (readyState !== 'READY') {
     output.error(
-      `${chalk.red(
-        'Error!'
-      )} Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+      `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
     );
     return 1;
   }
@@ -119,15 +120,14 @@ const printDeploymentStatus = async (
     let previewUrl;
     let isWildcard;
     if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
-      // search for a non now.sh/non wildcard domain
-      // but fallback to the first alias in the list
-      const mainAlias =
-        aliasList.find(
-          alias => !alias.endsWith('.now.sh') && !isWildcardAlias(alias)
-        ) || aliasList[0];
-
-      isWildcard = isWildcardAlias(mainAlias);
-      previewUrl = isWildcard ? mainAlias : `https://${mainAlias}`;
+      const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
+      if (previewUrlInfo) {
+        isWildcard = previewUrlInfo.isWildcard;
+        previewUrl = previewUrlInfo.previewUrl;
+      } else {
+        isWildcard = false;
+        previewUrl = `https://${deploymentUrl}`;
+      }
     } else {
       // fallback to deployment url
       isWildcard = false;
@@ -248,7 +248,9 @@ export default async function main(
   if (argv['--name']) {
     output.print(
       `${prependEmoji(
-        `The ${param('--name')} flag is deprecated (https://zeit.ink/1B)`,
+        `The ${param(
+          '--name'
+        )} option is deprecated (https://vercel.link/name-flag)`,
         emoji('warning')
       )}\n`
     );
@@ -260,7 +262,7 @@ export default async function main(
     debug: debugEnabled,
   });
 
-  // retrieve `project` and `org` from .now
+  // retrieve `project` and `org` from .vercel
   const link = await getLinkedProject(output, client, path);
 
   if (link.status === 'error') {
@@ -302,7 +304,7 @@ export default async function main(
     }
 
     // We use `localConfig` here to read the name
-    // even though the `now.json` file can change
+    // even though the `vercel.json` file can change
     // afterwards, this is fine since the property
     // will be deprecated and can be replaced with
     // user input.
@@ -352,7 +354,7 @@ export default async function main(
       path,
       sourcePath,
       project
-        ? `To change your project settings, go to https://zeit.co/${org.slug}/${project.name}/settings`
+        ? `To change your Project Settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -371,7 +373,7 @@ export default async function main(
       output.print(
         `${prependEmoji(
           `The ${highlight(
-            'now.json'
+            localConfig[fileNameSymbol]
           )} file should be inside of the provided root directory.`,
           emoji('warning')
         )}\n`
@@ -385,8 +387,8 @@ export default async function main(
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
-          'now.json'
-        )} is deprecated (https://zeit.ink/5F)`,
+          localConfig[fileNameSymbol]
+        )} is deprecated (https://vercel.link/name-prop)`,
         emoji('warning')
       )}\n`
     );
@@ -402,7 +404,7 @@ export default async function main(
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
     error(
       `The ${code('env')} property in ${highlight(
-        'now.json'
+        localConfig[fileNameSymbol]
       )} needs to be an object`
     );
     return 1;
@@ -412,7 +414,7 @@ export default async function main(
     if (!isObject(localConfig.build)) {
       error(
         `The ${code('build')} property in ${highlight(
-          'now.json'
+          localConfig[fileNameSymbol]
         )} needs to be an object`
       );
       return 1;
@@ -424,7 +426,7 @@ export default async function main(
     ) {
       error(
         `The ${code('build.env')} property in ${highlight(
-          'now.json'
+          localConfig[fileNameSymbol]
         )} needs to be an object`
       );
       return 1;
@@ -438,14 +440,14 @@ export default async function main(
     parseMeta(argv['--meta'])
   );
 
-  // Merge dotenv config, `env` from now.json, and `--env` / `-e` arguments
+  // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
     parseEnv(localConfig.env),
     parseEnv(argv['--env'])
   );
 
-  // Merge build env out of  `build.env` from now.json, and `--build-env` args
+  // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
@@ -570,8 +572,11 @@ export default async function main(
 
     if (deployment instanceof Error) {
       output.error(
-        `${deployment.message ||
-          'An unexpected error occurred while deploying your project'} (http://zeit.ink/P4)`
+        deployment.message ||
+          'An unexpected error occurred while deploying your project',
+        null,
+        'https://vercel.link/help',
+        'Contact Support'
       );
       return 1;
     }
@@ -635,11 +640,11 @@ export default async function main(
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment);
+        handleCreateDeployError(output, deployment, localConfig);
         return 1;
       }
 
-      handleCreateDeployError(output, purchase);
+      handleCreateDeployError(output, purchase, localConfig);
       return 1;
     }
 
@@ -659,15 +664,15 @@ export default async function main(
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, err);
+      handleCreateDeployError(output, err, localConfig);
       return 1;
     }
 
     if (err instanceof BuildError) {
-      output.error('Build failed');
+      output.error(err.message || 'Build failed');
       output.error(
-        `Check your logs at https://${now.url}/_logs or run ${code(
-          `now logs ${now.url}`,
+        `Check your logs at https://${now.url}/_logs or run ${getCommandName(
+          `logs ${now.url}`,
           {
             // Backticks are interpreted as part of the URL, causing CMD+Click
             // behavior to fail in editors like VSCode.
@@ -698,6 +703,12 @@ export default async function main(
 
   return printDeploymentStatus(
     output,
+    new Client({
+      apiUrl: ctx.apiUrl,
+      token: ctx.authConfig.token,
+      currentTeam: org.type === 'team' ? org.id : null,
+      debug: debugEnabled,
+    }),
     deployment,
     deployStamp,
     !argv['--no-clipboard'],
@@ -705,7 +716,7 @@ export default async function main(
   );
 }
 
-function handleCreateDeployError(output, error) {
+function handleCreateDeployError(output, error, localConfig) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
     return 1;
@@ -727,53 +738,10 @@ function handleCreateDeployError(output, error) {
     return 1;
   }
   if (error instanceof SchemaValidationFailed) {
-    const { message, params, keyword, dataPath } = error.meta;
-
-    if (params && params.additionalProperty) {
-      const prop = params.additionalProperty;
-
-      output.error(
-        `The property ${code(prop)} is not allowed in ${highlight(
-          'now.json'
-        )} when using Now 2.0 – please remove it.`
-      );
-
-      if (prop === 'build.env' || prop === 'builds.env') {
-        output.note(
-          `Do you mean ${code('build')} (object) with a property ${code(
-            'env'
-          )} (object) instead of ${code(prop)}?`
-        );
-      }
-
-      return 1;
-    }
-
-    if (dataPath === '.name') {
-      output.error(message);
-      return 1;
-    }
-
-    if (keyword === 'type') {
-      const prop = dataPath.substr(1, dataPath.length);
-
-      output.error(
-        `The property ${code(prop)} in ${highlight(
-          'now.json'
-        )} can only be of type ${code(title(params.type))}.`
-      );
-
-      return 1;
-    }
-
-    const link = 'https://zeit.co/docs/v2/deployments/configuration/';
-
-    output.error(
-      `Failed to validate ${highlight(
-        'now.json'
-      )}: ${message}\nDocumentation: ${link}`
-    );
-
+    const niceError = getPrettyError(error.meta);
+    const fileName = localConfig[fileNameSymbol] || 'vercel.json';
+    niceError.message = `Invalid ${fileName} - ${niceError.message}`;
+    output.prettyError(niceError);
     return 1;
   }
   if (error instanceof TooManyRequests) {
@@ -797,7 +765,9 @@ function handleCreateDeployError(output, error) {
   }
   if (error instanceof BuildsRateLimited) {
     output.error(error.message);
-    output.note(`Run ${code('now upgrade')} to increase your builds limit.`);
+    output.note(
+      `Run ${getCommandName('upgrade')} to increase your builds limit.`
+    );
     return 1;
   }
   if (

@@ -1,8 +1,8 @@
 const path = require('path');
 const os = require('os');
 const execa = require('execa');
-const { build } = require('@now/next');
-const { download, FileBlob } = require('@now/build-utils');
+const { build } = require('@vercel/next');
+const { download, FileBlob } = require('@vercel/build-utils');
 
 jest.setTimeout(45000);
 
@@ -117,7 +117,7 @@ describe('build meta dev', () => {
       {
         src: '^/(nested\\/([^/]+?)(?:\\/)?)$',
         dest: 'http://localhost:5000/$1',
-        check: true,
+        check: false /* We cannot check the filesystem for a url */,
       },
       { src: '/data.txt', dest: 'http://localhost:5000/data.txt' },
     ]);

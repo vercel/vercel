@@ -1,7 +1,18 @@
 import Client from './client';
-import getTeams from './get-teams';
+import { Team } from '../types';
 
-export default async function getTeamById(client: Client, teamId: string) {
-  const teams = await getTeams(client);
-  return teams.find(team => team.id === teamId) || null;
+const teamCache = new Map<string, Team>();
+
+export default async function getTeamById(
+  client: Client,
+  teamId: string
+): Promise<Team> {
+  let team = teamCache.get(teamId);
+
+  if (!team) {
+    team = await client.fetch<Team>(`/teams/${teamId}`);
+    teamCache.set(teamId, team);
+  }
+
+  return team;
 }

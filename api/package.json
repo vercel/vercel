@@ -2,7 +2,7 @@
   "name": "api",
   "private": true,
   "version": "0.0.0",
-  "description": "API for the zeit/now repo",
+  "description": "API for the vercel/vercel repo",
   "main": "index.js",
   "scripts": {
     "build": "yarn --cwd .. && node ../utils/run.js build all"
@@ -13,12 +13,12 @@
     "node-fetch": "2.6.0",
     "parse-github-url": "1.0.2",
     "tar-fs": "2.0.0",
-    "typescript": "3.7.4",
     "unzip-stream": "0.3.0"
   },
   "devDependencies": {
-    "@now/node": "1.3.3",
     "@types/node": "13.1.4",
-    "@types/node-fetch": "2.5.4"
+    "@types/node-fetch": "2.5.4",
+    "@vercel/node": "1.7.2",
+    "typescript": "3.9.6"
   }
 }

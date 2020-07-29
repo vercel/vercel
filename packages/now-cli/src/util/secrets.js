@@ -1,8 +1,43 @@
 import Now from '.';
 
 export default class Secrets extends Now {
-  ls() {
-    return this.listSecrets();
+  ls(next) {
+    return this.listSecrets(next);
+  }
+
+  getSecretByNameOrId(nameOrId) {
+    return this.retry(async (bail, attempt) => {
+      if (this._debug) {
+        console.time(`> [debug] #${attempt} GET /secrets/${nameOrId}`);
+      }
+      const res = await this._fetch(`/now/secrets/${nameOrId}`, {
+        method: 'GET',
+      });
+
+      if (this._debug) {
+        console.timeEnd(`> [debug] #${attempt} GET /secrets/${nameOrId}`);
+      }
+
+      if (res.status === 403) {
+        return bail(new Error('Unauthorized'));
+      }
+
+      if (res.status === 404) {
+        return bail(new Error('Not Found'));
+      }
+
+      if (res.status === 400) {
+        return bail(new Error('Bad Request'));
+      }
+
+      const body = await res.json();
+
+      if (res.status !== 200) {
+        throw new Error(body.error.message);
+      }
+
+      return body;
+    });
   }
 
   rm(nameOrId) {

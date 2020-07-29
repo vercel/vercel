@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/next" }],
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
     {
-      "path": "/_next/static/testing-build-id/pages/index.js",
+      "path": "/_next/__NEXT_SCRIPT__(/)",
       "responseHeaders": {
         "cache-control": "public,max-age=31536000,immutable"
       }
     },
     {
-      "path": "/_next/static/invalid-build-id/pages/index.js",
+      "path": "/_next/static/invalid-build-id/pages/non-existent.js",
       "notResponseHeaders": {
         "cache-control": "public,max-age=31536000,immutable"
       }

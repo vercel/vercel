@@ -2,8 +2,6 @@ import { NowConfig } from './util/dev/types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
-export type Config = NowConfig;
-
 export interface NowContext {
   argv: string[];
   apiUrl: string;
@@ -14,7 +12,7 @@ export interface NowContext {
     currentTeam: string;
     updateChannel: string;
   };
-  localConfig: Config;
+  localConfig: NowConfig;
 }
 
 type Billing = {
@@ -83,6 +81,16 @@ export type Domain = {
     username: string;
     email: string;
   };
+};
+
+export type DomainConfig = {
+  configuredBy: null | 'CNAME' | 'A' | 'http';
+  misconfigured: boolean;
+  serviceType: 'zeit.world' | 'external' | 'na';
+  nameservers: string[];
+  cnames: string[] & { traceString?: string };
+  aValues: string[] & { traceString?: string };
+  dnssecEnabled?: boolean;
 };
 
 export type Cert = {
@@ -187,6 +195,9 @@ export type DNSRecord = {
   value: string;
   created: number;
   updated: number;
+  createdAt: number;
+  updatedAt: number;
+  domain: string;
 };
 
 type SRVRecordData = {
@@ -216,12 +227,58 @@ export type DNSRecordData =
   | SRVRecordData
   | MXRecordData;
 
-export interface Project {
+export interface ProjectAliasTarget {
+  createdAt?: number;
+  domain: string;
+  redirect?: string | null;
+  target: 'PRODUCTION' | 'STAGING';
+  configuredBy?: null | 'CNAME' | 'A';
+  configuredChangedAt?: null | number;
+  configuredChangeAttempts?: [number, number];
+}
+
+export interface Secret {
+  uid: string;
+  name: string;
+  value: string;
+  teamId?: string;
+  userId?: string;
+  projectId?: string;
+  created: string;
+  createdAt: number;
+}
+
+export enum ProjectEnvTarget {
+  Production = 'production',
+  Preview = 'preview',
+  Development = 'development',
+}
+
+export interface ProjectEnvVariable {
+  key: string;
+  value: string;
+  configurationId?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
+  target?: ProjectEnvTarget;
+  system?: boolean;
+}
+
+export interface ProjectSettings {
+  framework?: string | null;
+  devCommand?: string | null;
+  buildCommand?: string | null;
+  outputDirectory?: string | null;
+  rootDirectory?: string | null;
+}
+
+export interface Project extends ProjectSettings {
   id: string;
   name: string;
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  alias?: ProjectAliasTarget[];
   devCommand?: string | null;
   framework?: string | null;
   rootDirectory?: string | null;
@@ -244,3 +301,8 @@ export interface PaginationOptions {
   count: number;
   next?: number;
 }
+
+export type ProjectLinkResult =
+  | { status: 'linked'; org: Org; project: Project }
+  | { status: 'not_linked'; org: null; project: null }
+  | { status: 'error'; exitCode: number };

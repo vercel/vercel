@@ -6,7 +6,7 @@ import NowTeams from './teams.js';
 
 let teams: Team[] | undefined;
 
-export default async function getTeams(client: Client) {
+export default async function getTeams(client: Client): Promise<Team[]> {
   if (teams) return teams;
 
   try {
@@ -17,8 +17,8 @@ export default async function getTeams(client: Client) {
       debug: client._debug,
     });
 
-    const teams = (await teamClient.ls()).teams;
-    return teams as Team[];
+    teams = (await teamClient.ls()).teams;
+    return teams || [];
   } catch (error) {
     if (error instanceof APIError && error.status === 403) {
       throw new InvalidToken();

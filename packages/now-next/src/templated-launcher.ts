@@ -1,11 +1,12 @@
 if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV =
-    process.env.NOW_REGION === 'dev1' ? 'development' : 'production';
+  const region = process.env.VERCEL_REGION || process.env.NOW_REGION;
+  process.env.NODE_ENV = region === 'dev1' ? 'development' : 'production';
 }
 
 import { Server } from 'http';
 import { Bridge } from './now__bridge';
 // @ts-ignore
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const page = require(__LAUNCHER_PAGE_PATH__);
 
 // page.render is for React rendering

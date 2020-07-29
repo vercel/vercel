@@ -82,7 +82,7 @@ export default async function validatePaths(
   if (isFile) {
     output.print(
       `${prependEmoji(
-        'Deploying files with ZEIT Now is deprecated (https://zeit.ink/3Z)',
+        'Deploying files with Vercel is deprecated (https://vercel.link/faq-deploy-file)',
         emoji('warning')
       )}\n`
     );

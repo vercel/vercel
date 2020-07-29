@@ -1,5 +1,10 @@
-import { Builder, BuilderFunctions } from '@now/build-utils';
-import { NowHeader, Route, NowRedirect, NowRewrite } from '@now/routing-utils';
+import { Builder, BuilderFunctions } from '@vercel/build-utils';
+import {
+  NowHeader,
+  Route,
+  NowRedirect,
+  NowRewrite,
+} from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
@@ -101,9 +106,13 @@ interface LegacyNowConfig {
   aliases?: string | string[];
 }
 
+export const fileNameSymbol = Symbol('fileName');
+
 export interface NowConfig extends LegacyNowConfig {
+  [fileNameSymbol]?: string;
   name?: string;
   version?: number;
+  public?: boolean;
   env?: Dictionary<string>;
   build?: {
     env?: Dictionary<string>;
@@ -168,6 +177,7 @@ export interface DeploymentOptions extends LegacyDeploymentOptions {
   build?: {
     env: Dictionary<string>;
   };
+  source?: string;
   target?: string;
   name?: string;
   public?: boolean;

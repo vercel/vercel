@@ -11,11 +11,8 @@ async function getEventsStream(now, idOrHost, options) {
       direction: options.direction,
       follow: options.follow ? '1' : '',
       format: options.format || 'lines',
-      instanceId: options.instanceId,
       limit: options.limit,
-      q: options.query,
       since: options.since,
-      types: (options.types || []).join(','),
       until: options.until,
     })}`
   );

@@ -1,26 +1,25 @@
 {
-  "name": "now",
-  "version": "17.1.2-canary.8",
+  "name": "vercel",
+  "version": "20.0.0-canary.6",
   "preferGlobal": true,
   "license": "Apache-2.0",
-  "description": "The command-line interface for Now",
-  "homepage": "https://zeit.co",
+  "description": "The command-line interface for Vercel",
+  "homepage": "https://vercel.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zeit/now.git",
+    "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/now-cli"
   },
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
-    "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js --serial --fail-fast --verbose",
-    "test-integration-cli": "ava test/integration.js --serial --fail-fast",
+    "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js test/dev-validate.unit.js --serial --fail-fast --verbose",
+    "test-integration-cli": "ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-v1": "ava test/integration-v1.js --serial --fail-fast",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "build": "ts-node ./scripts/build.ts",
-    "build-dev": "ts-node ./scripts/build.ts --dev",
-    "test-lint": "eslint . --ext .ts,.js --ignore-path ../../.eslintignore"
+    "build-dev": "ts-node ./scripts/build.ts --dev"
   },
   "nyc": {
     "include": [
@@ -42,7 +41,8 @@
     "all": true
   },
   "bin": {
-    "now": "./dist/index.js"
+    "vc": "./dist/index.js",
+    "vercel": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -61,9 +61,21 @@
   "engines": {
     "node": ">= 10"
   },
+  "dependencies": {
+    "@vercel/build-utils": "2.4.3-canary.2",
+    "@vercel/go": "1.1.5-canary.0",
+    "@vercel/next": "2.6.14-canary.2",
+    "@vercel/node": "1.7.4-canary.1",
+    "@vercel/python": "1.2.2",
+    "@vercel/redwood": "0.0.2-canary.1",
+    "@vercel/ruby": "1.2.3",
+    "@vercel/static-build": "0.17.7-canary.1",
+    "update-notifier": "4.1.0"
+  },
   "devDependencies": {
     "@sentry/node": "5.5.0",
-    "@sindresorhus/slugify": "0.10.0",
+    "@sindresorhus/slugify": "0.11.0",
+    "@tootallnate/once": "1.1.2",
     "@types/ansi-escapes": "3.0.0",
     "@types/ansi-regex": "4.0.0",
     "@types/async-retry": "1.2.1",
@@ -96,7 +108,7 @@
     "@zeit/fun": "0.11.2",
     "@zeit/ncc": "0.18.5",
     "@zeit/source-map-support": "0.6.2",
-    "ajv": "6.10.2",
+    "ajv": "6.12.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
     "ansi-regex": "3.0.0",
@@ -107,9 +119,9 @@
     "ava": "2.2.0",
     "bytes": "3.0.0",
     "chalk": "2.4.2",
-    "chokidar": "2.1.6",
+    "chokidar": "3.3.1",
     "clipboardy": "2.1.0",
-    "codecov": "3.6.5",
+    "codecov": "3.7.1",
     "cpy": "7.2.0",
     "credit-card": "3.0.1",
     "date-fns": "1.29.0",
@@ -126,6 +138,7 @@
     "escape-html": "1.0.3",
     "esm": "3.1.4",
     "execa": "3.2.0",
+    "fast-deep-equal": "3.1.3",
     "fs-extra": "7.0.1",
     "get-port": "5.1.1",
     "glob": "7.1.2",
@@ -143,6 +156,7 @@
     "minimatch": "3.0.4",
     "mri": "1.1.5",
     "ms": "2.1.2",
+    "nanoid": "3.0.2",
     "node-fetch": "2.6.0",
     "npm-package-arg": "6.1.0",
     "nyc": "13.2.0",
@@ -171,14 +185,12 @@
     "tmp-promise": "1.0.3",
     "tree-kill": "1.2.1",
     "ts-node": "8.3.0",
-    "typescript": "3.6.4",
+    "typescript": "3.9.3",
     "universal-analytics": "0.4.20",
-    "update-check": "1.5.3",
     "utility-types": "2.1.0",
     "which": "2.0.2",
     "which-promise": "1.0.0",
     "write-json-file": "2.2.0",
-    "xdg-app-paths": "5.1.0",
-    "yarn": "1.22.0"
+    "xdg-app-paths": "5.1.0"
   }
 }

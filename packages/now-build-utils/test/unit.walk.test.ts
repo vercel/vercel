@@ -21,7 +21,6 @@ describe('Test `walkParentDirs`', () => {
       await walkParentDirs({ base, start, filename });
       fail('Expected error');
     } catch (error) {
-      console.log(error);
       deepEqual(
         (error as Error).message,
         'Expected "base" to be absolute path'
@@ -36,7 +35,6 @@ describe('Test `walkParentDirs`', () => {
       await walkParentDirs({ base, start, filename });
       fail('Expected error');
     } catch (error) {
-      console.log(error);
       deepEqual(
         (error as Error).message,
         'Expected "start" to be absolute path'

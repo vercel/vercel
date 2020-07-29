@@ -6,14 +6,10 @@ import { ZipFile } from 'yazl';
 import crc32 from 'buffer-crc32';
 import { Sema } from 'async-sema';
 import resolveFrom from 'resolve-from';
-import {
-  Files,
-  FileFsRef,
-  streamToBuffer,
-  Lambda,
-  isSymbolicLink,
-} from '@now/build-utils';
-import { Route, Source, NowHeader, NowRewrite } from '@now/routing-utils';
+import buildUtils from './build-utils';
+const { streamToBuffer, Lambda, NowBuildError, isSymbolicLink } = buildUtils;
+import { Files, FileFsRef } from '@vercel/build-utils';
+import { Route, Source, NowHeader, NowRewrite } from '@vercel/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -38,9 +34,11 @@ function validateEntrypoint(entrypoint: string) {
     !/package\.json$/.exec(entrypoint) &&
     !/next\.config\.js$/.exec(entrypoint)
   ) {
-    throw new Error(
-      'Specified "src" for "@now/next" has to be "package.json" or "next.config.js"'
-    );
+    throw new NowBuildError({
+      message:
+        'Specified "src" for "@vercel/next" has to be "package.json" or "next.config.js"',
+      code: 'NEXT_INCORRECT_SRC',
+    });
   }
 }
 
@@ -200,7 +198,7 @@ async function getRoutes(
   // If default pages dir isn't found check for `src/pages`
   if (
     !pagesDir &&
-    fileKeys.some(file =>
+    fileKeys.some((file) =>
       file.startsWith(path.join(entryDirectory, 'src/pages'))
     )
   ) {
@@ -257,17 +255,21 @@ async function getRoutes(
   }
 
   routes.push(
-    ...(await getDynamicRoutes(entryPath, entryDirectory, dynamicPages).then(
-      arr =>
-        arr.map((route: Source) => {
-          // convert to make entire RegExp match as one group
-          route.src = route.src
-            .replace('^', `^${prefix}(`)
-            .replace('(\\/', '(')
-            .replace('$', ')$');
-          route.dest = `${url}/$1`;
-          return route;
-        })
+    ...(await getDynamicRoutes(
+      entryPath,
+      entryDirectory,
+      dynamicPages,
+      true
+    ).then((arr) =>
+      arr.map((route: Source) => {
+        // convert to make entire RegExp match as one group
+        route.src = route.src
+          .replace('^', `^${prefix}(`)
+          .replace('(\\/', '(')
+          .replace('$', ')$');
+        route.dest = `${url}/$1`;
+        return route;
+      })
     ))
   );
 
@@ -285,7 +287,7 @@ async function getRoutes(
     };
 
     // Only add the route if a page is not already using it
-    if (!routes.some(r => (r as Source).src === route.src)) {
+    if (!routes.some((r) => (r as Source).src === route.src)) {
       routes.push(route);
     }
   }
@@ -293,7 +295,7 @@ async function getRoutes(
   return routes;
 }
 
-// TODO: update to use type from @now/routing-utils after
+// TODO: update to use type from `@vercel/routing-utils` after
 // adding permanent: true/false handling
 export type Redirect = NowRewrite & {
   statusCode?: number;
@@ -314,9 +316,16 @@ export type RoutesManifest = {
   dynamicRoutes: {
     page: string;
     regex: string;
+    namedRegex?: string;
+    routeKeys?: { [named: string]: string };
   }[];
   version: number;
-  dataRoutes?: Array<{ page: string; dataRouteRegex: string }>;
+  dataRoutes?: Array<{
+    page: string;
+    dataRouteRegex: string;
+    namedDataRouteRegex?: string;
+    routeKeys?: { [named: string]: string };
+  }>;
 };
 
 export async function getRoutesManifest(
@@ -339,13 +348,35 @@ export async function getRoutesManifest(
     .catch(() => false);
 
   if (shouldHaveManifest && !hasRoutesManifest) {
-    throw new Error(
-      `A routes-manifest.json couldn't be found. This could be due to a failure during the build`
-    );
+    throw new NowBuildError({
+      message:
+        `A "routes-manifest.json" couldn't be found. This is normally caused by a misconfiguration in your project.\n` +
+        'Please check the following, and reach out to support if you cannot resolve the problem:\n' +
+        '  1. If present, be sure your `build` script in "package.json" calls `next build`.' +
+        '  2. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Build Command" is not overridden, or that it calls `next build`.' +
+        '  3. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Output Directory" is not overridden. Note that `next export` does **not** require you change this setting, even if you customize the `next export` output directory.',
+      link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
+      code: 'NEXT_NO_ROUTES_MANIFEST',
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const routesManifest: RoutesManifest = require(pathRoutesManifest);
+
+  // remove temporary array based routeKeys from v1/v2 of routes
+  // manifest since it can result in invalid routes
+  for (const route of routesManifest.dataRoutes || []) {
+    if (Array.isArray(route.routeKeys)) {
+      delete route.routeKeys;
+      delete route.namedDataRouteRegex;
+    }
+  }
+  for (const route of routesManifest.dynamicRoutes || []) {
+    if (Array.isArray(route.routeKeys)) {
+      delete route.routeKeys;
+      delete route.namedRegex;
+    }
+  }
 
   return routesManifest;
 }
@@ -378,12 +409,33 @@ export async function getDynamicRoutes(
             };
           });
       }
+      case 3: {
+        return routesManifest.dynamicRoutes
+          .filter(({ page }) =>
+            omittedRoutes ? !omittedRoutes.has(page) : true
+          )
+          .map(({ page, namedRegex, regex, routeKeys }) => {
+            return {
+              src: namedRegex || regex,
+              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
+                routeKeys
+                  ? `?${Object.keys(routeKeys)
+                      .map((key) => `${routeKeys[key]}=$${key}`)
+                      .join('&')}`
+                  : ''
+              }`,
+              check: true,
+            };
+          });
+      }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION
-        throw new Error(
-          'This version of `@now/next` does not support the version of Next.js you are trying to deploy.\n' +
-            'Please upgrade your `@now/next` builder and try again. Contact support if this continues to happen.'
-        );
+        throw new NowBuildError({
+          message:
+            'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
+          code: 'NEXT_VERSION_UPGRADE',
+        });
       }
     }
   }
@@ -420,19 +472,21 @@ export async function getDynamicRoutes(
   }
 
   if (!getRouteRegex || !getSortedRoutes) {
-    throw new Error(
-      'Found usage of dynamic routes but not on a new enough version of Next.js.'
-    );
+    throw new NowBuildError({
+      message:
+        'Found usage of dynamic routes but not on a new enough version of Next.js.',
+      code: 'NEXT_DYNAMIC_ROUTES_OUTDATED',
+    });
   }
 
-  const pageMatchers = getSortedRoutes(dynamicPages).map(pageName => ({
+  const pageMatchers = getSortedRoutes(dynamicPages).map((pageName) => ({
     pageName,
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
   const routes: Source[] = [];
-  pageMatchers.forEach(pageMatcher => {
-    // in `now dev` we don't need to prefix the destination
+  pageMatchers.forEach((pageMatcher) => {
+    // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
       ? path.join('/', entryDirectory, pageMatcher.pageName)
       : pageMatcher.pageName;
@@ -441,7 +495,7 @@ export async function getDynamicRoutes(
       routes.push({
         src: pageMatcher.matcher.source,
         dest,
-        check: true,
+        check: !isDev,
       });
     }
   });
@@ -495,23 +549,31 @@ const compressBuffer = (buf: Buffer): Promise<Buffer> => {
   });
 };
 
+export type PseudoLayerResult = {
+  pseudoLayer: PseudoLayer;
+  pseudoLayerBytes: number;
+};
+
 export async function createPseudoLayer(files: {
   [fileName: string]: FileFsRef;
-}): Promise<PseudoLayer> {
+}): Promise<PseudoLayerResult> {
   const pseudoLayer: PseudoLayer = {};
+  let pseudoLayerBytes = 0;
 
   for (const fileName of Object.keys(files)) {
     const file = files[fileName];
 
     if (isSymbolicLink(file.mode)) {
+      const symlinkTarget = await fs.readlink(file.fsPath);
       pseudoLayer[fileName] = {
         file,
         isSymlink: true,
-        symlinkTarget: await fs.readlink(file.fsPath),
+        symlinkTarget,
       };
     } else {
       const origBuffer = await streamToBuffer(file.toStream());
       const compBuffer = await compressBuffer(origBuffer);
+      pseudoLayerBytes += compBuffer.byteLength;
       pseudoLayer[fileName] = {
         compBuffer,
         isSymlink: false,
@@ -522,7 +584,7 @@ export async function createPseudoLayer(files: {
     }
   }
 
-  return pseudoLayer;
+  return { pseudoLayer, pseudoLayerBytes };
 }
 
 interface CreateLambdaFromPseudoLayersOptions {
@@ -800,7 +862,7 @@ export async function getPrerenderManifest(
         omittedRoutes: [],
       };
 
-      routes.forEach(route => {
+      routes.forEach((route) => {
         const {
           initialRevalidateSeconds,
           dataRoute,
@@ -816,7 +878,7 @@ export async function getPrerenderManifest(
         };
       });
 
-      lazyRoutes.forEach(lazyRoute => {
+      lazyRoutes.forEach((lazyRoute) => {
         const {
           routeRegex,
           fallback,
@@ -854,7 +916,7 @@ export async function getPrerenderManifest(
         omittedRoutes: [],
       };
 
-      routes.forEach(route => {
+      routes.forEach((route) => {
         const {
           initialRevalidateSeconds,
           dataRoute,
@@ -870,7 +932,7 @@ export async function getPrerenderManifest(
         };
       });
 
-      lazyRoutes.forEach(lazyRoute => {
+      lazyRoutes.forEach((lazyRoute) => {
         const {
           routeRegex,
           fallback,

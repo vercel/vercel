@@ -1,19 +1,19 @@
 # [Name] Example
 
-This directory is a brief example of a [Name](site-link) site that can be deployed with ZEIT Now and zero configuration.
+This directory is a brief example of a [Name](site-link) site that can be deployed with Vercel and zero configuration.
 
 ## Deploy Your Own
 
-Deploy your own [Name] project with ZEIT Now.
+Deploy your own [Name] project with Vercel.
 
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/zeit/now-examples/tree/master/example-directory)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/example-directory)
 
 ### How We Created This Example
 
-To get started with [Name] on Now, you can use the [CLI Tool Used](CLI-link) to initialize the project:
+To get started with [Name] on Vercel, you can use the [CLI Tool Used](CLI-link) to initialize the project:
 
 ```shell
-$ now init charge
+$ vercel init [Name]]
 ```
 
 ### Deploying From Your Terminal
@@ -21,5 +21,5 @@ $ now init charge
 Once initialized, you can deploy the [Name] example with just a single command:
 
 ```shell
-$ now
+$ vercel
 ```

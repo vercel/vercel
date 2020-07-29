@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "api",
+      "web"
+    ]
+  },
+  "devDependencies": {
+    "@redwoodjs/core": "0.14.0"
+  },
+  "engines": {
+    "node": ">=12",
+    "yarn": ">=1.15"
+  }
+}

@@ -1,8 +1,9 @@
-import { resolve, join } from 'path';
+import { resolve } from 'path';
 import ignore from 'ignore';
 import dockerignore from '@zeit/dockerignore';
-import _glob, { IOptions } from 'glob';
+import _glob, { IOptions as GlobOptions } from 'glob';
 import fs from 'fs-extra';
+import { getVercelIgnore } from '@vercel/client';
 import IGNORED from './ignored';
 import uniqueStrings from './unique-strings';
 import getLocalConfigPath from './config/local-path';
@@ -11,11 +12,11 @@ import { NowConfig } from './dev/types';
 
 type NullableString = string | null;
 
-const flatten = (
+function flatten(
   arr: NullableString[] | NullableString[][],
   res: NullableString[] = []
-) => {
-  for (let cur of arr) {
+): NullableString[] {
+  for (const cur of arr) {
     if (Array.isArray(cur)) {
       flatten(cur, res);
     } else {
@@ -23,21 +24,17 @@ const flatten = (
     }
   }
   return res;
-};
+}
 
-const glob = async function(pattern: string, options: IOptions) {
-  return new Promise<string[]>((resolve, reject) => {
-    _glob(pattern, options, (error, files) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(files);
-      }
+async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    _glob(pattern, options, (err, files) => {
+      err ? reject(err) : resolve(files);
     });
   });
-};
+}
 
-interface WalkSyncOptions {
+interface WalkOptions {
   output: Output;
 }
 
@@ -50,27 +47,27 @@ interface WalkSyncOptions {
  *  - `output` {Object} "output" helper object
  * @returns {Array}
  */
-const walkSync = async (
+async function walk(
   dir: string,
   path: string,
   filelist: string[] = [],
-  opts: WalkSyncOptions
-) => {
+  opts: WalkOptions
+) {
   const { debug } = opts.output;
   const dirc = await fs.readdir(asAbsolute(dir, path));
   for (let file of dirc) {
     file = asAbsolute(file, dir);
     try {
-      const file_stat = await fs.stat(file);
-      filelist = file_stat.isDirectory()
-        ? await walkSync(file, path, filelist, opts)
+      const fileStat = await fs.stat(file);
+      filelist = fileStat.isDirectory()
+        ? await walk(file, path, filelist, opts)
         : filelist.concat(file);
     } catch (e) {
       debug(`Ignoring invalid file ${file}`);
     }
   }
   return filelist;
-};
+}
 
 interface FilesInWhitelistOptions {
   output: Output;
@@ -84,7 +81,7 @@ interface FilesInWhitelistOptions {
  *  - `output` {Object} "output" helper object
  * @returns {Array} the expanded list of whitelisted files.
  */
-const getFilesInWhitelist = async function(
+const getFilesInWhitelist = async function (
   whitelist: string[],
   path: string,
   opts: FilesInWhitelistOptions
@@ -96,10 +93,10 @@ const getFilesInWhitelist = async function(
     whitelist.map(async (file: string) => {
       file = asAbsolute(file, path);
       try {
-        const file_stat = await fs.stat(file);
-        if (file_stat.isDirectory()) {
-          const dir_files = await walkSync(file, path, [], opts);
-          files.push(...dir_files);
+        const fileStat = await fs.stat(file);
+        if (fileStat.isDirectory()) {
+          const dirFiles = await walk(file, path, [], opts);
+          files.push(...dirFiles);
         } else {
           files.push(file);
         }
@@ -116,7 +113,7 @@ const getFilesInWhitelist = async function(
  * because ignore doesn't like them :|
  */
 
-const clearRelative = function(str: string) {
+const clearRelative = function (str: string) {
   return str.replace(/(\n|^)\.\//g, '$1');
 };
 
@@ -126,7 +123,7 @@ const clearRelative = function(str: string) {
  * @return {String} results or `''`
  */
 
-const maybeRead = async function<T>(path: string, default_: T) {
+const maybeRead = async function <T>(path: string, default_: T) {
   try {
     return await fs.readFile(path, 'utf8');
   } catch (err) {
@@ -142,7 +139,7 @@ const maybeRead = async function<T>(path: string, default_: T) {
  * @param {String} parent full path
  */
 
-const asAbsolute = function(path: string, parent: string) {
+const asAbsolute = function (path: string, parent: string) {
   if (path[0] === '/') {
     return path;
   }
@@ -193,8 +190,9 @@ export async function staticFiles(
     const search = await glob(source, { cwd: path, absolute: true, dot: true });
 
     // Compile list of ignored patterns and files
-    const ignoreName = isBuilds ? '.nowignore' : '.gitignore';
-    const ig = await createIgnore(resolve(path, ignoreName));
+    const ig = isBuilds
+      ? (await getVercelIgnore(path)).ig
+      : await createIgnore(resolve(path, '.gitignore'));
     const filter = ig.createFilter();
 
     const prefixLength = path.length + 1;
@@ -270,7 +268,7 @@ export async function npm(
     const search = Array.prototype.concat.apply(
       [],
       await Promise.all(
-        search_.map(file =>
+        search_.map((file) =>
           glob(file, { cwd: path, absolute: true, dot: true })
         )
       )
@@ -362,7 +360,7 @@ export async function docker(
     const search_ = ['.'];
 
     // Convert all filenames into absolute paths
-    const search = search_.map(file => asAbsolute(file, path));
+    const search = search_.map((file) => asAbsolute(file, path));
 
     // Compile list of ignored patterns and files
     const dockerIgnore = await maybeRead(resolve(path, '.dockerignore'), null);
@@ -380,7 +378,7 @@ export async function docker(
       .createFilter();
 
     const prefixLength = path.length + 1;
-    const accepts = function(file: string) {
+    const accepts = function (file: string) {
       const relativePath = file.substr(prefixLength);
 
       if (relativePath === '') {
@@ -411,24 +409,6 @@ export async function docker(
 
   // Get files
   return uniqueStrings(files);
-}
-
-/**
- * Get a list of all files inside the project folder
- *
- * @param {String} of the current working directory
- * @param {Object} output instance
- * @return {Array} of {String}s with the found files
- */
-export async function getAllProjectFiles(cwd: string, { debug }: Output) {
-  // We need a slash at the end to remove it later on from the matched files
-  const current = join(resolve(cwd), '/');
-  debug(`Searching files inside of ${current}`);
-
-  const list = await glob('**', { cwd: current, absolute: true, nodir: true });
-
-  // We need to replace \ with / for windows
-  return list.map(file => file.replace(current.replace(/\\/g, '/'), ''));
 }
 
 interface ExplodeOptions {
@@ -480,7 +460,7 @@ async function explode(
     if (s.isDirectory()) {
       const all = await fs.readdir(file);
       /* eslint-disable no-use-before-define */
-      const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
+      const recursive = many(all.map((subdir) => asAbsolute(subdir, file)));
       return (recursive as any) as Promise<string | null>;
       /* eslint-enable no-use-before-define */
     }
@@ -492,7 +472,7 @@ async function explode(
     return path;
   };
 
-  const many = (all: string[]) => Promise.all(all.map(file => list(file)));
+  const many = (all: string[]) => Promise.all(all.map((file) => list(file)));
   const arrayOfArrays = await many(paths);
   return flatten(arrayOfArrays).filter(notNull);
 }

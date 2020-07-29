@@ -15,10 +15,6 @@ export default async function inputProject(
   detectedProjectName: string,
   autoConfirm: boolean
 ): Promise<Project | string> {
-  if (autoConfirm) {
-    return detectedProjectName;
-  }
-
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
@@ -41,6 +37,10 @@ export default async function inputProject(
       : null;
   } catch (error) {}
   existingProjectSpinner();
+
+  if (autoConfirm) {
+    return detectedProject || detectedProjectName;
+  }
 
   let shouldLinkProject;
 
@@ -92,7 +92,7 @@ export default async function inputProject(
       }
 
       if (project instanceof ProjectNotFound) {
-        output.print(`${chalk.red('Error!')} Project not found\n`);
+        output.error(`Project not found`);
       }
     }
 
@@ -129,7 +129,7 @@ export default async function inputProject(
     }
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {
-      output.print(`${chalk.red('Error!')} Project already exists\n`);
+      output.print(`Project already exists`);
       newProjectName = null;
     }
   }

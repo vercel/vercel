@@ -1,57 +1,9 @@
 import cpy from 'cpy';
-import tar from 'tar-fs';
 import execa from 'execa';
 import { join } from 'path';
-import pipe from 'promisepipe';
-import { createGzip } from 'zlib';
-import {
-  createWriteStream,
-  mkdirp,
-  remove,
-  writeJSON,
-  writeFile,
-} from 'fs-extra';
-
-import { getDistTag } from '../src/util/get-dist-tag';
-import pkg from '../package.json';
-import { getBundledBuilders } from '../src/util/dev/get-bundled-builders';
+import { remove, writeFile } from 'fs-extra';
 
 const dirRoot = join(__dirname, '..');
-
-async function createBuildersTarball() {
-  const distTag = getDistTag(pkg.version);
-  const builders = Array.from(getBundledBuilders()).map(b => `${b}@${distTag}`);
-  console.log(`Creating builders tarball with: ${builders.join(', ')}`);
-
-  const buildersDir = join(dirRoot, '.builders');
-  const assetsDir = join(dirRoot, 'assets');
-  await mkdirp(buildersDir);
-  await mkdirp(assetsDir);
-
-  const buildersTarballPath = join(assetsDir, 'builders.tar.gz');
-
-  try {
-    const buildersPkg = join(buildersDir, 'package.json');
-    await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
-  } catch (err) {
-    if (err.code !== 'EEXIST') {
-      throw err;
-    }
-  }
-
-  const yarn = join(dirRoot, '../../node_modules/yarn/bin/yarn.js');
-  await execa(process.execPath, [yarn, 'add', '--no-lockfile', ...builders], {
-    cwd: buildersDir,
-    stdio: 'inherit',
-  });
-
-  const packer = tar.pack(buildersDir);
-  await pipe(
-    packer,
-    createGzip(),
-    createWriteStream(buildersTarballPath)
-  );
-}
 
 async function createConstants() {
   console.log('Creating constants.ts');
@@ -81,17 +33,13 @@ async function main() {
     // During local development, these secrets will be empty.
     await createConstants();
 
-    // Create a tarball from all the `@now` scoped builders which will be bundled
-    // with Now CLI
-    await createBuildersTarball();
-
-    // `now dev` uses chokidar to watch the filesystem, but opts-out of the
+    // `vercel dev` uses chokidar to watch the filesystem, but opts-out of the
     // `fsevents` feature using `useFsEvents: false`, so delete the module here so
     // that it is not compiled by ncc, which makes the npm package size larger
     // than necessary.
     await remove(join(dirRoot, '../../node_modules/fsevents'));
 
-    // Compile the `doT.js` template files for `now dev`
+    // Compile the `doT.js` template files for `vercel dev`
     console.log();
     await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
       stdio: 'inherit',
@@ -101,13 +49,18 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const ncc = join(dirRoot, 'node_modules/@zeit/ncc/dist/ncc/cli.js');
-  const args = [ncc, 'build', '--source-map'];
+  const args = [
+    '@zeit/ncc',
+    'build',
+    '--source-map',
+    '--external',
+    'update-notifier',
+  ];
   if (!isDev) {
     args.push('--minify');
   }
   args.push(src);
-  await execa(process.execPath, args, { stdio: 'inherit' });
+  await execa('npx', args, { stdio: 'inherit' });
 
   // `ncc` has some issues with `@zeit/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
@@ -128,7 +81,18 @@ async function main() {
   const dest = join(dirRoot, 'dist/runtimes');
   await cpy('**/*', dest, { parents: true, cwd: runtimes });
 
-  console.log('Finished building `now-cli`');
+  // Band-aid to delete stuff that `ncc` bundles, but it shouldn't:
+
+  // TypeScript definition files from `@vercel/build-utils`
+  await remove(join(dirRoot, 'dist', 'dist'));
+
+  // The Readme and `package.json` from "config-chain" module
+  await remove(join(dirRoot, 'dist', 'config-chain'));
+
+  // A bunch of source `.ts` files from CLI's `util` directory
+  await remove(join(dirRoot, 'dist', 'util'));
+
+  console.log('Finished building Vercel CLI');
 }
 
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {

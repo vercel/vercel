@@ -1,5 +1,6 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+set -euo pipefail
+
 out="dist"
 
 rm -rf "$out"

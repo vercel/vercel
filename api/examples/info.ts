@@ -1,14 +1,14 @@
 // A proxy to get the basic info of an existing github/gitlab repo:
-// GET /info?repo=zeit/micro
+// GET /info?repo=vercel/micro
 
 // @ts-ignore
 import parseGitUrl from 'parse-github-url';
-import { NowRequest, NowResponse } from '@now/node';
+import { NowRequest, NowResponse } from '@vercel/node';
 import { withApiHandler } from '../_lib/util/with-api-handler';
 import { getGitHubRepoInfo } from '../_lib/examples/github-repo-info';
 import { getGitLabRepoInfo } from '../_lib/examples/gitlab-repo-info';
 
-export default withApiHandler(async function(
+export default withApiHandler(async function (
   req: NowRequest,
   res: NowResponse
 ) {

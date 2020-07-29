@@ -13,34 +13,34 @@ import transferIn from './transfer-in';
 import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
-import verify from './verify';
 import move from './move';
+import { getPkgName } from '../../util/pkg-name';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} now domains`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} domains`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
     ls                                  Show all domains in a list
     inspect      [name]                 Displays information related to a domain
-    add          [name]                 Add a new domain that you already own
+    add          [name] [project]       Add a new domain that you already own
     rm           [name]                 Remove a domain
     buy          [name]                 Buy a domain that you don't yet own
     move         [name] [destination]   Move a domain to another user or team.
-    transfer-in  [name]                 Transfer in a domain to Zeit
-    verify       [name]                 Run a verification for a domain
+    transfer-in  [name]                 Transfer in a domain to Vercel
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     -d, --debug                    Debug mode [off]
+    -f, --force                    Force a domain on a project and remove it from an existing one
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
-  )}   Path to the local ${'`now.json`'} file
+  )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
-  )}    Path to the global ${'`.now`'} directory
+  )}    Path to the global ${'`.vercel`'} directory
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -51,13 +51,15 @@ const help = () => {
 
   ${chalk.gray('–')} Add a domain that you already own
 
-      ${chalk.cyan(`$ now domains add ${chalk.underline('domain-name.com')}`)}
+      ${chalk.cyan(
+        `$ ${getPkgName()} domains add ${chalk.underline('domain-name.com')}`
+      )}
 
       Make sure the domain's DNS nameservers are at least 2 of the
-      ones listed on ${chalk.underline('https://zeit.world')}.
+      ones listed on ${chalk.underline('https://vercel.com/edge-network')}.
 
       ${chalk.yellow('NOTE:')} Running ${chalk.dim(
-    '`now alias`'
+    `${getPkgName()} alias`
   )} will automatically register your domain
       if it's configured with these nameservers (no need to ${chalk.dim(
         '`domain add`'
@@ -67,7 +69,7 @@ const help = () => {
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-      ${chalk.cyan(`$ now domains ls --next 1584722256178`)}
+      ${chalk.cyan(`$ ${getPkgName()} domains ls --next 1584722256178`)}
 `);
 };
 
@@ -79,7 +81,6 @@ const COMMAND_CONFIG = {
   move: ['move'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
-  verify: ['verify'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -87,10 +88,9 @@ export default async function main(ctx: NowContext) {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
-      '--cdn': Boolean,
       '--code': String,
-      '--no-cdn': Boolean,
       '--yes': Boolean,
+      '--force': Boolean,
       '--next': Number,
       '-N': '--next',
     });
@@ -119,8 +119,6 @@ export default async function main(ctx: NowContext) {
       return rm(ctx, argv, args, output);
     case 'transferIn':
       return transferIn(ctx, argv, args, output);
-    case 'verify':
-      return verify(ctx, argv, args, output);
     default:
       return ls(ctx, argv, args, output);
   }

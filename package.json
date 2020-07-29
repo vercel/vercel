@@ -1,5 +1,5 @@
 {
-  "name": "now-builders",
+  "name": "vercel-monorepo",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -20,13 +20,16 @@
     "@zeit/ncc": "0.20.4",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
+    "cheerio": "1.0.0-rc.3",
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
+    "eslint-plugin-jest": "23.8.2",
     "husky": "3.0.4",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.0",
-    "prettier": "1.18.2"
+    "npm-package-arg": "6.1.0",
+    "prettier": "2.0.5"
   },
   "scripts": {
     "lerna": "lerna",
@@ -36,7 +39,7 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "node utils/run.js build all",
-    "test-lint": "node utils/run.js test-lint",
+    "now-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
     "test-unit": "node utils/run.js test-unit",
     "test-integration-cli": "node utils/run.js test-integration-cli",
     "test-integration-once": "node utils/run.js test-integration-once",
@@ -61,7 +64,8 @@
   },
   "prettier": {
     "trailingComma": "es5",
-    "singleQuote": true
+    "singleQuote": true,
+    "arrowParens": "avoid"
   },
   "eslintConfig": {
     "root": true,
@@ -71,6 +75,9 @@
       "sourceType": "module",
       "modules": true
     },
+    "plugins": [
+      "jest"
+    ],
     "extends": [
       "eslint:recommended",
       "plugin:@typescript-eslint/eslint-recommended",
@@ -89,8 +96,12 @@
       "@typescript-eslint/camelcase": 0,
       "@typescript-eslint/explicit-function-return-type": 0,
       "@typescript-eslint/no-empty-function": 0,
+      "@typescript-eslint/no-explicit-any": 0,
+      "@typescript-eslint/no-non-null-assertion": 0,
       "@typescript-eslint/no-unused-vars": 2,
-      "@typescript-eslint/no-use-before-define": 0
+      "@typescript-eslint/no-use-before-define": 0,
+      "jest/no-disabled-tests": 2,
+      "jest/no-focused-tests": 2
     },
     "overrides": [
       {
