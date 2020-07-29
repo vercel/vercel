@@ -73,13 +73,7 @@ function status(res: NowResponse, statusCode: number): NowResponse {
   return res;
 }
 
-function redirect(
-  res: NowResponse,
-  url: string,
-  // justification: more explicit code for easy compression
-  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-  status: number = 307
-): NowResponse {
+function redirect(res: NowResponse, url: string, status = 307): NowResponse {
   res.writeHead(status, { Location: url });
   res.end();
   return res;
