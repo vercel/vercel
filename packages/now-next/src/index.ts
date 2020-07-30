@@ -880,7 +880,13 @@ export const build = async ({
         !prerenderManifest.fallbackRoutes[route] &&
         !prerenderManifest.legacyBlockingRoutes[route]
       ) {
-        nonLambdaSsgPages.add(route);
+        // if the 404 page used getStaticProps we need to update static404Page
+        // since it wasn't populated from the staticPages group
+        if (route === '/404') {
+          static404Page = path.join(entryDirectory, '404');
+        }
+
+        nonLambdaSsgPages.add(route === '/' ? '/index' : route);
       }
     };
 

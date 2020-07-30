@@ -500,14 +500,21 @@ CMD ["node", "index.js"]`,
         },
       }),
     },
-    'project-link': {
-      'package.json': JSON.stringify({}),
+    'project-link-deploy': {
+      'package.json': '{}',
+    },
+    'project-link-zeroconf': {
+      'package.json': '{}',
     },
     'project-link-confirm': {
-      'package.json': JSON.stringify({}),
+      'package.json': '{}',
     },
     'project-link-dev': {
-      'package.json': JSON.stringify({}),
+      'package.json': '{}',
+    },
+    'project-link-legacy': {
+      'index.html': 'Hello',
+      'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
     },
     'dev-proxy-headers-and-env': {
       'package.json': JSON.stringify({}),

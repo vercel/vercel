@@ -703,7 +703,7 @@
         "value": "yarn rw db up --no-db-client --auto-approve && yarn rw build"
       },
       "devCommand": {
-        "value": "yarn rw dev"
+        "value": "yarn rw dev --fwd=\"--port=$PORT --open=false\""
       },
       "outputDirectory": {
         "value": "RedwoodJS default"
