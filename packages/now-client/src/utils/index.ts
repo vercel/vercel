@@ -35,7 +35,7 @@ const EVENTS_ARRAY = [
   'canceled',
 ] as const;
 
-export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
+export type DeploymentEventType = typeof EVENTS_ARRAY[number];
 export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl(
@@ -69,7 +69,7 @@ export async function parseVercelConfig(filePath?: string): Promise<NowConfig> {
   }
 }
 
-const maybeRead = async function<T>(path: string, default_: T) {
+const maybeRead = async function <T>(path: string, default_: T) {
   try {
     return await readFile(path, 'utf8');
   } catch (err) {
@@ -81,19 +81,26 @@ export async function buildFileTree(
   path: string | string[],
   isDirectory: boolean,
   debug: Debug
-): Promise<string[]> {
+): Promise<{ fileList: string[]; ignoreList: string[] }> {
+  const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig } = await getVercelIgnore(path);
+  let { ig, ignores } = await getVercelIgnore(path);
 
-  debug(`Found ${ig.ignores.length} rules in .vercelignore`);
+  debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
 
   if (isDirectory && !Array.isArray(path)) {
     // Directory path
-    const cwd = process.cwd();
-    const ignores = (absPath: string) => ig.ignores(relative(cwd, absPath));
+    const ignores = (absPath: string) => {
+      const rel = relative(path, absPath);
+      const ignored = ig.ignores(rel);
+      if (ignored) {
+        ignoreList.push(rel);
+      }
+      return ignored;
+    };
     fileList = await readdir(path, [ignores]);
-    debug(`Read ${fileList.length} files in the specified directory`);
+    debug(`Found ${fileList.length} files in the specified directory`);
   } else if (Array.isArray(path)) {
     // Array of file paths
     fileList = path;
@@ -104,7 +111,7 @@ export async function buildFileTree(
     debug(`Deploying the provided path as single file`);
   }
 
-  return fileList;
+  return { fileList, ignoreList };
 }
 
 export async function getVercelIgnore(

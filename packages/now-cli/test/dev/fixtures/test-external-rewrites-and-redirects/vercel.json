@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/rewrite", "destination": "https://vercel.com/robots.txt" }
+  ],
+  "redirects": [
+    { "source": "/redirect", "destination": "https://vercel.com/robots.txt" },
+    {
+      "source": "/tempRedirect",
+      "destination": "https://vercel.com/robots.txt",
+      "permanent": false
+    }
+  ]
+}

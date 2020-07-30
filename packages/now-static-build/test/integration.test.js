@@ -35,7 +35,7 @@ const testsThatFailToBuild = new Map([
   ['05-empty-dist-dir', 'The Output Directory "dist" is empty.'],
   [
     '06-missing-script',
-    'Missing required "now-build" script in "package.json"',
+    'Missing required "vercel-build" script in "package.json"',
   ],
   ['07-nonzero-sh', 'Command "./build.sh" exited with 1'],
   [

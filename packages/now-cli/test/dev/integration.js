@@ -111,7 +111,7 @@ async function exec(directory, args = []) {
 }
 
 async function runNpmInstall(fixturePath) {
-  if (await fs.exists(join(fixturePath, 'package.json'))) {
+  if (await fs.pathExists(join(fixturePath, 'package.json'))) {
     await execa('yarn', ['install'], {
       cwd: fixturePath,
       shell: true,
@@ -814,6 +814,20 @@ test(
   '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async testPath => {
     await testPath(200, '/hello', 'Hello World');
+  })
+);
+
+test(
+  '[vercel dev] test rewrites and redirects serve correct external content',
+  testFixtureStdio('test-external-rewrites-and-redirects', async testPath => {
+    const vcRobots = `https://vercel.com/robots.txt`;
+    await testPath(200, '/rewrite', /User-Agent: \*/m);
+    await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
+      Location: vcRobots,
+    });
+    await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
+      Location: vcRobots,
+    });
   })
 );
 
@@ -1640,7 +1654,6 @@ test(
       t.regex(env.NOW_REGION, /^[a-z]{3}\d$/);
       if (isDev) {
         // Only dev is tested because in production these are opt-in.
-        t.is(env.NOW_URL, host);
         t.is(env.VERCEL_URL, host);
         t.is(env.VERCEL_REGION, 'dev1');
       }

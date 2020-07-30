@@ -4,13 +4,16 @@ import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
-import dnsTable from '../../util/format-dns-table';
 import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
+import formatTable from '../../util/format-table';
+import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import { getCommandName } from '../../util/pkg-name';
+import { getDomainConfig } from '../../util/domains/get-domain-config';
+import code from '../../util/output/code';
 
 type Options = {
   '--debug': boolean;
@@ -70,7 +73,7 @@ export default async function inspect(
       .then(res => (res instanceof Error ? null : res.price))
       .catch(() => null),
   ]);
-  if (domain instanceof DomainNotFound) {
+  if (!domain || domain instanceof DomainNotFound) {
     output.error(
       `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
     );
@@ -87,6 +90,15 @@ export default async function inspect(
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
+
+  const projects = await findProjectsForDomain(client, domainName);
+
+  if (projects instanceof Error) {
+    output.prettyError(projects);
+    return 1;
+  }
+
+  const domainConfig = await getDomainConfig(client, contextName, domainName);
 
   output.log(
     `Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(
@@ -129,6 +141,7 @@ export default async function inspect(
       domain.txtVerifiedAt
     )}\n`
   );
+
   if (renewalPrice && domain.boughtAt) {
     output.print(
       `    ${chalk.cyan('Renewal Price')}\t\t$${renewalPrice} USD\n`
@@ -145,37 +158,57 @@ export default async function inspect(
   );
   output.print('\n');
 
-  output.print(chalk.bold('  Verification Record\n\n'));
-  output.print(
-    `${dnsTable([['_now', 'TXT', domain.verificationRecord]], {
-      extraSpace: '    ',
-    })}\n`
-  );
-  output.print('\n');
-
-  if (!domain.verified) {
-    output.warn(`This domain is not verified. To verify it you should either:`);
-    output.print(
-      `  ${chalk.gray(
-        'a)'
-      )} Change your domain nameservers to the intended set detailed above. ${chalk.gray(
-        '[recommended]'
-      )}\n`
+  if (domainConfig.misconfigured) {
+    output.warn(
+      `This domain is not configured properly. To configure it you should either:`
     );
     output.print(
-      `  ${chalk.gray(
-        'b)'
-      )} Add a DNS TXT record with the name and value shown above.\n\n`
+      `  ${chalk.grey('a)')} ` +
+        `Set the following record on your DNS provider to continue: ` +
+        `${code(`A ${domainName} 76.76.21.21`)} ` +
+        `${chalk.grey('[recommended]')}\n`
+    );
+    output.print(
+      `  ${chalk.grey('b)')} ` +
+        `Change your domain nameservers to the intended set detailed above.\n\n`
     );
     output.print(
       `  We will run a verification for you and you will receive an email upon completion.\n`
     );
-    output.print(
-      `  If you want to force running a verification, you can run ${getCommandName(
-        `domains verify <domain>`
-      )}\n`
+    output.print('  Read more: https://vercel.link/domain-configuration\n\n');
+  }
+
+  if (Array.isArray(projects) && projects.length > 0) {
+    output.print(chalk.bold('  Projects\n'));
+
+    const table = formatTable(
+      ['Project', 'Domains'],
+      ['l', 'l'],
+      [
+        {
+          rows: projects.map(project => {
+            const name = project.name;
+
+            const domains = (project.alias || [])
+              .map(target => target.domain)
+              .filter(alias => alias.endsWith(domainName));
+
+            const cols = domains.length ? domains.join(', ') : '-';
+
+            return [name, cols];
+          }),
+        },
+      ]
     );
-    output.print('  Read more: https://err.sh/now/domain-verification\n\n');
+
+    output.print(
+      table
+        .split('\n')
+        .map(line => `   ${line}`)
+        .join('\n')
+    );
+
+    output.print('\n\n');
   }
 
   return null;

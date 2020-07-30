@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@now/next" }],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "hello from index"
+    },
+    {
+      "path": "/index",
+      "mustContain": "hello from index"
+    },
+    {
+      "path": "/nested-index/index",
+      "mustContain": "hello from nested index"
+    },
+    {
+      "path": "/sub",
+      "mustContain": "hello from sub index"
+    },
+    {
+      "path": "/sub/index",
+      "mustContain": "hello from sub id"
+    },
+    {
+      "path": "/sub/another",
+      "mustContain": "hello from sub id"
+    },
+    {
+      "path": "/api/sub",
+      "mustContain": "hi from sub index"
+    },
+    {
+      "path": "/api/sub/index",
+      "mustContain": "hi from sub id"
+    },
+    {
+      "path": "/api/sub/another",
+      "mustContain": "hi from sub id"
+    }
+  ]
+}

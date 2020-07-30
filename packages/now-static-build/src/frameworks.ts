@@ -542,7 +542,8 @@ const frameworkList: Framework[] = [
     slug: 'hugo',
     buildCommand: 'hugo -D --gc',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      const config = await readConfigFile(
+      type HugoConfig = { publishDir?: string };
+      const config = await readConfigFile<HugoConfig>(
         ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
           return join(dirPrefix, fileName);
         })
@@ -556,7 +557,10 @@ const frameworkList: Framework[] = [
     slug: 'jekyll',
     buildCommand: 'jekyll build',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      const config = await readConfigFile(join(dirPrefix, '_config.yml'));
+      type JekyllConfig = { destination?: string };
+      const config = await readConfigFile<JekyllConfig>(
+        join(dirPrefix, '_config.yml')
+      );
       return (config && config.destination) || '_site';
     },
   },

@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "now-build": "mkdir dist && node build.js"
+    "vercel-build": "mkdir dist && node build.js"
   }
 }
