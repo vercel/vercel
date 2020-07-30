@@ -336,12 +336,12 @@ export const build = async ({
     await writePackageJson(entryPath, packageJson);
   }
 
-  const buildScriptName = getScriptName(pkg, [
+  let buildScriptName = getScriptName(pkg, [
     'vercel-build',
     'now-build',
     'build',
   ]);
-  let { buildCommand } = config;
+  const { buildCommand } = config;
 
   if (!buildScriptName && !buildCommand) {
     console.log(
@@ -349,7 +349,15 @@ export const build = async ({
         'If you need to define a different build step, please create a `vercel-build` script in your `package.json` ' +
         '(e.g. `{ "scripts": { "vercel-build": "npm run prepare && next build" } }`).'
     );
-    buildCommand = 'next build';
+
+    await writePackageJson(entryPath, {
+      ...pkg,
+      scripts: {
+        'vercel-build': 'next build',
+        ...pkg.scripts,
+      },
+    });
+    buildScriptName = 'vercel-build';
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
