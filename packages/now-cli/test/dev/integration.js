@@ -380,6 +380,21 @@ test.afterEach(async () => {
   );
 });
 
+test(
+  '[vercel dev] redwoodjs example',
+  testFixtureStdio(
+    'redwoodjs',
+    async testPath => {
+      await testPath(200, '/', /<div id="redwood-app">/m);
+      await testPath(200, '/about', /<div id="redwood-app">/m);
+      const reqBody = '{"query":"{redwood{version}}"}';
+      const resBody = '{"data":{"redwood":{"version":"0.15.0"}}}';
+      await testPath(200, '/api/graphql', resBody, {}, 'POST', reqBody);
+    },
+    { isExample: true }
+  )
+);
+
 test('[vercel dev] prints `npm install` errors', async t => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
@@ -1569,21 +1584,6 @@ test(
     await testPath(404, '/api/two');
     await testPath(200, '/api/three', 'One');
   })
-);
-
-test(
-  '[vercel dev] redwoodjs',
-  testFixtureStdio(
-    'redwoodjs',
-    async testPath => {
-      await testPath(200, '/', /<div id="redwood-app">/m);
-      await testPath(200, '/about', /<div id="redwood-app">/m);
-      const reqBody = '{"query":"{redwood{version}}"}';
-      const resBody = '{"data":{"redwood":{"version":"0.15.0"}}}';
-      await testPath(200, '/api/graphql', resBody, {}, 'POST', reqBody);
-    },
-    { isExample: true }
-  )
 );
 
 test(
