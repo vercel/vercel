@@ -59,7 +59,7 @@ export async function build({
   } = config;
 
   if (meta.isDev) {
-    debug('Detected redwood dev build, returning routes');
+    debug('Detected @vercel/redwood dev, returning routes...');
 
     let srcBase = mountpoint.replace(/^\.\/?/, '');
 
@@ -74,7 +74,6 @@ export async function build({
           dest: `http://localhost:$PORT/$1`,
         },
       ],
-      watch: [join(srcBase, '**/*')],
       output: {},
     };
   }
