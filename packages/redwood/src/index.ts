@@ -12,7 +12,6 @@ import {
   getSpawnOptions,
   runNpmInstall,
   execCommand,
-  readConfigFile,
   FileBlob,
   FileFsRef,
 } from '@vercel/build-utils';
@@ -21,19 +20,6 @@ const {
   getDependencies,
   // eslint-disable-next-line @typescript-eslint/no-var-requires
 } = require('@netlify/zip-it-and-ship-it/src/dependencies.js');
-
-interface RedwoodConfig {
-  web?: {
-    port?: number;
-    apiProxyPath?: string;
-  };
-  api?: {
-    port?: number;
-  };
-  browser?: {
-    open?: boolean;
-  };
-}
 
 const LAUNCHER_FILENAME = '___vc_launcher';
 const BRIDGE_FILENAME = '___vc_bridge';
@@ -73,7 +59,7 @@ export async function build({
   } = config;
 
   if (meta.isDev) {
-    const webPort = await getDevPortFromConfig(mountpoint);
+    debug('Detected redwood dev build, returning routes');
 
     let srcBase = mountpoint.replace(/^\.\/?/, '');
 
@@ -85,7 +71,7 @@ export async function build({
       routes: [
         {
           src: `${srcBase}/(.*)`,
-          dest: `http://localhost:${webPort}/$1`,
+          dest: `http://localhost:$PORT/$1`,
         },
       ],
       watch: [join(srcBase, '**/*')],
@@ -166,13 +152,4 @@ export async function prepareCache({
 }: PrepareCacheOptions): Promise<Files> {
   const cache = await glob('node_modules/**', workPath);
   return cache;
-}
-
-async function getDevPortFromConfig(workPath: string): Promise<number> {
-  const toml = await readConfigFile<RedwoodConfig>(
-    join(workPath, 'redwood.toml')
-  );
-  const port = toml?.web?.port || 8910;
-  debug(`Detected redwood.toml web port ${port}`);
-  return port;
 }
