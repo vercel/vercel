@@ -17,6 +17,9 @@
       "path": "/api/memory",
       "status": 200,
       "mustContain": "128"
+    },
+    {
+      "logMustContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
     }
   ]
 }

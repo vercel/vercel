@@ -1,5 +1,5 @@
-const Page = () => 'hello world'
+const Page = () => 'hello world';
 
-Page.getInitialProps = () => ({ hello: 'world' })
+Page.getInitialProps = () => ({ hello: 'world' });
 
-export default Page
+export default Page;

@@ -1,1 +1,1 @@
-export default () => 'hi from deployment route'
+export default () => 'hi from deployment route';

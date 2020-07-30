@@ -29,8 +29,19 @@ function execa(file, args, options) {
   return _execa(file, args, options);
 }
 
+function fixture(name) {
+  const directory = path.join(__dirname, 'fixtures', 'integration', name);
+  const config = path.join(directory, 'project.json');
+
+  // We need to remove it, otherwise we can't re-use fixtures
+  if (fs.existsSync(config)) {
+    fs.unlinkSync(config);
+  }
+
+  return directory;
+}
+
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-const fixture = name => path.join(__dirname, 'fixtures', 'integration', name);
 const example = name =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
@@ -95,7 +106,19 @@ function fetchTokenInformation(token, retries = 3) {
 }
 
 function formatOutput({ stderr, stdout }) {
-  return `Received:\n"${stderr}"\n"${stdout}"`;
+  return `
+-----
+
+Stderr:
+${stderr}
+
+-----
+
+Stdout:
+${stdout}
+
+-----
+  `;
 }
 
 // AVA's `t.context` can only be set before the tests,
@@ -219,9 +242,7 @@ const createUser = async () => {
 
       email = user.email;
       contextName = user.username;
-      session = Math.random()
-        .toString(36)
-        .split('.')[1];
+      session = Math.random().toString(36).split('.')[1];
     },
     { retries: 3, factor: 1 }
   );
@@ -280,10 +301,6 @@ test('login', async t => {
     loginApiUrl,
     ...defaultArgs,
   ]);
-
-  console.log(loginOutput.stderr);
-  console.log(loginOutput.stdout);
-  console.log(loginOutput.exitCode);
 
   t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
   t.regex(
@@ -595,7 +612,86 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(homeRes.status, 200, formatOutput({ stderr, stdout }));
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
-    t.is(apiJson['VERCEL_URL'], host);
+    t.is(homeJson['VERCEL_URL'], host);
+  }
+
+  async function nowDevWithEnv() {
+    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    let localhost = undefined;
+    await waitForPrompt(vc, chunk => {
+      if (chunk.includes('Ready! Available at')) {
+        localhost = /(https?:[^\s]+)/g.exec(chunk);
+        return true;
+      }
+      return false;
+    });
+
+    const localhostNoProtocol = localhost[0].slice('http://'.length);
+
+    const apiUrl = `${localhost[0]}/api/get-env`;
+    const apiRes = await fetch(apiUrl);
+
+    t.is(apiRes.status, 200);
+
+    const apiJson = await apiRes.json();
+
+    t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
+
+    const homeUrl = localhost[0];
+
+    const homeRes = await fetch(homeUrl);
+    const homeJson = await homeRes.json();
+    t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+
+    vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function nowDevAndFetchCloudVars() {
+    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    let localhost = undefined;
+    await waitForPrompt(vc, chunk => {
+      if (chunk.includes('Ready! Available at')) {
+        localhost = /(https?:[^\s]+)/g.exec(chunk);
+        return true;
+      }
+      return false;
+    });
+
+    const apiUrl = `${localhost[0]}/api/get-env`;
+    const apiRes = await fetch(apiUrl);
+
+    const localhostNoProtocol = localhost[0].slice('http://'.length);
+
+    t.is(apiRes.status, 200);
+
+    const apiJson = await apiRes.json();
+
+    t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+
+    const homeUrl = localhost[0];
+    const homeRes = await fetch(homeUrl);
+    const homeJson = await homeRes.json();
+    t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+
+    vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
   async function nowEnvRemove() {
@@ -664,11 +760,13 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvPullOverwrite();
   await nowEnvPullConfirm();
   await nowDeployWithVar();
+  await nowDevWithEnv();
+  fs.unlinkSync(path.join(target, '.env'));
+  await nowDevAndFetchCloudVars();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
   await nowEnvRemoveWithNameOnly();
   await nowEnvLsIsEmpty();
-  fs.unlinkSync(path.join(target, '.env'));
 });
 
 test('deploy with metadata containing "=" in the value', async t => {
@@ -947,16 +1045,35 @@ test('list the payment methods', async t => {
 });
 
 test('domains inspect', async t => {
-  const domainName = `inspect-${contextName}.org`;
+  const domainName = `inspect-${contextName}-${Math.random()
+    .toString()
+    .slice(2, 8)}.org`;
 
-  const addRes = await execa(
-    binaryPath,
-    [`domains`, `add`, domainName, ...defaultArgs],
-    { reject: false }
-  );
-  t.is(addRes.exitCode, 0);
+  const directory = fixture('static-multiple-files');
+  const projectName = Math.random().toString().slice(2);
 
-  const { stderr, exitCode } = await execa(
+  const output = await execute([
+    directory,
+    `-V`,
+    `2`,
+    `--name=${projectName}`,
+    '--confirm',
+    '--public',
+  ]);
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  {
+    // Add a domain that can be inspected
+    const result = await execa(
+      binaryPath,
+      [`domains`, `add`, domainName, projectName, ...defaultArgs],
+      { reject: false }
+    );
+
+    t.is(result.exitCode, 0, formatOutput(result));
+  }
+
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['domains', 'inspect', domainName, ...defaultArgs],
     {
@@ -964,18 +1081,30 @@ test('domains inspect', async t => {
     }
   );
 
-  const rmRes = await execa(
-    binaryPath,
-    [`domains`, `rm`, domainName, ...defaultArgs],
-    { reject: false, input: 'y' }
-  );
-  t.is(rmRes.exitCode, 0);
-
-  t.is(exitCode, 0);
   t.true(!stderr.includes(`Renewal Price`));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+
+  {
+    // Remove the domain again
+    const result = await execa(
+      binaryPath,
+      [`domains`, `rm`, domainName, ...defaultArgs],
+      { reject: false, input: 'y' }
+    );
+
+    t.is(result.exitCode, 0, formatOutput(result));
+  }
 });
 
 test('try to purchase a domain', async t => {
+  if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
+    console.log(
+      'Skipping test `try to purchase a domain` because a personal VERCEL_TOKEN was provided.'
+    );
+    t.pass();
+    return;
+  }
+
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
@@ -1358,7 +1487,7 @@ test('set platform version using `--platform-version` to `2`', async t => {
 });
 
 test('ensure we render a warning for deployments with no files', async t => {
-  const directory = fixture('single-dotfile');
+  const directory = fixture('empty-directory');
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -1381,11 +1510,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   console.log(exitCode);
 
   // Ensure the warning is printed
-  t.true(
-    stderr.includes(
-      'There are no files (or only files starting with a dot) inside your deployment.'
-    )
-  );
+  t.regex(stderr, /There are no files inside your deployment/);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1395,10 +1520,8 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(exitCode, 0);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
-  const contentType = response.headers.get('content-type');
-
-  t.is(contentType, 'text/plain; charset=utf-8');
+  const res = await fetch(href);
+  t.is(res.status, 404);
 });
 
 test('ensure we render a prompt when deploying home directory', async t => {
@@ -2198,7 +2321,11 @@ test('render build errors', async t => {
   console.log(output.exitCode);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /Build failed/gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Command "yarn run build" exited with 1/gm,
+    formatOutput(output)
+  );
 });
 
 test('invalid deployment, projects and alias names', async t => {
@@ -2371,7 +2498,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /steps of 64/gm, formatOutput(output));
-  t.regex(output.stderr, /More details/gm, formatOutput(output));
+  t.regex(output.stderr, /Learn More/gm, formatOutput(output));
 });
 
 test('deploy a Lambda with 3 seconds of maxDuration', async t => {
@@ -2439,11 +2566,10 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
   );
 });
 
-test('ensure `github` and `scope` are not sent to the API', async t => {
-  const directory = fixture('github-and-scope-config');
-  const output = await execute([directory, '--confirm']);
-
-  t.is(output.exitCode, 0, formatOutput(output));
+test('fail to add a domain without a project', async t => {
+  const output = await execute(['domains', 'add', 'my-domain.now.sh']);
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.regex(output.stderr, /expects two arguments/gm, formatOutput(output));
 });
 
 test('change user', async t => {
@@ -2473,12 +2599,72 @@ test('change user', async t => {
   t.not(prevUser, nextUser, JSON.stringify({ prevUser, nextUser }));
 });
 
-test('should show prompts to set up project', async t => {
-  const directory = fixture('project-link');
-  const projectName = `project-link-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
+test('assign a domain to a project', async t => {
+  const domain = `project-domain.${contextName}.now.sh`;
+  const directory = fixture('static-deployment');
+
+  const deploymentOutput = await execute([directory, '--public', '--confirm']);
+  t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
+
+  const host = deploymentOutput.stdout.trim().replace('https://', '');
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
+
+  t.is(typeof deployment.name, 'string', JSON.stringify(deployment, null, 2));
+  const project = deployment.name;
+
+  const output = await execute(['domains', 'add', domain, project, '--force']);
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  const removeResponse = await execute(['rm', project, '-y']);
+  t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
+});
+
+test('list project domains', async t => {
+  const domain = `project-domain.${contextName}.now.sh`;
+  const directory = fixture('static-deployment');
+
+  const deploymentOutput = await execute([directory, '--public', '--confirm']);
+  t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
+
+  const host = deploymentOutput.stdout.trim().replace('https://', '');
+  const deployment = await apiFetch(
+    `/v10/now/deployments/unknown?url=${host}`
+  ).then(resp => resp.json());
+
+  t.is(typeof deployment.name, 'string', JSON.stringify(deployment, null, 2));
+  const project = deployment.name;
+
+  const addOutput = await execute([
+    'domains',
+    'add',
+    domain,
+    project,
+    '--force',
+  ]);
+  t.is(addOutput.exitCode, 0, formatOutput(addOutput));
+
+  const output = await execute(['domains', 'ls']);
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, new RegExp(domain), formatOutput(output));
+  t.regex(output.stderr, new RegExp(project), formatOutput(output));
+
+  const removeResponse = await execute(['rm', project, '-y']);
+  t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
+});
+
+test('ensure `github` and `scope` are not sent to the API', async t => {
+  const directory = fixture('github-and-scope-config');
+  const output = await execute([directory, '--confirm']);
+
+  t.is(output.exitCode, 0, formatOutput(output));
+});
+
+test('should show prompts to set up project during first deploy', async t => {
+  const directory = fixture('project-link-deploy');
+  const projectName = `project-link-deploy-${
+    Math.random().toString(36).split('.')[1]
   }`;
 
   // remove previously linked project if it exists
@@ -2524,7 +2710,9 @@ test('should show prompts to set up project', async t => {
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Build Command?`)
   );
-  now.stdin.write(`mkdir o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+  now.stdin.write(
+    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
+  );
 
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Output Directory?`)
@@ -2534,7 +2722,7 @@ test('should show prompts to set up project', async t => {
   await waitForPrompt(now, chunk =>
     chunk.includes(`What's your Development Command?`)
   );
-  now.stdin.write(`yarn dev\n`);
+  now.stdin.write(`\n`);
 
   await waitForPrompt(now, chunk => chunk.includes('Linked to'));
 
@@ -2565,13 +2753,46 @@ test('should show prompts to set up project', async t => {
   const response = await fetch(new URL(output.stdout).href);
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
+
+  // Ensure that `vc dev` also uses the configured build command
+  // and output directory
+  let stderr = '';
+  const port = 58351;
+  const dev = execa(binaryPath, [
+    'dev',
+    '--listen',
+    port,
+    directory,
+    ...defaultArgs,
+  ]);
+  dev.stderr.setEncoding('utf8');
+
+  try {
+    dev.stdout.pipe(process.stdout);
+    dev.stderr.pipe(process.stderr);
+    await new Promise((resolve, reject) => {
+      dev.once('exit', (code, signal) => {
+        reject(`"vc dev" failed with ${signal || code}`);
+      });
+      dev.stderr.on('data', data => {
+        stderr += data;
+        if (stderr.includes('Ready! Available at')) {
+          resolve();
+        }
+      });
+    });
+
+    const res2 = await fetch(`http://localhost:${port}/`);
+    const text2 = await res2.text();
+    t.is(text2.includes('<h1>custom hello</h1>'), true, text2);
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
+  }
 });
 
 test('should prefill "project name" prompt with folder name', async t => {
   const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
+    Math.random().toString(36).split('.')[1]
   }`;
 
   const src = fixture('static-deployment');
@@ -2619,9 +2840,7 @@ test('should prefill "project name" prompt with folder name', async t => {
 test('should prefill "project name" prompt with --name', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
+    Math.random().toString(36).split('.')[1]
   }`;
 
   // remove previously linked project if it exists
@@ -2679,9 +2898,7 @@ test('should prefill "project name" prompt with --name', async t => {
 test('should prefill "project name" prompt with now.json `name`', async t => {
   const directory = fixture('static-deployment');
   const projectName = `static-deployment-${
-    Math.random()
-      .toString(36)
-      .split('.')[1]
+    Math.random().toString(36).split('.')[1]
   }`;
 
   // remove previously linked project if it exists
@@ -3046,5 +3263,372 @@ test('deploy gatsby twice and print cached directories', async t => {
     await tryDeploy(directory);
   } finally {
     await writeFile(packageJsonPath, packageJsonOriginal);
+  }
+});
+
+test('reject deploying with wrong team .vercel config', async t => {
+  const directory = fixture('unauthorized-vercel-config');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+  t.true(
+    stderr.includes(
+      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
+    ),
+    formatOutput({ stderr, stdout })
+  );
+});
+
+test('[vc link] should show prompts to set up project', async t => {
+  const dir = fixture('project-link-zeroconf');
+  const projectName = `project-link-zeroconf-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+
+  await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
+  vc.stdin.write('yes\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  vc.stdin.write('\n');
+
+  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  vc.stdin.write('no\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  vc.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  vc.stdin.write('\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  vc.stdin.write('yes\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  vc.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  vc.stdin.write(`mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  vc.stdin.write(`o\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  vc.stdin.write(`\n`);
+
+  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+
+  const output = await vc;
+
+  // Ensure the exit code is right
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+});
+
+test('[vc link --confirm] should not show prompts and autolink', async t => {
+  const dir = fixture('project-link-confirm');
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    { cwd: dir, reject: false }
+  );
+
+  // Ensure the exit code is right
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  // Ensure the message is correct pattern
+  t.regex(stderr, /Linked to /m);
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+});
+
+test('[vc dev] should show prompts to set up project', async t => {
+  const dir = fixture('project-link-dev');
+  const port = 58352;
+  const projectName = `project-link-dev-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
+    cwd: dir,
+  });
+
+  await waitForPrompt(dev, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  dev.stdin.write('no\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  dev.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  dev.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  dev.stdin.write(
+    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
+  );
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  dev.stdin.write(`o\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  dev.stdin.write(`\n`);
+
+  await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+
+  await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
+
+  // Ensure that `vc dev` also works
+  try {
+    const response = await fetch(`http://localhost:${port}/`);
+    const text = await response.text();
+    t.is(text.includes('<h1>custom hello</h1>'), true, text);
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
+  }
+});
+
+test('[vc link] should show project prompts but not framework when `builds` defined', async t => {
+  const dir = fixture('project-link-legacy');
+  const projectName = `project-link-legacy-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+
+  await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
+  vc.stdin.write('yes\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  vc.stdin.write('\n');
+
+  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  vc.stdin.write('no\n');
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  vc.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  vc.stdin.write('\n');
+
+  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+
+  const output = await vc;
+
+  // Ensure the exit code is right
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  // Ensure .gitignore is created
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  t.is(
+    await exists(path.join(dir, '.vercel', 'project.json')),
+    true,
+    'project.json should be created'
+  );
+  t.is(
+    await exists(path.join(dir, '.vercel', 'README.txt')),
+    true,
+    'README.txt should be created'
+  );
+});
+
+test('[vc dev] should send the platform proxy request headers to frontend dev server ', async t => {
+  const dir = fixture('dev-proxy-headers-and-env');
+  const port = 58353;
+  const projectName = `dev-proxy-headers-and-env-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
+    cwd: dir,
+  });
+
+  await waitForPrompt(dev, chunk => /Set up and develop [^?]+\?/.test(chunk));
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Which scope should contain your project?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  dev.stdin.write('no\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  dev.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  dev.stdin.write('\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+  dev.stdin.write('yes\n');
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  dev.stdin.write('a\n'); // 'a' means select all
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Build Command?`)
+  );
+  dev.stdin.write(
+    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
+  );
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Output Directory?`)
+  );
+  dev.stdin.write(`o\n`);
+
+  await waitForPrompt(dev, chunk =>
+    chunk.includes(`What's your Development Command?`)
+  );
+  dev.stdin.write(`node server.js\n`);
+
+  await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
+  await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
+
+  // Ensure that `vc dev` also works
+  try {
+    const response = await fetch(`http://localhost:${port}/`);
+    const body = await response.json();
+    t.is(body.headers['x-vercel-deployment-url'], `localhost:${port}`);
+    t.is(body.env.NOW_REGION, 'dev1');
+  } finally {
+    process.kill(dev.pid, 'SIGTERM');
   }
 });

@@ -775,8 +775,9 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toEqual([
       {
         code: 'unused_function',
-        message:
-          "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
+        message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
       },
     ]);
   });
@@ -1807,6 +1808,36 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
+  it('RedwoodJS should only use redwood builder', async () => {
+    const files = [
+      'package.json',
+      'web/index.html',
+      'api/one.js',
+      'api/two.js',
+    ];
+    const projectSettings = {
+      framework: 'redwoodjs',
+    };
+
+    const { builders, errorRoutes } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+
+    expect(builders).toEqual([
+      {
+        use: '@vercel/redwood',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+          framework: 'redwoodjs',
+        },
+      },
+    ]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
   it('No framework, only package.json', async () => {
     const files = ['package.json'];
     const pkg = {
@@ -1878,8 +1909,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toEqual([
       {
         code: 'unused_function',
-        message:
-          "The function for server/**/*.ts can't be handled by any builder. Make sure it is inside the api/ directory.",
+        message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
       },
     ]);
   });

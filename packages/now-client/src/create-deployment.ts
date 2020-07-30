@@ -1,6 +1,6 @@
 import { readdir as readRootFolder, lstatSync } from 'fs-extra';
 
-import { relative, isAbsolute, basename } from 'path';
+import { relative, isAbsolute } from 'path';
 import hashes, { mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug, parseVercelConfig } from './utils';
@@ -80,7 +80,11 @@ export default function buildCreateDeployment(version: number) {
       rootFiles = [path];
     }
 
-    let fileList = await buildFileTree(path, clientOptions.isDirectory, debug);
+    let { fileList } = await buildFileTree(
+      path,
+      clientOptions.isDirectory,
+      debug
+    );
 
     let configPath: string | undefined;
     if (!nowConfig) {
@@ -139,17 +143,11 @@ export default function buildCreateDeployment(version: number) {
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
-    if (
-      fileList.length === 0 ||
-      fileList.every(f => (f ? basename(f).startsWith('.') : true))
-    ) {
-      debug(
-        `Deployment path has no files (or only dotfiles). Yielding a warning event`
-      );
+    if (fileList.length === 0) {
+      debug('Deployment path has no files. Yielding a warning event');
       yield {
         type: 'warning',
-        payload:
-          'There are no files (or only files starting with a dot) inside your deployment.',
+        payload: 'There are no files inside your deployment.',
       };
     }
 

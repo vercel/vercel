@@ -2,6 +2,7 @@ import ms from 'ms';
 import os from 'os';
 import fs from 'fs-extra';
 import test from 'ava';
+import { isIP } from 'net';
 import { join, resolve, delimiter } from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
@@ -110,7 +111,7 @@ async function exec(directory, args = []) {
 }
 
 async function runNpmInstall(fixturePath) {
-  if (await fs.exists(join(fixturePath, 'package.json'))) {
+  if (await fs.pathExists(join(fixturePath, 'package.json'))) {
     await execa('yarn', ['install'], {
       cwd: fixturePath,
       shell: true,
@@ -118,24 +119,9 @@ async function runNpmInstall(fixturePath) {
   }
 }
 
-async function getPackedBuilderPath(builderDirName) {
-  const packagePath = join(__dirname, '..', '..', '..', builderDirName);
-  const output = await execa('npm', ['pack'], {
-    cwd: packagePath,
-    shell: true,
-  });
-
-  if (output.exitCode !== 0 || output.stdout.trim() === '') {
-    throw new Error(
-      `Failed to pack ${builderDirName}: ${formatOutput(output)}`
-    );
-  }
-
-  return join(packagePath, output.stdout.trim());
-}
-
 async function testPath(
   t,
+  isDev,
   origin,
   status,
   path,
@@ -153,6 +139,9 @@ async function testPath(
   if (typeof expectedText === 'string') {
     const actualText = await res.text();
     t.is(actualText.trim(), expectedText.trim(), msg);
+  } else if (typeof expectedText === 'function') {
+    const actualText = await res.text();
+    await expectedText(t, actualText, res, isDev);
   } else if (expectedText instanceof RegExp) {
     const actualText = await res.text();
     expectedText.lastIndex = 0; // reset since we test twice
@@ -342,9 +331,9 @@ function testFixtureStdio(
 
       const helperTestPath = async (...args) => {
         if (!skipDeploy) {
-          await testPath(t, `https://${deploymentUrl}`, ...args);
+          await testPath(t, false, `https://${deploymentUrl}`, ...args);
         }
-        await testPath(t, `http://localhost:${port}`, ...args);
+        await testPath(t, true, `http://localhost:${port}`, ...args);
       };
       await fn(helperTestPath, t, port);
     } finally {
@@ -411,6 +400,7 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
     {
       // Env var should not be set after `vercel.json` is deleted
       await fs.remove(configPath);
+
       const res = await fetch(`http://localhost:${port}/api`);
       const body = await res.json();
       t.is(body.FOO, undefined);
@@ -452,6 +442,7 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         ],
       };
       await fs.writeJSON(configPath, config);
+
       const res = await fetch(`http://localhost:${port}/?foo=bar`);
       const body = await res.json();
       t.is(body.hasHelpers, false);
@@ -472,6 +463,7 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         ],
       };
       await fs.writeJSON(configPath, config);
+
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
       t.is(body.hasHelpers, true);
@@ -489,6 +481,7 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         },
       };
       await fs.writeJSON(configPath, config);
+
       const res = await fetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
       t.is(body.hasHelpers, false);
@@ -506,6 +499,7 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
         },
       };
       await fs.writeJSON(configPath, config);
+
       const res = await fetch(`http://localhost:${port}/?foo=boo`);
       const body = await res.json();
       t.is(body.hasHelpers, true);
@@ -656,6 +650,7 @@ test(
   testFixtureStdio('public-and-api', async testPath => {
     await testPath(200, '/', 'This is the home page');
     await testPath(200, '/about.html', 'This is the about page');
+    await testPath(200, '/.well-known/humans.txt', 'We come in peace');
     await testPath(200, '/api/date', /current date/);
     await testPath(200, '/api/rand', /random number/);
     await testPath(200, '/api/rand.js', /random number/);
@@ -819,6 +814,20 @@ test(
   '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async testPath => {
     await testPath(200, '/hello', 'Hello World');
+  })
+);
+
+test(
+  '[vercel dev] test rewrites and redirects serve correct external content',
+  testFixtureStdio('test-external-rewrites-and-redirects', async testPath => {
+    const vcRobots = `https://vercel.com/robots.txt`;
+    await testPath(200, '/rewrite', /User-Agent: \*/m);
+    await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
+      Location: vcRobots,
+    });
+    await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
+      Location: vcRobots,
+    });
   })
 );
 
@@ -1018,6 +1027,8 @@ test(
   testFixtureStdio('00-list-directory', async testPath => {
     await testPath(200, '/', /Files within/m);
     await testPath(200, '/', /test[0-3]\.txt/m);
+    await testPath(200, '/', /\.well-known/m);
+    await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
   })
 );
 
@@ -1450,13 +1461,10 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
 
     // Monitor `stderr` for the warning
     dev.stderr.setEncoding('utf8');
+    const msg = 'There are no files inside your deployment.';
     await new Promise(resolve => {
       dev.stderr.on('data', str => {
-        if (
-          str.includes(
-            'There are no files (or only files starting with a dot) inside your deployment'
-          )
-        ) {
+        if (str.includes(msg)) {
           resolve();
         }
       });
@@ -1474,22 +1482,6 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
 
 test('[vercel dev] do not rebuild for changes in the output directory', async t => {
   const directory = fixture('output-is-source');
-
-  // Pack the builder and set it in the `vercel.json`
-  const builder = await getPackedBuilderPath('now-static-build');
-
-  await fs.writeFile(
-    join(directory, 'vercel.json'),
-    JSON.stringify({
-      builds: [
-        {
-          src: 'package.json',
-          use: `file://${builder}`,
-          config: { zeroConfig: true },
-        },
-      ],
-    })
-  );
 
   const { dev, port } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -1576,6 +1568,10 @@ test(
     await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/headers`, (t, body, res) => {
+      const { host } = new URL(res.url);
+      t.is(body, host);
+    });
   })
 );
 
@@ -1630,5 +1626,37 @@ test(
     await testPath(200, '/api/another.go', 'This is another page');
     await testPath(200, `/api/foo`, 'Req Path: /api/foo');
     await testPath(200, `/api/bar`, 'Req Path: /api/bar');
+  })
+);
+
+test(
+  '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
+  testFixtureStdio('node-ts-node-target', async testPath => {
+    await testPath(200, `/api/subclass`, '{"ok":true}');
+    await testPath(
+      200,
+      `/api/array`,
+      '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}'
+    );
+
+    await testPath(200, `/api/dump`, (t, body, res, isDev) => {
+      const { host } = new URL(res.url);
+      const { env, headers } = JSON.parse(body);
+
+      // Test that the API endpoint receives the Vercel proxy request headers
+      t.is(headers['x-forwarded-host'], host);
+      t.is(headers['x-vercel-deployment-url'], host);
+      t.truthy(isIP(headers['x-real-ip']));
+      t.truthy(isIP(headers['x-forwarded-for']));
+      t.truthy(isIP(headers['x-vercel-forwarded-for']));
+
+      // Test that the API endpoint has the Vercel platform env vars defined.
+      t.regex(env.NOW_REGION, /^[a-z]{3}\d$/);
+      if (isDev) {
+        // Only dev is tested because in production these are opt-in.
+        t.is(env.VERCEL_URL, host);
+        t.is(env.VERCEL_REGION, 'dev1');
+      }
+    });
   })
 );
