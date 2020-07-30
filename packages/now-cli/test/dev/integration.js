@@ -1579,7 +1579,7 @@ test(
       await testPath(200, '/', /<div id="redwood-app">/m);
       await testPath(200, '/about', /<div id="redwood-app">/m);
       const reqBody = '{"query":"{redwood{version}}"}';
-      const resBody = '{"data":{"redwood":{"version":"0.14.0"}}}';
+      const resBody = '{"data":{"redwood":{"version":"0.15.0"}}}';
       await testPath(200, '/api/graphql', resBody, {}, 'POST', reqBody);
     },
     { isExample: true }
