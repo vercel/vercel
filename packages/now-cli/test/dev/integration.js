@@ -20,6 +20,8 @@ let port = 3000;
 const binaryPath = resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => join('test', 'dev', 'fixtures', name);
 const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
+const exampleAbsolute = name =>
+  join(__dirname, '..', '..', '..', '..', 'examples', name);
 
 let processCounter = 0;
 const processList = new Map();
@@ -127,9 +129,10 @@ async function testPath(
   path,
   expectedText,
   headers = {},
-  method = 'GET'
+  method = 'GET',
+  body = undefined
 ) {
-  const opts = { redirect: 'manual-dont-change', method };
+  const opts = { redirect: 'manual-dont-change', method, body };
   const url = `${origin}${path}`;
   const res = await fetch(url, opts);
   const msg = `Testing response from ${method} ${url}`;
@@ -230,10 +233,18 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { expectedCode = 0, skipDeploy } = {}
+  { expectedCode = 0, skipDeploy, isExample } = {}
 ) {
   return async t => {
-    const cwd = fixtureAbsolute(directory);
+    const nodeMajor = Number(process.versions.node.split('.')[0]);
+    if (isExample && nodeMajor < 12) {
+      console.log(`Skipping ${directory} on Node ${process.version}`);
+      t.pass();
+      return;
+    }
+    const cwd = isExample
+      ? exampleAbsolute(directory)
+      : fixtureAbsolute(directory);
     const token = await fetchTokenWithRetry();
     let deploymentUrl;
 
@@ -1558,6 +1569,21 @@ test(
     await testPath(404, '/api/two');
     await testPath(200, '/api/three', 'One');
   })
+);
+
+test(
+  '[vercel dev] redwoodjs',
+  testFixtureStdio(
+    'redwoodjs',
+    async testPath => {
+      await testPath(200, '/', /<div id="redwood-app">/m);
+      await testPath(200, '/about', /<div id="redwood-app">/m);
+      const reqBody = '{"query":"{redwood{version}}"}';
+      const resBody = '{"data":{"redwood":{"version":"0.14.0"}}}';
+      await testPath(200, '/api/graphql', resBody, {}, 'POST', reqBody);
+    },
+    { isExample: true }
+  )
 );
 
 test(
