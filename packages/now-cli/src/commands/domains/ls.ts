@@ -3,6 +3,7 @@ import psl from 'psl';
 import chalk from 'chalk';
 import plural from 'pluralize';
 
+import wait from '../../util/output/wait';
 import Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
@@ -75,10 +76,14 @@ export default async function ls(
     return 1;
   }
 
+  const cancelWait = wait(`Fetching domains under ${chalk.bold(contextName)}`);
+
   const [{ domains, pagination }, projects] = await Promise.all([
-    getDomains(client, contextName),
+    getDomains(client),
     getProjectsWithDomains(client),
-  ] as const);
+  ] as const).finally(() => {
+    cancelWait();
+  });
 
   if (projects instanceof Error) {
     output.prettyError(projects);
@@ -88,16 +93,14 @@ export default async function ls(
   const domainsInfo = createDomainsInfo(domains, projects);
 
   output.log(
-    `${plural(
-      'project domain',
-      domainsInfo.length,
-      true
-    )} found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
+    `${plural('Domain', domainsInfo.length, true)} found under ${chalk.bold(
+      contextName
+    )} ${chalk.gray(lsStamp())}`
   );
 
   if (domainsInfo.length > 0) {
     output.print(
-      formatDomainsTable(domainsInfo).replace(/^(.*)/gm, `${' '.repeat(3)}$1`)
+      formatDomainsTable(domainsInfo).replace(/^(.*)/gm, `${' '.repeat(1)}$1`)
     );
     output.print('\n\n');
   }
@@ -105,7 +108,7 @@ export default async function ls(
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
-      `To display the next page run ${getCommandName(
+      `To display the next page, run ${getCommandName(
         `domains ls${flags} --next ${pagination.next}`
       )}`
     );

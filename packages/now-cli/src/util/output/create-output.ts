@@ -28,7 +28,10 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     str: string,
     slug: string | null = null,
     link: string | null = null,
-    action: string = 'Learn More'
+    action: string | null = 'Learn More',
+    options?: {
+      boxen?: boxen.Options;
+    }
   ) {
     const prevTerm = process.env.TERM;
 
@@ -52,6 +55,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
             right: 1,
           },
           borderColor: 'yellow',
+          ...options?.boxen,
         }
       )
     );

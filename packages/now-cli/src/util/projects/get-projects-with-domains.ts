@@ -1,12 +1,10 @@
 import Client from '../client';
-import wait from '../output/wait';
 import { Project } from '../../types';
 import { URLSearchParams } from 'url';
 
 export async function getProjectsWithDomains(
   client: Client
 ): Promise<Project[] | Error> {
-  const cancelWait = wait(`Fetching projects with domains`);
   try {
     const limit = 50;
     let result: Project[] = [];
@@ -16,14 +14,20 @@ export async function getProjectsWithDomains(
       limit: limit.toString(),
     });
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 100; i++) {
       const response = await client.fetch<Project[]>(`/v2/projects/?${query}`);
       result.push(...response);
 
-      const [latest] = response.sort((a, b) => b.updatedAt - a.updatedAt);
-      query.append('from', latest.updatedAt.toString());
+      if (!response.length) {
+        break;
+      }
 
-      if (response.length !== limit) break;
+      const [latest] = response.sort((a, b) => b.updatedAt - a.updatedAt);
+      query.set('from', latest.updatedAt.toString());
+
+      if (response.length !== limit) {
+        break;
+      }
     }
 
     return result;
@@ -33,7 +37,5 @@ export async function getProjectsWithDomains(
     }
 
     throw err;
-  } finally {
-    cancelWait();
   }
 }

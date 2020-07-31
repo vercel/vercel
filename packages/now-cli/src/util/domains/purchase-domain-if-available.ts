@@ -30,10 +30,17 @@ export default async function purchaseDomainIfAvailable(
     }
 
     output.debug(`Domain ${domain} is available to be purchased`);
-    const domainPrice = await getDomainPrice(client, domain);
-    cancelWait();
+
+    const domainPrice = await getDomainPrice(client, domain).finally(() => {
+      cancelWait();
+    });
+
     if (domainPrice instanceof ERRORS.UnsupportedTLD) {
       return domainPrice;
+    }
+
+    if (domainPrice instanceof Error) {
+      throw domainPrice;
     }
 
     const { price, period } = domainPrice;

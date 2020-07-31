@@ -8,22 +8,24 @@ type Response = {
   domain: Domain;
 };
 
-async function getDomainByName(
+export default async function getDomainByName(
   client: Client,
   contextName: string,
-  domainName: string
+  domainName: string,
+  options: {
+    ignoreWait?: boolean;
+  } = {}
 ) {
-  const cancelWait = wait(
-    `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
-  );
+  const cancelWait = options.ignoreWait
+    ? null
+    : wait(`Fetching domain ${domainName} under ${chalk.bold(contextName)}`);
   try {
     const { domain } = await client.fetch<Response>(
       `/v4/domains/${encodeURIComponent(domainName)}`
     );
-    cancelWait();
+
     return domain;
   } catch (error) {
-    cancelWait();
     if (error.status === 404) {
       return new DomainNotFound(domainName);
     }
@@ -33,7 +35,7 @@ async function getDomainByName(
     }
 
     throw error;
+  } finally {
+    cancelWait?.();
   }
 }
-
-export default getDomainByName;
