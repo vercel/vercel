@@ -235,7 +235,7 @@ export const build = async ({
 
   await download(files, workPath, meta);
 
-  const pkg = await readPackageJson(entryPath);
+  let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -331,9 +331,9 @@ export const build = async ({
     ]);
 
     debug('Normalizing package.json');
-    const packageJson = normalizePackageJson(pkg);
-    debug('Normalized package.json result: ', packageJson);
-    await writePackageJson(entryPath, packageJson);
+    pkg = normalizePackageJson(pkg);
+    debug('Normalized package.json result: ', pkg);
+    await writePackageJson(entryPath, pkg);
   }
 
   let buildScriptName = getScriptName(pkg, [
