@@ -15,7 +15,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import code from '../../util/output/code';
 import wait from '../../util/output/wait';
-import isDomainExternal from '../../util/domains/is-domain-external';
+import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 
 type Options = {
   '--debug': boolean;
@@ -99,9 +99,7 @@ export default async function inspect(
   output.print(chalk.bold('  General\n\n'));
   output.print(`    ${chalk.cyan('Name')}\t\t\t${domain.name}\n`);
   output.print(
-    `    ${chalk.cyan('Registrar')}\t\t\t${
-      isDomainExternal(domain) ? 'Third Party' : 'Vercel'
-    }\n`
+    `    ${chalk.cyan('Registrar')}\t\t\t${getDomainRegistrar(domain)}\n`
   );
   output.print(
     `    ${chalk.cyan('Expires At')}\t\t\t${formatDate(domain.expiresAt)}\n`
