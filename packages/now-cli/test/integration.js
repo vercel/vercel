@@ -2621,39 +2621,6 @@ test('assign a domain to a project', async t => {
   t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
 });
 
-test('list project domains', async t => {
-  const domain = `project-domain.${contextName}.now.sh`;
-  const directory = fixture('static-deployment');
-
-  const deploymentOutput = await execute([directory, '--public', '--confirm']);
-  t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
-
-  const host = deploymentOutput.stdout.trim().replace('https://', '');
-  const deployment = await apiFetch(
-    `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
-
-  t.is(typeof deployment.name, 'string', JSON.stringify(deployment, null, 2));
-  const project = deployment.name;
-
-  const addOutput = await execute([
-    'domains',
-    'add',
-    domain,
-    project,
-    '--force',
-  ]);
-  t.is(addOutput.exitCode, 0, formatOutput(addOutput));
-
-  const output = await execute(['domains', 'ls']);
-  t.is(output.exitCode, 0, formatOutput(output));
-  t.regex(output.stderr, new RegExp(domain), formatOutput(output));
-  t.regex(output.stderr, new RegExp(project), formatOutput(output));
-
-  const removeResponse = await execute(['rm', project, '-y']);
-  t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
-});
-
 test('ensure `github` and `scope` are not sent to the API', async t => {
   const directory = fixture('github-and-scope-config');
   const output = await execute([directory, '--confirm']);
