@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "0.0.2-canary.2",
+  "version": "0.0.2-canary.3",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs",
@@ -18,8 +18,7 @@
     "prepublishOnly": "./build.sh"
   },
   "dependencies": {
-    "@netlify/zip-it-and-ship-it": "1.2.0",
-    "is-port-reachable": "3.0.0"
+    "@netlify/zip-it-and-ship-it": "1.2.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",

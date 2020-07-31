@@ -235,7 +235,7 @@ export const build = async ({
 
   await download(files, workPath, meta);
 
-  const pkg = await readPackageJson(entryPath);
+  let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -331,17 +331,17 @@ export const build = async ({
     ]);
 
     debug('Normalizing package.json');
-    const packageJson = normalizePackageJson(pkg);
-    debug('Normalized package.json result: ', packageJson);
-    await writePackageJson(entryPath, packageJson);
+    pkg = normalizePackageJson(pkg);
+    debug('Normalized package.json result: ', pkg);
+    await writePackageJson(entryPath, pkg);
   }
 
-  const buildScriptName = getScriptName(pkg, [
+  let buildScriptName = getScriptName(pkg, [
     'vercel-build',
     'now-build',
     'build',
   ]);
-  let { buildCommand } = config;
+  const { buildCommand } = config;
 
   if (!buildScriptName && !buildCommand) {
     console.log(
@@ -349,7 +349,15 @@ export const build = async ({
         'If you need to define a different build step, please create a `vercel-build` script in your `package.json` ' +
         '(e.g. `{ "scripts": { "vercel-build": "npm run prepare && next build" } }`).'
     );
-    buildCommand = 'next build';
+
+    await writePackageJson(entryPath, {
+      ...pkg,
+      scripts: {
+        'vercel-build': 'next build',
+        ...pkg.scripts,
+      },
+    });
+    buildScriptName = 'vercel-build';
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
