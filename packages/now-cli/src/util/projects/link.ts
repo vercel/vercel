@@ -16,6 +16,7 @@ import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
+import os from 'os';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -245,7 +246,7 @@ export async function linkFolderToProject(
       .then(buf => buf.toString())
       .catch(() => null);
 
-    if (!gitIgnore || !gitIgnore.split('\n').includes(VERCEL_DIR)) {
+    if (!gitIgnore || !gitIgnore.split(os.EOL).includes(VERCEL_DIR)) {
       await writeFile(
         gitIgnorePath,
         gitIgnore ? `${gitIgnore}\n${VERCEL_DIR}` : VERCEL_DIR
