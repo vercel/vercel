@@ -244,7 +244,7 @@ export async function linkFolderToProject(
     const gitIgnore = await readFile(gitIgnorePath)
       .then(buf => buf.toString())
       .catch(() => null);
-    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : '\n'
+    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : '\n';
 
     if (!gitIgnore || !gitIgnore.split(EOL).includes(VERCEL_DIR)) {
       await writeFile(
