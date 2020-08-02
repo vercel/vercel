@@ -16,7 +16,6 @@ import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
-import os from 'os';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -245,11 +244,12 @@ export async function linkFolderToProject(
     const gitIgnore = await readFile(gitIgnorePath)
       .then(buf => buf.toString())
       .catch(() => null);
+    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : '\n'
 
-    if (!gitIgnore || !gitIgnore.split(os.EOL).includes(VERCEL_DIR)) {
+    if (!gitIgnore || !gitIgnore.split(EOL).includes(VERCEL_DIR)) {
       await writeFile(
         gitIgnorePath,
-        gitIgnore ? `${gitIgnore}\n${VERCEL_DIR}` : VERCEL_DIR
+        gitIgnore ? `${gitIgnore}${EOL}${VERCEL_DIR}` : VERCEL_DIR
       );
       isGitIgnoreUpdated = true;
     }
