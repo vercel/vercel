@@ -75,6 +75,5 @@ export default async function purchaseDomainIfAvailable(
   }
 
   output.debug(`Domain ${domain} is not available to be purchased`);
-  cancelWait();
   return false;
 }

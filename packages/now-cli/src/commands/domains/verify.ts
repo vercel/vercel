@@ -18,12 +18,16 @@ export default async function verify(
     return 1;
   }
 
-  output.error(
+  const error = new Error(
     `It's not necessary to verify Domains anymore. Instead, you can run ${getCommandName(
       `domains inspect ${domainName}`
-    )} to see what you need to do in order to configure it properly.`,
-    undefined,
-    'https://vercel.link/domain-verification-via-cli'
+    )} to see what you need to do in order to configure it properly.`
+  );
+
+  output.prettyError(
+    Object.assign(error, {
+      link: 'https://vercel.link/domain-verification-via-cli',
+    })
   );
 
   return 0;
