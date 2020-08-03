@@ -33,13 +33,6 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       boxen?: boxen.Options;
     }
   ) {
-    const prevTerm = process.env.TERM;
-
-    if (!prevTerm) {
-      // workaround for https://github.com/sindresorhus/term-size/issues/13
-      process.env.TERM = 'xterm';
-    }
-
     const details = slug ? `https://err.sh/now/${slug}` : link;
 
     print(
@@ -60,8 +53,6 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       )
     );
     print('\n');
-
-    process.env.TERM = prevTerm;
   }
 
   function note(str: string) {
