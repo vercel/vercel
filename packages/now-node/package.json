@@ -33,7 +33,7 @@
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
     "@zeit/ncc": "0.20.4",
-    "@zeit/node-file-trace": "0.8.1",
+    "@zeit/node-file-trace": "0.8.2",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
