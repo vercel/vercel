@@ -246,11 +246,7 @@ async function fetchInformation({
 
   if (domain instanceof DomainPermissionDenied) {
     cancelWait();
-    output.error(
-      `You don't have access to the domain ${domainName} under ${chalk.bold(
-        contextName
-      )}`
-    );
+    output.prettyError(domain);
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
