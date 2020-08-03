@@ -235,12 +235,9 @@ async function fetchInformation({
       .catch(() => null),
   ]);
 
-  if (!domain || domain instanceof DomainNotFound) {
+  if (domain instanceof DomainNotFound) {
     cancelWait();
-    output.error(
-      `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
-    );
-    output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
+    output.prettyError(domain);
     return 1;
   }
 

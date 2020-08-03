@@ -27,7 +27,7 @@ export default async function getDomainByName(
     return domain;
   } catch (error) {
     if (error.status === 404) {
-      return new DomainNotFound(domainName);
+      return new DomainNotFound(domainName, contextName);
     }
 
     if (error.status === 403) {
