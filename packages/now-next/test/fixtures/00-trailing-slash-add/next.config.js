@@ -1,1 +1,6 @@
-module.exports = { trailingSlash: true };
+module.exports = {
+  generateBuildId() {
+    return 'testing-build-id';
+  },
+  trailingSlash: true,
+};
