@@ -64,7 +64,8 @@
   },
   "prettier": {
     "trailingComma": "es5",
-    "singleQuote": true
+    "singleQuote": true,
+    "arrowParens": "avoid"
   },
   "eslintConfig": {
     "root": true,

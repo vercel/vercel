@@ -1,12 +1,41 @@
 [
   {
+    "name": "Blitz.js",
+    "slug": "blitzjs",
+    "demo": "https://blitzjs.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg",
+    "tagline": "Blitz.js: The Fullstack React Framework",
+    "description": "A brand new Blitz.js app - the result of running `npx blitz new`.",
+    "website": "https://blitzjs.com",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"blitz\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "placeholder": "`npm run build` or `blitz build`"
+      },
+      "devCommand": {
+        "value": "blitz start"
+      },
+      "outputDirectory": {
+        "placeholder": "Next.js default"
+      }
+    }
+  },
+  {
     "name": "Next.js",
     "slug": "nextjs",
     "demo": "https://nextjs.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg",
-    "tagline": "Next.js makes you productive with React instantly — whether you want to build static or dynamic sites. ",
+    "tagline": "Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.",
     "description": "A Next.js app and a Serverless Function API.",
     "website": "https://nextjs.org",
+    "sort": 1,
     "detectors": {
       "every": [
         {
@@ -35,6 +64,7 @@
     "tagline": "Gatsby helps developers build blazing fast websites and apps with React.",
     "description": "A Gatsby app, using the default starter theme and a Serverless Function API.",
     "website": "https://gatsbyjs.org",
+    "sort": 2,
     "detectors": {
       "every": [
         {
@@ -62,7 +92,8 @@
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hexo.svg",
     "tagline": "Hexo is a fast, simple & powerful blog framework powered by Node.js.",
     "description": "A Hexo site, created with the Hexo CLI.",
-    "website": "https://hexo.io/",
+    "website": "https://hexo.io",
+    "sort": 3,
     "detectors": {
       "every": [
         {
@@ -90,7 +121,8 @@
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/eleventy.svg",
     "tagline": "11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.",
     "description": "An Eleventy site, created with npm init.",
-    "website": "https://www.11ty.dev/",
+    "website": "https://www.11ty.dev",
+    "sort": 4,
     "detectors": {
       "every": [
         {
@@ -634,7 +666,7 @@
       "every": [
         {
           "path": "package.json",
-          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"nuxt\":\\s*\".+?\"[^}]*}"
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"nuxt(-edge)?\":\\s*\".+?\"[^}]*}"
         }
       ]
     },
@@ -651,6 +683,34 @@
     }
   },
   {
+    "name": "RedwoodJS",
+    "slug": "redwoodjs",
+    "demo": "https://redwoodjs.now-examples.now.sh",
+    "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/redwoodjs.svg",
+    "tagline": "RedwoodJS is a full-stack framework for the Jamstack.",
+    "description": "A RedwoodJS app, bootstraped with create-redwood-app.",
+    "website": "https://redwoodjs.com",
+    "detectors": {
+      "every": [
+        {
+          "path": "package.json",
+          "matchContent": "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"@redwoodjs\\/core\":\\s*\".+?\"[^}]*}"
+        }
+      ]
+    },
+    "settings": {
+      "buildCommand": {
+        "value": "yarn rw db up --no-db-client --auto-approve && yarn rw build"
+      },
+      "devCommand": {
+        "value": "yarn rw dev --fwd=\"--port=$PORT --open=false\""
+      },
+      "outputDirectory": {
+        "value": "RedwoodJS default"
+      }
+    }
+  },
+  {
     "name": "Hugo",
     "slug": "hugo",
     "demo": "https://hugo.now-examples.now.sh",
@@ -658,6 +718,7 @@
     "tagline": "Hugo is the world’s fastest framework for building websites, written in Go.",
     "description": "A Hugo site, created with the Hugo CLI.",
     "website": "https://gohugo.io",
+    "sort": 5,
     "detectors": {
       "some": [
         {
@@ -771,7 +832,7 @@
     "description": "No framework or a unoptimized framework.",
     "settings": {
       "buildCommand": {
-        "placeholder": "`npm run now-build` or `npm run build`"
+        "placeholder": "`npm run vercel-build` or `npm run build`"
       },
       "devCommand": {
         "placeholder": "None"

@@ -1,16 +1,20 @@
 import ms from 'ms';
 import chalk from 'chalk';
-import table from 'text-table';
+import plural from 'pluralize';
 
+import wait from '../../util/output/wait';
 import Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
 import { Output } from '../../util/output';
+import formatTable from '../../util/format-table';
+import { formatDateWithoutTime } from '../../util/format-date';
 import { Domain, NowContext } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import isDomainExternal from '../../util/domains/is-domain-external';
+import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 
 type Options = {
   '--debug': boolean;
@@ -60,22 +64,29 @@ export default async function ls(
     return 1;
   }
 
-  const { domains, pagination } = await getDomains(
-    client,
-    contextName,
-    nextTimestamp
-  );
+  const cancelWait = wait(`Fetching domains under ${chalk.bold(contextName)}`);
+
+  const { domains, pagination } = await getDomains(client).finally(() => {
+    cancelWait();
+  });
+
   output.log(
-    `Domains found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}\n`
+    `${plural('Domain', domains.length, true)} found under ${chalk.bold(
+      contextName
+    )} ${chalk.gray(lsStamp())}`
   );
+
   if (domains.length > 0) {
-    console.log(`${formatDomainsTable(domains)}\n`);
+    output.print(
+      formatDomainsTable(domains).replace(/^(.*)/gm, `${' '.repeat(1)}$1`)
+    );
+    output.print('\n\n');
   }
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
-      `To display the next page run ${getCommandName(
+      `To display the next page, run ${getCommandName(
         `domains ls${flags} --next ${pagination.next}`
       )}`
     );
@@ -85,27 +96,25 @@ export default async function ls(
 }
 
 function formatDomainsTable(domains: Domain[]) {
-  const current = new Date();
-  return table(
-    [
-      [
-        '',
-        chalk.gray('domain'),
-        chalk.gray('serviceType'),
-        chalk.gray('verified'),
-        chalk.gray('cdn'),
-        chalk.gray('age'),
-      ].map(s => chalk.dim(s)),
-      ...domains.map(domain => {
-        const url = chalk.bold(domain.name);
-        const time = chalk.gray(ms(current.getTime() - domain.createdAt));
-        return ['', url, domain.serviceType, domain.verified, true, time];
-      }),
-    ],
-    {
-      align: ['l', 'l', 'l', 'l', 'l'],
-      hsep: ' '.repeat(4),
-      stringLength: strlen,
-    }
+  const current = Date.now();
+
+  const rows: string[][] = domains.map(domain => {
+    const expiration = formatDateWithoutTime(domain.expiresAt);
+    const age = domain.createdAt ? ms(current - domain.createdAt) : '-';
+
+    return [
+      domain.name,
+      getDomainRegistrar(domain),
+      isDomainExternal(domain) ? 'Third Party' : 'Vercel',
+      expiration,
+      domain.creator.username,
+      chalk.gray(age),
+    ];
+  });
+
+  return formatTable(
+    ['Domain', 'Registrar', 'Nameservers', 'Expiration', 'Creator', 'Age'],
+    ['l', 'l', 'l', 'l', 'l', 'l'],
+    [{ rows }]
   );
 }

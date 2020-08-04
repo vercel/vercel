@@ -3,7 +3,11 @@ import { devRouter } from '../src/util/dev/router';
 
 test('[dev-router] 301 redirection', async t => {
   const routesConfig = [
-    { src: '/redirect', status: 301, headers: { Location: 'https://vercel.com' } },
+    {
+      src: '/redirect',
+      status: 301,
+      headers: { Location: 'https://vercel.com' },
+    },
   ];
   const result = await devRouter('/redirect', 'GET', routesConfig);
 

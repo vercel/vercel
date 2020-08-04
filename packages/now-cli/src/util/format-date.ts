@@ -18,3 +18,18 @@ export default function formatDate(dateStrOrNumber?: number | string | null) {
         `[in ${ms(diff)}]`
       )}`;
 }
+
+export function formatDateWithoutTime(
+  dateStrOrNumber?: number | string | null
+) {
+  if (!dateStrOrNumber) {
+    return chalk.gray('-');
+  }
+
+  const date = new Date(dateStrOrNumber);
+  const diff = date.getTime() - Date.now();
+
+  return diff < 0
+    ? `${format(date, 'MMM DD YYYY')} ${chalk.gray(`[${ms(-diff)} ago]`)}`
+    : `${format(date, 'MMM DD YYYY')} ${chalk.gray(`[in ${ms(diff)}]`)}`;
+}

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/next",
-  "version": "2.6.8",
+  "version": "2.6.19-canary.0",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
@@ -26,7 +26,7 @@
     "@types/resolve-from": "5.0.1",
     "@types/semver": "6.0.0",
     "@types/yazl": "2.4.1",
-    "@zeit/node-file-trace": "0.6.5",
+    "@zeit/node-file-trace": "0.8.2",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",
     "escape-string-regexp": "3.0.0",
@@ -36,6 +36,7 @@
     "get-port": "5.0.0",
     "resolve-from": "5.0.0",
     "semver": "6.1.1",
+    "set-cookie-parser": "2.4.6",
     "typescript": "3.9.3",
     "yazl": "https://github.com/ijjk/yazl#70949c55b482647669ce37023017b1514c42b33c"
   }

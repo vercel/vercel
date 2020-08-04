@@ -3,11 +3,7 @@ import React from 'react';
 // eslint-disable-next-line camelcase
 export async function getStaticPaths() {
   return {
-    paths: [
-      '/blog/post-1',
-      { params: { post: 'post-2' } },
-      '/blog/post-123',
-    ],
+    paths: ['/blog/post-1', { params: { post: 'post-2' } }, '/blog/post-123'],
     fallback: true,
   };
 }
@@ -26,7 +22,7 @@ export async function getStaticProps({ params }) {
       random: Math.random(),
       time: (await import('perf_hooks')).performance.now(),
     },
-    unstable_revalidate: 1,
+    revalidate: 1,
   };
 }
 
@@ -35,9 +31,9 @@ export default ({ post, time, random }) => {
 
   return (
     <>
-      <p id='post'>Post: {post}</p>
-      <span id='time'>time: {time}</span>
-      <span id='random'>random: {random}</span>
+      <p id="post">Post: {post}</p>
+      <span id="time">time: {time}</span>
+      <span id="random">random: {random}</span>
     </>
   );
 };

@@ -354,7 +354,7 @@ export default async function main(
       path,
       sourcePath,
       project
-        ? `To change your project settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
+        ? `To change your Project Settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -669,7 +669,7 @@ export default async function main(
     }
 
     if (err instanceof BuildError) {
-      output.error('Build failed');
+      output.error(err.message || 'Build failed');
       output.error(
         `Check your logs at https://${now.url}/_logs or run ${getCommandName(
           `logs ${now.url}`,

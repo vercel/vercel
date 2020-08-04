@@ -117,7 +117,6 @@ export default class DevServer {
   public address: string;
   public devCacheDir: string;
 
-  private cachedNowConfig: NowConfig | null;
   private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
@@ -141,18 +140,21 @@ export default class DevServer {
   private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
   private updateBuildersTimeout: NodeJS.Timeout | undefined;
+  private startPromise: Promise<void> | null;
+
+  private environmentVars: Env | undefined;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
+    this.environmentVars = options.environmentVars;
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
     this.projectSettings = options.projectSettings;
     this.frameworkSlug = options.frameworkSlug;
-    this.cachedNowConfig = null;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -171,12 +173,13 @@ export default class DevServer {
     this.getNowConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.updateBuildersPromise = null;
+    this.startPromise = null;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
     this.watchAggregationTimeout = 500;
 
-    this.filter = (path) => Boolean(path);
+    this.filter = path => Boolean(path);
     this.podId = Math.random().toString(32).slice(-5);
 
     this.devServerPids = new Set();
@@ -215,8 +218,8 @@ export default class DevServer {
       }
     }
 
-    events = events.filter((event) =>
-      distPaths.every((distPath) => !event.path.startsWith(distPath))
+    events = events.filter(event =>
+      distPaths.every(distPath => !event.path.startsWith(distPath))
     );
 
     // First, update the `files` mapping of source files
@@ -230,15 +233,7 @@ export default class DevServer {
       }
     }
 
-    const nowConfig = await this.getNowConfig(false);
-
-    // Update the env vars configuration
-    const [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfig.build?.env),
-    ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    const nowConfig = await this.getNowConfig();
 
     // Update the build matches in case an entrypoint was created or deleted
     await this.updateBuildMatches(nowConfig);
@@ -380,7 +375,7 @@ export default class DevServer {
       this,
       fileList
     );
-    const sources = matches.map((m) => m.src);
+    const sources = matches.map(m => m.src);
 
     if (isInitial && fileList.length === 0) {
       this.output.warn('There are no files inside your deployment.');
@@ -489,13 +484,16 @@ export default class DevServer {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
+      env = this.populateVercelEnvVars(env);
     } catch (err) {
       if (err.code !== 'ENOENT') {
         throw err;
       }
     }
     try {
-      return this.validateEnvConfig(fileName, base || {}, env);
+      return {
+        ...this.validateEnvConfig(fileName, base || {}, env),
+      };
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
         this.output.error(err.message);
@@ -507,23 +505,24 @@ export default class DevServer {
     return {};
   }
 
-  async getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
+  clearNowConfigPromise = () => {
+    this.getNowConfigPromise = null;
+  };
+
+  getNowConfig(): Promise<NowConfig> {
     if (this.getNowConfigPromise) {
       return this.getNowConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig(canUseCache);
-    try {
-      return await this.getNowConfigPromise;
-    } finally {
-      this.getNowConfigPromise = null;
-    }
+    this.getNowConfigPromise = this._getNowConfig();
+
+    // Clean up the promise once it has resolved
+    const clear = this.clearNowConfigPromise;
+    this.getNowConfigPromise.finally(clear);
+
+    return this.getNowConfigPromise;
   }
 
-  async _getNowConfig(canUseCache: boolean = true): Promise<NowConfig> {
-    if (canUseCache && this.cachedNowConfig) {
-      return this.cachedNowConfig;
-    }
-
+  async _getNowConfig(): Promise<NowConfig> {
     const configPath = getNowConfigPath(this.cwd);
 
     const [
@@ -552,7 +551,7 @@ export default class DevServer {
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
       const opts = { output: this.output, isBuilds: true };
-      const files = (await getFiles(this.cwd, config, opts)).map((f) =>
+      const files = (await getFiles(this.cwd, config, opts)).map(f =>
         relative(this.cwd, f)
       );
 
@@ -579,7 +578,7 @@ export default class DevServer {
       }
 
       if (warnings && warnings.length > 0) {
-        warnings.forEach((warning) => this.output.warn(warning.message));
+        warnings.forEach(warning => this.output.warn(warning.message));
       }
 
       if (builders) {
@@ -624,10 +623,25 @@ export default class DevServer {
 
     await this.validateNowConfig(config);
 
-    this.cachedNowConfig = config;
     this.caseSensitive = hasNewRoutingProperties(config);
     this.apiDir = detectApiDirectory(config.builds || []);
     this.apiExtensions = detectApiExtensions(config.builds || []);
+
+    // Update the env vars configuration
+    let [runEnv, buildEnv] = await Promise.all([
+      this.getLocalEnv('.env', config.env),
+      this.getLocalEnv('.env.build', config.build?.env),
+    ]);
+
+    let allEnv = { ...buildEnv, ...runEnv };
+
+    // If no .env/.build.env is present, fetch and use cloud environment variables
+    if (Object.keys(allEnv).length === 0) {
+      const cloudEnv = this.populateVercelEnvVars(this.environmentVars);
+      allEnv = runEnv = buildEnv = cloudEnv;
+    }
+
+    this.envConfigs = { buildEnv, runEnv, allEnv };
     return config;
   }
 
@@ -732,6 +746,26 @@ export default class DevServer {
     return merged;
   }
 
+  populateVercelEnvVars(env: Env | undefined): Env {
+    if (!env) {
+      return {};
+    }
+
+    for (const name of Object.keys(env)) {
+      if (name === 'VERCEL_URL') {
+        const host = new URL(this.address).host;
+        env['VERCEL_URL'] = host;
+      } else if (name === 'VERCEL_REGION') {
+        env['VERCEL_REGION'] = 'dev1';
+      }
+    }
+
+    // Always set NOW_REGION to match production
+    env['NOW_REGION'] = 'dev1';
+
+    return env;
+  }
+
   /**
    * Create an array of from builder inputs
    * and filter them
@@ -740,10 +774,20 @@ export default class DevServer {
     return Object.keys(files).filter(this.filter);
   }
 
+  start(...listenSpec: ListenSpec): Promise<void> {
+    if (!this.startPromise) {
+      this.startPromise = this._start(...listenSpec).catch(err => {
+        this.stop();
+        throw err;
+      });
+    }
+    return this.startPromise;
+  }
+
   /**
    * Launches the `vercel dev` server.
    */
-  async start(...listenSpec: ListenSpec): Promise<void> {
+  async _start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
       throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
@@ -755,14 +799,39 @@ export default class DevServer {
     const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
-    // Retrieve the path of the native module
-    const nowConfig = await this.getNowConfig(false);
-    const [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', nowConfig.env),
-      this.getLocalEnv('.env.build', nowConfig.build?.env),
-    ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
+    let address: string | null = null;
+    while (typeof address !== 'string') {
+      try {
+        address = await listen(this.server, ...listenSpec);
+      } catch (err) {
+        this.output.debug(`Got listen error: ${err.code}`);
+        if (err.code === 'EADDRINUSE') {
+          if (typeof listenSpec[0] === 'number') {
+            // Increase port and try again
+            this.output.note(
+              `Requested port ${chalk.yellow(
+                String(listenSpec[0])
+              )} is already in use`
+            );
+            listenSpec[0]++;
+          } else {
+            this.output.error(
+              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
+            );
+            process.exit(1);
+          }
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    this.address = address
+      .replace('[::]', 'localhost')
+      .replace('127.0.0.1', 'localhost');
+
+    const nowConfig = await this.getNowConfig();
+    const devCommandPromise = this.runDevCommand();
 
     const opts = { output: this.output, isBuilds: true };
     const files = await getFiles(this.cwd, nowConfig, opts);
@@ -790,11 +859,11 @@ export default class DevServer {
     // get their "build matches" invalidated so that the new version is used.
     this.updateBuildersTimeout = setTimeout(() => {
       this.updateBuildersPromise = updateBuilders(builders, this.output)
-        .then((updatedBuilders) => {
+        .then(updatedBuilders => {
           this.updateBuildersPromise = null;
           this.invalidateBuildMatches(nowConfig, updatedBuilders);
         })
-        .catch((err) => {
+        .catch(err => {
           this.updateBuildersPromise = null;
           this.output.error(`Failed to update builders: ${err.message}`);
           this.output.debug(err.stack);
@@ -853,39 +922,6 @@ export default class DevServer {
       this.output.debug(`Detected upgrade event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
-
-    const devCommandPromise = this.runDevCommand();
-
-    let address: string | null = null;
-    while (typeof address !== 'string') {
-      try {
-        address = await listen(this.server, ...listenSpec);
-      } catch (err) {
-        this.output.debug(`Got listen error: ${err.code}`);
-        if (err.code === 'EADDRINUSE') {
-          if (typeof listenSpec[0] === 'number') {
-            // Increase port and try again
-            this.output.note(
-              `Requested port ${chalk.yellow(
-                String(listenSpec[0])
-              )} is already in use`
-            );
-            listenSpec[0]++;
-          } else {
-            this.output.error(
-              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
-            );
-            process.exit(1);
-          }
-        } else {
-          throw err;
-        }
-      }
-    }
-
-    this.address = address
-      .replace('[::]', 'localhost')
-      .replace('127.0.0.1', 'localhost');
 
     await devCommandPromise;
 
@@ -1095,10 +1131,7 @@ export default class DevServer {
     const allHeaders = {
       'cache-control': 'public, max-age=0, must-revalidate',
       ...headers,
-      server: 'now',
-      'x-now-trace': 'dev1',
-      'x-now-id': nowRequestId,
-      'x-now-cache': 'MISS',
+      server: 'Vercel',
       'x-vercel-id': nowRequestId,
       'x-vercel-cache': 'MISS',
     };
@@ -1112,23 +1145,24 @@ export default class DevServer {
    */
   getNowProxyHeaders(
     req: http.IncomingMessage,
-    nowRequestId: string
+    nowRequestId: string,
+    xfwd: boolean
   ): http.IncomingHttpHeaders {
     const ip = this.getRequestIp(req);
     const { host } = req.headers;
-    return {
-      ...req.headers,
-      Connection: 'close',
-      'x-forwarded-host': host,
-      'x-forwarded-proto': 'http',
-      'x-forwarded-for': ip,
+    const headers: http.IncomingHttpHeaders = {
+      connection: 'close',
       'x-real-ip': ip,
-      'x-now-trace': 'dev1',
-      'x-now-deployment-url': host,
-      'x-now-id': nowRequestId,
-      'x-now-log-id': nowRequestId.split('-')[2],
-      'x-zeit-co-forwarded-for': ip,
+      'x-vercel-deployment-url': host,
+      'x-vercel-forwarded-for': ip,
+      'x-vercel-id': nowRequestId,
     };
+    if (xfwd) {
+      headers['x-forwarded-host'] = host;
+      headers['x-forwarded-proto'] = 'http';
+      headers['x-forwarded-for'] = ip;
+    }
+    return headers;
   }
 
   async triggerBuild(
@@ -1210,6 +1244,8 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
+    await this.startPromise;
+
     let nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
@@ -1476,9 +1512,9 @@ export default class DevServer {
     const { dest, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
-    Object.entries(headers).forEach(([name, value]) => {
+    for (const [name, value] of Object.entries(headers)) {
       res.setHeader(name, value);
-    });
+    }
 
     if (statusCode) {
       // Set the `statusCode` as read-only so that `http-proxy`
@@ -1501,6 +1537,13 @@ export default class DevServer {
       if (this.devProcessPort) {
         const upstream = `http://localhost:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
+
+        // Add the Vercel platform proxy request headers
+        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+        for (const [name, value] of Object.entries(headers)) {
+          req.headers[name] = value;
+        }
+
         this.setResponseHeaders(res, nowRequestId);
         const origUrl = url.parse(req.url || '/', true);
         delete origUrl.search;
@@ -1535,6 +1578,13 @@ export default class DevServer {
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
+      for (const r of buildResult.routes) {
+        // This replace is necessary for `@vercel/redwood` but might be relevant
+        // for builders that wish to return routes and work with zero config.
+        if (r.dest) {
+          r.dest = r.dest.replace(/\$PORT/g, `${this.devProcessPort}`);
+        }
+      }
       const matchedRoute = await devRouter(
         newUrl,
         req.method,
@@ -1620,6 +1670,12 @@ export default class DevServer {
           query: parsed.query,
         });
 
+        // Add the Vercel platform proxy request headers
+        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+        for (const [name, value] of Object.entries(headers)) {
+          req.headers[name] = value;
+        }
+
         this.setResponseHeaders(res, nowRequestId);
         return proxyPass(
           req,
@@ -1650,6 +1706,13 @@ export default class DevServer {
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
+
+      // Add the Vercel platform proxy request headers
+      const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+      for (const [name, value] of Object.entries(headers)) {
+        req.headers[name] = value;
+      }
+
       this.setResponseHeaders(res, nowRequestId);
       return proxyPass(
         req,
@@ -1732,7 +1795,10 @@ export default class DevServer {
           method: req.method || 'GET',
           host: req.headers.host,
           path,
-          headers: this.getNowProxyHeaders(req, nowRequestId),
+          headers: {
+            ...req.headers,
+            ...this.getNowProxyHeaders(req, nowRequestId, true),
+          },
           encoding: 'base64',
           body: body.toString('base64'),
         };
@@ -1789,7 +1855,7 @@ export default class DevServer {
 
     const dirs: Set<string> = new Set();
     const files = Array.from(this.buildMatches.keys())
-      .filter((p) => {
+      .filter(p => {
         const base = basename(p);
         if (
           base === 'now.json' ||
@@ -1810,7 +1876,7 @@ export default class DevServer {
         }
         return true;
       })
-      .map((p) => {
+      .map(p => {
         let base = basename(p);
         let ext = '';
         let type = 'file';
@@ -1902,8 +1968,6 @@ export default class DevServer {
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
       ...this.envConfigs.allEnv,
-      NOW_REGION: 'dev1',
-      VERCEL_REGION: 'dev1',
       PORT: `${port}`,
     };
 
@@ -2222,7 +2286,7 @@ function isIndex(path: string): boolean {
 
 function minimatches(files: string[], pattern: string): boolean {
   return files.some(
-    (file) => file === pattern || minimatch(file, pattern, { dot: true })
+    file => file === pattern || minimatch(file, pattern, { dot: true })
   );
 }
 
@@ -2252,7 +2316,7 @@ function needsBlockingBuild(buildMatch: BuildMatch): boolean {
 }
 
 async function sleep(n: number) {
-  return new Promise((resolve) => setTimeout(resolve, n));
+  return new Promise(resolve => setTimeout(resolve, n));
 }
 
 async function checkForPort(

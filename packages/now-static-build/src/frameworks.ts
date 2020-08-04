@@ -516,13 +516,34 @@ const frameworkList: Framework[] = [
     dependency: 'nuxt',
     buildCommand: 'nuxt generate',
     getOutputDirName: async () => 'dist',
+    cachePattern: '.nuxt/**',
+    defaultRoutes: [
+      {
+        src: '/sw.js',
+        headers: { 'cache-control': 'no-cache' },
+        continue: true,
+      },
+      {
+        src: '/_nuxt/(.*)',
+        headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/200.html',
+      },
+    ],
   },
   {
     name: 'Hugo',
     slug: 'hugo',
     buildCommand: 'hugo -D --gc',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      const config = await readConfigFile(
+      type HugoConfig = { publishDir?: string };
+      const config = await readConfigFile<HugoConfig>(
         ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
           return join(dirPrefix, fileName);
         })
@@ -536,7 +557,10 @@ const frameworkList: Framework[] = [
     slug: 'jekyll',
     buildCommand: 'jekyll build',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      const config = await readConfigFile(join(dirPrefix, '_config.yml'));
+      type JekyllConfig = { destination?: string };
+      const config = await readConfigFile<JekyllConfig>(
+        join(dirPrefix, '_config.yml')
+      );
       return (config && config.destination) || '_site';
     },
   },
