@@ -72,6 +72,17 @@
     "@vercel/static-build": "0.17.7-canary.1",
     "update-notifier": "4.1.0"
   },
+  "bundledDependencies": [
+    "@vercel/build-utils",
+    "@vercel/go",
+    "@vercel/next",
+    "@vercel/node",
+    "@vercel/python",
+    "@vercel/redwood",
+    "@vercel/ruby",
+    "@vercel/static-build",
+    "update-notifier"
+  ],
   "devDependencies": {
     "@sentry/node": "5.5.0",
     "@sindresorhus/slugify": "0.11.0",
