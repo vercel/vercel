@@ -35,7 +35,7 @@ const {
 import { Route, Source } from '@vercel/routing-utils';
 import { getVercelIgnore } from '@vercel/client';
 
-const sleep = (n: number) => new Promise((resolve) => setTimeout(resolve, n));
+const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
 const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
 
@@ -145,7 +145,7 @@ export const version = 2;
 const nowDevScriptPorts = new Map<string, number>();
 const nowDevChildProcesses = new Set<ChildProcess>();
 
-['SIGINT', 'SIGTERM'].forEach((signal) => {
+['SIGINT', 'SIGTERM'].forEach(signal => {
   process.once(signal as NodeJS.Signals, () => {
     for (const child of nowDevChildProcesses) {
       debug(
@@ -445,9 +445,8 @@ export async function build({
 
       if (!found) {
         throw new Error(
-          `Missing required "${
-            buildCommand || buildScript
-          }" script in "${entrypoint}"`
+          `Missing required "${buildCommand ||
+            buildScript}" script in "${entrypoint}"`
         );
       }
 
@@ -486,7 +485,7 @@ export async function build({
       if (config.zeroConfig) {
         const result = await getVercelIgnore(distPath);
         ignore = result.ignores
-          .map((file) => (file.endsWith('/') ? `${file}**` : file))
+          .map(file => (file.endsWith('/') ? `${file}**` : file))
           .concat([
             '.env',
             '.env.*',
