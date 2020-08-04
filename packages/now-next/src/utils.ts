@@ -1,15 +1,15 @@
-import zlib from 'zlib';
-import path from 'path';
+import { FileFsRef, Files } from '@vercel/build-utils';
+import { NowHeader, NowRewrite, Route, Source } from '@vercel/routing-utils';
+import { Sema } from 'async-sema';
+import crc32 from 'buffer-crc32';
 import fs from 'fs-extra';
+import path from 'path';
+import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import { ZipFile } from 'yazl';
-import crc32 from 'buffer-crc32';
-import { Sema } from 'async-sema';
-import resolveFrom from 'resolve-from';
+import zlib from 'zlib';
 import buildUtils from './build-utils';
 const { streamToBuffer, Lambda, NowBuildError, isSymbolicLink } = buildUtils;
-import { Files, FileFsRef } from '@vercel/build-utils';
-import { Route, Source, NowHeader, NowRewrite } from '@vercel/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -198,7 +198,7 @@ async function getRoutes(
   // If default pages dir isn't found check for `src/pages`
   if (
     !pagesDir &&
-    fileKeys.some((file) =>
+    fileKeys.some(file =>
       file.startsWith(path.join(entryDirectory, 'src/pages'))
     )
   ) {
@@ -260,7 +260,7 @@ async function getRoutes(
       entryDirectory,
       dynamicPages,
       true
-    ).then((arr) =>
+    ).then(arr =>
       arr.map((route: Source) => {
         // convert to make entire RegExp match as one group
         route.src = route.src
@@ -287,7 +287,7 @@ async function getRoutes(
     };
 
     // Only add the route if a page is not already using it
-    if (!routes.some((r) => (r as Source).src === route.src)) {
+    if (!routes.some(r => (r as Source).src === route.src)) {
       routes.push(route);
     }
   }
@@ -420,7 +420,7 @@ export async function getDynamicRoutes(
               dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
                 routeKeys
                   ? `?${Object.keys(routeKeys)
-                      .map((key) => `${routeKeys[key]}=$${key}`)
+                      .map(key => `${routeKeys[key]}=$${key}`)
                       .join('&')}`
                   : ''
               }`,
@@ -479,13 +479,13 @@ export async function getDynamicRoutes(
     });
   }
 
-  const pageMatchers = getSortedRoutes(dynamicPages).map((pageName) => ({
+  const pageMatchers = getSortedRoutes(dynamicPages).map(pageName => ({
     pageName,
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
   const routes: Source[] = [];
-  pageMatchers.forEach((pageMatcher) => {
+  pageMatchers.forEach(pageMatcher => {
     // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
       ? path.join('/', entryDirectory, pageMatcher.pageName)
@@ -862,7 +862,7 @@ export async function getPrerenderManifest(
         omittedRoutes: [],
       };
 
-      routes.forEach((route) => {
+      routes.forEach(route => {
         const {
           initialRevalidateSeconds,
           dataRoute,
@@ -878,7 +878,7 @@ export async function getPrerenderManifest(
         };
       });
 
-      lazyRoutes.forEach((lazyRoute) => {
+      lazyRoutes.forEach(lazyRoute => {
         const {
           routeRegex,
           fallback,
@@ -916,7 +916,7 @@ export async function getPrerenderManifest(
         omittedRoutes: [],
       };
 
-      routes.forEach((route) => {
+      routes.forEach(route => {
         const {
           initialRevalidateSeconds,
           dataRoute,
@@ -932,7 +932,7 @@ export async function getPrerenderManifest(
         };
       });
 
-      lazyRoutes.forEach((lazyRoute) => {
+      lazyRoutes.forEach(lazyRoute => {
         const {
           routeRegex,
           fallback,
