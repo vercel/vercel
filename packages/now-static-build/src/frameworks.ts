@@ -130,6 +130,11 @@ const frameworkList: Framework[] = [
         continue: true,
       },
       {
+        src: '^/assets/(images|medias|files)/.*',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
         handle: 'filesystem',
       },
       {
