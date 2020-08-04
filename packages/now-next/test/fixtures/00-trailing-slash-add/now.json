@@ -33,6 +33,48 @@
       "path": "/test.txt",
       "status": 200,
       "mustContain": "this is a file"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/blog/post-1",
+      "status": 308,
+      "responseHeaders": {
+        "refresh": "/url=/blog/post-1/$/"
+      }
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/blog/post-1/",
+      "status": 200,
+      "mustContain": "post: <!-- -->post-1"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/_next/data/testing-build-id/blog/post-1.json/",
+      "status": 308,
+      "responseHeaders": {
+        "refresh": "/url=/_next/data/testing-build-id/blog/post-1.json$/"
+      }
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/_next/data/testing-build-id/blog/post-1.json",
+      "status": 200,
+      "mustContain": "\"post-1\""
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/api/hello",
+      "status": 308,
+      "responseHeaders": {
+        "refresh": "/url=/api/hello/$/"
+      }
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/api/hello/",
+      "status": 200,
+      "mustContain": "hello from API"
     }
   ]
 }
