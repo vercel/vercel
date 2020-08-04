@@ -2701,7 +2701,7 @@ test('should show prompts to set up project during first deploy', async t => {
   // Ensure .gitignore is created
   t.is(
     (await readFile(path.join(directory, '.gitignore'))).toString(),
-    '.vercel'
+    '.vercel\n'
   );
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
@@ -3321,7 +3321,7 @@ test('[vc link] should show prompts to set up project', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3355,7 +3355,7 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
   t.regex(stderr, /Linked to /m);
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3439,7 +3439,7 @@ test('[vc dev] should show prompts to set up project', async t => {
   await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3505,7 +3505,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   t.is(output.exitCode, 0, formatOutput(output));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
