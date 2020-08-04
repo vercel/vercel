@@ -7,7 +7,7 @@ import * as ERRORS from '../../util/errors-ts';
 import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
-import getCertsForDomain from '../../util/certs/get-certs-for-domain';
+import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -66,9 +66,17 @@ async function rm(
   }
 
   if (certs.length === 0) {
-    output.error(
-      `No certificates found by id "${id}" under ${chalk.bold(contextName)}`
-    );
+    if (id.includes('.')) {
+      output.error(
+        `No custom certificates found for "${id}" under ${chalk.bold(
+          contextName
+        )}`
+      );
+    } else {
+      output.error(
+        `No certificates found by id "${id}" under ${chalk.bold(contextName)}`
+      );
+    }
     return 1;
   }
 
@@ -101,7 +109,7 @@ async function getCertsToDelete(
 ) {
   const cert = await getCertById(client, id);
   if (cert instanceof ERRORS.CertNotFound) {
-    const certs = await getCertsForDomain(output, client, contextName, id);
+    const certs = await getCustomCertsForDomain(client, contextName, id);
     if (certs instanceof ERRORS.CertsPermissionDenied) {
       return certs;
     }
