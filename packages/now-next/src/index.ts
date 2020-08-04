@@ -235,7 +235,7 @@ export const build = async ({
 
   await download(files, workPath, meta);
 
-  const pkg = await readPackageJson(entryPath);
+  let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -331,17 +331,17 @@ export const build = async ({
     ]);
 
     debug('Normalizing package.json');
-    const packageJson = normalizePackageJson(pkg);
-    debug('Normalized package.json result: ', packageJson);
-    await writePackageJson(entryPath, packageJson);
+    pkg = normalizePackageJson(pkg);
+    debug('Normalized package.json result: ', pkg);
+    await writePackageJson(entryPath, pkg);
   }
 
-  const buildScriptName = getScriptName(pkg, [
+  let buildScriptName = getScriptName(pkg, [
     'vercel-build',
     'now-build',
     'build',
   ]);
-  let { buildCommand } = config;
+  const { buildCommand } = config;
 
   if (!buildScriptName && !buildCommand) {
     console.log(
@@ -349,7 +349,15 @@ export const build = async ({
         'If you need to define a different build step, please create a `vercel-build` script in your `package.json` ' +
         '(e.g. `{ "scripts": { "vercel-build": "npm run prepare && next build" } }`).'
     );
-    buildCommand = 'next build';
+
+    await writePackageJson(entryPath, {
+      ...pkg,
+      scripts: {
+        'vercel-build': 'next build',
+        ...pkg.scripts,
+      },
+    });
+    buildScriptName = 'vercel-build';
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
@@ -880,7 +888,13 @@ export const build = async ({
         !prerenderManifest.fallbackRoutes[route] &&
         !prerenderManifest.legacyBlockingRoutes[route]
       ) {
-        nonLambdaSsgPages.add(route);
+        // if the 404 page used getStaticProps we need to update static404Page
+        // since it wasn't populated from the staticPages group
+        if (route === '/404') {
+          static404Page = path.join(entryDirectory, '404');
+        }
+
+        nonLambdaSsgPages.add(route === '/' ? '/index' : route);
       }
     };
 
@@ -1117,7 +1131,7 @@ export const build = async ({
           src: `^${escapeStringRegexp(outputName).replace(
             /\/index$/,
             '(/|/index|)'
-          )}$`,
+          )}/?$`,
           dest: `${path.join('/', currentLambdaGroup.lambdaIdentifier)}`,
           headers: {
             'x-nextjs-page': outputName,
@@ -1297,7 +1311,7 @@ export const build = async ({
                   if (!toRender) {
                     try {
                       const { pathname } = url.parse(req.url)
-                      toRender = pathname
+                      toRender = pathname.replace(/\\/$/, '')
                     } catch (_) {
                       // handle failing to parse url
                       res.statusCode = 400

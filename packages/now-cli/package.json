@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "20.0.0-canary.5",
+  "version": "20.0.0-canary.12",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -64,10 +64,10 @@
   "dependencies": {
     "@vercel/build-utils": "2.4.3-canary.2",
     "@vercel/go": "1.1.5-canary.0",
-    "@vercel/next": "2.6.14-canary.2",
-    "@vercel/node": "1.7.4-canary.1",
+    "@vercel/next": "2.6.19-canary.0",
+    "@vercel/node": "1.7.5-canary.1",
     "@vercel/python": "1.2.2",
-    "@vercel/redwood": "0.0.2-canary.1",
+    "@vercel/redwood": "0.0.2-canary.3",
     "@vercel/ruby": "1.2.3",
     "@vercel/static-build": "0.17.7-canary.1",
     "update-notifier": "4.1.0"

@@ -1578,6 +1578,13 @@ export default class DevServer {
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
+      for (const r of buildResult.routes) {
+        // This replace is necessary for `@vercel/redwood` but might be relevant
+        // for builders that wish to return routes and work with zero config.
+        if (r.dest) {
+          r.dest = r.dest.replace(/\$PORT/g, `${this.devProcessPort}`);
+        }
+      }
       const matchedRoute = await devRouter(
         newUrl,
         req.method,

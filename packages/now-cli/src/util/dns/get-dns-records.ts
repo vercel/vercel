@@ -4,6 +4,8 @@ import { Output } from '../output';
 import Client from '../client';
 import getDomainDNSRecords from './get-domain-dns-records';
 import getDomains from '../domains/get-domains';
+import wait from '../output/wait';
+import chalk from 'chalk';
 
 export type DomainRecordsItem = {
   domainName: string;
@@ -58,6 +60,11 @@ async function getDomainNames(
   contextName: string,
   next?: number
 ) {
-  const { domains, pagination } = await getDomains(client, contextName, next);
-  return { domainNames: domains.map(domain => domain.name), pagination };
+  const cancelWait = wait(`Fetching domains under ${chalk.bold(contextName)}`);
+  try {
+    const { domains, pagination } = await getDomains(client, next);
+    return { domainNames: domains.map(domain => domain.name), pagination };
+  } finally {
+    cancelWait();
+  }
 }

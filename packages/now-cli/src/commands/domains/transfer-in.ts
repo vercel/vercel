@@ -71,8 +71,8 @@ export default async function transferIn(
     checkTransfer(client, domainName),
   ]);
 
-  if (domainPrice instanceof ERRORS.UnsupportedTLD) {
-    output.error(`The TLD for ${param(domainName)} is not supported.`);
+  if (domainPrice instanceof Error) {
+    output.prettyError(domainPrice);
     return 1;
   }
 
