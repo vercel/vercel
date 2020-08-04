@@ -68,7 +68,9 @@ export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
   constructor() {
     super({
       code: `NOT_AUTHORIZED`,
-      message: `The specified token is not valid`,
+      message: `The specified token is not valid. Use ${getCommandName(
+        `login`
+      )} to generate a new token.`,
       meta: {},
     });
   }
