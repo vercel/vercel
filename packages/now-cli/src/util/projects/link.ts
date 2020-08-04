@@ -249,7 +249,7 @@ export async function linkFolderToProject(
     if (!gitIgnore || !gitIgnore.split(EOL).includes(VERCEL_DIR)) {
       await writeFile(
         gitIgnorePath,
-        gitIgnore ? `${gitIgnore}${EOL}${VERCEL_DIR}` : VERCEL_DIR
+        gitIgnore ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}` : `${VERCEL_DIR}${EOL}`
       );
       isGitIgnoreUpdated = true;
     }
