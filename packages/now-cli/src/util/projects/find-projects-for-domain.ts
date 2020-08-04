@@ -1,6 +1,4 @@
-import chalk from 'chalk';
 import Client from '../client';
-import wait from '../output/wait';
 import { Project } from '../../types';
 import { URLSearchParams } from 'url';
 
@@ -8,9 +6,6 @@ export async function findProjectsForDomain(
   client: Client,
   domainName: string
 ): Promise<Project[] | Error> {
-  const cancelWait = wait(
-    `Searching project for domain ${chalk.bold(domainName)}`
-  );
   try {
     const limit = 50;
     let result: Project[] = [];
@@ -30,7 +25,7 @@ export async function findProjectsForDomain(
       }
 
       const [latest] = response.sort((a, b) => b.updatedAt - a.updatedAt);
-      query.append('from', latest.updatedAt.toString());
+      query.set('from', latest.updatedAt.toString());
     }
 
     return result;
@@ -40,7 +35,5 @@ export async function findProjectsForDomain(
     }
 
     throw err;
-  } finally {
-    cancelWait();
   }
 }

@@ -128,7 +128,7 @@ export default async function add(
     return 1;
   }
 
-  const domainConfig = await getDomainConfig(client, contextName, domainName);
+  const domainConfig = await getDomainConfig(client, domainName);
 
   if (domainConfig.misconfigured) {
     output.warn(
@@ -142,7 +142,7 @@ export default async function add(
     );
     output.print(
       `  ${chalk.grey('b)')} ` +
-        `Change your domain nameservers to the intended set`
+        `Change your Domains's nameservers to the intended set`
     );
     output.print(
       `\n${formatNSTable(
