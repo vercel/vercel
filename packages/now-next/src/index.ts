@@ -1,20 +1,3 @@
-import buildUtils from './build-utils';
-import url from 'url';
-const {
-  createLambda,
-  debug,
-  download,
-  getLambdaOptionsFromFunction,
-  getNodeVersion,
-  getSpawnOptions,
-  getScriptName,
-  glob,
-  runNpmInstall,
-  runPackageJsonScript,
-  execCommand,
-  getNodeBinPath,
-} = buildUtils;
-
 import {
   BuildOptions,
   Config,
@@ -34,13 +17,17 @@ import {
   convertRewrites,
 } from '@vercel/routing-utils/dist/superstatic';
 import { nodeFileTrace, NodeFileTraceReasons } from '@zeit/node-file-trace';
+import { Sema } from 'async-sema';
 import { ChildProcess, fork } from 'child_process';
 import escapeStringRegexp from 'escape-string-regexp';
+import findUp from 'find-up';
 import { lstat, pathExists, readFile, remove, writeFile } from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
+import url from 'url';
+import buildUtils from './build-utils';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import {
@@ -66,8 +53,20 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
-import findUp from 'find-up';
-import { Sema } from 'async-sema';
+const {
+  createLambda,
+  debug,
+  download,
+  getLambdaOptionsFromFunction,
+  getNodeVersion,
+  getSpawnOptions,
+  getScriptName,
+  glob,
+  runNpmInstall,
+  runPackageJsonScript,
+  execCommand,
+  getNodeBinPath,
+} = buildUtils;
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
