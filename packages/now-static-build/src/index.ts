@@ -483,7 +483,7 @@ export async function build({
       }
 
       let ignore: string[] = [];
-      if (config.zeroConfig) {
+      if (config.zeroConfig && config.outputDirectory === '.') {
         ignore = [
           '.env',
           '.env.*',
