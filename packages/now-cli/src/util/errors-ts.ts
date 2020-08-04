@@ -4,6 +4,7 @@ import { NowBuildError } from '@vercel/build-utils';
 import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
+import chalk from 'chalk';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -185,11 +186,13 @@ export class DomainNotFound extends NowError<
   'DOMAIN_NOT_FOUND',
   { domain: string }
 > {
-  constructor(domain: string) {
+  constructor(domain: string, contextName?: string) {
     super({
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
-      message: `The domain ${domain} can't be found.`,
+      message: `Domain not found by "${domain}"${
+        contextName ? ` under ${chalk.bold(contextName)}` : ''
+      }.`,
     });
   }
 }

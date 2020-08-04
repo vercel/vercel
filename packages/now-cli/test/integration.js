@@ -2621,39 +2621,6 @@ test('assign a domain to a project', async t => {
   t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
 });
 
-test('list project domains', async t => {
-  const domain = `project-domain.${contextName}.now.sh`;
-  const directory = fixture('static-deployment');
-
-  const deploymentOutput = await execute([directory, '--public', '--confirm']);
-  t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
-
-  const host = deploymentOutput.stdout.trim().replace('https://', '');
-  const deployment = await apiFetch(
-    `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
-
-  t.is(typeof deployment.name, 'string', JSON.stringify(deployment, null, 2));
-  const project = deployment.name;
-
-  const addOutput = await execute([
-    'domains',
-    'add',
-    domain,
-    project,
-    '--force',
-  ]);
-  t.is(addOutput.exitCode, 0, formatOutput(addOutput));
-
-  const output = await execute(['domains', 'ls']);
-  t.is(output.exitCode, 0, formatOutput(output));
-  t.regex(output.stderr, new RegExp(domain), formatOutput(output));
-  t.regex(output.stderr, new RegExp(project), formatOutput(output));
-
-  const removeResponse = await execute(['rm', project, '-y']);
-  t.is(removeResponse.exitCode, 0, formatOutput(removeResponse));
-});
-
 test('ensure `github` and `scope` are not sent to the API', async t => {
   const directory = fixture('github-and-scope-config');
   const output = await execute([directory, '--confirm']);
@@ -2734,7 +2701,7 @@ test('should show prompts to set up project during first deploy', async t => {
   // Ensure .gitignore is created
   t.is(
     (await readFile(path.join(directory, '.gitignore'))).toString(),
-    '.vercel'
+    '.vercel\n'
   );
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
@@ -3354,7 +3321,7 @@ test('[vc link] should show prompts to set up project', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3388,7 +3355,7 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
   t.regex(stderr, /Linked to /m);
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3472,7 +3439,7 @@ test('[vc dev] should show prompts to set up project', async t => {
   await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3538,7 +3505,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   t.is(output.exitCode, 0, formatOutput(output));
 
   // Ensure .gitignore is created
-  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel');
+  t.is((await readFile(path.join(dir, '.gitignore'))).toString(), '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
