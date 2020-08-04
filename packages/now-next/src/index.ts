@@ -1131,7 +1131,7 @@ export const build = async ({
           src: `^${escapeStringRegexp(outputName).replace(
             /\/index$/,
             '(/|/index|)'
-          )}$`,
+          )}/?$`,
           dest: `${path.join('/', currentLambdaGroup.lambdaIdentifier)}`,
           headers: {
             'x-nextjs-page': outputName,
@@ -1311,7 +1311,7 @@ export const build = async ({
                   if (!toRender) {
                     try {
                       const { pathname } = url.parse(req.url)
-                      toRender = pathname
+                      toRender = pathname.replace(/\\/$/, '')
                     } catch (_) {
                       // handle failing to parse url
                       res.statusCode = 400
