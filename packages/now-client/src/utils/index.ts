@@ -118,14 +118,14 @@ export async function getVercelIgnore(
   cwd: string | string[]
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ignores: string[] = [
-    '.hg/',
-    '.git/',
+    '.hg',
+    '.git',
     '.gitmodules',
-    '.svn/',
+    '.svn',
     '.cache',
-    '.next/',
-    '.now/',
-    '.vercel/',
+    '.next',
+    '.now',
+    '.vercel',
     '.npmignore',
     '.dockerignore',
     '.gitignore',
@@ -138,9 +138,9 @@ export async function getVercelIgnore(
     '.venv',
     'npm-debug.log',
     'config.gypi',
-    'node_modules/',
-    '__pycache__/',
-    'venv/',
+    'node_modules',
+    '__pycache__',
+    'venv',
     'CVS',
   ];
 

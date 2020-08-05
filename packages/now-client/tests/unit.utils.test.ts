@@ -27,7 +27,7 @@ describe('buildFileTree()', () => {
     const expectedIgnoreList = [
       'ignore.txt',
       'folder/ignore.txt',
-      'node_modules/ignore.txt',
+      'node_modules',
     ];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()

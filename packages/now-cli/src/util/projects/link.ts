@@ -244,11 +244,12 @@ export async function linkFolderToProject(
     const gitIgnore = await readFile(gitIgnorePath)
       .then(buf => buf.toString())
       .catch(() => null);
+    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : '\n';
 
-    if (!gitIgnore || !gitIgnore.split('\n').includes(VERCEL_DIR)) {
+    if (!gitIgnore || !gitIgnore.split(EOL).includes(VERCEL_DIR)) {
       await writeFile(
         gitIgnorePath,
-        gitIgnore ? `${gitIgnore}\n${VERCEL_DIR}` : VERCEL_DIR
+        gitIgnore ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}` : `${VERCEL_DIR}${EOL}`
       );
       isGitIgnoreUpdated = true;
     }

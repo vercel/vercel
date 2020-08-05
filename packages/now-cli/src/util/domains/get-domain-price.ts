@@ -19,6 +19,11 @@ export default async function getDomainPrice(
     if (error.code === 'unsupported_tld') {
       return new UnsupportedTLD(name);
     }
+
+    if (error.status < 500) {
+      return error;
+    }
+
     throw error;
   }
 }
