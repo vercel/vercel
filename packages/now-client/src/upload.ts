@@ -76,7 +76,8 @@ export async function* upload(
   const uploadList: { [key: string]: Promise<any> } = {};
   debug('Building an upload list...');
 
-  const semaphore = new Sema(700, { capacity: 700 });
+  const semaphore = new Sema(50, { capacity: 50 });
+  const agent = new Agent({ keepAlive: true });
 
   shas.map((sha: string): void => {
     uploadList[sha] = retry(
@@ -102,7 +103,7 @@ export async function* upload(
             API_FILES,
             token,
             {
-              agent: new Agent({ keepAlive: true }),
+              agent,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
