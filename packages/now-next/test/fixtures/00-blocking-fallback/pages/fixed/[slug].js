@@ -2,7 +2,7 @@ export default function TestPage(props) {
   return <pre>{JSON.stringify(props)}</pre>;
 }
 
-export default function getStaticProps({ params }) {
+export function getStaticProps({ params }) {
   return {
     props: {
       params,
@@ -12,6 +12,6 @@ export default function getStaticProps({ params }) {
   };
 }
 
-export default function getStaticPaths() {
+export function getStaticPaths() {
   return { paths: [], fallback: 'unstable_blocking' };
 }
