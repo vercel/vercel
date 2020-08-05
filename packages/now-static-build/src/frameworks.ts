@@ -140,7 +140,7 @@ const frameworkList: Framework[] = [
         continue: true,
       },
       {
-        src: '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
+        src: '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
         headers: { 'cache-control': 'max-age=31536000, immutable' },
         continue: true,
       },
