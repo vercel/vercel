@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/fixed/yellow",
+      "status": 200,
+      "mustContain": "yellow"
+    },
+    { "delay": 2000 },
+    {
+      "path": "/fixed/yellow",
+      "status": 200,
+      "responseHeaders": {
+        "x-vercel-cache": "HIT"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/fixed/yellow.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-vercel-cache": "HIT"
+      }
+    }
+  ]
+}
