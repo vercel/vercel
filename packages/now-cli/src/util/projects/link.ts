@@ -226,14 +226,12 @@ export async function linkFolderToProject(
 
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_PROJECT),
-    JSON.stringify(projectLink),
-    { encoding: 'utf8' }
+    JSON.stringify(projectLink)
   );
 
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_README),
-    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf-8'),
-    { encoding: 'utf-8' }
+    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
   );
 
   // update .gitignore
@@ -241,15 +239,15 @@ export async function linkFolderToProject(
   try {
     const gitIgnorePath = join(path, '.gitignore');
 
-    const gitIgnore = await readFile(gitIgnorePath)
-      .then(buf => buf.toString())
-      .catch(() => null);
-    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : '\n';
+    const gitIgnore = await readFile(gitIgnorePath, 'utf8').catch(() => null);
+    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
 
     if (!gitIgnore || !gitIgnore.split(EOL).includes(VERCEL_DIR)) {
       await writeFile(
         gitIgnorePath,
-        gitIgnore ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}` : `${VERCEL_DIR}${EOL}`
+        gitIgnore
+          ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}`
+          : `${VERCEL_DIR}${EOL}`
       );
       isGitIgnoreUpdated = true;
     }
