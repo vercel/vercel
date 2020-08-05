@@ -640,6 +640,11 @@ const main = async argv_ => {
       return 1;
     }
 
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      output.prettyError(err);
+      return 1;
+    }
+
     if (err instanceof APIError && 400 <= err.status && err.status <= 499) {
       err.message = err.serverMessage;
       output.prettyError(err);
