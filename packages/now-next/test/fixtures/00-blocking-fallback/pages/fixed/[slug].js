@@ -1,11 +1,17 @@
-export default function TestPage(props) {
-  return <pre>{JSON.stringify(props)}</pre>;
+export default function TestPage({ slug, time }) {
+  return (
+    <>
+      Slug: <div id="slug">{slug}</div>
+      <br />
+      Time: <div id="time">{time}</div>
+    </>
+  );
 }
 
 export function getStaticProps({ params }) {
   return {
     props: {
-      params,
+      slug: params.slug,
       time: new Date().getTime(),
     },
     revalidate: false,

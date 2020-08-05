@@ -26,6 +26,37 @@
       "responseHeaders": {
         "x-vercel-cache": "HIT"
       }
+    },
+    {
+      "path": "/fixed/yellow",
+      "status": 200,
+      "mustContain": "yellow"
+    },
+    {
+      "path": "/_next/data/testing-build-id/fixed/yellow.json",
+      "status": 200,
+      "mustContain": "yellow"
+    },
+
+    {
+      "path": "/regenerated/blue",
+      "status": 200,
+      "mustContain": "blue"
+    },
+    { "delay": 2000 },
+    {
+      "path": "/regenerated/blue",
+      "status": 200,
+      "responseHeaders": {
+        "x-vercel-cache": "/HIT|STALE/"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/regenerated/blue.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-vercel-cache": "/HIT|STALE/"
+      }
     }
   ]
 }
