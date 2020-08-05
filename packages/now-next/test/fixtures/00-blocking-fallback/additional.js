@@ -4,6 +4,9 @@ const cheerio = require('cheerio');
 
 module.exports = function (ctx) {
   it('should revalidate content properly from dynamic pathname', async () => {
+    // wait for revalidation to expire
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const res = await fetch(`${ctx.deploymentUrl}/regenerated/blue`);
     expect(res.status).toBe(200);
 
@@ -23,6 +26,9 @@ module.exports = function (ctx) {
   });
 
   it('should revalidate content properly from /_next/data dynamic pathname', async () => {
+    // wait for revalidation to expire
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const res = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/regenerated/blue.json`
     );
