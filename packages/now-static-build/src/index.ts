@@ -33,7 +33,6 @@ const {
   NowBuildError,
 } = buildUtils;
 import { Route, Source } from '@vercel/routing-utils';
-import { getVercelIgnore } from '@vercel/client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -484,17 +483,17 @@ export async function build({
       }
 
       let ignore: string[] = [];
-      if (config.zeroConfig) {
-        const result = await getVercelIgnore(distPath);
-        ignore = result.ignores
-          .map(file => (file.endsWith('/') ? `${file}**` : file))
-          .concat([
-            '.env',
-            '.env.*',
-            'yarn.lock',
-            'package-lock.json',
-            'package.json',
-          ]);
+      if (config.zeroConfig && config.outputDirectory === '.') {
+        ignore = [
+          '.env',
+          '.env.*',
+          '.git/**',
+          '.vercel/**',
+          'node_modules/**',
+          'yarn.lock',
+          'package-lock.json',
+          'package.json',
+        ];
         debug(`Using ignore: ${JSON.stringify(ignore)}`);
       }
       output = await glob('**', { cwd: distPath, ignore }, mountpoint);

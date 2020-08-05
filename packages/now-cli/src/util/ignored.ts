@@ -21,6 +21,6 @@ export default `.hg
 npm-debug.log
 config.gypi
 node_modules
-__pycache__/
-venv/
+__pycache__
+venv
 CVS`;
