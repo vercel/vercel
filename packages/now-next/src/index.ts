@@ -445,7 +445,7 @@ export const build = async ({
           for (const dataRoute of routesManifest.dataRoutes) {
             const ssgDataRoute =
               prerenderManifest.fallbackRoutes[dataRoute.page] ||
-              prerenderManifest.legacyBlockingRoutes[dataRoute.page];
+              prerenderManifest.blockingFallbackRoutes[dataRoute.page];
 
             // we don't need to add routes for non-lazy SSG routes since
             // they have outputs which would override the routes anyways
@@ -885,7 +885,7 @@ export const build = async ({
         initialRevalidate === false &&
         !canUsePreviewMode &&
         !prerenderManifest.fallbackRoutes[route] &&
-        !prerenderManifest.legacyBlockingRoutes[route]
+        !prerenderManifest.blockingFallbackRoutes[route]
       ) {
         // if the 404 page used getStaticProps we need to update static404Page
         // since it wasn't populated from the staticPages group
@@ -1465,7 +1465,7 @@ export const build = async ({
       if (isFallback || isBlocking) {
         const pr = isFallback
           ? prerenderManifest.fallbackRoutes[routeKey]
-          : prerenderManifest.legacyBlockingRoutes[routeKey];
+          : prerenderManifest.blockingFallbackRoutes[routeKey];
         initialRevalidate = 1; // TODO: should Next.js provide this default?
         // @ts-ignore
         if (initialRevalidate === false) {
@@ -1556,7 +1556,7 @@ export const build = async ({
     Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: false, isFallback: true })
     );
-    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach(route =>
+    Object.keys(prerenderManifest.blockingFallbackRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: true, isFallback: false })
     );
 
@@ -1566,7 +1566,7 @@ export const build = async ({
       // Dynamic pages for lazy routes should be handled by the lambda flow.
       [
         ...Object.entries(prerenderManifest.fallbackRoutes),
-        ...Object.entries(prerenderManifest.legacyBlockingRoutes),
+        ...Object.entries(prerenderManifest.blockingFallbackRoutes),
       ].forEach(([, { dataRouteRegex, dataRoute }]) => {
         dataRoutes.push({
           // Next.js provided data route regex

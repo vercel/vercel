@@ -693,7 +693,7 @@ export type NextPrerenderedRoutes = {
     };
   };
 
-  legacyBlockingRoutes: {
+  blockingFallbackRoutes: {
     [route: string]: {
       routeRegex: string;
       dataRoute: string;
@@ -797,7 +797,7 @@ export async function getPrerenderManifest(
   if (!hasManifest) {
     return {
       staticRoutes: {},
-      legacyBlockingRoutes: {},
+      blockingFallbackRoutes: {},
       fallbackRoutes: {},
       bypassToken: null,
       omittedRoutes: [],
@@ -855,7 +855,7 @@ export async function getPrerenderManifest(
 
       const ret: NextPrerenderedRoutes = {
         staticRoutes: {},
-        legacyBlockingRoutes: {},
+        blockingFallbackRoutes: {},
         fallbackRoutes: {},
         bypassToken:
           (manifest.preview && manifest.preview.previewModeId) || null,
@@ -894,7 +894,7 @@ export async function getPrerenderManifest(
             dataRouteRegex,
           };
         } else {
-          ret.legacyBlockingRoutes[lazyRoute] = {
+          ret.blockingFallbackRoutes[lazyRoute] = {
             routeRegex,
             dataRoute,
             dataRouteRegex,
@@ -910,7 +910,7 @@ export async function getPrerenderManifest(
 
       const ret: NextPrerenderedRoutes = {
         staticRoutes: {},
-        legacyBlockingRoutes: {},
+        blockingFallbackRoutes: {},
         fallbackRoutes: {},
         bypassToken: manifest.preview.previewModeId,
         omittedRoutes: [],
@@ -940,19 +940,24 @@ export async function getPrerenderManifest(
           dataRouteRegex,
         } = manifest.dynamicRoutes[lazyRoute];
 
-        if (!fallback) {
+        if (typeof fallback === 'string') {
+          ret.fallbackRoutes[lazyRoute] = {
+            routeRegex,
+            fallback,
+            dataRoute,
+            dataRouteRegex,
+          };
+        } else if (fallback === null) {
+          ret.blockingFallbackRoutes[lazyRoute] = {
+            routeRegex,
+            dataRoute,
+            dataRouteRegex,
+          };
+        } else {
           // Fallback behavior is disabled, all routes would've been provided
           // in the top-level `routes` key (`staticRoutes`).
           ret.omittedRoutes.push(lazyRoute);
-          return;
         }
-
-        ret.fallbackRoutes[lazyRoute] = {
-          routeRegex,
-          fallback,
-          dataRoute,
-          dataRouteRegex,
-        };
       });
 
       return ret;
@@ -960,7 +965,7 @@ export async function getPrerenderManifest(
     default: {
       return {
         staticRoutes: {},
-        legacyBlockingRoutes: {},
+        blockingFallbackRoutes: {},
         fallbackRoutes: {},
         bypassToken: null,
         omittedRoutes: [],
