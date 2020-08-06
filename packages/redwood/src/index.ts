@@ -1,4 +1,5 @@
 import { join, dirname, relative, parse as parsePath, sep } from 'path';
+import { statSync } from 'fs';
 import {
   BuildOptions,
   Lambda,
@@ -119,9 +120,10 @@ export async function build({
       }),
     };
 
-    dependencies.forEach(fsPath => {
-      lambdaFiles[relative(workPath, fsPath)] = new FileFsRef({ fsPath });
-    });
+    for (const fsPath of dependencies) {
+      const { mode } = statSync(fsPath);
+      lambdaFiles[relative(workPath, fsPath)] = new FileFsRef({ fsPath, mode });
+    }
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
 
