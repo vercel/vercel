@@ -6,7 +6,14 @@ import renderLink from './link';
 import wait from './wait';
 
 export type Output = ReturnType<typeof createOutput>;
-
+export type Unwrap<T> = T extends Promise<infer U>
+  ? U
+  : T extends (...args: any) => Promise<infer U>
+  ? U
+  : T extends (...args: any) => infer U
+  ? U
+  : T;
+                                
 export default function createOutput({ debug: debugEnabled = false } = {}) {
   function isDebugEnabled() {
     return debugEnabled;
@@ -115,7 +122,10 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     },
   };
 
-  async function time(label: string, fn: Promise<any> | (() => Promise<any>)) {
+  async function time<T extends (...args: any) => Unwrap<T>>(
+    label: string,
+    fn: Promise<Unwrap<T>> | (() => Promise<Unwrap<T>>)
+  ): Promise<Unwrap<T>> {
     const promise = typeof fn === 'function' ? fn() : fn;
     if (debugEnabled) {
       c.log(label);
