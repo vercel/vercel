@@ -450,7 +450,7 @@ function detectFrontBuilder(
     config.outputDirectory = projectSettings.outputDirectory;
   }
 
-  if (pkg) {
+  if (pkg && framework !== null) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
       ...pkg.devDependencies,
