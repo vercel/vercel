@@ -4,7 +4,7 @@ import code from '../../util/output/code';
 import note from '../../util/output/note';
 import { getPkgName } from '../../util/pkg-name.ts';
 
-export const latestHelp = () => `
+export const help = () => `
   ${chalk.bold(`${logo} ${getPkgName()}`)} [options] <command | path>
 
   ${chalk.dim('Commands:')}
@@ -100,7 +100,7 @@ export const latestHelp = () => `
 
 `;
 
-export const latestArgs = {
+export const args = {
   '--force': Boolean,
   '--with-cache': Boolean,
   '--public': Boolean,
