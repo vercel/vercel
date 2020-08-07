@@ -12,7 +12,6 @@ import Now from '../../util';
 import { NowConfig } from '../dev/types';
 import { Org } from '../../types';
 import ua from '../ua';
-import processLegacyDeployment from './process-legacy-deployment';
 import { linkFolderToProject } from '../projects/link';
 import { prependEmoji, emoji } from '../emoji';
 
@@ -47,7 +46,6 @@ function printInspectUrl(
 }
 
 export default async function processDeployment({
-  isLegacy,
   org,
   cwd,
   projectName,
@@ -62,7 +60,6 @@ export default async function processDeployment({
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
   deployStamp: () => string;
-  isLegacy: boolean;
   quiet: boolean;
   nowConfig?: NowConfig;
   force?: boolean;
@@ -73,8 +70,6 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation?: boolean;
   cwd?: string;
 }) {
-  if (isLegacy) return processLegacyDeployment(args);
-
   let {
     now,
     output,

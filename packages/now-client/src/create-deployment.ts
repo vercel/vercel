@@ -12,7 +12,7 @@ import {
   DeploymentEventType,
 } from './types';
 
-export default function buildCreateDeployment(version: number) {
+export default function buildCreateDeployment() {
   return async function* createDeployment(
     clientOptions: NowClientOptions,
     deploymentOptions: DeploymentOptions = {},
@@ -109,38 +109,6 @@ export default function buildCreateDeployment(version: number) {
       nowConfig = await parseVercelConfig(configPath);
     }
 
-    if (
-      version === 1 &&
-      nowConfig &&
-      Array.isArray(nowConfig.files) &&
-      nowConfig.files.length > 0
-    ) {
-      // See the docs: https://vercel.com/docs/v1/features/configuration/#files-(array)
-      debug(`Filtering file list based on \`files\` key in "${configPath}"`);
-      const allowedFiles = new Set<string>(['Dockerfile']);
-      const allowedDirs = new Set<string>();
-      nowConfig.files.forEach(relPath => {
-        if (lstatSync(relPath).isDirectory()) {
-          allowedDirs.add(relPath);
-        } else {
-          allowedFiles.add(relPath);
-        }
-      });
-      fileList = fileList.filter(absPath => {
-        const relPath = relative(cwd, absPath);
-        if (allowedFiles.has(relPath)) {
-          return true;
-        }
-        for (let dir of allowedDirs) {
-          if (relPath.startsWith(dir + '/')) {
-            return true;
-          }
-        }
-        return false;
-      });
-      debug(`Found ${fileList.length} files: ${JSON.stringify(fileList)}`);
-    }
-
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
     if (fileList.length === 0) {
@@ -164,16 +132,8 @@ export default function buildCreateDeployment(version: number) {
       debug(`Using provided user agent: ${clientOptions.userAgent}`);
     }
 
-    debug(`Setting platform version to ${version}`);
-    deploymentOptions.version = version;
-
     debug(`Creating the deployment and starting upload...`);
-    for await (const event of upload(
-      files,
-      nowConfig,
-      clientOptions,
-      deploymentOptions
-    )) {
+    for await (const event of upload(files, clientOptions, deploymentOptions)) {
       debug(`Yielding a '${event.type}' event`);
       yield event;
     }

@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import { email as regexEmail } from '../../util/input/regexes';
 import wait from '../../util/output/wait';
-import fatalError from '../../util/fatal-error';
 import cmd from '../../util/output/cmd.ts';
 import info from '../../util/output/info';
 import stamp from '../../util/output/stamp.ts';
@@ -15,6 +14,7 @@ import success from '../../util/output/success';
 import getUser from '../../util/get-user.ts';
 import Client from '../../util/client.ts';
 import { getCommandName } from '../../util/pkg-name.ts';
+import createOutput from './util/output';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 
@@ -57,7 +57,7 @@ const emailAutoComplete = (value, teamSlug) => {
   return false;
 };
 
-export default async function({
+export default async function ({
   teams,
   args,
   config,
@@ -66,6 +66,7 @@ export default async function({
   apiUrl,
   token,
 } = {}) {
+  const output = createOutput();
   const { currentTeam: currentTeamId } = config;
 
   const stopSpinner = wait('Fetching teams');
@@ -100,7 +101,8 @@ export default async function({
     )}.\nPlease select a team scope using ${getCommandName(
       `switch`
     )} or use ${cmd('--scope')}`;
-    return fatalError(err);
+    output.error(err);
+    return 1;
   }
 
   console.log(

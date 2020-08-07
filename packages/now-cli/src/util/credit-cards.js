@@ -38,7 +38,7 @@ export default class CreditCards extends Now {
     return true;
   }
 
-  add(card) {
+  async add(card) {
     return new Promise(async (resolve, reject) => {
       if (!card.expDate) {
         reject(new Error(`Please define a expiration date for your card`));

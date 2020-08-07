@@ -550,8 +550,8 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      const opts = { output: this.output, isBuilds: true };
-      const files = (await getFiles(this.cwd, config, opts)).map(f =>
+      const opts = { output: this.output };
+      const files = (await getFiles(this.cwd, opts)).map(f =>
         relative(this.cwd, f)
       );
 
@@ -833,8 +833,8 @@ export default class DevServer {
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
 
-    const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowConfig, opts);
+    // TODO: double check this
+    const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);

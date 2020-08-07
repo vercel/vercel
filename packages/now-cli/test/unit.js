@@ -16,12 +16,10 @@ import { responseError, responseErrorMessage } from '../src/util/error';
 import getURL from './helpers/get-url';
 import {
   npm as getNpmFiles_,
-  docker as getDockerFiles_,
   staticFiles as getStaticFiles_,
 } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
 import { isValidName } from '../src/util/is-valid-name';
-import preferV2Deployment from '../src/util/prefer-v2-deployment';
 import getUpdateCommand from '../src/util/get-update-command';
 import { isCanary } from '../src/util/is-canary';
 import { getVercelDirectory } from '../src/util/projects/link';
@@ -39,16 +37,6 @@ const getNpmFiles = async dir => {
   });
 
   const files = await getNpmFiles_(dir, pkg, nowConfig, { hasNowJson, output });
-  return normalizeWindowsPaths(files);
-};
-
-const getDockerFiles = async dir => {
-  const { nowConfig, hasNowJson } = await readMetadata(dir, {
-    quiet: true,
-    strict: false,
-  });
-
-  const files = await getDockerFiles_(dir, nowConfig, { hasNowJson, output });
   return normalizeWindowsPaths(files);
 };
 
@@ -95,18 +83,6 @@ test('`files` + `.*.swp` + `.npmignore`', async t => {
   t.is(base(files[3]), 'files-in-package-ignore/package.json');
 });
 
-test('`.dockerignore` files are parsed correctly', async t => {
-  const path = 'dockerfile-negation';
-  let files = await getDockerFiles(fixture(path));
-  files = files.sort(alpha);
-
-  t.is(files.length, 4);
-  t.is(base(files[0]), `${path}/Dockerfile`);
-  t.is(base(files[1]), `${path}/a.js`);
-  t.is(base(files[2]), `${path}/build/a/c.js`);
-  t.is(base(files[3]), `${path}/c.js`);
-});
-
 test('`files` overrides `.gitignore`', async t => {
   let files = await getNpmFiles(fixture('files-overrides-gitignore'));
   files = files.sort(alpha);
@@ -115,39 +91,6 @@ test('`files` overrides `.gitignore`', async t => {
   t.is(base(files[0]), 'files-overrides-gitignore/package.json');
   t.is(base(files[1]), 'files-overrides-gitignore/test.js');
   t.is(base(files[2]), 'files-overrides-gitignore/test.json');
-});
-
-test('`now.files` overrides `.gitignore` in Docker', async t => {
-  const path = 'now-json-docker-gitignore-override';
-  let files = await getDockerFiles(
-    fixture(path),
-    await loadJSON(getLocalConfigPath(fixture(path)))
-  );
-  files = files.sort(alpha);
-
-  t.is(files.length, 5);
-  t.is(base(files[0]), `${path}/Dockerfile`);
-  t.is(base(files[1]), `${path}/a.js`);
-  t.is(base(files[2]), `${path}/b.js`);
-  t.is(base(files[3]), `${path}/build/a/c.js`);
-  t.is(base(files[4]), `${path}/now.json`);
-});
-
-test('`now.files` overrides `.dockerignore` in Docker', async t => {
-  const path = 'now-json-docker-dockerignore-override';
-  let files = await getDockerFiles(
-    fixture(path),
-    await loadJSON(getLocalConfigPath(fixture(path)))
-  );
-  files = files.sort(alpha);
-
-  t.is(files.length, 6);
-  t.is(base(files[0]), `${path}/Dockerfile`);
-  t.is(base(files[1]), `${path}/a.js`);
-  t.is(base(files[2]), `${path}/b.js`);
-  t.is(base(files[3]), `${path}/build/a/c.js`);
-  t.is(base(files[4]), `${path}/c.js`);
-  t.is(base(files[5]), `${path}/now.json`);
 });
 
 test('`now.files` overrides `.gitignore` in Node', async t => {
@@ -360,24 +303,6 @@ test('support `now.files`', async t => {
   t.is(base(files[1]), 'now-files/package.json');
 });
 
-test('support docker', async t => {
-  let files = await getDockerFiles(fixture('dockerfile'));
-  files = files.sort(alpha);
-  t.is(files.length, 2);
-  t.is(base(files[0]), 'dockerfile/Dockerfile');
-  t.is(base(files[1]), 'dockerfile/a.js');
-});
-
-test('gets correct name of docker deployment', async t => {
-  const { name, deploymentType } = await readMetadata(fixture('dockerfile'), {
-    quiet: true,
-    strict: false,
-  });
-
-  t.is(deploymentType, 'docker');
-  t.is(name, 'test');
-});
-
 test('prefix regression', async t => {
   let files = await getNpmFiles(fixture('prefix-regression'));
   files = files.sort(alpha);
@@ -452,90 +377,6 @@ test('support `now.json` files with package.json non quiet not specified', async
   t.is(base(files[2]), 'now-json-no-name/package.json');
 });
 
-test('No commands in Dockerfile with automatic strictness', async t => {
-  const f = fixture('dockerfile-empty');
-
-  try {
-    await readMetadata(f, {
-      quiet: true,
-    });
-  } catch (err) {
-    t.is(err.code, 'no_dockerfile_commands');
-    t.is(err.message, 'No commands found in `Dockerfile`');
-  }
-});
-
-test('No commands in Dockerfile', async t => {
-  const f = fixture('dockerfile-empty');
-
-  try {
-    await readMetadata(f, {
-      quiet: true,
-      strict: true,
-    });
-  } catch (err) {
-    t.is(err.code, 'no_dockerfile_commands');
-    t.is(err.message, 'No commands found in `Dockerfile`');
-  }
-});
-
-test('Missing Dockerfile for `docker` type', async t => {
-  const f = fixture('now-json-docker-missing');
-
-  try {
-    await readMetadata(f, {
-      quiet: true,
-      strict: true,
-    });
-  } catch (err) {
-    t.is(err.code, 'dockerfile_missing');
-    t.is(err.message, '`Dockerfile` missing');
-  }
-});
-
-test('support `now.json` files with Dockerfile', async t => {
-  const f = fixture('now-json-docker');
-  const { deploymentType, nowConfig, hasNowJson } = await readMetadata(f, {
-    quiet: true,
-    strict: false,
-  });
-  t.is(deploymentType, 'docker');
-
-  let files = await getDockerFiles(f, nowConfig, { hasNowJson });
-  files = files.sort(alpha);
-  t.is(files.length, 3);
-  t.is(base(files[0]), 'now-json-docker/Dockerfile');
-  t.is(base(files[1]), 'now-json-docker/b.js');
-  t.is(base(files[2]), 'now-json-docker/now.json');
-});
-
-test('load name from Dockerfile', async t => {
-  const f = fixture('now-json-docker-name');
-  const { deploymentType, name } = await readMetadata(f, {
-    quiet: true,
-    strict: false,
-  });
-
-  t.is(deploymentType, 'docker');
-  t.is(name, 'testing');
-});
-
-test('support `now.json` files with Dockerfile non quiet', async t => {
-  const f = fixture('now-json-docker');
-  const { deploymentType, nowConfig, hasNowJson } = await readMetadata(f, {
-    quiet: false,
-    strict: false,
-  });
-  t.is(deploymentType, 'docker');
-
-  let files = await getDockerFiles(f, nowConfig, { hasNowJson });
-  files = files.sort(alpha);
-  t.is(files.length, 3);
-  t.is(base(files[0]), 'now-json-docker/Dockerfile');
-  t.is(base(files[1]), 'now-json-docker/b.js');
-  t.is(base(files[2]), 'now-json-docker/now.json');
-});
-
 test('throws when both `now.json` and `package.json:now` exist', async t => {
   let e;
   try {
@@ -564,17 +405,6 @@ test('throws when `package.json` and `Dockerfile` exist', async t => {
   }
   t.is(e.code, 'multiple_manifests');
   t.pass(/ambiguous deployment/i.test(e.message));
-});
-
-test('support `package.json:now.type` to bypass multiple manifests error', async t => {
-  const f = fixture('type-in-package-now-with-dockerfile');
-  const { type, nowConfig, hasNowJson } = await readMetadata(f, {
-    quiet: true,
-    strict: false,
-  });
-  t.is(type, 'npm');
-  t.is(nowConfig.type, 'npm');
-  t.is(hasNowJson, false);
 });
 
 test('friendly error for malformed JSON', async t => {
@@ -974,106 +804,6 @@ test("guess user's intention with custom didYouMean", async t => {
   t.is(didYouMean('koa', examples, 0.7), 'nodejs-koa');
   t.is(didYouMean('node', examples, 0.7), 'nodejs');
   t.is(didYouMean('12345', examples, 0.7), undefined);
-});
-
-test('check platform version chanage with `preferV2Deployment`', async t => {
-  {
-    const localConfig = undefined;
-    const pkg = null;
-    const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({
-      localConfig,
-      pkg,
-      hasDockerfile,
-      hasServerfile,
-    });
-    t.regex(reason, /Deploying to Now 2\.0 automatically/gm);
-  }
-
-  {
-    const localConfig = undefined;
-    const pkg = { scripts: { start: 'echo hi' } };
-    const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({
-      localConfig,
-      pkg,
-      hasDockerfile,
-      hasServerfile,
-    });
-    t.is(reason, null);
-  }
-
-  {
-    const localConfig = undefined;
-    const pkg = { scripts: { 'now-start': 'echo hi' } };
-    const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({
-      localConfig,
-      pkg,
-      hasDockerfile,
-      hasServerfile,
-    });
-    t.is(reason, null);
-  }
-
-  {
-    const localConfig = { version: 1 };
-    const pkg = null;
-    const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({
-      localConfig,
-      pkg,
-      hasDockerfile,
-      hasServerfile,
-    });
-    t.is(reason, null);
-  }
-
-  {
-    const localConfig = undefined;
-    const pkg = null;
-    const hasDockerfile = true;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({
-      localConfig,
-      pkg,
-      hasDockerfile,
-      hasServerfile,
-    });
-    t.is(reason, null);
-  }
-
-  {
-    const localConfig = undefined;
-    const pkg = { scripts: { build: 'echo hi' } };
-    const hasDockerfile = false;
-    const hasServerfile = false;
-    const reason = await preferV2Deployment({
-      localConfig,
-      pkg,
-      hasDockerfile,
-      hasServerfile,
-    });
-    t.regex(reason, /package\.json/gm);
-  }
-
-  {
-    const localConfig = undefined;
-    const pkg = null;
-    const hasDockerfile = false;
-    const hasServerfile = true;
-    const reason = await preferV2Deployment({
-      localConfig,
-      pkg,
-      hasDockerfile,
-      hasServerfile,
-    });
-    t.is(reason, null);
-  }
 });
 
 test('check valid name', async t => {
