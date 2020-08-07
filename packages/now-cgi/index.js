@@ -8,7 +8,6 @@ const {
   createLambda,
   getWritableDirectory,
 } = require('@now/build-utils');
-
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 
 exports.version = 3;

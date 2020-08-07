@@ -17,7 +17,6 @@ import {
   convertTrailingSlash,
   sourceToRegex,
 } from './superstatic';
-
 export { getCleanUrls } from './superstatic';
 export { mergeRoutes } from './merge';
 export { appendRoutesToPhase } from './append';

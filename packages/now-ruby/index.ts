@@ -19,7 +19,6 @@ const {
   walkParentDirs,
 } = buildUtils;
 import { installBundler } from './install-ruby';
-
 async function matchPaths(
   configPatterns: string | string[] | undefined,
   workPath: string

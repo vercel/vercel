@@ -16,6 +16,7 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
+
 // @ts-ignore - `@types/mkdirp-promise` is broken
 import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';

@@ -13,6 +13,7 @@ try {
     process.exit(1);
   }
 }
+
 import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync, lstatSync } from 'fs';
