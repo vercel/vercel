@@ -164,6 +164,25 @@ module.exports = async function prepare(session) {
         name: 'nested-level',
       }),
     },
+    'subdirectory-secret': {
+      'index.html': 'Home page',
+      'secret/file.txt': 'my secret',
+    },
+    'build-secret': {
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'mkdir public && echo $MY_SECRET > public/index.txt',
+        },
+      }),
+      'now.json': JSON.stringify({
+        build: {
+          env: {
+            MY_SECRET: '@mysecret',
+          },
+        },
+      }),
+    },
     'api-env': {
       'api/get-env.js': 'module.exports = (_, res) => res.json(process.env)',
       'print.js': 'console.log(JSON.stringify(process.env))',

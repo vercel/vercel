@@ -1004,6 +1004,7 @@ test('list the scopes', async t => {
   t.is(exitCode, 0);
 
   const include = `✔ ${contextName}     ${email}`;
+
   t.true(
     stdout.includes(include),
     `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`

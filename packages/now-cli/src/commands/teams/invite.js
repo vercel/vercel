@@ -14,7 +14,7 @@ import success from '../../util/output/success';
 import getUser from '../../util/get-user.ts';
 import Client from '../../util/client.ts';
 import { getCommandName } from '../../util/pkg-name.ts';
-import createOutput from './util/output';
+import createOutput from '../../util/output';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 
