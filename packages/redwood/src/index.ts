@@ -87,16 +87,21 @@ export async function build({
   const pkgPath = join(workPath, 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
   if (hasScript('vercel-build', pkg)) {
+    debug(`Executing "yarn vercel-build"`);
     await runPackageJsonScript(workPath, 'vercel-build', spawnOpts);
   } else if (hasScript('build', pkg)) {
+    debug(`Executing "yarn build"`);
     await runPackageJsonScript(workPath, 'build', spawnOpts);
   } else if (buildCommand) {
+    debug(`Executing build command "${buildCommand}"`);
     await execCommand(buildCommand, {
       ...spawnOpts,
       cwd: workPath,
     });
   } else if (frmwrkCmd && 'value' in frmwrkCmd) {
-    await execCommand(frmwrkCmd.value, {
+    const cmd = frmwrkCmd.value;
+    debug(`Executing framework command "${cmd}"`);
+    await execCommand(cmd, {
       ...spawnOpts,
       cwd: workPath,
     });
