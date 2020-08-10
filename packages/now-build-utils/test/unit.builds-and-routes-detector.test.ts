@@ -1080,6 +1080,51 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
+  it('Using "Other" framework with Storybook should NOT autodetect Next.js', async () => {
+    const pkg = {
+      scripts: {
+        dev: 'next dev',
+        build: 'next build',
+        storybook: 'start-storybook -p 6006',
+        'build-storybook': 'build-storybook',
+      },
+      dependencies: {
+        next: '9.3.5',
+        react: '16.13.1',
+        'react-dom': '16.13.1',
+      },
+      devDependencies: {
+        '@babel/core': '7.9.0',
+        '@storybook/addon-links': '5.3.18',
+        '@storybook/addons': '5.3.18',
+        '@storybook/react': '5.3.18',
+      },
+    };
+    const files = ['package.json', 'pages/api/foo.js', 'index.html'];
+    const projectSettings = {
+      framework: null, // Selected "Other" framework
+      buildCommand: 'yarn build-storybook',
+    };
+
+    const { builders, errorRoutes } = await detectBuilders(files, pkg, {
+      projectSettings,
+      featHandleMiss,
+    });
+
+    expect(builders).toEqual([
+      {
+        use: '@vercel/static-build',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+          buildCommand: projectSettings.buildCommand,
+        },
+      },
+    ]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
   it('api + raw static', async () => {
     const files = ['api/endpoint.js', 'index.html', 'favicon.ico'];
 
