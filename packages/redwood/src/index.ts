@@ -11,6 +11,7 @@ import {
   getNodeVersion,
   getSpawnOptions,
   runNpmInstall,
+  runPackageJsonScript,
   execCommand,
   FileBlob,
   FileFsRef,
@@ -54,10 +55,6 @@ export async function build({
     meta
   );
 
-  const {
-    buildCommand = 'yarn rw db up --no-db-client --auto-approve && yarn rw build',
-  } = config;
-
   if (meta.isDev) {
     debug('Detected @vercel/redwood dev, returning routes...');
 
@@ -79,10 +76,27 @@ export async function build({
   }
 
   debug('Running build command...');
-  await execCommand(buildCommand, {
-    ...spawnOpts,
-    cwd: workPath,
-  });
+  const { buildCommand } = config;
+
+  const found =
+    typeof buildCommand === 'string'
+      ? await execCommand(buildCommand, {
+          ...spawnOpts,
+          cwd: workPath,
+        })
+      : await runPackageJsonScript(
+          workPath,
+          ['vercel-build', 'build'],
+          spawnOpts
+        );
+
+  if (!found) {
+    throw new Error(
+      `Missing required "${
+        buildCommand || 'vercel-build'
+      }" script in "${entrypoint}"`
+    );
+  }
 
   const apiDistPath = join(workPath, 'api', 'dist', 'functions');
   const webDistPath = join(workPath, 'web', 'dist');
@@ -120,7 +134,9 @@ export async function build({
     };
 
     for (const fsPath of dependencies) {
-      lambdaFiles[relative(workPath, fsPath)] = await FileFsRef.fromFsPath({ fsPath });
+      lambdaFiles[relative(workPath, fsPath)] = await FileFsRef.fromFsPath({
+        fsPath,
+      });
     }
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
