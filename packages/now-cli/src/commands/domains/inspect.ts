@@ -68,7 +68,7 @@ export default async function inspect(
     return 1;
   }
 
-  output.debug(`Fetching Domain info`);
+  output.debug(`Fetching domain info`);
 
   const cancelWait = wait(
     `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`
