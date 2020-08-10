@@ -126,7 +126,7 @@ ${stdout}
 const context = {};
 
 const defaultOptions = { reject: false };
-const defaultArgs = ['--scope', 'testing-internal'];
+const defaultArgs = [];
 let token;
 let email;
 let contextName;
@@ -867,49 +867,49 @@ test('should error with suggestion for secrets subcommand', async t => {
   );
 });
 
-// test('should add secret with hyphen prefix', async t => {
-//   const target = fixture('build-secret');
-//   const key = 'mysecret';
-//   const value = '-foo_bar';
+test('should add secret with hyphen prefix', async t => {
+  const target = fixture('build-secret');
+  const key = 'mysecret';
+  const value = '-foo_bar';
 
-//   let secretCall = await execa(
-//     binaryPath,
-//     ['secrets', 'add', ...defaultArgs, key, value],
-//     {
-//       cwd: target,
-//       reject: false,
-//     }
-//   );
+  let secretCall = await execa(
+    binaryPath,
+    ['secrets', 'add', ...defaultArgs, key, value],
+    {
+      cwd: target,
+      reject: false,
+    }
+  );
 
-//   t.is(
-//     secretCall.exitCode,
-//     0,
-//     formatOutput({ stderr: secretCall.stderr, stdout: secretCall.stdout })
-//   );
+  t.is(
+    secretCall.exitCode,
+    0,
+    formatOutput({ stderr: secretCall.stderr, stdout: secretCall.stdout })
+  );
 
-//   let targetCall = await execa(binaryPath, [...defaultArgs, '--confirm'], {
-//     cwd: target,
-//     reject: false,
-//   });
+  let targetCall = await execa(binaryPath, [...defaultArgs, '--confirm'], {
+    cwd: target,
+    reject: false,
+  });
 
-//   t.is(
-//     targetCall.exitCode,
-//     0,
-//     formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
-//   );
-//   const { host } = new URL(targetCall.stdout);
-//   const response = await fetch(`https://${host}`);
-//   t.is(
-//     response.status,
-//     200,
-//     formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
-//   );
-//   t.is(
-//     await response.text(),
-//     `${value}\n`,
-//     formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
-//   );
-// });
+  t.is(
+    targetCall.exitCode,
+    0,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+  const { host } = new URL(targetCall.stdout);
+  const response = await fetch(`https://${host}`);
+  t.is(
+    response.status,
+    200,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+  t.is(
+    await response.text(),
+    `${value}\n`,
+    formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
+  );
+});
 
 test('login with unregistered user', async t => {
   const { stdout, stderr, exitCode } = await execa(
