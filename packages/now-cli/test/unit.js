@@ -6,7 +6,6 @@ import { asc as alpha } from 'alpha-sort';
 import loadJSON from 'load-json-file';
 import fetch from 'node-fetch';
 import createOutput from '../src/util/output';
-import hash from '../src/util/hash';
 import readMetadata from '../src/util/read-metadata';
 import getProjectName from '../src/util/get-project-name';
 import getLocalConfigPath from '../src/util/config/local-path';
@@ -243,31 +242,6 @@ test('extensionless main', async t => {
   t.is(base(files[0]), 'extensionless-main/build/a.js');
   t.is(base(files[1]), 'extensionless-main/index.js');
   t.is(base(files[2]), 'extensionless-main/package.json');
-});
-
-test('hashes', async t => {
-  if (process.platform === 'win32') {
-    console.log('Skipping "hashes" test on Windows');
-    t.is(true, true);
-    return;
-  }
-  const files = await getNpmFiles(fixture('hashes'));
-  const hashes = await hash(files);
-  t.is(hashes.size, 3);
-  const many = new Set(
-    hashes.get('277c55a2042910b9fe706ad00859e008c1b7d172').names
-  );
-  t.is(many.size, 2);
-  t.is(many.has(`${prefix}hashes/dei.png`), true);
-  t.is(many.has(`${prefix}hashes/duplicate/dei.png`), true);
-  t.is(
-    hashes.get('56c00d0466fc6bdd41b13dac5fc920cc30a63b45').names[0],
-    `${prefix}hashes/index.js`
-  );
-  t.is(
-    hashes.get('706214f42ae940a01d2aa60c5e32408f4d2127dd').names[0],
-    `${prefix}hashes/package.json`
-  );
 });
 
 test('ignore node_modules', async t => {
