@@ -76,6 +76,10 @@ export default class Now extends EventEmitter {
       source: 'cli',
     };
 
+    // Ignore specific items from vercel.json
+    delete requestBody.scope;
+    delete requestBody.github;
+
     const deployment = await processDeployment({
       now: this,
       output: this._output,
