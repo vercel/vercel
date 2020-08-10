@@ -6,6 +6,9 @@
       "web"
     ]
   },
+  "scripts": {
+    "build": "rw db up --no-db-client --auto-approve && rw build"
+  },
   "devDependencies": {
     "@redwoodjs/core": "0.15.0"
   },
