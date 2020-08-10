@@ -551,7 +551,7 @@ export default class DevServer {
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
       const opts = { output: this.output };
-      const files = (await getFiles(this.cwd, opts)).map(f =>
+      const files = (await getFiles(this.cwd, config, opts)).map(f =>
         relative(this.cwd, f)
       );
 
@@ -833,8 +833,7 @@ export default class DevServer {
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
 
-    // TODO: double check this
-    const files = await getFiles(this.cwd, { output: this.output });
+    const files = await getFiles(this.cwd, nowConfig, { output: this.output });
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);

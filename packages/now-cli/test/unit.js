@@ -40,17 +40,16 @@ const getNpmFiles = async dir => {
   return normalizeWindowsPaths(files);
 };
 
-const getStaticFiles = async (dir, isBuilds = false) => {
-  const { nowConfig, hasNowJson } = await readMetadata(dir, {
+const getStaticFiles = async dir => {
+  const { hasNowJson } = await readMetadata(dir, {
     deploymentType: 'static',
     quiet: true,
     strict: false,
   });
 
-  const files = await getStaticFiles_(dir, nowConfig, {
+  const files = await getStaticFiles_(dir, {
     hasNowJson,
     output,
-    isBuilds,
   });
   return normalizeWindowsPaths(files);
 };
@@ -168,7 +167,7 @@ test('discover static files without `now.files`', async t => {
 
 test('discover files for builds deployment', async t => {
   const path = 'now-json-static-no-files';
-  let files = await getStaticFiles(fixture(path), true);
+  let files = await getStaticFiles(fixture(path));
   files = files.sort(alpha);
 
   t.is(files.length, 4);
@@ -391,20 +390,6 @@ test('throws when both `now.json` and `package.json:now` exist', async t => {
   t.pass(
     /please ensure there's a single source of configuration/i.test(e.message)
   );
-});
-
-test('throws when `package.json` and `Dockerfile` exist', async t => {
-  let e;
-  try {
-    await readMetadata(fixture('multiple-manifests-throws'), {
-      quiet: true,
-      strict: false,
-    });
-  } catch (err) {
-    e = err;
-  }
-  t.is(e.code, 'multiple_manifests');
-  t.pass(/ambiguous deployment/i.test(e.message));
 });
 
 test('friendly error for malformed JSON', async t => {

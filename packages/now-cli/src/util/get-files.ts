@@ -1,16 +1,15 @@
-import fs from 'fs-extra';
 import { resolve } from 'path';
+import ignore from 'ignore';
 import _glob, { IOptions as GlobOptions } from 'glob';
+import fs from 'fs-extra';
 import { getVercelIgnore } from '@vercel/client';
+import IGNORED from './ignored';
 import uniqueStrings from './unique-strings';
+import getLocalConfigPath from './config/local-path';
 import { Output } from './output/create-output';
+import { NowConfig } from './dev/types';
 
 type NullableString = string | null;
-
-interface StaticFilesOptions {
-  output: Output;
-  src?: string;
-}
 
 function flatten(
   arr: NullableString[] | NullableString[][],
@@ -34,6 +33,103 @@ async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
   });
 }
 
+interface WalkOptions {
+  output: Output;
+}
+
+/**
+ * Will recursivly walk through a directory and return an array of the files found within.
+ * @param {string} dir the directory to walk
+ * @param {string} path the path to this directory
+ * @param {Array[string]} filelist a list of files so far identified
+ * @param {Object} options
+ *  - `output` {Object} "output" helper object
+ * @returns {Array}
+ */
+async function walk(
+  dir: string,
+  path: string,
+  filelist: string[] = [],
+  opts: WalkOptions
+) {
+  const { debug } = opts.output;
+  const dirc = await fs.readdir(asAbsolute(dir, path));
+  for (let file of dirc) {
+    file = asAbsolute(file, dir);
+    try {
+      const fileStat = await fs.stat(file);
+      filelist = fileStat.isDirectory()
+        ? await walk(file, path, filelist, opts)
+        : filelist.concat(file);
+    } catch (e) {
+      debug(`Ignoring invalid file ${file}`);
+    }
+  }
+  return filelist;
+}
+
+interface FilesInWhitelistOptions {
+  output: Output;
+}
+
+/**
+ * Will return an array containing the expaneded list of all files included in the whitelist.
+ * @param {Array[string]} whitelist array of files and directories to include.
+ * @param {string} path the path of the deployment.
+ * @param {Object} options
+ *  - `output` {Object} "output" helper object
+ * @returns {Array} the expanded list of whitelisted files.
+ */
+const getFilesInWhitelist = async function (
+  whitelist: string[],
+  path: string,
+  opts: FilesInWhitelistOptions
+) {
+  const { debug } = opts.output;
+  const files: string[] = [];
+
+  await Promise.all(
+    whitelist.map(async (file: string) => {
+      file = asAbsolute(file, path);
+      try {
+        const fileStat = await fs.stat(file);
+        if (fileStat.isDirectory()) {
+          const dirFiles = await walk(file, path, [], opts);
+          files.push(...dirFiles);
+        } else {
+          files.push(file);
+        }
+      } catch (e) {
+        debug(`Ignoring invalid file ${file}`);
+      }
+    })
+  );
+  return files;
+};
+
+/**
+ * Remove leading `./` from the beginning of ignores
+ * because ignore doesn't like them :|
+ */
+
+const clearRelative = function (str: string) {
+  return str.replace(/(\n|^)\.\//g, '$1');
+};
+
+/**
+ * Returns the contents of a file if it exists.
+ *
+ * @return {String} results or `''`
+ */
+
+const maybeRead = async function <T>(path: string, default_: T) {
+  try {
+    return await fs.readFile(path, 'utf8');
+  } catch (err) {
+    return default_;
+  }
+};
+
 /**
  * Transform relative paths into absolutes,
  * and maintains absolutes as such.
@@ -49,6 +145,11 @@ const asAbsolute = function (path: string, parent: string) {
 
   return resolve(parent, path);
 };
+
+interface StaticFilesOptions {
+  output: Output;
+  src?: string;
+}
 
 /**
  * Returns a list of files in the given
@@ -67,18 +168,24 @@ export async function staticFiles(
   { output, src }: StaticFilesOptions
 ) {
   const { debug, time } = output;
+  let files: string[] = [];
+
+  // The package.json `files` whitelist still
+  // honors ignores: https://docs.npmjs.com/files/package.json#files
+  const source = src || '.';
+  // Convert all filenames into absolute paths
+  const search = await glob(source, { cwd: path, absolute: true, dot: true });
+
+  // Compile list of ignored patterns and files
+  const { ig } = await getVercelIgnore(path);
+  const filter = ig.createFilter();
+
+  const prefixLength = path.length + 1;
 
   // The package.json `files` whitelist still
   // honors npmignores: https://docs.npmjs.com/files/package.json#files
   // but we don't ignore if the user is explicitly listing files
   // under the now namespace, or using files in combination with gitignore
-
-  const prefixLength = path.length + 1;
-  const { ig } = await getVercelIgnore(resolve(path, '.vercelignore'));
-  const filter = ig.createFilter();
-  const source = src || '.';
-  const search = await glob(source, { cwd: path, absolute: true, dot: true });
-
   const accepts = (file: string) => {
     const relativePath = file.substr(prefixLength);
 
@@ -96,13 +203,107 @@ export async function staticFiles(
   };
 
   // Locate files
-  const files = await time(
+  files = await time(
     `Locating files ${path}`,
     explode(search, {
       accepts,
       output,
     })
   );
+
+  // Get files
+  return uniqueStrings(files);
+}
+
+interface NpmOptions {
+  hasNowJson: boolean;
+  output: Output;
+}
+
+/**
+ * Returns a list of files in the given
+ * directory that are subject to be
+ * synchronized for npm.
+ *
+ * @param {String} full path to directory
+ * @param {String} contents of `package.json` to avoid lookup
+ * @param {Object} options:
+ *  - `limit` {Number|null} byte limit
+ *  - `output` {Object} "output" helper object
+ * @return {Array} comprehensive list of paths to sync
+ */
+export async function npm(
+  path: string,
+  pkg: { files?: string[]; now?: { files?: string[] } } = {},
+  nowConfig: NowConfig = {},
+  { hasNowJson = false, output }: NpmOptions
+) {
+  const { debug, time } = output;
+  const whitelist = nowConfig.files || pkg.files || (pkg.now && pkg.now.files);
+  let files: string[] = [];
+
+  if (whitelist) {
+    files = await getFilesInWhitelist(whitelist, path, { output });
+  } else {
+    // The package.json `files` whitelist still
+    // honors ignores: https://docs.npmjs.com/files/package.json#files
+    const search_ = ['.'];
+    // Convert all filenames into absolute paths
+    const search = Array.prototype.concat.apply(
+      [],
+      await Promise.all(
+        search_.map(file =>
+          glob(file, { cwd: path, absolute: true, dot: true })
+        )
+      )
+    );
+
+    // Compile list of ignored patterns and files
+    const npmIgnore = await maybeRead(resolve(path, '.npmignore'), null);
+
+    const filter = ignore()
+      .add(
+        `${IGNORED}\n${clearRelative(
+          npmIgnore === null
+            ? await maybeRead(resolve(path, '.gitignore'), '')
+            : npmIgnore
+        )}`
+      )
+      .createFilter();
+
+    const prefixLength = path.length + 1;
+
+    const accepts = (file: string) => {
+      const relativePath = file.substr(prefixLength);
+
+      if (relativePath === '') {
+        return true;
+      }
+
+      const accepted = filter(relativePath);
+      if (!accepted) {
+        debug(`Ignoring ${file}`);
+      }
+      return accepted;
+    };
+
+    // Locate files
+    files = await time(
+      `Locating files ${path}`,
+      explode(search, {
+        accepts,
+        output,
+      })
+    );
+  }
+
+  // Always include manifest as npm does not allow ignoring it
+  // source: https://docs.npmjs.com/files/package.json#files
+  files.push(asAbsolute('package.json', path));
+
+  if (hasNowJson) {
+    files.push(asAbsolute(getLocalConfigPath(path), path));
+  }
 
   // Get files
   return uniqueStrings(files);
