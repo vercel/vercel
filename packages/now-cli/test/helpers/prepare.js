@@ -33,7 +33,7 @@ module.exports = async function prepare(session) {
     },
     'empty-directory': {},
     'config-scope-property-email': {
-      'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ]}`,
+      'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
       'index.html': '<span>test scope email</span',
     },
     'config-scope-property-username': {
