@@ -1,4 +1,5 @@
 import { join, dirname, relative, parse as parsePath, sep } from 'path';
+import { readFileSync } from 'fs';
 import {
   BuildOptions,
   Lambda,
@@ -15,8 +16,12 @@ import {
   execCommand,
   FileBlob,
   FileFsRef,
+  PackageJson,
+  NowBuildError,
 } from '@vercel/build-utils';
 import { makeAwsLauncher } from './launcher';
+import _frameworks, { Framework } from '@vercel/frameworks';
+const frameworks = _frameworks as Framework[];
 const {
   getDependencies,
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -77,25 +82,32 @@ export async function build({
 
   debug('Running build command...');
   const { buildCommand } = config;
-
-  const found =
-    typeof buildCommand === 'string'
-      ? await execCommand(buildCommand, {
-          ...spawnOpts,
-          cwd: workPath,
-        })
-      : await runPackageJsonScript(
-          workPath,
-          ['vercel-build', 'build'],
-          spawnOpts
-        );
-
-  if (!found) {
-    throw new Error(
-      `Missing required "${
-        buildCommand || 'vercel-build'
-      }" script in "${entrypoint}"`
-    );
+  const frmwrkCmd = frameworks.find(f => f.slug === 'redwoodjs')?.settings
+    .buildCommand;
+  const pkgPath = join(workPath, 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
+  if (hasScript('vercel-build', pkg)) {
+    await runPackageJsonScript(workPath, 'vercel-build', spawnOpts);
+  } else if (hasScript('build', pkg)) {
+    await runPackageJsonScript(workPath, 'build', spawnOpts);
+  } else if (buildCommand) {
+    await execCommand(buildCommand, {
+      ...spawnOpts,
+      cwd: workPath,
+    });
+  } else if (frmwrkCmd && 'value' in frmwrkCmd) {
+    await execCommand(frmwrkCmd.value, {
+      ...spawnOpts,
+      cwd: workPath,
+    });
+  } else {
+    throw new NowBuildError({
+      code: 'REDWOOD_BUILD_COMMAND_MISSING',
+      message:
+        'An unexpected error occurred while building RedwoodJS. Please contact support.',
+      action: 'Contact Support',
+      link: 'https://vercel.com/support/request',
+    });
   }
 
   const apiDistPath = join(workPath, 'api', 'dist', 'functions');
@@ -160,6 +172,11 @@ export async function build({
 function getAWSLambdaHandler(filePath: string, handlerName: string) {
   const { dir, name } = parsePath(filePath);
   return `${dir}${dir ? sep : ''}${name}.${handlerName}`;
+}
+
+function hasScript(scriptName: string, pkg: PackageJson) {
+  const scripts = (pkg && pkg.scripts) || {};
+  return typeof scripts[scriptName] === 'string';
 }
 
 export async function prepareCache({
