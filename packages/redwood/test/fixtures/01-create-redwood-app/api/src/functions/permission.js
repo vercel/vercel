@@ -1,8 +1,10 @@
-import { promises, constants } from 'fs'
-const { access } = promises
-const { X_OK } = constants
+const {
+  promises: { access },
+  constants: { X_OK },
+} = require('fs')
 
 async function isExecutable(fsPath) {
+  console.log(`Testing is file is executable: ${fsPath}`)
   try {
     await access(fsPath, X_OK)
     return true
@@ -12,11 +14,13 @@ async function isExecutable(fsPath) {
   }
 }
 
-export async function handler() {
-  const isExec = await isExecutable('../permission/test.sh')
+async function handler() {
+  const isExec = await isExecutable(module.id)
   return {
     statusCode: 200,
     headers: {},
     body: `File is executable: ${isExec}`,
   }
 }
+
+module.exports = { handler }
