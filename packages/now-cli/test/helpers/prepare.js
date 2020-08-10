@@ -86,6 +86,16 @@ module.exports = async function prepare(session) {
         },
       }),
     },
+    'build-env-debug': {
+      'now.json': JSON.stringify({
+        builds: [{ src: 'index.js', use: '@now/node' }],
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          'now-build': 'node now-build.js',
+        },
+      }),
+    },
     'now-revert-alias-1': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
       'now.json': getRevertAliasConfigFile(),
