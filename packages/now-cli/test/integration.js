@@ -1186,48 +1186,6 @@ test('try to remove a non-existing payment method', async t => {
   );
 });
 
-test('output logs of a 2.0 deployment', async t => {
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    ['logs', context.deployment, ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.true(
-    stderr.includes(`Fetched deployment "${context.deployment}"`),
-    formatOutput({ stderr, stdout })
-  );
-  t.is(exitCode, 0);
-});
-
-test('output logs of a 2.0 deployment without annotate', async t => {
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    ['logs', context.deployment, ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.true(!stderr.includes('[now-builder-debug]'));
-  t.true(!stderr.includes('START RequestId'));
-  t.true(!stderr.includes('END RequestId'));
-  t.true(!stderr.includes('REPORT RequestId'));
-  t.true(!stderr.includes('Init Duration'));
-  t.true(!stderr.includes('XRAY TraceId'));
-  t.is(exitCode, 0);
-});
-
 /*
  * Disabled 2 tests because these temp users don't have certs
 test('create wildcard alias for deployment', async t => {
@@ -1350,12 +1308,58 @@ test('ensure we render a warning for deployments with no files', async t => {
   const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 
+  if (host) {
+    context.deployment = host;
+  }
+
   // Ensure the exit code is right
   t.is(exitCode, 0);
 
   // Send a test request to the deployment
   const res = await fetch(href);
   t.is(res.status, 404);
+});
+
+test('output logs of a 2.0 deployment', async t => {
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    ['logs', context.deployment, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.true(
+    stderr.includes(`Fetched deployment "${context.deployment}"`),
+    formatOutput({ stderr, stdout })
+  );
+  t.is(exitCode, 0);
+});
+
+test('output logs of a 2.0 deployment without annotate', async t => {
+  const { stderr, stdout, exitCode } = await execa(
+    binaryPath,
+    ['logs', context.deployment, ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
+
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+
+  t.true(!stderr.includes('[now-builder-debug]'));
+  t.true(!stderr.includes('START RequestId'));
+  t.true(!stderr.includes('END RequestId'));
+  t.true(!stderr.includes('REPORT RequestId'));
+  t.true(!stderr.includes('Init Duration'));
+  t.true(!stderr.includes('XRAY TraceId'));
+  t.is(exitCode, 0);
 });
 
 test('ensure we render a prompt when deploying home directory', async t => {
