@@ -88,6 +88,15 @@ module.exports = async function prepare(session) {
           'now-build': 'node now-build.js',
         },
       }),
+      'now-build.js': `
+        const fs = require('fs');
+        fs.writeFileSync( 
+          'index.js',
+          fs.readFileSync('index.js', utf8)
+          .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
+        );
+      `,
+      'index.js': `module.exports = (req, res) => { res.status(200).send('BUILD_ENV_DEBUG'); }`,
     },
     'now-revert-alias-1': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
@@ -138,9 +147,11 @@ module.exports = async function prepare(session) {
       }),
     },
     'deploy-with-only-readme-now-json': {
+      'now.json': JSON.stringify({ version: 2 }),
       'README.md': 'readme contents',
     },
     'deploy-with-only-readme-vercel-json': {
+      'vercel.json': JSON.stringify({ version: 2 }),
       'README.md': 'readme contents',
     },
     'local-config-v2': {

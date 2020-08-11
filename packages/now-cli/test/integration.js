@@ -224,19 +224,6 @@ const getDeploymentBuildsByUrl = async url => {
   return builds;
 };
 
-const createDeploymentWithFixture = async (project = 'static-deployment') => {
-  const directory = fixture(project);
-  const output = await execute([directory, '--confirm']);
-
-  if (output.exitCode !== 0) {
-    throw output;
-  }
-
-  const { host } = new URL(output.stdout);
-
-  return host;
-};
-
 const createUser = async () => {
   await retry(
     async () => {
@@ -1164,7 +1151,7 @@ test('try to move an invalid domain', async t => {
 test('try to set default without existing payment method', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['billing', 'set-default', '-y', ...defaultArgs],
+    ['billing', 'set-default', ...defaultArgs],
     {
       reject: false,
     }
@@ -1181,7 +1168,7 @@ test('try to set default without existing payment method', async t => {
 test('try to remove a non-existing payment method', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['billing', 'rm', 'card_d2j32d9382jr928rd', '-y', ...defaultArgs],
+    ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
     {
       reject: false,
     }
@@ -1200,11 +1187,9 @@ test('try to remove a non-existing payment method', async t => {
 });
 
 test('output logs of a 2.0 deployment', async t => {
-  const deployment = await createDeploymentWithFixture();
-
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['logs', deployment, ...defaultArgs],
+    ['logs', context.deployment, ...defaultArgs],
     {
       reject: false,
     }
@@ -1215,17 +1200,16 @@ test('output logs of a 2.0 deployment', async t => {
   console.log(exitCode);
 
   t.true(
-    stderr.includes(`Fetched deployment "${deployment}"`),
+    stderr.includes(`Fetched deployment "${context.deployment}"`),
     formatOutput({ stderr, stdout })
   );
   t.is(exitCode, 0);
 });
 
 test('output logs of a 2.0 deployment without annotate', async t => {
-  const deployment = await createDeploymentWithFixture();
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['logs', deployment, ...defaultArgs],
+    ['logs', context.deployment, ...defaultArgs],
     {
       reject: false,
     }
@@ -1774,10 +1758,6 @@ test('use `--build-env` CLI flag', async t => {
       reject: false,
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   // Ensure the exit code is right
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
@@ -2974,7 +2954,7 @@ test('whoami with local .vercel scope', async t => {
   await ensureDir(path.join(directory, '.vercel'));
   await fs.writeFile(
     path.join(directory, '.vercel', 'project.json'),
-    JSON.stringify({ orgId: user.uid })
+    JSON.stringify({ orgId: user.uid, projectId: 'xxx' })
   );
 
   const output = await execute(['whoami'], {
