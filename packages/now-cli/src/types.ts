@@ -100,31 +100,22 @@ export type Cert = {
   expiration: string;
 };
 
-export type NpmDeployment = {
-  uid: string;
-  url: string;
-  name: string;
-  type: 'NPM';
-  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR';
-  version?: number;
-  created: number;
-  creator: { uid: string };
-  sessionAffinity: string;
-};
-
-export type StaticDeployment = {
+export type Deployment = {
   uid: string;
   url: string;
   name: string;
   type: 'STATIC';
-  state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR';
+  state:
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
   version?: number;
   created: number;
   creator: { uid: string };
-  sessionAffinity: string;
 };
-
-export type Deployment = NpmDeployment | StaticDeployment;
 
 type PathAliasRule = {
   pathname: string;
