@@ -2,20 +2,55 @@ import { basename, join, sep } from 'path';
 import { send } from 'micro';
 import test from 'ava';
 import sinon from 'sinon';
+import { asc as alpha } from 'alpha-sort';
 import fetch from 'node-fetch';
+import createOutput from '../src/util/output';
 import getProjectName from '../src/util/get-project-name';
 import toHost from '../src/util/to-host';
 import wait from '../src/util/output/wait';
 import { responseError, responseErrorMessage } from '../src/util/error';
 import getURL from './helpers/get-url';
+import { staticFiles as getStaticFiles_ } from '../src/util/get-files';
 import didYouMean from '../src/util/init/did-you-mean';
 import { isValidName } from '../src/util/is-valid-name';
 import getUpdateCommand from '../src/util/get-update-command';
 import { isCanary } from '../src/util/is-canary';
 import { getVercelDirectory } from '../src/util/projects/link';
 
+const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}${sep}`;
+const base = path => path.replace(prefix, '');
 const fixture = name => join(prefix, name);
+
+const getStaticFiles = async dir => {
+  const files = await getStaticFiles_(dir, {
+    output,
+  });
+  return normalizeWindowsPaths(files);
+};
+
+const normalizeWindowsPaths = files => {
+  if (process.platform === 'win32') {
+    const prefix = 'D:/a/vercel/vercel/packages/now-cli/test/fixtures/unit/';
+    return files.map(f => f.replace(/\\/g, '/').slice(prefix.length));
+  }
+  return files;
+};
+
+test('should observe .vercelignore file', async t => {
+  const path = 'vercelignore';
+  let files = await getStaticFiles(fixture(path));
+  files = files.sort(alpha);
+
+  t.is(files.length, 6);
+
+  t.is(base(files[0]), `${path}/.vercelignore`);
+  t.is(base(files[1]), `${path}/a.js`);
+  t.is(base(files[2]), `${path}/build/sub/a.js`);
+  t.is(base(files[3]), `${path}/build/sub/c.js`);
+  t.is(base(files[4]), `${path}/c.js`);
+  t.is(base(files[5]), `${path}/package.json`);
+});
 
 test('simple to host', t => {
   t.is(toHost('vercel.com'), 'vercel.com');
