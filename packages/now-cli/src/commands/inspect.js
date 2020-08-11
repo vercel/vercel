@@ -190,13 +190,10 @@ function stateString(s) {
     case 'ERROR':
       return chalk.red(s);
 
-    case 'BUILDING':
-      return chalk.grey(s);
-
     case 'READY':
       return s;
 
     default:
-      return chalk.gray('UNKNOWN');
+      return chalk.gray(s || 'UNKNOWN');
   }
 }

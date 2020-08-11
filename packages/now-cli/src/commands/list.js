@@ -36,7 +36,6 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
-    -a, --all                      See all instances for each deployment (requires [app])
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
@@ -75,9 +74,7 @@ export default async function main(ctx) {
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
-      '--all': Boolean,
       '--meta': [String],
-      '-a': '--all',
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
@@ -146,11 +143,6 @@ export default async function main(ctx) {
 
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const start = new Date();
-
-  if (argv['--all'] && !app) {
-    error('You must define an app when using `-a` / `--all`');
-    return 1;
-  }
 
   if (app && !isValidName(app)) {
     error(`The provided argument "${app}" is not a valid project name`);

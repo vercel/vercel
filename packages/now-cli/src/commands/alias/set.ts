@@ -96,7 +96,7 @@ export default async function set(
     return 1;
   }
 
-  // For `now alias <argument>`
+  // For `now alias set <argument>`
   if (args.length === 1) {
     const deployment = handleCertError(
       output,
@@ -127,11 +127,11 @@ export default async function set(
       return 1;
     }
 
-    // Find the targets to perform the alias	  const [deploymentIdOrHost, aliasTarget] = args;
+    // Find the targets to perform the alias
     const targets = getTargetsForAlias(args, localConfig);
 
     if (targets instanceof Error) {
-      output.error(targets.message);
+      output.prettyError(targets);
       return 1;
     }
 
