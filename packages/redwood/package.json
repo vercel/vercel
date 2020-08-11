@@ -18,7 +18,8 @@
     "prepublishOnly": "./build.sh"
   },
   "dependencies": {
-    "@netlify/zip-it-and-ship-it": "1.2.0"
+    "@netlify/zip-it-and-ship-it": "1.2.0",
+    "@vercel/frameworks": "0.0.18-canary.3"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",

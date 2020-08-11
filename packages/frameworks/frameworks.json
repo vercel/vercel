@@ -700,13 +700,13 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "yarn rw db up --no-db-client --auto-approve && yarn rw build"
+        "value": "yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up"
       },
       "devCommand": {
         "value": "yarn rw dev --fwd=\"--port=$PORT --open=false\""
       },
       "outputDirectory": {
-        "value": "RedwoodJS default"
+        "placeholder": "RedwoodJS default"
       }
     }
   },
