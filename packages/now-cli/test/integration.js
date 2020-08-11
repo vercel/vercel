@@ -988,28 +988,28 @@ test('ignore files specified in .nowignore via allowlist', async t => {
   t.is(presentFile.status, 200);
 });
 
-// test('list the scopes', async t => {
-//   const { stdout, stderr, exitCode } = await execa(
-//     binaryPath,
-//     ['teams', 'ls', ...defaultArgs],
-//     {
-//       reject: false,
-//     }
-//   );
+test('list the scopes', async t => {
+  const { stdout, stderr, exitCode } = await execa(
+    binaryPath,
+    ['teams', 'ls', ...defaultArgs],
+    {
+      reject: false,
+    }
+  );
 
-//   console.log(stderr);
-//   console.log(stdout);
-//   console.log(exitCode);
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
 
-//   t.is(exitCode, 0);
+  t.is(exitCode, 0);
 
-//   const include = `✔ ${contextName}     ${email}`;
+  const include = `✔ ${contextName}     ${email}`;
 
-//   t.true(
-//     stdout.includes(include),
-//     `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`
-//   );
-// });
+  t.true(
+    stdout.includes(include),
+    `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`
+  );
+});
 
 test('list the payment methods', async t => {
   const { stdout, stderr, exitCode } = await execa(
