@@ -5,6 +5,8 @@ import retry from 'async-retry';
 import ms from 'ms';
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
+import bytes from 'bytes';
+import chalk from 'chalk';
 import ua from './ua.ts';
 import processDeployment from './deploy/process-deployment.ts';
 import highlight from './output/highlight';
@@ -60,6 +62,7 @@ export default class Now extends EventEmitter {
     isSettingUpProject,
     cwd
   ) {
+    let hashes = {};
     const uploadStamp = stamp();
 
     let requestBody = {
@@ -83,6 +86,7 @@ export default class Now extends EventEmitter {
     const deployment = await processDeployment({
       now: this,
       output: this._output,
+      hashes,
       paths,
       requestBody,
       uploadStamp,
@@ -97,6 +101,33 @@ export default class Now extends EventEmitter {
       skipAutoDetectionConfirmation,
       cwd,
     });
+
+    if (deployment && deployment.warnings) {
+      let sizeExceeded = 0;
+      const { log, warn } = this._output;
+
+      deployment.warnings.forEach(warning => {
+        if (warning.reason === 'size_limit_exceeded') {
+          const { sha, limit } = warning;
+          const n = hashes[sha].names.pop();
+
+          warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`);
+
+          hashes[sha].names.unshift(n); // Move name (hack, if duplicate matches we report them in order)
+          sizeExceeded++;
+        } else if (warning.reason === 'node_version_not_found') {
+          warn(`Requested node version ${warning.wanted} is not available`);
+        }
+      });
+      if (sizeExceeded > 0) {
+        warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
+        log(
+          `Please upgrade your plan here: ${chalk.cyan(
+            'https://vercel.com/account/plan'
+          )}`
+        );
+      }
+    }
 
     return deployment;
   }
@@ -384,14 +415,6 @@ export default class Now extends EventEmitter {
   }
 
   close() {}
-
-  get id() {
-    return this._id;
-  }
-
-  get host() {
-    return this._host;
-  }
 
   get syncAmount() {
     if (!this._syncAmount) {
