@@ -25,59 +25,63 @@ async function* postDeployment(
   const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
 
   debug('Sending deployment creation API request');
-  const response = await fetch(
-    `${apiDeployments}${generateQueryString(clientOptions)}`,
-    clientOptions.token,
-    {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...deploymentOptions,
-        files: preparedFiles,
-      }),
-      apiUrl: clientOptions.apiUrl,
-      userAgent: clientOptions.userAgent,
+  try {
+    const response = await fetch(
+      `${apiDeployments}${generateQueryString(clientOptions)}`,
+      clientOptions.token,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...deploymentOptions,
+          files: preparedFiles,
+        }),
+        apiUrl: clientOptions.apiUrl,
+        userAgent: clientOptions.userAgent,
+      }
+    );
+
+    const deployment = await response.json();
+
+    if (clientOptions.debug) {
+      // Wrapped because there is no need to
+      // call JSON.stringify if we don't debug.
+      debug('Deployment response:', JSON.stringify(deployment));
     }
-  );
 
-  const deployment = await response.json();
+    if (!response.ok || deployment.error) {
+      debug('Error: Deployment request status is', response.status);
+      // Return error object
+      return yield {
+        type: 'error',
+        payload: deployment.error
+          ? { ...deployment.error, status: response.status }
+          : { ...deployment, status: response.status },
+      };
+    }
 
-  if (clientOptions.debug) {
-    // Wrapped because there is no need to
-    // call JSON.stringify if we don't debug.
-    debug('Deployment response:', JSON.stringify(deployment));
+    for (const [name, value] of response.headers.entries()) {
+      if (name.startsWith('x-now-warning-')) {
+        debug('Deployment created with a warning:', value);
+        yield { type: 'warning', payload: value };
+      }
+
+      if (name.startsWith('x-now-notice-')) {
+        debug('Deployment created with a notice:', value);
+        yield { type: 'notice', payload: value };
+      }
+      if (name.startsWith('x-now-tip-')) {
+        debug('Deployment created with a tip:', value);
+        yield { type: 'tip', payload: value };
+      }
+    }
+    yield { type: 'created', payload: deployment };
+  } catch (e) {
+    return yield { type: 'error', payload: e };
   }
-
-  if (!response.ok || deployment.error) {
-    debug('Error: Deployment request status is', response.status);
-    // Return error object
-    return yield {
-      type: 'error',
-      payload: deployment.error
-        ? { ...deployment.error, status: response.status }
-        : { ...deployment, status: response.status },
-    };
-  }
-
-  for (const [name, value] of response.headers.entries()) {
-    if (name.startsWith('x-now-warning-')) {
-      debug('Deployment created with a warning:', value);
-      yield { type: 'warning', payload: value };
-    }
-
-    if (name.startsWith('x-now-notice-')) {
-      debug('Deployment created with a notice:', value);
-      yield { type: 'notice', payload: value };
-    }
-    if (name.startsWith('x-now-tip-')) {
-      debug('Deployment created with a tip:', value);
-      yield { type: 'tip', payload: value };
-    }
-  }
-  yield { type: 'created', payload: deployment };
 }
 
 function getDefaultName(
@@ -142,6 +146,12 @@ export async function* deploy(
     deploymentOptions.name =
       clientOptions.defaultName || getDefaultName(files, clientOptions);
     debug('No name provided. Defaulting to', deploymentOptions.name);
+  }
+
+  if (clientOptions.withCache) {
+    debug(
+      `'withCache' is provided. Force deploy will be performed with cache retention`
+    );
   }
 
   let deployment: Deployment | undefined;

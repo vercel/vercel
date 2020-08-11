@@ -37,6 +37,19 @@ const normalizeWindowsPaths = files => {
   return files;
 };
 
+test('discover files for builds deployment', async t => {
+  const path = 'now-json-static-no-files';
+  let files = await getStaticFiles(fixture(path), true);
+  files = files.sort(alpha);
+
+  t.is(files.length, 4);
+
+  t.is(base(files[0]), `${path}/a.js`);
+  t.is(base(files[1]), `${path}/b.js`);
+  t.is(base(files[2]), `${path}/build/a/c.js`);
+  t.is(base(files[3]), `${path}/package.json`);
+});
+
 test('should observe .vercelignore file', async t => {
   const path = 'vercelignore';
   let files = await getStaticFiles(fixture(path));

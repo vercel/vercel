@@ -132,6 +132,9 @@ export default function buildCreateDeployment() {
       debug(`Using provided user agent: ${clientOptions.userAgent}`);
     }
 
+    debug(`Setting platform version to harcoded value 2`);
+    deploymentOptions.version = 2;
+
     debug(`Creating the deployment and starting upload...`);
     for await (const event of upload(files, clientOptions, deploymentOptions)) {
       debug(`Yielding a '${event.type}' event`);
