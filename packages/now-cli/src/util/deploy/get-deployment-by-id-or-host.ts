@@ -14,7 +14,7 @@ export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
   idOrHost: string,
-  apiVersion: APIVersion = 'v12'
+  apiVersion = 'v12'
 ) {
   try {
     const { deployment } =
