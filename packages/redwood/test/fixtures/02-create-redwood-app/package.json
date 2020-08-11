@@ -6,9 +6,6 @@
       "web"
     ]
   },
-  "scripts": {
-    "build": "rw build && rw db up --no-db-client --auto-approve && yarn rw dataMigrate up"
-  },
   "devDependencies": {
     "@redwoodjs/core": "^0.15.3",
     "netlify-plugin-prisma-provider": "^0.3.0"
