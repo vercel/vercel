@@ -403,7 +403,7 @@ module.exports = async function prepare(session) {
     for (const [name, content] of Object.entries(needed)) {
       const file = join(directory, name);
       await mkdirp(dirname(file));
-      await writeFile(file.replace('-builds', ''), content);
+      await writeFile(file, content);
     }
   }
 };
