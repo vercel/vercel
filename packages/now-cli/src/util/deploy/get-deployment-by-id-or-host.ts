@@ -8,8 +8,6 @@ import {
 } from '../errors-ts';
 import mapCertError from '../certs/map-cert-error';
 
-type APIVersion = 'v12';
-
 export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
@@ -49,7 +47,7 @@ export default async function getDeploymentByIdOrHost(
 async function getDeploymentById(
   client: Client,
   id: string,
-  apiVersion: APIVersion
+  apiVersion: string
 ) {
   const deployment = await client.fetch<Deployment>(
     `/${apiVersion}/now/deployments/${encodeURIComponent(id)}`
@@ -60,7 +58,7 @@ async function getDeploymentById(
 async function getDeploymentByHost(
   client: Client,
   host: string,
-  apiVersion: APIVersion
+  apiVersion: string
 ) {
   const response = await client.fetch<{ id: string }>(
     `/${apiVersion}/now/deployments/get?url=${encodeURIComponent(
