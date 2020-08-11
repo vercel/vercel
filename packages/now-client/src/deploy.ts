@@ -20,7 +20,11 @@ async function* createDeployment(
   files: Map<string, DeploymentFile>,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
-): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
+): AsyncIterableIterator<{
+  type: DeploymentEventType;
+  payload: any;
+  info?: string;
+}> {
   const debug = createDebug(clientOptions.debug);
   const preparedFiles = prepareFiles(files, clientOptions);
   const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
@@ -59,18 +63,22 @@ async function* createDeployment(
       };
     }
 
+    const regex = /^x-now-(?:warning|notice|tip)-(.*)$/;
     for (const [name, value] of dpl.headers.entries()) {
       if (name.startsWith('x-now-warning-')) {
         debug('Deployment created with a warning:', value);
-        yield { type: 'warning', payload: value };
+        const info = dpl.headers[`x-now-info-${name.match(regex)[1]}`];
+        yield { type: 'warning', payload: value, info };
       }
       if (name.startsWith('x-now-notice-')) {
         debug('Deployment created with a notice:', value);
-        yield { type: 'notice', payload: value };
+        const info = dpl.headers[`x-now-info-${name.match(regex)[1]}`];
+        yield { type: 'notice', payload: value, info };
       }
       if (name.startsWith('x-now-tip-')) {
         debug('Deployment created with a tip:', value);
-        yield { type: 'tip', payload: value };
+        const info = dpl.headers[`x-now-info-${name.match(regex)[1]}`];
+        yield { type: 'tip', payload: value, info };
       }
     }
 
