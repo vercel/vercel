@@ -79,13 +79,6 @@ module.exports = async function prepare(session) {
         },
       }),
     },
-    'build-env-arg': {
-      'package.json': JSON.stringify({
-        scripts: {
-          build: 'mkdir -p public && echo $NONCE > public/index.txt',
-        },
-      }),
-    },
     'build-env-debug': {
       'now.json': JSON.stringify({
         builds: [{ src: 'index.js', use: '@now/node' }],
