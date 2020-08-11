@@ -1780,7 +1780,7 @@ test('use `--build-env` CLI flag', async t => {
   console.log(exitCode);
 
   // Ensure the exit code is right
-  t.is(exitCode, 0, `Received:\n"${stderr}"\n"${stdout}"`);
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
