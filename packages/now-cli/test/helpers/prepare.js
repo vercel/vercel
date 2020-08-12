@@ -373,12 +373,12 @@ module.exports = async function prepare(session) {
     },
     'conflicting-now-json-vercel-json': {
       'index.html': '<h1>I am a website.</h1>',
-      'vercel.json': {
+      'vercel.json': JSON.stringify({
         builds: [{ src: '*.html', use: '@now/static' }],
-      },
-      'now.json': {
+      }),
+      'now.json': JSON.stringify({
         builds: [{ src: '*.html', use: '@now/static' }],
-      },
+      }),
     },
     'unauthorized-vercel-config': {
       // This project is under the testing-internal team
