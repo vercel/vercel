@@ -58,7 +58,7 @@ async function getDeploymentById(
 async function getDeploymentByHost(
   client: Client,
   host: string,
-  apiVersion: string
+  apiVersion = 'v10'
 ) {
   const response = await client.fetch<{ id: string }>(
     `/${apiVersion}/now/deployments/get?url=${encodeURIComponent(

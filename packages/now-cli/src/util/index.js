@@ -359,7 +359,7 @@ export default class Now extends EventEmitter {
     return this.retry(
       async bail => {
         const res = await this._fetch(
-          `/v12/now/deployments/${encodeURIComponent(id)}`
+          `/v11/now/deployments/${encodeURIComponent(id)}`
         );
 
         // No retry on 4xx
