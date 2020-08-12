@@ -104,7 +104,7 @@ export type Deployment = {
   uid: string;
   url: string;
   name: string;
-  type: 'STATIC';
+  type: 'LAMBDAS';
   state:
     | 'BUILDING'
     | 'ERROR'

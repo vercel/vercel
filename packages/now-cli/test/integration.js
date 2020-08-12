@@ -2066,7 +2066,7 @@ test('fail `now dev` dev script without now.json', async t => {
 });
 
 test('`vercel rm` removes a deployment', async t => {
-  const directory = fixture('now-dev-fail-dev-script');
+  const directory = fixture('static-deployment');
 
   const { stdout } = await execa(
     binaryPath,
