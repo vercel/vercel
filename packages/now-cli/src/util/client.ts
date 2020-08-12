@@ -1,4 +1,4 @@
-import qs from 'querystring';
+import { URLSearchParams } from 'url';
 import { EventEmitter } from 'events';
 import { parse as parseUrl } from 'url';
 import fetch, { RequestInit } from 'node-fetch';
@@ -7,7 +7,7 @@ import createOutput, { Output } from './output/create-output';
 import responseError from './response-error';
 import ua from './ua';
 
-export type FetchOptions = {
+export interface FetchOptions {
   body?: NodeJS.ReadableStream | object | string;
   headers?: { [key: string]: string };
   json?: boolean;
@@ -15,7 +15,7 @@ export type FetchOptions = {
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
   accountId?: string;
-};
+}
 
 export default class Client extends EventEmitter {
   _apiUrl: string;
@@ -67,19 +67,19 @@ export default class Client extends EventEmitter {
       : '';
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
-      const query = parsedUrl.query;
+      const query = new URLSearchParams(parsedUrl.query);
 
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
-          query.teamId = opts.accountId;
+          query.set('teamId', opts.accountId);
         } else {
-          delete query.teamId;
+          query.delete('teamId');
         }
       } else if (opts.useCurrentTeam !== false && this.currentTeam) {
-        query.teamId = this.currentTeam;
+        query.set('teamId', this.currentTeam);
       }
 
-      _url = `${apiUrl}${parsedUrl.pathname}?${qs.stringify(query)}`;
+      _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
 
       delete opts.useCurrentTeam;
       delete opts.accountId;
