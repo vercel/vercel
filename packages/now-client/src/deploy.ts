@@ -23,7 +23,8 @@ async function* createDeployment(
 ): AsyncIterableIterator<{
   type: DeploymentEventType;
   payload: any;
-  info?: string;
+  action?: string;
+  link?: string;
 }> {
   const debug = createDebug(clientOptions.debug);
   const preparedFiles = prepareFiles(files, clientOptions);
@@ -63,22 +64,31 @@ async function* createDeployment(
       };
     }
 
-    const regex = /^x-now-(?:warning|notice|tip)-(.*)$/;
+    const regex = /^x-(?:vercel|now)-(?:warning|notice|tip)-(.*)$/;
     for (const [name, value] of dpl.headers.entries()) {
-      if (name.startsWith('x-now-warning-')) {
+      if (
+        name.startsWith('x-vercel-warning-') ||
+        name.startsWith('x-now-warning-')
+      ) {
         debug('Deployment created with a warning:', value);
-        const info = dpl.headers[`x-now-info-${name.match(regex)[1]}`];
-        yield { type: 'warning', payload: value, info };
+        const action = dpl.headers[`x-vercel-action-${name.match(regex)[1]}`];
+        const link = dpl.headers[`x-vercel-link-${name.match(regex)[1]}`];
+        yield { type: 'warning', payload: value, action, link };
       }
-      if (name.startsWith('x-now-notice-')) {
+      if (
+        name.startsWith('x-vercel-notice-') ||
+        name.startsWith('x-now-notice-')
+      ) {
         debug('Deployment created with a notice:', value);
-        const info = dpl.headers[`x-now-info-${name.match(regex)[1]}`];
-        yield { type: 'notice', payload: value, info };
+        const action = dpl.headers[`x-vercel-action-${name.match(regex)[1]}`];
+        const link = dpl.headers[`x-vercel-link-${name.match(regex)[1]}`];
+        yield { type: 'notice', payload: value, action, link };
       }
-      if (name.startsWith('x-now-tip-')) {
+      if (name.startsWith('x-vercel-tip-') || name.startsWith('x-now-tip-')) {
         debug('Deployment created with a tip:', value);
-        const info = dpl.headers[`x-now-info-${name.match(regex)[1]}`];
-        yield { type: 'tip', payload: value, info };
+        const action = dpl.headers[`x-vercel-action-${name.match(regex)[1]}`];
+        const link = dpl.headers[`x-vercel-link-${name.match(regex)[1]}`];
+        yield { type: 'tip', payload: value, action, link };
       }
     }
 
