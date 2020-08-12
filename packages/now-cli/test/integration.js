@@ -1742,43 +1742,6 @@ test('use build-env', async t => {
   t.is(content.trim(), 'bar');
 });
 
-test('use `--build-env` CLI flag', async t => {
-  const directory = fixture('build-env-arg');
-  const nonce = Math.random().toString(36).substring(2);
-
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--build-env',
-      `NONCE=${nonce}`,
-      ...defaultArgs,
-      '--confirm',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), nonce);
-});
-
 test('use `--debug` CLI flag', async t => {
   const directory = fixture('build-env-debug');
 
