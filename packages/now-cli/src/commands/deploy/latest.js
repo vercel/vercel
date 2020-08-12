@@ -165,7 +165,7 @@ const printDeploymentStatus = async (
         ) +
           `\n` +
           indication.link
-          ? `${indication.action ? indication.action : 'Learn More: '}${
+          ? `${indication.action || 'Learn More'}: ${
               indication.link
             }\n`
           : ''
