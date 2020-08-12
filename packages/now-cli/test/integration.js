@@ -1189,53 +1189,42 @@ test('try to remove a non-existing payment method', async t => {
 /*
  * Disabled 2 tests because these temp users don't have certs
 test('create wildcard alias for deployment', async t => {
-  const deployment = await createDeploymentWithFixture('context-website');
-  const alias = `*.${contextName}.now.sh`;
-
+  const hosts = {
+    deployment: context.deployment,
+    alias: `*.${contextName}.now.sh`,
+  };
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    ['alias', deployment, alias, ...defaultArgs],
+    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
     {
       reject: false,
     }
   );
-
-   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-
-  t.regex(
-    stdout,
-    new RegExp(
-      `> Success! \\${alias} now points to https://${deployment}`,
-      'gm'
-    ),
-    formatOutput({ stderr, stdout })
-  );
-
+  console.log(stderr);
+  console.log(stdout);
+  console.log(exitCode);
+  const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
+  t.is(exitCode, 0);
+  t.true(stdout.startsWith(goal));
   // Send a test request to the alias
   // Retries to make sure we consider the time it takes to update
   const response = await retry(
     async () => {
       const response = await fetch(`https://test.${contextName}.now.sh`);
-
       if (response.ok) {
         return response;
       }
-
       throw new Error(`Error: Returned code ${response.status}`);
     },
     { retries: 3 }
   );
   const content = await response.text();
-
   t.true(response.ok);
-  t.regex(content, new RegExp(contextName));
-
-  context.wildcardAlias = alias;
+  t.true(content.includes(contextName));
+  context.wildcardAlias = hosts.alias;
 });
-
 test('remove the wildcard alias', async t => {
   const goal = `> Success! Alias ${context.wildcardAlias} removed`;
-
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
     ['alias', 'rm', context.wildcardAlias, '--yes', ...defaultArgs],
@@ -1243,11 +1232,9 @@ test('remove the wildcard alias', async t => {
       reject: false,
     }
   );
-
   console.log(stderr);
   console.log(stdout);
   console.log(exitCode);
-
   t.is(exitCode, 0);
   t.true(stdout.startsWith(goal));
 });
