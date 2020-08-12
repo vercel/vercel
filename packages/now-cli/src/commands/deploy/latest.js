@@ -164,11 +164,9 @@ const printDeploymentStatus = async (
           emoji(indication.type)
         ) +
           `\n` +
-          indication.link
-          ? `${indication.action || 'Learn More'}: ${
-              indication.link
-            }\n`
-          : ''
+          (indication.link
+            ? `${indication.action || 'Learn More'}: ${indication.link}\n\n`
+            : '')
       );
     }
   }
