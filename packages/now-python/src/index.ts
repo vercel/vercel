@@ -1,11 +1,12 @@
-import { join, dirname, basename } from 'path';
+import { join, dirname, basename, sep } from 'path';
 import execa from 'execa';
 import fs from 'fs';
+import { mkdirp } from 'fs-extra';
 import { promisify } from 'util';
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 import buildUtils from './build-utils';
-import { GlobOptions, BuildOptions } from '@vercel/build-utils';
+import { BuildOptions } from '@vercel/build-utils';
 const {
   getWriteableDirectory,
   download,
@@ -29,6 +30,27 @@ async function pipenvConvert(cmd: string, srcDir: string) {
   }
 }
 
+async function matchPaths(
+  configPatterns: string | string[] | undefined,
+  workPath: string
+) {
+  if (!configPatterns) {
+    return [];
+  }
+
+  const patterns =
+    typeof configPatterns === 'string' ? [configPatterns] : configPatterns;
+
+  const patternPaths = await Promise.all(
+    patterns.map(async pattern => {
+      const files = await glob(pattern, workPath);
+      return Object.keys(files);
+    })
+  );
+
+  return ([] as string[]).concat(...patternPaths);
+}
+
 export const version = 3;
 
 export async function downloadFilesInWorkPath({
@@ -42,7 +64,11 @@ export async function downloadFilesInWorkPath({
   if (meta.isDev) {
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
-    const destCache = join(devCacheDir, basename(entrypoint, '.py'));
+    const entrypointCacheDir = join(
+      dirname(entrypoint),
+      basename(entrypoint, '.py')
+    ).replace(new RegExp(sep, 'g'), '__');
+    const destCache = join(devCacheDir, entrypointCacheDir);
     await download(downloadedFiles, destCache);
     downloadedFiles = await glob('**', destCache);
     workPath = destCache;
@@ -84,9 +110,13 @@ export const build = async ({
 
   console.log('Installing required dependencies...');
 
+  const packagesDir = 'now__pypackages';
+
+  await mkdirp(join(workPath, packagesDir));
+
   await installRequirement({
     dependency: 'werkzeug',
-    workPath,
+    workPath: join(workPath, packagesDir),
     meta,
   });
 
@@ -116,9 +146,11 @@ export const build = async ({
 
     // Python needs to know where to look up all the packages we just installed.
     // We tell it to use the same location as used with `--target`
+    const pythonPath = process.env.PYTHONPATH;
     process.env.PYTHONPATH = tempDir;
     const convertCmd = join(tempDir, 'bin', 'pipfile2req');
     await pipenvConvert(convertCmd, pipfileLockDir);
+    process.env.PYTHONPATH = pythonPath;
   }
 
   fsFiles = await glob('**', workPath);
@@ -129,7 +161,7 @@ export const build = async ({
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await installRequirementsFile({
       filePath: requirementsTxtPath,
-      workPath,
+      workPath: join(workPath, packagesDir),
       meta,
     });
   } else if (fsFiles['requirements.txt']) {
@@ -137,7 +169,7 @@ export const build = async ({
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await installRequirementsFile({
       filePath: requirementsTxtPath,
-      workPath,
+      workPath: join(workPath, packagesDir),
       meta,
     });
   }
@@ -152,7 +184,8 @@ export const build = async ({
   debug('Entrypoint with suffix is', entrypointWithSuffix);
   const nowHandlerPyContents = originalNowHandlerPyContents
     .replace(/__NOW_HANDLER_MODULE_NAME/g, moduleName)
-    .replace(/__NOW_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
+    .replace(/__NOW_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
+    .replace(/__NOW_PACKAGES_DIR/g, packagesDir);
 
   // in order to allow the user to have `server.py`, we need our `server.py` to be called
   // somethig else
@@ -166,16 +199,39 @@ export const build = async ({
   // Use the system-installed version of `python3` when running via `vercel dev`
   const runtime = meta.isDev ? 'python3' : 'python3.6';
 
-  const globOptions: GlobOptions = {
-    cwd: workPath,
-    ignore:
-      config && typeof config.excludeFiles === 'string'
-        ? config.excludeFiles
-        : 'node_modules/**',
-  };
+  const outputFiles = await glob('**', workPath);
+
+  // Static analysis is impossible with Python. Instead, provide `includeFiles`
+  // and `excludeFiles` config options to reduce bundle size.
+  if (config && (config.includeFiles || config.excludeFiles)) {
+    const includedPaths = await matchPaths(config.includeFiles, workPath);
+    const excludedPaths = await matchPaths(
+      config.excludeFiles || 'node_modules/**',
+      workPath
+    );
+
+    for (let i = 0; i < excludedPaths.length; i++) {
+      // whitelist includeFiles
+      if (includedPaths.includes(excludedPaths[i])) {
+        continue;
+      }
+
+      // whitelist handler
+      if (excludedPaths[i] === `${nowHandlerPyFilename}.py`) {
+        continue;
+      }
+
+      // whitelist Python packages directory
+      if (excludedPaths[i].startsWith(packagesDir)) {
+        continue;
+      }
+
+      delete outputFiles[excludedPaths[i]];
+    }
+  }
 
   const lambda = await createLambda({
-    files: await glob('**', globOptions),
+    files: outputFiles,
     handler: `${nowHandlerPyFilename}.now_handler`,
     runtime,
     environment: {},

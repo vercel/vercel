@@ -1,10 +1,13 @@
-
+import os
 import sys
 import base64
 import json
 import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
+
+# Add the Python packages directory to the search path.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '__NOW_PACKAGES_DIR'))
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 __now_spec = util.spec_from_file_location("__NOW_HANDLER_MODULE_NAME", "./__NOW_HANDLER_ENTRYPOINT")
