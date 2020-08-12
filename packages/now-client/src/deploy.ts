@@ -64,7 +64,7 @@ async function* createDeployment(
       };
     }
 
-    const indications = ['warning', 'notice', 'tip'];
+    const indications = new Set(['warning', 'notice', 'tip']);
     const regex = /^x-(?:vercel|now)-(warning|notice|tip)-(.*)$/;
     for (const [name, payload] of dpl.headers.entries()) {
       const match = name.match(regex);
@@ -73,7 +73,7 @@ async function* createDeployment(
         const action = dpl.headers[`x-vercel-action-${identifier}`];
         const link = dpl.headers[`x-vercel-link-${identifier}`];
 
-        if (indications.includes(type)) {
+        if (indications.has(type)) {
           debug(`Deployment created with a ${type}: `, payload);
           yield { type, payload, action, link };
         }
