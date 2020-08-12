@@ -37,7 +37,7 @@ export interface Deployment {
   url: string;
   name: string;
   meta: Dictionary<string | number | boolean>;
-  version: number;
+  version: 2;
   regions: string[];
   routes: Route[];
   builds?: Builder[];
@@ -101,14 +101,9 @@ export interface DeploymentGithubData {
   autoJobCancelation: boolean;
 }
 
-interface LegacyNowConfig {
-  type?: string;
-  aliases?: string | string[];
-}
-
 export const fileNameSymbol = Symbol('fileName');
 
-export interface NowConfig extends LegacyNowConfig {
+export interface NowConfig {
   [fileNameSymbol]?: string;
   name?: string;
   version?: number;
@@ -129,6 +124,7 @@ export interface NowConfig extends LegacyNowConfig {
   github?: DeploymentGithubData;
   scope?: string;
   alias?: string | string[];
+  regions?: string[];
   projectSettings?: {
     devCommand?: string | null;
     buildCommand?: string | null;
@@ -137,32 +133,10 @@ export interface NowConfig extends LegacyNowConfig {
   };
 }
 
-interface LegacyDeploymentOptions {
-  project?: string;
-  forceNew?: boolean;
-  description?: string;
-  registryAuthToken?: string;
-  engines?: Dictionary<string>;
-  sessionAffinity?: 'ip' | 'key' | 'random';
-  deploymentType?: 'NPM' | 'STATIC' | 'DOCKER';
-  scale?: Dictionary<{
-    min?: number;
-    max?: number | 'auto';
-  }>;
-  limits?: {
-    duration?: number;
-    maxConcurrentReqs?: number;
-    timeout?: number;
-  };
-  // Can't be NowConfig, since we don't
-  // include all legacy types here
-  config?: Dictionary<any>;
-}
-
 /**
  * Options that will be sent to the API.
  */
-export interface DeploymentOptions extends LegacyDeploymentOptions {
+export interface DeploymentOptions {
   version?: number;
   regions?: string[];
   routes?: Route[];
@@ -175,7 +149,7 @@ export interface DeploymentOptions extends LegacyDeploymentOptions {
   functions?: BuilderFunctions;
   env?: Dictionary<string>;
   build?: {
-    env: Dictionary<string>;
+    env?: Dictionary<string>;
   };
   source?: string;
   target?: string;

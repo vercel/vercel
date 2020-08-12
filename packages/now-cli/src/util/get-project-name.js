@@ -1,12 +1,6 @@
 import { basename } from 'path';
 
-export default function getProjectName({
-  argv,
-  nowConfig,
-  isFile,
-  paths,
-  pre,
-}) {
+export default function getProjectName({ argv, nowConfig, isFile, paths }) {
   const nameCli = argv['--name'] || argv.name;
 
   if (nameCli) {
@@ -15,12 +9,6 @@ export default function getProjectName({
 
   if (nowConfig.name) {
     return nowConfig.name;
-  }
-
-  // For the legacy deployment pipeline, the name might have already
-  // been determined using `package.json`.
-  if (pre) {
-    return pre;
   }
 
   if (isFile || paths.length > 1) {
