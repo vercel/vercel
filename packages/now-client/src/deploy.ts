@@ -64,31 +64,19 @@ async function* createDeployment(
       };
     }
 
-    const regex = /^x-(?:vercel|now)-(?:warning|notice|tip)-(.*)$/;
-    for (const [name, value] of dpl.headers.entries()) {
-      if (
-        name.startsWith('x-vercel-warning-') ||
-        name.startsWith('x-now-warning-')
-      ) {
-        debug('Deployment created with a warning:', value);
-        const action = dpl.headers[`x-vercel-action-${name.match(regex)[1]}`];
-        const link = dpl.headers[`x-vercel-link-${name.match(regex)[1]}`];
-        yield { type: 'warning', payload: value, action, link };
-      }
-      if (
-        name.startsWith('x-vercel-notice-') ||
-        name.startsWith('x-now-notice-')
-      ) {
-        debug('Deployment created with a notice:', value);
-        const action = dpl.headers[`x-vercel-action-${name.match(regex)[1]}`];
-        const link = dpl.headers[`x-vercel-link-${name.match(regex)[1]}`];
-        yield { type: 'notice', payload: value, action, link };
-      }
-      if (name.startsWith('x-vercel-tip-') || name.startsWith('x-now-tip-')) {
-        debug('Deployment created with a tip:', value);
-        const action = dpl.headers[`x-vercel-action-${name.match(regex)[1]}`];
-        const link = dpl.headers[`x-vercel-link-${name.match(regex)[1]}`];
-        yield { type: 'tip', payload: value, action, link };
+    const indications = ['warning', 'notice', 'tip'];
+    const regex = /^x-(?:vercel|now)-(warning|notice|tip)-(.*)$/;
+    for (const [name, payload] of dpl.headers.entries()) {
+      const match = name.match(regex);
+      if (match) {
+        const [, type, identifier] = match;
+        const action = dpl.headers[`x-vercel-action-${identifier}`];
+        const link = dpl.headers[`x-vercel-link-${identifier}`];
+
+        if (indications.includes(type)) {
+          debug(`Deployment created with a ${type}: `, payload);
+          yield { type, payload, action, link };
+        }
       }
     }
 
