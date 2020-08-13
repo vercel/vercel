@@ -243,7 +243,7 @@ module.exports = async function prepare(session) {
     },
     'zero-config-next-js-functions-warning': {
       'pages/index.js':
-        'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
+        'export default () => <div><h1>Vercel CLI test</h1><p>Zero-config + Next.js</p></div>',
       'vercel.json':
         '{"version":2,"functions":{"pages/index.js":{"runtime": "@vercel/php@0.1.0"}}}',
       'package.json': JSON.stringify({
