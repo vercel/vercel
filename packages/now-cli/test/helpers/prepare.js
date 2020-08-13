@@ -247,7 +247,6 @@ module.exports = async function prepare(session) {
       'vercel.json':
         '{"version":2,"functions":{"pages/index.js":{"runtime": "@vercel/php@0.1.0"}}}',
       'package.json': JSON.stringify({
-        name: 'zero-config-next-js-test',
         scripts: {
           dev: 'next',
           start: 'next start',
