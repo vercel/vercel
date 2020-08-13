@@ -61,11 +61,7 @@ export async function build({
   );
 
   if (meta.isDev) {
-    console.log('WARN: Detected @vercel/redwood dev but this is not supported');
-    return {
-      routes: [],
-      output: {},
-    };
+    throw new Error('Detected `@vercel/redwood` dev but this is not supported');
   }
 
   const { buildCommand } = config;
