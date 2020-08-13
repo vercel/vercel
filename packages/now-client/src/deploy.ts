@@ -74,8 +74,8 @@ async function* postDeployment(
       const match = name.match(regex);
       if (match) {
         const [, type, identifier] = match;
-        const action = response.headers[`x-vercel-action-${identifier}`];
-        const link = response.headers[`x-vercel-link-${identifier}`];
+        const action = response.headers.get(`x-vercel-action-${identifier}`);
+        const link = response.headers.get(`x-vercel-link-${identifier}`);
 
         if (indications.has(type)) {
           debug(`Deployment created with a ${type}: `, payload);
