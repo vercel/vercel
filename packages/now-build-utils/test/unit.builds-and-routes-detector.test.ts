@@ -1853,23 +1853,38 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it('RedwoodJS should only use redwood builder', async () => {
-    const files = [
-      'package.json',
-      'web/index.html',
-      'api/one.js',
-      'api/two.js',
-    ];
+  const redwoodFiles = [
+    'package.json',
+    'web/package.json',
+    'web/public/robots.txt',
+    'web/src/index.html',
+    'web/src/index.css',
+    'web/src/index.js',
+    'api/package.json',
+    'api/prisma/seeds.js',
+    'api/src/functions/graphql.js',
+    'api/src/graphql/.keep',
+    'api/src/services/.keep',
+    'api/src/lib/db.js',
+  ];
+
+  it('RedwoodJS should only use Redwood builder and not Node builder', async () => {
+    const files = [...redwoodFiles].sort();
     const projectSettings = {
       framework: 'redwoodjs',
     };
 
-    const { builders, errorRoutes } = await detectBuilders(files, null, {
+    const {
+      builders,
+      defaultRoutes,
+      rewriteRoutes,
+      errorRoutes,
+    } = await detectBuilders(files, null, {
       projectSettings,
       featHandleMiss,
     });
 
-    expect(builders).toEqual([
+    expect(builders).toStrictEqual([
       {
         use: '@vercel/redwood',
         src: 'package.json',
@@ -1879,8 +1894,79 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         },
       },
     ]);
-    expect(errorRoutes!.length).toBe(1);
-    expect((errorRoutes![0] as Source).status).toBe(404);
+    expect(defaultRoutes).toStrictEqual([]);
+    expect(rewriteRoutes).toStrictEqual([]);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
+  });
+
+  it('RedwoodJS should allow usage of non-js API', async () => {
+    const files = [...redwoodFiles, 'api/golang.go', 'api/python.py'].sort();
+    const projectSettings = {
+      framework: 'redwoodjs',
+    };
+
+    const {
+      builders,
+      defaultRoutes,
+      rewriteRoutes,
+      errorRoutes,
+    } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+
+    expect(builders).toStrictEqual([
+      {
+        use: '@vercel/go',
+        src: 'api/golang.go',
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@vercel/python',
+        src: 'api/python.py',
+        config: {
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@vercel/redwood',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+          framework: 'redwoodjs',
+        },
+      },
+    ]);
+    expect(defaultRoutes).toStrictEqual([
+      { handle: 'miss' },
+      {
+        src: '^/api/(.+)(?:\\.(?:go|py))$',
+        dest: '/api/$1',
+        check: true,
+      },
+    ]);
+    expect(rewriteRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+        continue: true,
+      },
+    ]);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
   });
 
   it('No framework, only package.json', async () => {
