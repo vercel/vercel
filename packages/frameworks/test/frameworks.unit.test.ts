@@ -64,6 +64,21 @@ const Schema = {
       tagline: { type: 'string' },
       website: { type: 'string' },
       description: { type: 'string' },
+      useRuntime: {
+        type: 'object',
+        required: ['src', 'use'],
+        additionalProperties: false,
+        properties: {
+          src: { type: 'string' },
+          use: { type: 'string' },
+        },
+      },
+      ignoreRuntimes: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
+      },
       detectors: {
         type: 'object',
         additionalProperties: false,

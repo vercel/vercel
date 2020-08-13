@@ -2,8 +2,13 @@ import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
 import { Route, Source } from '@vercel/routing-utils';
+import _frameworks, { Framework } from '@vercel/frameworks';
 import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 import { isOfficialRuntime } from './';
+const frameworkList = _frameworks as Framework[];
+const slugToFramework = new Map<string | null, Framework>(
+  frameworkList.map(f => [f.slug, f])
+);
 
 interface ErrorResponse {
   code: string;
@@ -106,7 +111,6 @@ export async function detectBuilders(
     };
   }
 
-  const apiMatches = getApiMatches(options);
   const sortedFiles = files.sort(sortFiles);
   const apiSortedFiles = files.sort(sortFilesBySegmentCount);
 
@@ -122,6 +126,16 @@ export async function detectBuilders(
 
   const { projectSettings = {} } = options;
   const { buildCommand, outputDirectory, framework } = projectSettings;
+  const ignoreRuntimes = new Set(
+    slugToFramework.get(framework || '')?.ignoreRuntimes
+  );
+  const withTag = options.tag ? `@${options.tag}` : '';
+  const apiMatches = getApiMatches()
+    .filter(b => !ignoreRuntimes.has(b.use))
+    .map(b => {
+      b.use = `${b.use}${withTag}`;
+      return b;
+    });
 
   // If either is missing we'll make the frontend static
   const makeFrontendStatic = buildCommand === '' || outputDirectory === '';
@@ -309,13 +323,6 @@ export async function detectBuilders(
     options
   );
 
-  if (frontendBuilder && framework === 'redwoodjs') {
-    // RedwoodJS uses the /api directory differently so we must
-    // clear any existing builders and only use `@vercel/redwood`.
-    builders.length = 0;
-    builders.push(frontendBuilder);
-  }
-
   return {
     warnings,
     builders: builders.length ? builders : null,
@@ -401,16 +408,15 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
-function getApiMatches({ tag }: Options = {}) {
-  const withTag = tag ? `@${tag}` : '';
+function getApiMatches() {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'api/**/*.js', use: `@vercel/node${withTag}`, config },
-    { src: 'api/**/*.ts', use: `@vercel/node${withTag}`, config },
-    { src: 'api/**/!(*_test).go', use: `@vercel/go${withTag}`, config },
-    { src: 'api/**/*.py', use: `@vercel/python${withTag}`, config },
-    { src: 'api/**/*.rb', use: `@vercel/ruby${withTag}`, config },
+    { src: 'api/**/*.js', use: `@vercel/node`, config },
+    { src: 'api/**/*.ts', use: `@vercel/node`, config },
+    { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
+    { src: 'api/**/*.py', use: `@vercel/python`, config },
+    { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
   ];
 }
 
@@ -471,12 +477,10 @@ function detectFrontBuilder(
     });
   }
 
-  if (framework === 'nextjs' || framework === 'blitzjs') {
-    return { src: 'package.json', use: `@vercel/next${withTag}`, config };
-  }
-
-  if (framework === 'redwoodjs') {
-    return { src: 'package.json', use: `@vercel/redwood${withTag}`, config };
+  const f = slugToFramework.get(framework || '');
+  if (f && f.useRuntime) {
+    const { src, use } = f.useRuntime;
+    return { src, use: `${use}${withTag}`, config };
   }
 
   // Entrypoints for other frameworks
@@ -1041,5 +1045,5 @@ function sortFilesBySegmentCount(fileA: string, fileB: string): number {
     return -1;
   }
 
-  return 0;
+  return fileA.localeCompare(fileB);
 }
