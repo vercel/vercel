@@ -2332,8 +2332,7 @@ async function checkForPort(
 }
 
 function filterFrontendBuilds(build: Builder) {
-  const parsed = npa(build.use);
-  const { name } = parsed;
+  const { name } = npa(build.use);
   return !frontendRuntimeSet.has(name || '');
 }
 
