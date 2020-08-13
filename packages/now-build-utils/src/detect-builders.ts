@@ -111,8 +111,11 @@ export async function detectBuilders(
     };
   }
 
+  console.log('Unsorted files: ', files);
   const sortedFiles = files.sort(sortFiles);
+  console.log('Sorted files: ', files);
   const apiSortedFiles = files.sort(sortFilesBySegmentCount);
+  console.log('API Sorted files: ', apiSortedFiles);
 
   // Keep track of functions that are used
   const usedFunctions = new Set<string>();
@@ -137,6 +140,8 @@ export async function detectBuilders(
       return b;
     });
 
+  console.log('API Matches: ', apiMatches);
+
   // If either is missing we'll make the frontend static
   const makeFrontendStatic = buildCommand === '' || outputDirectory === '';
 
@@ -155,6 +160,7 @@ export async function detectBuilders(
   // API
   for (const fileName of sortedFiles) {
     const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
+    console.log(`File ${fileName} matched API Builder `, apiBuilder);
 
     if (apiBuilder) {
       const { routeError, apiRoute, isDynamic } = getApiRoute(

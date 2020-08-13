@@ -1921,17 +1921,17 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       featHandleMiss,
     });
 
-    expect(builders).toStrictEqual([
+    expect(builders).toEqual([
       {
-        use: '@vercel/go',
-        src: 'api/golang.go',
+        use: '@vercel/python',
+        src: 'api/python.py',
         config: {
           zeroConfig: true,
         },
       },
       {
-        use: '@vercel/python',
-        src: 'api/python.py',
+        use: '@vercel/go',
+        src: 'api/golang.go',
         config: {
           zeroConfig: true,
         },
