@@ -20,6 +20,7 @@ import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import which from 'which';
+import npa from 'npm-package-arg';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -40,6 +41,7 @@ import {
   spawnCommand,
   isOfficialRuntime,
 } from '@vercel/build-utils';
+import _frameworks, { Framework } from '@vercel/frameworks';
 
 import link from '../output/link';
 import { Output } from '../output';
@@ -84,6 +86,11 @@ import {
   EnvConfigs,
 } from './types';
 import { ProjectSettings } from '../../types';
+
+const frameworkList = _frameworks as Framework[];
+const frontendRuntimeSet = new Set(
+  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+);
 
 interface FSEvent {
   type: string;
@@ -1577,13 +1584,6 @@ export default class DevServer {
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
-      for (const r of buildResult.routes) {
-        // This replace is necessary for `@vercel/redwood` but might be relevant
-        // for builders that wish to return routes and work with zero config.
-        if (r.dest) {
-          r.dest = r.dest.replace(/\$PORT/g, `${this.devProcessPort}`);
-        }
-      }
       const matchedRoute = await devRouter(
         newUrl,
         req.method,
@@ -2332,10 +2332,9 @@ async function checkForPort(
 }
 
 function filterFrontendBuilds(build: Builder) {
-  return (
-    !isOfficialRuntime('static-build', build.use) &&
-    !isOfficialRuntime('next', build.use)
-  );
+  const parsed = npa(build.use);
+  const { name } = parsed;
+  return !frontendRuntimeSet.has(name || '');
 }
 
 function hasNewRoutingProperties(nowConfig: NowConfig) {

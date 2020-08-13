@@ -103,6 +103,7 @@
     "@types/universal-analytics": "0.4.2",
     "@types/which": "1.3.2",
     "@types/write-json-file": "2.2.1",
+    "@vercel/frameworks": "0.0.18-canary.5",
     "@zeit/fun": "0.11.2",
     "@zeit/ncc": "0.18.5",
     "@zeit/source-map-support": "0.6.2",

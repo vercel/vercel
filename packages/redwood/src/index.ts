@@ -61,21 +61,9 @@ export async function build({
   );
 
   if (meta.isDev) {
-    debug('Detected @vercel/redwood dev, returning routes...');
-
-    let srcBase = mountpoint.replace(/^\.\/?/, '');
-
-    if (srcBase.length > 0) {
-      srcBase = `/${srcBase}`;
-    }
-
+    console.log('WARN: Detected @vercel/redwood dev but this is not supported');
     return {
-      routes: [
-        {
-          src: `${srcBase}/(.*)`,
-          dest: `http://localhost:$PORT/$1`,
-        },
-      ],
+      routes: [],
       output: {},
     };
   }
