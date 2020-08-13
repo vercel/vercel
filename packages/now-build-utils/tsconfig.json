@@ -13,7 +13,7 @@
     "outDir": "./dist",
     "types": ["node", "jest"],
     "strict": true,
-    "target": "esnext"
+    "target": "es2019"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

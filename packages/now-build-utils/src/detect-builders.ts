@@ -111,7 +111,6 @@ export async function detectBuilders(
     };
   }
 
-  const apiMatches = getApiMatches(options);
   const sortedFiles = files.sort(sortFiles);
   const apiSortedFiles = files.sort(sortFilesBySegmentCount);
 
@@ -127,6 +126,16 @@ export async function detectBuilders(
 
   const { projectSettings = {} } = options;
   const { buildCommand, outputDirectory, framework } = projectSettings;
+  const ignoreRuntimes = new Set(
+    slugToFramework.get(framework || '')?.ignoreRuntimes
+  );
+  const withTag = options.tag ? `@${options.tag}` : '';
+  const apiMatches = getApiMatches()
+    .filter(b => !ignoreRuntimes.has(b.use))
+    .map(b => {
+      b.use = `${b.use}${withTag}`;
+      return b;
+    });
 
   // If either is missing we'll make the frontend static
   const makeFrontendStatic = buildCommand === '' || outputDirectory === '';
@@ -314,13 +323,6 @@ export async function detectBuilders(
     options
   );
 
-  if (frontendBuilder && framework === 'redwoodjs') {
-    // RedwoodJS uses the /api directory differently so we must
-    // clear any existing builders and only use `@vercel/redwood`.
-    builders.length = 0;
-    builders.push(frontendBuilder);
-  }
-
   return {
     warnings,
     builders: builders.length ? builders : null,
@@ -406,16 +408,15 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
-function getApiMatches({ tag }: Options = {}) {
-  const withTag = tag ? `@${tag}` : '';
+function getApiMatches() {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'api/**/*.js', use: `@vercel/node${withTag}`, config },
-    { src: 'api/**/*.ts', use: `@vercel/node${withTag}`, config },
-    { src: 'api/**/!(*_test).go', use: `@vercel/go${withTag}`, config },
-    { src: 'api/**/*.py', use: `@vercel/python${withTag}`, config },
-    { src: 'api/**/*.rb', use: `@vercel/ruby${withTag}`, config },
+    { src: 'api/**/*.js', use: `@vercel/node`, config },
+    { src: 'api/**/*.ts', use: `@vercel/node`, config },
+    { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
+    { src: 'api/**/*.py', use: `@vercel/python`, config },
+    { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
   ];
 }
 
