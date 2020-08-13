@@ -1045,5 +1045,5 @@ function sortFilesBySegmentCount(fileA: string, fileB: string): number {
     return -1;
   }
 
-  return 0;
+  return fileA.localeCompare(fileB);
 }
