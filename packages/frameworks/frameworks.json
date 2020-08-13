@@ -7,6 +7,7 @@
     "tagline": "Blitz.js: The Fullstack React Framework",
     "description": "A brand new Blitz.js app - the result of running `npx blitz new`.",
     "website": "https://blitzjs.com",
+    "useRuntime": { "src": "package.json", "use": "@vercel/next" },
     "detectors": {
       "every": [
         {
@@ -36,6 +37,7 @@
     "description": "A Next.js app and a Serverless Function API.",
     "website": "https://nextjs.org",
     "sort": 1,
+    "useRuntime": { "src": "package.json", "use": "@vercel/next" },
     "detectors": {
       "every": [
         {
@@ -690,6 +692,8 @@
     "tagline": "RedwoodJS is a full-stack framework for the Jamstack.",
     "description": "A RedwoodJS app, bootstraped with create-redwood-app.",
     "website": "https://redwoodjs.com",
+    "useRuntime": { "src": "package.json", "use": "@vercel/redwood" },
+    "ignoreRuntimes": ["@vercel/node"],
     "detectors": {
       "every": [
         {

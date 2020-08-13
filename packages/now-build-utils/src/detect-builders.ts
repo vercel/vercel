@@ -2,8 +2,13 @@ import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
 import { Route, Source } from '@vercel/routing-utils';
+import _frameworks, { Framework } from '@vercel/frameworks';
 import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 import { isOfficialRuntime } from './';
+const frameworkList = _frameworks as Framework[];
+const slugToFramework = new Map<string | null, Framework>(
+  frameworkList.map(f => [f.slug, f])
+);
 
 interface ErrorResponse {
   code: string;
@@ -471,12 +476,10 @@ function detectFrontBuilder(
     });
   }
 
-  if (framework === 'nextjs' || framework === 'blitzjs') {
-    return { src: 'package.json', use: `@vercel/next${withTag}`, config };
-  }
-
-  if (framework === 'redwoodjs') {
-    return { src: 'package.json', use: `@vercel/redwood${withTag}`, config };
+  const f = slugToFramework.get(framework || '');
+  if (f && f.useRuntime) {
+    const { src, use } = f.useRuntime;
+    return { src, use: `${use}${withTag}`, config };
   }
 
   // Entrypoints for other frameworks
