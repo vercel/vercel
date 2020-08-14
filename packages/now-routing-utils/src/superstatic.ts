@@ -183,7 +183,7 @@ function replaceSegments(
       indexes[name] = toSegmentDest(index);
     });
 
-    let destParams: string[] = [];
+    let destParams = new Set<string>();
 
     if (destination.includes(':') && segments.length > 0) {
       const pathnameKeys: Key[] = [];
@@ -197,9 +197,9 @@ function replaceSegments(
         // params from the destination
       }
 
-      destParams = [...pathnameKeys, ...hashKeys]
+      destParams = new Set([...pathnameKeys, ...hashKeys]
         .map(key => key.name)
-        .filter(isString);
+        .filter(isString));
 
       pathname = safelyCompile(pathname, indexes);
       hash = hash ? safelyCompile(hash, indexes) : null;
@@ -217,7 +217,7 @@ function replaceSegments(
     // specified
     const paramKeys = Object.keys(indexes);
 
-    if (!isRedirect && !paramKeys.some(param => destParams.includes(param))) {
+    if (!isRedirect && !paramKeys.some(param => destParams.has(param))) {
       for (const param of paramKeys) {
         if (!(param in query) && param !== UN_NAMED_SEGMENT) {
           query[param] = indexes[param];
