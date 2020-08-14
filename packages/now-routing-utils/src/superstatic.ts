@@ -5,7 +5,6 @@
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
-import { isString } from 'util';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -81,7 +80,6 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
       const route: Route = { src, dest, check: true };
       return route;
     } catch (e) {
-      console.error(e);
       throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
     }
   });
@@ -197,9 +195,11 @@ function replaceSegments(
         // params from the destination
       }
 
-      destParams = new Set([...pathnameKeys, ...hashKeys]
-        .map(key => key.name)
-        .filter(isString));
+      destParams = new Set(
+        [...pathnameKeys, ...hashKeys]
+          .map(key => key.name)
+          .filter(val => typeof val === 'string') as string[]
+      );
 
       pathname = safelyCompile(pathname, indexes);
       hash = hash ? safelyCompile(hash, indexes) : null;
@@ -214,7 +214,8 @@ function replaceSegments(
     }
 
     // We only add path segments to redirect queries if manually
-    // specified
+    // specified and only automatically add them for rewrites if one
+    // or more params aren't already used in the destination's path
     const paramKeys = Object.keys(indexes);
 
     if (!isRedirect && !paramKeys.some(param => destParams.has(param))) {
