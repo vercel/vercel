@@ -63,12 +63,9 @@
   "dependencies": {
     "@vercel/build-utils": "2.4.3-canary.4",
     "@vercel/go": "1.1.5-canary.0",
-    "@vercel/next": "2.6.20-canary.1",
     "@vercel/node": "1.7.5-canary.1",
     "@vercel/python": "1.2.2",
-    "@vercel/redwood": "0.0.2-canary.7",
     "@vercel/ruby": "1.2.3",
-    "@vercel/static-build": "0.17.7-canary.3",
     "update-notifier": "4.1.0"
   },
   "devDependencies": {
