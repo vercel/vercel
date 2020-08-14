@@ -381,12 +381,12 @@ test('convertRewrites', () => {
     },
     {
       src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
-      dest: '/$1/get?identifier=$2&file=$1&id=$2',
+      dest: '/$1/get?identifier=$2',
       check: true,
     },
     {
       src: '^\\/qs-and-hash(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
-      dest: '/api/get?identifier=$1&id=$1&hash=$2#$2',
+      dest: '/api/get?identifier=$1#$2',
       check: true,
     },
     {
@@ -402,12 +402,12 @@ test('convertRewrites', () => {
     },
     {
       src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?\\/$',
-      dest: '/catchall/$1?hello=$1',
+      dest: '/catchall/$1',
       check: true,
     },
     {
       src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/$',
-      dest: '/another-catch/$1?hello=$1',
+      dest: '/another-catch/$1',
       check: true,
     },
     {
@@ -425,7 +425,7 @@ test('convertRewrites', () => {
       dest: '/test?path=$1&two=$2',
       src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
     },
-    { check: true, dest: '/blog/$2?id=$2', src: '^(?:\\/(.*))-(\\d+)\\.html$' },
+    { check: true, dest: '/blog/$2', src: '^(?:\\/(.*))-(\\d+)\\.html$' },
   ];
 
   deepEqual(actual, expected);

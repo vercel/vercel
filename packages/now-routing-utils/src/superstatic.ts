@@ -181,7 +181,26 @@ function replaceSegments(
       indexes[name] = toSegmentDest(index);
     });
 
+    let destParams = new Set<string>();
+
     if (destination.includes(':') && segments.length > 0) {
+      const pathnameKeys: Key[] = [];
+      const hashKeys: Key[] = [];
+
+      try {
+        pathToRegexp(pathname, pathnameKeys);
+        pathToRegexp(hash || '', hashKeys);
+      } catch (_) {
+        // this is not fatal so don't error when failing to parse the
+        // params from the destination
+      }
+
+      destParams = new Set(
+        [...pathnameKeys, ...hashKeys]
+          .map(key => key.name)
+          .filter(val => typeof val === 'string') as string[]
+      );
+
       pathname = safelyCompile(pathname, indexes);
       hash = hash ? safelyCompile(hash, indexes) : null;
 
@@ -195,11 +214,14 @@ function replaceSegments(
     }
 
     // We only add path segments to redirect queries if manually
-    // specified
-    if (!isRedirect) {
-      for (const [name, value] of Object.entries(indexes)) {
-        if (!(name in query) && name !== UN_NAMED_SEGMENT) {
-          query[name] = value;
+    // specified and only automatically add them for rewrites if one
+    // or more params aren't already used in the destination's path
+    const paramKeys = Object.keys(indexes);
+
+    if (!isRedirect && !paramKeys.some(param => destParams.has(param))) {
+      for (const param of paramKeys) {
+        if (!(param in query) && param !== UN_NAMED_SEGMENT) {
+          query[param] = indexes[param];
         }
       }
     }
