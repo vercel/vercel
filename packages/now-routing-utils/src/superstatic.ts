@@ -5,6 +5,7 @@
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
+import { isString } from 'util';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -80,6 +81,7 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
       const route: Route = { src, dest, check: true };
       return route;
     } catch (e) {
+      console.error(e);
       throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
     }
   });
@@ -181,7 +183,24 @@ function replaceSegments(
       indexes[name] = toSegmentDest(index);
     });
 
+    let destParams: string[] = [];
+
     if (destination.includes(':') && segments.length > 0) {
+      const pathnameKeys: Key[] = [];
+      const hashKeys: Key[] = [];
+
+      try {
+        pathToRegexp(pathname, pathnameKeys);
+        pathToRegexp(hash || '', hashKeys);
+      } catch (_) {
+        // this is not fatal so don't error when failing to parse the
+        // params from the destination
+      }
+
+      destParams = [...pathnameKeys, ...hashKeys]
+        .map(key => key.name)
+        .filter(isString);
+
       pathname = safelyCompile(pathname, indexes);
       hash = hash ? safelyCompile(hash, indexes) : null;
 
@@ -196,10 +215,12 @@ function replaceSegments(
 
     // We only add path segments to redirect queries if manually
     // specified
-    if (!isRedirect) {
-      for (const [name, value] of Object.entries(indexes)) {
-        if (!(name in query) && name !== UN_NAMED_SEGMENT) {
-          query[name] = value;
+    const paramKeys = Object.keys(indexes);
+
+    if (!isRedirect && !paramKeys.some(param => destParams.includes(param))) {
+      for (const param of paramKeys) {
+        if (!(param in query) && param !== UN_NAMED_SEGMENT) {
+          query[param] = indexes[param];
         }
       }
     }
