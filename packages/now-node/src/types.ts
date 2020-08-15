@@ -14,7 +14,7 @@ export type NowResponse = ServerResponse & {
   send: (body: any) => NowResponse;
   json: (jsonBody: any) => NowResponse;
   status: (statusCode: number) => NowResponse;
-  redirect: (url: string, status: number) => NowResponse;
+  redirect: (statusOrUrl: string | number, url?: string) => NowResponse;
 };
 
 export type NowApiHandler = (req: NowRequest, res: NowResponse) => void;
