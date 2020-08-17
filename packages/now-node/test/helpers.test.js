@@ -320,6 +320,33 @@ describe('res.redirect', () => {
     expect(res.status).toBe(307);
     expect(res.getHeader('location')).toBe('/login');
   });
+  test('should redirect with status code 301', async () => {
+    mockListener.mockImplementation((req, res) => {
+      res.redirect(301, '/login');
+      res.end();
+    });
+    const res = await fetchWithProxyReq(url);
+    expect(res.status).toBe(301);
+    expect(res.getHeader('location')).toBe('/login');
+  });
+  test('should show friendly error for invalid redirect', async () => {
+    mockListener.mockImplementation((req, res) => {
+      res.redirect(307);
+      res.end();
+    });
+    expect(res.text()).toContain(
+      `Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`
+    );
+  });
+  test('should show friendly error in case of passing null as first argument redirect', async () => {
+    mockListener.mockImplementation((req, res) => {
+      res.redirect(null);
+      res.end();
+    });
+    expect(res.text()).toContain(
+      `Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`
+    );
+  });
 });
 
 // tests based on expressjs test suite
