@@ -190,6 +190,14 @@ test('convertRedirects', () => {
       source: '/optional/:id?',
       destination: '/api/optional/:id?',
     },
+    {
+      source: '/feature-{:slug}',
+      destination: '/blog-{:slug}',
+    },
+    {
+      source: '/hello/:world',
+      destination: '/somewhere?else={:world}',
+    },
   ]);
 
   const expected = [
@@ -266,6 +274,20 @@ test('convertRedirects', () => {
       headers: { Location: '/api/optional/$1' },
       status: 308,
     },
+    {
+      headers: {
+        Location: '/blog-$1',
+      },
+      src: '^\\/feature-([^\\/]+?)$',
+      status: 308,
+    },
+    {
+      headers: {
+        Location: '/somewhere?else=$1',
+      },
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
+      status: 308,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -285,6 +307,8 @@ test('convertRedirects', () => {
     ['/hello/world', '/hello/another/world'],
     ['/external/1', '/external/2'],
     ['/optional', '/optional/1'],
+    ['/feature-first', '/feature-second'],
+    ['/hello/world', '/hello/again'],
   ];
 
   const mustNotMatch = [
@@ -302,6 +326,8 @@ test('convertRedirects', () => {
     ['/not-this-one', '/helloo'],
     ['/externalnope', '/externally'],
     ['/optionalnope', '/optionally'],
+    ['/feature/first', '/feature'],
+    ['/hello', '/hello/another/one'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -350,6 +376,14 @@ test('convertRewrites', () => {
     { source: '/:path', destination: '/test?path=:path' },
     { source: '/:path/:two', destination: '/test?path=:path' },
     { source: '/(.*)-:id(\\d+).html', destination: '/blog/:id' },
+    {
+      source: '/feature-{:slug}',
+      destination: '/blog-{:slug}',
+    },
+    {
+      source: '/hello/:world',
+      destination: '/somewhere?else={:world}',
+    },
   ]);
 
   const expected = [
@@ -426,6 +460,16 @@ test('convertRewrites', () => {
       src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
     },
     { check: true, dest: '/blog/$2', src: '^(?:\\/(.*))-(\\d+)\\.html$' },
+    {
+      dest: '/blog-$1',
+      src: '^\\/feature-([^\\/]+?)$',
+      check: true,
+    },
+    {
+      dest: '/somewhere?else=$1&world=$1',
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
+      check: true,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -447,6 +491,8 @@ test('convertRewrites', () => {
     ['/first', '/another'],
     ['/first/second', '/one/two'],
     ['/hello/post-123.html', '/post-123.html'],
+    ['/feature-first', '/feature-second'],
+    ['/hello/world', '/hello/again'],
   ];
 
   const mustNotMatch = [
@@ -466,6 +512,8 @@ test('convertRewrites', () => {
     ['/another/one'],
     ['/not', '/these'],
     ['/hello/post.html'],
+    ['/feature/first', '/feature'],
+    ['/hello', '/hello/another/one'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
