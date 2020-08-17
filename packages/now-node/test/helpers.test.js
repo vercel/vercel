@@ -318,7 +318,7 @@ describe('res.redirect', () => {
     const res = await fetchWithProxyReq(url);
 
     expect(res.status).toBe(307);
-    expect(res.location).toBe('/login');
+    expect(res.getHeader('location')).toBe('/login');
   });
 });
 
