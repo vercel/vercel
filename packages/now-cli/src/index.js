@@ -135,7 +135,7 @@ const main = async argv_ => {
   // (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  if (notifier.update && isTTY) {
+  if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
     const { latest } = notifier.update;
     console.log(
       info(
