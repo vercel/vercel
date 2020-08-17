@@ -309,10 +309,16 @@ describe('res.status', () => {
 });
 
 describe('res.redirect', () => {
-  test('res.redirect() should redirect without statusCode', () => {
+  test('should redirect to login', async () => {
     mockListener.mockImplementation((req, res) => {
-      res.redirect('example.com');
+      res.redirect('/login');
+      res.end();
     });
+
+    const res = await fetchWithProxyReq(url);
+
+    expect(res.status).toBe(307);
+    expect(res.location).toBe('/login');
   });
 });
 
