@@ -135,7 +135,6 @@
     "get-port": "5.1.1",
     "glob": "7.1.2",
     "http-proxy": "1.17.0",
-    "ignore": "4.0.6",
     "inquirer": "7.0.4",
     "is-port-reachable": "3.0.0",
     "is-url": "1.2.2",
