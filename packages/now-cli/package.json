@@ -66,7 +66,7 @@
     "@vercel/node": "1.7.5-canary.1",
     "@vercel/python": "1.2.2",
     "@vercel/ruby": "1.2.3",
-    "update-notifier": "4.1.1"
+    "update-notifier": "4.1.0"
   },
   "devDependencies": {
     "@sentry/node": "5.5.0",
