@@ -14,7 +14,11 @@
       "method": "POST",
       "headers": { "Accept": "application/json" },
       "body": { "query": "{ redwood { version } }" },
-      "mustContain": "0.14.0"
+      "mustContain": "0.15.0"
+    },
+    {
+      "path": "/api/permission",
+      "mustContain": "File is executable: true"
     }
   ]
 }

@@ -1,4 +1,4 @@
-![RedwoodJS Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/redwood.svg)
+![RedwoodJS Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/redwoodjs.svg)
 
 # RedwoodJS Example
 

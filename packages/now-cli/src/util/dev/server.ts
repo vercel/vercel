@@ -20,6 +20,7 @@ import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import which from 'which';
+import npa from 'npm-package-arg';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -40,6 +41,7 @@ import {
   spawnCommand,
   isOfficialRuntime,
 } from '@vercel/build-utils';
+import _frameworks, { Framework } from '@vercel/frameworks';
 
 import link from '../output/link';
 import { Output } from '../output';
@@ -84,6 +86,11 @@ import {
   EnvConfigs,
 } from './types';
 import { ProjectSettings } from '../../types';
+
+const frameworkList = _frameworks as Framework[];
+const frontendRuntimeSet = new Set(
+  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+);
 
 interface FSEvent {
   type: string;
@@ -550,8 +557,8 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      const opts = { output: this.output, isBuilds: true };
-      const files = (await getFiles(this.cwd, config, opts)).map(f =>
+      const opts = { output: this.output };
+      const files = (await getFiles(this.cwd, opts)).map(f =>
         relative(this.cwd, f)
       );
 
@@ -833,8 +840,7 @@ export default class DevServer {
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
 
-    const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowConfig, opts);
+    const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
@@ -2326,10 +2332,8 @@ async function checkForPort(
 }
 
 function filterFrontendBuilds(build: Builder) {
-  return (
-    !isOfficialRuntime('static-build', build.use) &&
-    !isOfficialRuntime('next', build.use)
-  );
+  const { name } = npa(build.use);
+  return !frontendRuntimeSet.has(name || '');
 }
 
 function hasNewRoutingProperties(nowConfig: NowConfig) {

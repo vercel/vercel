@@ -1,9 +1,8 @@
 import { DeploymentFile } from './hashes';
-import { parse as parseUrl } from 'url';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
 import { join, sep, relative } from 'path';
-import qs from 'querystring';
+import { URL } from 'url';
 import ignore from 'ignore';
 type Ignore = ReturnType<typeof ignore>;
 import { pkgVersion } from '../pkg';
@@ -15,7 +14,6 @@ import readdir from 'recursive-readdir';
 const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/now/files';
-export const API_DELETE_DEPLOYMENTS_LEGACY = '/v2/now/deployments';
 
 const EVENTS_ARRAY = [
   // File events
@@ -39,12 +37,8 @@ export type DeploymentEventType = typeof EVENTS_ARRAY[number];
 export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl(
-  metadata?: Pick<DeploymentOptions, 'version' | 'builds' | 'functions'>
+  metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
 ) {
-  if (metadata && metadata.version !== 2) {
-    return '/v3/now/deployments';
-  }
-
   if (metadata && metadata.builds && !metadata.functions) {
     return '/v10/now/deployments';
   }
@@ -118,14 +112,14 @@ export async function getVercelIgnore(
   cwd: string | string[]
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ignores: string[] = [
-    '.hg/',
-    '.git/',
+    '.hg',
+    '.git',
     '.gitmodules',
-    '.svn/',
+    '.svn',
     '.cache',
-    '.next/',
-    '.now/',
-    '.vercel/',
+    '.next',
+    '.now',
+    '.vercel',
     '.npmignore',
     '.dockerignore',
     '.gitignore',
@@ -138,9 +132,9 @@ export async function getVercelIgnore(
     '.venv',
     'npm-debug.log',
     'config.gypi',
-    'node_modules/',
-    '__pycache__/',
-    'venv/',
+    'node_modules',
+    '__pycache__',
+    'venv',
     'CVS',
   ];
 
@@ -204,11 +198,9 @@ export const fetch = async (
   delete opts.apiUrl;
 
   if (opts.teamId) {
-    const parsedUrl = parseUrl(url, true);
-    const query = parsedUrl.query;
-
-    query.teamId = opts.teamId;
-    url = `${parsedUrl.href}?${qs.encode(query)}`;
+    const parsedUrl = new URL(url);
+    parsedUrl.searchParams.set('teamId', opts.teamId);
+    url = parsedUrl.toString();
     delete opts.teamId;
   }
 

@@ -20,6 +20,8 @@ export interface Framework {
   website?: string;
   description: string;
   sort?: number;
+  useRuntime?: { src: string; use: string };
+  ignoreRuntimes?: string[];
   detectors?: {
     every?: FrameworkDetectionItem[];
     some?: FrameworkDetectionItem[];
