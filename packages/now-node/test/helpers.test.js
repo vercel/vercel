@@ -329,6 +329,36 @@ describe('res.redirect', () => {
     expect(res.status).toBe(301);
     expect(res.headers.get('location')).toBe(url + '/login');
   });
+  test('should show friendly error for invalid redirect', async () => {
+    let error;
+    mockListener.mockImplementation((req, res) => {
+      try {
+        res.redirect(307);
+      } catch (err) {
+        error = err;
+      }
+      res.end();
+    });
+    await fetchWithProxyReq(url, { redirect: 'manual' });
+    expect(error.message).toBe(
+      `Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`
+    );
+  });
+  test('should show friendly error in case of passing null as first argument redirect', async () => {
+    let error;
+    mockListener.mockImplementation((req, res) => {
+      try {
+        res.redirect(null);
+      } catch (err) {
+        error = err;
+      }
+      res.end();
+    });
+    await fetchWithProxyReq(url, { redirect: 'manual' });
+    expect(error.message).toBe(
+      `Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`
+    );
+  });
 });
 
 // tests based on expressjs test suite
