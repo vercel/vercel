@@ -201,13 +201,13 @@ function replaceSegments(
           .filter(val => typeof val === 'string') as string[]
       );
 
-      pathname = safelyCompile(pathname, indexes);
-      hash = hash ? safelyCompile(hash, indexes) : null;
+      pathname = safelyCompile(pathname, indexes, true);
+      hash = hash ? safelyCompile(hash, indexes, true) : null;
 
       for (const [key, strOrArray] of Object.entries(query)) {
         let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
         if (value) {
-          value = safelyCompile(value, indexes);
+          value = safelyCompile(value, indexes, true);
         }
         query[key] = value;
       }
@@ -242,10 +242,22 @@ function replaceSegments(
 
 function safelyCompile(
   value: string,
-  indexes: { [k: string]: string }
+  indexes: { [k: string]: string },
+  attemptDirectCompile?: boolean
 ): string {
   if (!value) {
     return value;
+  }
+
+  if (attemptDirectCompile) {
+    try {
+      // Attempt compiling normally with path-to-regexp first and fall back
+      // to safely compiling to handle edge cases if path-to-regexp compile
+      // fails
+      return compile(value, { validate: false })(indexes);
+    } catch (e) {
+      // non-fatal, we continue to safely compile
+    }
   }
 
   for (const key of Object.keys(indexes)) {
