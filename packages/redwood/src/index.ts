@@ -18,6 +18,7 @@ import {
   FileFsRef,
   PackageJson,
   NowBuildError,
+  Config,
 } from '@vercel/build-utils';
 import { makeAwsLauncher } from './launcher';
 import _frameworks, { Framework } from '@vercel/frameworks';
@@ -26,6 +27,7 @@ const {
   getDependencies,
   // eslint-disable-next-line @typescript-eslint/no-var-requires
 } = require('@netlify/zip-it-and-ship-it/src/dependencies.js');
+import minimatch from 'minimatch';
 
 const LAUNCHER_FILENAME = '___vc_launcher';
 const BRIDGE_FILENAME = '___vc_bridge';
@@ -115,6 +117,7 @@ export async function build({
     );
     const relativeEntrypoint = relative(workPath, absEntrypoint);
     const awsLambdaHandler = getAWSLambdaHandler(relativeEntrypoint, 'handler');
+    const srcFile = relativeEntrypoint.replace('/dist/', '/src/');
 
     const lambdaFiles: Files = {
       [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
@@ -141,11 +144,15 @@ export async function build({
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
 
+    const { memory, maxDuration } = await getLambdaOptions(srcFile, config);
+
     const lambda = await createLambda({
       files: lambdaFiles,
       handler: `${LAUNCHER_FILENAME}.launcher`,
       runtime: nodeVersion.runtime,
       environment: {},
+      memory,
+      maxDuration,
     });
     lambdaOutputs[outputName] = lambda;
   }
@@ -167,9 +174,27 @@ function hasScript(scriptName: string, pkg: PackageJson) {
   return typeof scripts[scriptName] === 'string';
 }
 
+async function getLambdaOptions(
+  sourceFile: string,
+  config: Config
+): Promise<{ memory?: number; maxDuration?: number }> {
+  if (config && config.functions) {
+    for (const [pattern, fn] of Object.entries(config.functions)) {
+      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        return {
+          memory: fn.memory,
+          maxDuration: fn.maxDuration,
+        };
+      }
+    }
+  }
+
+  return {};
+}
+
 export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
-  const cache = await glob('node_modules/**', workPath);
+  const cache = await glob('**/node_modules/**', workPath);
   return cache;
 }
