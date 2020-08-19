@@ -1052,7 +1052,7 @@ test('domains inspect', async t => {
     }
   );
 
-  t.true(!stderr.includes(`Renewal Price`));
+  t.true(stderr.includes(`Renewal Price`));
   t.is(exitCode, 0, formatOutput({ stdout, stderr }));
 
   {
