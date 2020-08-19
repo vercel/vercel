@@ -50,7 +50,7 @@ async function main() {
   console.log();
   const src = join(dirRoot, 'src');
   const args = [
-    '@zeit/ncc',
+    '@vercel/ncc',
     'build',
     '--source-map',
     '--external',
