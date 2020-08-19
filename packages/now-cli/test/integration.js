@@ -2219,6 +2219,33 @@ test('create zero-config deployment', async t => {
   );
 });
 
+test('next unsupported functions config shows warning link', async t => {
+  const fixturePath = fixture('zero-config-next-js-functions-warning');
+  const output = await execute([
+    fixturePath,
+    '--force',
+    '--public',
+    '--confirm',
+  ]);
+
+  console.log('isCanary', isCanary);
+  console.log(output.stderr);
+  console.log(output.stdout);
+  console.log(output.exitCode);
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration` can be used\./gm,
+    formatOutput(output)
+  );
+  t.regex(
+    output.stderr,
+    /Learn More: https:\/\/vercel\.link\/functions-property-next/gm,
+    formatOutput(output)
+  );
+});
+
 test('vercel secret add', async t => {
   context.secretName = `my-secret-${Date.now().toString(36)}`;
   const value = 'https://my-secret-endpoint.com';

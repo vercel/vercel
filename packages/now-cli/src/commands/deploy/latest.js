@@ -162,7 +162,11 @@ const printDeploymentStatus = async (
         prependEmoji(
           `${chalk.dim(indication.payload)}`,
           emoji(indication.type)
-        ) + `\n`
+        ) +
+          `\n` +
+          (indication.link
+            ? `${indication.action || 'Learn More'}: ${indication.link}\n\n`
+            : '')
       );
     }
   }
