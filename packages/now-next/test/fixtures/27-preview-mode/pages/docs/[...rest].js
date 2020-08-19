@@ -1,4 +1,4 @@
-export const getStaticProps = (ctx) => {
+export const getStaticProps = ctx => {
   console.log('previewData', ctx.previewData);
 
   return {
@@ -12,7 +12,7 @@ export const getStaticProps = (ctx) => {
 
 export const getStaticPaths = () => {
   return {
-    paths: [['first'], ['second'], ['another', 'one']].map((rest) => ({
+    paths: [['first'], ['second'], ['another', 'one']].map(rest => ({
       params: { rest },
     })),
     fallback: false,

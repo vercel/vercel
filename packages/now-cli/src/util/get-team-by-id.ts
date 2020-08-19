@@ -13,6 +13,6 @@ export default async function getTeamById(
     team = await client.fetch<Team>(`/teams/${teamId}`);
     teamCache.set(teamId, team);
   }
-  
+
   return team;
 }

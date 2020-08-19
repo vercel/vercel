@@ -181,25 +181,47 @@ function replaceSegments(
       indexes[name] = toSegmentDest(index);
     });
 
+    let destParams = new Set<string>();
+
     if (destination.includes(':') && segments.length > 0) {
-      pathname = safelyCompile(pathname, indexes);
-      hash = hash ? safelyCompile(hash, indexes) : null;
+      const pathnameKeys: Key[] = [];
+      const hashKeys: Key[] = [];
+
+      try {
+        pathToRegexp(pathname, pathnameKeys);
+        pathToRegexp(hash || '', hashKeys);
+      } catch (_) {
+        // this is not fatal so don't error when failing to parse the
+        // params from the destination
+      }
+
+      destParams = new Set(
+        [...pathnameKeys, ...hashKeys]
+          .map(key => key.name)
+          .filter(val => typeof val === 'string') as string[]
+      );
+
+      pathname = safelyCompile(pathname, indexes, true);
+      hash = hash ? safelyCompile(hash, indexes, true) : null;
 
       for (const [key, strOrArray] of Object.entries(query)) {
         let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
         if (value) {
-          value = safelyCompile(value, indexes);
+          value = safelyCompile(value, indexes, true);
         }
         query[key] = value;
       }
     }
 
     // We only add path segments to redirect queries if manually
-    // specified
-    if (!isRedirect) {
-      for (const [name, value] of Object.entries(indexes)) {
-        if (!(name in query) && name !== UN_NAMED_SEGMENT) {
-          query[name] = value;
+    // specified and only automatically add them for rewrites if one
+    // or more params aren't already used in the destination's path
+    const paramKeys = Object.keys(indexes);
+
+    if (!isRedirect && !paramKeys.some(param => destParams.has(param))) {
+      for (const param of paramKeys) {
+        if (!(param in query) && param !== UN_NAMED_SEGMENT) {
+          query[param] = indexes[param];
         }
       }
     }
@@ -218,18 +240,54 @@ function replaceSegments(
   return destination;
 }
 
-function safelyCompile(str: string, indexes: { [k: string]: string }): string {
-  if (!str) {
-    return str;
+function safelyCompile(
+  value: string,
+  indexes: { [k: string]: string },
+  attemptDirectCompile?: boolean
+): string {
+  if (!value) {
+    return value;
   }
-  // path-to-regexp cannot compile question marks
-  return str
-    .split('?')
-    .map(part => {
-      const compiler = compile(part);
-      return compiler(indexes);
-    })
-    .join('?');
+
+  if (attemptDirectCompile) {
+    try {
+      // Attempt compiling normally with path-to-regexp first and fall back
+      // to safely compiling to handle edge cases if path-to-regexp compile
+      // fails
+      return compile(value, { validate: false })(indexes);
+    } catch (e) {
+      // non-fatal, we continue to safely compile
+    }
+  }
+
+  for (const key of Object.keys(indexes)) {
+    if (value.includes(`:${key}`)) {
+      value = value
+        .replace(
+          new RegExp(`:${key}\\*`, 'g'),
+          `:${key}--ESCAPED_PARAM_ASTERISK`
+        )
+        .replace(
+          new RegExp(`:${key}\\?`, 'g'),
+          `:${key}--ESCAPED_PARAM_QUESTION`
+        )
+        .replace(new RegExp(`:${key}\\+`, 'g'), `:${key}--ESCAPED_PARAM_PLUS`)
+        .replace(
+          new RegExp(`:${key}(?!\\w)`, 'g'),
+          `--ESCAPED_PARAM_COLON${key}`
+        );
+    }
+  }
+  value = value
+    .replace(/(:|\*|\?|\+|\(|\)|\{|\})/g, '\\$1')
+    .replace(/--ESCAPED_PARAM_PLUS/g, '+')
+    .replace(/--ESCAPED_PARAM_COLON/g, ':')
+    .replace(/--ESCAPED_PARAM_QUESTION/g, '?')
+    .replace(/--ESCAPED_PARAM_ASTERISK/g, '*');
+
+  // the value needs to start with a forward-slash to be compiled
+  // correctly
+  return compile(`/${value}`, { validate: false })(indexes).substr(1);
 }
 
 function toSegmentDest(index: number): string {

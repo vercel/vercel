@@ -28,15 +28,11 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     str: string,
     slug: string | null = null,
     link: string | null = null,
-    action: string = 'Learn More'
-  ) {
-    const prevTerm = process.env.TERM;
-
-    if (!prevTerm) {
-      // workaround for https://github.com/sindresorhus/term-size/issues/13
-      process.env.TERM = 'xterm';
+    action: string | null = 'Learn More',
+    options?: {
+      boxen?: boxen.Options;
     }
-
+  ) {
     const details = slug ? `https://err.sh/now/${slug}` : link;
 
     print(
@@ -52,12 +48,11 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
             right: 1,
           },
           borderColor: 'yellow',
+          ...options?.boxen,
         }
       )
     );
     print('\n');
-
-    process.env.TERM = prevTerm;
   }
 
   function note(str: string) {

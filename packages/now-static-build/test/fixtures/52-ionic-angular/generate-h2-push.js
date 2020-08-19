@@ -63,14 +63,14 @@ async function main() {
   updateWith(results);
 }
 function updateWith(result) {
-  fs.readFile('firebase.json', 'utf8', function(err, data) {
+  fs.readFile('firebase.json', 'utf8', function (err, data) {
     if (err) {
       return console.log(err);
     }
     let re = /("headers":\s*\[\s*{\s*"key":\s*"Link",\s*"value":\s*")(.*)("\s*}\s*\])/gm;
     if (re.exec(data)) {
       let newConfig = data.replace(re, `$1${result}$3`);
-      fs.writeFile('firebase.json', newConfig, 'utf8', function(err) {
+      fs.writeFile('firebase.json', newConfig, 'utf8', function (err) {
         if (err) return console.log(err);
         console.log('firebase.json updated successfully.');
       });

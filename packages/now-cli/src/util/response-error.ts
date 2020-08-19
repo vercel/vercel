@@ -8,7 +8,7 @@ export default async function responseError(
 ) {
   let bodyError;
 
-  if (res.status >= 400 && res.status < 500) {
+  if (!res.ok) {
     let body;
 
     try {

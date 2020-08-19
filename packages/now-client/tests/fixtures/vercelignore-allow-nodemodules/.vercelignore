@@ -1,6 +1,6 @@
 # literally dont ignore the node_modules directory
 # so basically include the node_modules directory recursively
-!node_modules/
+!node_modules
 
 # ignore this file in addition to the defaults
 exclude.txt

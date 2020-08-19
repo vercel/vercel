@@ -15,7 +15,6 @@ export default async function getScope(client: Client) {
 
     return {
       contextName: team.slug,
-      platformVersion: team.platformVersion,
       team,
       user,
     };
@@ -23,7 +22,6 @@ export default async function getScope(client: Client) {
 
   return {
     contextName: user.username || user.email,
-    platformVersion: user.platformVersion,
     team: null,
     user,
   };

@@ -13,15 +13,13 @@ try {
     process.exit(1);
   }
 }
-import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync, lstatSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import checkForUpdate from 'update-check';
-import ms from 'ms';
+import updateNotifier from 'update-notifier';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import { NowBuildError } from '@vercel/build-utils';
@@ -52,6 +50,14 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 import { getCommandName, getTitleName } from './util/pkg-name.ts';
 
+const isCanary = pkg.version.includes('canary');
+
+// Checks for available update and returns an instance
+const notifier = updateNotifier({
+  pkg,
+  distTag: isCanary ? 'canary' : 'latest',
+});
+
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
 const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
@@ -66,7 +72,7 @@ sourceMap.install();
 Sentry.init({
   dsn: SENTRY_DSN,
   release: `vercel-cli@${pkg.version}`,
-  environment: pkg.version.includes('canary') ? 'canary' : 'stable',
+  environment: isCanary ? 'canary' : 'stable',
 });
 
 let debug = () => {};
@@ -128,38 +134,20 @@ const main = async argv_ => {
   // (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  let update = null;
-
-  try {
-    if (targetOrSubcommand !== 'update') {
-      update = await checkForUpdate(pkg, {
-        interval: ms('1d'),
-        distTag: pkg.version.includes('canary') ? 'canary' : 'latest',
-      });
-    }
-  } catch (err) {
-    console.error(
-      error(`Checking for updates failed${isDebugging ? ':' : ''}`)
-    );
-
-    if (isDebugging) {
-      console.error(err);
-    }
-  }
-
-  if (update && isTTY) {
+  if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
+    const { latest } = notifier.update;
     console.log(
       info(
         `${chalk.bgRed('UPDATE AVAILABLE')} ` +
           `Run ${cmd(
             await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${update.latest}`
+          )} to install ${getTitleName()} CLI ${latest}`
       )
     );
 
     console.log(
       info(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${update.latest}`
+        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
       )
     );
   }
@@ -169,7 +157,7 @@ const main = async argv_ => {
       `${getTitleName()} CLI ${pkg.version}${
         targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
       }${
-        pkg.version.includes('canary') || targetOrSubcommand === 'dev'
+        isCanary || targetOrSubcommand === 'dev'
           ? ' — https://vercel.com/feedback'
           : ''
       }`
@@ -191,9 +179,7 @@ const main = async argv_ => {
   } catch (err) {
     console.error(
       error(
-        `An unexpected error occurred while trying to find the global directory: ${
-          err.message
-        }`
+        `An unexpected error occurred while trying to find the global directory: ${err.message}`
       )
     );
 
@@ -650,6 +636,11 @@ const main = async argv_ => {
         );
       }
       output.debug(err.stack);
+      return 1;
+    }
+
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      output.prettyError(err);
       return 1;
     }
 

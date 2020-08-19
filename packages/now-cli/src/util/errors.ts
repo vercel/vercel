@@ -25,39 +25,6 @@ export class SchemaValidationFailed extends NowError<
   }
 }
 
-/* eslint-disable-next-line @typescript-eslint/no-empty-interface */
-interface InvalidAllForScaleMeta {}
-
-export class InvalidAllForScale extends NowError<
-  'INVALID_ALL_FOR_SCALE',
-  InvalidAllForScaleMeta
-> {
-  constructor() {
-    super({
-      code: 'INVALID_ALL_FOR_SCALE',
-      meta: {},
-      message: `You can't use all in the regions list mixed with other regions`,
-    });
-  }
-}
-
-interface InvalidRegionOrDCForScaleMeta {
-  regionOrDC: string;
-}
-
-export class InvalidRegionOrDCForScale extends NowError<
-  'INVALID_REGION_OR_DC_FOR_SCALE',
-  InvalidRegionOrDCForScaleMeta
-> {
-  constructor(regionOrDC: string) {
-    super({
-      code: 'INVALID_REGION_OR_DC_FOR_SCALE',
-      meta: { regionOrDC },
-      message: `Invalid region or DC "${regionOrDC}" provided`,
-    });
-  }
-}
-
 interface InvalidLocalConfigMeta {
   value: string[];
 }

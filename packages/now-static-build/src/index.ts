@@ -33,7 +33,6 @@ const {
   NowBuildError,
 } = buildUtils;
 import { Route, Source } from '@vercel/routing-utils';
-import { getVercelIgnore } from '@vercel/client';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -264,7 +263,6 @@ export async function build({
   const pkg = getPkg(entrypoint, workPath);
 
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
-  const buildScript = pkg ? getScriptName(pkg, 'build', config) : null;
 
   const framework = getFramework(config, pkg);
 
@@ -431,8 +429,6 @@ export async function build({
 
       if (buildCommand) {
         debug(`Executing "${buildCommand}"`);
-      } else {
-        debug(`Running "${buildScript}" in "${entrypoint}"`);
       }
 
       const found =
@@ -441,12 +437,16 @@ export async function build({
               ...spawnOpts,
               cwd: entrypointDir,
             })
-          : await runPackageJsonScript(entrypointDir, buildScript!, spawnOpts);
+          : await runPackageJsonScript(
+              entrypointDir,
+              ['vercel-build', 'now-build', 'build'],
+              spawnOpts
+            );
 
       if (!found) {
         throw new Error(
           `Missing required "${
-            buildCommand || buildScript
+            buildCommand || 'vercel-build'
           }" script in "${entrypoint}"`
         );
       }
@@ -483,17 +483,17 @@ export async function build({
       }
 
       let ignore: string[] = [];
-      if (config.zeroConfig) {
-        const result = await getVercelIgnore(distPath);
-        ignore = result.ignores
-          .map(file => (file.endsWith('/') ? `${file}**` : file))
-          .concat([
-            '.env',
-            '.env.*',
-            'yarn.lock',
-            'package-lock.json',
-            'package.json',
-          ]);
+      if (config.zeroConfig && config.outputDirectory === '.') {
+        ignore = [
+          '.env',
+          '.env.*',
+          '.git/**',
+          '.vercel/**',
+          'node_modules/**',
+          'yarn.lock',
+          'package-lock.json',
+          'package.json',
+        ];
         debug(`Using ignore: ${JSON.stringify(ignore)}`);
       }
       output = await glob('**', { cwd: distPath, ignore }, mountpoint);

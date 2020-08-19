@@ -20,6 +20,7 @@ import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import which from 'which';
+import npa from 'npm-package-arg';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -40,6 +41,7 @@ import {
   spawnCommand,
   isOfficialRuntime,
 } from '@vercel/build-utils';
+import _frameworks, { Framework } from '@vercel/frameworks';
 
 import link from '../output/link';
 import { Output } from '../output';
@@ -84,6 +86,11 @@ import {
   EnvConfigs,
 } from './types';
 import { ProjectSettings } from '../../types';
+
+const frameworkList = _frameworks as Framework[];
+const frontendRuntimeSet = new Set(
+  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+);
 
 interface FSEvent {
   type: string;
@@ -140,12 +147,16 @@ export default class DevServer {
   private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
   private updateBuildersTimeout: NodeJS.Timeout | undefined;
+  private startPromise: Promise<void> | null;
+
+  private environmentVars: Env | undefined;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
+    this.environmentVars = options.environmentVars;
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
@@ -169,6 +180,7 @@ export default class DevServer {
     this.getNowConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.updateBuildersPromise = null;
+    this.startPromise = null;
 
     this.watchAggregationId = null;
     this.watchAggregationEvents = [];
@@ -479,22 +491,15 @@ export default class DevServer {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
+      env = this.populateVercelEnvVars(env);
     } catch (err) {
       if (err.code !== 'ENOENT') {
         throw err;
       }
     }
     try {
-      let host = '';
-      if (this.address) {
-        host = new URL(this.address).host;
-      }
       return {
         ...this.validateEnvConfig(fileName, base || {}, env),
-        NOW_REGION: 'dev1',
-        NOW_URL: host,
-        VERCEL_REGION: 'dev1',
-        VERCEL_URL: host,
       };
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
@@ -552,8 +557,8 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      const opts = { output: this.output, isBuilds: true };
-      const files = (await getFiles(this.cwd, config, opts)).map(f =>
+      const opts = { output: this.output };
+      const files = (await getFiles(this.cwd, opts)).map(f =>
         relative(this.cwd, f)
       );
 
@@ -630,13 +635,20 @@ export default class DevServer {
     this.apiExtensions = detectApiExtensions(config.builds || []);
 
     // Update the env vars configuration
-    const [runEnv, buildEnv] = await Promise.all([
+    let [runEnv, buildEnv] = await Promise.all([
       this.getLocalEnv('.env', config.env),
       this.getLocalEnv('.env.build', config.build?.env),
     ]);
-    const allEnv = { ...buildEnv, ...runEnv };
-    this.envConfigs = { buildEnv, runEnv, allEnv };
 
+    let allEnv = { ...buildEnv, ...runEnv };
+
+    // If no .env/.build.env is present, fetch and use cloud environment variables
+    if (Object.keys(allEnv).length === 0) {
+      const cloudEnv = this.populateVercelEnvVars(this.environmentVars);
+      allEnv = runEnv = buildEnv = cloudEnv;
+    }
+
+    this.envConfigs = { buildEnv, runEnv, allEnv };
     return config;
   }
 
@@ -741,6 +753,26 @@ export default class DevServer {
     return merged;
   }
 
+  populateVercelEnvVars(env: Env | undefined): Env {
+    if (!env) {
+      return {};
+    }
+
+    for (const name of Object.keys(env)) {
+      if (name === 'VERCEL_URL') {
+        const host = new URL(this.address).host;
+        env['VERCEL_URL'] = host;
+      } else if (name === 'VERCEL_REGION') {
+        env['VERCEL_REGION'] = 'dev1';
+      }
+    }
+
+    // Always set NOW_REGION to match production
+    env['NOW_REGION'] = 'dev1';
+
+    return env;
+  }
+
   /**
    * Create an array of from builder inputs
    * and filter them
@@ -749,10 +781,20 @@ export default class DevServer {
     return Object.keys(files).filter(this.filter);
   }
 
+  start(...listenSpec: ListenSpec): Promise<void> {
+    if (!this.startPromise) {
+      this.startPromise = this._start(...listenSpec).catch(err => {
+        this.stop();
+        throw err;
+      });
+    }
+    return this.startPromise;
+  }
+
   /**
    * Launches the `vercel dev` server.
    */
-  async start(...listenSpec: ListenSpec): Promise<void> {
+  async _start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
       throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
     }
@@ -764,10 +806,41 @@ export default class DevServer {
     const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
-    const nowConfig = await this.getNowConfig();
+    let address: string | null = null;
+    while (typeof address !== 'string') {
+      try {
+        address = await listen(this.server, ...listenSpec);
+      } catch (err) {
+        this.output.debug(`Got listen error: ${err.code}`);
+        if (err.code === 'EADDRINUSE') {
+          if (typeof listenSpec[0] === 'number') {
+            // Increase port and try again
+            this.output.note(
+              `Requested port ${chalk.yellow(
+                String(listenSpec[0])
+              )} is already in use`
+            );
+            listenSpec[0]++;
+          } else {
+            this.output.error(
+              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
+            );
+            process.exit(1);
+          }
+        } else {
+          throw err;
+        }
+      }
+    }
 
-    const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowConfig, opts);
+    this.address = address
+      .replace('[::]', 'localhost')
+      .replace('127.0.0.1', 'localhost');
+
+    const nowConfig = await this.getNowConfig();
+    const devCommandPromise = this.runDevCommand();
+
+    const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
@@ -855,39 +928,6 @@ export default class DevServer {
       this.output.debug(`Detected upgrade event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
-
-    const devCommandPromise = this.runDevCommand();
-
-    let address: string | null = null;
-    while (typeof address !== 'string') {
-      try {
-        address = await listen(this.server, ...listenSpec);
-      } catch (err) {
-        this.output.debug(`Got listen error: ${err.code}`);
-        if (err.code === 'EADDRINUSE') {
-          if (typeof listenSpec[0] === 'number') {
-            // Increase port and try again
-            this.output.note(
-              `Requested port ${chalk.yellow(
-                String(listenSpec[0])
-              )} is already in use`
-            );
-            listenSpec[0]++;
-          } else {
-            this.output.error(
-              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
-            );
-            process.exit(1);
-          }
-        } else {
-          throw err;
-        }
-      }
-    }
-
-    this.address = address
-      .replace('[::]', 'localhost')
-      .replace('127.0.0.1', 'localhost');
 
     await devCommandPromise;
 
@@ -1210,6 +1250,8 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
+    await this.startPromise;
+
     let nowRequestId = generateRequestId(this.podId);
 
     if (this.stopping) {
@@ -1476,9 +1518,9 @@ export default class DevServer {
     const { dest, headers, uri_args } = routeResult;
 
     // Set any headers defined in the matched `route` config
-    Object.entries(headers).forEach(([name, value]) => {
+    for (const [name, value] of Object.entries(headers)) {
       res.setHeader(name, value);
-    });
+    }
 
     if (statusCode) {
       // Set the `statusCode` as read-only so that `http-proxy`
@@ -1501,6 +1543,13 @@ export default class DevServer {
       if (this.devProcessPort) {
         const upstream = `http://localhost:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
+
+        // Add the Vercel platform proxy request headers
+        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+        for (const [name, value] of Object.entries(headers)) {
+          req.headers[name] = value;
+        }
+
         this.setResponseHeaders(res, nowRequestId);
         const origUrl = url.parse(req.url || '/', true);
         delete origUrl.search;
@@ -1656,6 +1705,13 @@ export default class DevServer {
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
+
+      // Add the Vercel platform proxy request headers
+      const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+      for (const [name, value] of Object.entries(headers)) {
+        req.headers[name] = value;
+      }
+
       this.setResponseHeaders(res, nowRequestId);
       return proxyPass(
         req,
@@ -2276,10 +2332,8 @@ async function checkForPort(
 }
 
 function filterFrontendBuilds(build: Builder) {
-  return (
-    !isOfficialRuntime('static-build', build.use) &&
-    !isOfficialRuntime('next', build.use)
-  );
+  const { name } = npa(build.use);
+  return !frontendRuntimeSet.has(name || '');
 }
 
 function hasNewRoutingProperties(nowConfig: NowConfig) {

@@ -6,7 +6,7 @@ import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
-import { NowConfig, NowClientOptions, DeploymentOptions } from './types';
+import { NowClientOptions, DeploymentOptions } from './types';
 
 const isClientNetworkError = (err: Error | DeploymentError) => {
   if (err.message) {
@@ -27,7 +27,6 @@ const isClientNetworkError = (err: Error | DeploymentError) => {
 
 export async function* upload(
   files: Map<string, DeploymentFile>,
-  nowConfig: NowConfig,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<any> {
@@ -43,12 +42,7 @@ export async function* upload(
 
   debug('Determining necessary files for upload...');
 
-  for await (const event of deploy(
-    files,
-    nowConfig,
-    clientOptions,
-    deploymentOptions
-  )) {
+  for await (const event of deploy(files, clientOptions, deploymentOptions)) {
     if (event.type === 'error') {
       if (event.payload.code === 'missing_files') {
         missingFiles = event.payload.missing;
@@ -76,7 +70,8 @@ export async function* upload(
   const uploadList: { [key: string]: Promise<any> } = {};
   debug('Building an upload list...');
 
-  const semaphore = new Sema(700, { capacity: 700 });
+  const semaphore = new Sema(50, { capacity: 50 });
+  const agent = new Agent({ keepAlive: true });
 
   shas.map((sha: string): void => {
     uploadList[sha] = retry(
@@ -102,7 +97,7 @@ export async function* upload(
             API_FILES,
             token,
             {
-              agent: new Agent({ keepAlive: true }),
+              agent,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',
@@ -196,12 +191,7 @@ export async function* upload(
 
   try {
     debug('Starting deployment creation');
-    for await (const event of deploy(
-      files,
-      nowConfig,
-      clientOptions,
-      deploymentOptions
-    )) {
+    for await (const event of deploy(files, clientOptions, deploymentOptions)) {
       if (event.type === 'alias-assigned') {
         debug('Deployment is ready');
         return yield event;
