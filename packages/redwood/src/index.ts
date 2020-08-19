@@ -17,7 +17,7 @@ import {
   FileFsRef,
   PackageJson,
   NowBuildError,
-  Config,
+  getLambdaOptionsFromFunction,
   readConfigFile,
 } from '@vercel/build-utils';
 import { makeAwsLauncher } from './launcher';
@@ -27,7 +27,6 @@ const {
   getDependencies,
   // eslint-disable-next-line @typescript-eslint/no-var-requires
 } = require('@netlify/zip-it-and-ship-it/src/dependencies.js');
-import minimatch from 'minimatch';
 
 const LAUNCHER_FILENAME = '___vc_launcher';
 const BRIDGE_FILENAME = '___vc_bridge';
@@ -127,7 +126,7 @@ export async function build({
     );
     const relativeEntrypoint = relative(workPath, absEntrypoint);
     const awsLambdaHandler = getAWSLambdaHandler(relativeEntrypoint, 'handler');
-    const srcFile = relativeEntrypoint.replace('/dist/', '/src/');
+    const sourceFile = relativeEntrypoint.replace('/dist/', '/src/');
 
     const lambdaFiles: Files = {
       [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
@@ -154,7 +153,10 @@ export async function build({
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
 
-    const { memory, maxDuration } = await getLambdaOptions(srcFile, config);
+    const { memory, maxDuration } = await getLambdaOptionsFromFunction({
+      sourceFile,
+      config,
+    });
 
     const lambda = await createLambda({
       files: lambdaFiles,
@@ -182,24 +184,6 @@ function getAWSLambdaHandler(filePath: string, handlerName: string) {
 function hasScript(scriptName: string, pkg: PackageJson | null) {
   const scripts = (pkg && pkg.scripts) || {};
   return typeof scripts[scriptName] === 'string';
-}
-
-async function getLambdaOptions(
-  sourceFile: string,
-  config: Config
-): Promise<{ memory?: number; maxDuration?: number }> {
-  if (config && config.functions) {
-    for (const [pattern, fn] of Object.entries(config.functions)) {
-      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
-        return {
-          memory: fn.memory,
-          maxDuration: fn.maxDuration,
-        };
-      }
-    }
-  }
-
-  return {};
 }
 
 export async function prepareCache({
