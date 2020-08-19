@@ -111,12 +111,11 @@ export default async function inspect(
     `    ${chalk.cyan('Created At')}\t\t\t${formatDate(domain.createdAt)}\n`
   );
   output.print(`    ${chalk.cyan('Edge Network')}\t\tyes\n`);
-
-  if (renewalPrice && domain.boughtAt) {
-    output.print(
-      `    ${chalk.cyan('Renewal Price')}\t\t$${renewalPrice} USD\n`
-    );
-  }
+  output.print(
+    `    ${chalk.cyan('Renewal Price')}\t\t${
+      domain.boughtAt && renewalPrice ? `$${renewalPrice} USD` : chalk.gray('-')
+    }\n`
+  );
 
   output.print('\n');
 
