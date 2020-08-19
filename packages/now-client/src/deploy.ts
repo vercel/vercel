@@ -19,7 +19,12 @@ async function* postDeployment(
   files: Map<string, DeploymentFile>,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
-): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
+): AsyncIterableIterator<{
+  type: DeploymentEventType;
+  payload: any;
+  action?: string;
+  link?: string;
+}> {
   const debug = createDebug(clientOptions.debug);
   const preparedFiles = prepareFiles(files, clientOptions);
   const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
@@ -63,19 +68,19 @@ async function* postDeployment(
       };
     }
 
-    for (const [name, value] of response.headers.entries()) {
-      if (name.startsWith('x-now-warning-')) {
-        debug('Deployment created with a warning:', value);
-        yield { type: 'warning', payload: value };
-      }
+    const indications = new Set(['warning', 'notice', 'tip']);
+    const regex = /^x-(?:vercel|now)-(warning|notice|tip)-(.*)$/;
+    for (const [name, payload] of response.headers.entries()) {
+      const match = name.match(regex);
+      if (match) {
+        const [, type, identifier] = match;
+        const action = response.headers.get(`x-vercel-action-${identifier}`);
+        const link = response.headers.get(`x-vercel-link-${identifier}`);
 
-      if (name.startsWith('x-now-notice-')) {
-        debug('Deployment created with a notice:', value);
-        yield { type: 'notice', payload: value };
-      }
-      if (name.startsWith('x-now-tip-')) {
-        debug('Deployment created with a tip:', value);
-        yield { type: 'tip', payload: value };
+        if (indications.has(type)) {
+          debug(`Deployment created with a ${type}: `, payload);
+          yield { type, payload, action, link };
+        }
       }
     }
     yield { type: 'created', payload: deployment };
