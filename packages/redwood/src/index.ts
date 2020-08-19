@@ -1,5 +1,4 @@
 import { join, dirname, relative, parse as parsePath, sep } from 'path';
-import { readFileSync } from 'fs';
 import {
   BuildOptions,
   Lambda,
@@ -19,6 +18,7 @@ import {
   PackageJson,
   NowBuildError,
   Config,
+  readConfigFile,
 } from '@vercel/build-utils';
 import { makeAwsLauncher } from './launcher';
 import _frameworks, { Framework } from '@vercel/frameworks';
@@ -33,6 +33,12 @@ const LAUNCHER_FILENAME = '___vc_launcher';
 const BRIDGE_FILENAME = '___vc_bridge';
 const HELPERS_FILENAME = '___vc_helpers';
 const SOURCEMAP_SUPPORT_FILENAME = '__vc_sourcemap_support';
+
+interface RedwoodToml {
+  web: { port?: number; apiProxyPath?: string };
+  api: { port?: number };
+  browser: { open?: boolean };
+}
 
 export const version = 2;
 
@@ -69,8 +75,11 @@ export async function build({
   const { buildCommand } = config;
   const frmwrkCmd = frameworks.find(f => f.slug === 'redwoodjs')?.settings
     .buildCommand;
-  const pkgPath = join(workPath, 'package.json');
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
+  const pkg = await readConfigFile<PackageJson>(join(workPath, 'package.json'));
+  const toml = await readConfigFile<RedwoodToml>(
+    join(workPath, 'redwood.toml')
+  );
+
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
     await execCommand(buildCommand, {
@@ -100,6 +109,7 @@ export async function build({
     });
   }
 
+  const apiDir = toml?.web?.apiProxyPath?.replace(/^\//, '') ?? 'api';
   const apiDistPath = join(workPath, 'api', 'dist', 'functions');
   const webDistPath = join(workPath, 'web', 'dist');
   const lambdaOutputs: { [filePath: string]: Lambda } = {};
@@ -109,7 +119,7 @@ export async function build({
   const functionFiles = await glob('*.js', apiDistPath);
 
   for (const [funcName, fileFsRef] of Object.entries(functionFiles)) {
-    const outputName = join('api', parsePath(funcName).name); // remove `.js` extension
+    const outputName = join(apiDir, parsePath(funcName).name); // remove `.js` extension
     const absEntrypoint = fileFsRef.fsPath;
     const dependencies: string[] = await getDependencies(
       absEntrypoint,
@@ -169,7 +179,7 @@ function getAWSLambdaHandler(filePath: string, handlerName: string) {
   return `${dir}${dir ? sep : ''}${name}.${handlerName}`;
 }
 
-function hasScript(scriptName: string, pkg: PackageJson) {
+function hasScript(scriptName: string, pkg: PackageJson | null) {
   const scripts = (pkg && pkg.scripts) || {};
   return typeof scripts[scriptName] === 'string';
 }
