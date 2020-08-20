@@ -974,7 +974,6 @@ function getRouteResult(
       errorRoutes.push({
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       });
     } else {
       defaultRoutes.push(...apiRoutes);

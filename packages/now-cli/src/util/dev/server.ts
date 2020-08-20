@@ -1487,6 +1487,7 @@ export default class DevServer {
           [],
           'error'
         );
+        const { matched_route } = routeResultForError;
 
         const matchForError = await findBuildMatch(
           this.buildMatches,
@@ -1497,9 +1498,27 @@ export default class DevServer {
         );
 
         if (matchForError) {
-          // error phase only applies if the file was found
+          this.output.debug(
+            `Route match detected in error phase, breaking loop`
+          );
           routeResult = routeResultForError;
           match = matchForError;
+        } else if (matched_route && matched_route.src && !matched_route.dest) {
+          this.output.debug(
+            'Route without `dest` detected in error phase, attempting to exit early'
+          );
+          if (
+            await this.exitWithStatus(
+              matchForError,
+              routeResultForError,
+              'error',
+              req,
+              res,
+              nowRequestId
+            )
+          ) {
+            return;
+          }
         }
       }
 
