@@ -948,9 +948,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes![1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([]);
-    expect(errorRoutes!.length).toBe(2);
-    expect((errorRoutes![0] as Source).status).toBe(404);
-    expect((errorRoutes![1] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+        dest: '/_vc_no_match_',
+      },
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
   });
 
   it('no package.json + no build + raw static + api', async () => {
@@ -975,9 +984,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes![1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([]);
-    expect(errorRoutes!.length).toBe(2);
-    expect((errorRoutes![0] as Source).status).toBe(404);
-    expect((errorRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+        dest: '/_vc_no_match_',
+      },
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
   });
 
   it('package.json + no build + root + api', async () => {
@@ -1017,9 +1035,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes!.length).toBe(1);
     expect((rewriteRoutes![0] as Source).src).toBe('^/api/([^/]+)/([^/]+)$');
-    expect(errorRoutes!.length).toBe(2);
-    expect((errorRoutes![0] as Source).status).toBe(404);
-    expect((errorRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+        dest: '/_vc_no_match_',
+      },
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
   });
 
   it('api + next + public', async () => {
@@ -1502,9 +1529,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json}');
     expect(rewriteRoutes).toStrictEqual([]);
-    expect(errorRoutes!.length).toBe(2);
-    expect((errorRoutes![0] as Source).status).toBe(404);
-    expect((errorRoutes![0] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+        dest: '/_vc_no_match_',
+      },
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
   });
 
   it('functions with nextjs', async () => {
@@ -1897,9 +1933,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes![1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([]);
-    expect(errorRoutes!.length).toBe(2);
-    expect((errorRoutes![0] as Source).status).toBe(404);
-    expect((errorRoutes![1] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+        dest: '/_vc_no_match_',
+      },
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
   });
 
   it('Framework with non-package.json entrypoint', async () => {
@@ -2098,9 +2143,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       },
     ]);
     expect(rewriteRoutes).toStrictEqual([]);
-    expect(errorRoutes!.length).toBe(2);
-    expect((errorRoutes![0] as Source).status).toBe(404);
-    expect((errorRoutes![1] as Source).status).toBe(404);
+    expect(errorRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+        dest: '/_vc_no_match_',
+      },
+      {
+        status: 404,
+        src: '^/(?!.*api).*$',
+        dest: '/404.html',
+      },
+    ]);
   });
 
   it('Error for non-api functions', async () => {
