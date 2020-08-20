@@ -971,10 +971,10 @@ function getRouteResult(
       }
 
       rewriteRoutes.push(...dynamicRoutes);
-      rewriteRoutes.push({
-        src: '^/api(/.*)?$',
+      errorRoutes.push({
         status: 404,
-        continue: true,
+        src: '^/api(/.*)?$',
+        dest: '/_vc_no_match_',
       });
     } else {
       defaultRoutes.push(...apiRoutes);
