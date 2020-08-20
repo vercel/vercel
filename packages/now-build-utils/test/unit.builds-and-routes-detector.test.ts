@@ -952,7 +952,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -988,7 +987,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -1039,7 +1037,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -1078,7 +1075,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
     ]);
   });
@@ -1112,7 +1108,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
     ]);
   });
@@ -1192,7 +1187,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -1231,7 +1225,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -1261,7 +1254,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -1301,7 +1293,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -1389,7 +1380,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -1533,7 +1523,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -1937,7 +1926,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2077,7 +2065,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2147,7 +2134,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2413,7 +2399,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2522,7 +2507,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2571,7 +2555,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2620,7 +2603,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2662,7 +2644,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2701,7 +2682,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2741,7 +2721,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2777,7 +2756,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2818,7 +2796,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2914,7 +2891,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2955,7 +2931,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -2997,7 +2972,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3030,7 +3004,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3062,7 +3035,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3094,7 +3066,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3122,7 +3093,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3164,7 +3134,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3230,7 +3199,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3271,7 +3239,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3313,7 +3280,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3339,7 +3305,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3371,7 +3336,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3403,7 +3367,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
@@ -3431,7 +3394,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        dest: '/_vc_no_match_',
       },
       {
         status: 404,
