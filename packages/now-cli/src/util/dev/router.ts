@@ -55,6 +55,7 @@ export async function devRouter(
   missRoutes?: Route[],
   phase?: HandleValue | null
 ): Promise<RouteResult> {
+  console.log('Phase routing: ' + phase || 'null');
   let result: RouteResult | undefined;
   let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };

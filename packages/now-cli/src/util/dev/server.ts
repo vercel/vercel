@@ -1475,58 +1475,57 @@ export default class DevServer {
         routeResult.status = prevStatus;
       }
 
-      if (!match && errorRoutes.length > 0) {
-        // error phase
-        const routeResultForError = await devRouter(
-          getReqUrl(routeResult),
-          req.method,
-          errorRoutes,
-          this,
-          nowConfig,
-          routeResult.headers,
-          [],
-          'error'
-        );
-        const { matched_route } = routeResultForError;
-
-        const matchForError = await findBuildMatch(
-          this.buildMatches,
-          this.files,
-          routeResultForError.dest,
-          this,
-          nowConfig
-        );
-
-        if (matchForError) {
-          this.output.debug(
-            `Route match detected in error phase, breaking loop`
-          );
-          routeResult = routeResultForError;
-          match = matchForError;
-        } else if (matched_route && matched_route.src && !matched_route.dest) {
-          this.output.debug(
-            'Route without `dest` detected in error phase, attempting to exit early'
-          );
-          if (
-            await this.exitWithStatus(
-              matchForError,
-              routeResultForError,
-              'error',
-              req,
-              res,
-              nowRequestId
-            )
-          ) {
-            return;
-          }
-        }
-      }
-
       statusCode = routeResult.status;
 
       if (match) {
         // end the phase
         break;
+      }
+    }
+
+    if (!match && routeResult && errorRoutes.length > 0) {
+      // error phase
+      const routeResultForError = await devRouter(
+        getReqUrl(routeResult),
+        req.method,
+        errorRoutes,
+        this,
+        nowConfig,
+        routeResult.headers,
+        [],
+        'error'
+      );
+      const { matched_route } = routeResultForError;
+
+      const matchForError = await findBuildMatch(
+        this.buildMatches,
+        this.files,
+        routeResultForError.dest,
+        this,
+        nowConfig
+      );
+
+      if (matchForError) {
+        debug(`Route match detected in error phase, breaking loop`);
+        routeResult = routeResultForError;
+        statusCode = routeResultForError.status;
+        match = matchForError;
+      } else if (matched_route && matched_route.src && !matched_route.dest) {
+        debug(
+          'Route without `dest` detected in error phase, attempting to exit early'
+        );
+        if (
+          await this.exitWithStatus(
+            matchForError,
+            routeResultForError,
+            'error',
+            req,
+            res,
+            nowRequestId
+          )
+        ) {
+          return;
+        }
       }
     }
 
