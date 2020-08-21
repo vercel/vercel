@@ -929,11 +929,10 @@ function getRouteResult(
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
-  const isNextjs =
-    frontendBuilder &&
-    ((frontendBuilder.use && frontendBuilder.use.startsWith('@vercel/next')) ||
-      (frontendBuilder.config &&
-        frontendBuilder.config.framework === 'nextjs'));
+  const framework = frontendBuilder?.config?.framework || '';
+  const use = frontendBuilder?.use || '';
+  const isNextjs = framework === 'nextjs' || use.startsWith('@vercel/next');
+  const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -971,10 +970,13 @@ function getRouteResult(
       }
 
       rewriteRoutes.push(...dynamicRoutes);
-      errorRoutes.push({
-        status: 404,
-        src: '^/api(/.*)?$',
-      });
+
+      if (ignoreRuntimes === undefined) {
+        errorRoutes.push({
+          status: 404,
+          src: '^/api(/.*)?$',
+        });
+      }
     } else {
       defaultRoutes.push(...apiRoutes);
 
