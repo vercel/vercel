@@ -26,6 +26,7 @@ interface Options {
     devCommand?: string | null;
     buildCommand?: string | null;
     outputDirectory?: string | null;
+    createdAt?: number;
   };
   cleanUrls?: boolean;
   trailingSlash?: boolean;
@@ -434,6 +435,7 @@ function detectFrontBuilder(
 ): Builder {
   const { tag, projectSettings = {} } = options;
   const withTag = tag ? `@${tag}` : '';
+  const { createdAt = 0 } = projectSettings;
   let { framework } = projectSettings;
 
   const config: Config = {
@@ -456,7 +458,7 @@ function detectFrontBuilder(
     config.outputDirectory = projectSettings.outputDirectory;
   }
 
-  if (pkg && framework !== null) {
+  if (pkg && (framework !== null || createdAt < Date.parse('2020-03-01'))) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
       ...pkg.devDependencies,
