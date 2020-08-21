@@ -971,7 +971,11 @@ function getRouteResult(
 
       rewriteRoutes.push(...dynamicRoutes);
 
-      if (ignoreRuntimes === undefined) {
+      if (typeof ignoreRuntimes === 'undefined') {
+        // This route is only necessary to hide the directory listing
+        // to avoid enumerating serverless function names.
+        // But it causes issues in `vc dev` for frameworks that handle
+        // their own functions such as redwood, so we ignore.
         errorRoutes.push({
           status: 404,
           src: '^/api(/.*)?$',
