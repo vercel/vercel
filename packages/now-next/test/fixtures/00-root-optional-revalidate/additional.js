@@ -18,7 +18,7 @@ module.exports = function (ctx) {
     const props = await getProps('/', { params: {} });
     expect(props.params).toEqual({});
 
-    await waitFor(1000);
+    await waitFor(2000);
     await getProps('/');
 
     const newProps = await getProps('/', { params: {} });
@@ -30,7 +30,7 @@ module.exports = function (ctx) {
     const props = await getProps('/index');
     expect(props.params).toEqual({});
 
-    await waitFor(1000);
+    await waitFor(2000);
     await getProps('/index');
 
     const newProps = await getProps('/index');
@@ -42,7 +42,7 @@ module.exports = function (ctx) {
     const props = await getProps('/a');
     expect(props.params).toEqual({ slug: ['a'] });
 
-    await waitFor(1000);
+    await waitFor(2000);
     await getProps('/a');
 
     const newProps = await getProps('/a');
@@ -54,7 +54,7 @@ module.exports = function (ctx) {
     const props = await getProps('/hello/world');
     expect(props.params).toEqual({ slug: ['hello', 'world'] });
 
-    await waitFor(1000);
+    await waitFor(2000);
     await getProps('/hello/world');
 
     const newProps = await getProps('/hello/world');
