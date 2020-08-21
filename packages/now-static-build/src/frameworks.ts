@@ -225,7 +225,7 @@ const frameworkList: Framework[] = [
         continue: true,
       },
       {
-        src: '^/(img|js|css|fonts|media)/.*',
+        src: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
         headers: { 'cache-control': 'max-age=31536000, immutable' },
         continue: true,
       },
