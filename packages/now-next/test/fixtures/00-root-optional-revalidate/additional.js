@@ -26,18 +26,6 @@ module.exports = function (ctx) {
     expect(props.random).not.toBe(newProps.random);
   });
 
-  it('should render /index correctly', async () => {
-    const props = await getProps('/index');
-    expect(props.params).toEqual({});
-
-    await waitFor(2000);
-    await getProps('/index');
-
-    const newProps = await getProps('/index');
-    expect(newProps.params).toEqual({});
-    expect(props.random).not.toBe(newProps.random);
-  });
-
   it('should render /a correctly', async () => {
     const props = await getProps('/a');
     expect(props.params).toEqual({ slug: ['a'] });
