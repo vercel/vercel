@@ -1941,7 +1941,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
-  it('RedwoodJS should allow usage of non-js API', async () => {
+  it('RedwoodJS should allow usage of non-js API and not add 404 api route', async () => {
     const files = [...redwoodFiles, 'api/golang.go', 'api/python.py'].sort();
     const projectSettings = {
       framework: 'redwoodjs',

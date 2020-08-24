@@ -972,6 +972,7 @@ function getRouteResult(
       }
 
       rewriteRoutes.push(...dynamicRoutes);
+
       if (typeof ignoreRuntimes === 'undefined') {
         // This route is only necessary to hide the directory listing
         // to avoid enumerating serverless function names.
