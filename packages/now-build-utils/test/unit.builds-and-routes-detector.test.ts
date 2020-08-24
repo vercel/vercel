@@ -1989,13 +1989,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         check: true,
       },
     ]);
-    expect(rewriteRoutes).toStrictEqual([
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
-        continue: true,
-      },
-    ]);
+    expect(rewriteRoutes).toStrictEqual([]);
     expect(errorRoutes).toStrictEqual([
       {
         status: 404,

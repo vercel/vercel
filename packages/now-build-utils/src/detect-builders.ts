@@ -931,11 +931,10 @@ function getRouteResult(
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
-  const isNextjs =
-    frontendBuilder &&
-    ((frontendBuilder.use && frontendBuilder.use.startsWith('@vercel/next')) ||
-      (frontendBuilder.config &&
-        frontendBuilder.config.framework === 'nextjs'));
+  const framework = frontendBuilder?.config?.framework || '';
+  const use = frontendBuilder?.use || '';
+  const isNextjs = framework === 'nextjs' || use.startsWith('@vercel/next');
+  const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -973,11 +972,17 @@ function getRouteResult(
       }
 
       rewriteRoutes.push(...dynamicRoutes);
-      rewriteRoutes.push({
-        src: '^/api(/.*)?$',
-        status: 404,
-        continue: true,
-      });
+      if (typeof ignoreRuntimes === 'undefined') {
+        // This route is only necessary to hide the directory listing
+        // to avoid enumerating serverless function names.
+        // But it causes issues in `vc dev` for frameworks that handle
+        // their own functions such as redwood, so we ignore.
+        rewriteRoutes.push({
+          src: '^/api(/.*)?$',
+          status: 404,
+          continue: true,
+        });
+      }
     } else {
       defaultRoutes.push(...apiRoutes);
 
