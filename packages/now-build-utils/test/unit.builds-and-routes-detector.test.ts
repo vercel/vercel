@@ -1080,7 +1080,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
-  it('Using "Other" framework with Storybook should NOT autodetect Next.js', async () => {
+  it('Using "Other" framework with Storybook should NOT autodetect Next.js for new projects', async () => {
     const pkg = {
       scripts: {
         dev: 'next dev',
@@ -1104,6 +1104,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     const projectSettings = {
       framework: null, // Selected "Other" framework
       buildCommand: 'yarn build-storybook',
+      createdAt: Date.parse('2020-07-01'),
     };
 
     const { builders, errorRoutes } = await detectBuilders(files, pkg, {
@@ -1123,6 +1124,41 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
     expect(errorRoutes!.length).toBe(1);
     expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
+  it('Using "Other" framework should autodetect Next.js for old projects', async () => {
+    const pkg = {
+      scripts: {
+        dev: 'next dev',
+        build: 'next build',
+      },
+      dependencies: {
+        next: '9.3.5',
+        react: '16.13.1',
+        'react-dom': '16.13.1',
+      },
+    };
+    const files = ['package.json', 'pages/api/foo.js', 'index.html'];
+    const projectSettings = {
+      framework: null, // Selected "Other" framework
+      createdAt: Date.parse('2020-02-01'),
+    };
+
+    const { builders, errorRoutes } = await detectBuilders(files, pkg, {
+      projectSettings,
+      featHandleMiss,
+    });
+
+    expect(builders).toEqual([
+      {
+        use: '@vercel/next',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+        },
+      },
+    ]);
+    expect(errorRoutes).toStrictEqual([]);
   });
 
   it('api + raw static', async () => {
@@ -1905,7 +1941,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
-  it('RedwoodJS should allow usage of non-js API', async () => {
+  it('RedwoodJS should allow usage of non-js API and not add 404 api route', async () => {
     const files = [...redwoodFiles, 'api/golang.go', 'api/python.py'].sort();
     const projectSettings = {
       framework: 'redwoodjs',
@@ -1953,13 +1989,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         check: true,
       },
     ]);
-    expect(rewriteRoutes).toStrictEqual([
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
-        continue: true,
-      },
-    ]);
+    expect(rewriteRoutes).toStrictEqual([]);
     expect(errorRoutes).toStrictEqual([
       {
         status: 404,

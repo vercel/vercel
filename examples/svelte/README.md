@@ -17,11 +17,3 @@ To get started with Svelte, along with [Serverless Functions](https://vercel.com
 ```shell
 $ npx degit sveltejs/template my-svelte-project
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Svelte project, along with [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction), with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

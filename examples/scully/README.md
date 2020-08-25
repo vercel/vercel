@@ -19,11 +19,3 @@ To get started deploying Scully with Vercel, you can use the [Vercel CLI](https:
 ```shell
 $ vercel init scully
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Scully project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

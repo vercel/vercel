@@ -19,11 +19,3 @@ To get started with Saber on Vercel, you can use [`npm init`](https://docs.npmjs
 ```shell
 $ npm init site my-saber-site
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Saber project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```
