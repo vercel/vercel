@@ -19,11 +19,3 @@ To get started with UmiJS deployed with Vercel, you can use the [Umi CLI](https:
 ```shell
 $ yarn create umi app-name
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new UmiJS project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

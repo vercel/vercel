@@ -17,11 +17,3 @@ To get started with Middleman for deployment with Vercel, you can use the [Middl
 ```shell
 $ middleman init project-name
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Middleman project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

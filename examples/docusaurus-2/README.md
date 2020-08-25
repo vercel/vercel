@@ -15,11 +15,3 @@ To get started with Docusaurus on Vercel, you can use the [Docusaurus CLI](https
 ```shell
 $ npx @docusaurus/init@next init my-website classic
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Docusaurus project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

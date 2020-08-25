@@ -19,11 +19,3 @@ To get started with Eleventy for deployment with Vercel, you can use [npx](https
 ```shell
 $ npx degit 11ty/eleventy-base-blog my-11ty-project
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Eleventy project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```
