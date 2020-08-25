@@ -8,7 +8,7 @@ Deploy your own Stencil project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/stencil)
 
-_Live Example: https://stencil.now-examples.now.sh_
+_Live Example: https://stencil-example.vercel.app_
 
 ### How We Created This Example
 
@@ -16,12 +16,4 @@ To get started with Stencil deployed with Vercel, you can use the [Stencil proje
 
 ```shell
 $ npm init stencil
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Stencil project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

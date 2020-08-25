@@ -8,7 +8,7 @@ Deploy your own Svelte project, along with Serverless Functions, with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/svelte)
 
-_Live Example: https://svelte.now-examples.now.sh_
+_Live Example: https://svelte-example.vercel.app_
 
 ### How We Created This Example
 
@@ -16,12 +16,4 @@ To get started with Svelte, along with [Serverless Functions](https://vercel.com
 
 ```shell
 $ npx degit sveltejs/template my-svelte-project
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Svelte project, along with [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction), with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

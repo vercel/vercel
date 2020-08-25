@@ -10,7 +10,7 @@ Deploy your own Eleventy project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/eleventy)
 
-_Live Example: https://eleventy.now-examples.now.sh_
+_Live Example: https://eleventy-template.vercel.app_
 
 ### How We Created This Example
 
@@ -18,12 +18,4 @@ To get started with Eleventy for deployment with Vercel, you can use [npx](https
 
 ```shell
 $ npx degit 11ty/eleventy-base-blog my-11ty-project
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Eleventy project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

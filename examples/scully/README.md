@@ -10,7 +10,7 @@ Deploy your own Scully project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/scully)
 
-_Live Example: https://scully.now-examples.now.sh_
+_Live Example: https://scully-example.vercel.app_
 
 ### How We Created This Example
 
@@ -18,12 +18,4 @@ To get started deploying Scully with Vercel, you can use the [Vercel CLI](https:
 
 ```shell
 $ vercel init scully
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Scully project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

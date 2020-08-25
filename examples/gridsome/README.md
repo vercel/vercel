@@ -10,7 +10,7 @@ Deploy your own Gridsome project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/gridsome)
 
-_Live Example: https://gridsome.now-examples.now.sh_
+_Live Example: https://gridsome-example.vercel.app_
 
 ### How We Created This Example
 
@@ -18,12 +18,4 @@ To get started with Gridsome for deployment with Vercel, you can use the [Gridso
 
 ```shell
 $ gridsome create my-website
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Gridsome project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

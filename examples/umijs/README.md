@@ -10,7 +10,7 @@ Deploy your own UmiJS project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/umijs)
 
-_Live Example: https://umijs.now-examples.now.sh_
+_Live Example: https://umijs-example.vercel.app_
 
 ### How We Created This Example
 
@@ -18,12 +18,4 @@ To get started with UmiJS deployed with Vercel, you can use the [Umi CLI](https:
 
 ```shell
 $ yarn create umi app-name
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new UmiJS project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

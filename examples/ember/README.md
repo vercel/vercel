@@ -10,7 +10,7 @@ Deploy your own Ember project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/ember)
 
-_Live Example: https://ember.now-examples.now.sh_
+_Live Example: https://ember-example.vercel.app_
 
 ### How We Created This Example
 
@@ -18,12 +18,4 @@ To get started with Ember for deployment with Vercel, you can use the [Ember CLI
 
 ```shell
 $ npx ember-cli new ember-project
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Ember project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

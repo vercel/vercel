@@ -10,7 +10,7 @@ Deploy your own Preact project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/preact)
 
-_Live Example: https://preact.now-examples.now.sh_
+_Live Example: https://preact-template.vercel.app_
 
 ### How We Created This Example
 
@@ -18,12 +18,4 @@ To get started with Preact for deployment with Vercel, you can use the [Preact C
 
 ```shell
 $ preact create default my-project
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Preact project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

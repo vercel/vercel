@@ -10,7 +10,7 @@ Deploy your own Hexo project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/hexo)
 
-_Live Example: https://hexo.now-examples.now.sh_
+_Live Example: https://hexo-template.vercel.app_
 
 ### How We Created This Example
 
@@ -18,12 +18,4 @@ To get started with Hexo for deployment with Vercel, you can use the [Hexo CLI](
 
 ```shell
 $ hexo init project-name
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Hexo project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

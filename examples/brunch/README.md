@@ -8,7 +8,7 @@ Deploy your own Brunch project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/brunch)
 
-_Live Example: https://brunch.now-examples.now.sh_
+_Live Example: https://brunch-example.vercel.app_
 
 ### How We Created This Example
 
@@ -16,12 +16,4 @@ To get started deploying Brunch with Vercel, you can use the [Brunch CLI](https:
 
 ```shell
 $ brunch new project-name -s es6
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new Brunch project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

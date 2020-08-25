@@ -1,21 +1,21 @@
 ![Blitz Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/blitz.svg)
 
-This is a [Blitz.js](https://blitzjs.com/) project bootstrapped with `npx blitz new`.
+# Blitz.js Example
 
-## Getting Started
+This directory is a brief example of a [Blitz.js](https://blitzjs.com/) project that can be deployed with Vercel and zero configuration.
 
-First, run the development server:
+## Deploy Your Own
 
-```bash
-npx blitz start
+Deploy your own Blitz.js project with Vercel by viewing the [documentation on deploying to Vercel](https://blitzjs.com/docs/deploy-vercel)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/blitzjs)
+
+_Live Example: https://blitz-example.vercel.app_
+
+### How We Created This Example
+
+To get started with Blitz.js, you can use [npx](https://www.npmjs.com/package/npx) to initialize the project:
+
+```shell
+$ npx blitz new
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## Learn More
-
-To learn more about Blitz.js, view [Blitzjs.com](https://blitzjs.com)
-
-## Deploy on Vercel
-
-View the [documentation on deploying to Vercel](https://blitzjs.com/docs/deploy-vercel)
