@@ -19,11 +19,3 @@ To get started with Hexo for deployment with Vercel, you can use the [Hexo CLI](
 ```shell
 $ hexo init project-name
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Hexo project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```
