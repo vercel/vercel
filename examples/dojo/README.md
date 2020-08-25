@@ -8,8 +8,6 @@ Deploy your own Dojo project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/dojo)
 
-_Live Example: https://dojo-example.vercel.app_
-
 ### How We Created This Example
 
 To get started with Dojo on Vercel, you can use the [Dojo CLI](https://github.com/dojo/cli) to initialize the project:

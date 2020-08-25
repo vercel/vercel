@@ -8,7 +8,7 @@ Deploy your own Middleman project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/middleman)
 
-_Live Example: https://middleman-template.vercel.app_
+_Live Example: https://middleman.now-examples.now.sh_
 
 ### How We Created This Example
 

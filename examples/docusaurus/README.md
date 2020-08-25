@@ -10,7 +10,7 @@ Deploy your own Docusaurus project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/docusaurus)
 
-_Live Example: https://docusaurus-example.vercel.app_
+_Live Example: https://docusaurus.now-examples.now.sh_
 
 ### How We Created This Example
 

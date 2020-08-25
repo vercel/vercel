@@ -8,7 +8,7 @@ Deploy your own Nuxt.js project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/nuxtjs)
 
-_Live Example: https://nuxtjs-template.vercel.app_
+_Live Example: https://nuxtjs.now-examples.now.sh_
 
 ### How We Created This Example
 

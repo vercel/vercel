@@ -10,7 +10,7 @@ Deploy your own UmiJS project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/umijs)
 
-_Live Example: https://umijs-example.vercel.app_
+_Live Example: https://umijs.now-examples.now.sh_
 
 ### How We Created This Example
 

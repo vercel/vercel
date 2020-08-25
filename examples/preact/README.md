@@ -10,7 +10,7 @@ Deploy your own Preact project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/preact)
 
-_Live Example: https://preact-template.vercel.app_
+_Live Example: https://preact.now-examples.now.sh_
 
 ### How We Created This Example
 

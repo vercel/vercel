@@ -8,7 +8,7 @@ Deploy your own Custom Built project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/custom-build)
 
-_Live Example: https://custom-build-example.vercel.app_
+_Live Example: https://custom-build.now-examples.now.sh_
 
 ### How We Created This Example
 

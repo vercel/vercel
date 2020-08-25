@@ -8,7 +8,7 @@ Deploy your own Svelte project, along with Serverless Functions, with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/svelte)
 
-_Live Example: https://svelte-example.vercel.app_
+_Live Example: https://svelte.now-examples.now.sh_
 
 ### How We Created This Example
 

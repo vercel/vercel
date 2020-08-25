@@ -8,7 +8,7 @@ Deploy your own AMP project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/amp)
 
-_Live Example: https://amp-example.vercel.app_
+_Live Example: https://amp.now-examples.now.sh_
 
 ### How We Created This Example
 

@@ -10,8 +10,6 @@ Deploy your own Blitz.js project with Vercel by viewing the [documentation on de
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/blitzjs)
 
-_Live Example: https://blitz-example.vercel.app_
-
 ### How We Created This Example
 
 To get started with Blitz.js, you can use [npx](https://www.npmjs.com/package/npx) to initialize the project:

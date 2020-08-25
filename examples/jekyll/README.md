@@ -8,7 +8,7 @@ Deploy your own Jekyll project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/jekyll)
 
-_Live Example: https://jekyll-example.vercel.app_
+_Live Example: https://jekyll.now-examples.now.sh_
 
 ### How We Created This Example
 
