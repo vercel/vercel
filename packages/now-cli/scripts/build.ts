@@ -50,6 +50,9 @@ async function main() {
   console.log();
   const src = join(dirRoot, 'src');
   const args = ['@zeit/ncc', 'build', '--external', 'update-notifier'];
+  if (isDev) {
+    args.push('--source-map');
+  }
   args.push(src);
   await execa('npx', args, { stdio: 'inherit' });
 
