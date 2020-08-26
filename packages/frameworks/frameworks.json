@@ -59,7 +59,7 @@
     }
   },
   {
-    "name": "Gatsby",
+    "name": "Gatsby.js",
     "slug": "gatsby",
     "demo": "https://gatsby.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gatsby.svg",
@@ -261,7 +261,7 @@
     }
   },
   {
-    "name": "Ember",
+    "name": "Ember.js",
     "slug": "ember",
     "demo": "https://ember.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ember.svg",
