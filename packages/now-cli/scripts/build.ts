@@ -49,16 +49,7 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const args = [
-    '@zeit/ncc',
-    'build',
-    '--source-map',
-    '--external',
-    'update-notifier',
-  ];
-  if (!isDev) {
-    args.push('--minify');
-  }
+  const args = ['@zeit/ncc', 'build', '--external', 'update-notifier'];
   args.push(src);
   await execa('npx', args, { stdio: 'inherit' });
 
