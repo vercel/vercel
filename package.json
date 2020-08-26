@@ -17,7 +17,7 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "2.0.0",
     "@typescript-eslint/parser": "2.0.0",
-    "@zeit/ncc": "0.20.4",
+    "@vercel/ncc": "0.24.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
     "cheerio": "1.0.0-rc.3",

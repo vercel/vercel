@@ -49,12 +49,12 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const args = ['@zeit/ncc', 'build', '--external', 'update-notifier'];
+  const args = ['ncc', 'build', '--external', 'update-notifier'];
   if (isDev) {
     args.push('--source-map');
   }
   args.push(src);
-  await execa('npx', args, { stdio: 'inherit' });
+  await execa('yarn', args, { stdio: 'inherit' });
 
   // `ncc` has some issues with `@zeit/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
