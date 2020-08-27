@@ -276,6 +276,7 @@ export default async function main(
   let { org, project, status } = link;
   let newProjectName = null;
   let rootDirectory = project ? project.rootDirectory : null;
+  let sourceFilesOutsideRootDirectory = true;
 
   if (status === 'not_linked') {
     const shouldStartSetup =
@@ -333,6 +334,7 @@ export default async function main(
     } else {
       project = projectOrNewProjectName;
       rootDirectory = project.rootDirectory;
+      sourceFilesOutsideRootDirectory = project.sourceFilesOutsideRootDirectory;
 
       // we can already link the project
       await linkFolderToProject(
@@ -349,7 +351,13 @@ export default async function main(
     }
   }
 
-  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+  // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
+  // and upload the entire directory.
+  const sourcePath = rootDirectory
+    ? sourceFilesOutsideRootDirectory
+      ? path
+      : join(path, rootDirectory)
+    : path;
 
   if (
     rootDirectory &&
