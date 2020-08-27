@@ -179,8 +179,12 @@ export default async function setupAndLink(
         deployStamp: stamp(),
         target: undefined,
         skipAutoDetectionConfirmation: false,
-        projectSettings: { sourceFilesOutsideRootDirectory },
       };
+
+      if (!localConfig.builds || localConfig.builds.length === 0) {
+        // Only add projectSettings for zero config deployments
+        createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+      }
 
       const deployment = await createDeploy(
         output,
