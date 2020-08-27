@@ -353,11 +353,7 @@ export default async function main(
 
   // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
   // and upload the entire directory.
-  const sourcePath = rootDirectory
-    ? sourceFilesOutsideRootDirectory
-      ? path
-      : join(path, rootDirectory)
-    : path;
+  const sourcePath = (rootDirectory && !sourceFilesOutsideRootDirectory) ? join(path, rootDirectory) : path;
 
   if (
     rootDirectory &&
