@@ -150,7 +150,11 @@ export const build = async ({
     process.env.PYTHONPATH = tempDir;
     const convertCmd = join(tempDir, 'bin', 'pipfile2req');
     await pipenvConvert(convertCmd, pipfileLockDir);
-    process.env.PYTHONPATH = pythonPath;
+    if (pythonPath === undefined) {
+      delete process.env.PYTHONPATH;
+    } else {
+      process.env.PYTHONPATH = pythonPath;
+    }
   }
 
   fsFiles = await glob('**', workPath);
