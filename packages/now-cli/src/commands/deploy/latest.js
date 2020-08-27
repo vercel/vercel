@@ -530,6 +530,7 @@ export default async function main(
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
+      projectSettings: { sourceFilesOutsideRootDirectory },
     };
 
     deployment = await createDeploy(
@@ -551,6 +552,9 @@ export default async function main(
 
       if (rootDirectory) {
         projectSettings.rootDirectory = rootDirectory;
+      }
+      if (sourceFilesOutsideRootDirectory) {
+        projectSettings.sourceFilesOutsideRootDirectory = sourceFilesOutsideRootDirectory;
       }
 
       const settings = await editProjectSettings(
