@@ -353,7 +353,10 @@ export default async function main(
 
   // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
   // and upload the entire directory.
-  const sourcePath = (rootDirectory && !sourceFilesOutsideRootDirectory) ? join(path, rootDirectory) : path;
+  const sourcePath =
+    rootDirectory && !sourceFilesOutsideRootDirectory
+      ? join(path, rootDirectory)
+      : path;
 
   if (
     rootDirectory &&
@@ -372,7 +375,7 @@ export default async function main(
   // If Root Directory is used we'll try to read the config
   // from there instead and use it if it exists.
   if (rootDirectory) {
-    const rootDirectoryConfig = readLocalConfig(sourcePath);
+    const rootDirectoryConfig = readLocalConfig(join(path, rootDirectory));
 
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);
