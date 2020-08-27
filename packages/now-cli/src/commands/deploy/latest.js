@@ -530,8 +530,12 @@ export default async function main(
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
-      projectSettings: { sourceFilesOutsideRootDirectory },
     };
+
+    if (!localConfig.builds || localConfig.builds.length === 0) {
+      // Only add projectSettings for zero config deployments
+      createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+    }
 
     deployment = await createDeploy(
       output,
@@ -553,7 +557,10 @@ export default async function main(
       if (rootDirectory) {
         projectSettings.rootDirectory = rootDirectory;
       }
-      projectSettings.sourceFilesOutsideRootDirectory = sourceFilesOutsideRootDirectory;
+
+      if (typeof sourceFilesOutsideRootDirectory !== 'undefined') {
+        projectSettings.sourceFilesOutsideRootDirectory = sourceFilesOutsideRootDirectory;
+      }
 
       const settings = await editProjectSettings(
         output,
