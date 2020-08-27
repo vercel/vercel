@@ -553,9 +553,7 @@ export default async function main(
       if (rootDirectory) {
         projectSettings.rootDirectory = rootDirectory;
       }
-      if (sourceFilesOutsideRootDirectory) {
-        projectSettings.sourceFilesOutsideRootDirectory = sourceFilesOutsideRootDirectory;
-      }
+      projectSettings.sourceFilesOutsideRootDirectory = sourceFilesOutsideRootDirectory;
 
       const settings = await editProjectSettings(
         output,
