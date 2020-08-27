@@ -59,6 +59,7 @@ export default async function setupAndLink(
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
   let rootDirectory: string | null = null;
+  let sourceFilesOutsideRootDirectory = true;
   let newProjectName: string;
   let org;
 
@@ -129,7 +130,13 @@ export default async function setupAndLink(
     );
     return { status: 'linked', org, project };
   }
-  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+
+  // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
+  // and upload the entire directory.
+  const sourcePath =
+    rootDirectory && !sourceFilesOutsideRootDirectory
+      ? join(path, rootDirectory)
+      : path;
 
   if (
     rootDirectory &&
@@ -172,6 +179,7 @@ export default async function setupAndLink(
         deployStamp: stamp(),
         target: undefined,
         skipAutoDetectionConfirmation: false,
+        projectSettings: { sourceFilesOutsideRootDirectory },
       };
 
       const deployment = await createDeploy(
