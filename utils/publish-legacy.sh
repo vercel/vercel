@@ -34,5 +34,5 @@ for tag in $tags; do
   echo "Running \`npm publish $npm_tag\` in \"$(pwd)\""
   npm publish $npm_tag
   echo "Running \`npm deprecate $old_name@$version\` in favor of $new_name"
-  npm deprecate "$old_name@$version" "\"$old_name\" is deprecated and will stop receiving updates January 2021. Please use \"$new_name\" instead."
+  npm deprecate "$old_name@$version" "\"$old_name\" is deprecated and will stop receiving updates on December 31, 2020. Please use \"$new_name\" instead."
 done
