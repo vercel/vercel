@@ -21,6 +21,7 @@ for tag in $tags; do
   package_dir="${ADDR[0]}"
   old_name="${ADDR[1]}"
   new_name="${ADDR[2]}"
+  version="${ADDR[3]}"
   IFS=' ' # reset to default after usage
 
   cd "${__dirname}/../packages/${package_dir}"
@@ -32,6 +33,6 @@ for tag in $tags; do
 
   echo "Running \`npm publish $npm_tag\` in \"$(pwd)\""
   npm publish $npm_tag
-  echo "Running \`npm deprecate $old_name\` in \"$(pwd)\""
-  npm deprecate "$old_name" "\"$old_name\" is deprecated and will stop receiving updates January 2021. Please use \"$new_name\" instead."
+  echo "Running \`npm deprecate $old_name@$version\` in favor of $new_name"
+  npm deprecate "$old_name@$version" "\"$old_name\" is deprecated and will stop receiving updates January 2021. Please use \"$new_name\" instead."
 done
