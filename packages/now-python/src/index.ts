@@ -205,7 +205,7 @@ export const build = async ({
 
   const outputFiles = await glob('**', workPath);
 
-  // Static analysis is impossible with Python. Instead, provide `includeFiles`
+  // Static analysis is difficult with Python. Instead, provide `includeFiles`
   // and `excludeFiles` config options to reduce bundle size.
   if (config && (config.includeFiles || config.excludeFiles)) {
     const includedPaths = await matchPaths(config.includeFiles, workPath);
