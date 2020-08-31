@@ -19,11 +19,3 @@ To get started with React, along with [Serverless Functions](https://vercel.com/
 ```shell
 $ npx create-react-app my-app
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new React project, along with [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction), with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

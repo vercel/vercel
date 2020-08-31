@@ -19,11 +19,3 @@ $ npx create-nuxt-app my-app
 ```
 
 > The only change made is to amend the output directory in `nuxt.config.js` to `"/public"`.
-
-### Deploying From Your Terminal
-
-You can deploy your new Nuxt.js project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

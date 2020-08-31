@@ -40,6 +40,6 @@ declare namespace ncc {
   }
 }
 
-declare module '@zeit/ncc' {
+declare module '@vercel/ncc' {
   export = ncc;
 }

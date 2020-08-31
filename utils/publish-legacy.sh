@@ -14,7 +14,15 @@ commit="$(git log --format="%H" -n 1)"
 
 tags="$(git show-ref --tags -d | grep ^"$commit" | sed -e 's,.* refs/tags/,,' -e 's/\^{}//')"
 for tag in $tags; do
-  package_dir="$(node "${__dirname}/update-legacy-name.js" "$tag")"
+  str="$(node "${__dirname}/update-legacy-name.js" "$tag")"
+
+  IFS='|' # set delimiter
+  read -ra ADDR <<< "$str" # str is read into an array as tokens separated by IFS
+  package_dir="${ADDR[0]}"
+  old_name="${ADDR[1]}"
+  new_name="${ADDR[2]}"
+  version="${ADDR[3]}"
+  IFS=' ' # reset to default after usage
 
   cd "${__dirname}/../packages/${package_dir}"
 
@@ -25,4 +33,6 @@ for tag in $tags; do
 
   echo "Running \`npm publish $npm_tag\` in \"$(pwd)\""
   npm publish $npm_tag
+  echo "Running \`npm deprecate $old_name@$version\` in favor of $new_name"
+  npm deprecate "$old_name@$version" "\"$old_name\" is deprecated and will stop receiving updates on December 31, 2020. Please use \"$new_name\" instead."
 done

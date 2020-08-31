@@ -26,6 +26,7 @@ interface Options {
     devCommand?: string | null;
     buildCommand?: string | null;
     outputDirectory?: string | null;
+    createdAt?: number;
   };
   cleanUrls?: boolean;
   trailingSlash?: boolean;
@@ -434,6 +435,7 @@ function detectFrontBuilder(
 ): Builder {
   const { tag, projectSettings = {} } = options;
   const withTag = tag ? `@${tag}` : '';
+  const { createdAt = 0 } = projectSettings;
   let { framework } = projectSettings;
 
   const config: Config = {
@@ -456,7 +458,7 @@ function detectFrontBuilder(
     config.outputDirectory = projectSettings.outputDirectory;
   }
 
-  if (pkg && framework !== null) {
+  if (pkg && (framework !== null || createdAt < Date.parse('2020-03-01'))) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
       ...pkg.devDependencies,
@@ -929,11 +931,10 @@ function getRouteResult(
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
-  const isNextjs =
-    frontendBuilder &&
-    ((frontendBuilder.use && frontendBuilder.use.startsWith('@vercel/next')) ||
-      (frontendBuilder.config &&
-        frontendBuilder.config.framework === 'nextjs'));
+  const framework = frontendBuilder?.config?.framework || '';
+  const use = frontendBuilder?.use || '';
+  const isNextjs = framework === 'nextjs' || use.startsWith('@vercel/next');
+  const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -971,11 +972,18 @@ function getRouteResult(
       }
 
       rewriteRoutes.push(...dynamicRoutes);
-      rewriteRoutes.push({
-        src: '^/api(/.*)?$',
-        status: 404,
-        continue: true,
-      });
+
+      if (typeof ignoreRuntimes === 'undefined') {
+        // This route is only necessary to hide the directory listing
+        // to avoid enumerating serverless function names.
+        // But it causes issues in `vc dev` for frameworks that handle
+        // their own functions such as redwood, so we ignore.
+        rewriteRoutes.push({
+          src: '^/api(/.*)?$',
+          status: 404,
+          continue: true,
+        });
+      }
     } else {
       defaultRoutes.push(...apiRoutes);
 

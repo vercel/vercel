@@ -19,11 +19,3 @@ $ npx degit "sveltejs/sapper-template#webpack" my-sapper-app
 ```
 
 > The only change made is to change the build script in `package.json` to be `"sapper export"`.
-
-### Deploying From Your Terminal
-
-You can deploy your new Sapper project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

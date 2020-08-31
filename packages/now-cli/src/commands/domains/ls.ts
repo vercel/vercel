@@ -66,7 +66,10 @@ export default async function ls(
 
   const cancelWait = wait(`Fetching Domains under ${chalk.bold(contextName)}`);
 
-  const { domains, pagination } = await getDomains(client).finally(() => {
+  const { domains, pagination } = await getDomains(
+    client,
+    nextTimestamp
+  ).finally(() => {
     cancelWait();
   });
 
