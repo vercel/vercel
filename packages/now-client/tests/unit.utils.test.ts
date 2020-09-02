@@ -14,18 +14,30 @@ const normalizeWindowsPaths = (files: string[]) => {
 const toAbsolutePaths = (cwd: string, files: string[]) =>
   files.map(p => join(cwd, p));
 
-describe('buildFileTree', () => {
+describe('buildFileTree()', () => {
   it('should exclude files using `.nowignore` blocklist', async () => {
     const cwd = fixture('nowignore');
-    const expected = toAbsolutePaths(cwd, ['.nowignore', 'index.txt']);
-    const actual = await buildFileTree(cwd, true, noop);
-    expect(normalizeWindowsPaths(expected).sort()).toEqual(
-      normalizeWindowsPaths(actual).sort()
+    const { fileList, ignoreList } = await buildFileTree(cwd, true, noop);
+
+    const expectedFileList = toAbsolutePaths(cwd, ['.nowignore', 'index.txt']);
+    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+      normalizeWindowsPaths(fileList).sort()
+    );
+
+    const expectedIgnoreList = [
+      'ignore.txt',
+      'folder/ignore.txt',
+      'node_modules',
+    ];
+    expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
+      normalizeWindowsPaths(ignoreList).sort()
     );
   });
 
   it('should include the node_modules using `.vercelignore` allowlist', async () => {
     const cwd = fixture('vercelignore-allow-nodemodules');
+    const { fileList, ignoreList } = await buildFileTree(cwd, true, noop);
+
     const expected = toAbsolutePaths(cwd, [
       'node_modules/one.txt',
       'sub/node_modules/two.txt',
@@ -33,9 +45,13 @@ describe('buildFileTree', () => {
       '.vercelignore',
       'hello.txt',
     ]);
-    const actual = await buildFileTree(cwd, true, noop);
     expect(normalizeWindowsPaths(expected).sort()).toEqual(
-      normalizeWindowsPaths(actual).sort()
+      normalizeWindowsPaths(fileList).sort()
+    );
+
+    const expectedIgnoreList = ['.env.local', 'exclude.txt'];
+    expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
+      normalizeWindowsPaths(ignoreList).sort()
     );
   });
 });

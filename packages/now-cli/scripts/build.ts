@@ -49,12 +49,12 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const args = ['@zeit/ncc', 'build', '--source-map'];
-  if (!isDev) {
-    args.push('--minify');
+  const args = ['ncc', 'build', '--external', 'update-notifier'];
+  if (isDev) {
+    args.push('--source-map');
   }
   args.push(src);
-  await execa('npx', args, { stdio: 'inherit' });
+  await execa('yarn', args, { stdio: 'inherit' });
 
   // `ncc` has some issues with `@zeit/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
@@ -86,7 +86,7 @@ async function main() {
   // A bunch of source `.ts` files from CLI's `util` directory
   await remove(join(dirRoot, 'dist', 'util'));
 
-  console.log('Finished building `now-cli`');
+  console.log('Finished building Vercel CLI');
 }
 
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {

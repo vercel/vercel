@@ -17,11 +17,3 @@ To get started with Hugo for deployment with Vercel, you can use the [Hugo CLI](
 ```shell
 $ hugo new site project-name
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Hugo project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

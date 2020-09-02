@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "8.1.1-canary.1",
+  "version": "9.0.1",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -26,7 +26,6 @@
     "@types/node": "12.0.4",
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
-    "@zeit/ncc": "0.18.5",
     "typescript": "3.9.3"
   },
   "jest": {
@@ -38,6 +37,7 @@
     ]
   },
   "dependencies": {
+    "@vercel/build-utils": "2.5.1",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",

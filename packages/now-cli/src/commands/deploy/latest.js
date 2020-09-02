@@ -162,7 +162,11 @@ const printDeploymentStatus = async (
         prependEmoji(
           `${chalk.dim(indication.payload)}`,
           emoji(indication.type)
-        ) + `\n`
+        ) +
+          `\n` +
+          (indication.link
+            ? `${indication.action || 'Learn More'}: ${indication.link}\n\n`
+            : '')
       );
     }
   }
@@ -272,6 +276,7 @@ export default async function main(
   let { org, project, status } = link;
   let newProjectName = null;
   let rootDirectory = project ? project.rootDirectory : null;
+  let sourceFilesOutsideRootDirectory = true;
 
   if (status === 'not_linked') {
     const shouldStartSetup =
@@ -329,6 +334,7 @@ export default async function main(
     } else {
       project = projectOrNewProjectName;
       rootDirectory = project.rootDirectory;
+      sourceFilesOutsideRootDirectory = project.sourceFilesOutsideRootDirectory;
 
       // we can already link the project
       await linkFolderToProject(
@@ -345,7 +351,12 @@ export default async function main(
     }
   }
 
-  const sourcePath = rootDirectory ? join(path, rootDirectory) : path;
+  // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
+  // and upload the entire directory.
+  const sourcePath =
+    rootDirectory && !sourceFilesOutsideRootDirectory
+      ? join(path, rootDirectory)
+      : path;
 
   if (
     rootDirectory &&
@@ -354,7 +365,7 @@ export default async function main(
       path,
       sourcePath,
       project
-        ? `To change your project settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
+        ? `To change your Project Settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -364,7 +375,7 @@ export default async function main(
   // If Root Directory is used we'll try to read the config
   // from there instead and use it if it exists.
   if (rootDirectory) {
-    const rootDirectoryConfig = readLocalConfig(sourcePath);
+    const rootDirectoryConfig = readLocalConfig(join(path, rootDirectory));
 
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);
@@ -521,6 +532,11 @@ export default async function main(
       skipAutoDetectionConfirmation: autoConfirm,
     };
 
+    if (!localConfig.builds || localConfig.builds.length === 0) {
+      // Only add projectSettings for zero config deployments
+      createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+    }
+
     deployment = await createDeploy(
       output,
       now,
@@ -540,6 +556,10 @@ export default async function main(
 
       if (rootDirectory) {
         projectSettings.rootDirectory = rootDirectory;
+      }
+
+      if (typeof sourceFilesOutsideRootDirectory !== 'undefined') {
+        projectSettings.sourceFilesOutsideRootDirectory = sourceFilesOutsideRootDirectory;
       }
 
       const settings = await editProjectSettings(
@@ -669,7 +689,7 @@ export default async function main(
     }
 
     if (err instanceof BuildError) {
-      output.error('Build failed');
+      output.error(err.message || 'Build failed');
       output.error(
         `Check your logs at https://${now.url}/_logs or run ${getCommandName(
           `logs ${now.url}`,

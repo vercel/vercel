@@ -17,11 +17,3 @@ To get started deploying a Custom Built project with Vercel, you can use the [Ve
 ```shell
 $ vercel init custom-build
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Custom Built project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

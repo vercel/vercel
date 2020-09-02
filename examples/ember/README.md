@@ -19,11 +19,3 @@ To get started with Ember for deployment with Vercel, you can use the [Ember CLI
 ```shell
 $ npx ember-cli new ember-project
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Ember project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

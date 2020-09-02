@@ -1,5 +1,6 @@
 import execa from 'execa';
-import { homedir } from 'os';
+import retry from 'async-retry';
+import { homedir, tmpdir } from 'os';
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
@@ -29,6 +30,8 @@ const {
   shouldServe,
   debug,
 } = buildUtils;
+
+const TMP = tmpdir();
 
 import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
 const handlerFileName = `handler${OUT_EXTENSION}`;
@@ -503,13 +506,7 @@ export async function startDevServer(
     entrypointWithExt += '.go';
   }
 
-  const tmp = join(
-    devCacheDir,
-    'go',
-    Math.random()
-      .toString(32)
-      .substring(2)
-  );
+  const tmp = join(devCacheDir, 'go', Math.random().toString(32).substring(2));
   const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
 
@@ -534,9 +531,15 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     copyDevServer(analyzed.functionName, tmpPackage),
   ]);
 
+  const portFile = join(
+    TMP,
+    `vercel-dev-port-${Math.random().toString(32).substring(2)}`
+  );
+
   const env: typeof process.env = {
     ...process.env,
     ...meta.env,
+    VERCEL_DEV_PORT_FILE: portFile,
   };
 
   const tmpRelative = `.${sep}${entrypointDir}`;
@@ -546,8 +549,10 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
   });
 
-  child.once('exit', async () => {
-    await remove(tmp); // Cleanup
+  child.once('exit', () => {
+    retry(() => remove(tmp)).catch((err: Error) => {
+      console.error('Could not delete tmp directory: %j: %s', tmp, err);
+    });
   });
 
   const portPipe = child.stdio[3];
@@ -562,19 +567,56 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
       resolve({ port: Number(d) });
     });
   });
+  const onPortFile = waitForPortFile(portFile);
   const onExit = once.spread<[number, string | null]>(child, 'exit');
-  const result = await Promise.race([onPort, onExit]);
+  const result = await Promise.race([onPort, onPortFile, onExit]);
   onExit.cancel();
+  onPortFile.cancel();
 
   if (isPortInfo(result)) {
     return {
       port: result.port,
       pid: child.pid,
     };
-  } else {
+  } else if (Array.isArray(result)) {
     // Got "exit" event from child process
     throw new Error(
       `Failed to start dev server for "${entrypointWithExt}" (code=${result[0]}, signal=${result[1]})`
     );
+  } else {
+    throw new Error(`Unexpected result type: ${typeof result}`);
+  }
+}
+
+export interface CancelablePromise<T> extends Promise<T> {
+  cancel: () => void;
+}
+
+function waitForPortFile(portFile: string) {
+  const opts = { portFile, canceled: false };
+  const promise = waitForPortFile_(opts) as CancelablePromise<PortInfo | void>;
+  promise.cancel = () => {
+    opts.canceled = true;
+  };
+  return promise;
+}
+
+async function waitForPortFile_(opts: {
+  portFile: string;
+  canceled: boolean;
+}): Promise<PortInfo | void> {
+  while (!opts.canceled) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      const port = Number(await readFile(opts.portFile, 'ascii'));
+      retry(() => remove(opts.portFile)).catch((err: Error) => {
+        console.error('Could not delete port file: %j: %s', opts.portFile, err);
+      });
+      return { port };
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
   }
 }

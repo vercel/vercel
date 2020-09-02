@@ -73,6 +73,24 @@ function status(res: NowResponse, statusCode: number): NowResponse {
   return res;
 }
 
+function redirect(
+  res: NowResponse,
+  statusOrUrl: string | number,
+  url?: string
+): NowResponse {
+  if (typeof statusOrUrl === 'string') {
+    url = statusOrUrl;
+    statusOrUrl = 307;
+  }
+  if (typeof statusOrUrl !== 'number' || typeof url !== 'string') {
+    throw new Error(
+      `Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`
+    );
+  }
+  res.writeHead(statusOrUrl, { Location: url }).end();
+  return res;
+}
+
 function setCharset(type: string, charset: string) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { parse, format } = require('content-type');
@@ -261,6 +279,7 @@ export function createServerWithHelpers(
       setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, event.body));
 
       res.status = statusCode => status(res, statusCode);
+      res.redirect = (statusOrUrl, url) => redirect(res, statusOrUrl, url);
       res.send = body => send(req, res, body);
       res.json = jsonBody => json(req, res, jsonBody);
 

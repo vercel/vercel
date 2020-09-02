@@ -2,12 +2,19 @@ import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
 import { Route, Source } from '@vercel/routing-utils';
+import _frameworks, { Framework } from '@vercel/frameworks';
 import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 import { isOfficialRuntime } from './';
+const frameworkList = _frameworks as Framework[];
+const slugToFramework = new Map<string | null, Framework>(
+  frameworkList.map(f => [f.slug, f])
+);
 
 interface ErrorResponse {
   code: string;
   message: string;
+  action?: string;
+  link?: string;
 }
 
 interface Options {
@@ -19,6 +26,7 @@ interface Options {
     devCommand?: string | null;
     buildCommand?: string | null;
     outputDirectory?: string | null;
+    createdAt?: number;
   };
   cleanUrls?: boolean;
   trailingSlash?: boolean;
@@ -104,7 +112,6 @@ export async function detectBuilders(
     };
   }
 
-  const apiMatches = getApiMatches(options);
   const sortedFiles = files.sort(sortFiles);
   const apiSortedFiles = files.sort(sortFilesBySegmentCount);
 
@@ -120,6 +127,16 @@ export async function detectBuilders(
 
   const { projectSettings = {} } = options;
   const { buildCommand, outputDirectory, framework } = projectSettings;
+  const ignoreRuntimes = new Set(
+    slugToFramework.get(framework || '')?.ignoreRuntimes
+  );
+  const withTag = options.tag ? `@${options.tag}` : '';
+  const apiMatches = getApiMatches()
+    .filter(b => !ignoreRuntimes.has(b.use))
+    .map(b => {
+      b.use = `${b.use}${withTag}`;
+      return b;
+    });
 
   // If either is missing we'll make the frontend static
   const makeFrontendStatic = buildCommand === '' || outputDirectory === '';
@@ -392,16 +409,15 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
-function getApiMatches({ tag }: Options = {}) {
-  const withTag = tag ? `@${tag}` : '';
+function getApiMatches() {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'api/**/*.js', use: `@vercel/node${withTag}`, config },
-    { src: 'api/**/*.ts', use: `@vercel/node${withTag}`, config },
-    { src: 'api/**/!(*_test).go', use: `@vercel/go${withTag}`, config },
-    { src: 'api/**/*.py', use: `@vercel/python${withTag}`, config },
-    { src: 'api/**/*.rb', use: `@vercel/ruby${withTag}`, config },
+    { src: 'api/**/*.js', use: `@vercel/node`, config },
+    { src: 'api/**/*.ts', use: `@vercel/node`, config },
+    { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
+    { src: 'api/**/*.py', use: `@vercel/python`, config },
+    { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
   ];
 }
 
@@ -419,6 +435,7 @@ function detectFrontBuilder(
 ): Builder {
   const { tag, projectSettings = {} } = options;
   const withTag = tag ? `@${tag}` : '';
+  const { createdAt = 0 } = projectSettings;
   let { framework } = projectSettings;
 
   const config: Config = {
@@ -441,7 +458,7 @@ function detectFrontBuilder(
     config.outputDirectory = projectSettings.outputDirectory;
   }
 
-  if (pkg) {
+  if (pkg && (framework !== null || createdAt < Date.parse('2020-03-01'))) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
       ...pkg.devDependencies,
@@ -462,8 +479,10 @@ function detectFrontBuilder(
     });
   }
 
-  if (framework === 'nextjs') {
-    return { src: 'package.json', use: `@vercel/next${withTag}`, config };
+  const f = slugToFramework.get(framework || '');
+  if (f && f.useRuntime) {
+    const { src, use } = f.useRuntime;
+    return { src, use: `${use}${withTag}`, config };
   }
 
   // Entrypoints for other frameworks
@@ -496,7 +515,7 @@ function getMissingBuildScriptError() {
     code: 'missing_build_script',
     message:
       'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
-      '\nMore details: https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-build-script',
+      '\nLearn More: https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-build-script',
   };
 }
 
@@ -608,20 +627,22 @@ function checkUnusedFunctions(
       } else {
         return {
           code: 'unused_function',
-          message: `The function for ${fnKey} can't be handled by any builder`,
+          message: `The pattern "${fnKey}" defined in \`functions\` doesn't match any Serverless Functions.`,
+          action: 'Learn More',
+          link: 'https://vercel.link/unmatched-function-pattern',
         };
       }
     }
   }
 
   if (unusedFunctions.size) {
-    const [unusedFunction] = Array.from(unusedFunctions);
+    const [fnKey] = Array.from(unusedFunctions);
 
     return {
       code: 'unused_function',
-      message:
-        `The function for ${unusedFunction} can't be handled by any builder. ` +
-        `Make sure it is inside the api/ directory.`,
+      message: `The pattern "${fnKey}" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+      action: 'Learn More',
+      link: 'https://vercel.link/unmatched-function-pattern',
     };
   }
 
@@ -910,11 +931,10 @@ function getRouteResult(
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
-  const isNextjs =
-    frontendBuilder &&
-    ((frontendBuilder.use && frontendBuilder.use.startsWith('@vercel/next')) ||
-      (frontendBuilder.config &&
-        frontendBuilder.config.framework === 'nextjs'));
+  const framework = frontendBuilder?.config?.framework || '';
+  const use = frontendBuilder?.use || '';
+  const isNextjs = framework === 'nextjs' || use.startsWith('@vercel/next');
+  const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
@@ -952,11 +972,18 @@ function getRouteResult(
       }
 
       rewriteRoutes.push(...dynamicRoutes);
-      rewriteRoutes.push({
-        src: '^/api(/.*)?$',
-        status: 404,
-        continue: true,
-      });
+
+      if (typeof ignoreRuntimes === 'undefined') {
+        // This route is only necessary to hide the directory listing
+        // to avoid enumerating serverless function names.
+        // But it causes issues in `vc dev` for frameworks that handle
+        // their own functions such as redwood, so we ignore.
+        rewriteRoutes.push({
+          src: '^/api(/.*)?$',
+          status: 404,
+          continue: true,
+        });
+      }
     } else {
       defaultRoutes.push(...apiRoutes);
 
@@ -1026,5 +1053,5 @@ function sortFilesBySegmentCount(fileA: string, fileB: string): number {
     return -1;
   }
 
-  return 0;
+  return fileA.localeCompare(fileB);
 }

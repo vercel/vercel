@@ -27,22 +27,19 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
   function warn(
     str: string,
     slug: string | null = null,
-    link: string | null = null
-  ) {
-    const prevTerm = process.env.TERM;
-
-    if (!prevTerm) {
-      // workaround for https://github.com/sindresorhus/term-size/issues/13
-      process.env.TERM = 'xterm';
+    link: string | null = null,
+    action: string | null = 'Learn More',
+    options?: {
+      boxen?: boxen.Options;
     }
-
+  ) {
     const details = slug ? `https://err.sh/now/${slug}` : link;
 
     print(
       boxen(
         chalk.bold.yellow('WARN! ') +
           str +
-          (details ? `\nMore details: ${renderLink(details)}` : ''),
+          (details ? `\n${action}: ${renderLink(details)}` : ''),
         {
           padding: {
             top: 0,
@@ -51,12 +48,11 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
             right: 1,
           },
           borderColor: 'yellow',
+          ...options?.boxen,
         }
       )
     );
     print('\n');
-
-    process.env.TERM = prevTerm;
   }
 
   function note(str: string) {
@@ -67,7 +63,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     str: string,
     slug?: string,
     link?: string,
-    action = 'More details'
+    action = 'Learn More'
   ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
     const details = slug ? `https://err.sh/now/${slug}` : link;

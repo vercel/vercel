@@ -3,16 +3,21 @@ const { createHash } = require('crypto');
 const path = require('path');
 const _fetch = require('node-fetch');
 const fetch = require('./fetch-retry.js');
+const fileModeSymbol = Symbol('fileMode');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(bodies, randomness) {
+async function nowDeploy(bodies, randomness, uploadNowJson) {
   const files = Object.keys(bodies)
-    .filter(n => n !== 'vercel.json' && n !== 'now.json')
+    .filter(n =>
+      uploadNowJson ? true : n !== 'vercel.json' && n !== 'now.json'
+    )
     .map(n => ({
       sha: digestOfFile(bodies[n]),
       size: bodies[n].length,
       file: n,
-      mode: path.extname(n) === '.sh' ? 0o100755 : 0o100644,
+      mode:
+        bodies[n][fileModeSymbol] ||
+        (path.extname(n) === '.sh' ? 0o100755 : 0o100644),
     }));
 
   const { FORCE_BUILD_IN_REGION, NOW_DEBUG, VERCEL_DEBUG } = process.env;
@@ -78,9 +83,7 @@ async function nowDeploy(bodies, randomness) {
 }
 
 function digestOfFile(body) {
-  return createHash('sha1')
-    .update(body)
-    .digest('hex');
+  return createHash('sha1').update(body).digest('hex');
 }
 
 async function filePost(body, digest) {
@@ -245,4 +248,5 @@ module.exports = {
   fetchWithAuth,
   nowDeploy,
   fetchTokenWithRetry,
+  fileModeSymbol,
 };

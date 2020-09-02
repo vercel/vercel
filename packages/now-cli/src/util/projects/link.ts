@@ -1,5 +1,6 @@
 import { join } from 'path';
 import fs from 'fs';
+import os from 'os';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
@@ -8,13 +9,14 @@ import { ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../get-team-by-id';
 import { Output } from '../output';
-import { Project } from '../../types';
+import { Project, ProjectLinkResult } from '../../types';
 import { Org, ProjectLink } from '../../types';
 import chalk from 'chalk';
-import { prependEmoji, emoji } from '../emoji';
+import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
+import outputCode from '../output/code';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -73,7 +75,7 @@ async function getLinkFromDir(dir: string): Promise<ProjectLink | null> {
 
     if (!ajv.validate(linkSchema, link)) {
       throw new Error(
-        `Project settings are invalid. To link your project again, remove the ${dir} directory.`
+        `Project Settings are invalid. To link your project again, remove the ${dir} directory.`
       );
     }
 
@@ -87,7 +89,7 @@ async function getLinkFromDir(dir: string): Promise<ProjectLink | null> {
     // link file can't be read
     if (error.name === 'SyntaxError') {
       throw new Error(
-        `Project settings could not be retrieved. To link your project again, remove the ${dir} directory.`
+        `Project Settings could not be retrieved. To link your project again, remove the ${dir} directory.`
       );
     }
 
@@ -111,11 +113,7 @@ export async function getLinkedProject(
   output: Output,
   client: Client,
   path?: string
-): Promise<
-  | { status: 'linked'; org: Org; project: Project }
-  | { status: 'not_linked'; org: null; project: null }
-  | { status: 'error'; exitCode: number }
-> {
+): Promise<ProjectLinkResult> {
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
@@ -141,13 +139,27 @@ export async function getLinkedProject(
   }
 
   const spinner = output.spinner('Retrieving project…', 1000);
-  let org: Org | null;
-  let project: Project | ProjectNotFound | null;
+  let org: Org | null = null;
+  let project: Project | ProjectNotFound | null = null;
   try {
     [org, project] = await Promise.all([
       getOrgById(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
+  } catch (err) {
+    if (err?.status === 403) {
+      spinner();
+      throw new NowBuildError({
+        message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
+          VERCEL_DIR
+        )} directory and deploy again.`,
+        code: 'PROJECT_UNAUTHORIZED',
+        link: 'https://vercel.link/cannot-load-project-settings',
+      });
+    }
+
+    // Not a special case 403, we should still throw it
+    throw err;
   } finally {
     spinner();
   }
@@ -181,7 +193,8 @@ export async function linkFolderToProject(
   path: string,
   projectLink: ProjectLink,
   projectName: string,
-  orgSlug: string
+  orgSlug: string,
+  successEmoji: EmojiLabel = 'link'
 ) {
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
@@ -214,14 +227,12 @@ export async function linkFolderToProject(
 
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_PROJECT),
-    JSON.stringify(projectLink),
-    { encoding: 'utf8' }
+    JSON.stringify(projectLink)
   );
 
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_README),
-    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf-8'),
-    { encoding: 'utf-8' }
+    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
   );
 
   // update .gitignore
@@ -229,14 +240,15 @@ export async function linkFolderToProject(
   try {
     const gitIgnorePath = join(path, '.gitignore');
 
-    const gitIgnore = await readFile(gitIgnorePath)
-      .then(buf => buf.toString())
-      .catch(() => null);
+    const gitIgnore = await readFile(gitIgnorePath, 'utf8').catch(() => null);
+    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
 
-    if (!gitIgnore || !gitIgnore.split('\n').includes(VERCEL_DIR)) {
+    if (!gitIgnore || !gitIgnore.split(EOL).includes(VERCEL_DIR)) {
       await writeFile(
         gitIgnorePath,
-        gitIgnore ? `${gitIgnore}\n${VERCEL_DIR}` : VERCEL_DIR
+        gitIgnore
+          ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}`
+          : `${VERCEL_DIR}${EOL}`
       );
       isGitIgnoreUpdated = true;
     }
@@ -251,7 +263,7 @@ export async function linkFolderToProject(
       )} (created ${VERCEL_DIR}${
         isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
       })`,
-      emoji('link')
+      emoji(successEmoji)
     ) + '\n'
   );
 }

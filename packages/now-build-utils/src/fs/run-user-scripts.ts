@@ -349,20 +349,35 @@ export async function runPipInstall(
   );
 }
 
+export function getScriptName(
+  pkg: Pick<PackageJson, 'scripts'> | null | undefined,
+  possibleNames: Iterable<string>
+): string | null {
+  if (pkg && pkg.scripts) {
+    for (const name of possibleNames) {
+      if (name in pkg.scripts) {
+        return name;
+      }
+    }
+  }
+  return null;
+}
+
 export async function runPackageJsonScript(
   destPath: string,
-  scriptName: string,
+  scriptNames: string | Iterable<string>,
   spawnOpts?: SpawnOptions
 ) {
   assert(path.isAbsolute(destPath));
   const { packageJson, cliType } = await scanParentDirs(destPath, true);
-  const hasScript = Boolean(
-    packageJson &&
-      packageJson.scripts &&
-      scriptName &&
-      packageJson.scripts[scriptName]
+  const scriptName = getScriptName(
+    packageJson,
+    typeof scriptNames === 'string' ? [scriptNames] : scriptNames
   );
-  if (!hasScript) return false;
+  if (!scriptName) return false;
+
+  debug('Running user script...');
+  const runScriptTime = Date.now();
 
   if (cliType === 'npm') {
     const prettyCommand = `npm run ${scriptName}`;
@@ -382,6 +397,7 @@ export async function runPackageJsonScript(
     });
   }
 
+  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
   return true;
 }
 

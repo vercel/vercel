@@ -125,7 +125,27 @@ const frameworkList: Framework[] = [
     },
     defaultRoutes: [
       {
-        src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)',
+        src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
         headers: { 'cache-control': 'max-age=31536000, immutable' },
         continue: true,
       },
@@ -516,13 +536,34 @@ const frameworkList: Framework[] = [
     dependency: 'nuxt',
     buildCommand: 'nuxt generate',
     getOutputDirName: async () => 'dist',
+    cachePattern: '.nuxt/**',
+    defaultRoutes: [
+      {
+        src: '/sw.js',
+        headers: { 'cache-control': 'no-cache' },
+        continue: true,
+      },
+      {
+        src: '/_nuxt/(.*)',
+        headers: { 'cache-control': 'public,max-age=31536000,immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/200.html',
+      },
+    ],
   },
   {
     name: 'Hugo',
     slug: 'hugo',
     buildCommand: 'hugo -D --gc',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      const config = await readConfigFile(
+      type HugoConfig = { publishDir?: string };
+      const config = await readConfigFile<HugoConfig>(
         ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
           return join(dirPrefix, fileName);
         })
@@ -536,7 +577,10 @@ const frameworkList: Framework[] = [
     slug: 'jekyll',
     buildCommand: 'jekyll build',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      const config = await readConfigFile(join(dirPrefix, '_config.yml'));
+      type JekyllConfig = { destination?: string };
+      const config = await readConfigFile<JekyllConfig>(
+        join(dirPrefix, '_config.yml')
+      );
       return (config && config.destination) || '_site';
     },
   },

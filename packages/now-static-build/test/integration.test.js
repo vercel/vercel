@@ -30,17 +30,17 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 const testsThatFailToBuild = new Map([
   [
     '04-wrong-dist-dir',
-    'No Output Directory named "out" found after the Build completed. You can configure the Output Directory in your project settings.',
+    'No Output Directory named "out" found after the Build completed. You can configure the Output Directory in your Project Settings.',
   ],
   ['05-empty-dist-dir', 'The Output Directory "dist" is empty.'],
   [
     '06-missing-script',
-    'Missing required "now-build" script in "package.json"',
+    'Missing required "vercel-build" script in "package.json"',
   ],
   ['07-nonzero-sh', 'Command "./build.sh" exited with 1'],
   [
     '22-docusaurus-2-build-fail',
-    'No Output Directory named "build" found after the Build completed. You can configure the Output Directory in your project settings.',
+    'No Output Directory named "build" found after the Build completed. You can configure the Output Directory in your Project Settings.',
   ],
   [
     '36-hugo-version-not-found',

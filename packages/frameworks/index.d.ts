@@ -19,6 +19,9 @@ export interface Framework {
   tagline?: string;
   website?: string;
   description: string;
+  sort?: number;
+  useRuntime?: { src: string; use: string };
+  ignoreRuntimes?: string[];
   detectors?: {
     every?: FrameworkDetectionItem[];
     some?: FrameworkDetectionItem[];

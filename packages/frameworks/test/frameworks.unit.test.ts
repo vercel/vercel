@@ -1,11 +1,9 @@
 import Ajv from 'ajv';
-import path from 'path';
+import { join } from 'path';
 import { existsSync } from 'fs';
+import { isString } from 'util';
 import { Framework } from '../';
-
-function isString(arg: any): arg is string {
-  return typeof arg === 'string';
-}
+const frameworkList = require('../frameworks.json') as Framework[];
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -60,11 +58,27 @@ const Schema = {
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
+      sort: { type: 'number' },
       logo: { type: 'string' },
       demo: { type: 'string' },
       tagline: { type: 'string' },
       website: { type: 'string' },
       description: { type: 'string' },
+      useRuntime: {
+        type: 'object',
+        required: ['src', 'use'],
+        additionalProperties: false,
+        properties: {
+          src: { type: 'string' },
+          use: { type: 'string' },
+        },
+      },
+      ignoreRuntimes: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
+      },
       detectors: {
         type: 'object',
         additionalProperties: false,
@@ -89,12 +103,10 @@ const Schema = {
 
 describe('frameworks', () => {
   it('ensure there is an example for every framework', async () => {
-    const root = path.join(__dirname, '..', '..', '..');
-    const getExample = (name: string) => path.join(root, 'examples', name);
+    const root = join(__dirname, '..', '..', '..');
+    const getExample = (name: string) => join(root, 'examples', name);
 
-    const frameworks = require('../frameworks.json') as Framework[];
-
-    const result = frameworks
+    const result = frameworkList
       .map(f => f.slug)
       .filter(isString)
       .filter(f => existsSync(getExample(f)) === false);
@@ -103,10 +115,8 @@ describe('frameworks', () => {
   });
 
   it('ensure schema', async () => {
-    const frameworks = require('../frameworks.json') as Framework[];
-
     const ajv = new Ajv();
-    const result = ajv.validate(Schema, frameworks);
+    const result = ajv.validate(Schema, frameworkList);
 
     if (ajv.errors) {
       console.error(ajv.errors);
@@ -116,17 +126,26 @@ describe('frameworks', () => {
   });
 
   it('ensure logo', async () => {
-    const frameworks = require('../frameworks.json') as Framework[];
-
-    const missing = frameworks
+    const missing = frameworkList
       .map(f => f.logo)
       .filter(url => {
         const prefix =
           'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/';
         const name = url.replace(prefix, '');
-        return existsSync(path.join(__dirname, '..', 'logos', name)) === false;
+        return existsSync(join(__dirname, '..', 'logos', name)) === false;
       });
 
     expect(missing).toEqual([]);
+  });
+
+  it('ensure unique sort number', async () => {
+    const sortNumToSlug = new Map<number, string | null>();
+    frameworkList.forEach(f => {
+      if (f.sort) {
+        const duplicateSlug = sortNumToSlug.get(f.sort);
+        expect(duplicateSlug).toStrictEqual(undefined);
+        sortNumToSlug.set(f.sort, f.slug);
+      }
+    });
   });
 });

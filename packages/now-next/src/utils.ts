@@ -1,15 +1,15 @@
-import zlib from 'zlib';
-import path from 'path';
+import { FileFsRef, Files } from '@vercel/build-utils';
+import { NowHeader, NowRewrite, Route, Source } from '@vercel/routing-utils';
+import { Sema } from 'async-sema';
+import crc32 from 'buffer-crc32';
 import fs from 'fs-extra';
+import path from 'path';
+import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import { ZipFile } from 'yazl';
-import crc32 from 'buffer-crc32';
-import { Sema } from 'async-sema';
-import resolveFrom from 'resolve-from';
+import zlib from 'zlib';
 import buildUtils from './build-utils';
 const { streamToBuffer, Lambda, NowBuildError, isSymbolicLink } = buildUtils;
-import { Files, FileFsRef } from '@vercel/build-utils';
-import { Route, Source, NowHeader, NowRewrite } from '@vercel/routing-utils';
 
 type stringMap = { [key: string]: string };
 
@@ -363,17 +363,18 @@ export async function getRoutesManifest(
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const routesManifest: RoutesManifest = require(pathRoutesManifest);
 
-  // massage temporary array based routeKeys from v1/v2 of routes
-  // manifest into new object based
-  for (const route of [
-    ...(routesManifest.dataRoutes || []),
-    ...(routesManifest.dynamicRoutes || []),
-  ]) {
+  // remove temporary array based routeKeys from v1/v2 of routes
+  // manifest since it can result in invalid routes
+  for (const route of routesManifest.dataRoutes || []) {
     if (Array.isArray(route.routeKeys)) {
-      route.routeKeys = route.routeKeys.reduce((prev, cur) => {
-        prev[cur] = cur;
-        return prev;
-      }, {});
+      delete route.routeKeys;
+      delete route.namedDataRouteRegex;
+    }
+  }
+  for (const route of routesManifest.dynamicRoutes || []) {
+    if (Array.isArray(route.routeKeys)) {
+      delete route.routeKeys;
+      delete route.namedRegex;
     }
   }
 
@@ -692,7 +693,7 @@ export type NextPrerenderedRoutes = {
     };
   };
 
-  legacyBlockingRoutes: {
+  blockingFallbackRoutes: {
     [route: string]: {
       routeRegex: string;
       dataRoute: string;
@@ -796,7 +797,7 @@ export async function getPrerenderManifest(
   if (!hasManifest) {
     return {
       staticRoutes: {},
-      legacyBlockingRoutes: {},
+      blockingFallbackRoutes: {},
       fallbackRoutes: {},
       bypassToken: null,
       omittedRoutes: [],
@@ -854,7 +855,7 @@ export async function getPrerenderManifest(
 
       const ret: NextPrerenderedRoutes = {
         staticRoutes: {},
-        legacyBlockingRoutes: {},
+        blockingFallbackRoutes: {},
         fallbackRoutes: {},
         bypassToken:
           (manifest.preview && manifest.preview.previewModeId) || null,
@@ -893,7 +894,7 @@ export async function getPrerenderManifest(
             dataRouteRegex,
           };
         } else {
-          ret.legacyBlockingRoutes[lazyRoute] = {
+          ret.blockingFallbackRoutes[lazyRoute] = {
             routeRegex,
             dataRoute,
             dataRouteRegex,
@@ -909,7 +910,7 @@ export async function getPrerenderManifest(
 
       const ret: NextPrerenderedRoutes = {
         staticRoutes: {},
-        legacyBlockingRoutes: {},
+        blockingFallbackRoutes: {},
         fallbackRoutes: {},
         bypassToken: manifest.preview.previewModeId,
         omittedRoutes: [],
@@ -939,19 +940,24 @@ export async function getPrerenderManifest(
           dataRouteRegex,
         } = manifest.dynamicRoutes[lazyRoute];
 
-        if (!fallback) {
+        if (typeof fallback === 'string') {
+          ret.fallbackRoutes[lazyRoute] = {
+            routeRegex,
+            fallback,
+            dataRoute,
+            dataRouteRegex,
+          };
+        } else if (fallback === null) {
+          ret.blockingFallbackRoutes[lazyRoute] = {
+            routeRegex,
+            dataRoute,
+            dataRouteRegex,
+          };
+        } else {
           // Fallback behavior is disabled, all routes would've been provided
           // in the top-level `routes` key (`staticRoutes`).
           ret.omittedRoutes.push(lazyRoute);
-          return;
         }
-
-        ret.fallbackRoutes[lazyRoute] = {
-          routeRegex,
-          fallback,
-          dataRoute,
-          dataRouteRegex,
-        };
       });
 
       return ret;
@@ -959,7 +965,7 @@ export async function getPrerenderManifest(
     default: {
       return {
         staticRoutes: {},
-        legacyBlockingRoutes: {},
+        blockingFallbackRoutes: {},
         fallbackRoutes: {},
         bypassToken: null,
         omittedRoutes: [],

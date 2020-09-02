@@ -1,38 +1,43 @@
 import { DeploymentFile } from './utils/hashes';
+import { generateQueryString } from './utils/query-string';
+import { isReady, isAliasAssigned } from './utils/ready-state';
+import { checkDeploymentStatus } from './check-deployment-status';
 import {
   fetch,
   prepareFiles,
   createDebug,
   getApiDeploymentsUrl,
 } from './utils';
-import { checkDeploymentStatus } from './check-deployment-status';
-import { generateQueryString } from './utils/query-string';
-import { isReady, isAliasAssigned } from './utils/ready-state';
 import {
   Deployment,
   DeploymentOptions,
-  NowConfig,
   NowClientOptions,
   DeploymentEventType,
 } from './types';
 
-async function* createDeployment(
+async function* postDeployment(
   files: Map<string, DeploymentFile>,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
-): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
+): AsyncIterableIterator<{
+  type: DeploymentEventType;
+  payload: any;
+  action?: string;
+  link?: string;
+}> {
   const debug = createDebug(clientOptions.debug);
   const preparedFiles = prepareFiles(files, clientOptions);
   const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
 
   debug('Sending deployment creation API request');
   try {
-    const dpl = await fetch(
+    const response = await fetch(
       `${apiDeployments}${generateQueryString(clientOptions)}`,
       clientOptions.token,
       {
         method: 'POST',
         headers: {
+          Accept: 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -44,37 +49,41 @@ async function* createDeployment(
       }
     );
 
-    const json = await dpl.json();
+    const deployment = await response.json();
 
-    debug('Deployment response:', JSON.stringify(json));
+    if (clientOptions.debug) {
+      // Wrapped because there is no need to
+      // call JSON.stringify if we don't debug.
+      debug('Deployment response:', JSON.stringify(deployment));
+    }
 
-    if (!dpl.ok || json.error) {
-      debug('Error: Deployment request status is', dpl.status);
+    if (!response.ok || deployment.error) {
+      debug('Error: Deployment request status is', response.status);
       // Return error object
       return yield {
         type: 'error',
-        payload: json.error
-          ? { ...json.error, status: dpl.status }
-          : { ...json, status: dpl.status },
+        payload: deployment.error
+          ? { ...deployment.error, status: response.status }
+          : { ...deployment, status: response.status },
       };
     }
 
-    for (const [name, value] of dpl.headers.entries()) {
-      if (name.startsWith('x-now-warning-')) {
-        debug('Deployment created with a warning:', value);
-        yield { type: 'warning', payload: value };
-      }
-      if (name.startsWith('x-now-notice-')) {
-        debug('Deployment created with a notice:', value);
-        yield { type: 'notice', payload: value };
-      }
-      if (name.startsWith('x-now-tip-')) {
-        debug('Deployment created with a tip:', value);
-        yield { type: 'tip', payload: value };
+    const indications = new Set(['warning', 'notice', 'tip']);
+    const regex = /^x-(?:vercel|now)-(warning|notice|tip)-(.*)$/;
+    for (const [name, payload] of response.headers.entries()) {
+      const match = name.match(regex);
+      if (match) {
+        const [, type, identifier] = match;
+        const action = response.headers.get(`x-vercel-action-${identifier}`);
+        const link = response.headers.get(`x-vercel-link-${identifier}`);
+
+        if (indications.has(type)) {
+          debug(`Deployment created with a ${type}: `, payload);
+          yield { type, payload, action, link };
+        }
       }
     }
-
-    yield { type: 'created', payload: json };
+    yield { type: 'created', payload: deployment };
   } catch (e) {
     return yield { type: 'error', payload: e };
   }
@@ -101,14 +110,13 @@ function getDefaultName(
 
 export async function* deploy(
   files: Map<string, DeploymentFile>,
-  nowConfig: NowConfig,
   clientOptions: NowClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(clientOptions.debug);
 
   // Check if we should default to a static deployment
-  if (!deploymentOptions.version && !deploymentOptions.name) {
+  if (!deploymentOptions.name) {
     deploymentOptions.version = 2;
     deploymentOptions.name =
       files.size === 1 ? 'file' : getDefaultName(files, clientOptions);
@@ -145,30 +153,6 @@ export async function* deploy(
     debug('No name provided. Defaulting to', deploymentOptions.name);
   }
 
-  if (
-    deploymentOptions.version === 1 &&
-    !deploymentOptions.deploymentType &&
-    nowConfig.type
-  ) {
-    debug(`Setting 'type' for 1.0 deployment to '${nowConfig.type}'`);
-    deploymentOptions.deploymentType = nowConfig.type.toUpperCase() as DeploymentOptions['deploymentType'];
-  }
-
-  if (deploymentOptions.version === 1 && !deploymentOptions.config) {
-    debug(`Writing 'config' values for 1.0 deployment`);
-    deploymentOptions.config = { ...nowConfig };
-    delete deploymentOptions.config.version;
-  }
-
-  if (
-    deploymentOptions.version === 1 &&
-    !deploymentOptions.forceNew &&
-    clientOptions.force
-  ) {
-    debug(`Setting 'forceNew' for 1.0 deployment`);
-    deploymentOptions.forceNew = clientOptions.force;
-  }
-
   if (clientOptions.withCache) {
     debug(
       `'withCache' is provided. Force deploy will be performed with cache retention`
@@ -179,7 +163,7 @@ export async function* deploy(
 
   try {
     debug('Creating deployment');
-    for await (const event of createDeployment(
+    for await (const event of postDeployment(
       files,
       clientOptions,
       deploymentOptions
