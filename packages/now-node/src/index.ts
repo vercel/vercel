@@ -52,12 +52,6 @@ import { Register, register } from './typescript';
 export { shouldServe };
 export { NowRequest, NowResponse } from './types';
 
-interface CompilerConfig {
-  debug?: boolean;
-  includeFiles?: string | string[];
-  excludeFiles?: string | string[];
-}
-
 interface DownloadOptions {
   files: Files;
   entrypoint: string;
@@ -129,7 +123,7 @@ async function compile(
   workPath: string,
   entrypointPath: string,
   entrypoint: string,
-  config: CompilerConfig
+  config: Config
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -152,20 +146,21 @@ async function compile(
     for (const pattern of includeFiles) {
       const files = await glob(pattern, workPath);
       await Promise.all(
-        Object.keys(files).map(async file => {
-          const entry = files[file];
-          fsCache.set(file, entry);
+        Object.values(files).map(async entry => {
+          const { fsPath } = entry;
+          const relPath = relative(baseDir, fsPath);
+          fsCache.set(relPath, entry);
           const stream = entry.toStream();
           const { data } = await FileBlob.fromStream({ stream });
-          if (file.endsWith('.ts') || file.endsWith('.tsx')) {
+          if (relPath.endsWith('.ts') || relPath.endsWith('.tsx')) {
             sourceCache.set(
-              file,
-              compileTypeScript(resolve(workPath, file), data.toString())
+              relPath,
+              compileTypeScript(fsPath, data.toString())
             );
           } else {
-            sourceCache.set(file, data);
+            sourceCache.set(relPath, data);
           }
-          inputFiles.add(resolve(workPath, file));
+          inputFiles.add(fsPath);
         })
       );
     }
