@@ -74,6 +74,8 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
+const baseDir = '/';
+
 const tscPath = resolve(
   dirname(require.resolve(eval('"typescript"'))),
   '../bin/tsc'
@@ -178,7 +180,7 @@ async function compile(
 
   let tsCompile: Register;
   function compileTypeScript(path: string, source: string): string {
-    const relPath = relative(workPath, path);
+    const relPath = relative(baseDir, path);
     if (!tsCompile) {
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
@@ -201,12 +203,13 @@ async function compile(
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
-      base: workPath,
+      base: baseDir,
+      processCwd: workPath,
       ts: true,
       mixedModules: true,
       ignore: config.excludeFiles,
       readFile(fsPath: string): Buffer | string | null {
-        const relPath = relative(workPath, fsPath);
+        const relPath = relative(baseDir, fsPath);
         const cached = sourceCache.get(relPath);
         if (cached) return cached.toString();
         // null represents a not found
@@ -246,7 +249,7 @@ async function compile(
   for (const path of fileList) {
     let entry = fsCache.get(path);
     if (!entry) {
-      const fsPath = resolve(workPath, path);
+      const fsPath = resolve(baseDir, path);
       const { mode } = lstatSync(fsPath);
       if (isSymbolicLink(mode)) {
         entry = new FileFsRef({ fsPath, mode });
@@ -258,14 +261,14 @@ async function compile(
     if (isSymbolicLink(entry.mode) && entry.fsPath) {
       // ensure the symlink target is added to the file list
       const symlinkTarget = relative(
-        workPath,
+        baseDir,
         resolve(dirname(entry.fsPath), readlinkSync(entry.fsPath))
       );
       if (
         !symlinkTarget.startsWith('..' + sep) &&
         fileList.indexOf(symlinkTarget) === -1
       ) {
-        const stats = statSync(resolve(workPath, symlinkTarget));
+        const stats = statSync(resolve(baseDir, symlinkTarget));
         if (stats.isFile()) {
           fileList.push(symlinkTarget);
         }
@@ -275,7 +278,7 @@ async function compile(
     // There is a bug on Windows where entrypoint uses forward slashes
     // and workPath uses backslashes so we use resolve before comparing.
     if (
-      resolve(workPath, path) !== resolve(workPath, entrypoint) &&
+      resolve(baseDir, path) !== resolve(workPath, entrypoint) &&
       tsCompiled.has(path)
     ) {
       preparedFiles[
@@ -383,7 +386,7 @@ export async function build({
   const launcherFiles: Files = {
     [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
       data: makeLauncher({
-        entrypointPath: `./${entrypoint}`,
+        entrypointPath: `./${entrypointPath}`,
         bridgePath: `./${BRIDGE_FILENAME}`,
         helpersPath: `./${HELPERS_FILENAME}`,
         sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
