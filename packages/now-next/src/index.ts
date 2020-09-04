@@ -16,7 +16,7 @@ import {
   convertRedirects,
   convertRewrites,
 } from '@vercel/routing-utils/dist/superstatic';
-import { nodeFileTrace, NodeFileTraceReasons } from '@zeit/node-file-trace';
+import { nodeFileTrace, NodeFileTraceReasons } from '@vercel/nft';
 import { Sema } from 'async-sema';
 import { ChildProcess, fork } from 'child_process';
 import escapeStringRegexp from 'escape-string-regexp';

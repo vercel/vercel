@@ -2221,6 +2221,28 @@
   resolved "https://registry.yarnpkg.com/@vercel/ncc/-/ncc-0.24.0.tgz#a2e8783a185caa99b5d8961a57dfc9665de16296"
   integrity sha512-crqItMcIwCkvdXY/V3/TzrHJQx6nbIaRqE1cOopJhgGX6izvNov40SmD//nS5flfEvdK54YGjwVVq+zG6crjOg==
 
+"@vercel/nft@0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.9.1.tgz#2bbd3c0ef8c6c1bc55c327d90e7cc95a89ca5d6d"
+  integrity sha512-3UoAvdK+BAOjQ2CY/1gNDxD0/ogs8sMTWIYZqrL6FO0Qt2a/QSDRNKdFfnNqbt3+7EicJmjIVoYg3EQLIZUAqg==
+  dependencies:
+    acorn "^7.1.1"
+    acorn-class-fields "^0.3.2"
+    acorn-export-ns-from "^0.1.0"
+    acorn-import-meta "^1.1.0"
+    acorn-numeric-separator "^0.3.0"
+    acorn-static-class-features "^0.2.1"
+    bindings "^1.4.0"
+    estree-walker "^0.6.1"
+    glob "^7.1.3"
+    graceful-fs "^4.1.15"
+    micromatch "^4.0.2"
+    mkdirp "^0.5.1"
+    node-gyp-build "^4.2.2"
+    node-pre-gyp "^0.13.0"
+    resolve-from "^5.0.0"
+    rollup-pluginutils "^2.8.2"
+
 "@zeit/dns-cached-resolve@2.1.0":
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/@zeit/dns-cached-resolve/-/dns-cached-resolve-2.1.0.tgz#78583010df1683fdb7b05949b75593c9a8641bc1"
@@ -2282,28 +2304,6 @@
     xdg-app-paths "5.1.0"
     yauzl-promise "2.1.3"
 
-"@zeit/node-file-trace@0.8.2":
-  version "0.8.2"
-  resolved "https://registry.yarnpkg.com/@zeit/node-file-trace/-/node-file-trace-0.8.2.tgz#a00d21a98015c4ea18c8b1104ad60ea91b42dcca"
-  integrity sha512-M6KR95Xz9af8kB8X7e4inhoIjVoKNT6WxjLQwPByAAdCP6JdCg3Fb0dbTh2WelKlAibUpfS9nANU/HUDcfedSA==
-  dependencies:
-    acorn "^7.1.1"
-    acorn-class-fields "^0.3.2"
-    acorn-export-ns-from "^0.1.0"
-    acorn-import-meta "^1.1.0"
-    acorn-numeric-separator "^0.3.0"
-    acorn-static-class-features "^0.2.1"
-    bindings "^1.4.0"
-    estree-walker "^0.6.1"
-    glob "^7.1.3"
-    graceful-fs "^4.1.15"
-    micromatch "^4.0.2"
-    mkdirp "^0.5.1"
-    node-gyp-build "^4.2.2"
-    node-pre-gyp "^0.13.0"
-    resolve-from "^5.0.0"
-    rollup-pluginutils "^2.8.2"
-
 "@zeit/source-map-support@0.6.2":
   version "0.6.2"
   resolved "https://registry.yarnpkg.com/@zeit/source-map-support/-/source-map-support-0.6.2.tgz#0efd478f24a606726948165e53a8efe89e24036f"
@@ -2339,11 +2339,11 @@ abbrev@1:
   integrity sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==
 
 acorn-class-fields@^0.3.2:
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/acorn-class-fields/-/acorn-class-fields-0.3.4.tgz#4144289bdf9d8b2bb9d274b794dd72d7f8e4a815"
-  integrity sha512-yqUCIu0UJHFmCVhH3Cq29UR+3OJo1CtNWf1ncxTf3KfdEDt7aD0iVYmX7UN+RvIHyOsgukzplQhNkgePtASLUw==
+  version "0.3.7"
+  resolved "https://registry.yarnpkg.com/acorn-class-fields/-/acorn-class-fields-0.3.7.tgz#a35122f3cc6ad2bb33b1857e79215677fcfdd720"
+  integrity sha512-jdUWSFce0fuADUljmExz4TWpPkxmRW/ZCPRqeeUzbGf0vFUcpQYbyq52l75qGd0oSwwtAepeL6hgb/naRgvcKQ==
   dependencies:
-    acorn-private-class-elements "^0.2.5"
+    acorn-private-class-elements "^0.2.7"
 
 acorn-export-ns-from@^0.1.0:
   version "0.1.0"
@@ -2369,21 +2369,21 @@ acorn-jsx@^5.2.0:
   integrity sha512-HiUX/+K2YpkpJ+SzBffkM/AQ2YE03S0U1kjTLVpoJdhZMOWy8qvXVN9JdLqv2QsaQ6MPYQIuNmwD8zOiYUofLQ==
 
 acorn-numeric-separator@^0.3.0:
-  version "0.3.2"
-  resolved "https://registry.yarnpkg.com/acorn-numeric-separator/-/acorn-numeric-separator-0.3.2.tgz#5f849ae00d11e0bf1f8092e0eca7e0917436ae9f"
-  integrity sha512-ZNN1qnKvjWycDSQBfuD1TCiB81ItjjeGUPLHuqfP8X8HXwAodGTWsAaqSOQ1Nc9t+Wlb3tcEFdBrwUFUIzDiiA==
+  version "0.3.6"
+  resolved "https://registry.yarnpkg.com/acorn-numeric-separator/-/acorn-numeric-separator-0.3.6.tgz#af7f0abaf8e74bd9ca1117602954d0a3b75804f3"
+  integrity sha512-jUr5esgChu4k7VzesH/Nww3EysuyGJJcTEEiXqILUFKpO96PNyEXmK21M6nE0TSqGA1PeEg1MzgqJaoFsn9JMw==
 
-acorn-private-class-elements@^0.2.3, acorn-private-class-elements@^0.2.5:
-  version "0.2.5"
-  resolved "https://registry.yarnpkg.com/acorn-private-class-elements/-/acorn-private-class-elements-0.2.5.tgz#5082582395d2dabbbb1ddf6397244fdaa61cded6"
-  integrity sha512-3eApRrJmPjaxWB3XidP8YMeVq9pcswPFE0KsSWVuhceCU68ZS8fkcf0fTXGhCmnNd7n48NWWV27EKMFPeCoJLg==
+acorn-private-class-elements@^0.2.7:
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/acorn-private-class-elements/-/acorn-private-class-elements-0.2.7.tgz#b14902c705bcff267adede1c9f61c1a317ef95d2"
+  integrity sha512-+GZH2wOKNZOBI4OOPmzpo4cs6mW297sn6fgIk1dUI08jGjhAaEwvC39mN2gJAg2lmAQJ1rBkFqKWonL3Zz6PVA==
 
 acorn-static-class-features@^0.2.1:
-  version "0.2.2"
-  resolved "https://registry.yarnpkg.com/acorn-static-class-features/-/acorn-static-class-features-0.2.2.tgz#3f8e5b97e5b969d544cf4b2fe51c0d4c396d7a5b"
-  integrity sha512-B7aWeS7MXqdgP3RnettN/CFz7HevAlQWfh5zkc3LJzeCQoF1InTzYBCfkkbmit1p0pmCEB8IG05gB62pOm5lvA==
+  version "0.2.4"
+  resolved "https://registry.yarnpkg.com/acorn-static-class-features/-/acorn-static-class-features-0.2.4.tgz#a0f5261dd483f25196716854f2d7652a1deb39ee"
+  integrity sha512-5X4mpYq5J3pdndLmIB0+WtFd/mKWnNYpuTlTzj32wUu/PMmEGOiayQ5UrqgwdBNiaZBtDDh5kddpP7Yg2QaQYA==
   dependencies:
-    acorn-private-class-elements "^0.2.3"
+    acorn-private-class-elements "^0.2.7"
 
 acorn-walk@^6.0.1:
   version "6.2.0"
@@ -8280,9 +8280,9 @@ natural-compare@^1.4.0:
   integrity sha1-Sr6/7tdUHywnrPspvbvRXI1bpPc=
 
 needle@^2.2.1:
-  version "2.5.0"
-  resolved "https://registry.yarnpkg.com/needle/-/needle-2.5.0.tgz#e6fc4b3cc6c25caed7554bd613a5cf0bac8c31c0"
-  integrity sha512-o/qITSDR0JCyCKEQ1/1bnUXMmznxabbwi/Y4WwJElf+evwJNFNwIDMCCt5IigFVxgeGBJESLohGtIS9gEzo1fA==
+  version "2.5.2"
+  resolved "https://registry.yarnpkg.com/needle/-/needle-2.5.2.tgz#cf1a8fce382b5a280108bba90a14993c00e4010a"
+  integrity sha512-LbRIwS9BfkPvNwNHlsA41Q29kL2L/6VaOJ0qisM5lLWsTV3nP15abO5ITL6L81zqFhzjRKDAYjpcBcwM0AVvLQ==
   dependencies:
     debug "^3.2.6"
     iconv-lite "^0.4.4"
@@ -8334,9 +8334,9 @@ node-fetch@2.6.0, node-fetch@^2.2.0, node-fetch@^2.2.1, node-fetch@^2.3.0, node-
   integrity sha512-8dG4H5ujfvFiqDmVu9fQ5bOHUC15JMjMY/Zumv26oOvvVJjM67KF8koCWIabKQ1GJIa9r2mMZscBq/TbdOcmNA==
 
 node-gyp-build@^4.2.2:
-  version "4.2.2"
-  resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.2.2.tgz#3f44b65adaafd42fb6c3d81afd630e45c847eb66"
-  integrity sha512-Lqh7mrByWCM8Cf9UPqpeoVBBo5Ugx+RKu885GAzmLBVYjeywScxHXPGLa4JfYNZmcNGwzR0Glu5/9GaQZMFqyA==
+  version "4.2.3"
+  resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.2.3.tgz#ce6277f853835f718829efb47db20f3e4d9c4739"
+  integrity sha512-MN6ZpzmfNCRM+3t57PTJHgHyw/h4OWnZ6mR8P5j/uZtqQr46RRuDE/P+g3n0YR/AiYXeWixZZzaip77gdICfRg==
 
 node-gyp@^5.0.2:
   version "5.1.1"

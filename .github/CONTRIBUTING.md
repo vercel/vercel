@@ -68,12 +68,12 @@ In such cases you can visit the URL of the failed deployment and append `/_logs`
 
 The logs of this deployment will contain the actual error which may help you to understand what went wrong.
 
-### @zeit/node-file-trace
+### @vercel/nft
 
-Some of the Builders use `@zeit/node-file-trace` to tree-shake files before deployment. If you suspect an error with this tree-shaking mechanism, you can create the following script in your project:
+Some of the Builders use `@vercel/nft` to tree-shake files before deployment. If you suspect an error with this tree-shaking mechanism, you can create the following script in your project:
 
 ```js
-const trace = require('@zeit/node-file-trace');
+const trace = require('@vercel/nft');
 trace(['path/to/entrypoint.js'], {
   ts: true,
   mixedModules: true,
@@ -82,7 +82,7 @@ trace(['path/to/entrypoint.js'], {
   .then(e => console.error(e));
 ```
 
-When you run this script, you'll see all imported files. If anything file is missing, the bug is in [@zeit/node-file-trace](https://github.com/vercel/node-file-trace) and not the Builder.
+When you run this script, you'll see all imported files. If anything file is missing, the bug is in [@vercel/nft](https://github.com/vercel/nft) and not the Builder.
 
 ## Deploy a Builder with existing project
 
