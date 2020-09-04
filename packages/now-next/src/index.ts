@@ -242,7 +242,7 @@ export const build = async ({
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
-    cwd: path.join(workPath, path.dirname(entrypoint)),
+    cwd: entryPath,
   });
 
   let hasLegacyRoutes = false;
@@ -758,7 +758,10 @@ export const build = async ({
         };
 
         const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          sourceFile: await getSourceFilePathFromPage({
+            workPath: entryPath,
+            page,
+          }),
           config,
         });
 
@@ -943,16 +946,16 @@ export const build = async ({
         reasons: apiReasons,
       } = await nodeFileTrace(apiPages, {
         base: baseDir,
-        processCwd: workPath,
+        processCwd: entryPath,
       });
 
-      const {
-        fileList,
-        reasons: nonApiReasons,
-      } = await nodeFileTrace(nonApiPages, {
-        base: baseDir,
-        processCwd: workPath,
-      });
+      const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
+        nonApiPages,
+        {
+          base: baseDir,
+          processCwd: entryPath,
+        }
+      );
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
@@ -1094,6 +1097,7 @@ export const build = async ({
         }
 
         const pageFileName = path.normalize(
+          // `workPath` is intentional here over `entryPath`
           path.relative(workPath, pages[page].fsPath)
         );
         const pathname = page.replace(/\.js$/, '');
@@ -1202,7 +1206,8 @@ export const build = async ({
           }
 
           const pageFileName = path.normalize(
-            path.relative(baseDir, pages[page].fsPath)
+            // `workPath` is intentional here over `entryPath`
+            path.relative(workPath, pages[page].fsPath)
           );
           const launcher = launcherData.replace(
             /__LAUNCHER_PAGE_PATH__/g,
@@ -1216,7 +1221,10 @@ export const build = async ({
           };
 
           const lambdaOptions = await getLambdaOptionsFromFunction({
-            sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+            sourceFile: await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page,
+            }),
             config,
           });
 
