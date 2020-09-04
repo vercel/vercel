@@ -68,8 +68,6 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
-const baseDir = '/';
-
 const tscPath = resolve(
   dirname(require.resolve(eval('"typescript"'))),
   '../bin/tsc'
@@ -121,6 +119,7 @@ async function downloadInstallAndBundle({
 
 async function compile(
   workPath: string,
+  baseDir: string,
   entrypointPath: string,
   entrypoint: string,
   config: Config
@@ -337,9 +336,11 @@ export async function build({
   files,
   entrypoint,
   workPath,
+  repoRootPath,
   config = {},
   meta = {},
 }: BuildOptions) {
+  const baseDir = repoRootPath || '/';
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
@@ -370,6 +371,7 @@ export async function build({
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport, watch } = await compile(
     workPath,
+    baseDir,
     entrypointPath,
     entrypoint,
     config
