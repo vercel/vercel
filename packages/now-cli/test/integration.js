@@ -2241,7 +2241,7 @@ test('next unsupported functions config shows warning link', async t => {
   );
   t.regex(
     output.stderr,
-    / {4}Learn More: https:\/\/vercel\.link\/functions-property-next\\n\\n/gm,
+    /Learn More: https:\/\/vercel\.link\/functions-property-next/gm,
     formatOutput(output)
   );
 });

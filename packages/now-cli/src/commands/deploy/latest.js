@@ -157,7 +157,7 @@ const printDeploymentStatus = async (
   }
 
   if (indications) {
-    const indent = '    ';
+    const indent = process.stdout.isTTY ? '    ' : ''; // if using emojis
     const newline = '\n';
     for (let indication of indications) {
       const message =
