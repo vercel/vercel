@@ -340,11 +340,11 @@ export async function build({
   config = {},
   meta = {},
 }: BuildOptions) {
-  const baseDir = repoRootPath || '/';
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
 
+  const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const {
