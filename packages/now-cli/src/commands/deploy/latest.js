@@ -157,17 +157,22 @@ const printDeploymentStatus = async (
   }
 
   if (indications) {
+    const indent = '    ';
+    const newline = '\n';
     for (let indication of indications) {
-      output.print(
-        prependEmoji(
-          `${chalk.dim(indication.payload)}`,
-          emoji(indication.type)
-        ) +
-          `\n` +
-          (indication.link
-            ? `${indication.action || 'Learn More'}: ${indication.link}\n\n`
-            : '')
-      );
+      const message =
+        prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
+        newline;
+      let link = '';
+      if (indication.link)
+        link =
+          indent +
+          chalk.dim(
+            `${indication.action || 'Learn More'}: ${indication.link}`
+          ) +
+          newline +
+          newline;
+      output.print(message + link);
     }
   }
 };
