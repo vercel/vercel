@@ -381,7 +381,7 @@ export async function build({
   const launcherFiles: Files = {
     [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
       data: makeLauncher({
-        entrypointPath: `./${entrypointPath}`,
+        entrypointPath: `./${relative(baseDir, entrypointPath)}`,
         bridgePath: `./${BRIDGE_FILENAME}`,
         helpersPath: `./${HELPERS_FILENAME}`,
         sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
