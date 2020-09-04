@@ -112,7 +112,7 @@ export interface BuildOptions {
    * is the Git Repository Root. This is only relevant for Monorepos.
    * See https://vercel.com/blog/monorepos
    */
-  repoRootPath: string;
+  repoRootPath?: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
