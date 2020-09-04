@@ -1214,10 +1214,16 @@ export const build = async ({
             JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
           );
           const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-            'now__bridge.js': new FileFsRef({
+            [path.join(
+              path.relative(baseDir, workPath),
+              'now__bridge.js'
+            )]: new FileFsRef({
               fsPath: path.join(__dirname, 'now__bridge.js'),
             }),
-            'now__launcher.js': new FileBlob({ data: launcher }),
+            [path.join(
+              path.relative(baseDir, workPath),
+              'now__launcher.js'
+            )]: new FileBlob({ data: launcher }),
           };
 
           const lambdaOptions = await getLambdaOptionsFromFunction({
@@ -1234,10 +1240,13 @@ export const build = async ({
             lambdas[outputName] = await createLambdaFromPseudoLayers({
               files: {
                 ...launcherFiles,
-                [requiresTracing ? pageFileName : 'page.js']: pages[page],
+                [pageFileName]: pages[page],
               },
               layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
-              handler: 'now__launcher.launcher',
+              handler: path.join(
+                path.relative(baseDir, workPath),
+                'now__launcher.launcher'
+              ),
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
             });
@@ -1247,7 +1256,7 @@ export const build = async ({
                 ...launcherFiles,
                 ...assets,
                 ...tracedFiles,
-                [requiresTracing ? pageFileName : 'page.js']: pages[page],
+                ['page.js']: pages[page],
               },
               handler: 'now__launcher.launcher',
               runtime: nodeVersion.runtime,
@@ -1388,10 +1397,16 @@ export const build = async ({
               `
             );
             const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-              'now__bridge.js': new FileFsRef({
+              [path.join(
+                path.relative(baseDir, workPath),
+                'now__bridge.js'
+              )]: new FileFsRef({
                 fsPath: path.join(__dirname, 'now__bridge.js'),
               }),
-              'now__launcher.js': new FileBlob({ data: launcher }),
+              [path.join(
+                path.relative(baseDir, workPath),
+                'now__launcher.js'
+              )]: new FileBlob({ data: launcher }),
             };
 
             const pageLayers: PseudoLayer[] = [];
@@ -1413,10 +1428,14 @@ export const build = async ({
                   ...(group.isApiLambda ? apiPseudoLayers : pseudoLayers),
                   ...pageLayers,
                 ],
-                handler: 'now__launcher.launcher',
+                handler: path.join(
+                  path.relative(baseDir, workPath),
+                  'now__launcher.launcher'
+                ),
                 runtime: nodeVersion.runtime,
               });
             } else {
+              // TODO: look at this one
               lambdas[
                 group.lambdaIdentifier
               ] = await createLambdaFromPseudoLayers({
