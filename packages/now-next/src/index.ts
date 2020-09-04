@@ -213,6 +213,7 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
 export const build = async ({
   files,
   workPath,
+  repoRootPath,
   entrypoint,
   config = {} as Config,
   meta = {} as BuildParamsMeta,
@@ -226,6 +227,7 @@ export const build = async ({
 
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
+  const baseDir = repoRootPath || '/'; // should fallback to workPath
 
   let entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
@@ -939,12 +941,18 @@ export const build = async ({
       const {
         fileList: apiFileList,
         reasons: apiReasons,
-      } = await nodeFileTrace(apiPages, { base: workPath });
+      } = await nodeFileTrace(apiPages, {
+        base: baseDir,
+        processCwd: workPath,
+      });
 
       const {
         fileList,
         reasons: nonApiReasons,
-      } = await nodeFileTrace(nonApiPages, { base: workPath });
+      } = await nodeFileTrace(nonApiPages, {
+        base: baseDir,
+        processCwd: workPath,
+      });
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
@@ -962,7 +970,7 @@ export const build = async ({
           // Initial files are manually added to the lambda later
           return;
         }
-        const filePath = path.join(workPath, file);
+        const filePath = path.join(baseDir, file);
 
         if (!lstatResults[filePath]) {
           lstatResults[filePath] = lstatSema
@@ -973,7 +981,7 @@ export const build = async ({
         const { mode } = await lstatResults[filePath];
 
         files[file] = new FileFsRef({
-          fsPath: path.join(workPath, file),
+          fsPath: path.join(baseDir, file),
           mode,
         });
       };
@@ -1194,7 +1202,7 @@ export const build = async ({
           }
 
           const pageFileName = path.normalize(
-            path.relative(workPath, pages[page].fsPath)
+            path.relative(baseDir, pages[page].fsPath)
           );
           const launcher = launcherData.replace(
             /__LAUNCHER_PAGE_PATH__/g,
