@@ -3,6 +3,7 @@
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true,
+    "jsx": "react",
     "lib": ["esnext"],
     "target": "esnext",
     "module": "commonjs"

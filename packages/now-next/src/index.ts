@@ -16,7 +16,7 @@ import {
   convertRedirects,
   convertRewrites,
 } from '@vercel/routing-utils/dist/superstatic';
-import { nodeFileTrace, NodeFileTraceReasons } from '@zeit/node-file-trace';
+import { nodeFileTrace, NodeFileTraceReasons } from '@vercel/nft';
 import { Sema } from 'async-sema';
 import { ChildProcess, fork } from 'child_process';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -213,6 +213,7 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
 export const build = async ({
   files,
   workPath,
+  repoRootPath,
   entrypoint,
   config = {} as Config,
   meta = {} as BuildParamsMeta,
@@ -231,6 +232,7 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
+  const baseDir = repoRootPath || workPath;
 
   await download(files, workPath, meta);
 
@@ -240,7 +242,7 @@ export const build = async ({
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
-    cwd: path.join(workPath, path.dirname(entrypoint)),
+    cwd: entryPath,
   });
 
   let hasLegacyRoutes = false;
@@ -756,7 +758,10 @@ export const build = async ({
         };
 
         const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+          sourceFile: await getSourceFilePathFromPage({
+            workPath: entryPath,
+            page,
+          }),
           config,
         });
 
@@ -939,12 +944,18 @@ export const build = async ({
       const {
         fileList: apiFileList,
         reasons: apiReasons,
-      } = await nodeFileTrace(apiPages, { base: workPath });
+      } = await nodeFileTrace(apiPages, {
+        base: baseDir,
+        processCwd: entryPath,
+      });
 
-      const {
-        fileList,
-        reasons: nonApiReasons,
-      } = await nodeFileTrace(nonApiPages, { base: workPath });
+      const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
+        nonApiPages,
+        {
+          base: baseDir,
+          processCwd: entryPath,
+        }
+      );
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
@@ -962,7 +973,7 @@ export const build = async ({
           // Initial files are manually added to the lambda later
           return;
         }
-        const filePath = path.join(workPath, file);
+        const filePath = path.join(baseDir, file);
 
         if (!lstatResults[filePath]) {
           lstatResults[filePath] = lstatSema
@@ -973,7 +984,7 @@ export const build = async ({
         const { mode } = await lstatResults[filePath];
 
         files[file] = new FileFsRef({
-          fsPath: path.join(workPath, file),
+          fsPath: path.join(baseDir, file),
           mode,
         });
       };
@@ -1158,7 +1169,11 @@ export const build = async ({
         const {
           pseudoLayer: pageLayer,
           pseudoLayerBytes: pageLayerBytes,
-        } = await createPseudoLayer({ [pageFileName]: pages[page] });
+        } = await createPseudoLayer({
+          [path.join(path.relative(baseDir, entryPath), pageFileName)]: pages[
+            page
+          ],
+        });
 
         currentLambdaGroup.pages[outputName] = {
           pageLayer,
@@ -1194,21 +1209,31 @@ export const build = async ({
           }
 
           const pageFileName = path.normalize(
-            path.relative(workPath, pages[page].fsPath)
+            path.relative(entryPath, pages[page].fsPath)
           );
+
           const launcher = launcherData.replace(
             /__LAUNCHER_PAGE_PATH__/g,
             JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
           );
           const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-            'now__bridge.js': new FileFsRef({
+            [path.join(
+              path.relative(baseDir, entryPath),
+              'now__bridge.js'
+            )]: new FileFsRef({
               fsPath: path.join(__dirname, 'now__bridge.js'),
             }),
-            'now__launcher.js': new FileBlob({ data: launcher }),
+            [path.join(
+              path.relative(baseDir, entryPath),
+              'now__launcher.js'
+            )]: new FileBlob({ data: launcher }),
           };
 
           const lambdaOptions = await getLambdaOptionsFromFunction({
-            sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+            sourceFile: await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page,
+            }),
             config,
           });
 
@@ -1218,10 +1243,16 @@ export const build = async ({
             lambdas[outputName] = await createLambdaFromPseudoLayers({
               files: {
                 ...launcherFiles,
-                [requiresTracing ? pageFileName : 'page.js']: pages[page],
+                [path.join(
+                  path.relative(baseDir, entryPath),
+                  pageFileName
+                )]: pages[page],
               },
               layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
-              handler: 'now__launcher.launcher',
+              handler: path.join(
+                path.relative(baseDir, entryPath),
+                'now__launcher.launcher'
+              ),
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
             });
@@ -1231,7 +1262,7 @@ export const build = async ({
                 ...launcherFiles,
                 ...assets,
                 ...tracedFiles,
-                [requiresTracing ? pageFileName : 'page.js']: pages[page],
+                ['page.js']: pages[page],
               },
               handler: 'now__launcher.launcher',
               runtime: nodeVersion.runtime,
@@ -1372,10 +1403,16 @@ export const build = async ({
               `
             );
             const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-              'now__bridge.js': new FileFsRef({
+              [path.join(
+                path.relative(baseDir, entryPath),
+                'now__bridge.js'
+              )]: new FileFsRef({
                 fsPath: path.join(__dirname, 'now__bridge.js'),
               }),
-              'now__launcher.js': new FileBlob({ data: launcher }),
+              [path.join(
+                path.relative(baseDir, entryPath),
+                'now__launcher.js'
+              )]: new FileBlob({ data: launcher }),
             };
 
             const pageLayers: PseudoLayer[] = [];
@@ -1397,7 +1434,10 @@ export const build = async ({
                   ...(group.isApiLambda ? apiPseudoLayers : pseudoLayers),
                   ...pageLayers,
                 ],
-                handler: 'now__launcher.launcher',
+                handler: path.join(
+                  path.relative(baseDir, entryPath),
+                  'now__launcher.launcher'
+                ),
                 runtime: nodeVersion.runtime,
               });
             } else {
@@ -1409,7 +1449,10 @@ export const build = async ({
                   ...assets,
                 },
                 layers: pageLayers,
-                handler: 'now__launcher.launcher',
+                handler: path.join(
+                  path.relative(baseDir, entryPath),
+                  'now__launcher.launcher'
+                ),
                 runtime: nodeVersion.runtime,
               });
             }
