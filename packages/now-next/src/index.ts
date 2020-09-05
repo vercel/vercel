@@ -227,12 +227,13 @@ export const build = async ({
 
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = config.maxLambdaSize || 50 * 1000 * 1000;
-  const baseDir = repoRootPath || '/'; // should fallback to workPath
 
   let entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
+  // TODO: const baseDir = repoRootPath || entryPath;
+  const baseDir = repoRootPath ? '/' : '/'; // For testing purposes
 
   await download(files, workPath, meta);
 
