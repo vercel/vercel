@@ -1098,7 +1098,6 @@ export const build = async ({
         }
 
         const pageFileName = path.normalize(
-          // `workPath` is intentional here over `entryPath`
           path.relative(workPath, pages[page].fsPath)
         );
         const pathname = page.replace(/\.js$/, '');
@@ -1211,7 +1210,6 @@ export const build = async ({
           }
 
           const pageFileName = path.normalize(
-            // `workPath` is intentional here over `entryPath`
             path.relative(entryPath, pages[page].fsPath)
           );
 
@@ -1446,7 +1444,7 @@ export const build = async ({
             } else {
               // TODO: look at this one
               lambdas[
-                group.lambdaIdentifier
+                grougp.lambdaIdentifier
               ] = await createLambdaFromPseudoLayers({
                 files: {
                   ...launcherFiles,
