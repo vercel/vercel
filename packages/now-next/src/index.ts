@@ -1170,7 +1170,11 @@ export const build = async ({
         const {
           pseudoLayer: pageLayer,
           pseudoLayerBytes: pageLayerBytes,
-        } = await createPseudoLayer({ [pageFileName]: pages[page] });
+        } = await createPseudoLayer({
+          [path.join(path.relative(baseDir, entryPath), pageFileName)]: pages[
+            page
+          ],
+        });
 
         currentLambdaGroup.pages[outputName] = {
           pageLayer,
@@ -1207,21 +1211,22 @@ export const build = async ({
 
           const pageFileName = path.normalize(
             // `workPath` is intentional here over `entryPath`
-            path.relative(workPath, pages[page].fsPath)
+            path.relative(entryPath, pages[page].fsPath)
           );
+
           const launcher = launcherData.replace(
             /__LAUNCHER_PAGE_PATH__/g,
             JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
           );
           const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
             [path.join(
-              path.relative(baseDir, workPath),
+              path.relative(baseDir, entryPath),
               'now__bridge.js'
             )]: new FileFsRef({
               fsPath: path.join(__dirname, 'now__bridge.js'),
             }),
             [path.join(
-              path.relative(baseDir, workPath),
+              path.relative(baseDir, entryPath),
               'now__launcher.js'
             )]: new FileBlob({ data: launcher }),
           };
@@ -1240,11 +1245,14 @@ export const build = async ({
             lambdas[outputName] = await createLambdaFromPseudoLayers({
               files: {
                 ...launcherFiles,
-                [pageFileName]: pages[page],
+                [path.join(
+                  path.relative(baseDir, entryPath),
+                  pageFileName
+                )]: pages[page],
               },
               layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
               handler: path.join(
-                path.relative(baseDir, workPath),
+                path.relative(baseDir, entryPath),
                 'now__launcher.launcher'
               ),
               runtime: nodeVersion.runtime,
@@ -1398,13 +1406,13 @@ export const build = async ({
             );
             const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
               [path.join(
-                path.relative(baseDir, workPath),
+                path.relative(baseDir, entryPath),
                 'now__bridge.js'
               )]: new FileFsRef({
                 fsPath: path.join(__dirname, 'now__bridge.js'),
               }),
               [path.join(
-                path.relative(baseDir, workPath),
+                path.relative(baseDir, entryPath),
                 'now__launcher.js'
               )]: new FileBlob({ data: launcher }),
             };
@@ -1429,7 +1437,7 @@ export const build = async ({
                   ...pageLayers,
                 ],
                 handler: path.join(
-                  path.relative(baseDir, workPath),
+                  path.relative(baseDir, entryPath),
                   'now__launcher.launcher'
                 ),
                 runtime: nodeVersion.runtime,
