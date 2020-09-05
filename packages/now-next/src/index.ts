@@ -232,7 +232,7 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
-  const baseDir = repoRootPath || entryPath;
+  const baseDir = repoRootPath || workPath;
 
   await download(files, workPath, meta);
 
