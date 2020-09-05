@@ -33,6 +33,7 @@ for tag in $tags; do
 
   echo "Running \`npm publish $npm_tag\` in \"$(pwd)\""
   npm publish $npm_tag
-  echo "Running \`npm deprecate $now_name@$version\` in favor of $vc_name"
-  npm deprecate "$now_name@$version" "\"$now_name\" is deprecated and will stop receiving updates on December 31, 2020. Please use \"$vc_name\" instead."
+  sleep 5 # Wait after publish before deprecate to avoid E405. https://github.com/vercel/vercel/runs/1076007594#step:6:649
+  echo "Running \`npm deprecate -f $now_name@$version\` in favor of $vc_name"
+  npm deprecate -f "$now_name@$version" "\"$now_name\" is deprecated and will stop receiving updates on December 31, 2020. Please use \"$vc_name\" instead."
 done
