@@ -232,8 +232,7 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
-  // TODO: const baseDir = repoRootPath || entryPath;
-  const baseDir = repoRootPath ? '/' : '/'; // For testing purposes
+  const baseDir = repoRootPath || entryPath;
 
   await download(files, workPath, meta);
 
