@@ -1442,7 +1442,6 @@ export const build = async ({
                 runtime: nodeVersion.runtime,
               });
             } else {
-              // TODO: look at this one
               lambdas[
                 group.lambdaIdentifier
               ] = await createLambdaFromPseudoLayers({
