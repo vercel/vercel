@@ -1444,14 +1444,17 @@ export const build = async ({
             } else {
               // TODO: look at this one
               lambdas[
-                grougp.lambdaIdentifier
+                group.lambdaIdentifier
               ] = await createLambdaFromPseudoLayers({
                 files: {
                   ...launcherFiles,
                   ...assets,
                 },
                 layers: pageLayers,
-                handler: 'now__launcher.launcher',
+                handler: path.join(
+                  path.relative(baseDir, entryPath),
+                  'now__launcher.launcher'
+                ),
                 runtime: nodeVersion.runtime,
               });
             }
