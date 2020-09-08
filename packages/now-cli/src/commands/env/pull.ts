@@ -56,7 +56,13 @@ export default async function pull(
     return 1;
   }
 
-  const [filename = '.env'] = args;
+  let [filename] = args;
+
+  if (!filename) {
+    // TODO: do we want to migrate this for non-Next.js projects too?
+    filename = project.framework === 'nextjs' ? '.env.local' : '.env';
+  }
+
   const fullPath = join(process.cwd(), filename);
   const skipConfirmation = opts['--yes'];
 
