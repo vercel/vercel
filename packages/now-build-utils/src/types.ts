@@ -108,6 +108,13 @@ export interface BuildOptions {
   workPath: string;
 
   /**
+   * The "Root Directory" is assigned to the `workPath` so the `repoRootPath`
+   * is the Git Repository Root. This is only relevant for Monorepos.
+   * See https://vercel.com/blog/monorepos
+   */
+  repoRootPath?: string;
+
+  /**
    * An arbitrary object passed by the user in the build definition defined
    * in `vercel.json`.
    */

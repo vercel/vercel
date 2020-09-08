@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "2.5.1",
+  "version": "2.5.2-canary.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
