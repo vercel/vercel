@@ -1009,7 +1009,7 @@ async function getSourceFilePathFromPage({
     return path.relative(workPath, fsPath);
   }
 
-  const extensionless = fsPath.slice(0, -3); // remove "".js"
+  const extensionless = fsPath.slice(0, -3); // remove ".js"
   fsPath = extensionless + '.ts';
   if (fs.existsSync(fsPath)) {
     return path.relative(workPath, fsPath);
