@@ -2365,7 +2365,6 @@ test('invalid `--token`', async t => {
   );
 });
 
-// We need to skip this test until `now-php` supports Runtime version 3
 test('deploy a Lambda with a specific runtime', async t => {
   const directory = fixture('lambda-with-php-runtime');
   const output = await execute([directory, '--public', '--confirm']);
@@ -2374,7 +2373,8 @@ test('deploy a Lambda with a specific runtime', async t => {
 
   const { host: url } = new URL(output.stdout);
 
-  const [build] = await getDeploymentBuildsByUrl(url);
+  const builds = await getDeploymentBuildsByUrl(url);
+  const build = builds.find(b => b.use && b.use.includes('php')) || builds[0];
   t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
 });
 
