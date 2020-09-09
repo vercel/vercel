@@ -1000,11 +1000,38 @@ async function getSourceFilePathFromPage({
   workPath: string;
   page: string;
 }) {
+  let fsPath = path.join(workPath, 'pages', page);
   if (await usesSrcDirectory(workPath)) {
-    return path.join('src', 'pages', page);
+    fsPath = path.join(workPath, 'src', 'pages', page);
   }
 
-  return path.join('pages', page);
+  if (fs.existsSync(fsPath)) {
+    return path.relative(workPath, fsPath);
+  }
+
+  const extensionless = fsPath.slice(0, -3); // remove "".js"
+  fsPath = extensionless + '.ts';
+  if (fs.existsSync(fsPath)) {
+    return path.relative(workPath, fsPath);
+  }
+
+  if (isDirectory(extensionless)) {
+    fsPath = path.join(extensionless, 'index.js');
+    if (fs.existsSync(fsPath)) {
+      return path.relative(workPath, fsPath);
+    }
+    fsPath = path.join(extensionless, 'index.ts');
+    if (fs.existsSync(fsPath)) {
+      return path.relative(workPath, fsPath);
+    }
+  }
+
+  console.log(`WARNING: Unable to find source file for page ${page}`);
+  return '';
+}
+
+function isDirectory(path: string) {
+  return fs.existsSync(path) && fs.lstatSync(path).isDirectory();
 }
 
 export {

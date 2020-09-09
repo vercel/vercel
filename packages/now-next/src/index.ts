@@ -757,13 +757,16 @@ export const build = async ({
           ],
         };
 
-        const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({
-            workPath: entryPath,
-            page,
-          }),
-          config,
-        });
+        let lambdaOptions = {};
+        if (config && config.functions) {
+          lambdaOptions = await getLambdaOptionsFromFunction({
+            sourceFile: await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page,
+            }),
+            config,
+          });
+        }
 
         debug(`Creating serverless function for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({

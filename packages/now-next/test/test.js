@@ -35,7 +35,7 @@ beforeAll(async () => {
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // eslint-disable-next-line no-restricted-syntax
-for (const fixture of fs.readdirSync(fixturesPath)) {
+for (const fixture of ['06-lambda-with-memory']) {
   const context = {};
 
   // eslint-disable-next-line no-loop-func
