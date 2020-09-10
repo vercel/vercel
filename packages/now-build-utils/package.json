@@ -44,7 +44,7 @@
     "js-yaml": "3.13.1",
     "minimatch": "3.0.4",
     "multistream": "2.1.1",
-    "node-fetch": "2.2.0",
+    "node-fetch": "2.6.1",
     "semver": "6.1.1",
     "ts-jest": "24.1.0",
     "typescript": "3.9.3",
