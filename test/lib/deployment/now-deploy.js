@@ -246,5 +246,6 @@ module.exports = {
   fetchWithAuth,
   nowDeploy,
   fetchTokenWithRetry,
+  fetchCachedToken,
   fileModeSymbol,
 };
