@@ -19,8 +19,8 @@ for tag in $tags; do
   IFS='|' # set delimiter
   read -ra ADDR <<< "$str" # str is read into an array as tokens separated by IFS
   package_dir="${ADDR[0]}"
-  old_name="${ADDR[1]}"
-  new_name="${ADDR[2]}"
+  vc_name="${ADDR[1]}"
+  now_name="${ADDR[2]}"
   version="${ADDR[3]}"
   IFS=' ' # reset to default after usage
 
@@ -33,6 +33,7 @@ for tag in $tags; do
 
   echo "Running \`npm publish $npm_tag\` in \"$(pwd)\""
   npm publish $npm_tag
-  echo "Running \`npm deprecate $old_name@$version\` in favor of $new_name"
-  npm deprecate "$old_name@$version" "\"$old_name\" is deprecated and will stop receiving updates on December 31, 2020. Please use \"$new_name\" instead."
+  sleep 5 # Wait after publish before deprecate to avoid E405. https://github.com/vercel/vercel/runs/1076007594#step:6:649
+  echo "Running \`npm deprecate -f $now_name@$version\` in favor of $vc_name"
+  npm deprecate -f "$now_name@$version" "\"$now_name\" is deprecated and will stop receiving updates on December 31, 2020. Please use \"$vc_name\" instead."
 done

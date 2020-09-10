@@ -170,7 +170,6 @@ const printDeploymentStatus = async (
           chalk.dim(
             `${indication.action || 'Learn More'}: ${indication.link}`
           ) +
-          newline +
           newline;
       output.print(message + link);
     }
