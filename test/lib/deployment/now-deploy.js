@@ -154,21 +154,19 @@ async function fetchWithAuth(url, opts = {}) {
   if (!opts.headers) opts.headers = {};
 
   if (!opts.headers.Authorization) {
-    currentCount += 1;
-    if (!token || currentCount === MAX_COUNT) {
-      currentCount = 0;
-      // used for health checks
-      token = process.env.VERCEL_TOKEN || process.env.NOW_TOKEN;
-      if (!token) {
-        // used by GH Actions
-        token = await fetchTokenWithRetry();
-      }
-    }
-
-    opts.headers.Authorization = `Bearer ${token}`;
+    opts.headers.Authorization = `Bearer ${await fetchCachedToken()}`;
   }
 
   return await fetchApi(url, opts);
+}
+
+async function fetchCachedToken() {
+  currentCount += 1;
+  if (!token || currentCount === MAX_COUNT) {
+    currentCount = 0;
+    token = await fetchTokenWithRetry();
+  }
+  return token;
 }
 
 async function fetchTokenWithRetry(retries = 5) {

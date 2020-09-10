@@ -10,7 +10,7 @@ import retry from 'async-retry';
 import { satisfies } from 'semver';
 import { getDistTag } from '../../src/util/get-dist-tag';
 import { version as cliVersion } from '../../package.json';
-import { fetchTokenWithRetry } from '../../../../test/lib/deployment/now-deploy';
+import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const isCanary = () => getDistTag(cliVersion) === 'canary';
@@ -245,7 +245,7 @@ function testFixtureStdio(
     const cwd = isExample
       ? exampleAbsolute(directory)
       : fixtureAbsolute(directory);
-    const token = await fetchTokenWithRetry();
+    const token = await fetchCachedToken();
     let deploymentUrl;
 
     // Deploy fixture and link project
