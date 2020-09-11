@@ -33,7 +33,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       boxen?: boxen.Options;
     }
   ) {
-    const details = slug ? `https://err.sh/now/${slug}` : link;
+    const details = slug ? `https://err.sh/vercel/${slug}` : link;
 
     print(
       boxen(
@@ -66,7 +66,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     action = 'Learn More'
   ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
-    const details = slug ? `https://err.sh/now/${slug}` : link;
+    const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
       print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }

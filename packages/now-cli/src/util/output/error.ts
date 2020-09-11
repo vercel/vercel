@@ -10,7 +10,7 @@ export default function error(...input: string[] | [APIError]) {
   if (typeof input[0] === 'object') {
     const { slug, message, link, action = 'Learn More' } = input[0];
     messages = [message];
-    const details = slug ? `https://err.sh/now/${slug}` : link;
+    const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
       messages.push(`${chalk.bold(action)}: ${renderLink(details)}`);
     }
