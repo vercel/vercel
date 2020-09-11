@@ -3,7 +3,7 @@
 #### Why This Error Occurred
 
 When supplying `regions` configuration, you
-used an unknown or invalid dc identifier.
+used an unknown or invalid DC identifier.
 
 #### Possible Ways to Fix It
 
