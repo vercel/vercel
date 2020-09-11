@@ -999,7 +999,7 @@ export class MissingDotenvVarsError extends NowError<
       ].join('\n');
     }
 
-    message += '\nRead more: https://err.sh/now/missing-env-file';
+    message += '\nRead more: https://err.sh/vercel/missing-env-file';
 
     super({
       code: 'MISSING_DOTENV_VARS',

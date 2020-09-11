@@ -104,7 +104,7 @@ const printDeploymentStatus = async (
 
   if (readyState !== 'READY') {
     output.error(
-      `Your deployment failed. Please retry later. More: https://err.sh/now/deployment-error`
+      `Your deployment failed. Please retry later. More: https://err.sh/vercel/deployment-error`
     );
     return 1;
   }

@@ -261,7 +261,7 @@ function handleSetupDomainError<T>(
         { extraSpace: '     ' }
       )}\n\n`
     );
-    output.print('  Read more: https://err.sh/now/domain-verification\n');
+    output.print('  Read more: https://err.sh/vercel/domain-verification\n');
     return 1;
   }
 
