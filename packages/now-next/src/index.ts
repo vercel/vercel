@@ -757,13 +757,16 @@ export const build = async ({
           ],
         };
 
-        const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({
-            workPath: entryPath,
-            page,
-          }),
-          config,
-        });
+        let lambdaOptions = {};
+        if (config && config.functions) {
+          lambdaOptions = await getLambdaOptionsFromFunction({
+            sourceFile: await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page,
+            }),
+            config,
+          });
+        }
 
         debug(`Creating serverless function for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
@@ -1324,7 +1327,7 @@ export const build = async ({
                     ${groupPageKeys
                       .map(
                         page =>
-                          `'${page}': require('./${path.join(
+                          `'${page}': () => require('./${path.join(
                             './',
                             group.pages[page].pageFileName
                           )}')`
@@ -1333,7 +1336,7 @@ export const build = async ({
                     ${
                       '' /*
                       creates a mapping of the page and the page's module e.g.
-                      '/about': require('./.next/serverless/pages/about.js')
+                      '/about': () => require('./.next/serverless/pages/about.js')
                     */
                     }
                   }
@@ -1393,7 +1396,10 @@ export const build = async ({
                     res.statusCode = 500
                     return res.end('internal server error')
                   }
-                  const method = currentPage.render || currentPage.default || currentPage
+
+                  const mod = currentPage()
+                  const method = mod.render || mod.default || mod
+
                   return method(req, res)
                 } catch (err) {
                   console.error('Unhandled error during request:', err)

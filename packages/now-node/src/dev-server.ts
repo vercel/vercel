@@ -8,11 +8,10 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
-import fs from 'fs';
 import { register } from 'ts-node';
 
 // Use the project's version of TypeScript if available,
-// otherwise fall back to using the copy that `@now/node` uses.
+// otherwise fall back to using the copy that `@vercel/node` uses.
 let compiler: string;
 try {
   compiler = require.resolve('typescript', {
@@ -34,12 +33,11 @@ if (nodeMajor >= 14) {
 
 if (tsconfig) {
   try {
-    const tsconfigParsed = JSON.parse(fs.readFileSync(tsconfig, 'utf8'));
-    if (
-      tsconfigParsed.compilerOptions &&
-      tsconfigParsed.compilerOptions.target
-    ) {
-      target = tsconfigParsed.compilerOptions.target;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ts: typeof import('typescript') = require(compiler);
+    const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
+    if (config?.compilerOptions?.target) {
+      target = config.compilerOptions.target;
     }
   } catch (err) {
     if (err.code !== 'ENOENT') {

@@ -96,7 +96,7 @@ export default async function set(
     return 1;
   }
 
-  // For `now alias set <argument>`
+  // For `vercel alias set <argument>`
   if (args.length === 1) {
     const deployment = handleCertError(
       output,
@@ -261,7 +261,7 @@ function handleSetupDomainError<T>(
         { extraSpace: '     ' }
       )}\n\n`
     );
-    output.print('  Read more: https://err.sh/now/domain-verification\n');
+    output.print('  Read more: https://err.sh/vercel/domain-verification\n');
     return 1;
   }
 

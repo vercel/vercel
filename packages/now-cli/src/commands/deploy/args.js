@@ -1,7 +1,5 @@
 import chalk from 'chalk';
 import logo from '../../util/output/logo';
-import code from '../../util/output/code';
-import note from '../../util/output/note';
 import { getPkgName } from '../../util/pkg-name.ts';
 
 export const help = () => `
@@ -69,12 +67,6 @@ export const help = () => `
     --regions                      Set default regions to enable the deployment on
     --prod                         Create a production deployment
     -c, --confirm                  Confirm default options and skip questions
-
-  ${note(
-    `To view the usage information for Now 1.0, run ${code(
-      `${getPkgName()} help deploy-v1`
-    )}`
-  )}
 
   ${chalk.dim('Examples:')}
 

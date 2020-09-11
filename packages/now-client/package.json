@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "9.0.2-canary.2",
+  "version": "9.0.2-canary.4",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -37,14 +37,14 @@
     ]
   },
   "dependencies": {
-    "@vercel/build-utils": "2.5.2-canary.2",
+    "@vercel/build-utils": "2.5.3-canary.1",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
     "fs-extra": "8.0.1",
     "ignore": "4.0.6",
     "ms": "2.1.2",
-    "node-fetch": "2.6.0",
+    "node-fetch": "2.6.1",
     "querystring": "^0.2.0",
     "recursive-readdir": "2.2.2",
     "sleep-promise": "8.0.1"
