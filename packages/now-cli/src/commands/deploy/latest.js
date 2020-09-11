@@ -247,11 +247,6 @@ export default async function main(
   const { isFile, path } = pathValidation;
   const autoConfirm = argv['--confirm'] || isFile;
 
-  // --no-scale
-  if (argv['--no-scale']) {
-    warn(`The option --no-scale is only supported on Now 1.0 deployments`);
-  }
-
   // deprecate --name
   if (argv['--name']) {
     output.print(
