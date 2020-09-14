@@ -872,7 +872,7 @@ export const build = async ({
         };
 
     const isApiPage = (page: string) =>
-      page.replace(/\\/g, '/').match(/serverless\/pages\/api/);
+      page.replace(/\\/g, '/').match(/serverless\/pages\/api(\/|\.js$)/);
 
     const canUsePreviewMode = Object.keys(pages).some(page =>
       isApiPage(pages[page].fsPath)
