@@ -38,48 +38,45 @@ export default class CreditCards extends Now {
     return true;
   }
 
-  add(card) {
-    return new Promise(async (resolve, reject) => {
-      if (!card.expDate) {
-        reject(new Error(`Please define a expiration date for your card`));
-        return;
+  async add(card) {
+    if (!card.expDate) {
+      throw new Error(`Please define an expiration date for your card`);
+    }
+
+    const expDateParts = card.expDate.split(' / ');
+
+    card = {
+      name: card.name,
+      number: card.cardNumber,
+      cvc: card.ccv,
+    };
+
+    card.exp_month = expDateParts[0];
+    card.exp_year = expDateParts[1];
+
+    try {
+      const token = (await stripe.tokens.create({ card })).id;
+
+      const res = await this._fetch('/stripe/sources/', {
+        method: 'POST',
+        body: {
+          source: token,
+        },
+      });
+
+      const { source, error } = await res.json();
+
+      if (source && source.id) {
+        return {
+          last4: source.last4,
+        };
+      } else if (error && error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('Unknown error');
       }
-
-      const expDateParts = card.expDate.split(' / ');
-
-      card = {
-        name: card.name,
-        number: card.cardNumber,
-        cvc: card.ccv,
-      };
-
-      card.exp_month = expDateParts[0];
-      card.exp_year = expDateParts[1];
-
-      try {
-        const token = (await stripe.tokens.create({ card })).id;
-
-        const res = await this._fetch('/stripe/sources/', {
-          method: 'POST',
-          body: {
-            source: token,
-          },
-        });
-
-        const { source, error } = await res.json();
-
-        if (source && source.id) {
-          resolve({
-            last4: source.last4,
-          });
-        } else if (error && error.message) {
-          reject(new Error(error.message));
-        } else {
-          reject(new Error('Unknown error'));
-        }
-      } catch (err) {
-        reject(new Error(err.message || 'Unknown error'));
-      }
-    });
+    } catch (err) {
+      throw new Error(err.message || 'Unknown error');
+    }
   }
 }

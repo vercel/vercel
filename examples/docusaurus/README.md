@@ -19,11 +19,3 @@ To get started with Docusaurus for deployment with Vercel, you can use the [Docu
 ```shell
 $ docusaurus-init
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Docusaurus project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

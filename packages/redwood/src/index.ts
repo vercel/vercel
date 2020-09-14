@@ -1,5 +1,4 @@
 import { join, dirname, relative, parse as parsePath, sep } from 'path';
-import { ChildProcess, SpawnOptions } from 'child_process';
 import {
   BuildOptions,
   Lambda,
@@ -12,54 +11,35 @@ import {
   getNodeVersion,
   getSpawnOptions,
   runNpmInstall,
+  runPackageJsonScript,
   execCommand,
-  spawnCommand,
-  readConfigFile,
   FileBlob,
   FileFsRef,
+  PackageJson,
   NowBuildError,
+  getLambdaOptionsFromFunction,
+  readConfigFile,
 } from '@vercel/build-utils';
 import { makeAwsLauncher } from './launcher';
+import _frameworks, { Framework } from '@vercel/frameworks';
+const frameworks = _frameworks as Framework[];
 const {
   getDependencies,
   // eslint-disable-next-line @typescript-eslint/no-var-requires
 } = require('@netlify/zip-it-and-ship-it/src/dependencies.js');
-//@ts-ignore
-import isPortReachable from 'is-port-reachable';
-
-interface RedwoodConfig {
-  web?: {
-    port?: number;
-    apiProxyPath?: string;
-  };
-  api?: {
-    port?: number;
-  };
-  browser?: {
-    open?: boolean;
-  };
-}
 
 const LAUNCHER_FILENAME = '___vc_launcher';
 const BRIDGE_FILENAME = '___vc_bridge';
 const HELPERS_FILENAME = '___vc_helpers';
 const SOURCEMAP_SUPPORT_FILENAME = '__vc_sourcemap_support';
 
-const entrypointToPort = new Map<string, number>();
-const childProcesses = new Set<ChildProcess>();
-export const version = 2;
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-async function waitForPort(port: number): Promise<boolean> {
-  for (let i = 0; i < 500; i++) {
-    if (await isPortReachable(port)) {
-      return true;
-    }
-    await sleep(100);
-  }
-  return false;
+interface RedwoodToml {
+  web: { port?: number; apiProxyPath?: string };
+  api: { port?: number };
+  browser: { open?: boolean };
 }
+
+export const version = 2;
 
 export async function build({
   workPath,
@@ -87,77 +67,48 @@ export async function build({
     meta
   );
 
-  const {
-    buildCommand = 'yarn rw db up --no-db-client --auto-approve && yarn rw build',
-    devCommand = 'yarn rw dev',
-  } = config;
-
   if (meta.isDev) {
-    const toml = await readConfigFile<RedwoodConfig>(
-      join(mountpoint, 'redwood.toml')
-    );
-    const webPort = toml?.web?.port || 8910;
-    const apiPort = toml?.web?.port || 8911;
-    let devPort = entrypointToPort.get(entrypoint);
-
-    if (typeof devPort === 'number') {
-      debug('`%s` server already running for %j', devCommand, entrypoint);
-    } else {
-      devPort = webPort;
-      entrypointToPort.set(entrypoint, devPort);
-
-      const opts: SpawnOptions = {
-        cwd: mountpoint,
-        stdio: 'inherit',
-        env: { ...spawnOpts.env, PORT: String(devPort) },
-      };
-
-      const child = spawnCommand(devCommand, opts);
-      child.on('exit', () => entrypointToPort.delete(entrypoint));
-      childProcesses.add(child);
-
-      const found = await waitForPort(devPort);
-      if (!found) {
-        throw new NowBuildError({
-          code: 'REDWOOD_PORT_UNAVAILABLE',
-          message: `Failed to detect a server running on port ${devPort}`,
-          action: 'More Details',
-          link:
-            'https://err.sh/vercel/vercel/now-static-build-failed-to-detect-a-server',
-        });
-      }
-
-      debug('Detected dev server for %j', entrypoint);
-    }
-
-    let srcBase = mountpoint.replace(/^\.\/?/, '');
-
-    if (srcBase.length > 0) {
-      srcBase = `/${srcBase}`;
-    }
-
-    return {
-      routes: [
-        {
-          src: `${srcBase}/api/(.*)`,
-          dest: `http://localhost:${apiPort}/$1`,
-        },
-        {
-          src: `${srcBase}/(.*)`,
-          dest: `http://localhost:${webPort}/$1`,
-        },
-      ],
-      watch: [join(srcBase, '**/*')],
-      output: {},
-    };
+    throw new Error('Detected `@vercel/redwood` dev but this is not supported');
   }
 
-  debug('Running build command...');
-  await execCommand(buildCommand, {
-    ...spawnOpts,
-    cwd: workPath,
-  });
+  const { buildCommand } = config;
+  const frmwrkCmd = frameworks.find(f => f.slug === 'redwoodjs')?.settings
+    .buildCommand;
+  const pkg = await readConfigFile<PackageJson>(join(workPath, 'package.json'));
+  const toml = await readConfigFile<RedwoodToml>(
+    join(workPath, 'redwood.toml')
+  );
 
+  if (buildCommand) {
+    debug(`Executing build command "${buildCommand}"`);
+    await execCommand(buildCommand, {
+      ...spawnOpts,
+      cwd: workPath,
+    });
+  } else if (hasScript('vercel-build', pkg)) {
+    debug(`Executing "yarn vercel-build"`);
+    await runPackageJsonScript(workPath, 'vercel-build', spawnOpts);
+  } else if (hasScript('build', pkg)) {
+    debug(`Executing "yarn build"`);
+    await runPackageJsonScript(workPath, 'build', spawnOpts);
+  } else if (frmwrkCmd && 'value' in frmwrkCmd) {
+    const cmd = frmwrkCmd.value;
+    debug(`Executing framework command "${cmd}"`);
+    await execCommand(cmd, {
+      ...spawnOpts,
+      cwd: workPath,
+    });
+  } else {
+    throw new NowBuildError({
+      code: 'REDWOOD_BUILD_COMMAND_MISSING',
+      message:
+        'An unexpected error occurred while building RedwoodJS. Please contact support.',
+      action: 'Contact Support',
+      link: 'https://vercel.com/support/request',
+    });
+  }
+
+  const apiDir = toml?.web?.apiProxyPath?.replace(/^\//, '') ?? 'api';
   const apiDistPath = join(workPath, 'api', 'dist', 'functions');
   const webDistPath = join(workPath, 'web', 'dist');
   const lambdaOutputs: { [filePath: string]: Lambda } = {};
@@ -167,7 +118,7 @@ export async function build({
   const functionFiles = await glob('*.js', apiDistPath);
 
   for (const [funcName, fileFsRef] of Object.entries(functionFiles)) {
-    const outputName = join('api', parsePath(funcName).name); // remove `.js` extension
+    const outputName = join(apiDir, parsePath(funcName).name); // remove `.js` extension
     const absEntrypoint = fileFsRef.fsPath;
     const dependencies: string[] = await getDependencies(
       absEntrypoint,
@@ -175,6 +126,7 @@ export async function build({
     );
     const relativeEntrypoint = relative(workPath, absEntrypoint);
     const awsLambdaHandler = getAWSLambdaHandler(relativeEntrypoint, 'handler');
+    const sourceFile = relativeEntrypoint.replace('/dist/', '/src/');
 
     const lambdaFiles: Files = {
       [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
@@ -193,17 +145,26 @@ export async function build({
       }),
     };
 
-    dependencies.forEach(fsPath => {
-      lambdaFiles[relative(workPath, fsPath)] = new FileFsRef({ fsPath });
-    });
+    for (const fsPath of dependencies) {
+      lambdaFiles[relative(workPath, fsPath)] = await FileFsRef.fromFsPath({
+        fsPath,
+      });
+    }
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
+
+    const { memory, maxDuration } = await getLambdaOptionsFromFunction({
+      sourceFile,
+      config,
+    });
 
     const lambda = await createLambda({
       files: lambdaFiles,
       handler: `${LAUNCHER_FILENAME}.launcher`,
       runtime: nodeVersion.runtime,
       environment: {},
+      memory,
+      maxDuration,
     });
     lambdaOutputs[outputName] = lambda;
   }
@@ -220,9 +181,14 @@ function getAWSLambdaHandler(filePath: string, handlerName: string) {
   return `${dir}${dir ? sep : ''}${name}.${handlerName}`;
 }
 
+function hasScript(scriptName: string, pkg: PackageJson | null) {
+  const scripts = (pkg && pkg.scripts) || {};
+  return typeof scripts[scriptName] === 'string';
+}
+
 export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
-  const cache = await glob('node_modules/**', workPath);
+  const cache = await glob('**/node_modules/**', workPath);
   return cache;
 }

@@ -1,6 +1,19 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/redwood" }],
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/redwood",
+      "config": {
+        "zeroConfig": true,
+        "functions": {
+          "api/src/functions/memory.js": {
+            "memory": 128
+          }
+        }
+      }
+    }
+  ],
   "probes": [
     { "path": "/", "mustContain": "<div id=\"redwood-app\">" },
     { "path": "/about", "mustContain": "<div id=\"redwood-app\">" },
@@ -14,7 +27,15 @@
       "method": "POST",
       "headers": { "Accept": "application/json" },
       "body": { "query": "{ redwood { version } }" },
-      "mustContain": "0.14.0"
+      "mustContain": "0.15.0"
+    },
+    {
+      "path": "/api/permission",
+      "mustContain": "File is executable: true"
+    },
+    {
+      "path": "/api/memory",
+      "mustContain": "Memory is: 128"
     }
   ]
 }

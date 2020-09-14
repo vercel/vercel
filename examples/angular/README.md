@@ -19,11 +19,3 @@ To get started with Angular, you can use the [Angular CLI](https://cli.angular.i
 ```shell
 $ ng new
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Angular project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

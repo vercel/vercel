@@ -14,6 +14,7 @@ import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import move from './move';
+import verify from './verify';
 import { getPkgName } from '../../util/pkg-name';
 
 const help = () => {
@@ -81,6 +82,7 @@ const COMMAND_CONFIG = {
   move: ['move'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
+  verify: ['verify'],
 };
 
 export default async function main(ctx: NowContext) {
@@ -119,6 +121,8 @@ export default async function main(ctx: NowContext) {
       return rm(ctx, argv, args, output);
     case 'transferIn':
       return transferIn(ctx, argv, args, output);
+    case 'verify':
+      return verify(ctx, argv, args, output);
     default:
       return ls(ctx, argv, args, output);
   }

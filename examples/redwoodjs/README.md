@@ -1,4 +1,4 @@
-![RedwoodJS Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/redwood.svg)
+![RedwoodJS Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/redwoodjs.svg)
 
 # RedwoodJS Example
 
@@ -18,12 +18,4 @@ To get started with RedwoodJS on Vercel, you can [use Yarn to initialize](https:
 
 ```shell
 $ yarn create redwood-app ./my-redwood-app
-```
-
-### Deploying From Your Terminal
-
-You can deploy your new RedwoodJS project, along with [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction), with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
 ```

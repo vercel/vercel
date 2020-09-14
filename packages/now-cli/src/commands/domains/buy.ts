@@ -71,8 +71,9 @@ export default async function buy(
 
   const availableStamp = stamp();
   const domainPrice = await getDomainPrice(client, domainName);
-  if (domainPrice instanceof ERRORS.UnsupportedTLD) {
-    output.error(`The TLD for ${param(domainName)} is not supported.`);
+
+  if (domainPrice instanceof Error) {
+    output.prettyError(domainPrice);
     return 1;
   }
 

@@ -13,7 +13,6 @@ try {
     process.exit(1);
   }
 }
-import 'core-js/modules/es7.symbol.async-iterator';
 import { join } from 'path';
 import { existsSync, lstatSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
@@ -135,7 +134,7 @@ const main = async argv_ => {
   // (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  if (notifier.update && isTTY) {
+  if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
     const { latest } = notifier.update;
     console.log(
       info(
@@ -637,6 +636,11 @@ const main = async argv_ => {
         );
       }
       output.debug(err.stack);
+      return 1;
+    }
+
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      output.prettyError(err);
       return 1;
     }
 

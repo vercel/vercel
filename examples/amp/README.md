@@ -17,11 +17,3 @@ To get started deploying AMP with Vercel, you can use the [Vercel CLI](https://v
 ```shell
 $ vercel init amp
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new AMP project with a single command from your terminal using Vercel CLI:
-
-```shell
-$ vercel
-```

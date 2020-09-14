@@ -67,13 +67,15 @@ export default function handleCertError<T>(
       output.print(
         `  ${getCommandName(`certs issue --challenge-only <cns>`)}\n`
       );
-      output.print('  Read more: https://err.sh/now/dns-configuration-error\n');
+      output.print(
+        '  Read more: https://err.sh/vercel/dns-configuration-error\n'
+      );
     } else {
       output.print(
         `  We configured them for you, but the propagation may take a few minutes. Please try again later.\n`
       );
       output.print(
-        '  Read more: https://err.sh/now/dns-configuration-error\n\n'
+        '  Read more: https://err.sh/vercel/dns-configuration-error\n\n'
       );
     }
     return 1;

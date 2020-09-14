@@ -28,16 +28,12 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     str: string,
     slug: string | null = null,
     link: string | null = null,
-    action: string = 'Learn More'
-  ) {
-    const prevTerm = process.env.TERM;
-
-    if (!prevTerm) {
-      // workaround for https://github.com/sindresorhus/term-size/issues/13
-      process.env.TERM = 'xterm';
+    action: string | null = 'Learn More',
+    options?: {
+      boxen?: boxen.Options;
     }
-
-    const details = slug ? `https://err.sh/now/${slug}` : link;
+  ) {
+    const details = slug ? `https://err.sh/vercel/${slug}` : link;
 
     print(
       boxen(
@@ -52,12 +48,11 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
             right: 1,
           },
           borderColor: 'yellow',
+          ...options?.boxen,
         }
       )
     );
     print('\n');
-
-    process.env.TERM = prevTerm;
   }
 
   function note(str: string) {
@@ -71,7 +66,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     action = 'Learn More'
   ) {
     print(`${chalk.red(`Error!`)} ${str}\n`);
-    const details = slug ? `https://err.sh/now/${slug}` : link;
+    const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
       print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }

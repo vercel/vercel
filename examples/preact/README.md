@@ -19,11 +19,3 @@ To get started with Preact for deployment with Vercel, you can use the [Preact C
 ```shell
 $ preact create default my-project
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Preact project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

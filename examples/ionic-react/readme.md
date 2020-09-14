@@ -17,11 +17,3 @@ To get started with Ionic React deployed with Vercel, you can use the [Ionic CLI
 ```shell
 $ npx ionic start [project-name] conference --type react && cd [project-name]
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Ionic React project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

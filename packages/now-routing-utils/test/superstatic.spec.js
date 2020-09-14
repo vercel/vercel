@@ -190,6 +190,14 @@ test('convertRedirects', () => {
       source: '/optional/:id?',
       destination: '/api/optional/:id?',
     },
+    {
+      source: '/feature-{:slug}',
+      destination: '/blog-{:slug}',
+    },
+    {
+      source: '/hello/:world',
+      destination: '/somewhere?else={:world}',
+    },
   ]);
 
   const expected = [
@@ -266,6 +274,20 @@ test('convertRedirects', () => {
       headers: { Location: '/api/optional/$1' },
       status: 308,
     },
+    {
+      headers: {
+        Location: '/blog-$1',
+      },
+      src: '^\\/feature-([^\\/]+?)$',
+      status: 308,
+    },
+    {
+      headers: {
+        Location: '/somewhere?else=$1',
+      },
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
+      status: 308,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -285,6 +307,8 @@ test('convertRedirects', () => {
     ['/hello/world', '/hello/another/world'],
     ['/external/1', '/external/2'],
     ['/optional', '/optional/1'],
+    ['/feature-first', '/feature-second'],
+    ['/hello/world', '/hello/again'],
   ];
 
   const mustNotMatch = [
@@ -302,6 +326,8 @@ test('convertRedirects', () => {
     ['/not-this-one', '/helloo'],
     ['/externalnope', '/externally'],
     ['/optionalnope', '/optionally'],
+    ['/feature/first', '/feature'],
+    ['/hello', '/hello/another/one'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -350,6 +376,14 @@ test('convertRewrites', () => {
     { source: '/:path', destination: '/test?path=:path' },
     { source: '/:path/:two', destination: '/test?path=:path' },
     { source: '/(.*)-:id(\\d+).html', destination: '/blog/:id' },
+    {
+      source: '/feature-{:slug}',
+      destination: '/blog-{:slug}',
+    },
+    {
+      source: '/hello/:world',
+      destination: '/somewhere?else={:world}',
+    },
   ]);
 
   const expected = [
@@ -381,12 +415,12 @@ test('convertRewrites', () => {
     },
     {
       src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
-      dest: '/$1/get?identifier=$2&file=$1&id=$2',
+      dest: '/$1/get?identifier=$2',
       check: true,
     },
     {
       src: '^\\/qs-and-hash(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
-      dest: '/api/get?identifier=$1&id=$1&hash=$2#$2',
+      dest: '/api/get?identifier=$1#$2',
       check: true,
     },
     {
@@ -402,12 +436,12 @@ test('convertRewrites', () => {
     },
     {
       src: '^\\/catchall(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?\\/$',
-      dest: '/catchall/$1?hello=$1',
+      dest: '/catchall/$1',
       check: true,
     },
     {
       src: '^\\/another-catch(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/$',
-      dest: '/another-catch/$1?hello=$1',
+      dest: '/another-catch/$1',
       check: true,
     },
     {
@@ -425,7 +459,17 @@ test('convertRewrites', () => {
       dest: '/test?path=$1&two=$2',
       src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
     },
-    { check: true, dest: '/blog/$2?id=$2', src: '^(?:\\/(.*))-(\\d+)\\.html$' },
+    { check: true, dest: '/blog/$2', src: '^(?:\\/(.*))-(\\d+)\\.html$' },
+    {
+      dest: '/blog-$1',
+      src: '^\\/feature-([^\\/]+?)$',
+      check: true,
+    },
+    {
+      dest: '/somewhere?else=$1&world=$1',
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
+      check: true,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -447,6 +491,8 @@ test('convertRewrites', () => {
     ['/first', '/another'],
     ['/first/second', '/one/two'],
     ['/hello/post-123.html', '/post-123.html'],
+    ['/feature-first', '/feature-second'],
+    ['/hello/world', '/hello/again'],
   ];
 
   const mustNotMatch = [
@@ -466,6 +512,8 @@ test('convertRewrites', () => {
     ['/another/one'],
     ['/not', '/these'],
     ['/hello/post.html'],
+    ['/feature/first', '/feature'],
+    ['/hello', '/hello/another/one'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -508,6 +556,60 @@ test('convertHeaders', () => {
         },
       ],
     },
+    {
+      source: '/like/params/:path',
+      headers: [
+        {
+          key: 'x-path',
+          value: ':path',
+        },
+        {
+          key: 'some:path',
+          value: 'hi',
+        },
+        {
+          key: 'x-test',
+          value: 'some:value*',
+        },
+        {
+          key: 'x-test-2',
+          value: 'value*',
+        },
+        {
+          key: 'x-test-3',
+          value: ':value?',
+        },
+        {
+          key: 'x-test-4',
+          value: ':value+',
+        },
+        {
+          key: 'x-test-5',
+          value: 'something https:',
+        },
+        {
+          key: 'x-test-6',
+          value: ':hello(world)',
+        },
+        {
+          key: 'x-test-7',
+          value: 'hello(world)',
+        },
+        {
+          key: 'x-test-8',
+          value: 'hello{1,}',
+        },
+        {
+          key: 'x-test-9',
+          value: ':hello{1,2}',
+        },
+        {
+          key: 'content-security-policy',
+          value:
+            "default-src 'self'; img-src *; media-src media1.com media2.com; script-src userscripts.example.com/:path",
+        },
+      ],
+    },
   ]);
 
   const expected = [
@@ -526,6 +628,25 @@ test('convertHeaders', () => {
       headers: { 'on-blog': '$1', $1: 'blog' },
       continue: true,
     },
+    {
+      continue: true,
+      headers: {
+        'content-security-policy':
+          "default-src 'self'; img-src *; media-src media1.com media2.com; script-src userscripts.example.com/$1",
+        some$1: 'hi',
+        'x-path': '$1',
+        'x-test': 'some:value*',
+        'x-test-2': 'value*',
+        'x-test-3': ':value?',
+        'x-test-4': ':value+',
+        'x-test-5': 'something https:',
+        'x-test-6': ':hello(world)',
+        'x-test-7': 'hello(world)',
+        'x-test-8': 'hello{1,}',
+        'x-test-9': ':hello{1,2}',
+      },
+      src: '^\\/like\\/params(?:\\/([^\\/]+?))$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -534,12 +655,14 @@ test('convertHeaders', () => {
     ['hello/world/file.eot', 'another/font.ttf', 'dir/arial.font.css'],
     ['404.html'],
     ['/blog/first-post', '/blog/another/one'],
+    ['/like/params/first', '/like/params/second'],
   ];
 
   const mustNotMatch = [
     ['hello/file.jpg', 'hello/font-css', 'dir/arial.font-css'],
     ['403.html', '500.html'],
     ['/blogg', '/random'],
+    ['/non-match', '/like/params', '/like/params/'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

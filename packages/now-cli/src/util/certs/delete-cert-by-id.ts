@@ -6,7 +6,7 @@ export default async function deleteCertById(
   client: Client,
   id: string
 ) {
-  return client.fetch(`/v3/now/certs/${id}`, {
-    method: 'DELETE'
+  return client.fetch(`/v5/now/certs/${id}`, {
+    method: 'DELETE',
   });
 }

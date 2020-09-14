@@ -28,26 +28,32 @@ beforeAll(async () => {
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
-const testsThatFailToBuild = new Set(['45-noEmitOnError-true']);
+const testsThatFailToBuild = new Map([
+  [
+    '45-noEmitOnError-true',
+    `index.ts(3,19): error TS2339: Property 'thisDoesNotExist' does not exist on type 'IncomingMessage'.\n`,
+  ],
+]);
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (testsThatFailToBuild.has(fixture)) {
+  const errMsg = testsThatFailToBuild.get(fixture);
+  if (errMsg) {
     // eslint-disable-next-line no-loop-func
-    it(`should not build ${fixture}`, async () => {
+    it(`should fail to build ${fixture}`, async () => {
       try {
         await testDeployment(
           { builderUrl, buildUtilsUrl },
           path.join(fixturesPath, fixture)
         );
       } catch (err) {
-        expect(err.message).toMatch(/is ERROR/);
+        expect(err).toBeTruthy();
+        expect(err.deployment).toBeTruthy();
+        expect(err.deployment.errorMessage).toBe(errMsg);
       }
     });
     continue; //eslint-disable-line
   }
-
-  // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(

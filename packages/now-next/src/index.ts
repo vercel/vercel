@@ -1,20 +1,3 @@
-import buildUtils from './build-utils';
-import url from 'url';
-const {
-  createLambda,
-  debug,
-  download,
-  getLambdaOptionsFromFunction,
-  getNodeVersion,
-  getSpawnOptions,
-  getScriptName,
-  glob,
-  runNpmInstall,
-  runPackageJsonScript,
-  execCommand,
-  getNodeBinPath,
-} = buildUtils;
-
 import {
   BuildOptions,
   Config,
@@ -33,14 +16,18 @@ import {
   convertRedirects,
   convertRewrites,
 } from '@vercel/routing-utils/dist/superstatic';
-import { nodeFileTrace, NodeFileTraceReasons } from '@zeit/node-file-trace';
+import { nodeFileTrace, NodeFileTraceReasons } from '@vercel/nft';
+import { Sema } from 'async-sema';
 import { ChildProcess, fork } from 'child_process';
 import escapeStringRegexp from 'escape-string-regexp';
+import findUp from 'find-up';
 import { lstat, pathExists, readFile, remove, writeFile } from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
+import url from 'url';
+import buildUtils from './build-utils';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import {
@@ -66,8 +53,20 @@ import {
   syncEnvVars,
   validateEntrypoint,
 } from './utils';
-import findUp from 'find-up';
-import { Sema } from 'async-sema';
+const {
+  createLambda,
+  debug,
+  download,
+  getLambdaOptionsFromFunction,
+  getNodeVersion,
+  getSpawnOptions,
+  getScriptName,
+  glob,
+  runNpmInstall,
+  runPackageJsonScript,
+  execCommand,
+  getNodeBinPath,
+} = buildUtils;
 
 interface BuildParamsMeta {
   isDev: boolean | undefined;
@@ -214,6 +213,7 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
 export const build = async ({
   files,
   workPath,
+  repoRootPath,
   entrypoint,
   config = {} as Config,
   meta = {} as BuildParamsMeta,
@@ -232,16 +232,17 @@ export const build = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = config.outputDirectory || '.next';
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
+  const baseDir = repoRootPath || workPath;
 
   await download(files, workPath, meta);
 
-  const pkg = await readPackageJson(entryPath);
+  let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
-    cwd: path.join(workPath, path.dirname(entrypoint)),
+    cwd: entryPath,
   });
 
   let hasLegacyRoutes = false;
@@ -331,17 +332,17 @@ export const build = async ({
     ]);
 
     debug('Normalizing package.json');
-    const packageJson = normalizePackageJson(pkg);
-    debug('Normalized package.json result: ', packageJson);
-    await writePackageJson(entryPath, packageJson);
+    pkg = normalizePackageJson(pkg);
+    debug('Normalized package.json result: ', pkg);
+    await writePackageJson(entryPath, pkg);
   }
 
-  const buildScriptName = getScriptName(pkg, [
+  let buildScriptName = getScriptName(pkg, [
     'vercel-build',
     'now-build',
     'build',
   ]);
-  let { buildCommand } = config;
+  const { buildCommand } = config;
 
   if (!buildScriptName && !buildCommand) {
     console.log(
@@ -349,7 +350,15 @@ export const build = async ({
         'If you need to define a different build step, please create a `vercel-build` script in your `package.json` ' +
         '(e.g. `{ "scripts": { "vercel-build": "npm run prepare && next build" } }`).'
     );
-    buildCommand = 'next build';
+
+    await writePackageJson(entryPath, {
+      ...pkg,
+      scripts: {
+        'vercel-build': 'next build',
+        ...pkg.scripts,
+      },
+    });
+    buildScriptName = 'vercel-build';
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
@@ -438,7 +447,7 @@ export const build = async ({
           for (const dataRoute of routesManifest.dataRoutes) {
             const ssgDataRoute =
               prerenderManifest.fallbackRoutes[dataRoute.page] ||
-              prerenderManifest.legacyBlockingRoutes[dataRoute.page];
+              prerenderManifest.blockingFallbackRoutes[dataRoute.page];
 
             // we don't need to add routes for non-lazy SSG routes since
             // they have outputs which would override the routes anyways
@@ -616,7 +625,8 @@ export const build = async ({
         },
 
         // error handling
-        ...(output[path.join('./', entryDirectory, '404')]
+        ...(output[path.join('./', entryDirectory, '404')] ||
+        output[path.join('./', entryDirectory, '404/index')]
           ? [
               { handle: 'error' } as Handler,
 
@@ -747,10 +757,16 @@ export const build = async ({
           ],
         };
 
-        const lambdaOptions = await getLambdaOptionsFromFunction({
-          sourceFile: await getSourceFilePathFromPage({ workPath, page }),
-          config,
-        });
+        let lambdaOptions = {};
+        if (config && config.functions) {
+          lambdaOptions = await getLambdaOptionsFromFunction({
+            sourceFile: await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page,
+            }),
+            config,
+          });
+        }
 
         debug(`Creating serverless function for page: "${page}"...`);
         lambdas[path.join(entryDirectory, pathname)] = await createLambda({
@@ -878,9 +894,15 @@ export const build = async ({
         initialRevalidate === false &&
         !canUsePreviewMode &&
         !prerenderManifest.fallbackRoutes[route] &&
-        !prerenderManifest.legacyBlockingRoutes[route]
+        !prerenderManifest.blockingFallbackRoutes[route]
       ) {
-        nonLambdaSsgPages.add(route);
+        // if the 404 page used getStaticProps we need to update static404Page
+        // since it wasn't populated from the staticPages group
+        if (route === '/404') {
+          static404Page = path.join(entryDirectory, '404');
+        }
+
+        nonLambdaSsgPages.add(route === '/' ? '/index' : route);
       }
     };
 
@@ -925,12 +947,18 @@ export const build = async ({
       const {
         fileList: apiFileList,
         reasons: apiReasons,
-      } = await nodeFileTrace(apiPages, { base: workPath });
+      } = await nodeFileTrace(apiPages, {
+        base: baseDir,
+        processCwd: entryPath,
+      });
 
-      const {
-        fileList,
-        reasons: nonApiReasons,
-      } = await nodeFileTrace(nonApiPages, { base: workPath });
+      const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
+        nonApiPages,
+        {
+          base: baseDir,
+          processCwd: entryPath,
+        }
+      );
 
       debug(`node-file-trace result for pages: ${fileList}`);
 
@@ -948,7 +976,7 @@ export const build = async ({
           // Initial files are manually added to the lambda later
           return;
         }
-        const filePath = path.join(workPath, file);
+        const filePath = path.join(baseDir, file);
 
         if (!lstatResults[filePath]) {
           lstatResults[filePath] = lstatSema
@@ -959,7 +987,7 @@ export const build = async ({
         const { mode } = await lstatResults[filePath];
 
         files[file] = new FileFsRef({
-          fsPath: path.join(workPath, file),
+          fsPath: path.join(baseDir, file),
           mode,
         });
       };
@@ -1117,7 +1145,7 @@ export const build = async ({
           src: `^${escapeStringRegexp(outputName).replace(
             /\/index$/,
             '(/|/index|)'
-          )}$`,
+          )}/?$`,
           dest: `${path.join('/', currentLambdaGroup.lambdaIdentifier)}`,
           headers: {
             'x-nextjs-page': outputName,
@@ -1144,7 +1172,11 @@ export const build = async ({
         const {
           pseudoLayer: pageLayer,
           pseudoLayerBytes: pageLayerBytes,
-        } = await createPseudoLayer({ [pageFileName]: pages[page] });
+        } = await createPseudoLayer({
+          [path.join(path.relative(baseDir, entryPath), pageFileName)]: pages[
+            page
+          ],
+        });
 
         currentLambdaGroup.pages[outputName] = {
           pageLayer,
@@ -1180,21 +1212,31 @@ export const build = async ({
           }
 
           const pageFileName = path.normalize(
-            path.relative(workPath, pages[page].fsPath)
+            path.relative(entryPath, pages[page].fsPath)
           );
+
           const launcher = launcherData.replace(
             /__LAUNCHER_PAGE_PATH__/g,
             JSON.stringify(requiresTracing ? `./${pageFileName}` : './page')
           );
           const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-            'now__bridge.js': new FileFsRef({
+            [path.join(
+              path.relative(baseDir, entryPath),
+              'now__bridge.js'
+            )]: new FileFsRef({
               fsPath: path.join(__dirname, 'now__bridge.js'),
             }),
-            'now__launcher.js': new FileBlob({ data: launcher }),
+            [path.join(
+              path.relative(baseDir, entryPath),
+              'now__launcher.js'
+            )]: new FileBlob({ data: launcher }),
           };
 
           const lambdaOptions = await getLambdaOptionsFromFunction({
-            sourceFile: await getSourceFilePathFromPage({ workPath, page }),
+            sourceFile: await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page,
+            }),
             config,
           });
 
@@ -1204,10 +1246,16 @@ export const build = async ({
             lambdas[outputName] = await createLambdaFromPseudoLayers({
               files: {
                 ...launcherFiles,
-                [requiresTracing ? pageFileName : 'page.js']: pages[page],
+                [path.join(
+                  path.relative(baseDir, entryPath),
+                  pageFileName
+                )]: pages[page],
               },
               layers: isApiPage(pageFileName) ? apiPseudoLayers : pseudoLayers,
-              handler: 'now__launcher.launcher',
+              handler: path.join(
+                path.relative(baseDir, entryPath),
+                'now__launcher.launcher'
+              ),
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
             });
@@ -1217,7 +1265,7 @@ export const build = async ({
                 ...launcherFiles,
                 ...assets,
                 ...tracedFiles,
-                [requiresTracing ? pageFileName : 'page.js']: pages[page],
+                ['page.js']: pages[page],
               },
               handler: 'now__launcher.launcher',
               runtime: nodeVersion.runtime,
@@ -1279,7 +1327,7 @@ export const build = async ({
                     ${groupPageKeys
                       .map(
                         page =>
-                          `'${page}': require('./${path.join(
+                          `'${page}': () => require('./${path.join(
                             './',
                             group.pages[page].pageFileName
                           )}')`
@@ -1288,7 +1336,7 @@ export const build = async ({
                     ${
                       '' /*
                       creates a mapping of the page and the page's module e.g.
-                      '/about': require('./.next/serverless/pages/about.js')
+                      '/about': () => require('./.next/serverless/pages/about.js')
                     */
                     }
                   }
@@ -1297,7 +1345,7 @@ export const build = async ({
                   if (!toRender) {
                     try {
                       const { pathname } = url.parse(req.url)
-                      toRender = pathname
+                      toRender = pathname.replace(/\\/$/, '')
                     } catch (_) {
                       // handle failing to parse url
                       res.statusCode = 400
@@ -1348,7 +1396,10 @@ export const build = async ({
                     res.statusCode = 500
                     return res.end('internal server error')
                   }
-                  const method = currentPage.render || currentPage.default || currentPage
+
+                  const mod = currentPage()
+                  const method = mod.render || mod.default || mod
+
                   return method(req, res)
                 } catch (err) {
                   console.error('Unhandled error during request:', err)
@@ -1358,10 +1409,16 @@ export const build = async ({
               `
             );
             const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-              'now__bridge.js': new FileFsRef({
+              [path.join(
+                path.relative(baseDir, entryPath),
+                'now__bridge.js'
+              )]: new FileFsRef({
                 fsPath: path.join(__dirname, 'now__bridge.js'),
               }),
-              'now__launcher.js': new FileBlob({ data: launcher }),
+              [path.join(
+                path.relative(baseDir, entryPath),
+                'now__launcher.js'
+              )]: new FileBlob({ data: launcher }),
             };
 
             const pageLayers: PseudoLayer[] = [];
@@ -1383,7 +1440,10 @@ export const build = async ({
                   ...(group.isApiLambda ? apiPseudoLayers : pseudoLayers),
                   ...pageLayers,
                 ],
-                handler: 'now__launcher.launcher',
+                handler: path.join(
+                  path.relative(baseDir, entryPath),
+                  'now__launcher.launcher'
+                ),
                 runtime: nodeVersion.runtime,
               });
             } else {
@@ -1395,7 +1455,10 @@ export const build = async ({
                   ...assets,
                 },
                 layers: pageLayers,
-                handler: 'now__launcher.launcher',
+                handler: path.join(
+                  path.relative(baseDir, entryPath),
+                  'now__launcher.launcher'
+                ),
                 runtime: nodeVersion.runtime,
               });
             }
@@ -1452,7 +1515,7 @@ export const build = async ({
       if (isFallback || isBlocking) {
         const pr = isFallback
           ? prerenderManifest.fallbackRoutes[routeKey]
-          : prerenderManifest.legacyBlockingRoutes[routeKey];
+          : prerenderManifest.blockingFallbackRoutes[routeKey];
         initialRevalidate = 1; // TODO: should Next.js provide this default?
         // @ts-ignore
         if (initialRevalidate === false) {
@@ -1543,7 +1606,7 @@ export const build = async ({
     Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: false, isFallback: true })
     );
-    Object.keys(prerenderManifest.legacyBlockingRoutes).forEach(route =>
+    Object.keys(prerenderManifest.blockingFallbackRoutes).forEach(route =>
       onPrerenderRoute(route, { isBlocking: true, isFallback: false })
     );
 
@@ -1553,7 +1616,7 @@ export const build = async ({
       // Dynamic pages for lazy routes should be handled by the lambda flow.
       [
         ...Object.entries(prerenderManifest.fallbackRoutes),
-        ...Object.entries(prerenderManifest.legacyBlockingRoutes),
+        ...Object.entries(prerenderManifest.blockingFallbackRoutes),
       ].forEach(([, { dataRouteRegex, dataRoute }]) => {
         dataRoutes.push({
           // Next.js provided data route regex
