@@ -8,17 +8,31 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
+import { join } from 'path';
 import { register } from 'ts-node';
 
-// Use the project's version of TypeScript if available,
-// otherwise fall back to using the copy that `@vercel/node` uses.
-let compiler: string;
-try {
-  compiler = require.resolve('typescript', {
-    paths: [process.cwd()],
+const resolveTypescript = (p: string): string =>
+  require.resolve('typescript', {
+    paths: [p],
   });
-} catch (e) {
-  compiler = 'typescript';
+
+// Use the project's version of TypeScript if available
+let compiler = '';
+try {
+  const resolved = resolveTypescript(process.cwd());
+
+  // Only use the user's resolved "typescript" if it's
+  // located *within* the project root directory
+  if (resolved.startsWith(join(process.cwd(), '/'))) {
+    compiler = resolved;
+  }
+} catch (_) {
+  // eslint-disable-next-line no-empty
+}
+
+// Otherwise fall back to using the copy that `@vercel/node` uses
+if (!compiler) {
+  compiler = resolveTypescript(__dirname);
 }
 
 // Assume Node 10
@@ -61,7 +75,6 @@ register({
 });
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { join } from 'path';
 import { Readable } from 'stream';
 import { Bridge } from './bridge';
 import { getNowLauncher } from './launcher';
