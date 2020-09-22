@@ -32,7 +32,7 @@ try {
 
 // Otherwise fall back to using the copy that `@vercel/node` uses
 if (!compiler) {
-  compiler = resolveTypescript(__dirname);
+  compiler = resolveTypescript(join(__dirname, '..'));
 }
 
 // Assume Node 10
