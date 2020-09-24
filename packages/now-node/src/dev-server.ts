@@ -8,33 +8,54 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
+import { join } from 'path';
 import { register } from 'ts-node';
 
-// Use the project's version of TypeScript if available,
-// otherwise fall back to using the copy that `@vercel/node` uses.
-let compiler: string;
-try {
-  compiler = require.resolve('typescript', {
-    paths: [process.cwd()],
-  });
-} catch (e) {
-  compiler = 'typescript';
-}
+type TypescriptModule = typeof import('typescript');
 
-// Assume Node 10
-let target = 'es2018';
+const resolveTypescript = (p: string): string => {
+  try {
+    return require.resolve('typescript', {
+      paths: [p],
+    });
+  } catch (_) {
+    return '';
+  }
+};
 
+const requireTypescript = (p: string): TypescriptModule => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require(p) as TypescriptModule;
+};
+
+let ts: TypescriptModule | null = null;
+
+// Assume Node 10 as the lowest common denominator
+let target = 'ES2018';
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 if (nodeMajor >= 14) {
-  target = 'es2020';
+  target = 'ES2020';
 } else if (nodeMajor >= 12) {
-  target = 'es2019';
+  target = 'ES2019';
+}
+
+// Use the project's version of Typescript if available and supports `target`
+let compiler = resolveTypescript(process.cwd());
+if (compiler) {
+  ts = requireTypescript(compiler);
+  if (!(target in ts.ScriptTarget)) {
+    ts = null;
+  }
+}
+
+// Otherwise fall back to using the copy that `@vercel/node` uses
+if (!ts) {
+  compiler = resolveTypescript(join(__dirname, '..'));
+  ts = requireTypescript(compiler);
 }
 
 if (tsconfig) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const ts: typeof import('typescript') = require(compiler);
     const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
     if (config?.compilerOptions?.target) {
       target = config.compilerOptions.target;
@@ -61,7 +82,6 @@ register({
 });
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { join } from 'path';
 import { Readable } from 'stream';
 import { Bridge } from './bridge';
 import { getNowLauncher } from './launcher';
