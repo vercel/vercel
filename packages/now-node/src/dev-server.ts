@@ -11,6 +11,8 @@ if (!entrypoint) {
 import { join } from 'path';
 import { register } from 'ts-node';
 
+type TypescriptModule = typeof import('typescript');
+
 const resolveTypescript = (p: string): string => {
   try {
     return require.resolve('typescript', {
@@ -21,26 +23,27 @@ const resolveTypescript = (p: string): string => {
   }
 };
 
-type TypeScriptModule = typeof import('typescript');
+const requireTypescript = (p: string): TypescriptModule => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require(p) as TypescriptModule;
+};
 
-// Assume Node 10
+let ts: TypescriptModule | null = null;
+
+// Assume Node 10 as the lowest common denominator
 let target = 'ES2018';
-let ts: TypeScriptModule | null = null;
 const nodeMajor = Number(process.versions.node.split('.')[0]);
+if (nodeMajor >= 14) {
+  target = 'ES2020';
+} else if (nodeMajor >= 12) {
+  target = 'ES2019';
+}
 
-// Use the project's version of TypeScript if available and new enough
+// Use the project's version of Typescript if available and supports `target`
 let compiler = resolveTypescript(process.cwd());
 if (compiler) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  ts = require(compiler) as TypeScriptModule;
-
-  if (nodeMajor >= 14 && ts.ScriptTarget.ES2020) {
-    target = 'ES2020';
-  } else if (nodeMajor >= 12 && ts.ScriptTarget.ES2019) {
-    target = 'ES2019';
-  } else if (!ts.ScriptTarget.ES2018) {
-    // TypeScript version is so old that "ES2018" isn't even supported,
-    // so fall back to the copy that `@vercel/node` uses
+  ts = requireTypescript(compiler);
+  if (typeof (ts.ScriptTarget as any)[target] === 'undefined') {
     ts = null;
   }
 }
@@ -48,15 +51,7 @@ if (compiler) {
 // Otherwise fall back to using the copy that `@vercel/node` uses
 if (!ts) {
   compiler = resolveTypescript(join(__dirname, '..'));
-
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  ts = require(compiler) as TypeScriptModule;
-
-  if (nodeMajor >= 14) {
-    target = 'ES2020';
-  } else if (nodeMajor >= 12) {
-    target = 'ES2019';
-  }
+  ts = requireTypescript(compiler);
 }
 
 if (tsconfig) {
