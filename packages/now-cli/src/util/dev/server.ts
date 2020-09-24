@@ -923,9 +923,17 @@ export default class DevServer {
     await once(this.watcher, 'ready');
 
     // Configure the server to forward WebSocket "upgrade" events to the proxy.
-    this.server.on('upgrade', (req, socket, head) => {
+    this.server.on('upgrade', async (req, socket, head) => {
+      await this.startPromise;
+      if (!this.devProcessPort) {
+        this.output.debug(
+          `Detected "upgrade" event, but closing socket because no frontend dev server is running`
+        );
+        socket.destroy();
+        return;
+      }
       const target = `http://localhost:${this.devProcessPort}`;
-      this.output.debug(`Detected upgrade event, proxying to ${target}`);
+      this.output.debug(`Detected "upgrade" event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
 
