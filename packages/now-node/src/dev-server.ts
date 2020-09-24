@@ -11,44 +11,56 @@ if (!entrypoint) {
 import { join } from 'path';
 import { register } from 'ts-node';
 
-const resolveTypescript = (p: string): string =>
-  require.resolve('typescript', {
-    paths: [p],
-  });
-
-// Use the project's version of TypeScript if available
-let compiler = '';
-try {
-  const resolved = resolveTypescript(process.cwd());
-
-  // Only use the user's resolved "typescript" if it's
-  // located *within* the project root directory
-  if (resolved.startsWith(join(process.cwd(), '/'))) {
-    compiler = resolved;
+const resolveTypescript = (p: string): string => {
+  try {
+    return require.resolve('typescript', {
+      paths: [p],
+    });
+  } catch (_) {
+    return '';
   }
-} catch (_) {
-  // eslint-disable-next-line no-empty
+};
+
+type TypeScriptModule = typeof import('typescript');
+
+// Assume Node 10
+let target = 'ES2018';
+let ts: TypeScriptModule | null = null;
+const nodeMajor = Number(process.versions.node.split('.')[0]);
+
+// Use the project's version of TypeScript if available and new enough
+let compiler = resolveTypescript(process.cwd());
+if (compiler) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  ts = require(compiler) as TypeScriptModule;
+
+  if (nodeMajor >= 14 && ts.ScriptTarget.ES2020) {
+    target = 'ES2020';
+  } else if (nodeMajor >= 12 && ts.ScriptTarget.ES2019) {
+    target = 'ES2019';
+  } else if (!ts.ScriptTarget.ES2018) {
+    // TypeScript version is so old that "ES2018" isn't even supported,
+    // so fall back to the copy that `@vercel/node` uses
+    ts = null;
+  }
 }
 
 // Otherwise fall back to using the copy that `@vercel/node` uses
-if (!compiler) {
+if (!ts) {
   compiler = resolveTypescript(join(__dirname, '..'));
-}
 
-// Assume Node 10
-let target = 'es2018';
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  ts = require(compiler) as TypeScriptModule;
 
-const nodeMajor = Number(process.versions.node.split('.')[0]);
-if (nodeMajor >= 14) {
-  target = 'es2020';
-} else if (nodeMajor >= 12) {
-  target = 'es2019';
+  if (nodeMajor >= 14) {
+    target = 'ES2020';
+  } else if (nodeMajor >= 12) {
+    target = 'ES2019';
+  }
 }
 
 if (tsconfig) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const ts: typeof import('typescript') = require(compiler);
     const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
     if (config?.compilerOptions?.target) {
       target = config.compilerOptions.target;
