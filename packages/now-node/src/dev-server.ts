@@ -43,7 +43,7 @@ if (nodeMajor >= 14) {
 let compiler = resolveTypescript(process.cwd());
 if (compiler) {
   ts = requireTypescript(compiler);
-  if (target in ts.ScriptTarget) {
+  if (!(target in ts.ScriptTarget)) {
     ts = null;
   }
 }
