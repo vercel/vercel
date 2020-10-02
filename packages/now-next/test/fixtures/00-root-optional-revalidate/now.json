@@ -5,5 +5,11 @@
       "src": "package.json",
       "use": "@vercel/next"
     }
+  ],
+  "probes": [
+    {
+      "path": "/non-existent",
+      "status": 404
+    }
   ]
 }
