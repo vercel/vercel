@@ -1384,6 +1384,9 @@ export default class DevServer {
       statusCode = undefined;
 
       const phaseRoutes = handleMap.get(phase) || [];
+      if (phaseRoutes.length === 0) {
+        continue;
+      }
       routeResult = await devRouter(
         prevUrl,
         req.method,
