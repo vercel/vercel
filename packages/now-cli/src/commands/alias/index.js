@@ -18,7 +18,7 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    ls    [app]                  Show all aliases (or per app name)
+    ls                           Show all aliases
     set   <deployment> <alias>   Create a new alias
     rm    <alias>                Remove an alias using its hostname
 
@@ -39,19 +39,19 @@ const help = () => {
     -N, --next                          Show next page of results
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.now.sh')}
+  ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.vercel.app')}
 
       ${chalk.cyan(
         `$ ${getPkgName()} alias set ${chalk.underline(
-          'api-ownv3nc9f8.now.sh'
-        )} ${chalk.underline('my-api.now.sh')}`
+          'api-ownv3nc9f8.vercel.app'
+        )} ${chalk.underline('my-api.vercel.app')}`
       )}
 
       Custom domains work as alias targets
 
       ${chalk.cyan(
         `$ ${getPkgName()} alias set ${chalk.underline(
-          'api-ownv3nc9f8.now.sh'
+          'api-ownv3nc9f8.vercel.app'
         )} ${chalk.underline('my-api.com')}`
       )}
 
