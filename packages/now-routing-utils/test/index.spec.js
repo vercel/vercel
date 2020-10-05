@@ -45,7 +45,7 @@ describe('normalizeRoutes', () => {
         },
       },
       {
-        src: '^/$',
+        src: '^/(?:en/?|fr/?)$',
         locale: {
           redirect: { en: '/en', fr: '/fr' },
         },
