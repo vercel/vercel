@@ -172,6 +172,10 @@ export default async function processDeployment({
       if (event.type === 'created') {
         deployingSpinner();
 
+        if (bar && !bar.complete) {
+          bar.tick(bar.total + 1);
+        }
+
         now._host = event.payload.url;
 
         await linkFolderToProject(
