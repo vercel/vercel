@@ -36,6 +36,20 @@ describe('normalizeRoutes', () => {
 
   test('accepts valid routes', () => {
     const routes = [
+      {
+        src: '^(?:/(?<value>en|fr))?(?<path>/.*)$',
+        locale: {
+          value: '$value',
+          path: '$path',
+          default: 'en',
+        },
+      },
+      {
+        src: '^/$',
+        locale: {
+          redirect: { en: '/en', fr: '/fr' },
+        },
+      },
       { src: '^/about$' },
       {
         src: '^/blog$',
