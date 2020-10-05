@@ -20,7 +20,6 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
         (path.extname(n) === '.sh' ? 0o100755 : 0o100644),
     }));
 
-  const { FORCE_BUILD_IN_REGION, NOW_DEBUG, VERCEL_DEBUG } = process.env;
   const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
 
   const nowDeployPayload = {
@@ -31,9 +30,8 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
       env: {
         ...(nowJson.build || {}).env,
         RANDOMNESS_BUILD_ENV_VAR: randomness,
-        FORCE_BUILD_IN_REGION,
-        NOW_DEBUG,
-        VERCEL_DEBUG,
+        FORCE_BUILD_IN_REGION: 'sfo1',
+        VERCEL_DEBUG: '1'
       },
     },
     name: 'test2020',
