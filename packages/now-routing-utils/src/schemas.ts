@@ -47,8 +47,9 @@ export const routesSchema = {
             maxProperties: 100,
             patternProperties: {
               '^.{1,256}$': {
-              type: 'string',
-              maxLength: 4096,
+                type: 'string',
+                maxLength: 4096,
+              },
             },
           },
           value: {
@@ -62,8 +63,8 @@ export const routesSchema = {
           default: {
             type: 'string',
             maxLength: 4096,
-          }
-        }
+          },
+        },
       },
       handle: {
         type: 'string',
