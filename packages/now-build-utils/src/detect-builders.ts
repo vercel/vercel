@@ -458,7 +458,10 @@ function detectFrontBuilder(
     config.outputDirectory = projectSettings.outputDirectory;
   }
 
-  if (pkg && (framework !== null || createdAt < Date.parse('2020-03-01'))) {
+  if (
+    pkg &&
+    (framework === undefined || createdAt < Date.parse('2020-03-01'))
+  ) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
       ...pkg.devDependencies,
