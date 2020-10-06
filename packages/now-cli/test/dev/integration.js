@@ -1181,6 +1181,14 @@ test(
 );
 
 test(
+  '[vercel dev] 10a-nextjs-routes',
+  testFixtureStdio('10a-nextjs-routes', async testPath => {
+    await testPath(200, '/', /Next.js with routes/m);
+    await testPath(200, '/hello', /Hello Routes/m);
+  })
+);
+
+test(
   '[vercel dev] 12-polymer-node',
   testFixtureStdio(
     '12-polymer-node',
