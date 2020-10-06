@@ -64,9 +64,12 @@ export default async function ls(
     return 1;
   }
 
-  const cancelWait = wait(`Fetching domains under ${chalk.bold(contextName)}`);
+  const cancelWait = wait(`Fetching Domains under ${chalk.bold(contextName)}`);
 
-  const { domains, pagination } = await getDomains(client).finally(() => {
+  const { domains, pagination } = await getDomains(
+    client,
+    nextTimestamp
+  ).finally(() => {
     cancelWait();
   });
 
@@ -113,7 +116,7 @@ function formatDomainsTable(domains: Domain[]) {
   });
 
   return formatTable(
-    ['Domain', 'Registrar', 'Nameservers', 'Expiration', 'Creator', 'Age'],
+    ['Domain', 'Registrar', 'Nameservers', 'Expiration Date', 'Creator', 'Age'],
     ['l', 'l', 'l', 'l', 'l', 'l'],
     [{ rows }]
   );

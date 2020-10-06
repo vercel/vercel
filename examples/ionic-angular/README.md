@@ -17,11 +17,3 @@ To get started with Ionic Angular deployed with Vercel, you can use the [Ionic C
 ```shell
 $ npx @ionic/cli start [project-name] conference --type angular && cd [project-name]
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Ionic Angular project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

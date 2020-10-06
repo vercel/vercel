@@ -644,19 +644,6 @@ export class DeploymentPermissionDenied extends NowError<
   }
 }
 
-export class DeploymentTypeUnsupported extends NowError<
-  'DEPLOYMENT_TYPE_UNSUPPORTED',
-  {}
-> {
-  constructor() {
-    super({
-      code: 'DEPLOYMENT_TYPE_UNSUPPORTED',
-      meta: {},
-      message: `This region only accepts Serverless Docker Deployments`,
-    });
-  }
-}
-
 /**
  * Returned when we try to create an alias but the API returns an error telling
  * that the given alias is not valid.
@@ -696,71 +683,6 @@ export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
       code: 'ALIAS_IN_USE',
       meta: { domain },
       message: `The alias is already in use`,
-    });
-  }
-}
-
-export class ForbiddenScaleMinInstances extends NowError<
-  'FORBIDDEN_SCALE_MIN_INSTANCES',
-  { url: string; max: number }
-> {
-  constructor(url: string, max: number) {
-    super({
-      code: 'FORBIDDEN_SCALE_MIN_INSTANCES',
-      meta: { url, max },
-      message: `You can't scale to more than ${max} min instances with your current plan.`,
-    });
-  }
-}
-
-export class ForbiddenScaleMaxInstances extends NowError<
-  'FORBIDDEN_SCALE_MAX_INSTANCES',
-  { url: string; max: number }
-> {
-  constructor(url: string, max: number) {
-    super({
-      code: 'FORBIDDEN_SCALE_MAX_INSTANCES',
-      meta: { url, max },
-      message: `You can't scale to more than ${max} max instances with your current plan.`,
-    });
-  }
-}
-
-export class InvalidScaleMinMaxRelation extends NowError<
-  'INVALID_SCALE_MIN_MAX_RELATION',
-  { url: string }
-> {
-  constructor(url: string) {
-    super({
-      code: 'INVALID_SCALE_MIN_MAX_RELATION',
-      meta: { url },
-      message: `Min number of instances can't be higher than max.`,
-    });
-  }
-}
-
-export class NotSupportedMinScaleSlots extends NowError<
-  'NOT_SUPPORTED_MIN_SCALE_SLOTS',
-  { url: string }
-> {
-  constructor(url: string) {
-    super({
-      code: 'NOT_SUPPORTED_MIN_SCALE_SLOTS',
-      meta: { url },
-      message: `Cloud v2 does not yet support setting a non-zero min scale setting.`,
-    });
-  }
-}
-
-export class VerifyScaleTimeout extends NowError<
-  'VERIFY_SCALE_TIMEOUT',
-  { timeout: number }
-> {
-  constructor(timeout: number) {
-    super({
-      code: 'VERIFY_SCALE_TIMEOUT',
-      meta: { timeout },
-      message: `Instance verification timed out (${timeout}ms)`,
     });
   }
 }
@@ -828,19 +750,6 @@ export class FileNotFound extends NowError<'FILE_NOT_FOUND', { file: string }> {
   }
 }
 
-export class RulesFileValidationError extends NowError<
-  'PATH_ALIAS_VALIDATION_ERROR',
-  { location: string; message: string }
-> {
-  constructor(location: string, message: string) {
-    super({
-      code: 'PATH_ALIAS_VALIDATION_ERROR',
-      meta: { location, message },
-      message: `The provided rules format in file for path alias are invalid`,
-    });
-  }
-}
-
 export class NoAliasInConfig extends NowError<'NO_ALIAS_IN_CONFIG', {}> {
   constructor() {
     super({
@@ -860,58 +769,6 @@ export class InvalidAliasInConfig extends NowError<
       code: 'INVALID_ALIAS_IN_CONFIG',
       meta: { value },
       message: `Invalid alias option in configuration.`,
-    });
-  }
-}
-
-export class RuleValidationFailed extends NowError<
-  'RULE_VALIDATION_FAILED',
-  { message: string }
-> {
-  constructor(message: string) {
-    super({
-      code: 'RULE_VALIDATION_FAILED',
-      meta: { message },
-      message: `The server validation for rules failed`,
-    });
-  }
-}
-
-export class InvalidMinForScale extends NowError<
-  'INVALID_MIN_FOR_SCALE',
-  { value: string }
-> {
-  constructor(value: string) {
-    super({
-      code: 'INVALID_MIN_FOR_SCALE',
-      meta: { value },
-      message: `Invalid <min> parameter "${value}". A number or "auto" were expected`,
-    });
-  }
-}
-
-export class InvalidArgsForMinMaxScale extends NowError<
-  'INVALID_ARGS_FOR_MIN_MAX_SCALE',
-  { min: string }
-> {
-  constructor(min: string) {
-    super({
-      code: 'INVALID_ARGS_FOR_MIN_MAX_SCALE',
-      meta: { min },
-      message: `Invalid number of arguments: expected <min> ("${min}") and [max]`,
-    });
-  }
-}
-
-export class InvalidMaxForScale extends NowError<
-  'INVALID_MAX_FOR_SCALE',
-  { value: string }
-> {
-  constructor(value: string) {
-    super({
-      code: 'INVALID_MAX_FOR_SCALE',
-      meta: { value },
-      message: `Invalid <max> parameter "${value}". A number or "auto" were expected`,
     });
   }
 }
@@ -1142,7 +999,7 @@ export class MissingDotenvVarsError extends NowError<
       ].join('\n');
     }
 
-    message += '\nRead more: https://err.sh/now/missing-env-file';
+    message += '\nRead more: https://err.sh/vercel/missing-env-file';
 
     super({
       code: 'MISSING_DOTENV_VARS',

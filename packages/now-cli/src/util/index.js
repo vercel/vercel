@@ -1,21 +1,12 @@
-import { homedir } from 'os';
-import { resolve as resolvePath } from 'path';
 import EventEmitter from 'events';
 import qs from 'querystring';
 import { parse as parseUrl } from 'url';
-import bytes from 'bytes';
-import chalk from 'chalk';
 import retry from 'async-retry';
-import { parse as parseIni } from 'ini';
-import fs from 'fs-extra';
 import ms from 'ms';
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
-import {
-  staticFiles as getFiles,
-  npm as getNpmFiles,
-  docker as getDockerFiles,
-} from './get-files';
+import bytes from 'bytes';
+import chalk from 'chalk';
 import ua from './ua.ts';
 import processDeployment from './deploy/process-deployment.ts';
 import highlight from './output/highlight';
@@ -23,10 +14,6 @@ import createOutput from './output';
 import { responseError } from './error';
 import stamp from './output/stamp';
 import { BuildError } from './errors-ts';
-
-// Check if running windows
-const IS_WIN = process.platform.startsWith('win');
-const SEP = IS_WIN ? '\\' : '/';
 
 export default class Now extends EventEmitter {
   constructor({
@@ -53,14 +40,7 @@ export default class Now extends EventEmitter {
     paths,
     {
       // Legacy
-      forwardNpm = false,
-      scale = {},
-      description,
-      type = 'npm',
-      pkg = {},
       nowConfig = {},
-      hasNowJson = false,
-      sessionAffinity = 'random',
 
       // Latest
       name,
@@ -82,56 +62,7 @@ export default class Now extends EventEmitter {
     isSettingUpProject,
     cwd
   ) {
-    const opts = { output: this._output, hasNowJson };
-    const { log, warn } = this._output;
-    const isLegacy = type !== null;
-
-    let files = [];
     let hashes = {};
-    const relatives = {};
-    let engines;
-    let deployment;
-
-    if (type === 'npm') {
-      files = await getNpmFiles(paths[0], pkg, nowConfig, opts);
-
-      // A `start` or `now-start` npm script, or a `server.js` file
-      // in the root directory of the deployment are required
-      if (
-        isLegacy &&
-        !hasNpmStart(pkg) &&
-        !hasFile(paths[0], files, 'server.js')
-      ) {
-        const err = new Error(
-          'Missing `start` (or `now-start`) script in `package.json`. ' +
-            'See: https://docs.npmjs.com/cli/start'
-        );
-        throw err;
-      }
-
-      engines = nowConfig.engines || pkg.engines;
-      forwardNpm = forwardNpm || nowConfig.forwardNpm;
-    } else if (type === 'static') {
-      if (paths.length === 1) {
-        files = await getFiles(paths[0], nowConfig, opts);
-      } else {
-        if (!files) {
-          files = [];
-        }
-
-        for (const path of paths) {
-          const list = await getFiles(path, {}, opts);
-          files = files.concat(list);
-
-          for (const file of list) {
-            relatives[file] = path;
-          }
-        }
-      }
-    } else if (type === 'docker') {
-      files = await getDockerFiles(paths[0], nowConfig, opts);
-    }
-
     const uploadStamp = stamp();
 
     let requestBody = {
@@ -152,35 +83,7 @@ export default class Now extends EventEmitter {
     delete requestBody.scope;
     delete requestBody.github;
 
-    if (isLegacy) {
-      // Read `registry.npmjs.org` authToken from .npmrc
-      const registryAuthToken =
-        type === 'npm' && forwardNpm
-          ? (await readAuthToken(paths[0])) || (await readAuthToken(homedir()))
-          : undefined;
-
-      requestBody = {
-        env,
-        build,
-        meta,
-        public: wantsPublic || nowConfig.public,
-        forceNew,
-        withCache,
-        name,
-        project,
-        description,
-        deploymentType: type,
-        registryAuthToken,
-        engines,
-        scale,
-        sessionAffinity,
-        limits: nowConfig.limits,
-        config: nowConfig,
-      };
-    }
-
-    deployment = await processDeployment({
-      isLegacy,
+    const deployment = await processDeployment({
       now: this,
       output: this._output,
       hashes,
@@ -199,11 +102,9 @@ export default class Now extends EventEmitter {
       cwd,
     });
 
-    // We report about files whose sizes are too big
-    let missingVersion = false;
-
     if (deployment && deployment.warnings) {
       let sizeExceeded = 0;
+      const { log, warn } = this._output;
 
       deployment.warnings.forEach(warning => {
         if (warning.reason === 'size_limit_exceeded') {
@@ -216,10 +117,8 @@ export default class Now extends EventEmitter {
           sizeExceeded++;
         } else if (warning.reason === 'node_version_not_found') {
           warn(`Requested node version ${warning.wanted} is not available`);
-          missingVersion = true;
         }
       });
-
       if (sizeExceeded > 0) {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
         log(
@@ -230,25 +129,10 @@ export default class Now extends EventEmitter {
       }
     }
 
-    if (isLegacy && !quiet && type === 'npm' && deployment.nodeVersion) {
-      if (engines && engines.node && !missingVersion) {
-        log(
-          chalk`Using Node.js {bold ${deployment.nodeVersion}} (requested: {dim \`${engines.node}\`})`
-        );
-      } else {
-        log(chalk`Using Node.js {bold ${deployment.nodeVersion}} (default)`);
-      }
-    }
-
-    this._id = deployment.deploymentId;
-    this._host = deployment.url;
-    this._missing = [];
-    this._fileCount = files.length;
-
     return deployment;
   }
 
-  async handleDeploymentError(error, { hashes, env }) {
+  async handleDeploymentError(error, { env }) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
         const err = new Error(error.message);
@@ -285,7 +169,6 @@ export default class Now extends EventEmitter {
 
     if (error.status === 400 && error.code === 'missing_files') {
       this._missing = error.missing || [];
-      this._fileCount = hashes.length;
 
       return error;
     }
@@ -303,7 +186,7 @@ export default class Now extends EventEmitter {
         const { key } = error;
         err.message =
           `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
-          'Please supply a String or a Number (https://err.sh/now-cli/env-value-invalid-type)';
+          'Please supply a String or a Number (https://err.sh/vercel-cli/env-value-invalid-type)';
       } else if (code === 'unreferenced_build_specifications') {
         const count = unreferencedBuildSpecs.length;
         const prefix = count === 1 ? 'build' : 'builds';
@@ -433,39 +316,10 @@ export default class Now extends EventEmitter {
     return response;
   }
 
-  async listInstances(deploymentId) {
-    const { instances } = await this.retry(
-      async bail => {
-        const res = await this._fetch(
-          `/now/deployments/${deploymentId}/instances`
-        );
-
-        if (res.status === 200) {
-          // What we want
-          return res.json();
-        }
-        if (res.status > 200 && res.status < 500) {
-          // If something is wrong with our request, we don't retry
-          return bail(await responseError(res, 'Failed to list instances'));
-        }
-        // If something is wrong with the server, we retry
-        throw await responseError(res, 'Failed to list instances');
-      },
-      {
-        retries: 3,
-        minTimeout: 2500,
-        onRetry: this._onRetry,
-      }
-    );
-
-    return instances;
-  }
-
   async findDeployment(hostOrId) {
     const { debug } = this._output;
 
     let id = hostOrId && !hostOrId.includes('.');
-    let isBuilds = null;
 
     if (!id) {
       let host = hostOrId.replace(/^https:\/\//i, '');
@@ -500,16 +354,13 @@ export default class Now extends EventEmitter {
       );
 
       id = deployment.id;
-      isBuilds = deployment.type === 'LAMBDAS';
     }
-
-    const url = `/${
-      isBuilds ? 'v11' : 'v5'
-    }/now/deployments/${encodeURIComponent(id)}`;
 
     return this.retry(
       async bail => {
-        const res = await this._fetch(url);
+        const res = await this._fetch(
+          `/v11/now/deployments/${encodeURIComponent(id)}`
+        );
 
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
@@ -565,18 +416,6 @@ export default class Now extends EventEmitter {
 
   close() {}
 
-  get id() {
-    return this._id;
-  }
-
-  get fileCount() {
-    return this._fileCount;
-  }
-
-  get host() {
-    return this._host;
-  }
-
   get syncAmount() {
     if (!this._syncAmount) {
       this._syncAmount = this._missing
@@ -585,10 +424,6 @@ export default class Now extends EventEmitter {
     }
 
     return this._syncAmount;
-  }
-
-  get syncFileCount() {
-    return this._missing.length;
   }
 
   _fetch(_url, opts = {}) {
@@ -659,39 +494,5 @@ export default class Now extends EventEmitter {
       }
       throw err;
     }, opts.retry);
-  }
-
-  async getPlanMax() {
-    return 10;
-  }
-}
-
-function toRelative(path, base) {
-  const fullBase = base.endsWith(SEP) ? base : base + SEP;
-  let relative = path.substr(fullBase.length);
-
-  if (relative.startsWith(SEP)) {
-    relative = relative.substr(1);
-  }
-
-  return relative.replace(/\\/g, '/');
-}
-
-function hasNpmStart(pkg) {
-  return pkg.scripts && (pkg.scripts.start || pkg.scripts['now-start']);
-}
-
-function hasFile(base, files, name) {
-  const relative = files.map(file => toRelative(file, base));
-  return relative.indexOf(name) !== -1;
-}
-
-async function readAuthToken(path, name = '.npmrc') {
-  try {
-    const contents = await fs.readFile(resolvePath(path, name), 'utf8');
-    const npmrc = parseIni(contents);
-    return npmrc['//registry.npmjs.org/:_authToken'];
-  } catch (err) {
-    // Do nothing
   }
 }

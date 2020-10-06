@@ -20,6 +20,7 @@ import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import which from 'which';
+import npa from 'npm-package-arg';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -40,6 +41,7 @@ import {
   spawnCommand,
   isOfficialRuntime,
 } from '@vercel/build-utils';
+import _frameworks, { Framework } from '@vercel/frameworks';
 
 import link from '../output/link';
 import { Output } from '../output';
@@ -84,6 +86,11 @@ import {
   EnvConfigs,
 } from './types';
 import { ProjectSettings } from '../../types';
+
+const frameworkList = _frameworks as Framework[];
+const frontendRuntimeSet = new Set(
+  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+);
 
 interface FSEvent {
   type: string;
@@ -550,8 +557,8 @@ export default class DevServer {
       const featHandleMiss = true; // enable for zero config
       const { projectSettings, cleanUrls, trailingSlash } = config;
 
-      const opts = { output: this.output, isBuilds: true };
-      const files = (await getFiles(this.cwd, config, opts)).map(f =>
+      const opts = { output: this.output };
+      const files = (await getFiles(this.cwd, opts)).map(f =>
         relative(this.cwd, f)
       );
 
@@ -833,8 +840,7 @@ export default class DevServer {
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
 
-    const opts = { output: this.output, isBuilds: true };
-    const files = await getFiles(this.cwd, nowConfig, opts);
+    const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
     for (const fsPath of files) {
       let path = relative(this.cwd, fsPath);
@@ -917,9 +923,17 @@ export default class DevServer {
     await once(this.watcher, 'ready');
 
     // Configure the server to forward WebSocket "upgrade" events to the proxy.
-    this.server.on('upgrade', (req, socket, head) => {
+    this.server.on('upgrade', async (req, socket, head) => {
+      await this.startPromise;
+      if (!this.devProcessPort) {
+        this.output.debug(
+          `Detected "upgrade" event, but closing socket because no frontend dev server is running`
+        );
+        socket.destroy();
+        return;
+      }
       const target = `http://localhost:${this.devProcessPort}`;
-      this.output.debug(`Detected upgrade event, proxying to ${target}`);
+      this.output.debug(`Detected "upgrade" event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
 
@@ -1358,6 +1372,7 @@ export default class DevServer {
     const missRoutes = handleMap.get('miss') || [];
     const hitRoutes = handleMap.get('hit') || [];
     const errorRoutes = handleMap.get('error') || [];
+    const filesystemRoutes = handleMap.get('filesystem') || [];
     const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
     let routeResult: RouteResult | null = null;
@@ -1469,39 +1484,62 @@ export default class DevServer {
         routeResult.status = prevStatus;
       }
 
-      if (!match && errorRoutes.length > 0) {
-        // error phase
-        const routeResultForError = await devRouter(
-          getReqUrl(routeResult),
-          req.method,
-          errorRoutes,
-          this,
-          nowConfig,
-          routeResult.headers,
-          [],
-          'error'
-        );
-
-        const matchForError = await findBuildMatch(
-          this.buildMatches,
-          this.files,
-          routeResultForError.dest,
-          this,
-          nowConfig
-        );
-
-        if (matchForError) {
-          // error phase only applies if the file was found
-          routeResult = routeResultForError;
-          match = matchForError;
-        }
-      }
-
       statusCode = routeResult.status;
 
       if (match) {
         // end the phase
         break;
+      }
+
+      if (phase === null && filesystemRoutes.length === 0) {
+        // hack to skip the reset from null to filesystem
+        break;
+      }
+    }
+
+    if (!match && routeResult && errorRoutes.length > 0) {
+      // error phase
+      const routeResultForError = await devRouter(
+        getReqUrl(routeResult),
+        req.method,
+        errorRoutes,
+        this,
+        nowConfig,
+        routeResult.headers,
+        [],
+        'error'
+      );
+      const { matched_route } = routeResultForError;
+
+      const matchForError = await findBuildMatch(
+        this.buildMatches,
+        this.files,
+        routeResultForError.dest,
+        this,
+        nowConfig
+      );
+
+      if (matchForError) {
+        debug(`Route match detected in error phase, breaking loop`);
+        routeResult = routeResultForError;
+        statusCode = routeResultForError.status;
+        match = matchForError;
+      } else if (matched_route && matched_route.src && !matched_route.dest) {
+        debug(
+          'Route without `dest` detected in error phase, attempting to exit early'
+        );
+        if (
+          await this.exitWithStatus(
+            matchForError,
+            routeResultForError,
+            'error',
+            req,
+            res,
+            nowRequestId
+          )
+        ) {
+          return;
+        }
       }
     }
 
@@ -1578,13 +1616,6 @@ export default class DevServer {
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
-      for (const r of buildResult.routes) {
-        // This replace is necessary for `@vercel/redwood` but might be relevant
-        // for builders that wish to return routes and work with zero config.
-        if (r.dest) {
-          r.dest = r.dest.replace(/\$PORT/g, `${this.devProcessPort}`);
-        }
-      }
       const matchedRoute = await devRouter(
         newUrl,
         req.method,
@@ -2333,10 +2364,8 @@ async function checkForPort(
 }
 
 function filterFrontendBuilds(build: Builder) {
-  return (
-    !isOfficialRuntime('static-build', build.use) &&
-    !isOfficialRuntime('next', build.use)
-  );
+  const { name } = npa(build.use);
+  return !frontendRuntimeSet.has(name || '');
 }
 
 function hasNewRoutingProperties(nowConfig: NowConfig) {

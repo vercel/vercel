@@ -125,7 +125,27 @@ const frameworkList: Framework[] = [
     },
     defaultRoutes: [
       {
-        src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)',
+        src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
         headers: { 'cache-control': 'max-age=31536000, immutable' },
         continue: true,
       },
@@ -205,7 +225,7 @@ const frameworkList: Framework[] = [
         continue: true,
       },
       {
-        src: '^/(img|js|css|fonts|media)/.*',
+        src: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
         headers: { 'cache-control': 'max-age=31536000, immutable' },
         continue: true,
       },

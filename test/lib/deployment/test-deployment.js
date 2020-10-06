@@ -6,7 +6,7 @@ const glob = require('util').promisify(require('glob'));
 const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
-const { nowDeploy } = require('./now-deploy.js');
+const { nowDeploy, fileModeSymbol } = require('./now-deploy.js');
 
 async function packAndDeploy(builderPath) {
   await spawnAsync('npm', ['--loglevel', 'warn', 'pack'], {
@@ -37,6 +37,7 @@ async function testDeployment(
   const bodies = globResult.reduce((b, f) => {
     const r = path.relative(fixturePath, f);
     b[r] = fs.readFileSync(f);
+    b[r][fileModeSymbol] = fs.statSync(f).mode;
     return b;
   }, {});
 

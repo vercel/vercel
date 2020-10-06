@@ -1,8 +1,7 @@
 import chalk from 'chalk';
-import printf from 'printf';
 
 const printLine = (data, sizes) =>
-  data.reduce((line, col, i) => line + printf(`%-${sizes[i]}s`, col), '');
+  data.reduce((line, col, i) => line + col.padEnd(sizes[i]), '');
 
 // Print a table
 export default (fieldNames = [], data = [], margins = []) => {

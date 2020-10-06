@@ -17,11 +17,3 @@ To get started with Jekyll for deployment with Vercel, you can use the [Jekyll C
 ```shell
 $ jekyll new my-blog
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Jekyll project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

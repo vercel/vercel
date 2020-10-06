@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import plural from 'pluralize';
 import table from 'text-table';
 import Now from '../../util';
 import Client from '../../util/client.ts';
@@ -52,21 +51,17 @@ export default async function ls(ctx, opts, args, output) {
   const lsStamp = stamp();
   let cancelWait;
 
-  if (args.length > 1) {
+  if (args.length > 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('alias ls [alias]')}`
+        `${getCommandName('alias ls')}`
       )}`
     );
     return 1;
   }
 
   cancelWait = output.spinner(
-    args[0]
-      ? `Fetching alias details for "${args[0]}" under ${chalk.bold(
-          contextName
-        )}`
-      : `Fetching aliases under ${chalk.bold(contextName)}`
+    `Fetching aliases under ${chalk.bold(contextName)}`
   );
 
   const { aliases, pagination } = await getAliases(
@@ -76,32 +71,8 @@ export default async function ls(ctx, opts, args, output) {
   );
   if (cancelWait) cancelWait();
 
-  if (args[0]) {
-    const alias = aliases.find(
-      item => item.uid === args[0] || item.alias === args[0]
-    );
-    if (!alias) {
-      output.error(`Could not match path alias for: ${args[0]}`);
-      now.close();
-      return 1;
-    }
-
-    if (opts['--json']) {
-      console.log(JSON.stringify({ rules: alias.rules }, null, 2));
-    } else {
-      const rules = alias.rules || [];
-      output.log(
-        `${rules.length} path alias ${plural(
-          'rule',
-          rules.length
-        )} found under ${chalk.bold(contextName)} ${lsStamp()}`
-      );
-      output.print(`${printPathAliasTable(rules)}\n`);
-    }
-  } else {
-    output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
-    console.log(printAliasTable(aliases));
-  }
+  output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
+  console.log(printAliasTable(aliases));
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
@@ -121,14 +92,10 @@ function printAliasTable(aliases) {
     [
       ['source', 'url', 'age'].map(h => chalk.gray(h)),
       ...aliases.map(a => [
-        a.rules && a.rules.length
-          ? chalk.cyan(`[${plural('rule', a.rules.length, true)}]`)
-          : // for legacy reasons, we might have situations
-          // where the deployment was deleted and the alias
-          // not collected appropriately, and we need to handle it
-          a.deployment && a.deployment.url
-          ? a.deployment.url
-          : chalk.gray('–'),
+        // for legacy reasons, we might have situations
+        // where the deployment was deleted and the alias
+        // not collected appropriately, and we need to handle it
+        a.deployment && a.deployment.url ? a.deployment.url : chalk.gray('–'),
         a.alias,
         ms(Date.now() - new Date(a.createdAt)),
       ]),
@@ -139,22 +106,4 @@ function printAliasTable(aliases) {
       stringLength: strlen,
     }
   ).replace(/^/gm, '  ')}\n\n`;
-}
-
-function printPathAliasTable(rules) {
-  const header = [['pathname', 'method', 'dest'].map(s => chalk.gray(s))];
-  return `${table(
-    header.concat(
-      rules.map(rule => [
-        rule.pathname ? rule.pathname : chalk.cyan('[fallthrough]'),
-        rule.method ? rule.method : '*',
-        rule.dest,
-      ])
-    ),
-    {
-      align: ['l', 'l', 'l', 'l'],
-      hsep: ' '.repeat(6),
-      stringLength: strlen,
-    }
-  ).replace(/^(.*)/gm, '  $1')}\n`;
 }

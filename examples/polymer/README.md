@@ -19,11 +19,3 @@ To get started with Polymer deployed with Vercel, you can use the [Polymer CLI](
 ```shell
 $ polymer init
 ```
-
-### Deploying From Your Terminal
-
-You can deploy your new Polymer project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```

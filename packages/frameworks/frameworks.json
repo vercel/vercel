@@ -7,6 +7,7 @@
     "tagline": "Blitz.js: The Fullstack React Framework",
     "description": "A brand new Blitz.js app - the result of running `npx blitz new`.",
     "website": "https://blitzjs.com",
+    "useRuntime": { "src": "package.json", "use": "@vercel/next" },
     "detectors": {
       "every": [
         {
@@ -36,6 +37,7 @@
     "description": "A Next.js app and a Serverless Function API.",
     "website": "https://nextjs.org",
     "sort": 1,
+    "useRuntime": { "src": "package.json", "use": "@vercel/next" },
     "detectors": {
       "every": [
         {
@@ -57,7 +59,7 @@
     }
   },
   {
-    "name": "Gatsby",
+    "name": "Gatsby.js",
     "slug": "gatsby",
     "demo": "https://gatsby.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gatsby.svg",
@@ -259,7 +261,7 @@
     }
   },
   {
-    "name": "Ember",
+    "name": "Ember.js",
     "slug": "ember",
     "demo": "https://ember.now-examples.now.sh",
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ember.svg",
@@ -690,6 +692,8 @@
     "tagline": "RedwoodJS is a full-stack framework for the Jamstack.",
     "description": "A RedwoodJS app, bootstraped with create-redwood-app.",
     "website": "https://redwoodjs.com",
+    "useRuntime": { "src": "package.json", "use": "@vercel/redwood" },
+    "ignoreRuntimes": ["@vercel/node"],
     "detectors": {
       "every": [
         {
@@ -700,13 +704,13 @@
     },
     "settings": {
       "buildCommand": {
-        "value": "yarn rw db up --no-db-client --auto-approve && yarn rw build"
+        "value": "yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up"
       },
       "devCommand": {
         "value": "yarn rw dev --fwd=\"--port=$PORT --open=false\""
       },
       "outputDirectory": {
-        "value": "RedwoodJS default"
+        "placeholder": "RedwoodJS default"
       }
     }
   },

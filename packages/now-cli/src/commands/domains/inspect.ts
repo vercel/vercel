@@ -71,7 +71,7 @@ export default async function inspect(
   output.debug(`Fetching domain info`);
 
   const cancelWait = wait(
-    `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
+    `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`
   );
 
   const information = await fetchInformation({
@@ -102,21 +102,19 @@ export default async function inspect(
     `    ${chalk.cyan('Registrar')}\t\t\t${getDomainRegistrar(domain)}\n`
   );
   output.print(
-    `    ${chalk.cyan('Expires At')}\t\t\t${formatDate(domain.expiresAt)}\n`
+    `    ${chalk.cyan('Expiration Date')}\t\t${formatDate(domain.expiresAt)}\n`
   );
-  output.print(`    ${chalk.cyan('Edge Network')}\t\t${true}\n`);
-
-  if (renewalPrice && domain.boughtAt) {
-    output.print(
-      `    ${chalk.cyan('Renewal Price')}\t\t$${renewalPrice} USD\n`
-    );
-  }
-
   output.print(
     `    ${chalk.cyan('Creator')}\t\t\t${domain.creator.username}\n`
   );
   output.print(
     `    ${chalk.cyan('Created At')}\t\t\t${formatDate(domain.createdAt)}\n`
+  );
+  output.print(`    ${chalk.cyan('Edge Network')}\t\tyes\n`);
+  output.print(
+    `    ${chalk.cyan('Renewal Price')}\t\t${
+      domain.boughtAt && renewalPrice ? `$${renewalPrice} USD` : chalk.gray('-')
+    }\n`
   );
 
   output.print('\n');
@@ -164,7 +162,7 @@ export default async function inspect(
 
   if (domainConfig.misconfigured) {
     output.warn(
-      `This domain is not configured properly. To configure it you should either:`,
+      `This Domain is not configured properly. To configure it you should either:`,
       null,
       null,
       null,

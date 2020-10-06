@@ -6,13 +6,13 @@ import { isIP } from 'net';
 import { join, resolve, delimiter } from 'path';
 import _execa from 'execa';
 import fetch from 'node-fetch';
-import sleep from 'then-sleep';
 import retry from 'async-retry';
 import { satisfies } from 'semver';
 import { getDistTag } from '../../src/util/get-dist-tag';
 import { version as cliVersion } from '../../package.json';
-import { fetchTokenWithRetry } from '../../../../test/lib/deployment/now-deploy';
+import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
@@ -245,7 +245,7 @@ function testFixtureStdio(
     const cwd = isExample
       ? exampleAbsolute(directory)
       : fixtureAbsolute(directory);
-    const token = await fetchTokenWithRetry();
+    const token = await fetchCachedToken();
     let deploymentUrl;
 
     // Deploy fixture and link project
@@ -1177,6 +1177,14 @@ test(
     await testPath(200, '/support', /Contact Page/);
     // TODO: Fix this test assertion that fails intermittently
     // await testPath(404, '/nothing', /Custom Next 404/);
+  })
+);
+
+test(
+  '[vercel dev] 10a-nextjs-routes',
+  testFixtureStdio('10a-nextjs-routes', async testPath => {
+    await testPath(200, '/', /Next.js with routes/m);
+    await testPath(200, '/hello', /Hello Routes/m);
   })
 );
 
