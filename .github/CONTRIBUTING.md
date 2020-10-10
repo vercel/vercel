@@ -73,8 +73,8 @@ The logs of this deployment will contain the actual error which may help you to 
 Some of the Builders use `@vercel/nft` to tree-shake files before deployment. If you suspect an error with this tree-shaking mechanism, you can create the following script in your project:
 
 ```js
-const trace = require('@vercel/nft');
-trace(['path/to/entrypoint.js'], {
+const { nodeFileTrace } = require('@vercel/nft');
+nodeFileTrace(['path/to/entrypoint.js'], {
   ts: true,
   mixedModules: true,
 })
