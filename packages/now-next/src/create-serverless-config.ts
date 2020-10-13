@@ -59,7 +59,7 @@ export default async function createServerlessConfig(
 
   const primaryConfigPath = path.join(entryPath, 'next.config.js');
   const secondaryConfigPath = path.join(workPath, 'next.config.js');
-  const backupConfigName = `next.config.original.${Date.now()}.js`;
+  const backupConfigName = `next.config.__vercel_builder_backup__.js`;
 
   const hasPrimaryConfig = fs.existsSync(primaryConfigPath);
   const hasSecondaryConfig = fs.existsSync(secondaryConfigPath);
