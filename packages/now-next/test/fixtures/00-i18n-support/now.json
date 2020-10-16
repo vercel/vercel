@@ -10,6 +10,94 @@
     {
       "path": "/non-existent",
       "status": 404
+    },
+
+    {
+      "path": "/hello.txt",
+      "status": 200,
+      "mustContain": "hello world!"
+    },
+
+    {
+      "path": "/gsp",
+      "status": 200,
+      "mustContain": "gsp page"
+    },
+    {
+      "path": "/gsp",
+      "status": 200,
+      "mustContain": ">en-US<"
+    },
+    {
+      "path": "/en/gsp",
+      "status": 200,
+      "mustContain": "gsp page"
+    },
+    {
+      "path": "/en/gsp",
+      "status": 200,
+      "mustContain": ">en<"
+    },
+    {
+      "path": "/nl/gsp",
+      "status": 200,
+      "mustContain": "gsp page"
+    },
+    {
+      "path": "/nl/gsp",
+      "status": 200,
+      "mustContain": ">nl<"
+    },
+    {
+      "path": "/fr/gsp",
+      "status": 200,
+      "mustContain": "gsp page"
+    },
+    {
+      "path": "/fr/gsp",
+      "status": 200,
+      "mustContain": ">fr<"
+    },
+
+    {
+      "path": "/gssp",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/gssp",
+      "status": 200,
+      "mustContain": ">en-US<"
+    },
+    {
+      "path": "/en/gssp",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/en/gssp",
+      "status": 200,
+      "mustContain": ">en<"
+    },
+    {
+      "path": "/nl/gssp",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/nl/gssp",
+      "status": 200,
+      "mustContain": ">nl<"
+    },
+    {
+      "path": "/fr/gssp",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/fr/gssp",
+      "status": 200,
+      "mustContain": ">fr<"
     }
   ]
 }
