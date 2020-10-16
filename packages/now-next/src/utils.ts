@@ -504,8 +504,10 @@ export async function getDynamicRoutes(
 
 type ImagesManifest = {
   version: number;
-  sizes: number[];
-  domains: string[];
+  images: {
+    sizes: number[];
+    domains: string[];
+  };
 };
 
 export async function getImagesManifest(

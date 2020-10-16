@@ -526,18 +526,26 @@ export const build = async ({
   if (imagesManifest) {
     switch (imagesManifest.version) {
       case 1: {
-        if (!Array.isArray(imagesManifest.domains)) {
+        if (!imagesManifest.images) {
           throw new NowBuildError({
-            code: 'NEXT_IMAGES_DOMAINS',
+            code: 'NEXT_IMAGES_MISSING',
             message:
-              '"images.domains" must be an array. Contact support if this continues to happen.',
+              'image-manifest.json "images" is required. Contact support if this continues to happen.',
           });
         }
-        if (!Array.isArray(imagesManifest.sizes)) {
+        const { images } = imagesManifest;
+        if (!Array.isArray(images.domains)) {
           throw new NowBuildError({
             code: 'NEXT_IMAGES_DOMAINS',
             message:
-              '"images.sizes" must be an array. Contact support if this continues to happen.',
+              'image-manifest.json "images.domains" must be an array. Contact support if this continues to happen.',
+          });
+        }
+        if (!Array.isArray(images.sizes)) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_DOMAINS',
+            message:
+              'image-manifest.json "images.sizes" must be an array. Contact support if this continues to happen.',
           });
         }
         break;
@@ -598,10 +606,10 @@ export const build = async ({
 
     return {
       output,
-      images: imagesManifest
+      images: imagesManifest?.images
         ? {
-            domains: imagesManifest.domains,
-            sizes: imagesManifest.sizes,
+            domains: imagesManifest.images.domains,
+            sizes: imagesManifest.images.sizes,
           }
         : undefined,
       routes: [
@@ -1776,10 +1784,10 @@ export const build = async ({
       ...staticFiles,
       ...staticDirectoryFiles,
     },
-    images: imagesManifest
+    images: imagesManifest?.images
       ? {
-          domains: imagesManifest.domains,
-          sizes: imagesManifest.sizes,
+          domains: imagesManifest.images.domains,
+          sizes: imagesManifest.images.sizes,
         }
       : undefined,
     /*
