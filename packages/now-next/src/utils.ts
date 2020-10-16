@@ -502,6 +502,38 @@ export async function getDynamicRoutes(
   return routes;
 }
 
+type ImagesManifest = {
+  version: number;
+  images: {
+    sizes: number[];
+    domains: string[];
+  };
+};
+
+export async function getImagesManifest(
+  entryPath: string,
+  outputDirectory: string
+): Promise<ImagesManifest | undefined> {
+  const pathImagesManifest = path.join(
+    entryPath,
+    outputDirectory,
+    'images-manifest.json'
+  );
+
+  const hasImagesManifest = await fs
+    .access(pathImagesManifest)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasImagesManifest) {
+    return undefined;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const imagesManifest: ImagesManifest = require(pathImagesManifest);
+  return imagesManifest;
+}
+
 function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
   // Remove any env vars from `removeEnv`
   // that are not present in the `addEnv`

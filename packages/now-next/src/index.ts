@@ -39,6 +39,7 @@ import {
   getDynamicRoutes,
   getExportIntent,
   getExportStatus,
+  getImagesManifest,
   getNextConfig,
   getPathsInside,
   getPrerenderManifest,
@@ -219,6 +220,7 @@ export const build = async ({
   meta = {} as BuildParamsMeta,
 }: BuildParamsType): Promise<{
   routes: Route[];
+  images?: { domains: string[]; sizes: number[] };
   output: Files;
   watch?: string[];
   childProcesses: ChildProcess[];
@@ -302,6 +304,7 @@ export const build = async ({
 
     return {
       output: {},
+      images: undefined,
       routes: await getRoutes(
         entryPath,
         entryDirectory,
@@ -420,6 +423,7 @@ export const build = async ({
     outputDirectory,
     nextVersion
   );
+  const imagesManifest = await getImagesManifest(entryPath, outputDirectory);
   const prerenderManifest = await getPrerenderManifest(entryPath);
   const headers: Route[] = [];
   const rewrites: Route[] = [];
@@ -519,6 +523,44 @@ export const build = async ({
     }
   }
 
+  if (imagesManifest) {
+    switch (imagesManifest.version) {
+      case 1: {
+        if (!imagesManifest.images) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_MISSING',
+            message:
+              'image-manifest.json "images" is required. Contact support if this continues to happen.',
+          });
+        }
+        const { images } = imagesManifest;
+        if (!Array.isArray(images.domains)) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_DOMAINS',
+            message:
+              'image-manifest.json "images.domains" must be an array. Contact support if this continues to happen.',
+          });
+        }
+        if (!Array.isArray(images.sizes)) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_DOMAINS',
+            message:
+              'image-manifest.json "images.sizes" must be an array. Contact support if this continues to happen.',
+          });
+        }
+        break;
+      }
+      default: {
+        throw new NowBuildError({
+          code: 'NEXT_IMAGES_VERSION_UNKNOWN',
+          message:
+            'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
+            'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
+        });
+      }
+    }
+  }
+
   const userExport = await getExportStatus(entryPath);
 
   if (userExport) {
@@ -564,6 +606,12 @@ export const build = async ({
 
     return {
       output,
+      images: imagesManifest?.images
+        ? {
+            domains: imagesManifest.images.domains,
+            sizes: imagesManifest.images.sizes,
+          }
+        : undefined,
       routes: [
         // User headers
         ...headers,
@@ -1736,6 +1784,12 @@ export const build = async ({
       ...staticFiles,
       ...staticDirectoryFiles,
     },
+    images: imagesManifest?.images
+      ? {
+          domains: imagesManifest.images.domains,
+          sizes: imagesManifest.images.sizes,
+        }
+      : undefined,
     /*
       Desired routes order
       - Runtime headers
