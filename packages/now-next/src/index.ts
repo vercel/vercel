@@ -1952,11 +1952,27 @@ export const build = async ({
         : []),
 
       // Make sure to 404 for the /404 path itself
-      {
-        src: path.join('/', entryDirectory, '404'),
-        status: 404,
-        continue: true,
-      },
+      ...(i18n
+        ? [
+            {
+              src: `${path.join(
+                '/',
+                entryDirectory,
+                '/'
+              )}(?:${i18n.locales
+                .map(locale => escapeStringRegexp(locale))
+                .join('|')})?[/]?404`,
+              status: 404,
+              continue: true,
+            },
+          ]
+        : [
+            {
+              src: path.join('/', entryDirectory, '404'),
+              status: 404,
+              continue: true,
+            },
+          ]),
 
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
@@ -2042,39 +2058,60 @@ export const build = async ({
             // Custom Next.js 404 page
             { handle: 'error' } as Handler,
 
-            isSharedLambdas
-              ? {
-                  src: path.join('/', entryDirectory, '.*'),
-                  // if static 404 is not present but we have pages/404.js
-                  // it is a lambda due to _app getInitialProps
-                  dest: path.join(
-                    '/',
-                    (static404Page
-                      ? static404Page
-                      : pageLambdaMap[page404Path]) as string
-                  ),
-
-                  status: 404,
-                  headers: {
-                    'x-nextjs-page': page404Path,
+            ...(i18n && static404Page
+              ? [
+                  {
+                    src: `${path.join(
+                      '/',
+                      entryDirectory,
+                      '/'
+                    )}(?<nextLocale>${i18n.locales
+                      .map(locale => escapeStringRegexp(locale))
+                      .join('|')})(/.*|$)`,
+                    dest: '/$nextLocale/404',
+                    status: 404,
                   },
-                }
-              : {
-                  src: path.join('/', entryDirectory, '.*'),
-                  // if static 404 is not present but we have pages/404.js
-                  // it is a lambda due to _app getInitialProps
-                  dest: static404Page
-                    ? path.join('/', static404Page)
-                    : path.join(
-                        '/',
-                        entryDirectory,
-                        hasPages404 &&
-                          lambdas[path.join('./', entryDirectory, '404')]
-                          ? '404'
-                          : '_error'
-                      ),
-                  status: 404,
-                },
+                  {
+                    src: path.join('/', entryDirectory, '.*'),
+                    dest: `/${i18n.defaultLocale}/404`,
+                    status: 404,
+                  },
+                ]
+              : [
+                  isSharedLambdas
+                    ? {
+                        src: path.join('/', entryDirectory, '.*'),
+                        // if static 404 is not present but we have pages/404.js
+                        // it is a lambda due to _app getInitialProps
+                        dest: path.join(
+                          '/',
+                          (static404Page
+                            ? static404Page
+                            : pageLambdaMap[page404Path]) as string
+                        ),
+
+                        status: 404,
+                        headers: {
+                          'x-nextjs-page': page404Path,
+                        },
+                      }
+                    : {
+                        src: path.join('/', entryDirectory, '.*'),
+                        // if static 404 is not present but we have pages/404.js
+                        // it is a lambda due to _app getInitialProps
+                        dest: static404Page
+                          ? path.join('/', static404Page)
+                          : path.join(
+                              '/',
+                              entryDirectory,
+                              hasPages404 &&
+                                lambdas[path.join('./', entryDirectory, '404')]
+                                ? '404'
+                                : '_error'
+                            ),
+                        status: 404,
+                      },
+                ]),
           ]),
     ],
     watch: [],

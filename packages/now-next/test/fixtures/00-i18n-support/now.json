@@ -11,6 +11,31 @@
       "path": "/non-existent",
       "status": 404
     },
+    {
+      "path": "/fr/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"fr\""
+    },
+    {
+      "path": "/en/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"en\""
+    },
+    {
+      "path": "/en-US/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"en-US\""
+    },
+    {
+      "path": "/nl/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"nl\""
+    },
+    {
+      "path": "/nl-NL/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"nl-NL\""
+    },
 
     {
       "path": "/hello.txt",
