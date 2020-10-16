@@ -42,6 +42,7 @@ describe('normalizeRoutes', () => {
           value: '$value',
           path: '$path',
           default: 'en',
+          cookie: 'NEXT_LOCALE',
         },
       },
       {

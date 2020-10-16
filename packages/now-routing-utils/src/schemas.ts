@@ -60,6 +60,10 @@ export const routesSchema = {
             type: 'string',
             maxLength: 4096,
           },
+          cookie: {
+            type: 'string',
+            maxLength: 4096,
+          },
           default: {
             type: 'string',
             maxLength: 4096,
