@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "next": "https://github.com/ijjk/next-update-loader.git",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6"
+  }
+}

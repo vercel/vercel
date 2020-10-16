@@ -19,6 +19,7 @@ import {
 import { nodeFileTrace, NodeFileTraceReasons } from '@vercel/nft';
 import { Sema } from 'async-sema';
 import { ChildProcess, fork } from 'child_process';
+// escape-string-regexp version must match Next.js version
 import escapeStringRegexp from 'escape-string-regexp';
 import findUp from 'find-up';
 import { lstat, pathExists, readFile, remove, writeFile } from 'fs-extra';
@@ -31,6 +32,7 @@ import buildUtils from './build-utils';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import {
+  addLocale,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
   EnvConfig,
@@ -46,6 +48,7 @@ import {
   getRoutesManifest,
   getSourceFilePathFromPage,
   isDynamicRoute,
+  normalizeLocalePath,
   normalizePackageJson,
   normalizePage,
   PseudoLayer,
@@ -367,7 +370,7 @@ export const build = async ({
   }
 
   console.log('Installing dependencies...');
-  await runNpmInstall(entryPath, ['--prefer-offline'], spawnOpts, meta);
+  await runNpmInstall(entryPath, [], spawnOpts, meta);
 
   // Refetch Next version now that dependencies are installed.
   // This will now resolve the actual installed Next version,
@@ -428,6 +431,26 @@ export const build = async ({
   let dynamicRoutes: Route[] = [];
   // whether they have enabled pages/404.js as the custom 404 page
   let hasPages404 = false;
+  let buildId = '';
+  let escapedBuildId = '';
+
+  if (isLegacy || isSharedLambdas) {
+    try {
+      buildId = await readFile(
+        path.join(entryPath, outputDirectory, 'BUILD_ID'),
+        'utf8'
+      );
+      escapedBuildId = escapeStringRegexp(buildId);
+    } catch (err) {
+      console.error(
+        'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
+      );
+      throw new NowBuildError({
+        code: 'NOW_NEXT_NO_BUILD_ID',
+        message: 'Missing BUILD_ID',
+      });
+    }
+  }
 
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -458,7 +481,7 @@ export const build = async ({
               continue;
             }
 
-            dataRoutes.push({
+            const route = {
               src: (
                 dataRoute.namedDataRouteRegex || dataRoute.dataRouteRegex
               ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
@@ -477,7 +500,31 @@ export const build = async ({
                 }`
               ),
               check: true,
-            });
+            };
+
+            const { i18n } = routesManifest;
+
+            if (i18n) {
+              route.src = route.src.replace(
+                // we need to double escape the build ID here
+                // to replace it properly
+                `/${escapedBuildId}/`,
+                `/${escapedBuildId}/(?${
+                  ssgDataRoute ? '<nextLocale>' : ':'
+                }${i18n.locales
+                  .map(locale => escapeStringRegexp(locale))
+                  .join('|')})/`
+              );
+
+              // make sure to route to the correct prerender output
+              if (ssgDataRoute) {
+                route.dest = route.dest.replace(
+                  `/${buildId}/`,
+                  `/${buildId}/$nextLocale/`
+                );
+              }
+            }
+            dataRoutes.push(route);
           }
         }
 
@@ -645,12 +692,7 @@ export const build = async ({
 
   if (isLegacy) {
     debug('Running npm install --production...');
-    await runNpmInstall(
-      entryPath,
-      ['--prefer-offline', '--production'],
-      spawnOpts,
-      meta
-    );
+    await runNpmInstall(entryPath, ['--production'], spawnOpts, meta);
   }
 
   if (process.env.NPM_AUTH_TOKEN) {
@@ -667,27 +709,7 @@ export const build = async ({
   const staticPages: { [key: string]: FileFsRef } = {};
   const dynamicPages: string[] = [];
   let static404Page: string | undefined;
-  let buildId = '';
   let page404Path = '';
-  let escapedBuildId = '';
-
-  if (isLegacy || isSharedLambdas) {
-    try {
-      buildId = await readFile(
-        path.join(entryPath, outputDirectory, 'BUILD_ID'),
-        'utf8'
-      );
-      escapedBuildId = escapeStringRegexp(buildId);
-    } catch (err) {
-      console.error(
-        'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
-      );
-      throw new NowBuildError({
-        code: 'NOW_NEXT_NO_BUILD_ID',
-        message: 'Missing BUILD_ID',
-      });
-    }
-  }
 
   if (isLegacy) {
     const filesAfterBuild = await glob('**', entryPath);
@@ -796,7 +818,10 @@ export const build = async ({
 
     Object.keys(staticPageFiles).forEach((page: string) => {
       const pathname = page.replace(/\.html$/, '');
-      const routeName = normalizePage(pathname);
+      const routeName = normalizeLocalePath(
+        normalizePage(pathname),
+        routesManifest?.i18n?.locales
+      ).pathname;
 
       // Prerendered routes emit a `.html` file but should not be treated as a
       // static page.
@@ -828,6 +853,17 @@ export const build = async ({
         : staticPages[path.join(entryDirectory, '_errors/404')]
         ? path.join(entryDirectory, '_errors/404')
         : undefined;
+
+    // TODO: locale specific 404s
+    const { i18n } = routesManifest || {};
+
+    if (!static404Page && i18n) {
+      static404Page = staticPages[
+        path.join(entryDirectory, i18n.defaultLocale, '404')
+      ]
+        ? path.join(entryDirectory, i18n.defaultLocale, '404')
+        : undefined;
+    }
 
     // > 1 because _error is a lambda but isn't used if a static 404 is available
     const pageKeys = Object.keys(pages);
@@ -1141,25 +1177,36 @@ export const build = async ({
           };
         }
 
-        const pageLambdaRoute: Route = {
-          src: `^${escapeStringRegexp(outputName).replace(
-            /\/index$/,
-            '(/|/index|)'
-          )}/?$`,
-          dest: `${path.join('/', currentLambdaGroup.lambdaIdentifier)}`,
-          headers: {
-            'x-nextjs-page': outputName,
-          },
-          check: true,
+        const addPageLambdaRoute = (escapedOutputPath: string) => {
+          const pageLambdaRoute: Route = {
+            src: `^${escapedOutputPath.replace(/\/index$/, '(/|/index|)')}/?$`,
+            dest: `${path.join('/', currentLambdaGroup.lambdaIdentifier)}`,
+            headers: {
+              'x-nextjs-page': outputName,
+            },
+            check: true,
+          };
+
+          // we only need to add the additional routes if shared lambdas
+          // is enabled
+          if (routeIsDynamic) {
+            dynamicPageLambdaRoutes.push(pageLambdaRoute);
+            dynamicPageLambdaRoutesMap[outputName] = pageLambdaRoute;
+          } else {
+            pageLambdaRoutes.push(pageLambdaRoute);
+          }
         };
 
-        // we only need to add the additional routes if shared lambdas
-        // is enabled
-        if (routeIsDynamic) {
-          dynamicPageLambdaRoutes.push(pageLambdaRoute);
-          dynamicPageLambdaRoutesMap[outputName] = pageLambdaRoute;
+        const { i18n } = routesManifest || {};
+
+        if (i18n) {
+          addPageLambdaRoute(
+            `[/]?(?:${i18n.locales
+              .map(locale => escapeStringRegexp(locale))
+              .join('|')})?${escapeStringRegexp(outputName)}`
+          );
         } else {
-          pageLambdaRoutes.push(pageLambdaRoute);
+          addPageLambdaRoute(escapeStringRegexp(outputName));
         }
 
         if (page === '_error.js' || (hasPages404 && page === '404.js')) {
@@ -1288,7 +1335,32 @@ export const build = async ({
       new Set(prerenderManifest.omittedRoutes)
     ).then(arr =>
       arr.map(route => {
-        route.src = route.src.replace('^', `^${dynamicPrefix}`);
+        const { i18n } = routesManifest || {};
+
+        if (i18n) {
+          const { pathname } = url.parse(route.dest!);
+          const isFallback = prerenderManifest.fallbackRoutes[pathname!];
+
+          route.src = route.src.replace(
+            '^',
+            `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
+              isFallback ? '<nextLocale>' : ':'
+            }${i18n.locales
+              .map(locale => escapeStringRegexp(locale))
+              .join('|')})?`
+          );
+
+          if (isFallback) {
+            // ensure destination has locale prefix to match prerender output
+            // path so that the prerender object is used
+            route.dest = route.dest!.replace(
+              `${path.join('/', entryDirectory, '/')}`,
+              `${path.join('/', entryDirectory, '$nextLocale', '/')}`
+            );
+          }
+        } else {
+          route.src = route.src.replace('^', `^${dynamicPrefix}`);
+        }
         return route;
       })
     );
@@ -1321,6 +1393,31 @@ export const build = async ({
               /\/\/ __LAUNCHER_PAGE_HANDLER__/g,
               `
               const url = require('url');
+
+              ${
+                routesManifest?.i18n
+                  ? `
+                  function stripLocalePath(pathname) {
+                  // first item will be empty string from splitting at first char
+                  const pathnameParts = pathname.split('/')
+
+                  ;(${JSON.stringify(
+                    routesManifest.i18n.locales
+                  )}).some((locale) => {
+                    if (pathnameParts[1].toLowerCase() === locale.toLowerCase()) {
+                      pathnameParts.splice(1, 1)
+                      pathname = pathnameParts.join('/') || '/'
+                      return true
+                    }
+                    return false
+                  })
+
+                  return pathname
+                }
+                `
+                  : `function stripLocalePath(pathname) { return pathname }`
+              }
+
               page = function(req, res) {
                 try {
                   const pages = {
@@ -1345,7 +1442,7 @@ export const build = async ({
                   if (!toRender) {
                     try {
                       const { pathname } = url.parse(req.url)
-                      toRender = pathname.replace(/\\/$/, '')
+                      toRender = stripLocalePath(pathname).replace(/\\/$/, '')
                     } catch (_) {
                       // handle failing to parse url
                       res.statusCode = 400
@@ -1364,6 +1461,7 @@ export const build = async ({
                         .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
                         .replace(/\\.json$/, '')
 
+                      toRender = stripLocalePath(toRender)
                       currentPage = pages[toRender]
                     }
 
@@ -1474,7 +1572,15 @@ export const build = async ({
     let prerenderGroup = 1;
     const onPrerenderRoute = (
       routeKey: string,
-      { isBlocking, isFallback }: { isBlocking: boolean; isFallback: boolean }
+      {
+        isBlocking,
+        isFallback,
+        locale,
+      }: {
+        isBlocking: boolean;
+        isFallback: boolean;
+        locale?: string;
+      }
     ) => {
       if (isBlocking && isFallback) {
         throw new NowBuildError({
@@ -1484,7 +1590,21 @@ export const build = async ({
       }
 
       // Get the route file as it'd be mounted in the builder output
-      const routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
+      let routeFileNoExt = routeKey === '/' ? '/index' : routeKey;
+      const origRouteFileNoExt = routeFileNoExt;
+
+      const nonDynamicSsg =
+        !isFallback &&
+        !isBlocking &&
+        !prerenderManifest.staticRoutes[routeKey].srcRoute;
+
+      // if there isn't a srcRoute then it's a non-dynamic SSG page and
+      if (nonDynamicSsg || isFallback) {
+        routeFileNoExt = addLocale(
+          routeFileNoExt,
+          locale || routesManifest?.i18n?.defaultLocale
+        );
+      }
 
       const htmlFsRef = isBlocking
         ? // Blocking pages do not have an HTML fallback
@@ -1494,7 +1614,10 @@ export const build = async ({
               pagesDir,
               isFallback
                 ? // Fallback pages have a special file.
-                  prerenderManifest.fallbackRoutes[routeKey].fallback
+                  addLocale(
+                    prerenderManifest.fallbackRoutes[routeKey].fallback,
+                    locale || routesManifest?.i18n?.defaultLocale
+                  )
                 : // Otherwise, the route itself should exist as a static HTML
                   // file.
                   `${routeFileNoExt}.html`
@@ -1533,14 +1656,25 @@ export const build = async ({
       }
 
       const outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+      const outputPathPageOrig = path.posix.join(
+        entryDirectory,
+        origRouteFileNoExt
+      );
       let lambda: undefined | Lambda;
-      const outputPathData = path.posix.join(entryDirectory, dataRoute);
+      let outputPathData = path.posix.join(entryDirectory, dataRoute);
+
+      if (nonDynamicSsg || isFallback) {
+        outputPathData = outputPathData.replace(
+          new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
+          `${routeFileNoExt}.json`
+        );
+      }
 
       if (isSharedLambdas) {
         const outputSrcPathPage = path.join(
           '/',
           srcRoute == null
-            ? outputPathPage
+            ? outputPathPageOrig
             : path.join(entryDirectory, srcRoute === '/' ? '/index' : srcRoute)
         );
 
@@ -1549,7 +1683,7 @@ export const build = async ({
       } else {
         const outputSrcPathPage =
           srcRoute == null
-            ? outputPathPage
+            ? outputPathPageOrig
             : path.posix.join(
                 entryDirectory,
                 srcRoute === '/' ? '/index' : srcRoute
@@ -1597,6 +1731,18 @@ export const build = async ({
         });
 
         ++prerenderGroup;
+      }
+
+      if ((nonDynamicSsg || isFallback) && routesManifest?.i18n && !locale) {
+        // load each locale
+        for (const locale of routesManifest.i18n.locales) {
+          if (locale === routesManifest.i18n.defaultLocale) continue;
+          onPrerenderRoute(routeKey, {
+            isBlocking,
+            isFallback,
+            locale,
+          });
+        }
       }
     };
 
@@ -1726,6 +1872,8 @@ export const build = async ({
     }
   }
 
+  const { i18n } = routesManifest || {};
+
   return {
     output: {
       ...publicDirectoryFiles,
@@ -1752,6 +1900,56 @@ export const build = async ({
 
       // redirects
       ...redirects,
+
+      ...(i18n
+        ? [
+            // Handle auto-adding current default locale to path based on $wildcard
+            {
+              src: `^${path.join(
+                '/',
+                entryDirectory,
+                '/'
+              )}(?!(?:_next/.*|${i18n.locales
+                .map(locale => escapeStringRegexp(locale))
+                .join('|')})(?:/.*|$))(.*)$`,
+              dest: '$wildcard/$1',
+              continue: true,
+            },
+
+            // Handle redirecting to locale paths
+            // {
+            //   src: "/(?:en/?|fr/?|zh/?|nl/?)?",
+            //   locale: {
+            //     redirect: {
+            //       en: "/",
+            //       fr: "/fr",
+            //       zh: "/zh",
+            //       nl: "/nl"
+            //     }
+            //   },
+            //   continue: true
+            // },
+
+            {
+              src: `^${path.join('/', entryDirectory)}$`,
+              dest: `/${i18n.defaultLocale}`,
+              continue: true,
+            },
+
+            // Auto-prefix non-locale path with default locale
+            {
+              src: `^${path.join(
+                '/',
+                entryDirectory,
+                '/'
+              )}(?!(?:_next/.*|${i18n.locales
+                .map(locale => escapeStringRegexp(locale))
+                .join('|')})(?:/.*|$))(.*)$`,
+              dest: `/${i18n.defaultLocale}/$1`,
+              continue: true,
+            },
+          ]
+        : []),
 
       // Make sure to 404 for the /404 path itself
       {
@@ -1787,6 +1985,22 @@ export const build = async ({
         check: true,
         dest: '$0',
       },
+
+      // remove default locale prefix to check public files
+      ...(i18n
+        ? [
+            {
+              src: `${path.join(
+                '/',
+                entryDirectory,
+                i18n.defaultLocale,
+                '/'
+              )}(.*)`,
+              dest: `${path.join('/', entryDirectory, '/')}$1`,
+              check: true,
+            },
+          ]
+        : []),
 
       // routes that are called after each rewrite or after routes
       // if there no rewrites
