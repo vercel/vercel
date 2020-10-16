@@ -330,6 +330,7 @@ export type RoutesManifest = {
     defaultLocale: string;
     locales: string[];
     domains?: Array<{
+      http?: boolean;
       domain: string;
       defaultLocale: string;
     }>;

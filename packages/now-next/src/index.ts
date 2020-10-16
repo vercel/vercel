@@ -223,6 +223,10 @@ export const build = async ({
 }: BuildParamsType): Promise<{
   routes: Route[];
   output: Files;
+  wildcard?: Array<{
+    domain: string;
+    value: string;
+  }>;
   watch?: string[];
   childProcesses: ChildProcess[];
 }> => {
@@ -1884,6 +1888,14 @@ export const build = async ({
       ...staticFiles,
       ...staticDirectoryFiles,
     },
+    wildcard: i18n?.domains
+      ? i18n?.domains.map(item => {
+          return {
+            domain: item.domain,
+            value: item.defaultLocale,
+          };
+        })
+      : undefined,
     /*
       Desired routes order
       - Runtime headers
@@ -1895,12 +1907,6 @@ export const build = async ({
       - Builder rewrites
     */
     routes: [
-      // headers
-      ...headers,
-
-      // redirects
-      ...redirects,
-
       ...(i18n
         ? [
             // Handle auto-adding current default locale to path based on $wildcard
@@ -1916,19 +1922,45 @@ export const build = async ({
               continue: true,
             },
 
+            // Handle redirecting to locale specific domains
+            ...(i18n.domains
+              ? [
+                  {
+                    src: '/',
+                    locale: {
+                      redirect: i18n.domains.reduce(
+                        (prev: Record<string, string>, item) => {
+                          prev[item.defaultLocale] = `http${
+                            item.http ? '' : 's'
+                          }://${item.domain}/`;
+                          return prev;
+                        },
+                        {}
+                      ),
+                      cookie: 'NEXT_LOCALE',
+                    },
+                    continue: true,
+                  } as any,
+                ]
+              : []),
+
             // Handle redirecting to locale paths
-            // {
-            //   src: "/(?:en/?|fr/?|zh/?|nl/?)?",
-            //   locale: {
-            //     redirect: {
-            //       en: "/",
-            //       fr: "/fr",
-            //       zh: "/zh",
-            //       nl: "/nl"
-            //     }
-            //   },
-            //   continue: true
-            // },
+            {
+              src: '/',
+              locale: {
+                redirect: i18n.locales.reduce(
+                  (prev: Record<string, string>, locale) => {
+                    prev[locale] =
+                      locale === i18n.defaultLocale ? `/` : `/${locale}`;
+                    return prev;
+                  },
+                  {}
+                ),
+                cookie: 'NEXT_LOCALE',
+                default: i18n.defaultLocale,
+              },
+              continue: true,
+            } as any,
 
             {
               src: `^${path.join('/', entryDirectory)}$`,
@@ -1950,6 +1982,12 @@ export const build = async ({
             },
           ]
         : []),
+
+      // headers
+      ...headers,
+
+      // redirects
+      ...redirects,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
@@ -2017,6 +2055,24 @@ export const build = async ({
             },
           ]
         : []),
+
+      // for non-shared lambdas remove locale prefix if present
+      // to allow checking for lambda
+      ...(isSharedLambdas || !i18n
+        ? []
+        : [
+            {
+              src: `${path.join(
+                '/',
+                entryDirectory,
+                '/'
+              )}(?:${i18n?.locales
+                .map(locale => escapeStringRegexp(locale))
+                .join('|')})/(.*)`,
+              dest: '/$1',
+              check: true,
+            },
+          ]),
 
       // routes that are called after each rewrite or after routes
       // if there no rewrites
