@@ -1940,7 +1940,7 @@ export const build = async ({
       ? i18n?.domains.map(item => {
           return {
             domain: item.domain,
-            value: item.defaultLocale,
+            value: `/${item.defaultLocale}`,
           };
         })
       : undefined,
