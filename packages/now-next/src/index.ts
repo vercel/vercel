@@ -455,7 +455,7 @@ export const build = async ({
       );
       throw new NowBuildError({
         code: 'NOW_NEXT_NO_BUILD_ID',
-        message: 'Missing BUILD_ID',
+        message: 'The BUILD_ID file was not found in the Output Directory. Did you forget to run "next build" in your Build Command?',
       });
     }
   }
