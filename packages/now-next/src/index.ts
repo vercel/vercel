@@ -1651,7 +1651,8 @@ export const build = async ({
       // if there isn't a srcRoute then it's a non-dynamic SSG page and
       if (nonDynamicSsg || isFallback) {
         routeFileNoExt = addLocaleOrDefault(
-          routeFileNoExt,
+          // root index files are located without folder/index.html
+          routeKey === '/' ? '' : routeFileNoExt,
           routesManifest,
           locale
         );
