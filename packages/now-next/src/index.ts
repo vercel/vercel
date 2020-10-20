@@ -1652,7 +1652,7 @@ export const build = async ({
       if (nonDynamicSsg || isFallback) {
         routeFileNoExt = addLocaleOrDefault(
           // root index files are located without folder/index.html
-          routeKey === '/' ? '' : routeFileNoExt,
+          routeFileNoExt,
           routesManifest,
           locale
         );
