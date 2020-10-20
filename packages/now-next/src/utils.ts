@@ -1102,7 +1102,14 @@ export function normalizeLocalePath(
   };
 }
 
-export function addLocale(pathname: string, locale?: string) {
+export function addLocaleOrDefault(
+  pathname: string,
+  routesManifest?: RoutesManifest,
+  locale?: string
+) {
+  if (!routesManifest?.i18n) return pathname;
+  if (!locale) locale = routesManifest.i18n.defaultLocale;
+
   return locale ? `/${locale}${pathname}` : pathname;
 }
 

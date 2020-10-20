@@ -32,7 +32,7 @@ import buildUtils from './build-utils';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import {
-  addLocale,
+  addLocaleOrDefault,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
   EnvConfig,
@@ -1652,9 +1652,10 @@ export const build = async ({
 
       // if there isn't a srcRoute then it's a non-dynamic SSG page and
       if (nonDynamicSsg || isFallback) {
-        routeFileNoExt = addLocale(
+        routeFileNoExt = addLocaleOrDefault(
           routeFileNoExt,
-          locale || routesManifest?.i18n?.defaultLocale
+          routesManifest,
+          locale
         );
       }
 
@@ -1666,9 +1667,10 @@ export const build = async ({
               pagesDir,
               isFallback
                 ? // Fallback pages have a special file.
-                  addLocale(
+                  addLocaleOrDefault(
                     prerenderManifest.fallbackRoutes[routeKey].fallback,
-                    locale || routesManifest?.i18n?.defaultLocale
+                    routesManifest,
+                    locale
                   )
                 : // Otherwise, the route itself should exist as a static HTML
                   // file.
