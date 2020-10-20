@@ -450,12 +450,10 @@ export const build = async ({
       );
       escapedBuildId = escapeStringRegexp(buildId);
     } catch (err) {
-      console.error(
-        'BUILD_ID not found in ".next". The "package.json" "build" script did not run "next build"'
-      );
       throw new NowBuildError({
         code: 'NOW_NEXT_NO_BUILD_ID',
-        message: 'The BUILD_ID file was not found in the Output Directory. Did you forget to run "next build" in your Build Command?',
+        message:
+          'The BUILD_ID file was not found in the Output Directory. Did you forget to run "next build" in your Build Command?',
       });
     }
   }
