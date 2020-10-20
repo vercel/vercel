@@ -326,6 +326,15 @@ export type RoutesManifest = {
     namedDataRouteRegex?: string;
     routeKeys?: { [named: string]: string };
   }>;
+  i18n?: {
+    defaultLocale: string;
+    locales: string[];
+    domains?: Array<{
+      http?: boolean;
+      domain: string;
+      defaultLocale: string;
+    }>;
+  };
 };
 
 export async function getRoutesManifest(
@@ -1064,6 +1073,44 @@ async function getSourceFilePathFromPage({
 
 function isDirectory(path: string) {
   return fs.existsSync(path) && fs.lstatSync(path).isDirectory();
+}
+
+export function normalizeLocalePath(
+  pathname: string,
+  locales?: string[]
+): {
+  detectedLocale?: string;
+  pathname: string;
+} {
+  let detectedLocale: string | undefined;
+  // first item will be empty string from splitting at first char
+  const pathnameParts = pathname.split('/');
+
+  (locales || []).some(locale => {
+    if (pathnameParts[1].toLowerCase() === locale.toLowerCase()) {
+      detectedLocale = locale;
+      pathnameParts.splice(1, 1);
+      pathname = pathnameParts.join('/') || '/';
+      return true;
+    }
+    return false;
+  });
+
+  return {
+    pathname,
+    detectedLocale,
+  };
+}
+
+export function addLocaleOrDefault(
+  pathname: string,
+  routesManifest?: RoutesManifest,
+  locale?: string
+) {
+  if (!routesManifest?.i18n) return pathname;
+  if (!locale) locale = routesManifest.i18n.defaultLocale;
+
+  return locale ? `/${locale}${pathname}` : pathname;
 }
 
 export {
