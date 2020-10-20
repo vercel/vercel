@@ -10,7 +10,7 @@ import {
   PrepareCacheOptions,
   Prerender,
 } from '@vercel/build-utils';
-import { Handler, Route } from '@vercel/routing-utils';
+import { Handler, Route, Source } from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
@@ -1969,22 +1969,27 @@ export const build = async ({
       ...headers,
 
       // redirects
-      ...redirects.map(redir => {
+      ...redirects.map(_redir => {
         if (i18n) {
+          const redir = _redir as Source;
           // detect the trailing slash redirect and make sure it's
           // kept above the wildcard mapping to prevent erroneous redirects
           // since non-continue routes come after continue the $wildcard
           // route will come before the redirect otherwise and if the
           // redirect is triggered it breaks locale mapping
+
+          const location =
+            redir.headers && (redir.headers.location || redir.headers.Location);
+
           if (
             redir.status === 308 &&
-            (redir.dest === '/$1' || redir.dest === '/$1/')
+            (location === '/$1' || location === '/$1/')
           ) {
             // we set continue true
-            (redir as any).continue = true;
+            redir.continue = true;
           }
         }
-        return redir;
+        return _redir;
       }),
 
       ...(i18n
