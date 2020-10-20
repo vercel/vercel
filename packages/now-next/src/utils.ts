@@ -1110,7 +1110,9 @@ export function addLocaleOrDefault(
   if (!routesManifest?.i18n) return pathname;
   if (!locale) locale = routesManifest.i18n.defaultLocale;
 
-  return locale ? `/${locale}${pathname}` : pathname;
+  return locale
+    ? `/${locale}${pathname === '/index' ? '' : pathname}`
+    : pathname;
 }
 
 export {
