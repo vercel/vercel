@@ -1658,6 +1658,10 @@ export const build = async ({
         );
       }
 
+      const isNotFound = prerenderManifest.notFoundRoutes.includes(
+        routeFileNoExt
+      );
+
       const htmlFsRef = isBlocking
         ? // Blocking pages do not have an HTML fallback
           null
@@ -1745,7 +1749,7 @@ export const build = async ({
         lambda = lambdas[outputSrcPathPage];
       }
 
-      if (initialRevalidate === false) {
+      if (!isNotFound && initialRevalidate === false) {
         if (htmlFsRef == null || jsonFsRef == null) {
           throw new NowBuildError({
             code: 'NEXT_HTMLFSREF_JSONFSREF',
@@ -1760,7 +1764,7 @@ export const build = async ({
         }
       }
 
-      if (prerenders[outputPathPage] == null) {
+      if (prerenders[outputPathPage] == null && initialRevalidate !== false) {
         if (lambda == null) {
           throw new NowBuildError({
             code: 'NEXT_MISSING_LAMBDA',
