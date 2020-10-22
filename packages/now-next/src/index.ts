@@ -1764,7 +1764,7 @@ export const build = async ({
         }
       }
 
-      if (prerenders[outputPathPage] == null && initialRevalidate !== false) {
+      if (prerenders[outputPathPage] == null && !isNotFound) {
         if (lambda == null) {
           throw new NowBuildError({
             code: 'NEXT_MISSING_LAMBDA',
