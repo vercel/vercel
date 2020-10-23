@@ -752,6 +752,8 @@ export type NextPrerenderedRoutes = {
   };
 
   omittedRoutes: string[];
+
+  notFoundRoutes: string[];
 };
 
 export async function getExportIntent(
@@ -842,6 +844,7 @@ export async function getPrerenderManifest(
       fallbackRoutes: {},
       bypassToken: null,
       omittedRoutes: [],
+      notFoundRoutes: [],
     };
   }
 
@@ -887,6 +890,7 @@ export async function getPrerenderManifest(
         preview: {
           previewModeId: string;
         };
+        notFoundRoutes?: string[];
       } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
   switch (manifest.version) {
@@ -901,6 +905,7 @@ export async function getPrerenderManifest(
         bypassToken:
           (manifest.preview && manifest.preview.previewModeId) || null,
         omittedRoutes: [],
+        notFoundRoutes: [],
       };
 
       routes.forEach(route => {
@@ -955,7 +960,12 @@ export async function getPrerenderManifest(
         fallbackRoutes: {},
         bypassToken: manifest.preview.previewModeId,
         omittedRoutes: [],
+        notFoundRoutes: [],
       };
+
+      if (manifest.notFoundRoutes) {
+        ret.notFoundRoutes.push(...manifest.notFoundRoutes);
+      }
 
       routes.forEach(route => {
         const {
@@ -1010,6 +1020,7 @@ export async function getPrerenderManifest(
         fallbackRoutes: {},
         bypassToken: null,
         omittedRoutes: [],
+        notFoundRoutes: [],
       };
     }
   }

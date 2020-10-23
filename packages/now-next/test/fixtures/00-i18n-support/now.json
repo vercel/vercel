@@ -310,6 +310,81 @@
       "path": "/fr/gssp/first",
       "status": 200,
       "mustContain": "slug\":\"first\""
+    },
+
+    // TODO: update when directory listing is disabled
+    // and these are proper 404s
+    {
+      "path": "/en/not-found",
+      "status": 200,
+      "mustContain": "Index of"
+    },
+    {
+      "path": "/nl/not-found",
+      "status": 200,
+      "mustContain": "Index of"
+    },
+    {
+      "path": "/en-US/not-found",
+      "status": 200,
+      "mustContain": "lang=\"en-US\""
+    },
+    {
+      "path": "/nl-NL/not-found",
+      "status": 200,
+      "mustContain": "lang=\"nl-NL\""
+    },
+    {
+      "path": "/fr/not-found",
+      "status": 200,
+      "mustContain": "lang=\"fr\""
+    },
+
+    // this will always be a 200 unless fallback: blocking is used
+    // since the static fallback page is served before the 404
+    // page is rendered
+    {
+      "path": "/en/not-found/fallback/first",
+      "status": 200,
+      "mustContain": "lang=\"en\""
+    },
+    {
+      "path": "/en/not-found/fallback/first",
+      "status": 200,
+      "mustNotContain": "gsp page"
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/not-found/fallback/first.json",
+      "status": 404
+    },
+    {
+      "path": "/en/not-found/fallback/first",
+      "status": 200,
+      "mustContain": "lang=\"en\""
+    },
+    {
+      "path": "/en/not-found/fallback/first",
+      "status": 200,
+      "mustNotContain": "gsp page"
+    },
+    {
+      "path": "/fr/not-found/fallback/first",
+      "status": 200,
+      "mustContain": "lang=\"fr\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/fr/not-found/fallback/first.json",
+      "status": 200
+    },
+    {
+      "path": "/fr/not-found/fallback/first",
+      "status": 200,
+      "mustContain": "lang=\"fr\""
+    },
+    {
+      "path": "/fr/not-found/fallback/first",
+      "status": 200,
+      "mustContain": "gsp page"
     }
   ]
 }

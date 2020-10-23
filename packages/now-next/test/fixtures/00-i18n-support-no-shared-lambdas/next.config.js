@@ -1,4 +1,7 @@
 module.exports = {
+  generateBuildId() {
+    return 'testing-build-id';
+  },
   experimental: {
     i18n: {
       locales: ['nl-NL', 'nl-BE', 'nl', 'fr-BE', 'fr', 'en-US', 'en'],
