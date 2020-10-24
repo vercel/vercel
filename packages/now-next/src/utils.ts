@@ -511,9 +511,12 @@ export async function getDynamicRoutes(
   return routes;
 }
 
+type LoaderKey = 'imgix' | 'cloudinary' | 'akamai' | 'default';
+
 type ImagesManifest = {
   version: number;
   images: {
+    loader: LoaderKey;
     sizes: number[];
     domains: string[];
   };
