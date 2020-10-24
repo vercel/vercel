@@ -655,12 +655,13 @@ export const build = async ({
 
     return {
       output,
-      images: imagesManifest?.images
-        ? {
-            domains: imagesManifest.images.domains,
-            sizes: imagesManifest.images.sizes,
-          }
-        : undefined,
+      images:
+        imagesManifest?.images?.loader === 'default'
+          ? {
+              domains: imagesManifest.images.domains,
+              sizes: imagesManifest.images.sizes,
+            }
+          : undefined,
       routes: [
         // User headers
         ...headers,
@@ -1952,12 +1953,13 @@ export const build = async ({
           };
         })
       : undefined,
-    images: imagesManifest?.images
-      ? {
-          domains: imagesManifest.images.domains,
-          sizes: imagesManifest.images.sizes,
-        }
-      : undefined,
+    images:
+      imagesManifest?.images?.loader === 'default'
+        ? {
+            domains: imagesManifest.images.domains,
+            sizes: imagesManifest.images.sizes,
+          }
+        : undefined,
     /*
       Desired routes order
       - Runtime headers
