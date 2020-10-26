@@ -13,7 +13,7 @@ module.exports = function(...args) {
   const finalConfig = {};
   const target = { target: '${target}' };
   const experimental = ${
-    config.hasIntegrationPlugins ? '{ plugins: true }' : '{}'
+    config.hasIntegrationPlugins ? '{ plugins: true }' : 'undefined'
   };
 
   if (typeof original === 'function' && original.constructor.name === 'AsyncFunction') {
@@ -28,7 +28,9 @@ module.exports = function(...args) {
       .then((orignalConfig) => Object.assign(finalConfig, orignalConfig))
       .then((config) => {
         Object.assign(config, target);
-        config.experimental = Object.assign({}, config.experimental, experimental);
+        if (experimental) {
+          config.experimental = Object.assign({}, config.experimental, experimental);
+        }
         return config;
       });
   } else if (typeof original === 'function') {
@@ -38,7 +40,10 @@ module.exports = function(...args) {
   }
 
   Object.assign(finalConfig, target);
-  finalConfig.experimental = Object.assign({}, finalConfig.experimental, experimental);
+
+  if (experimental) {
+    finalConfig.experimental = Object.assign({}, finalConfig.experimental, experimental);
+  }
 
   return finalConfig;
 }
