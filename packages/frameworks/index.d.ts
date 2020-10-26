@@ -31,4 +31,8 @@ export interface Framework {
     devCommand: Setting;
     outputDirectory: Setting;
   };
+  recommendedIntegrations?: {
+    id: string;
+    dependencies: string[];
+  }[];
 }
