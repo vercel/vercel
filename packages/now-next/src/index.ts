@@ -2021,13 +2021,26 @@ export const build = async ({
                   {
                     // TODO: enable redirecting between domains, will require
                     // updating the src with the desired locales to redirect
-                    src: '/',
+                    src: `^${path.join(
+                      '/',
+                      entryDirectory
+                    )}/?(?:${i18n.locales
+                      .map(locale => escapeStringRegexp(locale))
+                      .join('|')})?/?$`,
                     locale: {
                       redirect: i18n.domains.reduce(
                         (prev: Record<string, string>, item) => {
                           prev[item.defaultLocale] = `http${
                             item.http ? '' : 's'
                           }://${item.domain}/`;
+
+                          if (item.locales) {
+                            item.locales.map(locale => {
+                              prev[locale] = `http${item.http ? '' : 's'}://${
+                                item.domain
+                              }/${locale}`;
+                            });
+                          }
                           return prev;
                         },
                         {}
