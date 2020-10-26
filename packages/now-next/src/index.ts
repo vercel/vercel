@@ -392,7 +392,7 @@ export const build = async ({
   }
 
   if (!isLegacy) {
-    await createServerlessConfig(workPath, entryPath, nextVersion);
+    await createServerlessConfig(workPath, entryPath, nextVersion, config);
   }
 
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;

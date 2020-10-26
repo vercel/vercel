@@ -437,3 +437,89 @@ it(
   },
   FOUR_MINUTES
 );
+
+it(
+  'Should build the serverless-config-plugins example',
+  async () => {
+    const {
+      workPath,
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'serverless-config-plugins'));
+
+    expect(output['index']).toBeDefined();
+    expect(output.goodbye).not.toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
+    const filePaths = Object.keys(output);
+    const serverlessError = filePaths.some(filePath =>
+      filePath.match(/_error/)
+    );
+    const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_app-.*\.js$/)
+    );
+    const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_error-.*\.js$/)
+    );
+    expect(hasUnderScoreAppStaticFile).toBeTruthy();
+    expect(hasUnderScoreErrorStaticFile).toBeTruthy();
+    expect(serverlessError).toBeTruthy();
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
+    expect(
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
+    ).toBeTruthy();
+
+    const configContent = fs
+      .readFileSync(path.join(workPath, 'next.config.js'))
+      .toString();
+    expect(configContent).toContain('plugins: true');
+  },
+  FOUR_MINUTES
+);
+
+it(
+  'Should build the serverless-no-config-plugins example',
+  async () => {
+    const {
+      workPath,
+      buildResult: { output },
+    } = await runBuildLambda(
+      path.join(__dirname, 'serverless-no-config-plugins')
+    );
+
+    expect(output['index']).toBeDefined();
+    expect(output.goodbye).not.toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
+    const filePaths = Object.keys(output);
+    const serverlessError = filePaths.some(filePath =>
+      filePath.match(/_error/)
+    );
+    const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_app-.*\.js$/)
+    );
+    const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_error-.*\.js$/)
+    );
+    expect(hasUnderScoreAppStaticFile).toBeTruthy();
+    expect(hasUnderScoreErrorStaticFile).toBeTruthy();
+    expect(serverlessError).toBeTruthy();
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
+    expect(
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
+    ).toBeFalsy();
+
+    const configContent = fs
+      .readFileSync(path.join(workPath, 'next.config.js'))
+      .toString();
+    expect(configContent).toContain('"plugins":true');
+  },
+  FOUR_MINUTES
+);

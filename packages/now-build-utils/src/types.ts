@@ -45,6 +45,7 @@ export interface Config {
   devCommand?: string;
   framework?: string;
   nodeVersion?: string;
+  hasIntegrationPlugins?: boolean;
 }
 
 export interface Meta {

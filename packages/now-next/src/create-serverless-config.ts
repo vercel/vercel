@@ -1,16 +1,20 @@
+import { Config } from '@vercel/build-utils';
 import fs from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
 
 import { ExperimentalTraceVersion } from './utils';
 
-function getCustomData(importName: string, target: string) {
+function getCustomData(importName: string, target: string, config: Config) {
   return `
 module.exports = function(...args) {
   let original = require('./${importName}');
 
   const finalConfig = {};
   const target = { target: '${target}' };
+  const experimental = ${
+    config.hasIntegrationPlugins ? '{ plugins: true }' : '{}'
+  };
 
   if (typeof original === 'function' && original.constructor.name === 'AsyncFunction') {
     // AsyncFunctions will become promises
@@ -22,7 +26,11 @@ module.exports = function(...args) {
     // and will just error later on
     return original
       .then((orignalConfig) => Object.assign(finalConfig, orignalConfig))
-      .then((config) => Object.assign(config, target));
+      .then((config) => {
+        Object.assign(config, target);
+        config.experimental = Object.assign({}, config.experimental, experimental);
+        return config;
+      });
   } else if (typeof original === 'function') {
     Object.assign(finalConfig, original(...args));
   } else if (typeof original === 'object') {
@@ -30,20 +38,27 @@ module.exports = function(...args) {
   }
 
   Object.assign(finalConfig, target);
+  finalConfig.experimental = Object.assign({}, finalConfig.experimental, experimental);
 
   return finalConfig;
 }
   `.trim();
 }
 
-function getDefaultData(target: string) {
-  return `module.exports = { target: '${target}' };`;
+function getDefaultData(target: string, config: Config) {
+  return `module.exports = ${JSON.stringify({
+    target,
+    ...(config.hasIntegrationPlugins
+      ? { experimental: { plugins: true } }
+      : undefined),
+  })}`;
 }
 
 export default async function createServerlessConfig(
   workPath: string,
   entryPath: string,
-  nextVersion: string | undefined
+  nextVersion: string | undefined,
+  config: Config
 ) {
   let target = 'serverless';
   if (nextVersion) {
@@ -83,8 +98,11 @@ export default async function createServerlessConfig(
 
   if (fs.existsSync(configPath)) {
     await fs.rename(configPath, backupConfigPath);
-    await fs.writeFile(configPath, getCustomData(backupConfigName, target));
+    await fs.writeFile(
+      configPath,
+      getCustomData(backupConfigName, target, config)
+    );
   } else {
-    await fs.writeFile(configPath, getDefaultData(target));
+    await fs.writeFile(configPath, getDefaultData(target, config));
   }
 }
