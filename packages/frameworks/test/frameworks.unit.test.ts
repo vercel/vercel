@@ -101,6 +101,8 @@ const Schema = {
         type: 'array',
         items: {
           type: 'object',
+          required: ['id', 'dependencies'],
+          additionalProperties: false,
           properties: {
             id: {
               type: 'string',
