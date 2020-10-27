@@ -1724,7 +1724,9 @@ export const build = async ({
       if (nonDynamicSsg || isFallback) {
         outputPathData = outputPathData.replace(
           new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
-          `${routeFileNoExt}.json`
+          `${routeFileNoExt}${
+            origRouteFileNoExt === '/index' ? '/index' : ''
+          }.json`
         );
       }
 
