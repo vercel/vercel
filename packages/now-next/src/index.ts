@@ -1725,7 +1725,10 @@ export const build = async ({
         outputPathData = outputPathData.replace(
           new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
           `${routeFileNoExt}${
-            origRouteFileNoExt === '/index' ? '/index' : ''
+            routeFileNoExt !== origRouteFileNoExt &&
+            origRouteFileNoExt === '/index'
+              ? '/index'
+              : ''
           }.json`
         );
       }
