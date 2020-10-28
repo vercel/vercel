@@ -1587,7 +1587,31 @@ test(
 );
 
 test(
-  '[vercel dev] 28-vercel-json-and-ignore',
+  '[vercel dev] 30-next-image-optimization',
+  testFixtureStdio('30-next-image-optimization', async testPath => {
+    await testPath(200, '/', /Home Page/m);
+    const query = new URLSearchParams();
+    query.append('url', '/logo.png');
+    query.append('w', 320);
+    query.append('q', 50);
+    const reqHeaders = {
+      Accept: 'image/webp',
+    };
+    const checkRes = (t, body, res) => {
+      t.is(res.headers['Content-Type'], 'image/webp');
+      t.is(Boolean(body), true);
+    };
+    const url = `/_next/image?${query}`;
+    console.log('testing the url ' + url);
+    await testPath(200, url, checkRes, reqHeaders);
+
+    // TODO: test Cache-Control headers
+    // TODO: test cloudinary
+  })
+);
+
+test(
+  '[vercel dev] 30-vercel-json-and-ignore',
   testFixtureStdio('28-vercel-json-and-ignore', async testPath => {
     await testPath(200, '/api/one', 'One');
     await testPath(404, '/api/two');
