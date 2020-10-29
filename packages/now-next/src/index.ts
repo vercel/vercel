@@ -880,7 +880,9 @@ export const build = async ({
       // Next.js versions so we need to also not treat it as a static page here.
       if (
         prerenderManifest.staticRoutes[routeName] ||
-        prerenderManifest.fallbackRoutes[routeName]
+        prerenderManifest.fallbackRoutes[routeName] ||
+        prerenderManifest.staticRoutes[normalizePage(pathname)] ||
+        prerenderManifest.fallbackRoutes[normalizePage(pathname)]
       ) {
         return;
       }
@@ -1457,7 +1459,7 @@ export const build = async ({
                   )}).some((locale) => {
                     if (pathnameParts[1].toLowerCase() === locale.toLowerCase()) {
                       pathnameParts.splice(1, 1)
-                      pathname = pathnameParts.join('/') || '/'
+                      pathname = pathnameParts.join('/') || '/index'
                       return true
                     }
                     return false
@@ -1493,7 +1495,7 @@ export const build = async ({
                   if (!toRender) {
                     try {
                       const { pathname } = url.parse(req.url)
-                      toRender = stripLocalePath(pathname).replace(/\\/$/, '')
+                      toRender = stripLocalePath(pathname).replace(/\\/$/, '') || '/index'
                     } catch (_) {
                       // handle failing to parse url
                       res.statusCode = 400
@@ -1512,7 +1514,7 @@ export const build = async ({
                         .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
                         .replace(/\\.json$/, '')
 
-                      toRender = stripLocalePath(toRender)
+                      toRender = stripLocalePath(toRender) || '/index'
                       currentPage = pages[toRender]
                     }
 
@@ -1540,7 +1542,7 @@ export const build = async ({
 
                   if (!currentPage) {
                     console.error(
-                      "Failed to find matching page for", toRender, "in lambda"
+                      "Failed to find matching page for", {toRender, header: req.headers['x-nextjs-page'], url: req.url, pages: Object.keys(pages) }, "in lambda"
                     )
                     res.statusCode = 500
                     return res.end('internal server error')
