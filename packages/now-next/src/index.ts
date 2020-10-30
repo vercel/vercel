@@ -2186,10 +2186,22 @@ export const build = async ({
       { handle: 'filesystem' },
 
       // map pages to their lambda
-      ...pageLambdaRoutes,
+      ...pageLambdaRoutes.filter(route => {
+        // filter out any SSG pages as they are already present in output
+        if ('headers' in route) {
+          let page = route.headers?.['x-nextjs-page']!;
+          page = page === '/index' ? '/' : page;
 
-      // map /blog/[post] to correct lambda for iSSG
-      ...dynamicPageLambdaRoutes,
+          if (
+            prerenderManifest.staticRoutes[page] ||
+            prerenderManifest.fallbackRoutes[page] ||
+            prerenderManifest.blockingFallbackRoutes[page]
+          ) {
+            return false;
+          }
+        }
+        return true;
+      }),
 
       // These need to come before handle: miss or else they are grouped
       // with that routing section
