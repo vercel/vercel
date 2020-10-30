@@ -1393,17 +1393,19 @@ export const build = async ({
         if (i18n) {
           const { pathname } = url.parse(route.dest!);
           const isFallback = prerenderManifest.fallbackRoutes[pathname!];
+          const isBlocking =
+            prerenderManifest.blockingFallbackRoutes[pathname!];
 
           route.src = route.src.replace(
             '^',
             `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
-              isFallback ? '<nextLocale>' : ':'
+              isFallback || isBlocking ? '<nextLocale>' : ':'
             }${i18n.locales
               .map(locale => escapeStringRegexp(locale))
               .join('|')})?`
           );
 
-          if (isFallback) {
+          if (isFallback || isBlocking) {
             // ensure destination has locale prefix to match prerender output
             // path so that the prerender object is used
             route.dest = route.dest!.replace(
@@ -1796,6 +1798,44 @@ export const build = async ({
         });
 
         ++prerenderGroup;
+
+        if (routesManifest?.i18n && isBlocking) {
+          for (const locale of routesManifest.i18n.locales) {
+            const localeRouteFileNoExt = addLocaleOrDefault(
+              routeFileNoExt,
+              routesManifest,
+              locale
+            );
+            const localeOutputPathPage = path.posix.join(
+              entryDirectory,
+              localeRouteFileNoExt
+            );
+            const localeOutputPathData = outputPathData.replace(
+              new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
+              `${localeRouteFileNoExt}${
+                localeRouteFileNoExt !== origRouteFileNoExt &&
+                origRouteFileNoExt === '/index'
+                  ? '/index'
+                  : ''
+              }.json`
+            );
+
+            const origPrerenderPage = prerenders[outputPathPage];
+            const origPrerenderData = prerenders[outputPathData];
+
+            prerenders[localeOutputPathPage] = {
+              ...origPrerenderPage,
+              group: prerenderGroup,
+            } as Prerender;
+
+            prerenders[localeOutputPathData] = {
+              ...origPrerenderData,
+              group: prerenderGroup,
+            } as Prerender;
+
+            ++prerenderGroup;
+          }
+        }
       }
 
       if ((nonDynamicSsg || isFallback) && routesManifest?.i18n && !locale) {

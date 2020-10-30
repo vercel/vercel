@@ -77,7 +77,6 @@ module.exports = function (ctx) {
 
     const html = await res.text();
     let $ = cheerio.load(html);
-    console.log({ props: $('#props').text(), html });
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('en-US');
@@ -108,7 +107,6 @@ module.exports = function (ctx) {
 
     const html = await res.text();
     let $ = cheerio.load(html);
-    console.log({ props: $('#props').text(), html });
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('fr');
@@ -139,7 +137,6 @@ module.exports = function (ctx) {
 
     const html = await res.text();
     let $ = cheerio.load(html);
-    console.log({ props: $('#props').text(), html });
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('nl-NL');
