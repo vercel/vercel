@@ -48,8 +48,10 @@ export default function Page(props) {
 export const getStaticProps = ({ locale, locales }) => {
   return {
     props: {
+      random: Math.random(),
       locale,
       locales,
     },
+    revalidate: 1,
   };
 };

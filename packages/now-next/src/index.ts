@@ -880,7 +880,9 @@ export const build = async ({
       // Next.js versions so we need to also not treat it as a static page here.
       if (
         prerenderManifest.staticRoutes[routeName] ||
-        prerenderManifest.fallbackRoutes[routeName]
+        prerenderManifest.fallbackRoutes[routeName] ||
+        prerenderManifest.staticRoutes[normalizePage(pathname)] ||
+        prerenderManifest.fallbackRoutes[normalizePage(pathname)]
       ) {
         return;
       }
@@ -1391,17 +1393,19 @@ export const build = async ({
         if (i18n) {
           const { pathname } = url.parse(route.dest!);
           const isFallback = prerenderManifest.fallbackRoutes[pathname!];
+          const isBlocking =
+            prerenderManifest.blockingFallbackRoutes[pathname!];
 
           route.src = route.src.replace(
             '^',
             `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
-              isFallback ? '<nextLocale>' : ':'
+              isFallback || isBlocking ? '<nextLocale>' : ':'
             }${i18n.locales
               .map(locale => escapeStringRegexp(locale))
               .join('|')})?`
           );
 
-          if (isFallback) {
+          if (isFallback || isBlocking) {
             // ensure destination has locale prefix to match prerender output
             // path so that the prerender object is used
             route.dest = route.dest!.replace(
@@ -1457,7 +1461,7 @@ export const build = async ({
                   )}).some((locale) => {
                     if (pathnameParts[1].toLowerCase() === locale.toLowerCase()) {
                       pathnameParts.splice(1, 1)
-                      pathname = pathnameParts.join('/') || '/'
+                      pathname = pathnameParts.join('/') || '/index'
                       return true
                     }
                     return false
@@ -1493,7 +1497,7 @@ export const build = async ({
                   if (!toRender) {
                     try {
                       const { pathname } = url.parse(req.url)
-                      toRender = stripLocalePath(pathname).replace(/\\/$/, '')
+                      toRender = stripLocalePath(pathname).replace(/\\/$/, '') || '/index'
                     } catch (_) {
                       // handle failing to parse url
                       res.statusCode = 400
@@ -1512,7 +1516,7 @@ export const build = async ({
                         .replace(new RegExp('/_next/data/${escapedBuildId}/'), '/')
                         .replace(/\\.json$/, '')
 
-                      toRender = stripLocalePath(toRender)
+                      toRender = stripLocalePath(toRender) || '/index'
                       currentPage = pages[toRender]
                     }
 
@@ -1540,7 +1544,7 @@ export const build = async ({
 
                   if (!currentPage) {
                     console.error(
-                      "Failed to find matching page for", toRender, "in lambda"
+                      "Failed to find matching page for", {toRender, header: req.headers['x-nextjs-page'], url: req.url, pages: Object.keys(pages) }, "in lambda"
                     )
                     res.statusCode = 500
                     return res.end('internal server error')
@@ -1794,6 +1798,44 @@ export const build = async ({
         });
 
         ++prerenderGroup;
+
+        if (routesManifest?.i18n && isBlocking) {
+          for (const locale of routesManifest.i18n.locales) {
+            const localeRouteFileNoExt = addLocaleOrDefault(
+              routeFileNoExt,
+              routesManifest,
+              locale
+            );
+            const localeOutputPathPage = path.posix.join(
+              entryDirectory,
+              localeRouteFileNoExt
+            );
+            const localeOutputPathData = outputPathData.replace(
+              new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
+              `${localeRouteFileNoExt}${
+                localeRouteFileNoExt !== origRouteFileNoExt &&
+                origRouteFileNoExt === '/index'
+                  ? '/index'
+                  : ''
+              }.json`
+            );
+
+            const origPrerenderPage = prerenders[outputPathPage];
+            const origPrerenderData = prerenders[outputPathData];
+
+            prerenders[localeOutputPathPage] = {
+              ...origPrerenderPage,
+              group: prerenderGroup,
+            } as Prerender;
+
+            prerenders[localeOutputPathData] = {
+              ...origPrerenderData,
+              group: prerenderGroup,
+            } as Prerender;
+
+            ++prerenderGroup;
+          }
+        }
       }
 
       if ((nonDynamicSsg || isFallback) && routesManifest?.i18n && !locale) {

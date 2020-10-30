@@ -26,10 +26,12 @@ export default function Page(props) {
 export const getStaticProps = ({ params, locale, locales }) => {
   return {
     props: {
+      random: Math.random(),
       params,
       locale,
       locales,
     },
+    revalidate: 1,
   };
 };
 
@@ -40,6 +42,7 @@ export const getStaticPaths = () => {
       '/gsp/no-fallback/second',
       { params: { slug: 'first' }, locale: 'en-US' },
       '/nl-NL/gsp/no-fallback/second',
+      '/fr/gsp/no-fallback/first',
     ],
     fallback: false,
   };
