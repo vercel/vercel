@@ -1,0 +1,5 @@
+/gatsby-browser.js
+/gatsby-node.js
+node_modules
+/web-vitals.js
+.DS_Store
