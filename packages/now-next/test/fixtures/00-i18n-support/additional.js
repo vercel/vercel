@@ -4,6 +4,14 @@ const cheerio = require('cheerio');
 
 module.exports = function (ctx) {
   it('should revalidate content properly from /', async () => {
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/index.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const res = await fetch(`${ctx.deploymentUrl}/`);
     expect(res.status).toBe(200);
 
@@ -25,6 +33,14 @@ module.exports = function (ctx) {
   });
 
   it('should revalidate content properly from /fr', async () => {
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/index.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const res = await fetch(`${ctx.deploymentUrl}/fr`);
     expect(res.status).toBe(200);
 
@@ -46,6 +62,14 @@ module.exports = function (ctx) {
   });
 
   it('should revalidate content properly from /nl-NL', async () => {
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/index.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const res = await fetch(`${ctx.deploymentUrl}/nl-NL`);
     expect(res.status).toBe(200);
 
@@ -66,7 +90,107 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('nl-NL');
   });
 
+  it('should revalidate content properly from /gsp/fallback/first', async () => {
+    // check the _next/data URL first
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/fallback/first.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const res = await fetch(`${ctx.deploymentUrl}/gsp/fallback/first`);
+    expect(res.status).toBe(200);
+
+    const html = await res.text();
+    let $ = cheerio.load(html);
+    const props = JSON.parse($('#props').text());
+    const initialRandom = props.random;
+    expect($('#router-locale').text()).toBe('en-US');
+
+    // wait for revalidation to occur
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const res2 = await fetch(`${ctx.deploymentUrl}/gsp/fallback/first`);
+    expect(res2.status).toBe(200);
+
+    $ = cheerio.load(await res2.text());
+    const props2 = JSON.parse($('#props').text());
+    expect(initialRandom).not.toBe(props2.random);
+    expect($('#router-locale').text()).toBe('en-US');
+  });
+
+  it('should revalidate content properly from /fr/gsp/fallback/first', async () => {
+    // check the _next/data URL first
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/gsp/fallback/first.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const res = await fetch(`${ctx.deploymentUrl}/fr/gsp/fallback/first`);
+    expect(res.status).toBe(200);
+
+    const html = await res.text();
+    let $ = cheerio.load(html);
+    const props = JSON.parse($('#props').text());
+    const initialRandom = props.random;
+    expect($('#router-locale').text()).toBe('fr');
+
+    // wait for revalidation to occur
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const res2 = await fetch(`${ctx.deploymentUrl}/fr/gsp/fallback/first`);
+    expect(res2.status).toBe(200);
+
+    $ = cheerio.load(await res2.text());
+    const props2 = JSON.parse($('#props').text());
+    expect(initialRandom).not.toBe(props2.random);
+    expect($('#router-locale').text()).toBe('fr');
+  });
+
+  it('should revalidate content properly from /nl-NL/gsp/fallback/first', async () => {
+    // check the _next/data URL first
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/gsp/fallback/first.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const res = await fetch(`${ctx.deploymentUrl}/nl-NL/gsp/fallback/first`);
+    expect(res.status).toBe(200);
+
+    const html = await res.text();
+    let $ = cheerio.load(html);
+    const props = JSON.parse($('#props').text());
+    const initialRandom = props.random;
+    expect($('#router-locale').text()).toBe('nl-NL');
+
+    // wait for revalidation to occur
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const res2 = await fetch(`${ctx.deploymentUrl}/nl-NL/gsp/fallback/first`);
+    expect(res2.status).toBe(200);
+
+    $ = cheerio.load(await res2.text());
+    const props2 = JSON.parse($('#props').text());
+    expect(initialRandom).not.toBe(props2.random);
+    expect($('#router-locale').text()).toBe('nl-NL');
+  });
+  //
+
   it('should revalidate content properly from /gsp/fallback/new-page', async () => {
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/fallback/new-page.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
     const initRes = await fetch(`${ctx.deploymentUrl}/gsp/fallback/new-page`);
     expect(initRes.status).toBe(200);
 
@@ -156,6 +280,14 @@ module.exports = function (ctx) {
   });
 
   it('should revalidate content properly from /gsp/no-fallback/first', async () => {
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/no-fallback/first.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const res = await fetch(`${ctx.deploymentUrl}/gsp/no-fallback/first`);
     expect(res.status).toBe(200);
 
@@ -177,6 +309,14 @@ module.exports = function (ctx) {
   });
 
   it('should revalidate content properly from /fr/gsp/no-fallback/first', async () => {
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/gsp/no-fallback/first.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const res = await fetch(`${ctx.deploymentUrl}/fr/gsp/no-fallback/first`);
     expect(res.status).toBe(200);
 
@@ -198,6 +338,14 @@ module.exports = function (ctx) {
   });
 
   it('should revalidate content properly from /nl-NL/gsp/no-fallback/second', async () => {
+    const dataRes = await fetch(
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/gsp/no-fallback/second.json`
+    );
+    expect(dataRes.status).toBe(200);
+    await dataRes.json();
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const res = await fetch(
       `${ctx.deploymentUrl}/nl-NL/gsp/no-fallback/second`
     );

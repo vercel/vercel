@@ -35,12 +35,17 @@ export const getStaticProps = ({ params, locale, locales }) => {
   };
 };
 
-export const getStaticPaths = () => {
+export const getStaticPaths = ({ locales }) => {
+  const paths = [];
+
+  for (const locale of locales) {
+    paths.push({ params: { slug: 'first' }, locale });
+    paths.push({ params: { slug: 'second' }, locale });
+  }
+
   return {
     // the default locale will be used since one isn't defined here
-    paths: ['first', 'second'].map(slug => ({
-      params: { slug },
-    })),
+    paths,
     fallback: true,
   };
 };
