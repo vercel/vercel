@@ -2,7 +2,7 @@ import { webVitals } from "./web-vitals";
 
 export const onClientEntry = (_, pluginOptions = {}) => {
   let options = {
-    projectId: undefined,
+    projectId: process.env.VERCEL_ANALYTICS_ID,
     debug: false,
     ...pluginOptions,
   };

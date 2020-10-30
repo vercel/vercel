@@ -14,8 +14,8 @@ function sendToAnalytics(metric, options) {
   const body = {
     dsn: options.projectId,
     id: metric.id,
-    page: "/", // TODO
-    href: "/", // TODO
+    page: location.pathname,
+    href: location.href,
     event_name: metric.name,
     value: metric.value.toString(),
     speed:
