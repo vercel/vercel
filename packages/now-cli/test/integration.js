@@ -710,12 +710,14 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
 
     t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
     t.is(apiJson['MY_ENV_VAR'], 'MY_VALUE');
+    t.is(apiJson['MY_PLAIN_VAR'], 'hello');
 
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_ENV_VAR'], 'MY_VALUE');
     t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(homeJson['MY_PLAIN_VAR'], 'hello');
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
@@ -791,7 +793,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowDeployWithVar();
   await nowDevWithEnv();
   fs.unlinkSync(path.join(target, '.env'));
-  await nowDevAndFetchCloudVars();
+  await withPlainTextEnv(nowDevAndFetchCloudVars)();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
   await nowEnvRemoveWithNameOnly();
