@@ -12,14 +12,14 @@ or
 
 ## Usage
 
-The Vercel Analytics project ID will be automically added as an environment variable (`process.env.VERCEL_ANALYTICS_ID`) at build time.
-
 ```js
 // gatsby-config.js
 {
   resolve: 'gatsby-plugin-vercel',
   options: {
-    // Prints metrics in the console when true
+    // (required) This env var is automatically added at build time
+    projectId: process.env.VERCEL_ANALYTICS_ID,
+    // (optional) Prints metrics in the console when true
     debug: false,
   }
 }
