@@ -22,7 +22,7 @@ jobs:
       - name: yarn install, publish
         run: |
           yarn install --frozen-lockfile --check-files
-          yarn semantic-release
+          yarn semantic-release --branches main
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
