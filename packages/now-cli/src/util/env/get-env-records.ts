@@ -7,12 +7,16 @@ import {
 } from '../../types';
 import { URLSearchParams } from 'url';
 
-type ApiVersion = 4 | 5;
+type ApiVersion = 4 | 5 | 6;
 
 type APIV4Response = ProjectEnvVariable[];
 
 interface APIV5Response {
   pagination: PaginationOptions;
+  envs: ProjectEnvVariable[];
+}
+
+interface APIV6Response {
   envs: ProjectEnvVariable[];
 }
 
@@ -33,6 +37,14 @@ export default async function getEnvVariables(
   next?: number
 ): Promise<APIV5Response>;
 
+export default async function getEnvVariables(
+  output: Output,
+  client: Client,
+  projectId: string,
+  apiVersion: 6,
+  target?: ProjectEnvTarget
+): Promise<APIV4Response>;
+
 export default async function getEnvVariables<V extends ApiVersion>(
   output: Output,
   client: Client,
@@ -45,7 +57,7 @@ export default async function getEnvVariables<V extends ApiVersion>(
     `Fetching Environment Variables of project ${projectId} and target ${target}`
   );
   const query = new URLSearchParams();
-  if (apiVersion >= 5) {
+  if (apiVersion === 5) {
     query.set('limit', String(20));
   }
 
@@ -59,7 +71,9 @@ export default async function getEnvVariables<V extends ApiVersion>(
 
   const url = `/v${apiVersion}/projects/${projectId}/env?${query}`;
 
-  if (apiVersion === 5) {
+  if (apiVersion === 6) {
+    return client.fetch<APIV6Response>(url);
+  } else if (apiVersion === 5) {
     return client.fetch<APIV5Response>(url);
   } else if (apiVersion === 4) {
     return client.fetch<APIV4Response>(url);
