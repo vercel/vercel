@@ -2,6 +2,7 @@ import { Output } from '../output';
 import Client from '../client';
 import {
   ProjectEnvVariable,
+  ProjectEnvVariableV5,
   ProjectEnvTarget,
   PaginationOptions,
 } from '../../types';
@@ -9,11 +10,11 @@ import { URLSearchParams } from 'url';
 
 type ApiVersion = 4 | 5 | 6;
 
-type APIV4Response = ProjectEnvVariable[];
+type APIV4Response = ProjectEnvVariableV5[];
 
 interface APIV5Response {
   pagination: PaginationOptions;
-  envs: ProjectEnvVariable[];
+  envs: ProjectEnvVariableV5[];
 }
 
 interface APIV6Response {

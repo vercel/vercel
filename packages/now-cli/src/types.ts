@@ -212,8 +212,12 @@ export interface ProjectEnvVariable {
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
-  target?: ProjectEnvTarget;
+  target?: ProjectEnvTarget | ProjectEnvTarget[];
   system?: boolean;
+}
+
+export interface ProjectEnvVariableV5 extends ProjectEnvVariable {
+  target?: ProjectEnvTarget;
 }
 
 export interface ProjectSettings {

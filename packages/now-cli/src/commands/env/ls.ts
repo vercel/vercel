@@ -11,12 +11,11 @@ import {
 } from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
-import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import ellipsis from '../../util/output/ellipsis';
 
 type Options = {
   '--debug': boolean;
-  '--next'?: number;
 };
 
 export default async function ls(
@@ -26,8 +25,6 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  const { '--next': nextTimestamp } = opts;
-
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
@@ -50,35 +47,19 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
-    return 1;
-  }
-
-  const data = await getEnvVariables(
+  const { envs } = await getEnvVariables(
     output,
     client,
     project.id,
-    5,
-    envTarget,
-    nextTimestamp
+    6,
+    envTarget
   );
-  const { envs: records, pagination } = data;
   output.log(
     `${
-      records.length > 0 ? 'Environment Variables' : 'No Environment Variables'
+      envs.length > 0 ? 'Environment Variables' : 'No Environment Variables'
     } found in Project ${chalk.bold(project.name)} ${chalk.gray(lsStamp())}`
   );
-  console.log(getTable(records));
-
-  if (pagination && pagination.count === 20) {
-    const flags = getCommandFlags(opts, ['_', '--next']);
-    output.log(
-      `To display the next page run ${getCommandName(
-        `env ls${flags} --next ${pagination.next}`
-      )}`
-    );
-  }
+  console.log(getTable(envs));
 
   return 0;
 }
@@ -96,17 +77,25 @@ function getTable(records: ProjectEnvVariable[]) {
   );
 }
 
-function getRow({
-  key,
-  system = false,
-  target,
-  createdAt = 0,
-}: ProjectEnvVariable) {
+function getRow(env: ProjectEnvVariable) {
+  let value: string;
+  if (env.type === 'plain') {
+    // replace space characters (line-break, etc.) with simple spaces
+    // to make sure the displayed value is a single line
+    const singleLineValue = env.value.replace(/\s/g, ' ');
+
+    value = chalk.gray(ellipsis(singleLineValue, 19));
+  } else if (env.type === 'system') {
+    value = chalk.gray.italic('Populated by System');
+  } else {
+    value = chalk.gray.italic('Encrypted');
+  }
+
   const now = Date.now();
   return [
-    chalk.bold(key),
-    chalk.gray(chalk.italic(system ? 'Populated by System' : 'Encrypted')),
-    target || '',
-    `${ms(now - createdAt)} ago`,
+    chalk.bold(env.key),
+    value,
+    Array.isArray(env.target) ? env.target.join(',') : env.target || '',
+    env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }
