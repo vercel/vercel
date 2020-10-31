@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { ProjectEnvTarget, Project } from '../../types';
 import { Output } from '../../util/output';
-import promptBool from '../../util/prompt-bool';
+import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvVariables from '../../util/env/get-env-records';
 import {
@@ -104,11 +104,11 @@ export default async function rm(
   const skipConfirmation = opts['--yes'];
   if (
     !skipConfirmation &&
-    !(await promptBool(
-      output,
+    !(await confirm(
       `Removing Environment Variable ${param(
         envName
-      )} from Project ${chalk.bold(project.name)}. Are you sure?`
+      )} from Project ${chalk.bold(project.name)}. Are you sure?`,
+      false
     ))
   ) {
     output.log('Aborted');
