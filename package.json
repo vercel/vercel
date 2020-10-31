@@ -25,6 +25,7 @@
   "keywords": [
     "gatsby",
     "gatsby-plugin",
+    "gatsby-plugin-vercel",
     "web vitals",
     "vercel",
     "cls",
