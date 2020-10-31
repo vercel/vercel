@@ -7,7 +7,7 @@ import getScope from '../../util/get-scope.ts';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp.ts';
 import strlen from '../../util/strlen.ts';
-import promptBool from '../../util/prompt-bool';
+import confirm from '../../util/input/confirm';
 import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 import { getCommandName } from '../../util/pkg-name.ts';
@@ -108,5 +108,5 @@ async function confirmAliasRemove(output, alias) {
 
   output.log(`The following alias will be removed permanently`);
   output.print(`  ${tbl}\n`);
-  return promptBool(output, chalk.red('Are you sure?'));
+  return confirm(chalk.red('Are you sure?'), false);
 }
