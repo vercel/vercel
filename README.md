@@ -23,3 +23,7 @@ or
   }
 }
 ```
+
+## Inspiration
+
+- [gatsby-plugin-web-vitals](https://github.com/bejamas/gatsby-plugin-web-vitals)
