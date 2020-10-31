@@ -349,6 +349,9 @@
       "mustContain": "lang=\"en\""
     },
     {
+      "delay": 2000
+    },
+    {
       "path": "/en/not-found/fallback/first",
       "status": 200,
       "mustNotContain": "gsp page"
@@ -380,6 +383,9 @@
       "path": "/fr/not-found/fallback/first",
       "status": 200,
       "mustContain": "lang=\"fr\""
+    },
+    {
+      "delay": 2000
     },
     {
       "path": "/fr/not-found/fallback/first",

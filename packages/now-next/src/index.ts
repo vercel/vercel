@@ -511,6 +511,7 @@ export const build = async ({
             const { i18n } = routesManifest;
 
             if (i18n) {
+              const origSrc = route.src;
               route.src = route.src.replace(
                 // we need to double escape the build ID here
                 // to replace it properly
@@ -521,6 +522,21 @@ export const build = async ({
                   .map(locale => escapeStringRegexp(locale))
                   .join('|')})/`
               );
+
+              // optional-catchall routes don't have slash between
+              // build-id and the regex
+              if (route.src === origSrc) {
+                route.src = route.src.replace(
+                  // we need to double escape the build ID here
+                  // to replace it properly
+                  `/${escapedBuildId}`,
+                  `/${escapedBuildId}/(?${
+                    ssgDataRoute ? '<nextLocale>' : ':'
+                  }${i18n.locales
+                    .map(locale => escapeStringRegexp(locale))
+                    .join('|')})[/]?`
+                );
+              }
 
               // make sure to route to the correct prerender output
               if (ssgDataRoute) {
@@ -2170,10 +2186,22 @@ export const build = async ({
       { handle: 'filesystem' },
 
       // map pages to their lambda
-      ...pageLambdaRoutes,
+      ...pageLambdaRoutes.filter(route => {
+        // filter out any SSG pages as they are already present in output
+        if ('headers' in route) {
+          let page = route.headers?.['x-nextjs-page']!;
+          page = page === '/index' ? '/' : page;
 
-      // map /blog/[post] to correct lambda for iSSG
-      ...dynamicPageLambdaRoutes,
+          if (
+            prerenderManifest.staticRoutes[page] ||
+            prerenderManifest.fallbackRoutes[page] ||
+            prerenderManifest.blockingFallbackRoutes[page]
+          ) {
+            return false;
+          }
+        }
+        return true;
+      }),
 
       // These need to come before handle: miss or else they are grouped
       // with that routing section
