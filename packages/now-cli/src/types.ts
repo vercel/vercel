@@ -213,11 +213,11 @@ export interface ProjectEnvVariable {
   createdAt?: number;
   updatedAt?: number;
   target?: ProjectEnvTarget | ProjectEnvTarget[];
-  system?: boolean;
 }
 
 export interface ProjectEnvVariableV5 extends ProjectEnvVariable {
   target?: ProjectEnvTarget;
+  system?: boolean;
 }
 
 export interface ProjectSettings {
