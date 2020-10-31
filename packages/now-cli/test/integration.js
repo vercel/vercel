@@ -422,6 +422,34 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
+  function withPlainTextEnv(fn) {
+    return async function (...args) {
+      const link = require(path.join(target, '.vercel/project.json'));
+      const postRes = await apiFetch(`/v6/projects/${link.projectId}/env`, {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'plain',
+          key: 'MY_PLAIN_VAR',
+          value: 'hello',
+          target: ['development'],
+        }),
+      });
+      t.is(postRes.status, 200);
+
+      try {
+        return await fn(...args);
+      } finally {
+        const deleteRes = await apiFetch(
+          `/v4/projects/${link.projectId}/env/MY_PLAIN_VAR?target=development`,
+          {
+            method: 'DELETE',
+          }
+        );
+        t.is(deleteRes.status, 200);
+      }
+    };
+  }
+
   async function nowEnvLsIsEmpty() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
@@ -530,34 +558,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(vercelVars.join('\n'), /development/gm);
     t.regex(vercelVars.join('\n'), /preview/gm);
     t.regex(vercelVars.join('\n'), /production/gm);
-  }
 
-  function withPlainTextEnv(fn) {
-    return async function (...args) {
-      const link = require(path.join(target, '.vercel/project.json'));
-      const postRes = await apiFetch(`/v6/projects/${link.projectId}/env`, {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'plain',
-          key: 'MY_PLAIN_VAR',
-          value: 'hello',
-          target: ['development'],
-        }),
-      });
-      t.is(postRes.status, 200);
-
-      try {
-        return await fn(...args);
-      } finally {
-        const deleteRes = await apiFetch(
-          `/v4/projects/${link.projectId}/env/MY_PLAIN_VAR?target=development`,
-          {
-            method: 'DELETE',
-          }
-        );
-        t.is(deleteRes.status, 200);
-      }
-    };
+    const myPlainVars = lines.filter(line => line.includes('MY_PLAIN_VAR'));
+    t.is(myPlainVars.length, 1);
+    t.regex(myPlainVars.join('\n'), /development/gm);
+    t.regex(myPlainVars.join('\n'), /hello/gm);
   }
 
   async function nowEnvPull() {
@@ -786,7 +791,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvAdd();
   await nowEnvAddFromStdin();
   await nowEnvAddSystemEnv();
-  await nowEnvLsIncludesVar();
+  await withPlainTextEnv(nowEnvLsIncludesVar)();
   await withPlainTextEnv(nowEnvPull)();
   await nowEnvPullOverwrite();
   await nowEnvPullConfirm();
