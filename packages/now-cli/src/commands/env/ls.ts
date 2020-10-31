@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { Output } from '../../util/output';
-import { ProjectEnvVariable, ProjectEnvTarget, Project } from '../../types';
+import { ProjectEnvTarget, Project, ProjectEnvVariableV5 } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvVariables from '../../util/env/get-env-records';
@@ -47,13 +47,20 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  const { envs } = await getEnvVariables(
-    output,
-    client,
-    project.id,
-    6,
-    envTarget
-  );
+  const data = await getEnvVariables(output, client, project.id, 6, envTarget);
+
+  // we expand env vars with multiple targets
+  const envs: ProjectEnvVariableV5[] = [];
+  for (let env of data.envs) {
+    if (Array.isArray(env.target)) {
+      for (let target of env.target) {
+        envs.push({ ...env, target });
+      }
+    } else {
+      envs.push({ ...env, target: env.target });
+    }
+  }
+
   output.log(
     `${
       envs.length > 0 ? 'Environment Variables' : 'No Environment Variables'
@@ -64,7 +71,7 @@ export default async function ls(
   return 0;
 }
 
-function getTable(records: ProjectEnvVariable[]) {
+function getTable(records: ProjectEnvVariableV5[]) {
   return formatTable(
     ['name', 'value', 'environment', 'created'],
     ['l', 'l', 'l', 'l', 'l'],
@@ -77,7 +84,7 @@ function getTable(records: ProjectEnvVariable[]) {
   );
 }
 
-function getRow(env: ProjectEnvVariable) {
+function getRow(env: ProjectEnvVariableV5) {
   let value: string;
   if (env.type === 'plain') {
     // replace space characters (line-break, etc.) with simple spaces
@@ -95,7 +102,7 @@ function getRow(env: ProjectEnvVariable) {
   return [
     chalk.bold(env.key),
     value,
-    Array.isArray(env.target) ? env.target.join(',') : env.target || '',
+    env.target || '',
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }
