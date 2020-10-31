@@ -43,7 +43,7 @@ export default async function getEnvVariables(
   projectId: string,
   apiVersion: 6,
   target?: ProjectEnvTarget
-): Promise<APIV4Response>;
+): Promise<APIV6Response>;
 
 export default async function getEnvVariables<V extends ApiVersion>(
   output: Output,
