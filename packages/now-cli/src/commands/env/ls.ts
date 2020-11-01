@@ -47,7 +47,7 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  const data = await getEnvVariables(output, client, project.id, 6, envTarget);
+  const data = await getEnvVariables(output, client, project.id, envTarget);
 
   // we expand env vars with multiple targets
   const envs: ProjectEnvVariableV5[] = [];

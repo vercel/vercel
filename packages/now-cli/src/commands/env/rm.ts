@@ -69,7 +69,7 @@ export default async function rm(
     envName = inputName;
   }
 
-  const envs = await getEnvVariables(output, client, project.id, 4);
+  const { envs } = await getEnvVariables(output, client, project.id);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
