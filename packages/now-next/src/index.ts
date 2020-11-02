@@ -1560,8 +1560,9 @@ export const build = async ({
 
                   if (!currentPage) {
                     console.error(
-                      "Failed to find matching page for", {toRender, header: req.headers['x-nextjs-page'], url: req.url, pages: Object.keys(pages) }, "in lambda"
+                      "Failed to find matching page for", {toRender, header: req.headers['x-nextjs-page'], url: req.url }, "in lambda"
                     )
+                    console.error('pages in lambda', Object.keys(pages))
                     res.statusCode = 500
                     return res.end('internal server error')
                   }
@@ -2144,6 +2145,10 @@ export const build = async ({
             },
 
             // Auto-prefix non-locale path with default locale
+            // note for prerendered pages this will cause
+            // x-now-route-matches to contain the path minus the locale
+            // e.g. for /de/posts/[slug] x-now-route-matches would have
+            // 1=posts%2Fpost-1
             {
               src: `^${path.join(
                 '/',

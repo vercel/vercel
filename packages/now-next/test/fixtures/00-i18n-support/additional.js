@@ -19,6 +19,7 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('en-US');
+    expect(JSON.parse($('#router-query').text())).toEqual({});
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -30,6 +31,7 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('en-US');
+    expect(JSON.parse($('#router-query').text())).toEqual({});
   });
 
   it('should revalidate content properly from /fr', async () => {
@@ -48,6 +50,7 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('fr');
+    expect(JSON.parse($('#router-query').text())).toEqual({});
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -59,6 +62,7 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('fr');
+    expect(JSON.parse($('#router-query').text())).toEqual({});
   });
 
   it('should revalidate content properly from /nl-NL', async () => {
@@ -77,6 +81,7 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('nl-NL');
+    expect(JSON.parse($('#router-query').text())).toEqual({});
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -88,6 +93,7 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('nl-NL');
+    expect(JSON.parse($('#router-query').text())).toEqual({});
   });
 
   it('should revalidate content properly from /gsp/fallback/first', async () => {
@@ -108,6 +114,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('en-US');
+    expect(props.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -119,6 +127,8 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('en-US');
+    expect(props2.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
   it('should revalidate content properly from /fr/gsp/fallback/first', async () => {
@@ -139,6 +149,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('fr');
+    expect(props.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -150,6 +162,8 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('fr');
+    expect(props2.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
   it('should revalidate content properly from /nl-NL/gsp/fallback/first', async () => {
@@ -170,6 +184,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('nl-NL');
+    expect(props.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -181,6 +197,8 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('nl-NL');
+    expect(props2.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
   //
 
@@ -204,6 +222,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('en-US');
+    expect(props.params).toEqual({ slug: 'new-page' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -215,6 +235,8 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('en-US');
+    expect(props2.params).toEqual({ slug: 'new-page' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
   });
 
   it('should revalidate content properly from /fr/gsp/fallback/new-page', async () => {
@@ -234,6 +256,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('fr');
+    expect(props.params).toEqual({ slug: 'new-page' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -264,6 +288,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('nl-NL');
+    expect(props.params).toEqual({ slug: 'new-page' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -277,6 +303,8 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('nl-NL');
+    expect(props2.params).toEqual({ slug: 'new-page' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
   });
 
   it('should revalidate content properly from /gsp/no-fallback/first', async () => {
@@ -295,6 +323,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('en-US');
+    expect(props.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -306,6 +336,8 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('en-US');
+    expect(props2.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
   it('should revalidate content properly from /fr/gsp/no-fallback/first', async () => {
@@ -324,6 +356,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('fr');
+    expect(props.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -335,6 +369,8 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('fr');
+    expect(props2.params).toEqual({ slug: 'first' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
   it('should revalidate content properly from /nl-NL/gsp/no-fallback/second', async () => {
@@ -355,6 +391,8 @@ module.exports = function (ctx) {
     const props = JSON.parse($('#props').text());
     const initialRandom = props.random;
     expect($('#router-locale').text()).toBe('nl-NL');
+    expect(props.params).toEqual({ slug: 'second' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'second' });
 
     // wait for revalidation to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -368,5 +406,7 @@ module.exports = function (ctx) {
     const props2 = JSON.parse($('#props').text());
     expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('nl-NL');
+    expect(props2.params).toEqual({ slug: 'second' });
+    expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'second' });
   });
 };
