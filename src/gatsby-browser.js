@@ -2,12 +2,12 @@ import { webVitals } from "./web-vitals";
 
 export const onClientEntry = (_, pluginOptions = {}) => {
   let options = {
-    projectId: undefined,
     debug: false,
     ...pluginOptions,
+    analyticsId: process.env.GATSBY_VERCEL_ANALYTICS_ID,
   };
 
-  if (!options.projectId) {
+  if (!options.analyticsId) {
     return null;
   }
 
