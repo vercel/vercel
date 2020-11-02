@@ -12,7 +12,7 @@ function onDebug(label, payload) {
 
 function sendToAnalytics(metric, options) {
   const body = {
-    dsn: options.projectId,
+    dsn: options.analyticsId,
     id: metric.id,
     page: location.pathname,
     href: location.href,
