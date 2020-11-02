@@ -11,10 +11,38 @@ function onDebug(label, payload) {
 }
 
 function sendToAnalytics(metric, options) {
+  // Scrape the intial component name from the DOM:
+  const pageScript = [].slice
+    .call(
+      /^\/component---(.+)\-(.+?)\-.{20}\.js$/.exec(
+        document
+          .querySelector(`script[src^="/component---"]`)
+          ?.getAttribute("src")
+      ) ?? []
+    )
+    .slice(1)
+    .join("-");
+
+  // Verify page name is correct:
+  const pageName =
+    "component---" + pageScript in (self.___chunkMapping ?? {})
+      ? pageScript
+      : null;
+
+  if (!pageName) {
+    if (options.debug) {
+      onDebug(
+        `[gatsby-plugin-vercel]`,
+        "Unable to detect Page Name, skipping reporting."
+      );
+    }
+    return;
+  }
+
   const body = {
     dsn: options.analyticsId,
     id: metric.id,
-    page: location.pathname,
+    page: pageName,
     href: location.href,
     event_name: metric.name,
     value: metric.value.toString(),
