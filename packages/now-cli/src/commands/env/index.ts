@@ -42,7 +42,6 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
@@ -73,12 +72,6 @@ const help = () => {
 
       ${chalk.cyan(`$ ${getPkgName()} env rm <name> ${placeholder}`)}
       ${chalk.cyan(`$ ${getPkgName()} env rm NPM_RC preview`)}
-
-  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
-    '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch.
-
-      ${chalk.cyan(`$ ${getPkgName()} env ls --next 1584722256178`)}
 `);
 };
 
@@ -96,8 +89,6 @@ export default async function main(ctx: NowContext) {
     argv = getArgs(ctx.argv.slice(2), {
       '--yes': Boolean,
       '-y': '--yes',
-      '--next': Number,
-      '-N': '--next',
     });
   } catch (error) {
     handleError(error);
