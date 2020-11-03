@@ -97,6 +97,25 @@ const Schema = {
           outputDirectory: SchemaSettings,
         },
       },
+      recommendedIntegrations: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['id', 'dependencies'],
+          additionalProperties: false,
+          properties: {
+            id: {
+              type: 'string',
+            },
+            dependencies: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+            },
+          },
+        },
+      },
     },
   },
 };

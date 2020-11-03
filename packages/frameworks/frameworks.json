@@ -56,7 +56,13 @@
       "outputDirectory": {
         "placeholder": "Next.js default"
       }
-    }
+    },
+    "recommendedIntegrations": [
+      {
+        "id": "oac_5lUsiANun1DEzgLg0NZx5Es3",
+        "dependencies": ["next-plugin-sentry", "next-sentry-source-maps"]
+      }
+    ]
   },
   {
     "name": "Gatsby.js",

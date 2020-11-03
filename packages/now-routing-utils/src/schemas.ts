@@ -36,6 +36,40 @@ export const routesSchema = {
           },
         },
       },
+      locale: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          redirect: {
+            type: 'object',
+            additionalProperties: false,
+            minProperties: 1,
+            maxProperties: 100,
+            patternProperties: {
+              '^.{1,256}$': {
+                type: 'string',
+                maxLength: 4096,
+              },
+            },
+          },
+          value: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          path: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          cookie: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          default: {
+            type: 'string',
+            maxLength: 4096,
+          },
+        },
+      },
       handle: {
         type: 'string',
         maxLength: 32,

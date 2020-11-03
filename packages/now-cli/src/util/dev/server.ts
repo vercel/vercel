@@ -1372,6 +1372,7 @@ export default class DevServer {
     const missRoutes = handleMap.get('miss') || [];
     const hitRoutes = handleMap.get('hit') || [];
     const errorRoutes = handleMap.get('error') || [];
+    const filesystemRoutes = handleMap.get('filesystem') || [];
     const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
     let routeResult: RouteResult | null = null;
@@ -1487,6 +1488,11 @@ export default class DevServer {
 
       if (match) {
         // end the phase
+        break;
+      }
+
+      if (phase === null && filesystemRoutes.length === 0) {
+        // hack to skip the reset from null to filesystem
         break;
       }
     }

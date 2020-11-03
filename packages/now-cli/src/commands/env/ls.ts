@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { Output } from '../../util/output';
-import { ProjectEnvVariable, ProjectEnvTarget, Project } from '../../types';
+import { ProjectEnvTarget, Project, ProjectEnvVariableV5 } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvVariables from '../../util/env/get-env-records';
@@ -11,12 +11,11 @@ import {
 } from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
-import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import ellipsis from '../../util/output/ellipsis';
 
 type Options = {
   '--debug': boolean;
-  '--next'?: number;
 };
 
 export default async function ls(
@@ -26,8 +25,6 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  const { '--next': nextTimestamp } = opts;
-
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
@@ -50,40 +47,31 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
-    return 1;
+  const data = await getEnvVariables(output, client, project.id, envTarget);
+
+  // we expand env vars with multiple targets
+  const envs: ProjectEnvVariableV5[] = [];
+  for (let env of data.envs) {
+    if (Array.isArray(env.target)) {
+      for (let target of env.target) {
+        envs.push({ ...env, target });
+      }
+    } else {
+      envs.push({ ...env, target: env.target });
+    }
   }
 
-  const data = await getEnvVariables(
-    output,
-    client,
-    project.id,
-    5,
-    envTarget,
-    nextTimestamp
-  );
-  const { envs: records, pagination } = data;
   output.log(
     `${
-      records.length > 0 ? 'Environment Variables' : 'No Environment Variables'
+      envs.length > 0 ? 'Environment Variables' : 'No Environment Variables'
     } found in Project ${chalk.bold(project.name)} ${chalk.gray(lsStamp())}`
   );
-  console.log(getTable(records));
-
-  if (pagination && pagination.count === 20) {
-    const flags = getCommandFlags(opts, ['_', '--next']);
-    output.log(
-      `To display the next page run ${getCommandName(
-        `env ls${flags} --next ${pagination.next}`
-      )}`
-    );
-  }
+  console.log(getTable(envs));
 
   return 0;
 }
 
-function getTable(records: ProjectEnvVariable[]) {
+function getTable(records: ProjectEnvVariableV5[]) {
   return formatTable(
     ['name', 'value', 'environment', 'created'],
     ['l', 'l', 'l', 'l', 'l'],
@@ -96,17 +84,25 @@ function getTable(records: ProjectEnvVariable[]) {
   );
 }
 
-function getRow({
-  key,
-  system = false,
-  target,
-  createdAt = 0,
-}: ProjectEnvVariable) {
+function getRow(env: ProjectEnvVariableV5) {
+  let value: string;
+  if (env.type === 'plain') {
+    // replace space characters (line-break, etc.) with simple spaces
+    // to make sure the displayed value is a single line
+    const singleLineValue = env.value.replace(/\s/g, ' ');
+
+    value = chalk.gray(ellipsis(singleLineValue, 19));
+  } else if (env.type === 'system') {
+    value = chalk.gray.italic('Populated by System');
+  } else {
+    value = chalk.gray.italic('Encrypted');
+  }
+
   const now = Date.now();
   return [
-    chalk.bold(key),
-    chalk.gray(chalk.italic(system ? 'Populated by System' : 'Encrypted')),
-    target || '',
-    `${ms(now - createdAt)} ago`,
+    chalk.bold(env.key),
+    value,
+    env.target || '',
+    env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }

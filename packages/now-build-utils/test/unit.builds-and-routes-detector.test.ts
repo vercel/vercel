@@ -1080,6 +1080,46 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
+  it('Using "Create React App" framework with `next` in dependencies should NOT autodetect Next.js for new projects', async () => {
+    const pkg = {
+      scripts: {
+        dev: 'react-scripts start',
+        build: 'react-scripts build',
+      },
+      dependencies: {
+        next: '9.3.5',
+        react: '16.13.1',
+        'react-dom': '16.13.1',
+        'react-scripts': '2.1.1',
+      },
+    };
+    const files = ['package.json', 'src/index.js', 'public/favicon.ico'];
+    const projectSettings = {
+      framework: 'create-react-app',
+      buildCommand: 'react-scripts build',
+      createdAt: Date.parse('2020-07-01'),
+    };
+
+    const { builders, errorRoutes } = await detectBuilders(files, pkg, {
+      projectSettings,
+      featHandleMiss,
+    });
+
+    expect(builders).toEqual([
+      {
+        use: '@vercel/static-build',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+          framework: projectSettings.framework,
+          buildCommand: projectSettings.buildCommand,
+        },
+      },
+    ]);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
   it('Using "Other" framework with Storybook should NOT autodetect Next.js for new projects', async () => {
     const pkg = {
       scripts: {

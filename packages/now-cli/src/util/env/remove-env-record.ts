@@ -1,6 +1,6 @@
 import { Output } from '../output';
 import Client from '../client';
-import { ProjectEnvTarget, Secret, ProjectEnvVariable } from '../../types';
+import { ProjectEnvTarget, Secret, ProjectEnvVariableV5 } from '../../types';
 
 export default async function removeEnvRecord(
   output: Output,
@@ -18,7 +18,7 @@ export default async function removeEnvRecord(
     envName
   )}${qs}`;
 
-  const env = await client.fetch<ProjectEnvVariable>(urlProject, {
+  const env = await client.fetch<ProjectEnvVariableV5>(urlProject, {
     method: 'DELETE',
   });
 

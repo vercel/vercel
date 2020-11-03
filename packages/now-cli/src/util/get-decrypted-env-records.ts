@@ -12,9 +12,15 @@ export default async function getDecryptedEnvRecords(
   project: Project,
   target: ProjectEnvTarget
 ): Promise<Env> {
-  const envs = await getEnvVariables(output, client, project.id, 4, target);
+  const { envs } = await getEnvVariables(output, client, project.id, target);
   const decryptedValues = await Promise.all(
     envs.map(async env => {
+      if (env.type === 'system') {
+        return { value: '', found: true };
+      } else if (env.type === 'plain') {
+        return { value: env.value, found: true };
+      }
+
       try {
         const value = await getDecryptedSecret(output, client, env.value);
         return { value, found: true };
