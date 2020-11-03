@@ -327,6 +327,7 @@ export type RoutesManifest = {
     routeKeys?: { [named: string]: string };
   }>;
   i18n?: {
+    localeDetection?: boolean;
     defaultLocale: string;
     locales: string[];
     domains?: Array<{

@@ -2080,7 +2080,7 @@ export const build = async ({
             },
 
             // Handle redirecting to locale specific domains
-            ...(i18n.domains
+            ...(i18n.domains && i18n.localeDetection !== false
               ? [
                   {
                     // TODO: enable redirecting between domains, will require
@@ -2117,26 +2117,29 @@ export const build = async ({
               : []),
 
             // Handle redirecting to locale paths
-            {
-              // TODO: enable redirecting between paths, will require
-              // updating the src with the desired locales to redirect.
-              // if default locale is included in this src it won't be visitable
-              // by users who prefer another language since the cookie isn't set
-              // on redirect currently like in `next start`
-              src: '/',
-              locale: {
-                redirect: i18n.locales.reduce(
-                  (prev: Record<string, string>, locale) => {
-                    prev[locale] =
-                      locale === i18n.defaultLocale ? `/` : `/${locale}`;
-                    return prev;
+            ...(i18n.localeDetection !== false
+              ? [
+                  {
+                    // TODO: if default locale is included in this src it won't be
+                    // visitable by users who prefer another language since a
+                    // cookie isn't set signaling the default locale is preferred
+                    // on redirect currently, investigate adding this
+                    src: '/',
+                    locale: {
+                      redirect: i18n.locales.reduce(
+                        (prev: Record<string, string>, locale) => {
+                          prev[locale] =
+                            locale === i18n.defaultLocale ? `/` : `/${locale}`;
+                          return prev;
+                        },
+                        {}
+                      ),
+                      cookie: 'NEXT_LOCALE',
+                    },
+                    continue: true,
                   },
-                  {}
-                ),
-                cookie: 'NEXT_LOCALE',
-              },
-              continue: true,
-            },
+                ]
+              : []),
 
             {
               src: `^${path.join('/', entryDirectory)}$`,
