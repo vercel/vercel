@@ -583,31 +583,28 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
     t.regex(stderr, /Environment Variables found in Project/gm);
 
+    console.log(stdout);
+
     const lines = stdout.split('\n');
 
-    const myPlaintextEnvVars = lines.filter(line =>
+    const plaintextEnvs = lines.filter(line =>
       line.includes('MY_PLAINTEXT_ENV_VAR')
     );
-    t.is(myPlaintextEnvVars.length, 3);
-    t.regex(myPlaintextEnvVars.join('\n'), /development/gm);
-    t.regex(myPlaintextEnvVars.join('\n'), /preview/gm);
-    t.regex(myPlaintextEnvVars.join('\n'), /production/gm);
+    t.is(plaintextEnvs.length, 1);
+    t.regex(plaintextEnvs[0], /production, preview, development/gm);
 
-    const mySecretEnvVars = lines.filter(line =>
-      line.includes('MY_SECRET_ENV_VAR')
-    );
-    t.is(mySecretEnvVars.length, 1);
-    t.regex(mySecretEnvVars.join('\n'), /preview/gm);
+    const secretEnvs = lines.filter(line => line.includes('MY_SECRET_ENV_VAR'));
+    t.is(secretEnvs.length, 1);
+    t.regex(secretEnvs[0], /preview/gm);
 
     // const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
     // t.is(myStdinVars.length, 1);
     // t.regex(myStdinVars.join('\n'), /development/gm);
 
-    const vercelVars = lines.filter(line => line.includes('VERCEL_URL'));
-    t.is(vercelVars.length, 3);
-    t.regex(vercelVars.join('\n'), /development/gm);
-    t.regex(vercelVars.join('\n'), /preview/gm);
-    t.regex(vercelVars.join('\n'), /production/gm);
+    const systemEnvs = lines.filter(line => line.includes('VERCEL_URL'));
+    t.is(systemEnvs.length, 1);
+    t.regex(systemEnvs[0], /VERCEL_URL/gm);
+    t.regex(systemEnvs[0], /production, preview, development/gm);
   }
 
   async function nowEnvPull() {
