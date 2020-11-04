@@ -64,7 +64,7 @@ export default async function add(
     envTargets.push(envTarget);
   }
 
-  await inquirer.prompt({
+  const { envType } = await inquirer.prompt({
     name: 'envType',
     type: 'list',
     message: `Which type of Environment Variable do you want to add?`,
@@ -142,7 +142,15 @@ export default async function add(
   const addStamp = stamp();
   try {
     await withSpinner('Saving', () =>
-      addEnvRecord(output, client, project.id, envName, envValue, envTargets)
+      addEnvRecord(
+        output,
+        client,
+        project.id,
+        envType,
+        envName,
+        envValue,
+        envTargets
+      )
     );
   } catch (error) {
     if (isKnownError(error) && error.serverMessage) {
