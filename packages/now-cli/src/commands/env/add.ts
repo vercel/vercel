@@ -30,6 +30,9 @@ export default async function add(
   args: string[],
   output: Output
 ) {
+  // improve the way we show inquirer prompts
+  require('../../util/input/patch-inquirer');
+
   const stdInput = await readStandardInput();
   let [envName, envTarget] = args;
 
