@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { ProjectEnvTarget, Project } from '../../types';
 import { Output } from '../../util/output';
-import promptBool from '../../util/prompt-bool';
+import confirm from '../../util/input/confirm';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
@@ -68,9 +68,9 @@ export default async function pull(
   } else if (
     exists &&
     !skipConfirmation &&
-    !(await promptBool(
-      output,
-      `Found existing file ${param(filename)}. Do you want to overwrite?`
+    !(await confirm(
+      `Found existing file ${param(filename)}. Do you want to overwrite?`,
+      false
     ))
   ) {
     output.log('Aborted');

@@ -136,6 +136,37 @@
       "status": 404
     },
     {
+      "path": "/api-docs/first",
+      "status": 200,
+      "mustContain": "API Docs"
+    },
+    {
+      "path": "/api-docs/second",
+      "status": 200,
+      "mustContain": "Loading..."
+    },
+    {
+      "path": "/_next/data/testing-build-id/api-docs/first.json",
+      "status": 200,
+      "responseHeaders": {
+        "x-vercel-cache": "/HIT|STALE|PRERENDER/"
+      }
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hi"
+    },
+    {
+      "path": "/_next/data/testing-build-id/index.json",
+      "status": 200,
+      "mustContain": "\"hello\":\"index\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/api-docs/second.json",
+      "status": 200
+    },
+    {
       "logMustNotContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
     },
     {

@@ -923,9 +923,17 @@ export default class DevServer {
     await once(this.watcher, 'ready');
 
     // Configure the server to forward WebSocket "upgrade" events to the proxy.
-    this.server.on('upgrade', (req, socket, head) => {
+    this.server.on('upgrade', async (req, socket, head) => {
+      await this.startPromise;
+      if (!this.devProcessPort) {
+        this.output.debug(
+          `Detected "upgrade" event, but closing socket because no frontend dev server is running`
+        );
+        socket.destroy();
+        return;
+      }
       const target = `http://localhost:${this.devProcessPort}`;
-      this.output.debug(`Detected upgrade event, proxying to ${target}`);
+      this.output.debug(`Detected "upgrade" event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
 
@@ -1364,6 +1372,7 @@ export default class DevServer {
     const missRoutes = handleMap.get('miss') || [];
     const hitRoutes = handleMap.get('hit') || [];
     const errorRoutes = handleMap.get('error') || [];
+    const filesystemRoutes = handleMap.get('filesystem') || [];
     const phases: (HandleValue | null)[] = [null, 'filesystem'];
 
     let routeResult: RouteResult | null = null;
@@ -1479,6 +1488,11 @@ export default class DevServer {
 
       if (match) {
         // end the phase
+        break;
+      }
+
+      if (phase === null && filesystemRoutes.length === 0) {
+        // hack to skip the reset from null to filesystem
         break;
       }
     }

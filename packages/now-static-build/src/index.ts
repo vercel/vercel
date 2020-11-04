@@ -33,6 +33,7 @@ const {
   NowBuildError,
 } = buildUtils;
 import { Route, Source } from '@vercel/routing-utils';
+import * as GatsbyUtils from './utils/gatsby';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -327,6 +328,22 @@ export async function build({
       debug(
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
+
+      if (process.env.VERCEL_ANALYTICS_ID) {
+        const frameworkDirectory = path.join(
+          workPath,
+          path.dirname(entrypoint)
+        );
+        switch (framework.slug) {
+          case 'gatsby': {
+            await GatsbyUtils.injectVercelAnalyticsPlugin(frameworkDirectory);
+            break;
+          }
+          default: {
+            break;
+          }
+        }
+      }
     }
 
     const nodeVersion = await getNodeVersion(
