@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { ProjectEnvTarget, Project } from '../../types';
+import { ProjectEnvTarget, Project, Secret } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -64,7 +64,7 @@ export default async function add(
     envTargets.push(envTarget);
   }
 
-  const { envType } = await inquirer.prompt({
+  const { envType } = (await inquirer.prompt({
     name: 'envType',
     type: 'list',
     message: `Which type of Environment Variable do you want to add?`,
@@ -76,7 +76,7 @@ export default async function add(
       },
       { name: 'Provided by System', value: 'system' },
     ],
-  });
+  })) as { envType: 'plain' | 'secret' | 'system' };
 
   while (!envName) {
     const { inputName } = await inquirer.prompt({
@@ -122,6 +122,69 @@ export default async function add(
       message: `What’s the value of ${envName}?`,
     });
     envValue = inputValue || '';
+  }
+
+  if (envType === 'plain') {
+    const { inputValue } = await inquirer.prompt({
+      type: 'input',
+      name: 'inputValue',
+      message: `What’s the value of ${envName}?`,
+    });
+    envValue = inputValue || '';
+  } else if (envType === 'secret') {
+    const { secretName } = await inquirer.prompt({
+      type: 'input',
+      name: 'secretName',
+      message: `What’s the value of ${envName}?`,
+    });
+
+    const secret = await client.fetch<Secret>(
+      `/v2/now/secrets/${encodeURIComponent(secretName)}`
+    );
+
+    envValue = secret.uid;
+  } else {
+    const SYSTEM_ENV_VARIABLES = [
+      'VERCEL_URL',
+      'VERCEL_GITHUB_COMMIT_ORG',
+      'VERCEL_GITHUB_COMMIT_REF',
+      'VERCEL_GITHUB_ORG',
+      'VERCEL_GITHUB_DEPLOYMENT',
+      'VERCEL_GITHUB_COMMIT_REPO',
+      'VERCEL_GITHUB_REPO',
+      'VERCEL_GITHUB_COMMIT_AUTHOR_LOGIN',
+      'VERCEL_GITHUB_COMMIT_AUTHOR_NAME',
+      'VERCEL_GITHUB_COMMIT_SHA',
+      'VERCEL_GITLAB_DEPLOYMENT',
+      'VERCEL_GITLAB_PROJECT_NAMESPACE',
+      'VERCEL_GITLAB_PROJECT_NAME',
+      'VERCEL_GITLAB_PROJECT_ID',
+      'VERCEL_GITLAB_PROJECT_PATH',
+      'VERCEL_GITLAB_COMMIT_REF',
+      'VERCEL_GITLAB_COMMIT_SHA',
+      'VERCEL_GITLAB_COMMIT_MESSAGE',
+      'VERCEL_GITLAB_COMMIT_AUTHOR_LOGIN',
+      'VERCEL_GITLAB_COMMIT_AUTHOR_NAME',
+      'VERCEL_BITBUCKET_DEPLOYMENT',
+      'VERCEL_BITBUCKET_REPO_OWNER',
+      'VERCEL_BITBUCKET_REPO_SLUG',
+      'VERCEL_BITBUCKET_REPO_NAME',
+      'VERCEL_BITBUCKET_COMMIT_REF',
+      'VERCEL_BITBUCKET_COMMIT_SHA',
+      'VERCEL_BITBUCKET_COMMIT_MESSAGE',
+      'VERCEL_BITBUCKET_COMMIT_AUTHOR_NAME',
+      'VERCEL_BITBUCKET_COMMIT_AUTHOR_URL',
+      'VERCEL_BITBUCKET_COMMIT_AUTHOR_AVATAR',
+    ];
+
+    const { systemEnvValue } = await inquirer.prompt({
+      name: 'systemEnvValue',
+      type: 'list',
+      message: `Which type of Environment Variable do you want to add?`,
+      choices: SYSTEM_ENV_VARIABLES.map(value => ({ name: value, value })),
+    });
+
+    envValue = systemEnvValue;
   }
 
   while (envTargets.length === 0) {
