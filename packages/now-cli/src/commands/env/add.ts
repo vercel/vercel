@@ -111,26 +111,17 @@ export default async function add(
 
   let envValue: string;
 
-  if (stdInput) {
-    envValue = stdInput;
-  } else if (isSystemEnvVariable(envName)) {
-    envValue = '';
-  } else {
-    const { inputValue } = await inquirer.prompt({
-      type: 'input',
-      name: 'inputValue',
-      message: `What’s the value of ${envName}?`,
-    });
-    envValue = inputValue || '';
-  }
-
   if (envType === 'plain') {
-    const { inputValue } = await inquirer.prompt({
-      type: 'input',
-      name: 'inputValue',
-      message: `What’s the value of ${envName}?`,
-    });
-    envValue = inputValue || '';
+    if (stdInput) {
+      envValue = stdInput;
+    } else {
+      const { inputValue } = await inquirer.prompt({
+        type: 'input',
+        name: 'inputValue',
+        message: `What’s the value of ${envName}?`,
+      });
+      envValue = inputValue || '';
+    }
   } else if (envType === 'secret') {
     const { secretName } = await inquirer.prompt({
       type: 'input',
@@ -233,8 +224,4 @@ export default async function add(
   );
 
   return 0;
-}
-
-function isSystemEnvVariable(envName: string) {
-  return envName.startsWith('VERCEL_');
 }
