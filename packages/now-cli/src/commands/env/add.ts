@@ -117,7 +117,7 @@ export default async function add(
     envValue = '';
   } else {
     const { inputValue } = await inquirer.prompt({
-      type: 'password',
+      type: 'input',
       name: 'inputValue',
       message: `What’s the value of ${envName}?`,
     });
