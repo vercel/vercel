@@ -63,6 +63,17 @@ export default async function add(
     envTargets.push(envTarget);
   }
 
+  await inquirer.prompt({
+    name: 'envType',
+    type: 'list',
+    message: `Which type of Environment Variable do you want to add?`,
+    choices: [
+      { name: 'Plaintext', value: 'plain' },
+      { name: 'Secret', value: 'secret' },
+      { name: 'Provided by System', value: 'system' },
+    ],
+  });
+
   while (!envName) {
     const { inputName } = await inquirer.prompt({
       type: 'input',
