@@ -1,6 +1,6 @@
 # gatsby-plugin-vercel
 
-This plugin sends [Core Web Vitals](https://web.dev/vitals/) to Vercel Analytics. This plugin is configured by default on Vercel. You **do not** need to install it manually.
+This plugin sends [Core Web Vitals](https://web.dev/vitals/) to Vercel Analytics. This plugin is configured by default on Vercel. You **do not** need to install it manually. For more information, [read this post](https://vercel.com/blog/gatsby-analytics).
 
 ## Install
 
