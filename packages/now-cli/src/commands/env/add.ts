@@ -17,6 +17,7 @@ import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
+import code from '../../util/output/code';
 
 type Options = {
   '--debug': boolean;
@@ -69,7 +70,10 @@ export default async function add(
     message: `Which type of Environment Variable do you want to add?`,
     choices: [
       { name: 'Plaintext', value: 'plain' },
-      { name: 'Secret', value: 'secret' },
+      {
+        name: `Secret (can be created using ${code('vercel secret add')})`,
+        value: 'secret',
+      },
       { name: 'Provided by System', value: 'system' },
     ],
   });
