@@ -73,7 +73,7 @@ export default async function ls(
 
 function getTable(records: ProjectEnvVariableV5[]) {
   return formatTable(
-    ['name', 'value', 'environment', 'created'],
+    ['name', 'value', 'environments', 'created'],
     ['l', 'l', 'l', 'l', 'l'],
     [
       {
