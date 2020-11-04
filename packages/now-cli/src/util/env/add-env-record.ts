@@ -18,7 +18,9 @@ export default async function addEnvRecord(
   let value = envValue;
 
   if (envType === 'secret') {
-    const secret = await client.fetch<Secret>(`/v2/now/secrets/${envValue}`);
+    const secret = await client.fetch<Secret>(
+      `/v2/now/secrets/${encodeURIComponent(envValue)}`
+    );
     value = secret.uid;
   }
 
