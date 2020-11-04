@@ -81,7 +81,7 @@ function getRow(env: ProjectEnvVariable) {
 
     value = chalk.gray(ellipsis(singleLineValue, 19));
   } else if (env.type === 'system') {
-    value = chalk.gray.italic('Populated by System');
+    value = chalk.gray.italic(env.value);
   } else {
     value = chalk.gray.italic('Encrypted');
   }
