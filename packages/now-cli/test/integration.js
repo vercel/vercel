@@ -591,11 +591,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
       line.includes('MY_PLAINTEXT_ENV_VAR')
     );
     t.is(plaintextEnvs.length, 1);
-    t.regex(plaintextEnvs[0], /production, preview, development/gm);
+    t.regex(plaintextEnvs[0], /Production, Preview, Development/gm);
 
     const secretEnvs = lines.filter(line => line.includes('MY_SECRET_ENV_VAR'));
     t.is(secretEnvs.length, 1);
-    t.regex(secretEnvs[0], /preview/gm);
+    t.regex(secretEnvs[0], /Preview/gm);
 
     // const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
     // t.is(myStdinVars.length, 1);
@@ -604,7 +604,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const systemEnvs = lines.filter(line => line.includes('VERCEL_URL'));
     t.is(systemEnvs.length, 1);
     t.regex(systemEnvs[0], /VERCEL_URL/gm);
-    t.regex(systemEnvs[0], /production, preview, development/gm);
+    t.regex(systemEnvs[0], /Production, Preview, Development/gm);
   }
 
   async function nowEnvPull() {

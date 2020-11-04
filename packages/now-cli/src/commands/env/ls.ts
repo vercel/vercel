@@ -13,6 +13,7 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
+import capitalize from '../../util/output/capitalize';
 
 type Options = {
   '--debug': boolean;
@@ -90,7 +91,9 @@ function getRow(env: ProjectEnvVariable) {
   return [
     chalk.bold(env.key),
     value,
-    Array.isArray(env.target) ? env.target.join(', ') : env.target || '',
+    (Array.isArray(env.target) ? env.target : [env.target || ''])
+      .map(capitalize)
+      .join(', '),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }
