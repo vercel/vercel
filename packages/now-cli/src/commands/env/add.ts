@@ -123,17 +123,35 @@ export default async function add(
       envValue = inputValue || '';
     }
   } else if (envType === 'secret') {
-    const { secretName } = await inquirer.prompt({
-      type: 'input',
-      name: 'secretName',
-      message: `What’s the value of ${envName}?`,
-    });
+    let secretId: string | null = null;
 
-    const secret = await client.fetch<Secret>(
-      `/v2/now/secrets/${encodeURIComponent(secretName)}`
-    );
+    while (!secretId) {
+      const { secretName } = await inquirer.prompt({
+        type: 'input',
+        name: 'secretName',
+        message: `What’s the value of ${envName}?`,
+      });
 
-    envValue = secret.uid;
+      try {
+        const secret = await client.fetch<Secret>(
+          `/v2/now/secrets/${encodeURIComponent(secretName)}`
+        );
+
+        secretId = secret.uid;
+      } catch (error) {
+        if (error.status === 404) {
+          output.error(
+            `Please enter the name of an existing Secret (can be created with ${code(
+              'vercel secret add'
+            )}).`
+          );
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    envValue = secretId;
   } else {
     const SYSTEM_ENV_VARIABLES = [
       'VERCEL_URL',
