@@ -6,25 +6,25 @@ export default async function addEnvRecord(
   output: Output,
   client: Client,
   projectId: string,
-  envType: 'plain' | 'secret' | 'system',
+  type: 'plain' | 'secret' | 'system',
   envName: string,
   envValue: string,
   targets: ProjectEnvTarget[]
 ): Promise<void> {
   output.debug(
-    `Adding ${envType} Environment Variable ${envName} to ${targets.length} targets`
+    `Adding ${type} Environment Variable ${envName} to ${targets.length} targets`
   );
 
   let value = envValue;
 
-  if (envType === 'secret') {
+  if (type === 'secret') {
     const secret = await client.fetch<Secret>(
       `/v2/now/secrets/${encodeURIComponent(envValue)}`
     );
     value = secret.uid;
   }
 
-  const body = { type: envType, key: envName, value, target: targets };
+  const body = { type, key: envName, value, target: targets };
 
   const urlProject = `/v6/projects/${projectId}/env`;
   await client.fetch<ProjectEnvVariableV5>(urlProject, {
