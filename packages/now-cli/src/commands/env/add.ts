@@ -120,17 +120,24 @@ export default async function add(
         name: 'inputValue',
         message: `What’s the value of ${envName}?`,
       });
+
       envValue = inputValue || '';
     }
   } else if (envType === 'secret') {
     let secretId: string | null = null;
 
     while (!secretId) {
-      const { secretName } = await inquirer.prompt({
+      let { secretName } = await inquirer.prompt({
         type: 'input',
         name: 'secretName',
         message: `What’s the value of ${envName}?`,
       });
+
+      secretName = secretName || '';
+
+      if (secretName[0] === '@') {
+        secretName = secretName.slice(1);
+      }
 
       try {
         const secret = await client.fetch<Secret>(
