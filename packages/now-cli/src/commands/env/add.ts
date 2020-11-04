@@ -196,7 +196,7 @@ export default async function add(
     const { systemEnvValue } = await inquirer.prompt({
       name: 'systemEnvValue',
       type: 'list',
-      message: `Which type of Environment Variable do you want to add?`,
+      message: `What’s the value of ${envName}?`,
       choices: SYSTEM_ENV_VARIABLES.map(value => ({ name: value, value })),
     });
 
