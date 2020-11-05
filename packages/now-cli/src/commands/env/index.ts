@@ -18,7 +18,8 @@ import ls from './ls';
 import rm from './rm';
 
 const help = () => {
-  const placeholder = getEnvTargetPlaceholder();
+  const typePlaceholder = getEnvTargetPlaceholder();
+  const targetPlaceholder = getEnvTargetPlaceholder();
   console.log(`
   ${chalk.bold(`${logo} ${getPkgName()} env`)} [options] <command>
 
@@ -47,18 +48,20 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new variable to multiple Environments
 
-      ${chalk.cyan(`$ ${getPkgName()} env add <type> <name>`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add ${typePlaceholder} <name>`)}
       ${chalk.cyan(`$ ${getPkgName()} env add secret API_TOKEN`)}
 
   ${chalk.gray('–')} Add a new variable for a specific Environment
 
-      ${chalk.cyan(`$ ${getPkgName()} env add <type> <name> ${placeholder}`)}
+      ${chalk.cyan(
+        `$ ${getPkgName()} env add ${typePlaceholder} <name> ${targetPlaceholder}`
+      )}
       ${chalk.cyan(`$ ${getPkgName()} env add secret DB_PASS production`)}
 
   ${chalk.gray('–')} Add a new Environment Variable from stdin
 
       ${chalk.cyan(
-        `$ cat <file> | ${getPkgName()} env add <type> <name> ${placeholder}`
+        `$ cat <file> | ${getPkgName()} env add ${typePlaceholder} <name> ${targetPlaceholder}`
       )}
       ${chalk.cyan(
         `$ cat ~/.npmrc | ${getPkgName()} env add plain NPM_RC preview`
@@ -74,7 +77,7 @@ const help = () => {
 
   ${chalk.gray('–')} Remove a variable from a specific Environment
 
-      ${chalk.cyan(`$ ${getPkgName()} env rm <name> ${placeholder}`)}
+      ${chalk.cyan(`$ ${getPkgName()} env rm <name> ${targetPlaceholder}`)}
       ${chalk.cyan(`$ ${getPkgName()} env rm NPM_RC preview`)}
 `);
 };

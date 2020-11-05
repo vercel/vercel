@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { ProjectEnvTarget, Project, Secret } from '../../types';
+import { ProjectEnvTarget, Project, Secret, ProjectEnvType } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -11,6 +11,7 @@ import {
   getEnvTargetPlaceholder,
   getEnvTargetChoices,
 } from '../../util/env/env-target';
+import { isValidEnvType, getEnvTypePlaceholder } from '../../util/env/env-type';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
@@ -39,7 +40,7 @@ export default async function add(
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <type> <name> ${getEnvTargetPlaceholder()}`
+        `env add ${getEnvTypePlaceholder()} <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
@@ -48,7 +49,7 @@ export default async function add(
   if (stdInput && (!envType || !envName || !envTarget)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <type> <name> <target> < <file>`
+        `env add ${getEnvTypePlaceholder()} <name> <target> < <file>`
       )}`
     );
     return 1;
@@ -67,12 +68,11 @@ export default async function add(
     envTargets.push(envTarget);
   }
 
-  const VALID_ENV_TYPES = ['plain', 'system', 'secret'];
-  if (envType && !VALID_ENV_TYPES.includes(envType)) {
+  if (envType && !isValidEnvType(envType)) {
     output.error(
       `The Environment Variable type ${param(
         envType
-      )} is invalid. It must be one of: <${VALID_ENV_TYPES.join(' | ')}>.`
+      )} is invalid. It must be one of: ${getEnvTypePlaceholder()}.`
     );
     return 1;
   }
@@ -83,14 +83,14 @@ export default async function add(
       type: 'list',
       message: `Which type of Environment Variable do you want to add?`,
       choices: [
-        { name: 'Plaintext', value: 'plain' },
+        { name: 'Plaintext', value: ProjectEnvType.Plaintext },
         {
           name: `Secret (can be created using ${code('vercel secret add')})`,
-          value: 'secret',
+          value: ProjectEnvType.Secret,
         },
-        { name: 'Provided by System', value: 'system' },
+        { name: 'Provided by System', value: ProjectEnvType.System },
       ],
-    })) as { inputEnvType: 'plain' | 'secret' | 'system' };
+    })) as { inputEnvType: ProjectEnvType };
 
     envType = inputEnvType;
   }
@@ -130,7 +130,7 @@ export default async function add(
 
   if (stdInput) {
     envValue = stdInput;
-  } else if (envType === 'plain') {
+  } else if (envType === ProjectEnvType.Plaintext) {
     const { inputValue } = await inquirer.prompt({
       type: 'input',
       name: 'inputValue',
@@ -138,7 +138,7 @@ export default async function add(
     });
 
     envValue = inputValue || '';
-  } else if (envType === 'secret') {
+  } else if (envType === ProjectEnvType.Secret) {
     let secretId: string | null = null;
 
     while (!secretId) {
