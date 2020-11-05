@@ -89,9 +89,15 @@ const Schema = {
       },
       settings: {
         type: 'object',
-        required: ['buildCommand', 'devCommand', 'outputDirectory'],
+        required: [
+          'installCommand',
+          'buildCommand',
+          'devCommand',
+          'outputDirectory',
+        ],
         additionalProperties: false,
         properties: {
+          installCommand: SchemaSettings,
           buildCommand: SchemaSettings,
           devCommand: SchemaSettings,
           outputDirectory: SchemaSettings,
