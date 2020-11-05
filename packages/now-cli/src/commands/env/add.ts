@@ -19,6 +19,7 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import code from '../../util/output/code';
+import { SYSTEM_ENV_VALUES } from '../../util/env/system-env';
 
 type Options = {
   '--debug': boolean;
@@ -175,44 +176,11 @@ export default async function add(
 
     envValue = secretId;
   } else {
-    const SYSTEM_ENV_VARIABLES = [
-      'VERCEL_URL',
-      'VERCEL_GITHUB_COMMIT_ORG',
-      'VERCEL_GITHUB_COMMIT_REF',
-      'VERCEL_GITHUB_ORG',
-      'VERCEL_GITHUB_DEPLOYMENT',
-      'VERCEL_GITHUB_COMMIT_REPO',
-      'VERCEL_GITHUB_REPO',
-      'VERCEL_GITHUB_COMMIT_AUTHOR_LOGIN',
-      'VERCEL_GITHUB_COMMIT_AUTHOR_NAME',
-      'VERCEL_GITHUB_COMMIT_SHA',
-      'VERCEL_GITLAB_DEPLOYMENT',
-      'VERCEL_GITLAB_PROJECT_NAMESPACE',
-      'VERCEL_GITLAB_PROJECT_NAME',
-      'VERCEL_GITLAB_PROJECT_ID',
-      'VERCEL_GITLAB_PROJECT_PATH',
-      'VERCEL_GITLAB_COMMIT_REF',
-      'VERCEL_GITLAB_COMMIT_SHA',
-      'VERCEL_GITLAB_COMMIT_MESSAGE',
-      'VERCEL_GITLAB_COMMIT_AUTHOR_LOGIN',
-      'VERCEL_GITLAB_COMMIT_AUTHOR_NAME',
-      'VERCEL_BITBUCKET_DEPLOYMENT',
-      'VERCEL_BITBUCKET_REPO_OWNER',
-      'VERCEL_BITBUCKET_REPO_SLUG',
-      'VERCEL_BITBUCKET_REPO_NAME',
-      'VERCEL_BITBUCKET_COMMIT_REF',
-      'VERCEL_BITBUCKET_COMMIT_SHA',
-      'VERCEL_BITBUCKET_COMMIT_MESSAGE',
-      'VERCEL_BITBUCKET_COMMIT_AUTHOR_NAME',
-      'VERCEL_BITBUCKET_COMMIT_AUTHOR_URL',
-      'VERCEL_BITBUCKET_COMMIT_AUTHOR_AVATAR',
-    ];
-
     const { systemEnvValue } = await inquirer.prompt({
       name: 'systemEnvValue',
       type: 'list',
       message: `What’s the value of ${envName}?`,
-      choices: SYSTEM_ENV_VARIABLES.map(value => ({ name: value, value })),
+      choices: SYSTEM_ENV_VALUES.map(value => ({ name: value, value })),
     });
 
     envValue = systemEnvValue;
