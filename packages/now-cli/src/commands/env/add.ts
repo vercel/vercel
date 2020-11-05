@@ -128,18 +128,16 @@ export default async function add(
 
   let envValue: string;
 
-  if (envType === 'plain') {
-    if (stdInput) {
-      envValue = stdInput;
-    } else {
-      const { inputValue } = await inquirer.prompt({
-        type: 'input',
-        name: 'inputValue',
-        message: `What’s the value of ${envName}?`,
-      });
+  if (stdInput) {
+    envValue = stdInput;
+  } else if (envType === 'plain') {
+    const { inputValue } = await inquirer.prompt({
+      type: 'input',
+      name: 'inputValue',
+      message: `What’s the value of ${envName}?`,
+    });
 
-      envValue = inputValue || '';
-    }
+    envValue = inputValue || '';
   } else if (envType === 'secret') {
     let secretId: string | null = null;
 
