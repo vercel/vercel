@@ -18,7 +18,6 @@ import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
-import code from '../../util/output/code';
 import { SYSTEM_ENV_VALUES } from '../../util/env/system-env';
 
 type Options = {
@@ -86,7 +85,7 @@ export default async function add(
       choices: [
         { name: 'Plaintext', value: ProjectEnvType.Plaintext },
         {
-          name: `Secret (can be created using ${code('vercel secret add')})`,
+          name: `Secret (can be created using ${getCommandName('secret add')})`,
           value: ProjectEnvType.Secret,
         },
         { name: 'Provided by System', value: ProjectEnvType.System },
@@ -164,8 +163,8 @@ export default async function add(
       } catch (error) {
         if (error.status === 404) {
           output.error(
-            `Please enter the name of an existing Secret (can be created with ${code(
-              'vercel secret add'
+            `Please enter the name of an existing Secret (can be created with ${getCommandName(
+              'secret add'
             )}).`
           );
         } else {
