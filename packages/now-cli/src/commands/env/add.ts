@@ -34,7 +34,7 @@ export default async function add(
   require('../../util/input/patch-inquirer');
 
   const stdInput = await readStandardInput();
-  let [envName, envTarget] = args;
+  let [envType, envName, envTarget] = args;
 
   if (args.length > 2) {
     output.error(
@@ -45,10 +45,10 @@ export default async function add(
     return 1;
   }
 
-  if (stdInput && (!envName || !envTarget)) {
+  if (stdInput && (!envType || !envName || !envTarget)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> < <file>`
+        `env add <type> <name> <target> < <file>`
       )}`
     );
     return 1;
@@ -67,19 +67,33 @@ export default async function add(
     envTargets.push(envTarget);
   }
 
-  const { envType } = (await inquirer.prompt({
-    name: 'envType',
-    type: 'list',
-    message: `Which type of Environment Variable do you want to add?`,
-    choices: [
-      { name: 'Plaintext', value: 'plain' },
-      {
-        name: `Secret (can be created using ${code('vercel secret add')})`,
-        value: 'secret',
-      },
-      { name: 'Provided by System', value: 'system' },
-    ],
-  })) as { envType: 'plain' | 'secret' | 'system' };
+  const VALID_ENV_TYPES = ['plain', 'system', 'secret'];
+  if (envType && !VALID_ENV_TYPES.includes(envType)) {
+    output.error(
+      `The Environment Variable type ${param(
+        envType
+      )} is invalid. It must be one of: <${VALID_ENV_TYPES.join(' | ')}>.`
+    );
+    return 1;
+  }
+
+  if (!envType) {
+    const { inputEnvType } = (await inquirer.prompt({
+      name: 'inputEnvType',
+      type: 'list',
+      message: `Which type of Environment Variable do you want to add?`,
+      choices: [
+        { name: 'Plaintext', value: 'plain' },
+        {
+          name: `Secret (can be created using ${code('vercel secret add')})`,
+          value: 'secret',
+        },
+        { name: 'Provided by System', value: 'system' },
+      ],
+    })) as { inputEnvType: 'plain' | 'secret' | 'system' };
+
+    envType = inputEnvType;
+  }
 
   while (!envName) {
     const { inputName } = await inquirer.prompt({
@@ -228,6 +242,7 @@ export default async function add(
         output,
         client,
         project.id,
+        // @ts-ignore
         envType,
         envName,
         envValue,

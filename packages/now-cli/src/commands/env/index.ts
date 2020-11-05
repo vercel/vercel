@@ -24,10 +24,10 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    ls      [environment]              List all variables for the specified Environment
-    add     [name] [environment]       Add an Environment Variable (see examples below)
-    rm      [name] [environment]       Remove an Environment Variable (see examples below)
-    pull    [filename]                 Pull all Development Environment Variables from the cloud and write to a file [.env]
+    ls      [environment]                   List all variables for the specified Environment
+    add     [type] [name] [environment]     Add an Environment Variable (see examples below)
+    rm      [name] [environment]            Remove an Environment Variable (see examples below)
+    pull    [filename]                      Pull all Development Environment Variables from the cloud and write to a file [.env]
 
   ${chalk.dim('Options:')}
 
@@ -47,21 +47,25 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new variable to multiple Environments
 
-      ${chalk.cyan(`$ ${getPkgName()} env add <name>`)}
-      ${chalk.cyan(`$ ${getPkgName()} env add API_TOKEN`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add <type> <name>`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add secret API_TOKEN`)}
 
   ${chalk.gray('–')} Add a new variable for a specific Environment
 
-      ${chalk.cyan(`$ ${getPkgName()} env add <name> ${placeholder}`)}
-      ${chalk.cyan(`$ ${getPkgName()} env add DB_CONNECTION production`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add <type> <name> ${placeholder}`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add secret DB_PASS production`)}
 
   ${chalk.gray('–')} Add a new Environment Variable from stdin
 
       ${chalk.cyan(
-        `$ cat <file> | ${getPkgName()} env add <name> ${placeholder}`
+        `$ cat <file> | ${getPkgName()} env add <type> <name> ${placeholder}`
       )}
-      ${chalk.cyan(`$ cat ~/.npmrc | ${getPkgName()} env add NPM_RC preview`)}
-      ${chalk.cyan(`$ ${getPkgName()} env add DB_PASS production < secret.txt`)}
+      ${chalk.cyan(
+        `$ cat ~/.npmrc | ${getPkgName()} env add plain NPM_RC preview`
+      )}
+      ${chalk.cyan(
+        `$ ${getPkgName()} env add plain API_URL production < url.txt`
+      )}
 
   ${chalk.gray('–')} Remove an variable from multiple Environments
 
