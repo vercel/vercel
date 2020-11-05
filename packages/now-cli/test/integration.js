@@ -522,34 +522,29 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
-  // async function nowEnvAddFromStdin() {
-  //   const now = execa(
-  //     binaryPath,
-  //     ['env', 'add', 'MY_STDIN_VAR', 'development', ...defaultArgs],
-  //     {
-  //       reject: false,
-  //       cwd: target,
-  //     }
-  //   );
-  //   now.stdin.end('{"expect":"quotes"}');
-  //   const { exitCode, stderr, stdout } = await now;
-  //   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  // }
-
-  async function nowEnvAddSystemEnv() {
+  async function nowEnvAddFromStdin() {
     const now = execa(
       binaryPath,
-      ['env', 'add', 'VERCEL_URL', ...defaultArgs],
+      ['env', 'add', 'plain', 'MY_STDIN_VAR', 'development', ...defaultArgs],
       {
         reject: false,
         cwd: target,
       }
     );
+    now.stdin.end('{"expect":"quotes"}');
+    const { exitCode, stderr, stdout } = await now;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
 
-    await waitForPrompt(now, chunk =>
-      chunk.includes('Which type of Environment Variable do you want to add?')
+  async function nowEnvAddSystemEnv() {
+    const now = execa(
+      binaryPath,
+      ['env', 'add', 'system', 'VERCEL_URL', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
     );
-    now.stdin.write('jj\n'); // select system
 
     await waitForPrompt(
       now,
@@ -597,9 +592,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(secretEnvs.length, 1);
     t.regex(secretEnvs[0], /Preview/gm);
 
-    // const myStdinVars = lines.filter(line => line.includes('MY_STDIN_VAR'));
-    // t.is(myStdinVars.length, 1);
-    // t.regex(myStdinVars.join('\n'), /development/gm);
+    const stdinEnvs = lines.filter(line => line.includes('MY_STDIN_VAR'));
+    t.is(stdinEnvs.length, 1);
+    t.regex(stdinEnvs[0], /Development/gm);
 
     const systemEnvs = lines.filter(line => line.includes('VERCEL_URL'));
     t.is(systemEnvs.length, 1);
@@ -625,7 +620,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
 
     const lines = new Set(contents.split('\n'));
     t.true(lines.has('MY_PLAINTEXT_ENV_VAR="my plaintext value"'));
-    // t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
+    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
     t.true(lines.has('VERCEL_URL=""'));
   }
 
@@ -758,12 +753,14 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
 
     t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
     t.is(apiJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
+    t.is(apiJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
 
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
     t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(homeJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
@@ -805,6 +802,21 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     );
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+    const {
+      exitCode: exitCode2,
+      stderr: stderr2,
+      stdout: stdout2,
+    } = await execa(
+      binaryPath,
+      ['env', 'rm', 'MY_STDIN_VAR', 'development', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode2, 0, formatOutput({ stderr2, stdout2 }));
   }
 
   async function nowEnvRemoveWithNameOnly() {
@@ -833,7 +845,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvLsIsEmpty();
   await nowEnvAddPlaintext();
   await nowEnvAddSecret(secretName);
-  // await nowEnvAddFromStdin();
+  await nowEnvAddFromStdin();
   await nowEnvAddSystemEnv();
   await nowEnvLsIncludesVar();
   await nowEnvPull();
