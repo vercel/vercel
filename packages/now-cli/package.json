@@ -13,7 +13,7 @@
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
     "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js test/dev-validate.unit.js --serial --fail-fast --verbose",
-    "test-integration-cli": "ava test/integration.js --serial --fail-fast --verbose",
+    "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
@@ -158,6 +158,7 @@
     "psl": "1.1.31",
     "qr-image": "3.2.0",
     "raw-body": "2.4.1",
+    "rimraf": "3.0.2",
     "semver": "5.5.0",
     "serve-handler": "6.1.1",
     "sinon": "4.4.2",
