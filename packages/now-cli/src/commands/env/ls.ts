@@ -1,7 +1,12 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { Output } from '../../util/output';
-import { ProjectEnvTarget, Project, ProjectEnvVariable } from '../../types';
+import {
+  ProjectEnvTarget,
+  Project,
+  ProjectEnvVariable,
+  ProjectEnvType,
+} from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvVariables from '../../util/env/get-env-records';
@@ -76,13 +81,13 @@ function getTable(records: ProjectEnvVariable[]) {
 
 function getRow(env: ProjectEnvVariable) {
   let value: string;
-  if (env.type === 'plain') {
+  if (env.type === ProjectEnvType.Plaintext) {
     // replace space characters (line-break, etc.) with simple spaces
     // to make sure the displayed value is a single line
     const singleLineValue = env.value.replace(/\s/g, ' ');
 
     value = chalk.gray(ellipsis(singleLineValue, 19));
-  } else if (env.type === 'system') {
+  } else if (env.type === ProjectEnvType.System) {
     value = chalk.gray.italic(env.value);
   } else {
     value = chalk.gray.italic('Encrypted');

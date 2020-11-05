@@ -1,12 +1,17 @@
 import { Output } from '../output';
 import Client from '../client';
-import { Secret, ProjectEnvTarget, ProjectEnvVariableV5 } from '../../types';
+import {
+  Secret,
+  ProjectEnvTarget,
+  ProjectEnvVariableV5,
+  ProjectEnvType,
+} from '../../types';
 
 export default async function addEnvRecord(
   output: Output,
   client: Client,
   projectId: string,
-  type: 'plain' | 'secret' | 'system',
+  type: ProjectEnvType,
   key: string,
   envValue: string,
   targets: ProjectEnvTarget[]
@@ -17,7 +22,7 @@ export default async function addEnvRecord(
 
   let value = envValue;
 
-  if (type === 'secret') {
+  if (type === ProjectEnvType.Secret) {
     const secret = await client.fetch<Secret>(
       `/v2/now/secrets/${encodeURIComponent(envValue)}`
     );
