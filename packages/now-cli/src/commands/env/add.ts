@@ -36,10 +36,10 @@ export default async function add(
   const stdInput = await readStandardInput();
   let [envType, envName, envTarget] = args;
 
-  if (args.length > 2) {
+  if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> ${getEnvTargetPlaceholder()}`
+        `env add <type> <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
