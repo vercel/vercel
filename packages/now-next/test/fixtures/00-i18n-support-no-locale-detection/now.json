@@ -162,6 +162,47 @@
     },
 
     {
+      "path": "/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"en-US\""
+    },
+    {
+      "path": "/en/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/en/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"en\""
+    },
+    {
+      "path": "/nl/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/nl/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"nl\""
+    },
+    {
+      "path": "/fr/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/fr/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"fr\""
+    },
+
+    {
       "path": "/gsp",
       "status": 200,
       "mustContain": "gsp page"
