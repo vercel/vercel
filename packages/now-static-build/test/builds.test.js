@@ -180,3 +180,40 @@ it(
   },
   FOUR_MINUTES
 );
+
+it(
+  'Should build Gatsby with configuration that has export default',
+  async () => {
+    const { workPath } = await runBuildLambda(
+      path.join(__dirname, 'build-fixtures/06-gatsby-export-default')
+    );
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'gatsby-config.js')).toBeTruthy();
+    expect(
+      contents.some(
+        name => name === 'gatsby-config.js.__vercel_builder_backup__.js'
+      )
+    ).toBeTruthy();
+
+    expect(require(path.join(workPath, 'gatsby-config.js')))
+      .toMatchInlineSnapshot(`
+      Object {
+        "plugins": Array [
+          "gatsby-plugin-react-helmet",
+          Object {
+            "options": Object {},
+            "resolve": "gatsby-plugin-vercel",
+          },
+        ],
+        "siteMetadata": Object {
+          "author": "@gatsbyjs",
+          "description": "Kick off your next, great Gatsby project with this default starter. This barebones starter ships with the main Gatsby configuration files you might need.",
+          "title": "Gatsby Default Starter",
+        },
+      }
+    `);
+  },
+  FOUR_MINUTES
+);
