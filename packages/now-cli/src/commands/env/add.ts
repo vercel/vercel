@@ -35,7 +35,7 @@ export default async function add(
   require('../../util/input/patch-inquirer');
 
   const stdInput = await readStandardInput();
-  let [envType, envName, envTarget] = args;
+  let [envTypeArg, envName, envTargetArg] = args;
 
   if (args.length > 3) {
     output.error(
@@ -46,7 +46,7 @@ export default async function add(
     return 1;
   }
 
-  if (stdInput && (!envType || !envName || !envTarget)) {
+  if (stdInput && (!envTypeArg || !envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
         `env add ${getEnvTypePlaceholder()} <name> <target> < <file>`
@@ -56,29 +56,32 @@ export default async function add(
   }
 
   let envTargets: ProjectEnvTarget[] = [];
-  if (envTarget) {
-    if (!isValidEnvTarget(envTarget)) {
+  if (envTargetArg) {
+    if (!isValidEnvTarget(envTargetArg)) {
       output.error(
         `The Environment ${param(
-          envTarget
+          envTargetArg
         )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
       );
       return 1;
     }
-    envTargets.push(envTarget);
+    envTargets.push(envTargetArg);
   }
 
-  if (envType && !isValidEnvType(envType)) {
-    output.error(
-      `The Environment Variable type ${param(
-        envType
-      )} is invalid. It must be one of: ${getEnvTypePlaceholder()}.`
-    );
-    return 1;
-  }
+  let envType: ProjectEnvType;
+  if (envTypeArg) {
+    if (!isValidEnvType(envTypeArg)) {
+      output.error(
+        `The Environment Variable type ${param(
+          envTypeArg
+        )} is invalid. It must be one of: ${getEnvTypePlaceholder()}.`
+      );
+      return 1;
+    }
 
-  if (!envType) {
-    const { inputEnvType } = (await inquirer.prompt({
+    envType = envTypeArg;
+  } else {
+    const answers = (await inquirer.prompt({
       name: 'inputEnvType',
       type: 'list',
       message: `Which type of Environment Variable do you want to add?`,
@@ -92,7 +95,7 @@ export default async function add(
       ],
     })) as { inputEnvType: ProjectEnvType };
 
-    envType = inputEnvType;
+    envType = answers.inputEnvType;
   }
 
   while (!envName) {
@@ -207,7 +210,6 @@ export default async function add(
         output,
         client,
         project.id,
-        // @ts-ignore
         envType,
         envName,
         envValue,
