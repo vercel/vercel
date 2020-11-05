@@ -6,6 +6,7 @@ import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import { getEnvTypePlaceholder } from '../../util/env/env-type';
 import { getLinkedProject } from '../../util/projects/link';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
@@ -18,7 +19,7 @@ import ls from './ls';
 import rm from './rm';
 
 const help = () => {
-  const typePlaceholder = getEnvTargetPlaceholder();
+  const typePlaceholder = getEnvTypePlaceholder();
   const targetPlaceholder = getEnvTargetPlaceholder();
   console.log(`
   ${chalk.bold(`${logo} ${getPkgName()} env`)} [options] <command>
