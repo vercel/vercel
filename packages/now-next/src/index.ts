@@ -1411,17 +1411,23 @@ export const build = async ({
           const isFallback = prerenderManifest.fallbackRoutes[pathname!];
           const isBlocking =
             prerenderManifest.blockingFallbackRoutes[pathname!];
+          const isAutoExport =
+            staticPages[
+              addLocaleOrDefault(pathname!, routesManifest).substr(1)
+            ];
+
+          const isLocalePrefixed = isFallback || isBlocking || isAutoExport;
 
           route.src = route.src.replace(
             '^',
             `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
-              isFallback || isBlocking ? '<nextLocale>' : ':'
+              isLocalePrefixed ? '<nextLocale>' : ':'
             }${i18n.locales
               .map(locale => escapeStringRegexp(locale))
               .join('|')})?`
           );
 
-          if (isFallback || isBlocking) {
+          if (isLocalePrefixed) {
             // ensure destination has locale prefix to match prerender output
             // path so that the prerender object is used
             route.dest = route.dest!.replace(
