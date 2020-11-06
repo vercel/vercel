@@ -30,6 +30,9 @@ export default async function rm(
   args: string[],
   output: Output
 ) {
+  // improve the way we show inquirer prompts
+  require('../../util/input/patch-inquirer');
+
   if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
@@ -92,7 +95,7 @@ export default async function rm(
     return 1;
   }
 
-  if (envTargets.length === 0) {
+  while (envTargets.length === 0) {
     const choices = getEnvTargetChoices().filter(c => existing.has(c.value));
     if (choices.length === 0) {
       output.error(
@@ -110,6 +113,13 @@ export default async function rm(
         message: `Remove ${envName} from which Environments (select multiple)?`,
         choices,
       });
+
+      if (inputTargets.length === 0) {
+        output.error(
+          'Please select an Environment to remove the Environment Variable from.'
+        );
+      }
+
       envTargets = inputTargets;
     }
   }
