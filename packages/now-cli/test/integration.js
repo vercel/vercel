@@ -778,6 +778,20 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     );
     now.stdin.write('MY_PLAINTEXT_ENV_VAR\n');
 
+    // expect error if no environment is selected
+    await waitForPrompt(
+      now,
+      chunk =>
+        chunk.includes('which Environments') &&
+        chunk.includes('MY_PLAINTEXT_ENV_VAR')
+    );
+    now.stdin.write('\n'); // select none
+    await waitForPrompt(now, chunk =>
+      chunk.includes(
+        'Please select an Environment to remove the Environment Variable from.'
+      )
+    );
+
     await waitForPrompt(
       now,
       chunk =>
