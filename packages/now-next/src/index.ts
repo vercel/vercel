@@ -421,7 +421,7 @@ export const build = async ({
     });
   }
 
-  const appMountPrefixNoTrailingSlash = path.posix
+  let appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
     .replace(/\/+$/, '');
 
@@ -468,6 +468,30 @@ export const build = async ({
 
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
+        }
+
+        if (routesManifest.basePath && routesManifest.basePath !== '/') {
+          const nextBasePath = routesManifest.basePath;
+
+          if (!nextBasePath.startsWith('/')) {
+            throw new NowBuildError({
+              code: 'NEXT_BASEPATH_STARTING_SLASH',
+              message:
+                'basePath must start with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
+            });
+          }
+          if (nextBasePath.endsWith('/')) {
+            throw new NowBuildError({
+              code: 'NEXT_BASEPATH_TRAILING_SLASH',
+              message:
+                'basePath must not end with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
+            });
+          }
+
+          entryDirectory = path.join(entryDirectory, nextBasePath);
+          appMountPrefixNoTrailingSlash = path.posix
+            .join('/', entryDirectory)
+            .replace(/\/+$/, '');
         }
 
         if (routesManifest.dataRoutes) {
@@ -554,26 +578,6 @@ export const build = async ({
           hasPages404 = true;
         }
 
-        if (routesManifest.basePath && routesManifest.basePath !== '/') {
-          const nextBasePath = routesManifest.basePath;
-
-          if (!nextBasePath.startsWith('/')) {
-            throw new NowBuildError({
-              code: 'NEXT_BASEPATH_STARTING_SLASH',
-              message:
-                'basePath must start with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
-            });
-          }
-          if (nextBasePath.endsWith('/')) {
-            throw new NowBuildError({
-              code: 'NEXT_BASEPATH_TRAILING_SLASH',
-              message:
-                'basePath must not end with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
-            });
-          }
-
-          entryDirectory = path.join(entryDirectory, nextBasePath);
-        }
         break;
       }
       default: {
