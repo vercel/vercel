@@ -79,7 +79,6 @@ export async function readBuildOutputDirectory({
           sourcemapSupportPath: '',
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
-          awsLambdaHandler: '',
         }),
       }),
       [`${bridgeFileName}.js`]: new FileBlob({
