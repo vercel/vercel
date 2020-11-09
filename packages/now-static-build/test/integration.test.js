@@ -50,6 +50,10 @@ const testsThatFailToBuild = new Map([
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
+  if (!fixture.endsWith('61-function-output-directory')) {
+    continue;
+  }
+
   const errMsg = testsThatFailToBuild.get(fixture);
   if (errMsg) {
     // eslint-disable-next-line no-loop-func
