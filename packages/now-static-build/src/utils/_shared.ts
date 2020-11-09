@@ -1,18 +1,12 @@
 import { constants, PathLike, promises as fs } from 'fs';
-import { FileBlob } from '@vercel/build-utils';
-import { Files } from '@vercel/build-utils';
-import { Lambda } from '@vercel/build-utils';
-import { PackageJson } from '@vercel/build-utils';
+import { FileBlob, Files, Lambda, PackageJson } from '@vercel/build-utils';
 import buildUtils from '../build-utils';
 import path from 'path';
 
 // @ts-ignore
 import { makeNowLauncher } from '@vercel/node/dist/launcher';
 
-const { createLambda } = buildUtils;
-const { debug } = buildUtils;
-const { getLatestNodeVersion } = buildUtils;
-const { glob } = buildUtils;
+const { createLambda, debug, getLatestNodeVersion, glob } = buildUtils;
 
 export type DeepWriteable<T> = {
   -readonly [P in keyof T]: DeepWriteable<T[P]>;
