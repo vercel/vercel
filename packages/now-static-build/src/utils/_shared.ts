@@ -1,6 +1,18 @@
-import { PackageJson } from '@vercel/build-utils';
 import { constants, PathLike, promises as fs } from 'fs';
-import * as path from 'path';
+import { FileBlob } from '@vercel/build-utils';
+import { Files } from '@vercel/build-utils';
+import { Lambda } from '@vercel/build-utils';
+import { PackageJson } from '@vercel/build-utils';
+import buildUtils from '../build-utils';
+import path from 'path';
+
+// @ts-ignore
+import { makeNowLauncher } from '@vercel/node/dist/launcher';
+
+const { createLambda } = buildUtils;
+const { debug } = buildUtils;
+const { getLatestNodeVersion } = buildUtils;
+const { glob } = buildUtils;
 
 export type DeepWriteable<T> = {
   -readonly [P in keyof T]: DeepWriteable<T[P]>;
@@ -37,4 +49,75 @@ export async function writePackageJson(
     path.join(workPath, 'package.json'),
     JSON.stringify(packageJson, null, 2)
   );
+}
+
+/**
+ * Reads the .vercel_build_output directory and returns and object
+ * that should be merged with the build outputs.
+ *
+ * At the moment only `functions/node` is supported.
+ */
+export async function readBuildOutputDirectory({
+  workPath,
+}: {
+  workPath: string;
+}) {
+  const output: { [key: string]: Lambda } = {};
+  const nodeFunctionPath = path.join(
+    workPath,
+    '.vercel_build_output',
+    'functions',
+    'node'
+  );
+  const nodeFunctionFiles = await glob('**', { cwd: nodeFunctionPath });
+  const nodeBridgeData = (
+    await fs.readFile(path.join(__dirname, 'bridge.js'))
+  ).toString();
+
+  for (const [fileName, file] of Object.entries(nodeFunctionFiles)) {
+    const launcherFileName = '__now_launcher';
+    const bridgeFileName = '___now_bridge';
+
+    const launcherFiles: Files = {
+      [`${launcherFileName}.js`]: new FileBlob({
+        data: makeNowLauncher({
+          entrypointPath: `./${path.relative(
+            nodeFunctionPath,
+            path.join(nodeFunctionPath, fileName)
+          )}`,
+          bridgePath: `./${bridgeFileName}`,
+          helpersPath: '',
+          sourcemapSupportPath: '',
+          shouldAddHelpers: false,
+          shouldAddSourcemapSupport: false,
+          awsLambdaHandler: false,
+        }),
+      }),
+      [`${bridgeFileName}.js`]: new FileBlob({
+        data: nodeBridgeData,
+      }),
+    };
+
+    const lambda = await createLambda({
+      files: {
+        [fileName]: file,
+        ...launcherFiles,
+      },
+      handler: `${launcherFileName}.launcher`,
+      runtime: getLatestNodeVersion().runtime,
+    });
+
+    const parsed = path.parse(fileName);
+    const newPath = path.join(parsed.dir, parsed.name);
+    output[newPath] = lambda;
+
+    debug(
+      `Created Lambda "${newPath}" from "${path.join(
+        nodeFunctionPath,
+        fileName
+      )}".`
+    );
+  }
+
+  return { output };
 }

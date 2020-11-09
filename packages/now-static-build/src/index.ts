@@ -33,6 +33,7 @@ const {
   NowBuildError,
 } = buildUtils;
 import { Route, Source } from '@vercel/routing-utils';
+import { readBuildOutputDirectory } from './utils/_shared';
 import * as GatsbyUtils from './utils/gatsby';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -489,7 +490,12 @@ export async function build({
         }
       }
 
-      validateDistDir(distPath);
+      const extraOutputs = await readBuildOutputDirectory({ workPath });
+
+      // No need to verify the dist dir if there are other output files.
+      if (!Object.keys(extraOutputs.output).length) {
+        validateDistDir(distPath);
+      }
 
       if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
@@ -514,6 +520,7 @@ export async function build({
         debug(`Using ignore: ${JSON.stringify(ignore)}`);
       }
       output = await glob('**', { cwd: distPath, ignore }, mountpoint);
+      Object.assign(output, extraOutputs.output);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];
@@ -530,9 +537,16 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-    validateDistDir(distPath);
+
+    const extraOutputs = await readBuildOutputDirectory({ workPath });
+
+    // No need to verify the dist dir if there are other output files.
+    if (!Object.keys(extraOutputs.output).length) {
+      validateDistDir(distPath);
+    }
 
     const output = await glob('**', distPath, mountpoint);
+    Object.assign(output, extraOutputs.output);
 
     return {
       output,
