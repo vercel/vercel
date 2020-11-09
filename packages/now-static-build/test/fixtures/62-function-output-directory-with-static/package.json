@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "build": "mkdir -p public && echo 'Hello from a static file.' > public/static.txt && mkdir -p .vercel_build_output/functions/node && cp -r src/* .vercel_build_output/functions/node"
+  }
+}
