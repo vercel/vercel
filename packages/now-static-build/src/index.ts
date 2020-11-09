@@ -537,16 +537,9 @@ export async function build({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
     await runShellScript(path.join(workPath, entrypoint), [], spawnOpts);
-
-    const extraOutputs = await readBuildOutputDirectory({ workPath });
-
-    // No need to verify the dist dir if there are other output files.
-    if (!Object.keys(extraOutputs.output).length) {
-      validateDistDir(distPath);
-    }
+    validateDistDir(distPath);
 
     const output = await glob('**', distPath, mountpoint);
-    Object.assign(output, extraOutputs.output);
 
     return {
       output,
