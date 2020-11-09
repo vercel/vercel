@@ -24,6 +24,7 @@ interface Options {
   projectSettings?: {
     framework?: string | null;
     devCommand?: string | null;
+    installCommand?: string | null;
     buildCommand?: string | null;
     outputDirectory?: string | null;
     createdAt?: number;
@@ -448,6 +449,10 @@ function detectFrontBuilder(
 
   if (projectSettings.devCommand) {
     config.devCommand = projectSettings.devCommand;
+  }
+
+  if (projectSettings.installCommand) {
+    config.installCommand = projectSettings.installCommand;
   }
 
   if (projectSettings.buildCommand) {
