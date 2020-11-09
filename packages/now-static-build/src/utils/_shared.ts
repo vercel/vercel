@@ -1,10 +1,8 @@
 import { constants, PathLike, promises as fs } from 'fs';
 import { FileBlob, Files, Lambda, PackageJson } from '@vercel/build-utils';
+import { makeNowLauncher } from '../launcher';
 import buildUtils from '../build-utils';
 import path from 'path';
-
-// @ts-ignore
-import { makeNowLauncher } from '@vercel/node/dist/launcher';
 
 const { createLambda, debug, getLatestNodeVersion, glob } = buildUtils;
 
