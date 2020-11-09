@@ -9,10 +9,14 @@
   ],
   "probes": [
     { "path": "/", "mustContain": "Hello from /index.js on /" },
-    { "path": "/about", "mustContain": "Hello from /about.js on /about" },
+    {
+      "path": "/about",
+      "mustContain": "Hello from /about/index.js on /about - Milkshake"
+    },
     {
       "path": "/products/product",
-      "mustContain": "Hello from /products/product.js on /products/product"
-    }
+      "mustContain": "Hello from /products/product/index.js on /products/product"
+    },
+    { "path": "/about/util", "status": 404 }
   ]
 }

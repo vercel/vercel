@@ -69,22 +69,19 @@ export async function readBuildOutputDirectory({
     'functions',
     'node'
   );
-  const nodeFunctionFiles = await glob('**', { cwd: nodeFunctionPath });
-  const nodeBridgeData = (
-    await fs.readFile(path.join(__dirname, 'bridge.js'))
-  ).toString();
+  const nodeFunctionFiles = await glob('**/index.js', {
+    cwd: nodeFunctionPath,
+  });
+  const nodeBridgeData = await fs.readFile(path.join(__dirname, 'bridge.js'));
 
-  for (const [fileName, file] of Object.entries(nodeFunctionFiles)) {
+  for (const fileName of Object.keys(nodeFunctionFiles)) {
     const launcherFileName = '__now_launcher';
     const bridgeFileName = '___now_bridge';
 
     const launcherFiles: Files = {
       [`${launcherFileName}.js`]: new FileBlob({
         data: makeNowLauncher({
-          entrypointPath: `./${path.relative(
-            nodeFunctionPath,
-            path.join(nodeFunctionPath, fileName)
-          )}`,
+          entrypointPath: `./index.js`,
           bridgePath: `./${bridgeFileName}`,
           helpersPath: '',
           sourcemapSupportPath: '',
@@ -98,9 +95,13 @@ export async function readBuildOutputDirectory({
       }),
     };
 
+    const requiredFiles = await glob('**', {
+      cwd: path.join(nodeFunctionPath, path.dirname(fileName)),
+    });
+
     const lambda = await createLambda({
       files: {
-        [fileName]: file,
+        ...requiredFiles,
         ...launcherFiles,
       },
       handler: `${launcherFileName}.launcher`,
