@@ -69,7 +69,7 @@ export async function readBuildOutputDirectory({
   const nodeBridgeData = await fs.readFile(path.join(__dirname, 'bridge.js'));
 
   for (const fileName of Object.keys(nodeFunctionFiles)) {
-    const launcherFileName = '__now_launcher';
+    const launcherFileName = '___now_launcher';
     const bridgeFileName = '___now_bridge';
 
     const launcherFiles: Files = {
