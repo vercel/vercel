@@ -7,7 +7,7 @@ async function main() {
   await fs.mkdir(path.join(__dirname, 'public'));
   await fs.writeFile(
     path.join(__dirname, 'public', 'index.txt'),
-    `installCommand\n`
+    `installCommand.`
   );
 
   console.log('Finished installing...');

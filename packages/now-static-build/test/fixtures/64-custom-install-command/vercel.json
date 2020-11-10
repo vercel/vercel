@@ -10,5 +10,5 @@
       }
     }
   ],
-  "probes": [{ "path": "/", "mustContain": "installCommand\nbuildCommand" }]
+  "probes": [{ "path": "/", "mustContain": "installCommand.buildCommand." }]
 }

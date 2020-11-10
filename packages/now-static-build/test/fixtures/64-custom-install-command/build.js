@@ -6,7 +6,7 @@ async function main() {
 
   await fs.appendFile(
     path.join(__dirname, 'public', 'index.txt'),
-    `buildCommand\n`
+    `buildCommand.`
   );
 
   console.log('Finished building...');
