@@ -1,6 +1,6 @@
-import { PackageJson } from '@vercel/build-utils';
 import { constants, PathLike, promises as fs } from 'fs';
-import * as path from 'path';
+import { PackageJson } from '@vercel/build-utils';
+import path from 'path';
 
 export type DeepWriteable<T> = {
   -readonly [P in keyof T]: DeepWriteable<T[P]>;
@@ -37,4 +37,12 @@ export async function writePackageJson(
     path.join(workPath, 'package.json'),
     JSON.stringify(packageJson, null, 2)
   );
+}
+
+export function isObjectEmpty(object: { [key: string]: unknown }) {
+  for (const _prop in object) {
+    return false;
+  }
+
+  return true;
 }

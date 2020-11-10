@@ -1,0 +1,10 @@
+[
+  {
+    "src": "/",
+    "dest": "/.vercel/functions/root/"
+  },
+  {
+    "src": "/(.*)",
+    "dest": "/.vercel/functions/$1"
+  }
+]

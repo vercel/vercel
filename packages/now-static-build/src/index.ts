@@ -33,6 +33,7 @@ const {
   NowBuildError,
 } = buildUtils;
 import { Route, Source } from '@vercel/routing-utils';
+import { readBuildOutputDirectory } from './utils/read-build-output';
 import * as GatsbyUtils from './utils/gatsby';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -505,31 +506,48 @@ export async function build({
         }
       }
 
-      validateDistDir(distPath);
+      const extraOutputs = await readBuildOutputDirectory({ workPath });
 
-      if (framework) {
+      if (extraOutputs.staticFiles) {
+        output = Object.assign(
+          {},
+          extraOutputs.staticFiles,
+          extraOutputs.functions
+        );
+      } else {
+        // No need to verify the dist dir if there are other output files.
+        if (!extraOutputs.functions) {
+          validateDistDir(distPath);
+        }
+
+        let ignore: string[] = [];
+        if (config.zeroConfig && config.outputDirectory === '.') {
+          ignore = [
+            '.env',
+            '.env.*',
+            '.git/**',
+            '.vercel/**',
+            'node_modules/**',
+            'yarn.lock',
+            'package-lock.json',
+            'package.json',
+            '.vercel_build_output',
+          ];
+          debug(`Using ignore: ${JSON.stringify(ignore)}`);
+        }
+        output = await glob('**', { cwd: distPath, ignore }, mountpoint);
+        Object.assign(output, extraOutputs.functions);
+      }
+
+      if (extraOutputs.routes) {
+        routes.push(...extraOutputs.routes);
+      } else if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
           framework,
           outputDirPrefix
         );
         routes.push(...frameworkRoutes);
       }
-
-      let ignore: string[] = [];
-      if (config.zeroConfig && config.outputDirectory === '.') {
-        ignore = [
-          '.env',
-          '.env.*',
-          '.git/**',
-          '.vercel/**',
-          'node_modules/**',
-          'yarn.lock',
-          'package-lock.json',
-          'package.json',
-        ];
-        debug(`Using ignore: ${JSON.stringify(ignore)}`);
-      }
-      output = await glob('**', { cwd: distPath, ignore }, mountpoint);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];

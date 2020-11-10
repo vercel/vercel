@@ -849,7 +849,7 @@
     },
     "settings": {
       "installCommand": {
-        "placeholder": "`bundle install`"
+        "value": "bundle install"
       },
       "buildCommand": {
         "placeholder": "`npm run build` or `jekyll build`"
@@ -909,7 +909,7 @@
     },
     "settings": {
       "installCommand": {
-        "placeholder": "`bundle install`"
+        "value": "bundle install"
       },
       "buildCommand": {
         "value": "`npm run build` or `bundle exec middleman build`"
