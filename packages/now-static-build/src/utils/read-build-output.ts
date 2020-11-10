@@ -1,8 +1,8 @@
 import { FileBlob, Files, Lambda } from '@vercel/build-utils';
-import { getTransformedRoutes, Route } from '@vercel/routing-utils';
 import { isObjectEmpty } from './_shared';
 import { makeNowLauncher } from '../launcher';
 import { promises as fs } from 'fs';
+import { Route } from '@vercel/routing-utils';
 import buildUtils from '../build-utils';
 import path from 'path';
 
@@ -146,14 +146,7 @@ async function readRoutesConfig({
   );
 
   try {
-    const rawRoutes = JSON.parse(await fs.readFile(routesConfigPath, 'utf8'));
-    const { routes, error } = getTransformedRoutes({ nowConfig: rawRoutes });
-
-    if (error) {
-      throw error;
-    }
-
-    return routes || [];
+    return JSON.parse(await fs.readFile(routesConfigPath, 'utf8')) || [];
   } catch (error) {
     if (error.code === 'ENOENT') {
       return [];
