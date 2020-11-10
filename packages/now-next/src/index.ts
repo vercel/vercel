@@ -376,7 +376,6 @@ export async function build({
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  console.log('Installing dependencies...');
   const installTime = Date.now();
   if (typeof installCommand === 'string') {
     console.log(`Running "install" command: \`${installCommand}\`...`);
