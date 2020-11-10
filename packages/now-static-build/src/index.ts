@@ -523,16 +523,14 @@ export async function build({
         Object.assign(output, extraOutputs.functions);
       }
 
-      if (framework) {
+      if (extraOutputs.routes) {
+        routes.push(...extraOutputs.routes);
+      } else if (framework) {
         const frameworkRoutes = await getFrameworkRoutes(
           framework,
           outputDirPrefix
         );
         routes.push(...frameworkRoutes);
-      }
-
-      if (extraOutputs.routes) {
-        routes.push(...extraOutputs.routes);
       }
     }
 
