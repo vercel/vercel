@@ -370,12 +370,7 @@ export async function build({
         });
       } else {
         console.log('Installing dependencies...');
-        await runNpmInstall(
-          entrypointDir,
-          ['--prefer-offline'],
-          spawnOpts,
-          meta
-        );
+        await runNpmInstall(entrypointDir, [], spawnOpts, meta);
         debug(`Install complete [${Date.now() - installTime}ms]`);
       }
     }
