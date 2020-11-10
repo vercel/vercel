@@ -33,7 +33,7 @@ const {
   NowBuildError,
 } = buildUtils;
 import { Route, Source } from '@vercel/routing-utils';
-import { readBuildOutputDirectory } from './utils/_shared';
+import { readBuildOutputDirectory } from './utils/read-build-output';
 import * as GatsbyUtils from './utils/gatsby';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -493,8 +493,34 @@ export async function build({
       const extraOutputs = await readBuildOutputDirectory({ workPath });
 
       // No need to verify the dist dir if there are other output files.
-      if (!Object.keys(extraOutputs.output).length) {
-        validateDistDir(distPath);
+      if (extraOutputs.staticFiles) {
+        output = Object.assign(
+          {},
+          extraOutputs.staticFiles,
+          extraOutputs.functions
+        );
+      } else {
+        if (!extraOutputs.functions) {
+          validateDistDir(distPath);
+        }
+
+        let ignore: string[] = [];
+        if (config.zeroConfig && config.outputDirectory === '.') {
+          ignore = [
+            '.env',
+            '.env.*',
+            '.git/**',
+            '.vercel/**',
+            'node_modules/**',
+            'yarn.lock',
+            'package-lock.json',
+            'package.json',
+            '.vercel_build_output',
+          ];
+          debug(`Using ignore: ${JSON.stringify(ignore)}`);
+        }
+        output = await glob('**', { cwd: distPath, ignore }, mountpoint);
+        Object.assign(output, extraOutputs.functions);
       }
 
       if (framework) {
@@ -505,22 +531,9 @@ export async function build({
         routes.push(...frameworkRoutes);
       }
 
-      let ignore: string[] = [];
-      if (config.zeroConfig && config.outputDirectory === '.') {
-        ignore = [
-          '.env',
-          '.env.*',
-          '.git/**',
-          '.vercel/**',
-          'node_modules/**',
-          'yarn.lock',
-          'package-lock.json',
-          'package.json',
-        ];
-        debug(`Using ignore: ${JSON.stringify(ignore)}`);
+      if (extraOutputs.routes) {
+        routes.push(...extraOutputs.routes);
       }
-      output = await glob('**', { cwd: distPath, ignore }, mountpoint);
-      Object.assign(output, extraOutputs.output);
     }
 
     const watch = [path.join(mountpoint.replace(/^\.\/?/, ''), '**/*')];

@@ -8,15 +8,15 @@
     }
   ],
   "probes": [
-    { "path": "/", "mustContain": "Hello from /index.js on /" },
+    { "path": "/static.txt", "mustContain": "static" },
+    { "path": "/", "mustContain": "Hello from /root/index.js on /" },
     {
       "path": "/about",
       "mustContain": "Hello from /about/index.js on /about - Milkshake"
     },
     {
-      "path": "/products/product",
-      "mustContain": "Hello from /products/product/index.js on /products/product"
-    },
-    { "path": "/about/util", "status": 404 }
+      "path": "/product",
+      "mustContain": "Hello from /product/index.js on /product - Information about a Product"
+    }
   ]
 }
