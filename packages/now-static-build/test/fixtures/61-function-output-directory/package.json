@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "build": "mkdir -p .vercel_build_output/functions/node && cp -r src/* .vercel_build_output/functions/node"
-  }
-}

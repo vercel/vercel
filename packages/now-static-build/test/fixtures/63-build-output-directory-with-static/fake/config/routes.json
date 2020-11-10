@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/.vercel/functions/root" },
+    { "source": "/:path*", "destination": "/.vercel/functions/:path*" }
+  ]
+}
