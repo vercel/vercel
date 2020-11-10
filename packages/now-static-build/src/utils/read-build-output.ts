@@ -1,19 +1,18 @@
 import { FileBlob, Files, Lambda } from '@vercel/build-utils';
 import { getTransformedRoutes, Route } from '@vercel/routing-utils';
+import { isObjectEmpty } from './_shared';
 import { makeNowLauncher } from '../launcher';
 import { promises as fs } from 'fs';
 import buildUtils from '../build-utils';
 import path from 'path';
-import { isObjectEmpty } from './_shared';
 
 const { createLambda, debug, getLatestNodeVersion, glob } = buildUtils;
 
 /**
- * TODO: Update.
  * Reads the .vercel_build_output directory and returns and object
  * that should be merged with the build outputs.
  *
- * At the moment only `functions/node` is supported.
+ * At the moment only `functions/node` is supported for functions.
  */
 export async function readBuildOutputDirectory({
   workPath,
@@ -31,11 +30,27 @@ export async function readBuildOutputDirectory({
 
   const routes = await readRoutesConfig({ workPath });
 
-  return {
+  const outputs = {
     staticFiles: isObjectEmpty(staticFiles) ? null : staticFiles,
     functions: isObjectEmpty(functions) ? null : functions,
     routes: routes.length ? routes : null,
   };
+
+  if (outputs.functions) {
+    console.log(
+      `Detected Serverless Functions in ".vercel_build_output/functions"`
+    );
+  }
+
+  if (outputs.staticFiles) {
+    console.log(`Detected Static Assets in ".vercel_build_output/static"`);
+  }
+
+  if (outputs.routes) {
+    console.log(`Detected Configuration in ".vercel_build_output/config"`);
+  }
+
+  return outputs;
 }
 
 async function readStaticFiles({
