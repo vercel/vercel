@@ -104,12 +104,7 @@ async function downloadInstallAndBundle({
   } else {
     const installTime = Date.now();
     console.log('Installing dependencies...');
-    await runNpmInstall(
-      entrypointFsDirname,
-      ['--prefer-offline'],
-      spawnOpts,
-      meta
-    );
+    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta);
     debug(`Install complete [${Date.now() - installTime}ms]`);
   }
 
