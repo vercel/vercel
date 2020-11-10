@@ -492,7 +492,6 @@ export async function build({
 
       const extraOutputs = await readBuildOutputDirectory({ workPath });
 
-      // No need to verify the dist dir if there are other output files.
       if (extraOutputs.staticFiles) {
         output = Object.assign(
           {},
@@ -500,6 +499,7 @@ export async function build({
           extraOutputs.functions
         );
       } else {
+        // No need to verify the dist dir if there are other output files.
         if (!extraOutputs.functions) {
           validateDistDir(distPath);
         }
