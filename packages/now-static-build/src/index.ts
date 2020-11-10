@@ -120,10 +120,10 @@ function getCommand(
     return null;
   }
 
-  const propName = `${name}Command`;
+  const propName = `${name}Command` as keyof Config;
 
-  if (typeof (config as any)[propName] === 'string') {
-    return (config as any)[propName];
+  if (typeof config[propName] === 'string') {
+    return config[propName];
   }
 
   if (pkg) {
