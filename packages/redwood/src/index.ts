@@ -61,7 +61,6 @@ export async function build({
   );
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const installTime = Date.now();
   if (typeof installCommand === 'string') {
     console.log(`Running "install" command: \`${installCommand}\`...`);
     await execCommand(installCommand, {
@@ -70,6 +69,7 @@ export async function build({
     });
   } else {
     console.log('Installing dependencies...');
+    const installTime = Date.now();
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta);
     debug(`Install complete [${Date.now() - installTime}ms]`);
   }

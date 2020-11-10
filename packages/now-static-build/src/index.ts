@@ -361,7 +361,6 @@ export async function build({
     if (meta.isDev) {
       debug('Skipping dependency installation because dev mode is enabled');
     } else {
-      const installTime = Date.now();
       if (typeof installCommand === 'string') {
         console.log(`Running "install" command: \`${installCommand}\`...`);
         await execCommand(installCommand, {
@@ -370,6 +369,7 @@ export async function build({
         });
       } else {
         console.log('Installing dependencies...');
+        const installTime = Date.now();
         await runNpmInstall(entrypointDir, [], spawnOpts, meta);
         debug(`Install complete [${Date.now() - installTime}ms]`);
       }
