@@ -686,11 +686,23 @@ test('convertTrailingSlash enabled', () => {
   deepEqual(actual, expected);
 
   const mustMatch = [
+    [
+      '/.well-known',
+      '/.well-known/',
+      '/.well-known/asdf',
+      '/.well-known/asdf/',
+    ],
     ['/dir', '/dir/foo', '/dir/foo/bar'],
     ['/foo.html/', '/dir/foo.html/', '/dir/foo/bar.css/', '/dir/about.map.js/'],
   ];
 
   const mustNotMatch = [
+    [
+      '/swell-known',
+      '/swell-known/',
+      '/swell-known/asdf',
+      '/swell-known/asdf/',
+    ],
     [
       '/',
       '/index.html',
