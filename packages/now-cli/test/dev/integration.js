@@ -1605,7 +1605,9 @@ test(
     console.log('testing the url ' + url);
     await testPath(200, url, checkRes, reqHeaders);
 
-    // TODO: test Cache-Control headers
+    // TODO: test cache-control, last-modified, etag, headers
+    // TODO: test svg bypass
+    // TODO: test animated gif bypass
     // TODO: test cloudinary
   })
 );
