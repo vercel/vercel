@@ -118,6 +118,11 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
 
 export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   const routes: Route[] = [];
+  // we shouldn't redirect well known files because they likely won't follow redirects
+  routes.push({
+    src: '^/\\.well-known(?:/.*)?$',
+    headers: { 'X-Robots-Tag': 'noindex' }
+  });
   if (enable) {
     routes.push({
       src: '^/((?:[^/]+/)*[^/\\.]+)$',
