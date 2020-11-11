@@ -671,6 +671,7 @@ test('convertHeaders', () => {
 test('convertTrailingSlash enabled', () => {
   const actual = convertTrailingSlash(true);
   const expected = [
+    { src: '^/\\.well-known(?:/.*)?$' },
     {
       src: '^/((?:[^/]+/)*[^/\\.]+)$',
       headers: { Location: '/$1/' },
