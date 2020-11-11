@@ -153,6 +153,16 @@
       }
     },
     {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hi"
+    },
+    {
+      "path": "/_next/data/testing-build-id/index.json",
+      "status": 200,
+      "mustContain": "\"hello\":\"index\""
+    },
+    {
       "path": "/_next/data/testing-build-id/api-docs/second.json",
       "status": 200
     },

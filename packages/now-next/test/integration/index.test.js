@@ -207,7 +207,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeTruthy();
   },
   FOUR_MINUTES
@@ -278,7 +280,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeTruthy();
   },
   FOUR_MINUTES
@@ -345,7 +349,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeTruthy();
   },
   FOUR_MINUTES
@@ -380,7 +386,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeFalsy();
   },
   FOUR_MINUTES
@@ -422,7 +430,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeFalsy();
   },
   FOUR_MINUTES
