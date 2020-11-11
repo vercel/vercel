@@ -20,6 +20,48 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0].src).not.toBe('now.json');
   });
 
+  it('should select "installCommand"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const files = ['package.json', 'pages/index.js', 'public/index.html'];
+    const { builders, errors } = await detectBuilders(files, pkg, {
+      projectSettings: {
+        installCommand: 'npx pnpm install',
+      },
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBeDefined();
+    expect(builders!.length).toStrictEqual(1);
+    expect(builders![0].src).toStrictEqual('package.json');
+    expect(builders![0].use).toStrictEqual('@vercel/next');
+    expect(builders![0].config!.zeroConfig).toStrictEqual(true);
+    expect(builders![0].config!.installCommand).toStrictEqual(
+      'npx pnpm install'
+    );
+  });
+
+  it('should select empty "installCommand"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const files = ['package.json', 'pages/index.js', 'public/index.html'];
+    const { builders, errors } = await detectBuilders(files, pkg, {
+      projectSettings: {
+        installCommand: '',
+      },
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBeDefined();
+    expect(builders!.length).toStrictEqual(1);
+    expect(builders![0].src).toStrictEqual('package.json');
+    expect(builders![0].use).toStrictEqual('@vercel/next');
+    expect(builders![0].config!.zeroConfig).toStrictEqual(true);
+    expect(builders![0].config!.installCommand).toStrictEqual('');
+  });
+
   it('package.json + no build', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'pages/index.js', 'public/index.html'];

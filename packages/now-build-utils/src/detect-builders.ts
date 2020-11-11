@@ -451,7 +451,7 @@ function detectFrontBuilder(
     config.devCommand = projectSettings.devCommand;
   }
 
-  if (projectSettings.installCommand) {
+  if (typeof projectSettings.installCommand === 'string') {
     config.installCommand = projectSettings.installCommand;
   }
 
