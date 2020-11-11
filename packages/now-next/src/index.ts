@@ -377,11 +377,15 @@ export async function build({
   }
 
   if (typeof installCommand === 'string') {
-    console.log(`Running "install" command: \`${installCommand}\`...`);
-    await execCommand(installCommand, {
-      ...spawnOpts,
-      cwd: entryPath,
-    });
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entryPath,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
   } else {
     console.log('Installing dependencies...');
     const installTime = Date.now();

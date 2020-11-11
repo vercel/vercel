@@ -362,11 +362,15 @@ export async function build({
       debug('Skipping dependency installation because dev mode is enabled');
     } else {
       if (typeof installCommand === 'string') {
-        console.log(`Running "install" command: \`${installCommand}\`...`);
-        await execCommand(installCommand, {
-          ...spawnOpts,
-          cwd: entrypointDir,
-        });
+        if (installCommand.trim()) {
+          console.log(`Running "install" command: \`${installCommand}\`...`);
+          await execCommand(installCommand, {
+            ...spawnOpts,
+            cwd: entrypointDir,
+          });
+        } else {
+          console.log(`Skipping "install" command...`);
+        }
       } else {
         console.log('Installing dependencies...');
         const installTime = Date.now();

@@ -62,11 +62,15 @@ export async function build({
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (typeof installCommand === 'string') {
-    console.log(`Running "install" command: \`${installCommand}\`...`);
-    await execCommand(installCommand, {
-      ...spawnOpts,
-      cwd: entrypointFsDirname,
-    });
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entrypointFsDirname,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
   } else {
     console.log('Installing dependencies...');
     const installTime = Date.now();
