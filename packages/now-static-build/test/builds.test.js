@@ -217,3 +217,42 @@ it(
   },
   FOUR_MINUTES
 );
+
+it(
+  'Should build Gatsby with "gatsby-plugin-zeit-now" plugin',
+  async () => {
+    const { workPath } = await runBuildLambda(
+      path.join(__dirname, 'build-fixtures/07-gatsby-with-now-plugin')
+    );
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'gatsby-config.js')).toBeTruthy();
+
+    expect(require(path.join(workPath, 'gatsby-config.js')))
+      .toMatchInlineSnapshot(`
+      Object {
+        "plugins": Array [
+          Object {
+            "options": Object {
+              "globalHeaders": Object {
+                "x-some-header": "some-value",
+              },
+            },
+            "resolve": "gatsby-plugin-zeit-now",
+          },
+          Object {
+            "options": Object {},
+            "resolve": "gatsby-plugin-vercel",
+          },
+        ],
+        "siteMetadata": Object {
+          "author": "@gatsbyjs",
+          "description": "Kick off your next, great Gatsby project with this default starter. This barebones starter ships with the main Gatsby configuration files you might need.",
+          "title": "Gatsby Default Starter",
+        },
+      }
+    `);
+  },
+  FOUR_MINUTES
+);
