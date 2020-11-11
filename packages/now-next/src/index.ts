@@ -214,7 +214,7 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
   return { forked, getUrl };
 }
 
-export const build = async ({
+export async function build({
   files,
   workPath,
   repoRootPath,
@@ -231,7 +231,7 @@ export const build = async ({
   }>;
   watch?: string[];
   childProcesses: ChildProcess[];
-}> => {
+}> {
   validateEntrypoint(entrypoint);
 
   // Limit for max size each lambda can be, 50 MB if no custom limit
@@ -352,7 +352,7 @@ export const build = async ({
     'now-build',
     'build',
   ]);
-  const { buildCommand } = config;
+  const { installCommand, buildCommand } = config;
 
   if (!buildScriptName && !buildCommand) {
     console.log(
@@ -376,8 +376,22 @@ export const build = async ({
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  console.log('Installing dependencies...');
-  await runNpmInstall(entryPath, [], spawnOpts, meta);
+  if (typeof installCommand === 'string') {
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entryPath,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
+  } else {
+    console.log('Installing dependencies...');
+    const installTime = Date.now();
+    await runNpmInstall(entryPath, [], spawnOpts, meta);
+    debug(`Install complete [${Date.now() - installTime}ms]`);
+  }
 
   // Refetch Next version now that dependencies are installed.
   // This will now resolve the actual installed Next version,
@@ -2372,7 +2386,7 @@ export const build = async ({
     watch: [],
     childProcesses: [],
   };
-};
+}
 
 export const prepareCache = async ({
   workPath,

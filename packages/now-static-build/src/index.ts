@@ -111,7 +111,7 @@ function getScriptName(pkg: PackageJson, cmd: string, { zeroConfig }: Config) {
 }
 
 function getCommand(
-  name: 'build' | 'dev',
+  name: 'install' | 'build' | 'dev',
   pkg: PackageJson | null,
   config: Config,
   framework: Framework | undefined
@@ -120,7 +120,7 @@ function getCommand(
     return null;
   }
 
-  const propName = name === 'build' ? 'buildCommand' : 'devCommand';
+  const propName = `${name}Command` as keyof Config;
 
   if (typeof config[propName] === 'string') {
     return config[propName];
@@ -135,7 +135,7 @@ function getCommand(
   }
 
   if (framework) {
-    return framework[propName] || null;
+    return (framework as any)[propName] || null;
   }
 
   return null;
@@ -270,6 +270,7 @@ export async function build({
 
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
+  const installCommand = getCommand('install', pkg, config, framework);
 
   if (pkg || buildCommand) {
     const gemfilePath = path.join(workPath, 'Gemfile');
@@ -280,18 +281,20 @@ export async function build({
     const routes: Route[] = [];
 
     if (config.zeroConfig) {
-      if (existsSync(gemfilePath) && !meta.isDev) {
-        debug('Detected Gemfile, executing bundle install...');
-        await runBundleInstall(workPath, [], undefined, meta);
-      }
-      if (existsSync(requirementsPath) && !meta.isDev) {
-        debug('Detected requirements.txt, executing pip install...');
-        await runPipInstall(
-          workPath,
-          ['-r', requirementsPath],
-          undefined,
-          meta
-        );
+      if (typeof installCommand !== 'string') {
+        if (existsSync(gemfilePath) && !meta.isDev) {
+          debug('Detected Gemfile, executing bundle install...');
+          await runBundleInstall(workPath, [], undefined, meta);
+        }
+        if (existsSync(requirementsPath) && !meta.isDev) {
+          debug('Detected requirements.txt, executing pip install...');
+          await runPipInstall(
+            workPath,
+            ['-r', requirementsPath],
+            undefined,
+            meta
+          );
+        }
       }
 
       const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
@@ -358,10 +361,22 @@ export async function build({
     if (meta.isDev) {
       debug('Skipping dependency installation because dev mode is enabled');
     } else {
-      const installTime = Date.now();
-      console.log('Installing dependencies...');
-      await runNpmInstall(entrypointDir, ['--prefer-offline'], spawnOpts, meta);
-      debug(`Install complete [${Date.now() - installTime}ms]`);
+      if (typeof installCommand === 'string') {
+        if (installCommand.trim()) {
+          console.log(`Running "install" command: \`${installCommand}\`...`);
+          await execCommand(installCommand, {
+            ...spawnOpts,
+            cwd: entrypointDir,
+          });
+        } else {
+          console.log(`Skipping "install" command...`);
+        }
+      } else {
+        console.log('Installing dependencies...');
+        const installTime = Date.now();
+        await runNpmInstall(entrypointDir, [], spawnOpts, meta);
+        debug(`Install complete [${Date.now() - installTime}ms]`);
+      }
     }
 
     if (pkg && (buildCommand || devCommand)) {
@@ -376,7 +391,7 @@ export async function build({
       };
 
       debug(
-        `Added "${nodeBinPath}" to PATH env because a package.json file was found.`
+        `Added "${nodeBinPath}" to PATH env because a package.json file was found`
       );
     }
 
@@ -442,7 +457,7 @@ export async function build({
       );
     } else {
       if (meta.isDev) {
-        debug(`WARN: A dev script is missing.`);
+        debug(`WARN: A dev script is missing`);
       }
 
       if (buildCommand) {
