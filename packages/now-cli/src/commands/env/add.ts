@@ -91,7 +91,10 @@ export default async function add(
           name: `Secret (can be created using ${getCommandName('secret add')})`,
           value: ProjectEnvType.Secret,
         },
-        { name: 'Provided by System', value: ProjectEnvType.System },
+        {
+          name: 'Reference to System Environment Variable',
+          value: ProjectEnvType.System,
+        },
       ],
     })) as { inputEnvType: ProjectEnvType };
 
