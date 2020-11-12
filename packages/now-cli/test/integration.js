@@ -744,8 +744,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     await waitForPrompt(
       now,
       chunk =>
-        chunk.includes('which Environments') &&
-        chunk.includes('MY_PLAINTEXT_ENV_VAR')
+        chunk.includes('which Environments') && chunk.includes('MY_ENV_VAR')
     );
     now.stdin.write('\n'); // select none
     await waitForPrompt(now, chunk =>
