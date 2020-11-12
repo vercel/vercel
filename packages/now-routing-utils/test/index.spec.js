@@ -72,6 +72,7 @@ describe('normalizeRoutes', () => {
         src: '^/missed-me$',
         headers: { 'Cache-Control': 'max-age=10' },
         continue: true,
+        important: true,
       },
       { handle: 'rewrite' },
       { src: '^.*$', dest: '/somewhere' },
