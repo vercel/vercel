@@ -1,4 +1,4 @@
-import { join, dirname, basename, sep } from 'path';
+import { join, dirname, basename } from 'path';
 import execa from 'execa';
 import fs from 'fs';
 import { mkdirp } from 'fs-extra';
