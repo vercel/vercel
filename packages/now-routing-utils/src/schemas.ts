@@ -80,6 +80,9 @@ export const routesSchema = {
       check: {
         type: 'boolean',
       },
+      important: {
+        type: 'boolean',
+      },
       status: {
         type: 'integer',
         minimum: 100,
