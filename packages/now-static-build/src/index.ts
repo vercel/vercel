@@ -507,6 +507,10 @@ export async function build({
 
       const extraOutputs = await readBuildOutputDirectory({ workPath });
 
+      if (extraOutputs.routes) {
+        routes.push(...extraOutputs.routes);
+      }
+
       if (extraOutputs.staticFiles) {
         output = Object.assign(
           {},
@@ -517,6 +521,14 @@ export async function build({
         // No need to verify the dist dir if there are other output files.
         if (!extraOutputs.functions) {
           validateDistDir(distPath);
+        }
+
+        if (framework && !extraOutputs.routes) {
+          const frameworkRoutes = await getFrameworkRoutes(
+            framework,
+            outputDirPrefix
+          );
+          routes.push(...frameworkRoutes);
         }
 
         let ignore: string[] = [];
@@ -536,16 +548,6 @@ export async function build({
         }
         output = await glob('**', { cwd: distPath, ignore }, mountpoint);
         Object.assign(output, extraOutputs.functions);
-      }
-
-      if (extraOutputs.routes) {
-        routes.push(...extraOutputs.routes);
-      } else if (framework) {
-        const frameworkRoutes = await getFrameworkRoutes(
-          framework,
-          outputDirPrefix
-        );
-        routes.push(...frameworkRoutes);
       }
     }
 
