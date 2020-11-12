@@ -10,7 +10,7 @@ import chalk from 'chalk';
  */
 
 // adjusted from https://github.com/SBoudrias/Inquirer.js/blob/942908f17319343d1acc7b876f990797c5695918/packages/inquirer/lib/prompts/base.js#L126
-const getQuestion = function() {
+const getQuestion = function () {
   let message = `${chalk.gray('?')} ${this.opt.message} `;
 
   if (this.opt.type === 'confirm') {
@@ -35,7 +35,7 @@ inquirer.prompt.prompts.input.prototype.getQuestion = getQuestion;
 inquirer.prompt.prompts.confirm.prototype.getQuestion = getQuestion;
 
 // adjusted from https://github.com/SBoudrias/Inquirer.js/blob/942908f17319343d1acc7b876f990797c5695918/packages/inquirer/lib/prompts/list.js#L80
-inquirer.prompt.prompts.list.prototype.render = function() {
+inquirer.prompt.prompts.list.prototype.render = function () {
   // Render question
   let message = this.getQuestion();
 
@@ -89,10 +89,21 @@ function listRender(choices, pointer) {
 }
 
 // adjusted from https://github.com/SBoudrias/Inquirer.js/blob/942908f17319343d1acc7b876f990797c5695918/packages/inquirer/lib/prompts/checkbox.js#L84
-inquirer.prompt.prompts.checkbox.prototype.render = function(error) {
+inquirer.prompt.prompts.checkbox.prototype.render = function (error) {
   // Render question
   let message = this.getQuestion();
   let bottomContent = '';
+
+  if (!this.spaceKeyPressed) {
+    message +=
+      '(Press ' +
+      chalk.cyan.bold('<space>') +
+      ' to select, ' +
+      chalk.cyan.bold('<a>') +
+      ' to toggle all, ' +
+      chalk.cyan.bold('<i>') +
+      ' to invert selection)';
+  }
 
   // Render choices or answer depending on the state
   if (this.status === 'answered') {
@@ -118,7 +129,7 @@ function renderChoices(choices, pointer) {
   let output = '';
   let separatorOffset = 0;
 
-  choices.forEach(function(choice, i) {
+  choices.forEach(function (choice, i) {
     if (choice.type === 'separator') {
       separatorOffset++;
       output += '' + choice + '\n';
@@ -151,7 +162,7 @@ function renderChoices(choices, pointer) {
 }
 
 // adjusted from https://github.com/SBoudrias/Inquirer.js/blob/942908f17319343d1acc7b876f990797c5695918/packages/inquirer/lib/prompts/input.js#L44
-inquirer.prompt.prompts.input.prototype.render = function(error) {
+inquirer.prompt.prompts.input.prototype.render = function (error) {
   let bottomContent = '';
   let appendContent = '';
   let message = this.getQuestion();
@@ -178,7 +189,7 @@ inquirer.prompt.prompts.input.prototype.render = function(error) {
 };
 
 // adjusted from https://github.com/SBoudrias/Inquirer.js/blob/942908f17319343d1acc7b876f990797c5695918/packages/inquirer/lib/prompts/confirm.js#L64
-inquirer.prompt.prompts.confirm.prototype.render = function(answer) {
+inquirer.prompt.prompts.confirm.prototype.render = function (answer) {
   let message = this.getQuestion();
 
   if (this.status === 'answered') {
