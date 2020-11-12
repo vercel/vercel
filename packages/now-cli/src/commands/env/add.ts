@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { ProjectEnvTarget, Project, Secret, ProjectEnvType } from '../../types';
+import { ProjectEnvTarget, Project } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -11,14 +11,12 @@ import {
   getEnvTargetPlaceholder,
   getEnvTargetChoices,
 } from '../../util/env/env-target';
-import { isValidEnvType, getEnvTypePlaceholder } from '../../util/env/env-type';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
-import { SYSTEM_ENV_VALUES } from '../../util/env/system-env';
 
 type Options = {
   '--debug': boolean;
@@ -31,71 +29,38 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  // improve the way we show inquirer prompts
-  require('../../util/input/patch-inquirer');
-
   const stdInput = await readStandardInput();
-  let [envTypeArg, envName, envTargetArg] = args;
+  let [envName, envTarget] = args;
 
-  if (args.length > 3) {
+  if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add ${getEnvTypePlaceholder()} <name> ${getEnvTargetPlaceholder()}`
+        `env add <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
   }
 
-  if (stdInput && (!envTypeArg || !envName || !envTargetArg)) {
+  if (stdInput && (!envName || !envTarget)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add ${getEnvTypePlaceholder()} <name> <target> < <file>`
+        `env add <name> <target> < <file>`
       )}`
     );
     return 1;
   }
 
   let envTargets: ProjectEnvTarget[] = [];
-  if (envTargetArg) {
-    if (!isValidEnvTarget(envTargetArg)) {
+  if (envTarget) {
+    if (!isValidEnvTarget(envTarget)) {
       output.error(
         `The Environment ${param(
-          envTargetArg
+          envTarget
         )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
       );
       return 1;
     }
-    envTargets.push(envTargetArg);
-  }
-
-  let envType: ProjectEnvType;
-  if (envTypeArg) {
-    if (!isValidEnvType(envTypeArg)) {
-      output.error(
-        `The Environment Variable type ${param(
-          envTypeArg
-        )} is invalid. It must be one of: ${getEnvTypePlaceholder()}.`
-      );
-      return 1;
-    }
-
-    envType = envTypeArg;
-  } else {
-    const answers = (await inquirer.prompt({
-      name: 'inputEnvType',
-      type: 'list',
-      message: `Which type of Environment Variable do you want to add?`,
-      choices: [
-        { name: 'Plaintext', value: ProjectEnvType.Plaintext },
-        {
-          name: `Secret (can be created using ${getCommandName('secret add')})`,
-          value: ProjectEnvType.Secret,
-        },
-        { name: 'Provided by System', value: ProjectEnvType.System },
-      ],
-    })) as { inputEnvType: ProjectEnvType };
-
-    envType = answers.inputEnvType;
+    envTargets.push(envTarget);
   }
 
   while (!envName) {
@@ -133,59 +98,15 @@ export default async function add(
 
   if (stdInput) {
     envValue = stdInput;
-  } else if (envType === ProjectEnvType.Plaintext) {
+  } else if (isSystemEnvVariable(envName)) {
+    envValue = '';
+  } else {
     const { inputValue } = await inquirer.prompt({
-      type: 'input',
+      type: 'password',
       name: 'inputValue',
       message: `What’s the value of ${envName}?`,
     });
-
     envValue = inputValue || '';
-  } else if (envType === ProjectEnvType.Secret) {
-    let secretId: string | null = null;
-
-    while (!secretId) {
-      let { secretName } = await inquirer.prompt({
-        type: 'input',
-        name: 'secretName',
-        message: `What’s the value of ${envName}?`,
-      });
-
-      secretName = secretName || '';
-
-      if (secretName[0] === '@') {
-        secretName = secretName.slice(1);
-      }
-
-      try {
-        const secret = await client.fetch<Secret>(
-          `/v2/now/secrets/${encodeURIComponent(secretName)}`
-        );
-
-        secretId = secret.uid;
-      } catch (error) {
-        if (error.status === 404) {
-          output.error(
-            `Please enter the name of an existing Secret (can be created with ${getCommandName(
-              'secret add'
-            )}).`
-          );
-        } else {
-          throw error;
-        }
-      }
-    }
-
-    envValue = secretId;
-  } else {
-    const { systemEnvValue } = await inquirer.prompt({
-      name: 'systemEnvValue',
-      type: 'list',
-      message: `What’s the value of ${envName}?`,
-      choices: SYSTEM_ENV_VALUES.map(value => ({ name: value, value })),
-    });
-
-    envValue = systemEnvValue;
   }
 
   while (envTargets.length === 0) {
@@ -206,15 +127,7 @@ export default async function add(
   const addStamp = stamp();
   try {
     await withSpinner('Saving', () =>
-      addEnvRecord(
-        output,
-        client,
-        project.id,
-        envType,
-        envName,
-        envValue,
-        envTargets
-      )
+      addEnvRecord(output, client, project.id, envName, envValue, envTargets)
     );
   } catch (error) {
     if (isKnownError(error) && error.serverMessage) {
@@ -234,4 +147,8 @@ export default async function add(
   );
 
   return 0;
+}
+
+function isSystemEnvVariable(envName: string) {
+  return envName.startsWith('VERCEL_');
 }

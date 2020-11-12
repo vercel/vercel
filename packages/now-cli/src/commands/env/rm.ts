@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { ProjectEnvTarget, Project, ProjectEnvVariableV5 } from '../../types';
+import { ProjectEnvTarget, Project } from '../../types';
 import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
@@ -72,20 +72,7 @@ export default async function rm(
     envName = inputName;
   }
 
-  const data = await getEnvVariables(output, client, project.id);
-
-  // we expand env vars with multiple targets
-  const envs: ProjectEnvVariableV5[] = [];
-  for (let env of data.envs) {
-    if (Array.isArray(env.target)) {
-      for (let target of env.target) {
-        envs.push({ ...env, target });
-      }
-    } else {
-      envs.push({ ...env, target: env.target });
-    }
-  }
-
+  const { envs } = await getEnvVariables(output, client, project.id);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );

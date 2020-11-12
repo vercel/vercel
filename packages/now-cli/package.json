@@ -146,6 +146,7 @@
     "minimatch": "3.0.4",
     "mri": "1.1.5",
     "ms": "2.1.2",
+    "nanoid": "3.0.2",
     "node-fetch": "2.6.1",
     "npm-package-arg": "6.1.0",
     "nyc": "13.2.0",
