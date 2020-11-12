@@ -48,7 +48,7 @@ async function matchPaths(
     })
   );
 
-  return ([] as string[]).concat(...patternPaths);
+  return patternPaths;
 }
 
 export const version = 3;
