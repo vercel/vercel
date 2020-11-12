@@ -203,12 +203,16 @@ export enum ProjectEnvTarget {
   Development = 'development',
 }
 
-export type ProjectEnvVariableType = 'system' | 'secret' | 'plain';
+export enum ProjectEnvType {
+  Plaintext = 'plain',
+  Secret = 'secret',
+  System = 'system',
+}
 
 export interface ProjectEnvVariable {
   key: string;
   value: string;
-  type: ProjectEnvVariableType;
+  type: ProjectEnvType;
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
