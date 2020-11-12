@@ -1,12 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { Output } from '../../util/output';
-import {
-  ProjectEnvTarget,
-  Project,
-  ProjectEnvVariable,
-  ProjectEnvType,
-} from '../../types';
+import { ProjectEnvTarget, Project, ProjectEnvVariableV5 } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvVariables from '../../util/env/get-env-records';
@@ -18,8 +13,6 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
-// @ts-ignore
-import title from 'title';
 
 type Options = {
   '--debug': boolean;
@@ -54,7 +47,19 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  const { envs } = await getEnvVariables(output, client, project.id, envTarget);
+  const data = await getEnvVariables(output, client, project.id, envTarget);
+
+  // we expand env vars with multiple targets
+  const envs: ProjectEnvVariableV5[] = [];
+  for (let env of data.envs) {
+    if (Array.isArray(env.target)) {
+      for (let target of env.target) {
+        envs.push({ ...env, target });
+      }
+    } else {
+      envs.push({ ...env, target: env.target });
+    }
+  }
 
   output.log(
     `${
@@ -66,9 +71,9 @@ export default async function ls(
   return 0;
 }
 
-function getTable(records: ProjectEnvVariable[]) {
+function getTable(records: ProjectEnvVariableV5[]) {
   return formatTable(
-    ['name', 'value', 'environments', 'created'],
+    ['name', 'value', 'environment', 'created'],
     ['l', 'l', 'l', 'l', 'l'],
     [
       {
@@ -79,16 +84,16 @@ function getTable(records: ProjectEnvVariable[]) {
   );
 }
 
-function getRow(env: ProjectEnvVariable) {
+function getRow(env: ProjectEnvVariableV5) {
   let value: string;
-  if (env.type === ProjectEnvType.Plaintext) {
+  if (env.type === 'plain') {
     // replace space characters (line-break, etc.) with simple spaces
     // to make sure the displayed value is a single line
     const singleLineValue = env.value.replace(/\s/g, ' ');
 
     value = chalk.gray(ellipsis(singleLineValue, 19));
-  } else if (env.type === ProjectEnvType.System) {
-    value = chalk.gray.italic(env.value);
+  } else if (env.type === 'system') {
+    value = chalk.gray.italic('Populated by System');
   } else {
     value = chalk.gray.italic('Encrypted');
   }
@@ -97,9 +102,7 @@ function getRow(env: ProjectEnvVariable) {
   return [
     chalk.bold(env.key),
     value,
-    (Array.isArray(env.target) ? env.target : [env.target || ''])
-      .map(title)
-      .join(', '),
+    env.target || '',
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }
