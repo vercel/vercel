@@ -18,7 +18,7 @@ import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
-import { SYSTEM_ENV_VALUES } from '../../util/env/system-env';
+import getSystemEnvValues from '../../util/env/get-system-env-values';
 
 type Options = {
   '--debug': boolean;
@@ -112,7 +112,10 @@ export default async function add(
     }
   }
 
-  const { envs } = await getEnvVariables(output, client, project.id);
+  const [{ envs }, { systemEnvValues }] = await Promise.all([
+    getEnvVariables(output, client, project.id),
+    getSystemEnvValues(output, client, project.id),
+  ]);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
@@ -182,7 +185,7 @@ export default async function add(
       name: 'systemEnvValue',
       type: 'list',
       message: `What’s the value of ${envName}?`,
-      choices: SYSTEM_ENV_VALUES.map(value => ({ name: value, value })),
+      choices: systemEnvValues.map(value => ({ name: value, value })),
     });
 
     envValue = systemEnvValue;
