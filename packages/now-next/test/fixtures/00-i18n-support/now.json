@@ -520,6 +520,280 @@
       "path": "/_next/data/testing-build-id/fr/gsp/blocking/first.json",
       "status": 200,
       "mustContain": "\"catchall\":\"yes\""
+    },
+
+    {
+      "path": "/en-US/redirect-1",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/en/redirect-1",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404
+    },
+    {
+      "path": "/nl/redirect-2",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/en-US/redirect-2",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404
+    },
+    {
+      "path": "/redirect-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/en-US/redirect-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/fr/redirect-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/nl-NL/redirect-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+
+    {
+      "path": "/en-US/rewrite-1",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/en-US/rewrite-1",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "lang=\"en-US\""
+    },
+    {
+      "path": "/nl/rewrite-1",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404
+    },
+    {
+      "path": "/nl/rewrite-2",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/nl/rewrite-2",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "lang=\"nl\""
+    },
+    {
+      "path": "/rewrite-2",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404
+    },
+    {
+      "path": "/fr/rewrite-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/fr/rewrite-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "lang=\"nl\""
+    },
+    {
+      "path": "/rewrite-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404
+    },
+    {
+      "path": "/rewrite-4",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/rewrite-4",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "lang=\"en-US\""
+    },
+    {
+      "path": "/en/rewrite-4",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/en/rewrite-4",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "lang=\"en\""
+    },
+    {
+      "path": "/fr/rewrite-4",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/fr/rewrite-4",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "lang=\"fr\""
+    },
+
+    {
+      "path": "/en-US/add-header-1",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "x-hello": "world"
+      }
+    },
+    {
+      "path": "/en/add-header-1",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "x-hello": null
+      }
+    },
+    {
+      "path": "/nl/add-header-2",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "x-hello": "world"
+      }
+    },
+    {
+      "path": "/en-US/add-header-2",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "x-hello": null
+      }
+    },
+    {
+      "path": "/add-header-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "x-hello": "world"
+      }
+    },
+    {
+      "path": "/en-US/add-header-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "x-hello": "world"
+      }
+    },
+    {
+      "path": "/fr/add-header-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "x-hello": "world"
+      }
+    },
+    {
+      "path": "/nl-NL/add-header-3",
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 404,
+      "responseHeaders": {
+        "x-hello": "world"
+      }
     }
   ]
 }

@@ -448,7 +448,7 @@ export async function build({
   const prerenderManifest = await getPrerenderManifest(entryPath);
   const headers: Route[] = [];
   const rewrites: Route[] = [];
-  const redirects: Route[] = [];
+  let redirects: Route[] = [];
   const dataRoutes: Route[] = [];
   let dynamicRoutes: Route[] = [];
   // whether they have enabled pages/404.js as the custom 404 page
@@ -2020,6 +2020,31 @@ export async function build({
 
   const { i18n } = routesManifest || {};
 
+  let trailingSlashRedirect: Route | undefined;
+
+  if (i18n) {
+    redirects = redirects.filter(_redir => {
+      const redir = _redir as Source;
+      // detect the trailing slash redirect and make sure it's
+      // kept above the wildcard mapping to prevent erroneous redirects
+      // since non-continue routes come after continue the $wildcard
+      // route will come before the redirect otherwise and if the
+      // redirect is triggered it breaks locale mapping
+
+      const location =
+        redir.headers && (redir.headers.location || redir.headers.Location);
+
+      if (redir.status === 308 && (location === '/$1' || location === '/$1/')) {
+        // we set continue here to prevent the redirect from
+        // be moving underneath i18n routes
+        redir.continue = true;
+        trailingSlashRedirect = redir;
+        return false;
+      }
+      return true;
+    });
+  }
+
   return {
     output: {
       ...publicDirectoryFiles,
@@ -2059,36 +2084,15 @@ export async function build({
       - Builder rewrites
     */
     routes: [
-      // headers
-      ...headers,
-
-      // redirects
-      ...redirects.map(_redir => {
-        if (i18n) {
-          const redir = _redir as Source;
-          // detect the trailing slash redirect and make sure it's
-          // kept above the wildcard mapping to prevent erroneous redirects
-          // since non-continue routes come after continue the $wildcard
-          // route will come before the redirect otherwise and if the
-          // redirect is triggered it breaks locale mapping
-
-          const location =
-            redir.headers && (redir.headers.location || redir.headers.Location);
-
-          if (
-            redir.status === 308 &&
-            (location === '/$1' || location === '/$1/')
-          ) {
-            // we set continue true
-            redir.continue = true;
-          }
-        }
-        return _redir;
-      }),
+      // force trailingSlashRedirect to the very top so it doesn't
+      // conflict with i18n routes that don't have or don't have the
+      // trailing slash
+      ...(trailingSlashRedirect ? [trailingSlashRedirect] : []),
 
       ...(i18n
         ? [
-            // Handle auto-adding current default locale to path based on $wildcard
+            // Handle auto-adding current default locale to path based on
+            // $wildcard
             {
               src: `^${path.join(
                 '/',
@@ -2097,8 +2101,8 @@ export async function build({
               )}(?!(?:_next/.*|${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})(?:/.*|$))(.*)$`,
-              // TODO: this needs to contain or not contain a trailing slash
-              // to prevent the trailing slash redirect from being triggered
+              // we aren't able to ensure trailing slash mode here
+              // so ensure this comes after the trailing slash redirect
               dest: '$wildcard/$1',
               continue: true,
             },
@@ -2107,8 +2111,6 @@ export async function build({
             ...(i18n.domains && i18n.localeDetection !== false
               ? [
                   {
-                    // TODO: enable redirecting between domains, will require
-                    // updating the src with the desired locales to redirect
                     src: `^${path.join(
                       '/',
                       entryDirectory
@@ -2144,10 +2146,10 @@ export async function build({
             ...(i18n.localeDetection !== false
               ? [
                   {
-                    // TODO: if default locale is included in this src it won't be
-                    // visitable by users who prefer another language since a
-                    // cookie isn't set signaling the default locale is preferred
-                    // on redirect currently, investigate adding this
+                    // TODO: if default locale is included in this src it won't
+                    // be visitable by users who prefer another language since a
+                    // cookie isn't set signaling the default locale is
+                    // preferred on redirect currently, investigate adding this
                     src: '/',
                     locale: {
                       redirect: i18n.locales.reduce(
@@ -2189,6 +2191,12 @@ export async function build({
             },
           ]
         : []),
+
+      // headers
+      ...headers,
+
+      // redirects
+      ...redirects,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
