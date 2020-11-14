@@ -2036,7 +2036,7 @@ export async function build({
 
       if (redir.status === 308 && (location === '/$1' || location === '/$1/')) {
         // we set continue here to prevent the redirect from
-        // be moving underneath i18n routes
+        // moving underneath i18n routes
         redir.continue = true;
         trailingSlashRedirect = redir;
         return false;
