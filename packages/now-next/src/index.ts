@@ -1928,6 +1928,10 @@ export async function build({
     '**',
     path.join(entryPath, outputDirectory, 'static')
   );
+  const nextPublicFiles = await glob(
+    '**',
+    path.join(entryPath, outputDirectory, 'public')
+  );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
   const publicFolderFiles = await glob('**', path.join(entryPath, 'public'));
 
@@ -1944,6 +1948,15 @@ export async function build({
     (mappedFiles, file) => ({
       ...mappedFiles,
       [path.join(entryDirectory, 'static', file)]: staticFolderFiles[file],
+    }),
+    {}
+  );
+  const publicFiles = Object.keys(nextPublicFiles).reduce(
+    (mappedFiles, file) => ({
+      ...mappedFiles,
+      [path.join(entryDirectory, file.replace(/^public[/\\]+/, ''))]: nextPublicFiles[
+        file
+      ],
     }),
     {}
   );
@@ -2047,6 +2060,7 @@ export async function build({
 
   return {
     output: {
+      ...publicFiles,
       ...publicDirectoryFiles,
       ...lambdas,
       // Prerenders may override Lambdas -- this is an intentional behavior.
