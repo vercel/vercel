@@ -386,8 +386,10 @@ test(
     async testPath => {
       await testPath(200, '/', /<div id="redwood-app">/m);
       await testPath(200, '/about', /<div id="redwood-app">/m);
-      const fetchOpts = { method: 'POST', body: reqBody };
-      const reqBody = '{"query":"{redwood{version}}"}';
+      const fetchOpts = {
+        method: 'POST',
+        body: '{"query":"{redwood{version}}"}',
+      };
       const resBody = '{"data":{"redwood":{"version":"0.15.0"}}}';
       await testPath(200, '/api/graphql', resBody, {}, fetchOpts);
     },
