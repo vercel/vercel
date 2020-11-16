@@ -386,9 +386,10 @@ test(
     async testPath => {
       await testPath(200, '/', /<div id="redwood-app">/m);
       await testPath(200, '/about', /<div id="redwood-app">/m);
+      const fetchOpts = { method: 'POST', body: reqBody };
       const reqBody = '{"query":"{redwood{version}}"}';
       const resBody = '{"data":{"redwood":{"version":"0.15.0"}}}';
-      await testPath(200, '/api/graphql', resBody, {}, 'POST', reqBody);
+      await testPath(200, '/api/graphql', resBody, {}, fetchOpts);
     },
     { isExample: true }
   )
@@ -944,12 +945,16 @@ test(
       'Access-Control-Allow-Methods':
         'GET, POST, OPTIONS, HEAD, PATCH, PUT, DELETE',
     };
-    await testPath(200, '/', 'status api', headers, 'GET');
-    await testPath(200, '/', 'status api', headers, 'POST');
-    await testPath(200, '/api/status.js', 'status api', headers, 'GET');
-    await testPath(200, '/api/status.js', 'status api', headers, 'POST');
-    await testPath(204, '/', '', headers, 'OPTIONS');
-    await testPath(204, '/api/status.js', '', headers, 'OPTIONS');
+    await testPath(200, '/', 'status api', headers, { method: 'GET' });
+    await testPath(200, '/', 'status api', headers, { method: 'POST' });
+    await testPath(200, '/api/status.js', 'status api', headers, {
+      method: 'GET',
+    });
+    await testPath(200, '/api/status.js', 'status api', headers, {
+      method: 'POST',
+    });
+    await testPath(204, '/', '', headers, { method: 'OPTIONS' });
+    await testPath(204, '/api/status.js', '', headers, { method: 'OPTIONS' });
   })
 );
 
@@ -1596,10 +1601,9 @@ test(
       return `/_next/image?${query}`;
     };
 
-    const cache = 'public, max-age=0, must-revalidate';
     const expectHeader = accept => ({
       'content-type': accept,
-      'cache-control': cache,
+      'cache-control': 'public, max-age=0, must-revalidate',
     });
     const fetchOpts = accept => ({ method: 'GET', headers: { accept } });
     await testPath(200, '/', /Home Page/m);
