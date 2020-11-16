@@ -4,9 +4,12 @@ export default function Home() {
   return (
     <>
       <h1>Home Page</h1>
-      <Image src="/logo.png" width="500" height="500" />
       <hr />
-      <img src="/logo.png" />
+      <h2>Optimized</h2>
+      <Image src="/test.png" width="400" height="400" />
+      <hr />
+      <h2>Original</h2>
+      <img src="/test.png" width="400" height="400" />
     </>
   );
 }
