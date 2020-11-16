@@ -1593,6 +1593,15 @@ test(
 );
 
 test(
+  '[vercel dev] 28-vercel-json-and-ignore',
+  testFixtureStdio('28-vercel-json-and-ignore', async testPath => {
+    await testPath(200, '/api/one', 'One');
+    await testPath(404, '/api/two');
+    await testPath(200, '/api/three', 'One');
+  })
+);
+
+test(
   '[vercel dev] 30-next-image-optimization',
   testFixtureStdio('30-next-image-optimization', async testPath => {
     const toUrl = (url, w, q) => {
@@ -1644,15 +1653,6 @@ test(
       expectHeader('image/gif'),
       fetchOpts('image/gif')
     );
-  })
-);
-
-test(
-  '[vercel dev] 30-vercel-json-and-ignore',
-  testFixtureStdio('28-vercel-json-and-ignore', async testPath => {
-    await testPath(200, '/api/one', 'One');
-    await testPath(404, '/api/two');
-    await testPath(200, '/api/three', 'One');
   })
 );
 
