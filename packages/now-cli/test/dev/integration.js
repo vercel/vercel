@@ -128,14 +128,13 @@ async function testPath(
   status,
   path,
   expectedText,
-  headers = {},
-  method = 'GET',
-  body = undefined
+  expectedHeaders = {},
+  fetchOpts = {}
 ) {
-  const opts = { redirect: 'manual-dont-change', method, body };
+  const opts = { ...fetchOpts, redirect: 'manual-dont-change' };
   const url = `${origin}${path}`;
   const res = await fetch(url, opts);
-  const msg = `Testing response from ${method} ${url}`;
+  const msg = `Testing response from ${fetchOpts.method || 'GET'} ${url}`;
   console.log(msg);
   t.is(res.status, status, msg);
   validateResponseHeaders(t, res);
@@ -150,8 +149,8 @@ async function testPath(
     expectedText.lastIndex = 0; // reset since we test twice
     t.regex(actualText, expectedText);
   }
-  if (headers) {
-    Object.entries(headers).forEach(([key, expectedValue]) => {
+  if (expectedHeaders) {
+    Object.entries(expectedHeaders).forEach(([key, expectedValue]) => {
       let actualValue = res.headers.get(key);
       if (key.toLowerCase() === 'location' && actualValue === '//') {
         // HACK: `node-fetch` has strange behavior for location header so fix it
@@ -1589,26 +1588,56 @@ test(
 test(
   '[vercel dev] 30-next-image-optimization',
   testFixtureStdio('30-next-image-optimization', async testPath => {
-    await testPath(200, '/', /Home Page/m);
-    const query = new URLSearchParams();
-    query.append('url', '/logo.png');
-    query.append('w', 320);
-    query.append('q', 50);
-    const reqHeaders = {
-      Accept: 'image/webp',
+    const toUrl = (url, w, q) => {
+      const query = new URLSearchParams();
+      query.append('url', url);
+      query.append('w', w);
+      query.append('q', q);
+      return `/_next/image?${query}`;
     };
-    const checkRes = (t, body, res) => {
-      t.is(res.headers['Content-Type'], 'image/webp');
-      t.is(Boolean(body), true);
-    };
-    const url = `/_next/image?${query}`;
-    console.log('testing the url ' + url);
-    await testPath(200, url, checkRes, reqHeaders);
 
-    // TODO: test cache-control, last-modified, etag, headers
-    // TODO: test svg bypass
-    // TODO: test animated gif bypass
-    // TODO: test cloudinary
+    const cache = 'public, max-age=0, must-revalidate';
+    const expectHeader = accept => ({
+      'content-type': accept,
+      'cache-control': cache,
+    });
+    const fetchOpts = accept => ({ method: 'GET', headers: { accept } });
+    await testPath(200, '/', /Home Page/m);
+    await testPath(
+      200,
+      toUrl('/test.jpg', 64, 100),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/test.png', 64, 90),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/test.gif', 64, 80),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/test.svg', 64, 70),
+      null,
+      expectHeader('image/svg+xml'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/animated.gif', 64, 60),
+      null,
+      expectHeader('image/gif'),
+      fetchOpts('image/gif')
+    );
   })
 );
 
