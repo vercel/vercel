@@ -2012,7 +2012,7 @@ export default class DevServer {
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
-      ...this.systemEnvs.runEnv,
+      ...this.systemEnvs.buildEnv,
       ...this.envConfigs.allEnv,
       PORT: `${port}`,
     };

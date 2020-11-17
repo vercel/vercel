@@ -66,9 +66,9 @@ async function createBuildProcess(
   let PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
 
   const env: Env = {
-    ...systemEnvs.buildEnv,
     ...process.env,
     PATH,
+    ...systemEnvs.buildEnv,
     ...envConfigs.allEnv,
   };
 
