@@ -5,7 +5,7 @@ const cheerio = require('cheerio');
 module.exports = function (ctx) {
   it('should revalidate content properly from /', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/index.json`
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -36,7 +36,7 @@ module.exports = function (ctx) {
 
   it('should revalidate content properly from /fr', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/index.json`
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -67,7 +67,7 @@ module.exports = function (ctx) {
 
   it('should revalidate content properly from /nl-NL', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/index.json`
+      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
