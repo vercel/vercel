@@ -989,7 +989,6 @@ function getRouteResult(
         rewriteRoutes.push({
           src: '^/api(/.*)?$',
           status: 404,
-          continue: true,
         });
       }
     } else {
