@@ -435,22 +435,22 @@
     },
 
     {
-      "path": "/_next/data/testing-build-id/en-US/index.json",
+      "path": "/_next/data/testing-build-id/en-US.json",
       "status": 200,
       "mustContain": "\"locale\":\"en-US\""
     },
     {
-      "path": "/_next/data/testing-build-id/en/index.json",
+      "path": "/_next/data/testing-build-id/en.json",
       "status": 200,
       "mustContain": "\"locale\":\"en\""
     },
     {
-      "path": "/_next/data/testing-build-id/fr/index.json",
+      "path": "/_next/data/testing-build-id/fr.json",
       "status": 200,
       "mustContain": "\"locale\":\"fr\""
     },
     {
-      "path": "/_next/data/testing-build-id/nl/index.json",
+      "path": "/_next/data/testing-build-id/nl.json",
       "status": 200,
       "mustContain": "\"locale\":\"nl\""
     },
