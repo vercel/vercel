@@ -809,7 +809,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const localhostNoProtocol = localhost[0].slice('http://'.length);
 
     const apiJson = await apiRes.json();
-    t.is(apiJson['CI'], undefined);
     t.is(apiJson['VERCEL'], '1');
     t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
     t.is(apiJson['VERCEL_ENV'], 'development');
@@ -819,7 +818,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
-    t.is(homeJson['CI'], '1');
     t.is(homeJson['VERCEL'], '1');
     t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
     t.is(homeJson['VERCEL_ENV'], 'development');

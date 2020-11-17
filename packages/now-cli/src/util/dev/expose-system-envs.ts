@@ -9,7 +9,7 @@ export default async function exposeSystemEnvs(
   projectId: string
 ) {
   const systemEnvs: SystemEnvs = {
-    buildEnv: { VERCEL: '1', VERCEL_ENV: 'development', CI: '1' },
+    buildEnv: { VERCEL: '1', VERCEL_ENV: 'development' },
     runEnv: { VERCEL: '1', VERCEL_ENV: 'development' },
   };
 
