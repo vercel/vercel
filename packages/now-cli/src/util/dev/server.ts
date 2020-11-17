@@ -2011,8 +2011,8 @@ export default class DevServer {
       // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
-      ...this.systemEnvs.runEnv,
       ...process.env,
+      ...this.systemEnvs.runEnv,
       ...this.envConfigs.allEnv,
       PORT: `${port}`,
     };
