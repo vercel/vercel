@@ -9,11 +9,8 @@ export default async function exposeSystemEnvs(
   projectId: string
 ) {
   const systemEnvs: SystemEnvs = {
-    buildEnv: { CI: '1' },
-    runEnv: {
-      VERCEL: '1',
-      VERCEL_ENV: 'development',
-    },
+    buildEnv: { VERCEL: '1', VERCEL_ENV: 'development', CI: '1' },
+    runEnv: { VERCEL: '1', VERCEL_ENV: 'development' },
   };
 
   const { systemEnvValues } = await getSystemEnvValues(
@@ -22,6 +19,7 @@ export default async function exposeSystemEnvs(
     projectId
   );
   for (const key of systemEnvValues) {
+    systemEnvs.buildEnv[key] = '';
     systemEnvs.runEnv[key] = '';
   }
 
