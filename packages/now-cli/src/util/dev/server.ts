@@ -84,6 +84,7 @@ import {
   RouteResult,
   HttpHeadersConfig,
   EnvConfigs,
+  SystemEnvs,
 } from './types';
 import { ProjectSettings } from '../../types';
 
@@ -119,6 +120,7 @@ export default class DevServer {
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
+  public systemEnvs: SystemEnvs;
   public frameworkSlug?: string;
   public files: BuilderInputs;
   public address: string;
@@ -156,6 +158,7 @@ export default class DevServer {
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
+    this.systemEnvs = options.systemEnvs || { buildEnv: {}, runEnv: {} };
     this.environmentVars = options.environmentVars;
     this.files = {};
     this.address = '';
@@ -839,6 +842,11 @@ export default class DevServer {
 
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
+
+    this.systemEnvs.buildEnv = this.populateVercelEnvVars(
+      this.systemEnvs.buildEnv
+    );
+    this.systemEnvs.runEnv = this.populateVercelEnvVars(this.systemEnvs.runEnv);
 
     const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
@@ -1648,7 +1656,13 @@ export default class DevServer {
     if (typeof builder.startDevServer === 'function') {
       let devServerResult: StartDevServerResult = null;
       try {
-        const { envConfigs, files, devCacheDir, cwd: workPath } = this;
+        const {
+          envConfigs,
+          systemEnvs,
+          files,
+          devCacheDir,
+          cwd: workPath,
+        } = this;
         devServerResult = await builder.startDevServer({
           files,
           entrypoint: match.entrypoint,
@@ -1658,8 +1672,8 @@ export default class DevServer {
             isDev: true,
             requestPath,
             devCacheDir,
-            env: envConfigs.runEnv,
-            buildEnv: envConfigs.buildEnv,
+            env: { ...systemEnvs.runEnv, ...envConfigs.runEnv },
+            buildEnv: { ...systemEnvs.buildEnv, ...envConfigs.buildEnv },
           },
         });
       } catch (err) {
@@ -1997,6 +2011,7 @@ export default class DevServer {
       // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
+      ...this.systemEnvs.runEnv,
       ...process.env,
       ...this.envConfigs.allEnv,
       PORT: `${port}`,

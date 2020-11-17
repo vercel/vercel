@@ -243,6 +243,7 @@ export interface Project extends ProjectSettings {
   framework?: string | null;
   rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
+  autoExposeSystemEnvs?: boolean;
 }
 
 export interface Org {
