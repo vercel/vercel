@@ -762,6 +762,68 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
     t.is(homeJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
 
+    // system env vars are not automatically exposed
+    t.is(apiJson['VERCEL'], undefined);
+    t.is(homeJson['VERCEL'], undefined);
+
+    vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function enableAutoExposeSystemEnvs() {
+    const link = require(path.join(target, '.vercel/project.json'));
+
+    const res = await apiFetch(`/v2/projects/${link.projectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ autoExposeSystemEnvs: true }),
+    });
+
+    t.is(res.status, 200);
+    if (res.status === 200) {
+      console.log(
+        `Set autoExposeSystemEnvs=true for project ${link.projectId}`
+      );
+    }
+  }
+
+  async function nowDevAndFetchSystemVars() {
+    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    let localhost = undefined;
+    await waitForPrompt(vc, chunk => {
+      if (chunk.includes('Ready! Available at')) {
+        localhost = /(https?:[^\s]+)/g.exec(chunk);
+        return true;
+      }
+      return false;
+    });
+
+    const apiUrl = `${localhost[0]}/api/get-env`;
+    const apiRes = await fetch(apiUrl);
+
+    const localhostNoProtocol = localhost[0].slice('http://'.length);
+
+    const apiJson = await apiRes.json();
+    t.is(apiJson['VERCEL'], '1');
+    t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(apiJson['VERCEL_ENV'], 'development');
+    t.is(apiJson['VERCEL_GIT_PROVIDER'], '');
+    t.is(apiJson['VERCEL_GIT_REPO_SLUG'], '');
+
+    const homeUrl = localhost[0];
+    const homeRes = await fetch(homeUrl);
+    const homeJson = await homeRes.json();
+    t.is(homeJson['VERCEL'], '1');
+    t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(homeJson['VERCEL_ENV'], 'development');
+    t.is(homeJson['VERCEL_GIT_PROVIDER'], '');
+    t.is(homeJson['VERCEL_GIT_REPO_SLUG'], '');
+
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
     const { exitCode, stderr, stdout } = await vc;
@@ -869,6 +931,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowDevWithEnv();
   fs.unlinkSync(path.join(target, '.env'));
   await nowDevAndFetchCloudVars();
+  await enableAutoExposeSystemEnvs();
+  await nowDevAndFetchSystemVars();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();
   await nowEnvRemoveWithNameOnly();

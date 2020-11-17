@@ -2,6 +2,8 @@ import { resolve, join } from 'path';
 
 import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
+import exposeSystemEnvs from '../../util/dev/expose-system-envs';
+import { SystemEnvs } from '../../util/dev/types';
 import { Output } from '../../util/output';
 import { NowContext } from '../../types';
 import Client from '../../util/client';
@@ -71,6 +73,7 @@ export default async function dev(
   let frameworkSlug: string | undefined;
   let projectSettings: ProjectSettings | undefined;
   let environmentVars: Env | undefined;
+  let systemEnvs: SystemEnvs | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;
     client.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -98,12 +101,17 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
-    environmentVars = await getDecryptedEnvRecords(
-      output,
-      client,
-      project,
-      ProjectEnvTarget.Development
-    );
+    [environmentVars, systemEnvs] = await Promise.all([
+      getDecryptedEnvRecords(
+        output,
+        client,
+        project,
+        ProjectEnvTarget.Development
+      ),
+      project.autoExposeSystemEnvs
+        ? exposeSystemEnvs(output, client, project.id)
+        : undefined,
+    ]);
   }
 
   const devServer = new DevServer(cwd, {
@@ -113,6 +121,7 @@ export default async function dev(
     frameworkSlug,
     projectSettings,
     environmentVars,
+    systemEnvs,
   });
 
   process.once('SIGINT', () => devServer.stop());
