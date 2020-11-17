@@ -731,7 +731,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const vc = execa(binaryPath, ['dev', ...defaultArgs], {
       reject: false,
       cwd: target,
-      extendEnv: false,
     });
 
     let localhost = undefined;
@@ -793,7 +792,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const vc = execa(binaryPath, ['dev', ...defaultArgs], {
       reject: false,
       cwd: target,
-      extendEnv: false,
     });
 
     let localhost = undefined;
