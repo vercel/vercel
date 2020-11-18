@@ -812,6 +812,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(apiJson['VERCEL'], '1');
     t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
     t.is(apiJson['VERCEL_ENV'], 'development');
+    t.is(apiJson['VERCEL_REGION'], 'dev1');
     t.is(apiJson['VERCEL_GIT_PROVIDER'], '');
     t.is(apiJson['VERCEL_GIT_REPO_SLUG'], '');
 
@@ -821,6 +822,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(homeJson['VERCEL'], '1');
     t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
     t.is(homeJson['VERCEL_ENV'], 'development');
+    t.is(homeJson['VERCEL_REGION'], undefined);
     t.is(homeJson['VERCEL_GIT_PROVIDER'], '');
     t.is(homeJson['VERCEL_GIT_REPO_SLUG'], '');
 

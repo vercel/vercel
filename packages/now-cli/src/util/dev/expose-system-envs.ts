@@ -10,7 +10,7 @@ export default async function exposeSystemEnvs(
 ) {
   const systemEnvs: SystemEnvs = {
     buildEnv: { VERCEL: '1', VERCEL_ENV: 'development' },
-    runEnv: { VERCEL: '1', VERCEL_ENV: 'development' },
+    runEnv: { VERCEL: '1', VERCEL_ENV: 'development', VERCEL_REGION: 'dev1' },
   };
 
   const { systemEnvValues } = await getSystemEnvValues(
