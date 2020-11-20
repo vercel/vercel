@@ -14,6 +14,7 @@ import { ProjectSettings, ProjectEnvTarget } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import { Env } from '@vercel/build-utils';
 import setupAndLink from '../../util/link/setup-and-link';
+import getEnvVariables from '../../util/env/get-env-records';
 
 type Options = {
   '--debug'?: boolean;
@@ -101,13 +102,15 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
+    const { envs } = await getEnvVariables(
+      output,
+      client,
+      project.id,
+      ProjectEnvTarget.Development
+    );
+
     [environmentVars, systemEnvs] = await Promise.all([
-      getDecryptedEnvRecords(
-        output,
-        client,
-        project,
-        ProjectEnvTarget.Development
-      ),
+      getDecryptedEnvRecords(output, client, envs),
       exposeSystemEnvs(output, client, project),
     ]);
   }

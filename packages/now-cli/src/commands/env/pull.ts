@@ -13,6 +13,7 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { getCommandName } from '../../util/pkg-name';
 const { writeFile } = promises;
 import { Env } from '@vercel/build-utils';
+import getEnvVariables from '../../util/env/get-env-records';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -84,16 +85,16 @@ export default async function pull(
   );
   const pullStamp = stamp();
 
-  const records: Env = await withSpinner(
-    'Downloading',
-    async () =>
-      await getDecryptedEnvRecords(
-        output,
-        client,
-        project,
-        ProjectEnvTarget.Development
-      )
-  );
+  const records: Env = await withSpinner('Downloading', async () => {
+    const { envs } = await getEnvVariables(
+      output,
+      client,
+      project.id,
+      ProjectEnvTarget.Development
+    );
+
+    return await getDecryptedEnvRecords(output, client, envs);
+  });
 
   const contents =
     CONTENTS_PREFIX +

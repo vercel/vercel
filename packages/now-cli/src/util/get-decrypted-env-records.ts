@@ -1,20 +1,17 @@
-import getEnvVariables from './env/get-env-records';
 import getDecryptedSecret from './env/get-decrypted-secret';
 import Client from './client';
 import { Output } from './output/create-output';
-import { ProjectEnvTarget, Project, ProjectEnvType } from '../types';
+import { ProjectEnvType, ProjectEnvVariable } from '../types';
 
 import { Env } from '@vercel/build-utils';
 
 export default async function getDecryptedEnvRecords(
   output: Output,
   client: Client,
-  project: Project,
-  target: ProjectEnvTarget
+  projectEnvs: ProjectEnvVariable[]
 ): Promise<Env> {
-  const { envs } = await getEnvVariables(output, client, project.id, target);
   const decryptedValues = await Promise.all(
-    envs.map(async env => {
+    projectEnvs.map(async env => {
       if (env.type === ProjectEnvType.System) {
         return { value: '', found: true };
       } else if (env.type === ProjectEnvType.Plaintext) {
@@ -35,7 +32,7 @@ export default async function getDecryptedEnvRecords(
 
   const results: Env = {};
   for (let i = 0; i < decryptedValues.length; i++) {
-    const { key } = envs[i];
+    const { key } = projectEnvs[i];
     const { value, found } = decryptedValues[i];
 
     if (!found) {
