@@ -20,7 +20,7 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('en-US');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/`);
     expect(res2.status).toBe(200);
@@ -48,7 +48,7 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('fr');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/fr`);
     expect(res2.status).toBe(200);
@@ -76,7 +76,7 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('nl-NL');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/nl-NL`);
     expect(res2.status).toBe(200);
@@ -95,7 +95,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/second`);
     expect(res.status).toBe(200);
@@ -107,7 +107,7 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('en-US');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/second`);
     expect(res2.status).toBe(200);
@@ -126,7 +126,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/fr/second`);
     expect(res.status).toBe(200);
@@ -138,7 +138,7 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('fr');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/fr/second`);
     expect(res2.status).toBe(200);
@@ -157,7 +157,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/nl-NL/second`);
     expect(res.status).toBe(200);
@@ -169,7 +169,7 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('nl-NL');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/nl-NL/second`);
     expect(res2.status).toBe(200);
