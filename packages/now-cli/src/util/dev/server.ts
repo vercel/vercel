@@ -84,7 +84,6 @@ import {
   RouteResult,
   HttpHeadersConfig,
   EnvConfigs,
-  SystemEnvs,
 } from './types';
 import { ProjectSettings } from '../../types';
 
@@ -120,7 +119,7 @@ export default class DevServer {
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
-  public systemEnvs: SystemEnvs;
+  public systemEnvs: Env;
   public frameworkSlug?: string;
   public files: BuilderInputs;
   public address: string;
@@ -158,7 +157,7 @@ export default class DevServer {
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.systemEnvs = options.systemEnvs || { buildEnv: {}, runEnv: {} };
+    this.systemEnvs = options.systemEnvs || {};
     this.environmentVars = options.environmentVars;
     this.files = {};
     this.address = '';
@@ -844,10 +843,7 @@ export default class DevServer {
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
 
-    this.systemEnvs.buildEnv = this.populateVercelEnvVars(
-      this.systemEnvs.buildEnv
-    );
-    this.systemEnvs.runEnv = this.populateVercelEnvVars(this.systemEnvs.runEnv);
+    this.systemEnvs = this.populateVercelEnvVars(this.systemEnvs);
 
     const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
@@ -1673,8 +1669,8 @@ export default class DevServer {
             isDev: true,
             requestPath,
             devCacheDir,
-            env: { ...systemEnvs.runEnv, ...envConfigs.runEnv },
-            buildEnv: { ...systemEnvs.buildEnv, ...envConfigs.buildEnv },
+            env: { ...systemEnvs, ...envConfigs.runEnv },
+            buildEnv: { ...systemEnvs, ...envConfigs.buildEnv },
           },
         });
       } catch (err) {
@@ -2013,7 +2009,7 @@ export default class DevServer {
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
-      ...this.systemEnvs.buildEnv,
+      ...this.systemEnvs,
       ...this.envConfigs.allEnv,
       PORT: `${port}`,
     };

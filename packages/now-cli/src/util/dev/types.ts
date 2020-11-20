@@ -28,7 +28,7 @@ export interface DevServerOptions {
   frameworkSlug?: string;
   projectSettings?: ProjectSettings;
   environmentVars?: Env;
-  systemEnvs?: SystemEnvs;
+  systemEnvs?: Env;
 }
 
 export interface EnvConfigs {
@@ -46,11 +46,6 @@ export interface EnvConfigs {
    * environment variables from `.env` and `.env.build`
    */
   allEnv: Env;
-}
-
-export interface SystemEnvs {
-  buildEnv: Env;
-  runEnv: Env;
 }
 
 export interface BuildMatch extends BuildConfig {
