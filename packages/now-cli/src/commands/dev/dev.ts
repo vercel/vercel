@@ -108,9 +108,7 @@ export default async function dev(
         project,
         ProjectEnvTarget.Development
       ),
-      project.autoExposeSystemEnvs
-        ? exposeSystemEnvs(output, client, project.id)
-        : undefined,
+      exposeSystemEnvs(output, client, project),
     ]);
   }
 
