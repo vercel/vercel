@@ -2226,10 +2226,10 @@
   resolved "https://registry.yarnpkg.com/@vercel/ncc/-/ncc-0.24.0.tgz#a2e8783a185caa99b5d8961a57dfc9665de16296"
   integrity sha512-crqItMcIwCkvdXY/V3/TzrHJQx6nbIaRqE1cOopJhgGX6izvNov40SmD//nS5flfEvdK54YGjwVVq+zG6crjOg==
 
-"@vercel/nft@0.9.2":
-  version "0.9.2"
-  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.9.2.tgz#677ecefb0bd618143281c62c719baca57a36ac4d"
-  integrity sha512-Dr2yJlCnfkQEt4QHKcPJKTxCyoBX0YCzHDzozd8upBFm8kKbh2yMSu5wp+1btevQXOMkOUtxntovwwPHDIU51w==
+"@vercel/nft@0.9.3":
+  version "0.9.3"
+  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.9.3.tgz#d27d6173a9036d37a497511d84273fcb03d6c483"
+  integrity sha512-hbRTSKzHt6fTzTKDjZR5fXNMIOAS3/Ffhw96RM4M5+ZnDkxb+OFr6lNIhFibLxxvp27aCh/r/RqPZqj2EBgrlg==
   dependencies:
     acorn "^7.1.1"
     acorn-class-fields "^0.3.2"
