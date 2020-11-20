@@ -99,7 +99,7 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
-    [projectEnvs, { systemEnvValues }] = await Promise.all([
+    [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
       getDecryptedEnvRecords(output, client, project.id),
       getSystemEnvValues(output, client, project.id),
     ]);

@@ -12,7 +12,7 @@ export default async function getDecryptedEnvRecords(
   output: Output,
   client: Client,
   projectId: string
-): Promise<ProjectEnvVariable[]> {
+): Promise<{ envs: ProjectEnvVariable[] }> {
   const { envs } = await getEnvRecords(
     output,
     client,
@@ -61,5 +61,5 @@ export default async function getDecryptedEnvRecords(
     }
   }
 
-  return envsWithDecryptedSecrets;
+  return { envs };
 }

@@ -85,13 +85,14 @@ export default async function pull(
   );
   const pullStamp = stamp();
 
-  const [projectEnvs, { systemEnvValues }] = await withSpinner(
-    'Downloading',
-    () =>
-      Promise.all([
-        getDecryptedEnvRecords(output, client, project.id),
-        getSystemEnvValues(output, client, project.id),
-      ])
+  const [
+    { envs: projectEnvs },
+    { systemEnvValues },
+  ] = await withSpinner('Downloading', () =>
+    Promise.all([
+      getDecryptedEnvRecords(output, client, project.id),
+      getSystemEnvValues(output, client, project.id),
+    ])
   );
 
   const records = exposeSystemEnvs(
