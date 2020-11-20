@@ -651,7 +651,7 @@ export default class DevServer {
         this.projectEnvs,
         this.systemEnvValues,
         this.projectSettings && this.projectSettings.autoExposeSystemEnvs,
-        this.address
+        new URL(this.address).host
       );
 
       allEnv = runEnv = buildEnv = cloudEnv;

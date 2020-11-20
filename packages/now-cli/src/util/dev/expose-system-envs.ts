@@ -1,4 +1,3 @@
-import { URL } from 'url';
 import { ProjectEnvType, ProjectEnvVariable } from '../../types';
 import { Env } from '@vercel/build-utils';
 
@@ -6,14 +5,14 @@ export default function exposeSystemEnvs(
   projectEnvs: ProjectEnvVariable[],
   systemEnvValues: string[],
   autoExposeSystemEnvs: boolean | undefined,
-  url?: string
+  vercelUrl?: string
 ) {
   const envs: Env = {};
 
   if (autoExposeSystemEnvs) {
     envs['VERCEL'] = '1';
     envs['VERCEL_ENV'] = 'development';
-    envs['VERCEL_URL'] = url ? new URL(url).host : '';
+    envs['VERCEL_URL'] = vercelUrl || '';
 
     for (const key of systemEnvValues) {
       envs[key] = '';
