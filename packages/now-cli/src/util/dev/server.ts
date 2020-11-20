@@ -654,7 +654,9 @@ export default class DevServer {
         new URL(this.address).host
       );
 
-      allEnv = runEnv = buildEnv = cloudEnv;
+      allEnv = { ...cloudEnv };
+      runEnv = { ...cloudEnv };
+      buildEnv = { ...cloudEnv };
     }
 
     // mirror how VERCEL_REGION and NOW_REGION are injected in prod/preview
