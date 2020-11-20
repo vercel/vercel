@@ -158,8 +158,8 @@ export default class DevServer {
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.systemEnvValues = options.systemEnvValues;
-    this.projectEnvs = options.projectEnvs;
+    this.systemEnvValues = options.systemEnvValues || [];
+    this.projectEnvs = options.projectEnvs || [];
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
@@ -648,8 +648,8 @@ export default class DevServer {
     // If no .env/.build.env is present, use cloud environment variables
     if (Object.keys(allEnv).length === 0) {
       const cloudEnv = exposeSystemEnvs(
-        this.projectEnvs,
-        this.systemEnvValues,
+        this.projectEnvs || [],
+        this.systemEnvValues || [],
         this.projectSettings && this.projectSettings.autoExposeSystemEnvs,
         new URL(this.address).host
       );
