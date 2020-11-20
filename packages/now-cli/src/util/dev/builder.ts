@@ -35,7 +35,6 @@ import {
   BuildResultV3,
   BuilderOutputs,
   EnvConfigs,
-  SystemEnvs,
 } from './types';
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
@@ -54,7 +53,6 @@ interface BuildMessageResult extends BuildMessage {
 async function createBuildProcess(
   match: BuildMatch,
   envConfigs: EnvConfigs,
-  systemEnvs: SystemEnvs,
   workPath: string,
   output: Output
 ): Promise<ChildProcess> {
@@ -68,7 +66,6 @@ async function createBuildProcess(
   const env: Env = {
     ...process.env,
     PATH,
-    ...systemEnvs.buildEnv,
     ...envConfigs.allEnv,
   };
 
@@ -112,13 +109,7 @@ export async function executeBuild(
     builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const {
-    debug,
-    envConfigs,
-    systemEnvs,
-    cwd: workPath,
-    devCacheDir,
-  } = devServer;
+  const { debug, envConfigs, cwd: workPath, devCacheDir } = devServer;
 
   const startTime = Date.now();
   const showBuildTimestamp =
@@ -140,7 +131,6 @@ export async function executeBuild(
     buildProcess = await createBuildProcess(
       match,
       envConfigs,
-      systemEnvs,
       workPath,
       devServer.output
     );
@@ -159,8 +149,8 @@ export async function executeBuild(
       filesRemoved,
       // This env distiniction is only necessary to maintain
       // backwards compatibility with the `@vercel/next` builder.
-      env: { ...systemEnvs.runEnv, ...envConfigs.runEnv },
-      buildEnv: { ...systemEnvs.buildEnv, ...envConfigs.buildEnv },
+      env: { ...envConfigs.runEnv },
+      buildEnv: { ...envConfigs.buildEnv },
     },
   };
 
