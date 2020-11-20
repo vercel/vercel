@@ -85,7 +85,8 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectSettings } from '../../types';
+import { ProjectEnvVariable, ProjectSettings } from '../../types';
+import exposeSystemEnvs from './expose-system-envs';
 
 const frameworkList = _frameworks as Framework[];
 const frontendRuntimeSet = new Set(
@@ -119,7 +120,6 @@ export default class DevServer {
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
-  public systemEnvs: Env;
   public frameworkSlug?: string;
   public files: BuilderInputs;
   public address: string;
@@ -151,13 +151,17 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private environmentVars: Env | undefined;
+  private systemEnvs: Env | undefined;
+  private systemEnvValues: string[];
+  private projectEnvs: ProjectEnvVariable[];
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.systemEnvs = options.systemEnvs || {};
+    this.systemEnvValues = options.systemEnvValues;
+    this.projectEnvs = options.projectEnvs;
     this.environmentVars = options.environmentVars;
     this.files = {};
     this.address = '';
@@ -493,7 +497,7 @@ export default class DevServer {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
-      env = this.populateVercelEnvVars(env);
+      env = this.injectVercelUrl(env);
     } catch (err) {
       if (err.code !== 'ENOENT') {
         throw err;
@@ -644,9 +648,17 @@ export default class DevServer {
 
     let allEnv = { ...buildEnv, ...runEnv };
 
-    // If no .env/.build.env is present, fetch and use cloud environment variables
+    // If no .env/.build.env is present, use cloud environment variables
     if (Object.keys(allEnv).length === 0) {
-      const cloudEnv = this.populateVercelEnvVars(this.environmentVars);
+      const systemEnvs = exposeSystemEnvs(
+        this.projectEnvs,
+        this.systemEnvValues,
+        this.projectSettings?.autoExposeSystemEnvs,
+        this.address
+      );
+
+      const cloudEnv = { ...systemEnvs, ...this.environmentVars };
+
       allEnv = runEnv = buildEnv = cloudEnv;
     }
 
@@ -761,7 +773,7 @@ export default class DevServer {
     return merged;
   }
 
-  populateVercelEnvVars(env: Env | undefined): Env {
+  injectVercelUrl(env: Env): Env {
     if (!env) {
       return {};
     }
@@ -843,7 +855,12 @@ export default class DevServer {
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
 
-    this.systemEnvs = this.populateVercelEnvVars(this.systemEnvs);
+    this.systemEnvs = exposeSystemEnvs(
+      this.projectEnvs,
+      this.systemEnvValues,
+      this.projectSettings?.autoExposeSystemEnvs,
+      this.address
+    );
 
     const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};

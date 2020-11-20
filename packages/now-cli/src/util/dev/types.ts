@@ -17,7 +17,7 @@ import {
 import { NowConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
-import { ProjectSettings } from '../../types';
+import { ProjectEnvVariable, ProjectSettings } from '../../types';
 
 export { NowConfig };
 
@@ -28,7 +28,8 @@ export interface DevServerOptions {
   frameworkSlug?: string;
   projectSettings?: ProjectSettings;
   environmentVars?: Env;
-  systemEnvs?: Env;
+  systemEnvValues: string[];
+  projectEnvs: ProjectEnvVariable[];
 }
 
 export interface EnvConfigs {

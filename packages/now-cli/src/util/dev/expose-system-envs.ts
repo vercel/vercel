@@ -1,26 +1,19 @@
-import getSystemEnvValues from '../env/get-system-env-values';
-import Client from '../client';
-import { Output } from '../output';
-import { Project, ProjectEnvType, ProjectEnvVariable } from '../../types';
+import { URL } from 'url';
+import { ProjectEnvType, ProjectEnvVariable } from '../../types';
 import { Env } from '@vercel/build-utils';
 
-export default async function exposeSystemEnvs(
-  output: Output,
-  client: Client,
-  project: Project,
-  projectEnvs: ProjectEnvVariable[]
+export default function exposeSystemEnvs(
+  projectEnvs: ProjectEnvVariable[],
+  systemEnvValues: string[],
+  autoExposeSystemEnvs: boolean | undefined,
+  url?: string
 ) {
-  const systemEnvs: Env = { VERCEL: '1', VERCEL_ENV: 'development' };
+  const systemEnvs: Env = {};
 
-  if (project.autoExposeSystemEnvs) {
+  if (autoExposeSystemEnvs) {
     systemEnvs['VERCEL'] = '1';
     systemEnvs['VERCEL_ENV'] = 'development';
-
-    const { systemEnvValues } = await getSystemEnvValues(
-      output,
-      client,
-      project.id
-    );
+    systemEnvs['VERCEL_URL'] = url ? new URL(url).host : '';
 
     for (const key of systemEnvValues) {
       systemEnvs[key] = '';
