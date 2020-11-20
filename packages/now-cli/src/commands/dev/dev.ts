@@ -111,7 +111,7 @@ export default async function dev(
 
     [environmentVars, systemEnvs] = await Promise.all([
       getDecryptedEnvRecords(output, client, envs),
-      exposeSystemEnvs(output, client, project),
+      exposeSystemEnvs(output, client, project, envs),
     ]);
   }
 
