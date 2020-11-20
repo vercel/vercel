@@ -494,7 +494,7 @@ export default class DevServer {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
-      env = this.injectVercelUrl(env);
+      env = this.injectSystemValuesInDotenv(env);
     } catch (err) {
       if (err.code !== 'ENOENT') {
         throw err;
@@ -776,10 +776,12 @@ export default class DevServer {
     return merged;
   }
 
-  injectVercelUrl(env: Env): Env {
+  injectSystemValuesInDotenv(env: Env): Env {
     for (const name of Object.keys(env)) {
       if (name === 'VERCEL_URL') {
         env['VERCEL_URL'] = new URL(this.address).host;
+      } else if (name === 'VERCEL_REGION') {
+        env['VERCEL_REGION'] = 'dev1';
       }
     }
 
