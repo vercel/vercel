@@ -1,27 +1,41 @@
-import { SystemEnvs } from './types';
-import getSystemEnvValues from '../env/get-system-env-values';
-import Client from '../client';
-import { Output } from '../output';
+import { ProjectEnvType, ProjectEnvVariable } from '../../types';
+import { Env } from '@vercel/build-utils';
 
-export default async function exposeSystemEnvs(
-  output: Output,
-  client: Client,
-  projectId: string
+function getSystemEnvValue(
+  systemEnvRef: string,
+  { vercelUrl }: { vercelUrl?: string }
 ) {
-  const systemEnvs: SystemEnvs = {
-    buildEnv: { VERCEL: '1', VERCEL_ENV: 'development' },
-    runEnv: { VERCEL: '1', VERCEL_ENV: 'development', VERCEL_REGION: 'dev1' },
-  };
-
-  const { systemEnvValues } = await getSystemEnvValues(
-    output,
-    client,
-    projectId
-  );
-  for (const key of systemEnvValues) {
-    systemEnvs.buildEnv[key] = '';
-    systemEnvs.runEnv[key] = '';
+  if (systemEnvRef === 'VERCEL_URL') {
+    return vercelUrl || '';
   }
 
-  return systemEnvs;
+  return '';
+}
+
+export default function exposeSystemEnvs(
+  projectEnvs: ProjectEnvVariable[],
+  systemEnvValues: string[],
+  autoExposeSystemEnvs: boolean | undefined,
+  vercelUrl?: string
+) {
+  const envs: Env = {};
+
+  if (autoExposeSystemEnvs) {
+    envs['VERCEL'] = '1';
+    envs['VERCEL_ENV'] = 'development';
+
+    for (const key of systemEnvValues) {
+      envs[key] = getSystemEnvValue(key, { vercelUrl });
+    }
+  }
+
+  for (let env of projectEnvs) {
+    if (env.type === ProjectEnvType.System) {
+      envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
+    } else {
+      envs[env.key] = env.value;
+    }
+  }
+
+  return envs;
 }

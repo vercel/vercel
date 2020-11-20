@@ -2,18 +2,16 @@ import { resolve, join } from 'path';
 
 import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
-import exposeSystemEnvs from '../../util/dev/expose-system-envs';
-import { SystemEnvs } from '../../util/dev/types';
 import { Output } from '../../util/output';
-import { NowContext } from '../../types';
+import { NowContext, ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
-import { ProjectSettings, ProjectEnvTarget } from '../../types';
+import { ProjectSettings } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
-import { Env } from '@vercel/build-utils';
 import setupAndLink from '../../util/link/setup-and-link';
+import getSystemEnvValues from '../../util/env/get-system-env-values';
 
 type Options = {
   '--debug'?: boolean;
@@ -72,8 +70,8 @@ export default async function dev(
   let devCommand: string | undefined;
   let frameworkSlug: string | undefined;
   let projectSettings: ProjectSettings | undefined;
-  let environmentVars: Env | undefined;
-  let systemEnvs: SystemEnvs | undefined;
+  let projectEnvs: ProjectEnvVariable[] = [];
+  let systemEnvValues: string[] = [];
   if (link.status === 'linked') {
     const { project, org } = link;
     client.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -101,16 +99,11 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
-    [environmentVars, systemEnvs] = await Promise.all([
-      getDecryptedEnvRecords(
-        output,
-        client,
-        project,
-        ProjectEnvTarget.Development
-      ),
+    [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
+      getDecryptedEnvRecords(output, client, project.id),
       project.autoExposeSystemEnvs
-        ? exposeSystemEnvs(output, client, project.id)
-        : undefined,
+        ? getSystemEnvValues(output, client, project.id)
+        : { systemEnvValues: [] },
     ]);
   }
 
@@ -120,8 +113,8 @@ export default async function dev(
     devCommand,
     frameworkSlug,
     projectSettings,
-    environmentVars,
-    systemEnvs,
+    projectEnvs,
+    systemEnvValues,
   });
 
   process.once('SIGINT', () => devServer.stop());

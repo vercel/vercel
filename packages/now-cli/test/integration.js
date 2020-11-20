@@ -539,7 +539,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   async function nowEnvAddSystemEnv() {
     const now = execa(
       binaryPath,
-      ['env', 'add', 'system', 'VERCEL_URL', ...defaultArgs],
+      ['env', 'add', 'system', 'NEXT_PUBLIC_VERCEL_URL', ...defaultArgs],
       {
         reject: false,
         cwd: target,
@@ -621,7 +621,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const lines = new Set(contents.split('\n'));
     t.true(lines.has('MY_PLAINTEXT_ENV_VAR="my plaintext value"'));
     t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
-    t.true(lines.has('VERCEL_URL=""'));
+    t.true(lines.has('NEXT_PUBLIC_VERCEL_URL=""'));
   }
 
   async function nowEnvPullOverwrite() {
@@ -675,7 +675,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const apiJson = await apiRes.json();
     t.is(apiJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
     t.is(apiJson['MY_SECRET_ENV_VAR'], 'my secret');
-    t.is(apiJson['VERCEL_URL'], host);
+    t.is(apiJson['NEXT_PUBLIC_VERCEL_URL'], host);
 
     const homeUrl = `https://${host}`;
     console.log({ homeUrl });
@@ -684,7 +684,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
     t.is(homeJson['MY_SECRET_ENV_VAR'], 'my secret');
-    t.is(homeJson['VERCEL_URL'], host);
+    t.is(homeJson['NEXT_PUBLIC_VERCEL_URL'], host);
   }
 
   async function nowDevWithEnv() {
@@ -702,8 +702,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
       return false;
     });
 
-    const localhostNoProtocol = localhost[0].slice('http://'.length);
-
     const apiUrl = `${localhost[0]}/api/get-env`;
     const apiRes = await fetch(apiUrl);
 
@@ -712,14 +710,14 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const apiJson = await apiRes.json();
 
     t.is(apiJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
-    t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(apiJson['NEXT_PUBLIC_VERCEL_URL'], '');
 
     const homeUrl = localhost[0];
 
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
-    t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(homeJson['NEXT_PUBLIC_VERCEL_URL'], '');
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
@@ -751,7 +749,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
 
     const apiJson = await apiRes.json();
 
-    t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(apiJson['NEXT_PUBLIC_VERCEL_URL'], localhostNoProtocol);
     t.is(apiJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
     t.is(apiJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
 
@@ -759,7 +757,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
-    t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
+    t.is(homeJson['NEXT_PUBLIC_VERCEL_URL'], localhostNoProtocol);
     t.is(homeJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
 
     // system env vars are not automatically exposed
@@ -786,6 +784,29 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
         `Set autoExposeSystemEnvs=true for project ${link.projectId}`
       );
     }
+  }
+
+  async function nowEnvPullFetchSystemVars() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['env', 'pull', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+
+    const lines = new Set(contents.split('\n'));
+    t.true(lines.has('VERCEL="1"'));
+    t.true(lines.has('VERCEL_URL=""'));
+    t.true(lines.has('NEXT_PUBLIC_VERCEL_URL=""'));
+    t.true(lines.has('VERCEL_ENV="development"'));
+    t.true(lines.has('VERCEL_GIT_PROVIDER=""'));
+    t.true(lines.has('VERCEL_GIT_REPO_SLUG=""'));
   }
 
   async function nowDevAndFetchSystemVars() {
@@ -900,7 +921,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   async function nowEnvRemoveWithNameOnly() {
     const vc = execa(
       binaryPath,
-      ['env', 'rm', 'VERCEL_URL', '-y', ...defaultArgs],
+      ['env', 'rm', 'NEXT_PUBLIC_VERCEL_URL', '-y', ...defaultArgs],
       {
         reject: false,
         cwd: target,
@@ -910,7 +931,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     await waitForPrompt(
       vc,
       chunk =>
-        chunk.includes('which Environments') && chunk.includes('VERCEL_URL')
+        chunk.includes('which Environments') &&
+        chunk.includes('NEXT_PUBLIC_VERCEL_URL')
     );
     vc.stdin.write('a\n'); // select all
 
@@ -934,6 +956,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   fs.unlinkSync(path.join(target, '.env'));
   await nowDevAndFetchCloudVars();
   await enableAutoExposeSystemEnvs();
+  await nowEnvPullFetchSystemVars();
+  fs.unlinkSync(path.join(target, '.env'));
   await nowDevAndFetchSystemVars();
   await nowEnvRemove();
   await nowEnvRemoveWithArgs();

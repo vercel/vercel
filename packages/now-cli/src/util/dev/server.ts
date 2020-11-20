@@ -84,9 +84,9 @@ import {
   RouteResult,
   HttpHeadersConfig,
   EnvConfigs,
-  SystemEnvs,
 } from './types';
-import { ProjectSettings } from '../../types';
+import { ProjectEnvVariable, ProjectSettings } from '../../types';
+import exposeSystemEnvs from './expose-system-envs';
 
 const frameworkList = _frameworks as Framework[];
 const frontendRuntimeSet = new Set(
@@ -120,7 +120,6 @@ export default class DevServer {
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
-  public systemEnvs: SystemEnvs;
   public frameworkSlug?: string;
   public files: BuilderInputs;
   public address: string;
@@ -151,15 +150,16 @@ export default class DevServer {
   private updateBuildersTimeout: NodeJS.Timeout | undefined;
   private startPromise: Promise<void> | null;
 
-  private environmentVars: Env | undefined;
+  private systemEnvValues: string[];
+  private projectEnvs: ProjectEnvVariable[];
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.systemEnvs = options.systemEnvs || { buildEnv: {}, runEnv: {} };
-    this.environmentVars = options.environmentVars;
+    this.systemEnvValues = options.systemEnvValues || [];
+    this.projectEnvs = options.projectEnvs || [];
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
@@ -494,7 +494,7 @@ export default class DevServer {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
-      env = this.populateVercelEnvVars(env);
+      env = this.injectSystemValuesInDotenv(env);
     } catch (err) {
       if (err.code !== 'ENOENT') {
         throw err;
@@ -645,10 +645,30 @@ export default class DevServer {
 
     let allEnv = { ...buildEnv, ...runEnv };
 
-    // If no .env/.build.env is present, fetch and use cloud environment variables
+    // If no .env/.build.env is present, use cloud environment variables
     if (Object.keys(allEnv).length === 0) {
-      const cloudEnv = this.populateVercelEnvVars(this.environmentVars);
-      allEnv = runEnv = buildEnv = cloudEnv;
+      const cloudEnv = exposeSystemEnvs(
+        this.projectEnvs || [],
+        this.systemEnvValues || [],
+        this.projectSettings && this.projectSettings.autoExposeSystemEnvs,
+        new URL(this.address).host
+      );
+
+      allEnv = { ...cloudEnv };
+      runEnv = { ...cloudEnv };
+      buildEnv = { ...cloudEnv };
+    }
+
+    // legacy NOW_REGION env variable
+    runEnv['NOW_REGION'] = 'dev1';
+    buildEnv['NOW_REGION'] = 'dev1';
+    allEnv['NOW_REGION'] = 'dev1';
+
+    // mirror how VERCEL_REGION is injected in prod/preview
+    // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
+    // and should not contain VERCEL_REGION
+    if (this.projectSettings && this.projectSettings.autoExposeSystemEnvs) {
+      runEnv['VERCEL_REGION'] = 'dev1';
     }
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
@@ -756,22 +776,14 @@ export default class DevServer {
     return merged;
   }
 
-  populateVercelEnvVars(env: Env | undefined): Env {
-    if (!env) {
-      return {};
-    }
-
+  injectSystemValuesInDotenv(env: Env): Env {
     for (const name of Object.keys(env)) {
       if (name === 'VERCEL_URL') {
-        const host = new URL(this.address).host;
-        env['VERCEL_URL'] = host;
+        env['VERCEL_URL'] = new URL(this.address).host;
       } else if (name === 'VERCEL_REGION') {
         env['VERCEL_REGION'] = 'dev1';
       }
     }
-
-    // Always set NOW_REGION to match production
-    env['NOW_REGION'] = 'dev1';
 
     return env;
   }
@@ -842,11 +854,6 @@ export default class DevServer {
 
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
-
-    this.systemEnvs.buildEnv = this.populateVercelEnvVars(
-      this.systemEnvs.buildEnv
-    );
-    this.systemEnvs.runEnv = this.populateVercelEnvVars(this.systemEnvs.runEnv);
 
     const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
@@ -1656,13 +1663,7 @@ export default class DevServer {
     if (typeof builder.startDevServer === 'function') {
       let devServerResult: StartDevServerResult = null;
       try {
-        const {
-          envConfigs,
-          systemEnvs,
-          files,
-          devCacheDir,
-          cwd: workPath,
-        } = this;
+        const { envConfigs, files, devCacheDir, cwd: workPath } = this;
         devServerResult = await builder.startDevServer({
           files,
           entrypoint: match.entrypoint,
@@ -1672,8 +1673,8 @@ export default class DevServer {
             isDev: true,
             requestPath,
             devCacheDir,
-            env: { ...systemEnvs.runEnv, ...envConfigs.runEnv },
-            buildEnv: { ...systemEnvs.buildEnv, ...envConfigs.buildEnv },
+            env: { ...envConfigs.runEnv },
+            buildEnv: { ...envConfigs.buildEnv },
           },
         });
       } catch (err) {
@@ -2012,7 +2013,6 @@ export default class DevServer {
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
-      ...this.systemEnvs.buildEnv,
       ...this.envConfigs.allEnv,
       PORT: `${port}`,
     };

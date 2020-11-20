@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { ProjectEnvTarget, Project } from '../../types';
+import { Project } from '../../types';
 import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import Client from '../../util/client';
@@ -12,7 +12,8 @@ import { promises, openSync, closeSync, readSync } from 'fs';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { getCommandName } from '../../util/pkg-name';
 const { writeFile } = promises;
-import { Env } from '@vercel/build-utils';
+import exposeSystemEnvs from '../../util/dev/expose-system-envs';
+import getSystemEnvValues from '../../util/env/get-system-env-values';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -84,15 +85,22 @@ export default async function pull(
   );
   const pullStamp = stamp();
 
-  const records: Env = await withSpinner(
-    'Downloading',
-    async () =>
-      await getDecryptedEnvRecords(
-        output,
-        client,
-        project,
-        ProjectEnvTarget.Development
-      )
+  const [
+    { envs: projectEnvs },
+    { systemEnvValues },
+  ] = await withSpinner('Downloading', () =>
+    Promise.all([
+      getDecryptedEnvRecords(output, client, project.id),
+      project.autoExposeSystemEnvs
+        ? getSystemEnvValues(output, client, project.id)
+        : { systemEnvValues: [] },
+    ])
+  );
+
+  const records = exposeSystemEnvs(
+    projectEnvs,
+    systemEnvValues,
+    project.autoExposeSystemEnvs
   );
 
   const contents =
