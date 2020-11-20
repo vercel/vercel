@@ -659,10 +659,14 @@ export default class DevServer {
       buildEnv = { ...cloudEnv };
     }
 
-    // mirror how VERCEL_REGION and NOW_REGION are injected in prod/preview
-    // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
-    // and should not contain NOW_REGION and VERCEL_REGION
+    // legacy NOW_REGION env variable
     runEnv['NOW_REGION'] = 'dev1';
+    buildEnv['NOW_REGION'] = 'dev1';
+    allEnv['NOW_REGION'] = 'dev1';
+
+    // mirror how VERCEL_REGION is injected in prod/preview
+    // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
+    // and should not contain VERCEL_REGION
     if (this.projectSettings && this.projectSettings.autoExposeSystemEnvs) {
       runEnv['VERCEL_REGION'] = 'dev1';
     }
