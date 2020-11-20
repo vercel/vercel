@@ -769,14 +769,9 @@ export default class DevServer {
   }
 
   injectVercelUrl(env: Env): Env {
-    if (!env) {
-      return {};
-    }
-
     for (const name of Object.keys(env)) {
       if (name === 'VERCEL_URL') {
-        const host = new URL(this.address).host;
-        env['VERCEL_URL'] = host;
+        env['VERCEL_URL'] = new URL(this.address).host;
       }
     }
 
