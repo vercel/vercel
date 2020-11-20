@@ -101,7 +101,9 @@ export default async function dev(
 
     [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
       getDecryptedEnvRecords(output, client, project.id),
-      getSystemEnvValues(output, client, project.id),
+      project.autoExposeSystemEnvs
+        ? getSystemEnvValues(output, client, project.id)
+        : { systemEnvValues: [] },
     ]);
   }
 

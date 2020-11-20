@@ -91,7 +91,9 @@ export default async function pull(
   ] = await withSpinner('Downloading', () =>
     Promise.all([
       getDecryptedEnvRecords(output, client, project.id),
-      getSystemEnvValues(output, client, project.id),
+      project.autoExposeSystemEnvs
+        ? getSystemEnvValues(output, client, project.id)
+        : { systemEnvValues: [] },
     ])
   );
 
