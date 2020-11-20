@@ -651,6 +651,12 @@ export default class DevServer {
       allEnv = runEnv = buildEnv = cloudEnv;
     }
 
+    // mirror how VERCEL_REGION and NOW_REGION are injected in prod/preview
+    runEnv['NOW_REGION'] = 'dev1';
+    if (this.projectSettings && this.projectSettings.autoExposeSystemEnvs) {
+      runEnv['VERCEL_REGION'] = 'dev1';
+    }
+
     this.envConfigs = { buildEnv, runEnv, allEnv };
     return config;
   }
@@ -765,13 +771,8 @@ export default class DevServer {
       if (name === 'VERCEL_URL') {
         const host = new URL(this.address).host;
         env['VERCEL_URL'] = host;
-      } else if (name === 'VERCEL_REGION') {
-        env['VERCEL_REGION'] = 'dev1';
       }
     }
-
-    // Always set NOW_REGION to match production
-    env['NOW_REGION'] = 'dev1';
 
     return env;
   }

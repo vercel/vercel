@@ -230,6 +230,7 @@ export interface ProjectSettings {
   buildCommand?: string | null;
   outputDirectory?: string | null;
   rootDirectory?: string | null;
+  autoExposeSystemEnvs?: boolean;
 }
 
 export interface Project extends ProjectSettings {
