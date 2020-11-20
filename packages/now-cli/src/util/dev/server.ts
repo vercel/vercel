@@ -150,8 +150,6 @@ export default class DevServer {
   private updateBuildersTimeout: NodeJS.Timeout | undefined;
   private startPromise: Promise<void> | null;
 
-  private environmentVars: Env | undefined;
-  private systemEnvs: Env | undefined;
   private systemEnvValues: string[];
   private projectEnvs: ProjectEnvVariable[];
 
@@ -162,7 +160,6 @@ export default class DevServer {
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.systemEnvValues = options.systemEnvValues;
     this.projectEnvs = options.projectEnvs;
-    this.environmentVars = options.environmentVars;
     this.files = {};
     this.address = '';
     this.devCommand = options.devCommand;
@@ -650,14 +647,12 @@ export default class DevServer {
 
     // If no .env/.build.env is present, use cloud environment variables
     if (Object.keys(allEnv).length === 0) {
-      const systemEnvs = exposeSystemEnvs(
+      const cloudEnv = exposeSystemEnvs(
         this.projectEnvs,
         this.systemEnvValues,
-        this.projectSettings?.autoExposeSystemEnvs,
+        this.projectSettings && this.projectSettings.autoExposeSystemEnvs,
         this.address
       );
-
-      const cloudEnv = { ...systemEnvs, ...this.environmentVars };
 
       allEnv = runEnv = buildEnv = cloudEnv;
     }
@@ -854,13 +849,6 @@ export default class DevServer {
 
     const nowConfig = await this.getNowConfig();
     const devCommandPromise = this.runDevCommand();
-
-    this.systemEnvs = exposeSystemEnvs(
-      this.projectEnvs,
-      this.systemEnvValues,
-      this.projectSettings?.autoExposeSystemEnvs,
-      this.address
-    );
 
     const files = await getFiles(this.cwd, { output: this.output });
     this.files = {};
@@ -1670,13 +1658,7 @@ export default class DevServer {
     if (typeof builder.startDevServer === 'function') {
       let devServerResult: StartDevServerResult = null;
       try {
-        const {
-          envConfigs,
-          systemEnvs,
-          files,
-          devCacheDir,
-          cwd: workPath,
-        } = this;
+        const { envConfigs, files, devCacheDir, cwd: workPath } = this;
         devServerResult = await builder.startDevServer({
           files,
           entrypoint: match.entrypoint,
@@ -1686,8 +1668,8 @@ export default class DevServer {
             isDev: true,
             requestPath,
             devCacheDir,
-            env: { ...systemEnvs, ...envConfigs.runEnv },
-            buildEnv: { ...systemEnvs, ...envConfigs.buildEnv },
+            env: { ...envConfigs.runEnv },
+            buildEnv: { ...envConfigs.buildEnv },
           },
         });
       } catch (err) {
@@ -2026,7 +2008,6 @@ export default class DevServer {
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
       ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
       ...process.env,
-      ...this.systemEnvs,
       ...this.envConfigs.allEnv,
       PORT: `${port}`,
     };

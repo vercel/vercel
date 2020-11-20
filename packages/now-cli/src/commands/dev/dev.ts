@@ -8,11 +8,9 @@ import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
-import { ProjectSettings, ProjectEnvTarget } from '../../types';
+import { ProjectSettings } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
-import { Env } from '@vercel/build-utils';
 import setupAndLink from '../../util/link/setup-and-link';
-import getEnvVariables from '../../util/env/get-env-records';
 import getSystemEnvValues from '../../util/env/get-system-env-values';
 
 type Options = {
@@ -73,7 +71,6 @@ export default async function dev(
   let frameworkSlug: string | undefined;
   let projectSettings: ProjectSettings | undefined;
   let projectEnvs: ProjectEnvVariable[] = [];
-  let environmentVars: Env | undefined;
   let systemEnvValues: string[] = [];
   if (link.status === 'linked') {
     const { project, org } = link;
@@ -102,15 +99,8 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
-    ({ envs: projectEnvs } = await getEnvVariables(
-      output,
-      client,
-      project.id,
-      ProjectEnvTarget.Development
-    ));
-
-    [environmentVars, { systemEnvValues }] = await Promise.all([
-      getDecryptedEnvRecords(output, client, projectEnvs),
+    [projectEnvs, { systemEnvValues }] = await Promise.all([
+      getDecryptedEnvRecords(output, client, project.id),
       getSystemEnvValues(output, client, project.id),
     ]);
   }
@@ -121,7 +111,6 @@ export default async function dev(
     devCommand,
     frameworkSlug,
     projectSettings,
-    environmentVars,
     projectEnvs,
     systemEnvValues,
   });

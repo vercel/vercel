@@ -8,23 +8,25 @@ export default function exposeSystemEnvs(
   autoExposeSystemEnvs: boolean | undefined,
   url?: string
 ) {
-  const systemEnvs: Env = {};
+  const envs: Env = {};
 
   if (autoExposeSystemEnvs) {
-    systemEnvs['VERCEL'] = '1';
-    systemEnvs['VERCEL_ENV'] = 'development';
-    systemEnvs['VERCEL_URL'] = url ? new URL(url).host : '';
+    envs['VERCEL'] = '1';
+    envs['VERCEL_ENV'] = 'development';
+    envs['VERCEL_URL'] = url ? new URL(url).host : '';
 
     for (const key of systemEnvValues) {
-      systemEnvs[key] = '';
+      envs[key] = '';
     }
   }
 
   for (let env of projectEnvs) {
     if (env.type === ProjectEnvType.System) {
-      systemEnvs[env.key] = '';
+      envs[env.key] = '';
+    } else {
+      envs[env.key] = env.value;
     }
   }
 
-  return systemEnvs;
+  return envs;
 }
