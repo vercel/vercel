@@ -2015,30 +2015,32 @@ export async function build({
 
   const { i18n } = routesManifest || {};
 
-  let trailingSlashRedirect: Route | undefined;
+  const trailingSlashRedirects: Route[] = [];
+  let trailingSlash = false;
 
-  if (i18n) {
-    redirects = redirects.filter(_redir => {
-      const redir = _redir as Source;
-      // detect the trailing slash redirect and make sure it's
-      // kept above the wildcard mapping to prevent erroneous redirects
-      // since non-continue routes come after continue the $wildcard
-      // route will come before the redirect otherwise and if the
-      // redirect is triggered it breaks locale mapping
+  redirects = redirects.filter(_redir => {
+    const redir = _redir as Source;
+    // detect the trailing slash redirect and make sure it's
+    // kept above the wildcard mapping to prevent erroneous redirects
+    // since non-continue routes come after continue the $wildcard
+    // route will come before the redirect otherwise and if the
+    // redirect is triggered it breaks locale mapping
 
-      const location =
-        redir.headers && (redir.headers.location || redir.headers.Location);
+    const location =
+      redir.headers && (redir.headers.location || redir.headers.Location);
 
-      if (redir.status === 308 && (location === '/$1' || location === '/$1/')) {
-        // we set continue here to prevent the redirect from
-        // moving underneath i18n routes
-        redir.continue = true;
-        trailingSlashRedirect = redir;
-        return false;
+    if (redir.status === 308 && (location === '/$1' || location === '/$1/')) {
+      // we set continue here to prevent the redirect from
+      // moving underneath i18n routes
+      if (location === '/$1/') {
+        trailingSlash = true;
       }
-      return true;
-    });
-  }
+      redir.continue = true;
+      trailingSlashRedirects.push(redir);
+      return false;
+    }
+    return true;
+  });
 
   return {
     output: {
@@ -2079,10 +2081,17 @@ export async function build({
       - Builder rewrites
     */
     routes: [
+      ...(trailingSlash
+        ? [
+            {
+              src: '^/\\.well-known(?:/.*)?$',
+            },
+          ]
+        : []),
       // force trailingSlashRedirect to the very top so it doesn't
       // conflict with i18n routes that don't have or don't have the
       // trailing slash
-      ...(trailingSlashRedirect ? [trailingSlashRedirect] : []),
+      ...trailingSlashRedirects,
 
       ...(i18n
         ? [
@@ -2256,16 +2265,16 @@ export async function build({
         dest: '$0',
       },
 
-      // remove default locale prefix to check public files
+      // remove locale prefixes to check public files
       ...(i18n
         ? [
             {
-              src: `${path.join(
+              src: `^${path.join(
                 '/',
-                entryDirectory,
-                i18n.defaultLocale,
-                '/'
-              )}(.*)`,
+                entryDirectory
+              )}/?(?:${i18n.locales
+                .map(locale => escapeStringRegexp(locale))
+                .join('|')})/(.*)`,
               dest: `${path.join('/', entryDirectory, '/')}$1`,
               check: true,
             },
