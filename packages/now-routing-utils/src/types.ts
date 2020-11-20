@@ -16,6 +16,7 @@ export type Source = {
   methods?: string[];
   continue?: boolean;
   check?: boolean;
+  important?: boolean;
   status?: number;
   locale?: {
     redirect: Record<string, string>;
