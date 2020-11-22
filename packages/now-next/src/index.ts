@@ -718,6 +718,8 @@ export async function build({
         // with that routing section
         ...rewrites,
 
+        // make sure 404 page is used when a directory is matched without
+        // an index page
         { handle: 'resource' },
         { src: path.join('/', entryDirectory, '.*'), status: 404 },
 
@@ -2243,6 +2245,8 @@ export async function build({
       // with that routing section
       ...rewrites,
 
+      // make sure 404 page is used when a directory is matched without
+      // an index page
       { handle: 'resource' },
       { src: path.join('/', entryDirectory, '.*'), status: 404 },
 
