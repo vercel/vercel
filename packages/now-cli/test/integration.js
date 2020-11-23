@@ -621,7 +621,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(res.status, 200);
 
     const json = await res.json();
-    console.log({ json });
 
     const link = require(path.join(target, '.vercel/project.json'));
 
@@ -634,8 +633,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
         type: 'secret',
       }),
     });
-
-    console.log(resEnv);
 
     t.is(resEnv.status, 200);
   }
