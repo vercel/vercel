@@ -61,5 +61,5 @@ export default async function getDecryptedEnvRecords(
     }
   }
 
-  return { envs };
+  return { envs: envsWithDecryptedSecrets };
 }
