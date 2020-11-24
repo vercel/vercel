@@ -1,4 +1,4 @@
-const { deepEqual } = require('assert');
+const { deepStrictEqual } = require('assert');
 const { mergeRoutes } = require('../dist/merge');
 
 test('mergeRoutes simple', () => {
@@ -10,7 +10,10 @@ test('mergeRoutes simple', () => {
     {
       use: '@now/node',
       entrypoint: 'api/home.js',
-      routes: [{ src: '/node1', dest: '/n1' }, { src: '/node2', dest: '/n2' }],
+      routes: [
+        { src: '/node1', dest: '/n1' },
+        { src: '/node2', dest: '/n2' },
+      ],
     },
     {
       use: '@now/python',
@@ -30,7 +33,7 @@ test('mergeRoutes simple', () => {
     { dest: '/py1', src: '/python1' },
     { dest: '/py2', src: '/python2' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
 });
 
 test('mergeRoutes handle filesystem user routes', () => {
@@ -43,7 +46,10 @@ test('mergeRoutes handle filesystem user routes', () => {
     {
       use: '@now/node',
       entrypoint: 'api/home.js',
-      routes: [{ src: '/node1', dest: '/n1' }, { src: '/node2', dest: '/n2' }],
+      routes: [
+        { src: '/node1', dest: '/n1' },
+        { src: '/node2', dest: '/n2' },
+      ],
     },
     {
       use: '@now/python',
@@ -64,7 +70,7 @@ test('mergeRoutes handle filesystem user routes', () => {
     { handle: 'filesystem' },
     { dest: '/u2', src: '/user2' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
 });
 
 test('mergeRoutes handle filesystem build routes', () => {
@@ -102,7 +108,7 @@ test('mergeRoutes handle filesystem build routes', () => {
     { dest: '/n2', src: '/node2' },
     { dest: '/py2', src: '/python2' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
 });
 
 test('mergeRoutes handle filesystem both user and builds', () => {
@@ -141,7 +147,7 @@ test('mergeRoutes handle filesystem both user and builds', () => {
     { dest: '/n2', src: '/node2' },
     { dest: '/py2', src: '/python2' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
 });
 
 test('mergeRoutes continue true', () => {
@@ -182,7 +188,7 @@ test('mergeRoutes continue true', () => {
     { dest: '/py1', src: '/python1' },
     { dest: '/py3', src: '/python3' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
 });
 
 test('mergeRoutes check true', () => {
@@ -223,7 +229,7 @@ test('mergeRoutes check true', () => {
     { dest: '/py1', src: '/python1' },
     { dest: '/py3', src: '/python3' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
 });
 
 test('mergeRoutes check true, continue true, handle filesystem middle', () => {
@@ -268,7 +274,7 @@ test('mergeRoutes check true, continue true, handle filesystem middle', () => {
     { dest: '/n3', src: '/node3' },
     { dest: '/py3', src: '/python3' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
 });
 
 test('mergeRoutes check true, continue true, handle filesystem top', () => {
@@ -306,7 +312,7 @@ test('mergeRoutes check true, continue true, handle filesystem top', () => {
     { dest: '/n1', src: '/node1' },
     { dest: '/py1', src: '/python1' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
 });
 
 test('mergeRoutes multiple handle values', () => {
@@ -359,5 +365,57 @@ test('mergeRoutes multiple handle values', () => {
     { dest: '/u3', src: '/user3' },
     { check: true, dest: '/py2', src: '/python2' },
   ];
-  deepEqual(actual, expected);
+  deepStrictEqual(actual, expected);
+});
+
+test('mergeRoutes ensure `handle: error` comes last', () => {
+  const userRoutes = [];
+  const builds = [
+    {
+      use: '@vercel/static-build',
+      entrypoint: 'packge.json',
+      routes: [
+        {
+          src: '^/home$',
+          status: 301,
+          headers: {
+            Location: '/',
+          },
+        },
+      ],
+    },
+    {
+      use: '@vercel/zero-config-routes',
+      entrypoint: '/',
+      routes: [
+        {
+          handle: 'error',
+        },
+        {
+          status: 404,
+          src: '^/(?!.*api).*$',
+          dest: '404.html',
+        },
+      ],
+    },
+  ];
+  const actual = mergeRoutes({ userRoutes, builds });
+  const expected = [
+    {
+      status: 301,
+      src: '^/home$',
+      headers: {
+        Location: '/',
+      },
+    },
+    {
+      handle: 'error',
+    },
+    {
+      status: 404,
+      src: '^/(?!.*api).*$',
+      dest: '404.html',
+    },
+  ];
+  deepStrictEqual(actual, expected);
 });
