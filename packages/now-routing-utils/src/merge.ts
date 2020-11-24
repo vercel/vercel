@@ -90,9 +90,9 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
   const outputRoutes: Route[] = [];
 
   const uniqueHandleValues: Array<HandleValue | null> = [
+    null,
     'rewrite',
     'filesystem',
-    null,
     'miss',
     'hit',
     'resource',
