@@ -345,17 +345,21 @@
       "mustContain": "slug\":\"first\""
     },
 
-    // TODO: update when directory listing is disabled
-    // and these are proper 404s
     {
       "path": "/en/not-found",
-      "status": 200,
-      "mustContain": "Index of"
+      "status": 404
+    },
+    {
+      "path": "/en/not-found",
+      "mustContain": "lang=\"en\""
     },
     {
       "path": "/nl/not-found",
-      "status": 200,
-      "mustContain": "Index of"
+      "status": 404
+    },
+    {
+      "path": "/nl/not-found",
+      "mustContain": "lang=\"nl\""
     },
     {
       "path": "/en-US/not-found",
