@@ -718,6 +718,11 @@ export async function build({
         // with that routing section
         ...rewrites,
 
+        // make sure 404 page is used when a directory is matched without
+        // an index page
+        { handle: 'resource' },
+        { src: path.join('/', entryDirectory, '.*'), status: 404 },
+
         // We need to make sure to 404 for /_next after handle: miss since
         // handle: miss is called before rewrites and to prevent rewriting
         // /_next
@@ -2016,7 +2021,6 @@ export async function build({
   const { i18n } = routesManifest || {};
 
   const trailingSlashRedirects: Route[] = [];
-  let trailingSlash = false;
 
   redirects = redirects.filter(_redir => {
     const redir = _redir as Source;
@@ -2032,9 +2036,6 @@ export async function build({
     if (redir.status === 308 && (location === '/$1' || location === '/$1/')) {
       // we set continue here to prevent the redirect from
       // moving underneath i18n routes
-      if (location === '/$1/') {
-        trailingSlash = true;
-      }
       redir.continue = true;
       trailingSlashRedirects.push(redir);
       return false;
@@ -2081,13 +2082,6 @@ export async function build({
       - Builder rewrites
     */
     routes: [
-      ...(trailingSlash
-        ? [
-            {
-              src: '^/\\.well-known(?:/.*)?$',
-            },
-          ]
-        : []),
       // force trailingSlashRedirect to the very top so it doesn't
       // conflict with i18n routes that don't have or don't have the
       // trailing slash
@@ -2250,6 +2244,11 @@ export async function build({
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...rewrites,
+
+      // make sure 404 page is used when a directory is matched without
+      // an index page
+      { handle: 'resource' },
+      { src: path.join('/', entryDirectory, '.*'), status: 404 },
 
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
