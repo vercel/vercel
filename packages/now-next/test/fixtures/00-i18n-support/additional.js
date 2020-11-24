@@ -10,7 +10,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/`);
     expect(res.status).toBe(200);
@@ -22,7 +22,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({});
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/`);
     expect(res2.status).toBe(200);
@@ -41,7 +41,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/fr`);
     expect(res.status).toBe(200);
@@ -53,7 +53,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({});
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/fr`);
     expect(res2.status).toBe(200);
@@ -72,7 +72,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/nl-NL`);
     expect(res.status).toBe(200);
@@ -84,7 +84,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({});
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/nl-NL`);
     expect(res2.status).toBe(200);
@@ -104,7 +104,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/gsp/fallback/first`);
     expect(res.status).toBe(200);
@@ -118,7 +118,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/gsp/fallback/first`);
     expect(res2.status).toBe(200);
@@ -139,7 +139,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/fr/gsp/fallback/first`);
     expect(res.status).toBe(200);
@@ -153,7 +153,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/fr/gsp/fallback/first`);
     expect(res2.status).toBe(200);
@@ -174,7 +174,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/nl-NL/gsp/fallback/first`);
     expect(res.status).toBe(200);
@@ -188,7 +188,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/nl-NL/gsp/fallback/first`);
     expect(res2.status).toBe(200);
@@ -212,7 +212,7 @@ module.exports = function (ctx) {
     const initRes = await fetch(`${ctx.deploymentUrl}/gsp/fallback/new-page`);
     expect(initRes.status).toBe(200);
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/gsp/fallback/new-page`);
     expect(res.status).toBe(200);
@@ -226,7 +226,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/gsp/fallback/new-page`);
     expect(res2.status).toBe(200);
@@ -246,7 +246,7 @@ module.exports = function (ctx) {
     );
     expect(dataRes.status).toBe(200);
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/fr/gsp/fallback/new-page`);
     expect(res.status).toBe(200);
@@ -260,7 +260,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/fr/gsp/fallback/new-page`);
     expect(res2.status).toBe(200);
@@ -278,7 +278,7 @@ module.exports = function (ctx) {
     );
     expect(dataRes.status).toBe(200);
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/nl-NL/gsp/fallback/new-page`);
     expect(res.status).toBe(200);
@@ -292,7 +292,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(
       `${ctx.deploymentUrl}/nl-NL/gsp/fallback/new-page`
@@ -314,7 +314,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/gsp/no-fallback/first`);
     expect(res.status).toBe(200);
@@ -327,7 +327,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/gsp/no-fallback/first`);
     expect(res2.status).toBe(200);
@@ -347,7 +347,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(`${ctx.deploymentUrl}/fr/gsp/no-fallback/first`);
     expect(res.status).toBe(200);
@@ -360,7 +360,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/fr/gsp/no-fallback/first`);
     expect(res2.status).toBe(200);
@@ -380,7 +380,7 @@ module.exports = function (ctx) {
     expect(dataRes.status).toBe(200);
     await dataRes.json();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res = await fetch(
       `${ctx.deploymentUrl}/nl-NL/gsp/no-fallback/second`
@@ -395,7 +395,7 @@ module.exports = function (ctx) {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'second' });
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(
       `${ctx.deploymentUrl}/nl-NL/gsp/no-fallback/second`
