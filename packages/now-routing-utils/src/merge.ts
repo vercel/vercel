@@ -88,17 +88,11 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
   });
 
   const outputRoutes: Route[] = [];
-
-  const uniqueHandleValues: Array<HandleValue | null> = [
+  const uniqueHandleValues = new Set([
     null,
-    'rewrite',
-    'filesystem',
-    'miss',
-    'hit',
-    'resource',
-    'error',
-  ];
-
+    ...userHandleMap.keys(),
+    ...builderHandleMap.keys(),
+  ]);
   for (const handle of uniqueHandleValues) {
     const userRoutes = userHandleMap.get(handle) || [];
     const builderRoutes = builderHandleMap.get(handle) || [];
