@@ -13,7 +13,7 @@ module.exports = function (ctx) {
     expect($('#hello').text()).toBe('hello: world');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/another`);
     expect(res2.status).toBe(200);
@@ -34,7 +34,7 @@ module.exports = function (ctx) {
     expect($('#post').text()).toBe('Post: post-123');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/blog/post-123`);
     expect(res2.status).toBe(200);
@@ -56,7 +56,7 @@ module.exports = function (ctx) {
     expect($('#comment').text()).toBe('Comment: comment-321');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(`${ctx.deploymentUrl}/blog/post-123/comment-321`);
     expect(res2.status).toBe(200);
@@ -82,7 +82,7 @@ module.exports = function (ctx) {
     expect(isNaN(initialRandom)).toBe(false);
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/another.json`
@@ -111,7 +111,7 @@ module.exports = function (ctx) {
     expect(isNaN(initialRandom)).toBe(false);
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123.json`
@@ -141,7 +141,7 @@ module.exports = function (ctx) {
     expect(isNaN(initialRandom)).toBe(false);
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const res2 = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123/comment-321.json`
