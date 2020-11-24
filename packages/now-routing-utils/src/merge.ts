@@ -93,8 +93,8 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
     'rewrite',
     'filesystem',
     null,
-    'hit',
     'miss',
+    'hit',
     'resource',
     'error',
   ];
