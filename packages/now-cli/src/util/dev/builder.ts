@@ -149,8 +149,8 @@ export async function executeBuild(
       filesRemoved,
       // This env distiniction is only necessary to maintain
       // backwards compatibility with the `@vercel/next` builder.
-      env: envConfigs.runEnv,
-      buildEnv: envConfigs.buildEnv,
+      env: { ...envConfigs.runEnv },
+      buildEnv: { ...envConfigs.buildEnv },
     },
   };
 

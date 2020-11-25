@@ -9,6 +9,12 @@
       }
     },
     {
+      "path": "/_next/static/testing-build-id/_buildManifest.js",
+      "responseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
+    },
+    {
       "path": "/_next/static/invalid-build-id/pages/non-existent.js",
       "notResponseHeaders": {
         "cache-control": "public,max-age=31536000,immutable"

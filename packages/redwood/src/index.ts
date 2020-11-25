@@ -50,6 +50,7 @@ export async function build({
 }: BuildOptions) {
   await download(files, workPath, meta);
 
+  const { installCommand, buildCommand } = config;
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
   const nodeVersion = await getNodeVersion(
@@ -60,18 +61,27 @@ export async function build({
   );
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(
-    entrypointFsDirname,
-    ['--prefer-offline'],
-    spawnOpts,
-    meta
-  );
+  if (typeof installCommand === 'string') {
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entrypointFsDirname,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
+  } else {
+    console.log('Installing dependencies...');
+    const installTime = Date.now();
+    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta);
+    debug(`Install complete [${Date.now() - installTime}ms]`);
+  }
 
   if (meta.isDev) {
     throw new Error('Detected `@vercel/redwood` dev but this is not supported');
   }
 
-  const { buildCommand } = config;
   const frmwrkCmd = frameworks.find(f => f.slug === 'redwoodjs')?.settings
     .buildCommand;
   const pkg = await readConfigFile<PackageJson>(join(workPath, 'package.json'));

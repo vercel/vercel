@@ -17,6 +17,10 @@ export type Source = {
   continue?: boolean;
   check?: boolean;
   status?: number;
+  locale?: {
+    redirect: Record<string, string>;
+    cookie: string;
+  };
 };
 
 export type Handler = {

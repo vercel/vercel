@@ -41,6 +41,7 @@ export interface Config {
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
   outputDirectory?: string;
+  installCommand?: string;
   buildCommand?: string;
   devCommand?: string;
   framework?: string;

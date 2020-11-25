@@ -24,6 +24,7 @@ interface Options {
   projectSettings?: {
     framework?: string | null;
     devCommand?: string | null;
+    installCommand?: string | null;
     buildCommand?: string | null;
     outputDirectory?: string | null;
     createdAt?: number;
@@ -450,6 +451,10 @@ function detectFrontBuilder(
     config.devCommand = projectSettings.devCommand;
   }
 
+  if (typeof projectSettings.installCommand === 'string') {
+    config.installCommand = projectSettings.installCommand;
+  }
+
   if (projectSettings.buildCommand) {
     config.buildCommand = projectSettings.buildCommand;
   }
@@ -458,7 +463,10 @@ function detectFrontBuilder(
     config.outputDirectory = projectSettings.outputDirectory;
   }
 
-  if (pkg && (framework !== null || createdAt < Date.parse('2020-03-01'))) {
+  if (
+    pkg &&
+    (framework === undefined || createdAt < Date.parse('2020-03-01'))
+  ) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
       ...pkg.devDependencies,
@@ -981,7 +989,6 @@ function getRouteResult(
         rewriteRoutes.push({
           src: '^/api(/.*)?$',
           status: 404,
-          continue: true,
         });
       }
     } else {

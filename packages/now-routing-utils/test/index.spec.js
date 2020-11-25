@@ -36,6 +36,21 @@ describe('normalizeRoutes', () => {
 
   test('accepts valid routes', () => {
     const routes = [
+      {
+        src: '^(?:/(?<value>en|fr))?(?<path>/.*)$',
+        locale: {
+          value: '$value',
+          path: '$path',
+          default: 'en',
+          cookie: 'NEXT_LOCALE',
+        },
+      },
+      {
+        src: '^/(?:en/?|fr/?)$',
+        locale: {
+          redirect: { en: '/en', fr: '/fr' },
+        },
+      },
       { src: '^/about$' },
       {
         src: '^/blog$',
@@ -57,6 +72,7 @@ describe('normalizeRoutes', () => {
         src: '^/missed-me$',
         headers: { 'Cache-Control': 'max-age=10' },
         continue: true,
+        important: true,
       },
       { handle: 'rewrite' },
       { src: '^.*$', dest: '/somewhere' },

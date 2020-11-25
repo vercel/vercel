@@ -117,12 +117,6 @@ export type Deployment = {
   creator: { uid: string };
 };
 
-type PathAliasRule = {
-  pathname: string;
-  method: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>;
-  dest: string;
-};
-
 export type Alias = {
   uid: string;
   alias: string;
@@ -137,13 +131,6 @@ export type Alias = {
     email: string;
   };
   deploymentId?: string;
-  rules?: PathAliasRule[];
-};
-
-export type PathRule = {
-  dest: string;
-  pathname?: string;
-  method?: Array<string>;
 };
 
 export type DNSRecord = {
@@ -216,12 +203,23 @@ export enum ProjectEnvTarget {
   Development = 'development',
 }
 
+export enum ProjectEnvType {
+  Plaintext = 'plain',
+  Secret = 'secret',
+  System = 'system',
+}
+
 export interface ProjectEnvVariable {
   key: string;
   value: string;
+  type: ProjectEnvType;
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
+  target?: ProjectEnvTarget | ProjectEnvTarget[];
+}
+
+export interface ProjectEnvVariableV5 extends ProjectEnvVariable {
   target?: ProjectEnvTarget;
   system?: boolean;
 }
@@ -232,6 +230,7 @@ export interface ProjectSettings {
   buildCommand?: string | null;
   outputDirectory?: string | null;
   rootDirectory?: string | null;
+  autoExposeSystemEnvs?: boolean;
 }
 
 export interface Project extends ProjectSettings {
@@ -245,6 +244,7 @@ export interface Project extends ProjectSettings {
   framework?: string | null;
   rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
+  autoExposeSystemEnvs?: boolean;
 }
 
 export interface Org {

@@ -17,6 +17,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `blitz build`"
       },
@@ -47,6 +50,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `next build`"
       },
@@ -56,7 +62,13 @@
       "outputDirectory": {
         "placeholder": "Next.js default"
       }
-    }
+    },
+    "recommendedIntegrations": [
+      {
+        "id": "oac_5lUsiANun1DEzgLg0NZx5Es3",
+        "dependencies": ["next-plugin-sentry", "next-sentry-source-maps"]
+      }
+    ]
   },
   {
     "name": "Gatsby.js",
@@ -76,6 +88,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `gatsby build`"
       },
@@ -105,6 +120,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `hexo generate`"
       },
@@ -134,6 +152,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `npx @11ty/eleventy`"
       },
@@ -162,6 +183,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `docusaurus build`"
       },
@@ -190,6 +214,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `docusaurus-build`"
       },
@@ -218,6 +245,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `preact build`"
       },
@@ -249,6 +279,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `dojo build`"
       },
@@ -277,6 +310,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `ember build`"
       },
@@ -305,6 +341,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `vue-cli-service build`"
       },
@@ -333,6 +372,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `ng build && scully`"
       },
@@ -361,6 +403,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `ng build`"
       },
@@ -389,6 +434,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `ng build`"
       },
@@ -417,6 +465,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `polymer build`"
       },
@@ -445,6 +496,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `rollup -c`"
       },
@@ -473,6 +527,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `react-scripts build`"
       },
@@ -505,6 +562,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `react-scripts build`"
       },
@@ -533,6 +593,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `gridsome build`"
       },
@@ -561,6 +624,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `umi build`"
       },
@@ -589,6 +655,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `sapper export`"
       },
@@ -617,6 +686,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `saber build`"
       },
@@ -645,6 +717,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `stencil build`"
       },
@@ -673,6 +748,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `nuxt generate`"
       },
@@ -703,6 +781,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "value": "yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up"
       },
@@ -737,6 +818,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "None"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `hugo -D --gc`"
       },
@@ -764,6 +848,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "value": "bundle install"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `jekyll build`"
       },
@@ -791,6 +878,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run build` or `brunch build --production`"
       },
@@ -818,6 +908,9 @@
       ]
     },
     "settings": {
+      "installCommand": {
+        "value": "bundle install"
+      },
       "buildCommand": {
         "value": "`npm run build` or `bundle exec middleman build`"
       },
@@ -835,6 +928,9 @@
     "logo": "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/other.svg",
     "description": "No framework or a unoptimized framework.",
     "settings": {
+      "installCommand": {
+        "placeholder": "`yarn install` or `npm install`"
+      },
       "buildCommand": {
         "placeholder": "`npm run vercel-build` or `npm run build`"
       },
