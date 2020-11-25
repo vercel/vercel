@@ -6,6 +6,7 @@ import info from './util/output/info';
 try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
+  //
   process.cwd();
 } catch (e) {
   if (e && e.message && e.message.includes('uv_cwd')) {
