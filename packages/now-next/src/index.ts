@@ -445,7 +445,10 @@ export async function build({
     nextVersion
   );
   const imagesManifest = await getImagesManifest(entryPath, outputDirectory);
-  const prerenderManifest = await getPrerenderManifest(entryPath);
+  const prerenderManifest = await getPrerenderManifest(
+    entryPath,
+    outputDirectory
+  );
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   let redirects: Route[] = [];
