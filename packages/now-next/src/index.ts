@@ -762,6 +762,7 @@ export async function build({
             'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
           },
           continue: true,
+          important: true,
         },
 
         // error handling
@@ -2332,6 +2333,7 @@ export async function build({
           'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
         },
         continue: true,
+        important: true,
       },
 
       // error handling
