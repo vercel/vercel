@@ -829,11 +829,12 @@ export async function getExportStatus(
 }
 
 export async function getPrerenderManifest(
-  entryPath: string
+  entryPath: string,
+  outputDirectory: string
 ): Promise<NextPrerenderedRoutes> {
   const pathPrerenderManifest = path.join(
     entryPath,
-    '.next',
+    outputDirectory,
     'prerender-manifest.json'
   );
 
