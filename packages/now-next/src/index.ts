@@ -1933,7 +1933,25 @@ export async function build({
     path.join(entryPath, outputDirectory, 'static')
   );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
-  const publicFolderFiles = await glob('**', path.join(entryPath, 'public'));
+
+  let publicFolderFiles: Files = {};
+  let publicFolderPath: string | undefined;
+
+  if (await pathExists(path.join(entryPath, 'public'))) {
+    publicFolderPath = path.join(entryPath, 'public');
+  } else if (
+    // check at the same level as the output directory also
+    await pathExists(path.join(entryPath, outputDirectory, '../public'))
+  ) {
+    publicFolderPath = path.join(entryPath, outputDirectory, '../public');
+  }
+
+  if (publicFolderPath) {
+    debug(`Using public folder at ${publicFolderPath}`);
+    publicFolderFiles = await glob('**/*', publicFolderPath);
+  } else {
+    debug('No public folder found');
+  }
 
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
@@ -1954,10 +1972,7 @@ export async function build({
   const publicDirectoryFiles = Object.keys(publicFolderFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [path.join(
-        entryDirectory,
-        file.replace(/^public[/\\]+/, '')
-      )]: publicFolderFiles[file],
+      [path.join(entryDirectory, file)]: publicFolderFiles[file],
     }),
     {}
   );

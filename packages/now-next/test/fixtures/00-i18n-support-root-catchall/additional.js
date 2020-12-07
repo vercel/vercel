@@ -1,6 +1,7 @@
 /* eslint-env jest */
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
+const { check, waitFor } = require('../../utils');
 
 module.exports = function (ctx) {
   it('should revalidate content properly from /', async () => {
@@ -13,15 +14,28 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('en-US');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    await waitFor(2000);
 
     const res2 = await fetch(`${ctx.deploymentUrl}/`);
     expect(res2.status).toBe(200);
 
     $ = cheerio.load(await res2.text());
-    const props2 = JSON.parse($('#props').text());
-    expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('en-US');
+
+    await check(async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/`);
+
+      if (res.status !== 200) {
+        throw new Error(`Invalid status code ${res.status}`);
+      }
+      const $ = cheerio.load(await res.text());
+      const props = JSON.parse($('#props').text());
+
+      if (isNaN(props.random)) {
+        throw new Error(`Invalid random value ${props.random}`);
+      }
+      return initialRandom !== props.random ? 'success' : 'failed';
+    }, 'success');
   });
 
   it('should revalidate content properly from /fr', async () => {
@@ -34,15 +48,28 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('fr');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    await waitFor(2000);
 
     const res2 = await fetch(`${ctx.deploymentUrl}/fr`);
     expect(res2.status).toBe(200);
 
     $ = cheerio.load(await res2.text());
-    const props2 = JSON.parse($('#props').text());
-    expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('fr');
+
+    await check(async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/fr`);
+
+      if (res.status !== 200) {
+        throw new Error(`Invalid status code ${res.status}`);
+      }
+      const $ = cheerio.load(await res.text());
+      const props = JSON.parse($('#props').text());
+
+      if (isNaN(props.random)) {
+        throw new Error(`Invalid random value ${props.random}`);
+      }
+      return initialRandom !== props.random ? 'success' : 'failed';
+    }, 'success');
   });
 
   it('should revalidate content properly from /nl-NL', async () => {
@@ -55,15 +82,28 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('nl-NL');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    await waitFor(2000);
 
     const res2 = await fetch(`${ctx.deploymentUrl}/nl-NL`);
     expect(res2.status).toBe(200);
 
     $ = cheerio.load(await res2.text());
-    const props2 = JSON.parse($('#props').text());
-    expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('nl-NL');
+
+    await check(async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/nl-NL`);
+
+      if (res.status !== 200) {
+        throw new Error(`Invalid status code ${res.status}`);
+      }
+      const $ = cheerio.load(await res.text());
+      const props = JSON.parse($('#props').text());
+
+      if (isNaN(props.random)) {
+        throw new Error(`Invalid random value ${props.random}`);
+      }
+      return initialRandom !== props.random ? 'success' : 'failed';
+    }, 'success');
   });
 
   it('should revalidate content properly from /second', async () => {
@@ -77,15 +117,28 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('en-US');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    await waitFor(2000);
 
     const res2 = await fetch(`${ctx.deploymentUrl}/second`);
     expect(res2.status).toBe(200);
 
     $ = cheerio.load(await res2.text());
-    const props2 = JSON.parse($('#props').text());
-    expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('en-US');
+
+    await check(async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/second`);
+
+      if (res.status !== 200) {
+        throw new Error(`Invalid status code ${res.status}`);
+      }
+      const $ = cheerio.load(await res.text());
+      const props = JSON.parse($('#props').text());
+
+      if (isNaN(props.random)) {
+        throw new Error(`Invalid random value ${props.random}`);
+      }
+      return initialRandom !== props.random ? 'success' : 'failed';
+    }, 'success');
   });
 
   it('should revalidate content properly from /fr/second', async () => {
@@ -99,15 +152,28 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('fr');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    await waitFor(2000);
 
     const res2 = await fetch(`${ctx.deploymentUrl}/fr/second`);
     expect(res2.status).toBe(200);
 
     $ = cheerio.load(await res2.text());
-    const props2 = JSON.parse($('#props').text());
-    expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('fr');
+
+    await check(async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/fr/second`);
+
+      if (res.status !== 200) {
+        throw new Error(`Invalid status code ${res.status}`);
+      }
+      const $ = cheerio.load(await res.text());
+      const props = JSON.parse($('#props').text());
+
+      if (isNaN(props.random)) {
+        throw new Error(`Invalid random value ${props.random}`);
+      }
+      return initialRandom !== props.random ? 'success' : 'failed';
+    }, 'success');
   });
 
   it('should revalidate content properly from /nl-NL/second', async () => {
@@ -121,14 +187,27 @@ module.exports = function (ctx) {
     expect($('#router-locale').text()).toBe('nl-NL');
 
     // wait for revalidation to occur
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    await waitFor(2000);
 
     const res2 = await fetch(`${ctx.deploymentUrl}/nl-NL/second`);
     expect(res2.status).toBe(200);
 
     $ = cheerio.load(await res2.text());
-    const props2 = JSON.parse($('#props').text());
-    expect(initialRandom).not.toBe(props2.random);
     expect($('#router-locale').text()).toBe('nl-NL');
+
+    await check(async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/nl-NL/second`);
+
+      if (res.status !== 200) {
+        throw new Error(`Invalid status code ${res.status}`);
+      }
+      const $ = cheerio.load(await res.text());
+      const props = JSON.parse($('#props').text());
+
+      if (isNaN(props.random)) {
+        throw new Error(`Invalid random value ${props.random}`);
+      }
+      return initialRandom !== props.random ? 'success' : 'failed';
+    }, 'success');
   });
 };
