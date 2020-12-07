@@ -3,6 +3,28 @@ const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 const { check, waitFor } = require('../../utils');
 
+async function checkForChange(url, initialValue, hardError) {
+  return check(
+    async () => {
+      const res = await fetch(url);
+
+      if (res.status !== 200) {
+        throw new Error(`Invalid status code ${res.status}`);
+      }
+      const $ = cheerio.load(await res.text());
+      const props = JSON.parse($('#props').text());
+
+      if (isNaN(props.random)) {
+        throw new Error(`Invalid random value ${props.random}`);
+      }
+      const newValue = props.random;
+      return initialValue !== newValue ? 'success' : 'fail';
+    },
+    'success',
+    hardError
+  );
+}
+
 module.exports = function (ctx) {
   it('should revalidate content properly from /', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/`);
@@ -22,20 +44,7 @@ module.exports = function (ctx) {
     $ = cheerio.load(await res2.text());
     expect($('#router-locale').text()).toBe('en-US');
 
-    await check(async () => {
-      const res = await fetch(`${ctx.deploymentUrl}/`);
-
-      if (res.status !== 200) {
-        throw new Error(`Invalid status code ${res.status}`);
-      }
-      const $ = cheerio.load(await res.text());
-      const props = JSON.parse($('#props').text());
-
-      if (isNaN(props.random)) {
-        throw new Error(`Invalid random value ${props.random}`);
-      }
-      return initialRandom !== props.random ? 'success' : 'failed';
-    }, 'success');
+    await checkForChange(`${ctx.deploymentUrl}/`, initialRandom);
   });
 
   it('should revalidate content properly from /fr', async () => {
@@ -56,20 +65,7 @@ module.exports = function (ctx) {
     $ = cheerio.load(await res2.text());
     expect($('#router-locale').text()).toBe('fr');
 
-    await check(async () => {
-      const res = await fetch(`${ctx.deploymentUrl}/fr`);
-
-      if (res.status !== 200) {
-        throw new Error(`Invalid status code ${res.status}`);
-      }
-      const $ = cheerio.load(await res.text());
-      const props = JSON.parse($('#props').text());
-
-      if (isNaN(props.random)) {
-        throw new Error(`Invalid random value ${props.random}`);
-      }
-      return initialRandom !== props.random ? 'success' : 'failed';
-    }, 'success');
+    await checkForChange(`${ctx.deploymentUrl}/fr`, initialRandom);
   });
 
   it('should revalidate content properly from /nl-NL', async () => {
@@ -90,20 +86,7 @@ module.exports = function (ctx) {
     $ = cheerio.load(await res2.text());
     expect($('#router-locale').text()).toBe('nl-NL');
 
-    await check(async () => {
-      const res = await fetch(`${ctx.deploymentUrl}/nl-NL`);
-
-      if (res.status !== 200) {
-        throw new Error(`Invalid status code ${res.status}`);
-      }
-      const $ = cheerio.load(await res.text());
-      const props = JSON.parse($('#props').text());
-
-      if (isNaN(props.random)) {
-        throw new Error(`Invalid random value ${props.random}`);
-      }
-      return initialRandom !== props.random ? 'success' : 'failed';
-    }, 'success');
+    await checkForChange(`${ctx.deploymentUrl}/nl-NL`, initialRandom);
   });
 
   it('should revalidate content properly from /second', async () => {
@@ -125,20 +108,7 @@ module.exports = function (ctx) {
     $ = cheerio.load(await res2.text());
     expect($('#router-locale').text()).toBe('en-US');
 
-    await check(async () => {
-      const res = await fetch(`${ctx.deploymentUrl}/second`);
-
-      if (res.status !== 200) {
-        throw new Error(`Invalid status code ${res.status}`);
-      }
-      const $ = cheerio.load(await res.text());
-      const props = JSON.parse($('#props').text());
-
-      if (isNaN(props.random)) {
-        throw new Error(`Invalid random value ${props.random}`);
-      }
-      return initialRandom !== props.random ? 'success' : 'failed';
-    }, 'success');
+    await checkForChange(`${ctx.deploymentUrl}/second`, initialRandom);
   });
 
   it('should revalidate content properly from /fr/second', async () => {
@@ -160,20 +130,7 @@ module.exports = function (ctx) {
     $ = cheerio.load(await res2.text());
     expect($('#router-locale').text()).toBe('fr');
 
-    await check(async () => {
-      const res = await fetch(`${ctx.deploymentUrl}/fr/second`);
-
-      if (res.status !== 200) {
-        throw new Error(`Invalid status code ${res.status}`);
-      }
-      const $ = cheerio.load(await res.text());
-      const props = JSON.parse($('#props').text());
-
-      if (isNaN(props.random)) {
-        throw new Error(`Invalid random value ${props.random}`);
-      }
-      return initialRandom !== props.random ? 'success' : 'failed';
-    }, 'success');
+    await checkForChange(`${ctx.deploymentUrl}/fr/second`, initialRandom);
   });
 
   it('should revalidate content properly from /nl-NL/second', async () => {
@@ -195,19 +152,6 @@ module.exports = function (ctx) {
     $ = cheerio.load(await res2.text());
     expect($('#router-locale').text()).toBe('nl-NL');
 
-    await check(async () => {
-      const res = await fetch(`${ctx.deploymentUrl}/nl-NL/second`);
-
-      if (res.status !== 200) {
-        throw new Error(`Invalid status code ${res.status}`);
-      }
-      const $ = cheerio.load(await res.text());
-      const props = JSON.parse($('#props').text());
-
-      if (isNaN(props.random)) {
-        throw new Error(`Invalid random value ${props.random}`);
-      }
-      return initialRandom !== props.random ? 'success' : 'failed';
-    }, 'success');
+    await checkForChange(`${ctx.deploymentUrl}/nl-NL/second`, initialRandom);
   });
 };
