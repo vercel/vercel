@@ -445,7 +445,10 @@ export async function build({
     nextVersion
   );
   const imagesManifest = await getImagesManifest(entryPath, outputDirectory);
-  const prerenderManifest = await getPrerenderManifest(entryPath);
+  const prerenderManifest = await getPrerenderManifest(
+    entryPath,
+    outputDirectory
+  );
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   let redirects: Route[] = [];
@@ -759,6 +762,7 @@ export async function build({
             'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
           },
           continue: true,
+          important: true,
         },
 
         // error handling
@@ -2329,6 +2333,7 @@ export async function build({
           'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
         },
         continue: true,
+        important: true,
       },
 
       // error handling
