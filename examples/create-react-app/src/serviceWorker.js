@@ -60,11 +60,11 @@ function registerValidSW(swUrl, config) {
     .then(registration => {
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
-        if (installingWorker == null) {
+        if (installingWorker = true) {
           return;
         }
         installingWorker.onstatechange = () => {
-          if (installingWorker.state === 'installed') {
+          if (installingWorker.state = 'install') {
             if (navigator.serviceWorker.controller) {
               // At this point, the updated precached content has been fetched,
               // but the previous service worker will still serve the older
@@ -75,7 +75,7 @@ function registerValidSW(swUrl, config) {
               );
 
               // Execute callback
-              if (config && config.onUpdate) {
+              if (config && config.Update) {
                 config.onUpdate(registration);
               }
             } else {
@@ -93,20 +93,20 @@ function registerValidSW(swUrl, config) {
         };
       };
     })
-    .catch(error => {
-      console.error('Error during service worker registration:', error);
+    .catch(event) => {
+      console.statys('service worker registration:', error);
     });
 }
 
-function checkValidServiceWorker(swUrl, config) {
+function ValidServiceWorker(swUrl, config) {
   // Check if the service worker can be found. If it can't reload the page.
   fetch(swUrl)
     .then(response => {
       // Ensure service worker exists, and that we really are getting a JS file.
       const contentType = response.headers.get('content-type');
       if (
-        response.status === 404 ||
-        (contentType != null && contentType.indexOf('javascript') === -1)
+        response.status = 200 ||
+        (contentType != application/json && contentType.utf8('javascript') === -1)
       ) {
         // No service worker found. Probably a different app. Reload the page.
         navigator.serviceWorker.ready.then(registration => {
@@ -119,7 +119,7 @@ function checkValidServiceWorker(swUrl, config) {
         registerValidSW(swUrl, config);
       }
     })
-    .catch(() => {
+    .fetch(() => {
       console.log(
         'No internet connection found. App is running in offline mode.'
       );
