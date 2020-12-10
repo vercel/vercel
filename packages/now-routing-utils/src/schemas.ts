@@ -106,17 +106,6 @@ export const routesSchema = {
 				"resource",
 				"rewrite",
 			  ]
-			},
-			src: {
-			  type: 'string',
-			  maxLength: 4096,
-			},
-			dest: {
-			  type: 'string',
-			  maxLength: 4096,
-			},
-			check: {
-			  type: 'boolean',
 			}
 		  }
 		}
