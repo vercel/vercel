@@ -92,7 +92,7 @@
         "placeholder": "`yarn install` or `npm install`"
       },
       "buildCommand": {
-        "placeholder": "`npm run build` or `gatsby build`"
+        "placeholder": "`npm run build` or `gatsby clean && gatsby build`"
       },
       "devCommand": {
         "value": "gatsby develop --port $PORT"
