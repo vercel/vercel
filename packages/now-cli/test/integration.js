@@ -1734,10 +1734,9 @@ test('try to create a builds deployments with wrong now.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
+      'Error! Invalid request: should NOT have additional property `builder`.'
     )
   );
-  t.true(stderr.includes('https://vercel.com/docs/configuration'));
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
