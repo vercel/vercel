@@ -366,6 +366,14 @@ export async function build({
           console.log(`Running "install" command: \`${installCommand}\`...`);
           await execCommand(installCommand, {
             ...spawnOpts,
+
+            // Yarn v2 PnP mode may be activated, so force
+            // "node-modules" linker style
+            env: {
+              YARN_NODE_LINKER: 'node-modules',
+              ...spawnOpts.env,
+            },
+
             cwd: entrypointDir,
           });
         } else {
@@ -468,6 +476,14 @@ export async function build({
         typeof buildCommand === 'string'
           ? await execCommand(buildCommand, {
               ...spawnOpts,
+
+              // Yarn v2 PnP mode may be activated, so force
+              // "node-modules" linker style
+              env: {
+                YARN_NODE_LINKER: 'node-modules',
+                ...spawnOpts.env,
+              },
+
               cwd: entrypointDir,
             })
           : await runPackageJsonScript(
