@@ -182,7 +182,7 @@ describe('Test `detectBuilders`', () => {
 
     const { builders } = await detectBuilders(files);
     expect(builders!.length).toBe(7);
-    expect(builders!.some(b => b.src.endsWith('_test.go'))).toBe(false);
+    expect(builders!.some(b => b.src!.endsWith('_test.go'))).toBe(false);
   });
 
   it('just public', async () => {
@@ -1341,7 +1341,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       featHandleMiss,
     });
     expect(builders!.length).toBe(7);
-    expect(builders!.some(b => b.src.endsWith('_test.go'))).toBe(false);
+    expect(builders!.some(b => b.src!.endsWith('_test.go'))).toBe(false);
     expect(errorRoutes!.length).toBe(1);
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
