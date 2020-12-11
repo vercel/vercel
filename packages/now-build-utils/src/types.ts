@@ -336,7 +336,7 @@ export interface NodeVersion {
 
 export interface Builder {
   use: string;
-  src: string;
+  src?: string;
   config?: Config;
 }
 

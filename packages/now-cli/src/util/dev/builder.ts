@@ -402,7 +402,7 @@ export async function getBuildMatches(
   const builds = nowConfig.builds || [{ src: '**', use: '@vercel/static' }];
 
   for (const buildConfig of builds) {
-    let { src, use } = buildConfig;
+    let { src = '**', use } = buildConfig;
 
     if (!use) {
       continue;
