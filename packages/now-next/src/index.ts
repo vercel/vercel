@@ -381,6 +381,14 @@ export async function build({
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         ...spawnOpts,
+
+        // Yarn v2 PnP mode may be activated, so force
+        // "node-modules" linker style
+        env: {
+          YARN_NODE_LINKER: 'node-modules',
+          ...spawnOpts.env,
+        },
+
         cwd: entryPath,
       });
     } else {
@@ -410,13 +418,18 @@ export async function build({
   }
 
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
+  const env: typeof process.env = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
 
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
     const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+
+    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+    if (!env.YARN_NODE_LINKER) {
+      env.YARN_NODE_LINKER = 'node-modules';
+    }
 
     debug(
       `Added "${nodeBinPath}" to PATH env because a build command was used.`
