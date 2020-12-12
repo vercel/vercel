@@ -43,9 +43,8 @@ export function sortFiles(fileA: string, fileB: string) {
 export function detectApiExtensions(builders: Builder[]): Set<string> {
   return new Set<string>(
     builders
-      .filter(
-        b =>
-          b.config && b.config.zeroConfig && b.src && b.src.startsWith('api/')
+      .filter((b): b is Builder & { src: string } =>
+        Boolean(b.config && b.config.zeroConfig && b.src?.startsWith('api/'))
       )
       .map(b => extname(b.src))
       .filter(Boolean)
@@ -56,22 +55,28 @@ export function detectApiDirectory(builders: Builder[]): string | null {
   // TODO: We eventually want to save the api directory to
   // builder.config.apiDirectory so it is only detected once
   const found = builders.some(
-    b => b.config && b.config.zeroConfig && b.src.startsWith('api/')
+    b => b.config && b.config.zeroConfig && b.src?.startsWith('api/')
   );
   return found ? 'api' : null;
 }
 
 // TODO: Replace this function with `config.outputDirectory`
-function getPublicBuilder(builders: Builder[]): Builder | null {
-  const builder = builders.find(
-    builder =>
+function getPublicBuilder(
+  builders: Builder[]
+): (Builder & { src: string }) | null {
+  for (const builder of builders) {
+    if (
+      typeof builder.src === 'string' &&
       isOfficialRuntime('static', builder.use) &&
       /^.*\/\*\*\/\*$/.test(builder.src) &&
       builder.config &&
       builder.config.zeroConfig === true
-  );
+    ) {
+      return builder as Builder & { src: string };
+    }
+  }
 
-  return builder || null;
+  return null;
 }
 export function detectOutputDirectory(builders: Builder[]): string | null {
   // TODO: We eventually want to save the output directory to
@@ -361,7 +366,7 @@ function maybeGetApiBuilder(
     return null;
   }
 
-  const match = apiMatches.find(({ src }) => {
+  const match = apiMatches.find(({ src = '**' }) => {
     return src === fileName || minimatch(fileName, src);
   });
 

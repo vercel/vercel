@@ -458,7 +458,10 @@ export async function build({
     nextVersion
   );
   const imagesManifest = await getImagesManifest(entryPath, outputDirectory);
-  const prerenderManifest = await getPrerenderManifest(entryPath);
+  const prerenderManifest = await getPrerenderManifest(
+    entryPath,
+    outputDirectory
+  );
   const headers: Route[] = [];
   const rewrites: Route[] = [];
   let redirects: Route[] = [];
@@ -731,6 +734,11 @@ export async function build({
         // with that routing section
         ...rewrites,
 
+        // make sure 404 page is used when a directory is matched without
+        // an index page
+        { handle: 'resource' },
+        { src: path.join('/', entryDirectory, '.*'), status: 404 },
+
         // We need to make sure to 404 for /_next after handle: miss since
         // handle: miss is called before rewrites and to prevent rewriting
         // /_next
@@ -767,6 +775,7 @@ export async function build({
             'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
           },
           continue: true,
+          important: true,
         },
 
         // error handling
@@ -1937,7 +1946,25 @@ export async function build({
     path.join(entryPath, outputDirectory, 'static')
   );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
-  const publicFolderFiles = await glob('**', path.join(entryPath, 'public'));
+
+  let publicFolderFiles: Files = {};
+  let publicFolderPath: string | undefined;
+
+  if (await pathExists(path.join(entryPath, 'public'))) {
+    publicFolderPath = path.join(entryPath, 'public');
+  } else if (
+    // check at the same level as the output directory also
+    await pathExists(path.join(entryPath, outputDirectory, '../public'))
+  ) {
+    publicFolderPath = path.join(entryPath, outputDirectory, '../public');
+  }
+
+  if (publicFolderPath) {
+    debug(`Using public folder at ${publicFolderPath}`);
+    publicFolderFiles = await glob('**/*', publicFolderPath);
+  } else {
+    debug('No public folder found');
+  }
 
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
@@ -1958,10 +1985,7 @@ export async function build({
   const publicDirectoryFiles = Object.keys(publicFolderFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [path.join(
-        entryDirectory,
-        file.replace(/^public[/\\]+/, '')
-      )]: publicFolderFiles[file],
+      [path.join(entryDirectory, file)]: publicFolderFiles[file],
     }),
     {}
   );
@@ -2029,7 +2053,6 @@ export async function build({
   const { i18n } = routesManifest || {};
 
   const trailingSlashRedirects: Route[] = [];
-  let trailingSlash = false;
 
   redirects = redirects.filter(_redir => {
     const redir = _redir as Source;
@@ -2045,9 +2068,6 @@ export async function build({
     if (redir.status === 308 && (location === '/$1' || location === '/$1/')) {
       // we set continue here to prevent the redirect from
       // moving underneath i18n routes
-      if (location === '/$1/') {
-        trailingSlash = true;
-      }
       redir.continue = true;
       trailingSlashRedirects.push(redir);
       return false;
@@ -2094,13 +2114,6 @@ export async function build({
       - Builder rewrites
     */
     routes: [
-      ...(trailingSlash
-        ? [
-            {
-              src: '^/\\.well-known(?:/.*)?$',
-            },
-          ]
-        : []),
       // force trailingSlashRedirect to the very top so it doesn't
       // conflict with i18n routes that don't have or don't have the
       // trailing slash
@@ -2264,6 +2277,11 @@ export async function build({
       // with that routing section
       ...rewrites,
 
+      // make sure 404 page is used when a directory is matched without
+      // an index page
+      { handle: 'resource' },
+      { src: path.join('/', entryDirectory, '.*'), status: 404 },
+
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
       { handle: 'miss' },
@@ -2343,6 +2361,7 @@ export async function build({
           'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
         },
         continue: true,
+        important: true,
       },
 
       // error handling

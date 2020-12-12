@@ -1,4 +1,6 @@
 module.exports = {
   distDir: 'the-output-directory',
-  target: 'serverless',
+  generateBuildId() {
+    return 'testing-build-id';
+  },
 };

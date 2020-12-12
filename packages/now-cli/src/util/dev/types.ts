@@ -50,6 +50,7 @@ export interface EnvConfigs {
 
 export interface BuildMatch extends BuildConfig {
   entrypoint: string;
+  src: string;
   builderWithPkg: BuilderWithPackage;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;

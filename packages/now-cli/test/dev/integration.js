@@ -1756,3 +1756,11 @@ test(
     });
   })
 );
+
+test(
+  '[vercel dev] Do not fail if `src` is missing',
+  testFixtureStdio('missing-src-property', async testPath => {
+    await testPath(200, '/', /hello:index.txt/m);
+    await testPath(404, '/i-do-not-exist');
+  })
+);

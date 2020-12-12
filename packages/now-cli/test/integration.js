@@ -602,6 +602,41 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(systemEnvs[0], /Production, Preview, Development/gm);
   }
 
+  // we create a "legacy" env variable that contains a decryptable secret
+  // to check that vc env pull and vc dev work correctly with decryptable secrets
+  async function createEnvWithDecryptableSecret() {
+    console.log('creating an env variable with a decryptable secret');
+
+    const name = `my-secret${Math.floor(Math.random() * 10000)}`;
+
+    const res = await apiFetch('/v2/now/secrets', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        value: 'decryptable value',
+        decryptable: true,
+      }),
+    });
+
+    t.is(res.status, 200);
+
+    const json = await res.json();
+
+    const link = require(path.join(target, '.vercel/project.json'));
+
+    const resEnv = await apiFetch(`/v4/projects/${link.projectId}/env`, {
+      method: 'POST',
+      body: JSON.stringify({
+        key: 'MY_DECRYPTABLE_SECRET_ENV',
+        value: json.uid,
+        target: ['development'],
+        type: 'secret',
+      }),
+    });
+
+    t.is(resEnv.status, 200);
+  }
+
   async function nowEnvPull() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
@@ -622,6 +657,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.true(lines.has('MY_PLAINTEXT_ENV_VAR="my plaintext value"'));
     t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
     t.true(lines.has('NEXT_PUBLIC_VERCEL_URL=""'));
+    t.true(lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'));
   }
 
   async function nowEnvPullOverwrite() {
@@ -711,6 +747,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
 
     t.is(apiJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
     t.is(apiJson['NEXT_PUBLIC_VERCEL_URL'], '');
+    t.is(apiJson['MY_DECRYPTABLE_SECRET_ENV'], 'decryptable value');
 
     const homeUrl = localhost[0];
 
@@ -718,6 +755,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const homeJson = await homeRes.json();
     t.is(homeJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
     t.is(homeJson['NEXT_PUBLIC_VERCEL_URL'], '');
+    t.is(homeJson['MY_DECRYPTABLE_SECRET_ENV'], 'decryptable value');
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
@@ -752,6 +790,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(apiJson['NEXT_PUBLIC_VERCEL_URL'], localhostNoProtocol);
     t.is(apiJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
     t.is(apiJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
+    t.is(apiJson['MY_DECRYPTABLE_SECRET_ENV'], 'decryptable value');
 
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
@@ -759,6 +798,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(homeJson['MY_PLAINTEXT_ENV_VAR'], 'my plaintext value');
     t.is(homeJson['NEXT_PUBLIC_VERCEL_URL'], localhostNoProtocol);
     t.is(homeJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
+    t.is(homeJson['MY_DECRYPTABLE_SECRET_ENV'], 'decryptable value');
 
     // system env vars are not automatically exposed
     t.is(apiJson['VERCEL'], undefined);
@@ -916,6 +956,28 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     );
 
     t.is(exitCode2, 0, formatOutput({ stderr2, stdout2 }));
+
+    const {
+      exitCode: exitCode3,
+      stderr: stderr3,
+      stdout: stdout3,
+    } = await execa(
+      binaryPath,
+      [
+        'env',
+        'rm',
+        'MY_DECRYPTABLE_SECRET_ENV',
+        'development',
+        '-y',
+        ...defaultArgs,
+      ],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode3, 0, formatOutput({ stderr3, stdout3 }));
   }
 
   async function nowEnvRemoveWithNameOnly() {
@@ -948,6 +1010,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvAddFromStdin();
   await nowEnvAddSystemEnv();
   await nowEnvLsIncludesVar();
+  await createEnvWithDecryptableSecret();
   await nowEnvPull();
   await nowEnvPullOverwrite();
   await nowEnvPullConfirm();

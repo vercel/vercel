@@ -14,6 +14,26 @@
       "path": "/",
       "status": 200,
       "mustContain": "hello world"
+    },
+    {
+      "path": "/ssg/first",
+      "status": 200,
+      "mustContain": "first"
+    },
+    {
+      "path": "/ssg/second",
+      "status": 200,
+      "mustContain": "Loading..."
+    },
+    {
+      "path": "/_next/data/testing-build-id/ssg/second.json",
+      "status": 200,
+      "mustContain": "\"slug\":\"second\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/ssg/third.json",
+      "status": 200,
+      "mustContain": "\"slug\":\"third\""
     }
   ]
 }
