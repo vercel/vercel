@@ -16,6 +16,7 @@
     "svelte": "^3.0.0"
   },
   "dependencies": {
+    "camel-case": "^4.1.2",
     "sirv-cli": "^0.4.4"
   }
 }

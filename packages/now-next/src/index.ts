@@ -214,7 +214,7 @@ function startDevServer(entryPath: string, runtimeEnv: EnvConfig) {
   return { forked, getUrl };
 }
 
-export const build = async ({
+export async function build({
   files,
   workPath,
   repoRootPath,
@@ -231,7 +231,7 @@ export const build = async ({
   }>;
   watch?: string[];
   childProcesses: ChildProcess[];
-}> => {
+}> {
   validateEntrypoint(entrypoint);
 
   // Limit for max size each lambda can be, 50 MB if no custom limit
@@ -352,7 +352,7 @@ export const build = async ({
     'now-build',
     'build',
   ]);
-  const { buildCommand } = config;
+  const { installCommand, buildCommand } = config;
 
   if (!buildScriptName && !buildCommand) {
     console.log(
@@ -376,8 +376,30 @@ export const build = async ({
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  console.log('Installing dependencies...');
-  await runNpmInstall(entryPath, [], spawnOpts, meta);
+  if (typeof installCommand === 'string') {
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+
+        // Yarn v2 PnP mode may be activated, so force
+        // "node-modules" linker style
+        env: {
+          YARN_NODE_LINKER: 'node-modules',
+          ...spawnOpts.env,
+        },
+
+        cwd: entryPath,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
+  } else {
+    console.log('Installing dependencies...');
+    const installTime = Date.now();
+    await runNpmInstall(entryPath, [], spawnOpts, meta);
+    debug(`Install complete [${Date.now() - installTime}ms]`);
+  }
 
   // Refetch Next version now that dependencies are installed.
   // This will now resolve the actual installed Next version,
@@ -396,13 +418,18 @@ export const build = async ({
   }
 
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  const env: { [key: string]: string | undefined } = { ...spawnOpts.env };
+  const env: typeof process.env = { ...spawnOpts.env };
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
 
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
     const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+
+    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+    if (!env.YARN_NODE_LINKER) {
+      env.YARN_NODE_LINKER = 'node-modules';
+    }
 
     debug(
       `Added "${nodeBinPath}" to PATH env because a build command was used.`
@@ -421,7 +448,7 @@ export const build = async ({
     });
   }
 
-  const appMountPrefixNoTrailingSlash = path.posix
+  let appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
     .replace(/\/+$/, '');
 
@@ -431,10 +458,13 @@ export const build = async ({
     nextVersion
   );
   const imagesManifest = await getImagesManifest(entryPath, outputDirectory);
-  const prerenderManifest = await getPrerenderManifest(entryPath);
+  const prerenderManifest = await getPrerenderManifest(
+    entryPath,
+    outputDirectory
+  );
   const headers: Route[] = [];
   const rewrites: Route[] = [];
-  const redirects: Route[] = [];
+  let redirects: Route[] = [];
   const dataRoutes: Route[] = [];
   let dynamicRoutes: Route[] = [];
   // whether they have enabled pages/404.js as the custom 404 page
@@ -468,6 +498,30 @@ export const build = async ({
 
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
+        }
+
+        if (routesManifest.basePath && routesManifest.basePath !== '/') {
+          const nextBasePath = routesManifest.basePath;
+
+          if (!nextBasePath.startsWith('/')) {
+            throw new NowBuildError({
+              code: 'NEXT_BASEPATH_STARTING_SLASH',
+              message:
+                'basePath must start with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
+            });
+          }
+          if (nextBasePath.endsWith('/')) {
+            throw new NowBuildError({
+              code: 'NEXT_BASEPATH_TRAILING_SLASH',
+              message:
+                'basePath must not end with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
+            });
+          }
+
+          entryDirectory = path.join(entryDirectory, nextBasePath);
+          appMountPrefixNoTrailingSlash = path.posix
+            .join('/', entryDirectory)
+            .replace(/\/+$/, '');
         }
 
         if (routesManifest.dataRoutes) {
@@ -554,26 +608,6 @@ export const build = async ({
           hasPages404 = true;
         }
 
-        if (routesManifest.basePath && routesManifest.basePath !== '/') {
-          const nextBasePath = routesManifest.basePath;
-
-          if (!nextBasePath.startsWith('/')) {
-            throw new NowBuildError({
-              code: 'NEXT_BASEPATH_STARTING_SLASH',
-              message:
-                'basePath must start with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
-            });
-          }
-          if (nextBasePath.endsWith('/')) {
-            throw new NowBuildError({
-              code: 'NEXT_BASEPATH_TRAILING_SLASH',
-              message:
-                'basePath must not end with `/`. Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
-            });
-          }
-
-          entryDirectory = path.join(entryDirectory, nextBasePath);
-        }
         break;
       }
       default: {
@@ -700,6 +734,11 @@ export const build = async ({
         // with that routing section
         ...rewrites,
 
+        // make sure 404 page is used when a directory is matched without
+        // an index page
+        { handle: 'resource' },
+        { src: path.join('/', entryDirectory, '.*'), status: 404 },
+
         // We need to make sure to 404 for /_next after handle: miss since
         // handle: miss is called before rewrites and to prevent rewriting
         // /_next
@@ -728,7 +767,7 @@ export const build = async ({
           src: path.join(
             '/',
             entryDirectory,
-            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
+            `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media|${escapedBuildId})/.+`
           ),
           // Next.js assets contain a hash or entropy in their filenames, so they
           // are guaranteed to be unique and cacheable indefinitely.
@@ -736,6 +775,7 @@ export const build = async ({
             'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
           },
           continue: true,
+          important: true,
         },
 
         // error handling
@@ -1411,17 +1451,23 @@ export const build = async ({
           const isFallback = prerenderManifest.fallbackRoutes[pathname!];
           const isBlocking =
             prerenderManifest.blockingFallbackRoutes[pathname!];
+          const isAutoExport =
+            staticPages[
+              addLocaleOrDefault(pathname!, routesManifest).substr(1)
+            ];
+
+          const isLocalePrefixed = isFallback || isBlocking || isAutoExport;
 
           route.src = route.src.replace(
             '^',
             `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
-              isFallback || isBlocking ? '<nextLocale>' : ':'
+              isLocalePrefixed ? '<nextLocale>' : ':'
             }${i18n.locales
               .map(locale => escapeStringRegexp(locale))
               .join('|')})?`
           );
 
-          if (isFallback || isBlocking) {
+          if (isLocalePrefixed) {
             // ensure destination has locale prefix to match prerender output
             // path so that the prerender object is used
             route.dest = route.dest!.replace(
@@ -1745,12 +1791,7 @@ export const build = async ({
       if (nonDynamicSsg || isFallback) {
         outputPathData = outputPathData.replace(
           new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
-          `${routeFileNoExt}${
-            routeFileNoExt !== origRouteFileNoExt &&
-            origRouteFileNoExt === '/index'
-              ? '/index'
-              : ''
-          }.json`
+          `${routeFileNoExt}.json`
         );
       }
 
@@ -1905,7 +1946,25 @@ export const build = async ({
     path.join(entryPath, outputDirectory, 'static')
   );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
-  const publicFolderFiles = await glob('**', path.join(entryPath, 'public'));
+
+  let publicFolderFiles: Files = {};
+  let publicFolderPath: string | undefined;
+
+  if (await pathExists(path.join(entryPath, 'public'))) {
+    publicFolderPath = path.join(entryPath, 'public');
+  } else if (
+    // check at the same level as the output directory also
+    await pathExists(path.join(entryPath, outputDirectory, '../public'))
+  ) {
+    publicFolderPath = path.join(entryPath, outputDirectory, '../public');
+  }
+
+  if (publicFolderPath) {
+    debug(`Using public folder at ${publicFolderPath}`);
+    publicFolderFiles = await glob('**/*', publicFolderPath);
+  } else {
+    debug('No public folder found');
+  }
 
   const staticFiles = Object.keys(nextStaticFiles).reduce(
     (mappedFiles, file) => ({
@@ -1926,10 +1985,7 @@ export const build = async ({
   const publicDirectoryFiles = Object.keys(publicFolderFiles).reduce(
     (mappedFiles, file) => ({
       ...mappedFiles,
-      [path.join(
-        entryDirectory,
-        file.replace(/^public[/\\]+/, '')
-      )]: publicFolderFiles[file],
+      [path.join(entryDirectory, file)]: publicFolderFiles[file],
     }),
     {}
   );
@@ -1996,6 +2052,29 @@ export const build = async ({
 
   const { i18n } = routesManifest || {};
 
+  const trailingSlashRedirects: Route[] = [];
+
+  redirects = redirects.filter(_redir => {
+    const redir = _redir as Source;
+    // detect the trailing slash redirect and make sure it's
+    // kept above the wildcard mapping to prevent erroneous redirects
+    // since non-continue routes come after continue the $wildcard
+    // route will come before the redirect otherwise and if the
+    // redirect is triggered it breaks locale mapping
+
+    const location =
+      redir.headers && (redir.headers.location || redir.headers.Location);
+
+    if (redir.status === 308 && (location === '/$1' || location === '/$1/')) {
+      // we set continue here to prevent the redirect from
+      // moving underneath i18n routes
+      redir.continue = true;
+      trailingSlashRedirects.push(redir);
+      return false;
+    }
+    return true;
+  });
+
   return {
     output: {
       ...publicDirectoryFiles,
@@ -2035,36 +2114,15 @@ export const build = async ({
       - Builder rewrites
     */
     routes: [
-      // headers
-      ...headers,
-
-      // redirects
-      ...redirects.map(_redir => {
-        if (i18n) {
-          const redir = _redir as Source;
-          // detect the trailing slash redirect and make sure it's
-          // kept above the wildcard mapping to prevent erroneous redirects
-          // since non-continue routes come after continue the $wildcard
-          // route will come before the redirect otherwise and if the
-          // redirect is triggered it breaks locale mapping
-
-          const location =
-            redir.headers && (redir.headers.location || redir.headers.Location);
-
-          if (
-            redir.status === 308 &&
-            (location === '/$1' || location === '/$1/')
-          ) {
-            // we set continue true
-            redir.continue = true;
-          }
-        }
-        return _redir;
-      }),
+      // force trailingSlashRedirect to the very top so it doesn't
+      // conflict with i18n routes that don't have or don't have the
+      // trailing slash
+      ...trailingSlashRedirects,
 
       ...(i18n
         ? [
-            // Handle auto-adding current default locale to path based on $wildcard
+            // Handle auto-adding current default locale to path based on
+            // $wildcard
             {
               src: `^${path.join(
                 '/',
@@ -2073,8 +2131,8 @@ export const build = async ({
               )}(?!(?:_next/.*|${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})(?:/.*|$))(.*)$`,
-              // TODO: this needs to contain or not contain a trailing slash
-              // to prevent the trailing slash redirect from being triggered
+              // we aren't able to ensure trailing slash mode here
+              // so ensure this comes after the trailing slash redirect
               dest: '$wildcard/$1',
               continue: true,
             },
@@ -2083,8 +2141,6 @@ export const build = async ({
             ...(i18n.domains && i18n.localeDetection !== false
               ? [
                   {
-                    // TODO: enable redirecting between domains, will require
-                    // updating the src with the desired locales to redirect
                     src: `^${path.join(
                       '/',
                       entryDirectory
@@ -2120,10 +2176,10 @@ export const build = async ({
             ...(i18n.localeDetection !== false
               ? [
                   {
-                    // TODO: if default locale is included in this src it won't be
-                    // visitable by users who prefer another language since a
-                    // cookie isn't set signaling the default locale is preferred
-                    // on redirect currently, investigate adding this
+                    // TODO: if default locale is included in this src it won't
+                    // be visitable by users who prefer another language since a
+                    // cookie isn't set signaling the default locale is
+                    // preferred on redirect currently, investigate adding this
                     src: '/',
                     locale: {
                       redirect: i18n.locales.reduce(
@@ -2165,6 +2221,12 @@ export const build = async ({
             },
           ]
         : []),
+
+      // headers
+      ...headers,
+
+      // redirects
+      ...redirects,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
@@ -2215,6 +2277,11 @@ export const build = async ({
       // with that routing section
       ...rewrites,
 
+      // make sure 404 page is used when a directory is matched without
+      // an index page
+      { handle: 'resource' },
+      { src: path.join('/', entryDirectory, '.*'), status: 404 },
+
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
       { handle: 'miss' },
@@ -2229,16 +2296,16 @@ export const build = async ({
         dest: '$0',
       },
 
-      // remove default locale prefix to check public files
+      // remove locale prefixes to check public files
       ...(i18n
         ? [
             {
-              src: `${path.join(
+              src: `^${path.join(
                 '/',
-                entryDirectory,
-                i18n.defaultLocale,
-                '/'
-              )}(.*)`,
+                entryDirectory
+              )}/?(?:${i18n.locales
+                .map(locale => escapeStringRegexp(locale))
+                .join('|')})/(.*)`,
               dest: `${path.join('/', entryDirectory, '/')}$1`,
               check: true,
             },
@@ -2286,7 +2353,7 @@ export const build = async ({
         src: path.join(
           '/',
           entryDirectory,
-          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media)/.+'
+          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|media|${escapedBuildId})/.+`
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
@@ -2294,6 +2361,7 @@ export const build = async ({
           'cache-control': `public,max-age=${MAX_AGE_ONE_YEAR},immutable`,
         },
         continue: true,
+        important: true,
       },
 
       // error handling
@@ -2362,7 +2430,7 @@ export const build = async ({
     watch: [],
     childProcesses: [],
   };
-};
+}
 
 export const prepareCache = async ({
   workPath,

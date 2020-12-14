@@ -41,6 +41,7 @@ export interface Config {
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
   outputDirectory?: string;
+  installCommand?: string;
   buildCommand?: string;
   devCommand?: string;
   framework?: string;
@@ -335,7 +336,7 @@ export interface NodeVersion {
 
 export interface Builder {
   use: string;
-  src: string;
+  src?: string;
   config?: Config;
 }
 

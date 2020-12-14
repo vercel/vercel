@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { ProjectEnvTarget, Project } from '../../types';
+import { ProjectEnvTarget, Project, Secret, ProjectEnvType } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -11,12 +11,14 @@ import {
   getEnvTargetPlaceholder,
   getEnvTargetChoices,
 } from '../../util/env/env-target';
+import { isValidEnvType, getEnvTypePlaceholder } from '../../util/env/env-type';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
+import getSystemEnvValues from '../../util/env/get-system-env-values';
 
 type Options = {
   '--debug': boolean;
@@ -29,38 +31,74 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  const stdInput = await readStandardInput();
-  let [envName, envTarget] = args;
+  // improve the way we show inquirer prompts
+  require('../../util/input/patch-inquirer');
 
-  if (args.length > 2) {
+  const stdInput = await readStandardInput();
+  let [envTypeArg, envName, envTargetArg] = args;
+
+  if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> ${getEnvTargetPlaceholder()}`
+        `env add ${getEnvTypePlaceholder()} <name> ${getEnvTargetPlaceholder()}`
       )}`
     );
     return 1;
   }
 
-  if (stdInput && (!envName || !envTarget)) {
+  if (stdInput && (!envTypeArg || !envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> < <file>`
+        `env add ${getEnvTypePlaceholder()} <name> <target> < <file>`
       )}`
     );
     return 1;
   }
 
   let envTargets: ProjectEnvTarget[] = [];
-  if (envTarget) {
-    if (!isValidEnvTarget(envTarget)) {
+  if (envTargetArg) {
+    if (!isValidEnvTarget(envTargetArg)) {
       output.error(
         `The Environment ${param(
-          envTarget
+          envTargetArg
         )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
       );
       return 1;
     }
-    envTargets.push(envTarget);
+    envTargets.push(envTargetArg);
+  }
+
+  let envType: ProjectEnvType;
+  if (envTypeArg) {
+    if (!isValidEnvType(envTypeArg)) {
+      output.error(
+        `The Environment Variable type ${param(
+          envTypeArg
+        )} is invalid. It must be one of: ${getEnvTypePlaceholder()}.`
+      );
+      return 1;
+    }
+
+    envType = envTypeArg;
+  } else {
+    const answers = (await inquirer.prompt({
+      name: 'inputEnvType',
+      type: 'list',
+      message: `Which type of Environment Variable do you want to add?`,
+      choices: [
+        { name: 'Plaintext', value: ProjectEnvType.Plaintext },
+        {
+          name: `Secret (can be created using ${getCommandName('secret add')})`,
+          value: ProjectEnvType.Secret,
+        },
+        {
+          name: 'Reference to System Environment Variable',
+          value: ProjectEnvType.System,
+        },
+      ],
+    })) as { inputEnvType: ProjectEnvType };
+
+    envType = answers.inputEnvType;
   }
 
   while (!envName) {
@@ -77,7 +115,10 @@ export default async function add(
     }
   }
 
-  const { envs } = await getEnvVariables(output, client, project.id);
+  const [{ envs }, { systemEnvValues }] = await Promise.all([
+    getEnvVariables(output, client, project.id),
+    getSystemEnvValues(output, client, project.id),
+  ]);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
@@ -98,15 +139,59 @@ export default async function add(
 
   if (stdInput) {
     envValue = stdInput;
-  } else if (isSystemEnvVariable(envName)) {
-    envValue = '';
-  } else {
+  } else if (envType === ProjectEnvType.Plaintext) {
     const { inputValue } = await inquirer.prompt({
-      type: 'password',
+      type: 'input',
       name: 'inputValue',
       message: `What’s the value of ${envName}?`,
     });
+
     envValue = inputValue || '';
+  } else if (envType === ProjectEnvType.Secret) {
+    let secretId: string | null = null;
+
+    while (!secretId) {
+      let { secretName } = await inquirer.prompt({
+        type: 'input',
+        name: 'secretName',
+        message: `What’s the value of ${envName}?`,
+      });
+
+      secretName = secretName || '';
+
+      if (secretName[0] === '@') {
+        secretName = secretName.slice(1);
+      }
+
+      try {
+        const secret = await client.fetch<Secret>(
+          `/v2/now/secrets/${encodeURIComponent(secretName)}`
+        );
+
+        secretId = secret.uid;
+      } catch (error) {
+        if (error.status === 404) {
+          output.error(
+            `Please enter the name of an existing Secret (can be created with ${getCommandName(
+              'secret add'
+            )}).`
+          );
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    envValue = secretId;
+  } else {
+    const { systemEnvValue } = await inquirer.prompt({
+      name: 'systemEnvValue',
+      type: 'list',
+      message: `What’s the value of ${envName}?`,
+      choices: systemEnvValues.map(value => ({ name: value, value })),
+    });
+
+    envValue = systemEnvValue;
   }
 
   while (envTargets.length === 0) {
@@ -127,7 +212,15 @@ export default async function add(
   const addStamp = stamp();
   try {
     await withSpinner('Saving', () =>
-      addEnvRecord(output, client, project.id, envName, envValue, envTargets)
+      addEnvRecord(
+        output,
+        client,
+        project.id,
+        envType,
+        envName,
+        envValue,
+        envTargets
+      )
     );
   } catch (error) {
     if (isKnownError(error) && error.serverMessage) {
@@ -147,8 +240,4 @@ export default async function add(
   );
 
   return 0;
-}
-
-function isSystemEnvVariable(envName: string) {
-  return envName.startsWith('VERCEL_');
 }

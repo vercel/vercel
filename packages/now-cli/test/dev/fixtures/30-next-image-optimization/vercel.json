@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "build": {
+    "env": {
+      "FORCE_BUILDER_TAG": "canary"
+    }
+  }
+}

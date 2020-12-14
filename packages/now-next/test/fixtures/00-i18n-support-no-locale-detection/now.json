@@ -162,6 +162,47 @@
     },
 
     {
+      "path": "/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"en-US\""
+    },
+    {
+      "path": "/en/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/en/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"en\""
+    },
+    {
+      "path": "/nl/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/nl/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"nl\""
+    },
+    {
+      "path": "/fr/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/fr/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"fr\""
+    },
+
+    {
       "path": "/gsp",
       "status": 200,
       "mustContain": "gsp page"
@@ -304,17 +345,21 @@
       "mustContain": "slug\":\"first\""
     },
 
-    // TODO: update when directory listing is disabled
-    // and these are proper 404s
     {
       "path": "/en/not-found",
-      "status": 200,
-      "mustContain": "Index of"
+      "status": 404
+    },
+    {
+      "path": "/en/not-found",
+      "mustContain": "lang=\"en\""
     },
     {
       "path": "/nl/not-found",
-      "status": 200,
-      "mustContain": "Index of"
+      "status": 404
+    },
+    {
+      "path": "/nl/not-found",
+      "mustContain": "lang=\"nl\""
     },
     {
       "path": "/en-US/not-found",
@@ -386,22 +431,22 @@
     },
 
     {
-      "path": "/_next/data/testing-build-id/en-US/index.json",
+      "path": "/_next/data/testing-build-id/en-US.json",
       "status": 200,
       "mustContain": "\"locale\":\"en-US\""
     },
     {
-      "path": "/_next/data/testing-build-id/en/index.json",
+      "path": "/_next/data/testing-build-id/en.json",
       "status": 200,
       "mustContain": "\"locale\":\"en\""
     },
     {
-      "path": "/_next/data/testing-build-id/fr/index.json",
+      "path": "/_next/data/testing-build-id/fr.json",
       "status": 200,
       "mustContain": "\"locale\":\"fr\""
     },
     {
-      "path": "/_next/data/testing-build-id/nl/index.json",
+      "path": "/_next/data/testing-build-id/nl.json",
       "status": 200,
       "mustContain": "\"locale\":\"nl\""
     },

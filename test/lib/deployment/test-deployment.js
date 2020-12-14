@@ -251,7 +251,9 @@ async function testDeployment(
         const expected = probe.responseHeaders[header];
         const isEqual = Array.isArray(expected)
           ? expected.every(h => actual.includes(h))
-          : expected.startsWith('/') && expected.endsWith('/')
+          : typeof expected === 'string' &&
+            expected.startsWith('/') &&
+            expected.endsWith('/')
           ? new RegExp(expected.slice(1, -1)).test(actual)
           : expected === actual;
         if (!isEqual) {

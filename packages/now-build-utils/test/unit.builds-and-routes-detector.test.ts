@@ -182,7 +182,7 @@ describe('Test `detectBuilders`', () => {
 
     const { builders } = await detectBuilders(files);
     expect(builders!.length).toBe(7);
-    expect(builders!.some(b => b.src.endsWith('_test.go'))).toBe(false);
+    expect(builders!.some(b => b.src!.endsWith('_test.go'))).toBe(false);
   });
 
   it('just public', async () => {
@@ -833,6 +833,50 @@ describe('Test `detectBuilders`', () => {
 describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   const featHandleMiss = true;
 
+  it('should select "installCommand"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const files = ['package.json', 'pages/index.js', 'public/index.html'];
+    const { builders, errors } = await detectBuilders(files, pkg, {
+      featHandleMiss,
+      projectSettings: {
+        installCommand: 'npx pnpm install',
+      },
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBeDefined();
+    expect(builders!.length).toStrictEqual(1);
+    expect(builders![0].src).toStrictEqual('package.json');
+    expect(builders![0].use).toStrictEqual('@vercel/next');
+    expect(builders![0].config!.zeroConfig).toStrictEqual(true);
+    expect(builders![0].config!.installCommand).toStrictEqual(
+      'npx pnpm install'
+    );
+  });
+
+  it('should select empty "installCommand"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const files = ['package.json', 'pages/index.js', 'public/index.html'];
+    const { builders, errors } = await detectBuilders(files, pkg, {
+      featHandleMiss,
+      projectSettings: {
+        installCommand: '',
+      },
+    });
+    expect(errors).toBe(null);
+    expect(builders).toBeDefined();
+    expect(builders!.length).toStrictEqual(1);
+    expect(builders![0].src).toStrictEqual('package.json');
+    expect(builders![0].use).toStrictEqual('@vercel/next');
+    expect(builders![0].config!.zeroConfig).toStrictEqual(true);
+    expect(builders![0].config!.installCommand).toStrictEqual('');
+  });
+
   it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -1297,7 +1341,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       featHandleMiss,
     });
     expect(builders!.length).toBe(7);
-    expect(builders!.some(b => b.src.endsWith('_test.go'))).toBe(false);
+    expect(builders!.some(b => b.src!.endsWith('_test.go'))).toBe(false);
     expect(errorRoutes!.length).toBe(1);
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
@@ -2349,7 +2393,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
     expect(errorRoutes).toStrictEqual([
@@ -2451,7 +2494,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2489,7 +2531,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2527,7 +2568,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2560,7 +2600,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2588,7 +2627,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2619,7 +2657,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2646,7 +2683,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2681,7 +2717,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
     expect(errorRoutes).toStrictEqual([
@@ -2776,7 +2811,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2809,7 +2843,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2843,7 +2876,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2869,7 +2901,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2893,7 +2924,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2918,7 +2948,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2939,7 +2968,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -2974,7 +3002,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
 
@@ -3032,7 +3059,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -3065,7 +3091,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -3099,7 +3124,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -3118,7 +3142,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -3142,7 +3165,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -3167,7 +3189,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }
@@ -3188,7 +3209,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
       {
         status: 404,
         src: '^/api(/.*)?$',
-        continue: true,
       },
     ]);
   }

@@ -149,8 +149,8 @@ export async function executeBuild(
       filesRemoved,
       // This env distiniction is only necessary to maintain
       // backwards compatibility with the `@vercel/next` builder.
-      env: envConfigs.runEnv,
-      buildEnv: envConfigs.buildEnv,
+      env: { ...envConfigs.runEnv },
+      buildEnv: { ...envConfigs.buildEnv },
     },
   };
 
@@ -402,7 +402,7 @@ export async function getBuildMatches(
   const builds = nowConfig.builds || [{ src: '**', use: '@vercel/static' }];
 
   for (const buildConfig of builds) {
-    let { src, use } = buildConfig;
+    let { src = '**', use } = buildConfig;
 
     if (!use) {
       continue;
