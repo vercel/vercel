@@ -292,6 +292,11 @@ export async function runNpmInstall(
     opts.prettyCommand = 'yarn install';
     command = 'yarn';
     commandArgs = ['install', ...args];
+
+    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+    if (!env.YARN_NODE_LINKER) {
+      env.YARN_NODE_LINKER = 'node-modules';
+    }
   }
 
   if (process.env.NPM_ONLY_PRODUCTION) {
@@ -388,10 +393,17 @@ export async function runPackageJsonScript(
       prettyCommand,
     });
   } else {
+    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+    const env: typeof process.env = { ...spawnOpts?.env };
+    if (!env.YARN_NODE_LINKER) {
+      env.YARN_NODE_LINKER = 'node-modules';
+    }
+
     const prettyCommand = `yarn run ${scriptName}`;
     console.log(`Running "${prettyCommand}"`);
     await spawnAsync('yarn', ['run', scriptName], {
       ...spawnOpts,
+      env,
       cwd: destPath,
       prettyCommand,
     });
