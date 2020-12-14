@@ -7,5 +7,5 @@
     "target": "esnext",
     "module": "commonjs"
   },
-  "include": ["index.ts"]
+  "include": ["index.ts", "handler.ts"]
 }
