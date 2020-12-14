@@ -1,7 +1,7 @@
-import { VercelRequest, VercelResponse } from '@now/node';
+import { NowRequest, NowResponse } from '@now/node';
 import { hello } from './dep';
 
-export default function (req: VercelRequest, res: VercelResponse) {
+export default function (req: NowRequest, res: NowResponse) {
   if (req) {
     res.end(hello.toString());
   } else {

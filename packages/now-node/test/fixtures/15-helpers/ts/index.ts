@@ -1,6 +1,6 @@
-import { NowRequest, NowResponse } from './types';
+import { VercelRequest, VercelResponse } from './types';
 
-export default function listener(req: NowRequest, res: NowResponse) {
+export default function listener(req: VercelRequest, res: VercelResponse) {
   res.status(200);
   res.send('hello:RANDOMNESS_PLACEHOLDER');
 }
