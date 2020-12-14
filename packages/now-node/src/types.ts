@@ -1,20 +1,31 @@
 import { ServerResponse, IncomingMessage } from 'http';
 
-export type NowRequestCookies = { [key: string]: string };
-export type NowRequestQuery = { [key: string]: string | string[] };
+export type VercelRequestCookies = { [key: string]: string };
+export type VercelRequestQuery = { [key: string]: string | string[] };
+export type VercelRequestBody = any;
+
+export type VercelRequest = IncomingMessage & {
+  query: VercelRequestQuery;
+  cookies: VercelRequestCookies;
+  body: VercelRequestBody;
+};
+
+export type VercelResponse = ServerResponse & {
+  send: (body: any) => VercelResponse;
+  json: (jsonBody: any) => VercelResponse;
+  status: (statusCode: number) => VercelResponse;
+  redirect: (statusOrUrl: string | number, url?: string) => VercelResponse;
+};
+
+export type VercelApiHandler = (
+  req: VercelRequest,
+  res: VercelResponse
+) => void;
+
+// Backwards-compat
+export type NowRequestCookies = VercelRequestCookies;
+export type NowRequestQuery = VercelRequestQuery;
 export type NowRequestBody = any;
-
-export type NowRequest = IncomingMessage & {
-  query: NowRequestQuery;
-  cookies: NowRequestCookies;
-  body: NowRequestBody;
-};
-
-export type NowResponse = ServerResponse & {
-  send: (body: any) => NowResponse;
-  json: (jsonBody: any) => NowResponse;
-  status: (statusCode: number) => NowResponse;
-  redirect: (statusOrUrl: string | number, url?: string) => NowResponse;
-};
-
-export type NowApiHandler = (req: NowRequest, res: NowResponse) => void;
+export type NowRequest = VercelRequest;
+export type NowResponse = VercelResponse;
+export type NowApiHandler = VercelApiHandler;
