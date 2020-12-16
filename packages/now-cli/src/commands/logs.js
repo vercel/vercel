@@ -324,7 +324,7 @@ function printLogRaw(log) {
 
   if (log.object) {
     console.log(log.object);
-  } else {
+  } else if (typeof log.text === 'string') {
     console.log(
       log.text
         .replace(/\n$/, '')
