@@ -1566,7 +1566,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.is(res.status, 404);
 });
 
-test('output logs of a 2.0 deployment', async t => {
+test('output logs with "short" output', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
@@ -1583,13 +1583,21 @@ test('output logs of a 2.0 deployment', async t => {
     stderr.includes(`Fetched deployment "${context.deployment}"`),
     formatOutput({ stderr, stdout })
   );
+
+  // "short" format includes timestamps
+  t.truthy(
+    stdout.match(
+      /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/
+    )
+  );
+
   t.is(exitCode, 0);
 });
 
-test('output logs of a 2.0 deployment without annotate', async t => {
+test('output logs with "raw" output', async t => {
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['logs', context.deployment, ...defaultArgs],
+    ['logs', context.deployment, ...defaultArgs, '--output', 'raw'],
     {
       reject: false,
     }
@@ -1599,12 +1607,19 @@ test('output logs of a 2.0 deployment without annotate', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  t.true(!stderr.includes('[now-builder-debug]'));
-  t.true(!stderr.includes('START RequestId'));
-  t.true(!stderr.includes('END RequestId'));
-  t.true(!stderr.includes('REPORT RequestId'));
-  t.true(!stderr.includes('Init Duration'));
-  t.true(!stderr.includes('XRAY TraceId'));
+  t.true(
+    stderr.includes(`Fetched deployment "${context.deployment}"`),
+    formatOutput({ stderr, stdout })
+  );
+
+  // "raw" format does not include timestamps
+  t.is(
+    null,
+    stdout.match(
+      /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/
+    )
+  );
+
   t.is(exitCode, 0);
 });
 
