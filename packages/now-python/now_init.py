@@ -46,8 +46,7 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
         _thread.start_new_thread(server.handle_request, ())
 
         payload = json.loads(event['body'])
-        path = unquote(payload['path'])
-        path = path.replace(' ', '%20')
+        path = payload['path']
         headers = payload['headers']
         method = payload['method']
         encoding = payload.get('encoding')
