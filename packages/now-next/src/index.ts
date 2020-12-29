@@ -1089,19 +1089,25 @@ export async function build({
         console.time(tracingLabel);
       }
 
+      const nftCache = Object.create(null);
+
       const {
         fileList: apiFileList,
         reasons: apiReasons,
       } = await nodeFileTrace(apiPages, {
         base: baseDir,
         processCwd: entryPath,
+        cache: nftCache,
       });
+
+      debug(`node-file-trace result for api routes: ${apiFileList}`);
 
       const { fileList, reasons: nonApiReasons } = await nodeFileTrace(
         nonApiPages,
         {
           base: baseDir,
           processCwd: entryPath,
+          cache: nftCache,
         }
       );
 
