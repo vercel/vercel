@@ -15,14 +15,14 @@
     "lerna": "3.16.4"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "2.0.0",
-    "@typescript-eslint/parser": "2.0.0",
+    "@typescript-eslint/eslint-plugin": "4.11.1",
+    "@typescript-eslint/parser": "4.11.1",
     "@vercel/ncc": "0.24.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
     "cheerio": "1.0.0-rc.3",
-    "eslint": "6.2.2",
-    "eslint-config-prettier": "6.1.0",
+    "eslint": "7.16.0",
+    "eslint-config-prettier": "7.1.0",
     "eslint-plugin-jest": "23.8.2",
     "husky": "3.0.4",
     "json5": "2.1.1",
