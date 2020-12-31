@@ -1,10 +1,5 @@
-export default function MyApp(props) {
-  return (
-    <>
-      <p>static 404</p>
-      <p id="props">{JSON.stringify(props)}</p>
-    </>
-  );
+export default function MyApp() {
+  return '404 page';
 }
 
 export const getStaticProps = () => {

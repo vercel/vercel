@@ -1,5 +1,7 @@
+import React from 'react';
+
 function MyApp({ Component, pageProps }) {
-  return <Component {...pageProps} />;
+  return React.createElement(Component, pageProps);
 }
 
 MyApp.getInitialProps = () => {
