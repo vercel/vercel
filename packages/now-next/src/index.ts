@@ -1831,7 +1831,11 @@ export async function build({
           });
         }
 
-        if (!canUsePreviewMode) {
+        // If revalidate isn't enabled we force the /404 route to be static
+        // to match next start behavior otherwise getStaticProps would be
+        // recalled for each 404 URL path since Prerender is cached based
+        // on the URL path
+        if (!canUsePreviewMode || (hasPages404 && routeKey === '/404')) {
           htmlFsRef.contentType = htmlContentType;
           prerenders[outputPathPage] = htmlFsRef;
           prerenders[outputPathData] = jsonFsRef;
