@@ -1,7 +1,7 @@
 import { ServerResponse, IncomingMessage } from 'http';
 
-export type VercelRequestCookies = { [key: string]: string };
-export type VercelRequestQuery = { [key: string]: string | string[] };
+export type VercelRequestCookies = { [key: string]: string | undefined };
+export type VercelRequestQuery = { [key: string]: string | string[] | undefined };
 export type VercelRequestBody = any;
 
 export type VercelRequest = IncomingMessage & {
