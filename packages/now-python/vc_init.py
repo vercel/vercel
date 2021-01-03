@@ -35,7 +35,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
 
     print('using HTTP Handler')
     from http.server import HTTPServer
-    from urllib.parse import unquote
+    from urllib.parse import urlparse
     import http
     import _thread
 
@@ -46,8 +46,9 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         _thread.start_new_thread(server.handle_request, ())
 
         payload = json.loads(event['body'])
-        path = unquote(payload['path'])
-        path = path.replace(' ', '%20')
+        parse_result = urlparse(payload['path'])
+        query = parse_result.query.replace('%2F', '/')
+        path = ''.join([parse_result.path, '?', query]) if len(query) > 0 else parse_result.path
         headers = payload['headers']
         method = payload['method']
         encoding = payload.get('encoding')

@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "builds": [{ "src": "*.py", "use": "@vercel/python" }],
+  "routes": [{ "src": "/(.+)", "dest": "custom.py" }],
+  "probes": [
+    { "path": "/?hello=world", "mustContain": "path=/?hello=world" },
+    {
+      "path": "/?hello=%E4%B8%96%E7%95%8C",
+      "mustContain": "path=/?hello=世界"
+    },
+    {
+      "path": "/?hello=%E4%B8%96%20%E7%95%8C",
+      "mustContain": "path=/?hello=世 界"
+    },
+    {
+      "path": "/?hello=%E4%B8%96+%E7%95%8C",
+      "mustContain": "path=/?hello=世 界"
+    },
+    {
+      "path": "/?hello=%E4%B8%96/%E7%95%8C",
+      "mustContain": "path=/?hello=世/界"
+    },
+    {
+      "path": "/another?hello=world",
+      "mustContain": "path=/another?hello=world"
+    },
+    {
+      "path": "/another?hello=%E4%B8%96%E7%95%8C",
+      "mustContain": "path=/another?hello=世界"
+    },
+    {
+      "path": "/another?hello=%E4%B8%96%20%E7%95%8C",
+      "mustContain": "path=/another?hello=世 界"
+    },
+    {
+      "path": "/another?hello=%E4%B8%96+%E7%95%8C",
+      "mustContain": "path=/another?hello=世 界"
+    },
+    {
+      "path": "/another?hello=%E4%B8%96/%E7%95%8C",
+      "mustContain": "path=/another?hello=世/界"
+    }
+  ]
+}
