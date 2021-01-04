@@ -16,7 +16,6 @@ ln -sf symlinked-asset test/fixtures/11-symlinks/symlink
 
 # use types.d.ts as the main types export
 mv dist/types.d.ts dist/types
-rm dist/*.d.ts
 mv dist/types dist/index.d.ts
 
 # bundle helpers.ts with ncc
