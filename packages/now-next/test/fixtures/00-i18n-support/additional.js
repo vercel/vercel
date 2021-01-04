@@ -1,7 +1,7 @@
 /* eslint-env jest */
-const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 const { check, waitFor } = require('../../utils');
+const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
 async function checkForChange(url, initialValue, hardError) {
   return check(
