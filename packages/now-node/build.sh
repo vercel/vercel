@@ -15,8 +15,7 @@ cp dist/types.d.ts test/fixtures/15-helpers/ts/types.d.ts
 ln -sf symlinked-asset test/fixtures/11-symlinks/symlink
 
 # use types.d.ts as the main types export
-mv dist/types.d.ts dist/types
-mv dist/types dist/index.d.ts
+mv dist/types.d.ts dist/index.d.ts
 
 # bundle helpers.ts with ncc
 rm dist/helpers.js
