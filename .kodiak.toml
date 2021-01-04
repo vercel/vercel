@@ -1,7 +1,7 @@
 version = 1
 
 [merge]
-automerge_label = "automerge"
+automerge_label = ["semver-major","semver-minor","semver-patch"]
 blacklist_title_regex = "^WIP.*"
 blacklist_labels = ["work in progress"]
 method = "squash"

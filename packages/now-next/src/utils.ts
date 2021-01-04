@@ -326,6 +326,17 @@ export type RoutesManifest = {
     namedDataRouteRegex?: string;
     routeKeys?: { [named: string]: string };
   }>;
+  i18n?: {
+    localeDetection?: boolean;
+    defaultLocale: string;
+    locales: string[];
+    domains?: Array<{
+      http?: boolean;
+      domain: string;
+      locales?: string[];
+      defaultLocale: string;
+    }>;
+  };
 };
 
 export async function getRoutesManifest(
@@ -500,6 +511,41 @@ export async function getDynamicRoutes(
     }
   });
   return routes;
+}
+
+type LoaderKey = 'imgix' | 'cloudinary' | 'akamai' | 'default';
+
+type ImagesManifest = {
+  version: number;
+  images: {
+    loader: LoaderKey;
+    sizes: number[];
+    domains: string[];
+  };
+};
+
+export async function getImagesManifest(
+  entryPath: string,
+  outputDirectory: string
+): Promise<ImagesManifest | undefined> {
+  const pathImagesManifest = path.join(
+    entryPath,
+    outputDirectory,
+    'images-manifest.json'
+  );
+
+  const hasImagesManifest = await fs
+    .access(pathImagesManifest)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasImagesManifest) {
+    return undefined;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const imagesManifest: ImagesManifest = require(pathImagesManifest);
+  return imagesManifest;
 }
 
 function syncEnvVars(base: EnvConfig, removeEnv: EnvConfig, addEnv: EnvConfig) {
@@ -711,6 +757,8 @@ export type NextPrerenderedRoutes = {
   };
 
   omittedRoutes: string[];
+
+  notFoundRoutes: string[];
 };
 
 export async function getExportIntent(
@@ -781,11 +829,12 @@ export async function getExportStatus(
 }
 
 export async function getPrerenderManifest(
-  entryPath: string
+  entryPath: string,
+  outputDirectory: string
 ): Promise<NextPrerenderedRoutes> {
   const pathPrerenderManifest = path.join(
     entryPath,
-    '.next',
+    outputDirectory,
     'prerender-manifest.json'
   );
 
@@ -801,6 +850,7 @@ export async function getPrerenderManifest(
       fallbackRoutes: {},
       bypassToken: null,
       omittedRoutes: [],
+      notFoundRoutes: [],
     };
   }
 
@@ -846,6 +896,7 @@ export async function getPrerenderManifest(
         preview: {
           previewModeId: string;
         };
+        notFoundRoutes?: string[];
       } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
   switch (manifest.version) {
@@ -860,6 +911,7 @@ export async function getPrerenderManifest(
         bypassToken:
           (manifest.preview && manifest.preview.previewModeId) || null,
         omittedRoutes: [],
+        notFoundRoutes: [],
       };
 
       routes.forEach(route => {
@@ -914,7 +966,12 @@ export async function getPrerenderManifest(
         fallbackRoutes: {},
         bypassToken: manifest.preview.previewModeId,
         omittedRoutes: [],
+        notFoundRoutes: [],
       };
+
+      if (manifest.notFoundRoutes) {
+        ret.notFoundRoutes.push(...manifest.notFoundRoutes);
+      }
 
       routes.forEach(route => {
         const {
@@ -969,6 +1026,7 @@ export async function getPrerenderManifest(
         fallbackRoutes: {},
         bypassToken: null,
         omittedRoutes: [],
+        notFoundRoutes: [],
       };
     }
   }
@@ -1032,6 +1090,46 @@ async function getSourceFilePathFromPage({
 
 function isDirectory(path: string) {
   return fs.existsSync(path) && fs.lstatSync(path).isDirectory();
+}
+
+export function normalizeLocalePath(
+  pathname: string,
+  locales?: string[]
+): {
+  detectedLocale?: string;
+  pathname: string;
+} {
+  let detectedLocale: string | undefined;
+  // first item will be empty string from splitting at first char
+  const pathnameParts = pathname.split('/');
+
+  (locales || []).some(locale => {
+    if (pathnameParts[1].toLowerCase() === locale.toLowerCase()) {
+      detectedLocale = locale;
+      pathnameParts.splice(1, 1);
+      pathname = pathnameParts.join('/') || '/';
+      return true;
+    }
+    return false;
+  });
+
+  return {
+    pathname,
+    detectedLocale,
+  };
+}
+
+export function addLocaleOrDefault(
+  pathname: string,
+  routesManifest?: RoutesManifest,
+  locale?: string
+) {
+  if (!routesManifest?.i18n) return pathname;
+  if (!locale) locale = routesManifest.i18n.defaultLocale;
+
+  return locale
+    ? `/${locale}${pathname === '/index' ? '' : pathname}`
+    : pathname;
 }
 
 export {

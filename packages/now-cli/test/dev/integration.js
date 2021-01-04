@@ -128,14 +128,13 @@ async function testPath(
   status,
   path,
   expectedText,
-  headers = {},
-  method = 'GET',
-  body = undefined
+  expectedHeaders = {},
+  fetchOpts = {}
 ) {
-  const opts = { redirect: 'manual-dont-change', method, body };
+  const opts = { ...fetchOpts, redirect: 'manual-dont-change' };
   const url = `${origin}${path}`;
   const res = await fetch(url, opts);
-  const msg = `Testing response from ${method} ${url}`;
+  const msg = `Testing response from ${fetchOpts.method || 'GET'} ${url}`;
   console.log(msg);
   t.is(res.status, status, msg);
   validateResponseHeaders(t, res);
@@ -150,8 +149,8 @@ async function testPath(
     expectedText.lastIndex = 0; // reset since we test twice
     t.regex(actualText, expectedText);
   }
-  if (headers) {
-    Object.entries(headers).forEach(([key, expectedValue]) => {
+  if (expectedHeaders) {
+    Object.entries(expectedHeaders).forEach(([key, expectedValue]) => {
       let actualValue = res.headers.get(key);
       if (key.toLowerCase() === 'location' && actualValue === '//') {
         // HACK: `node-fetch` has strange behavior for location header so fix it
@@ -387,9 +386,12 @@ test(
     async testPath => {
       await testPath(200, '/', /<div id="redwood-app">/m);
       await testPath(200, '/about', /<div id="redwood-app">/m);
-      const reqBody = '{"query":"{redwood{version}}"}';
+      const fetchOpts = {
+        method: 'POST',
+        body: '{"query":"{redwood{version}}"}',
+      };
       const resBody = '{"data":{"redwood":{"version":"0.15.0"}}}';
-      await testPath(200, '/api/graphql', resBody, {}, 'POST', reqBody);
+      await testPath(200, '/api/graphql', resBody, {}, fetchOpts);
     },
     { isExample: true }
   )
@@ -945,12 +947,16 @@ test(
       'Access-Control-Allow-Methods':
         'GET, POST, OPTIONS, HEAD, PATCH, PUT, DELETE',
     };
-    await testPath(200, '/', 'status api', headers, 'GET');
-    await testPath(200, '/', 'status api', headers, 'POST');
-    await testPath(200, '/api/status.js', 'status api', headers, 'GET');
-    await testPath(200, '/api/status.js', 'status api', headers, 'POST');
-    await testPath(204, '/', '', headers, 'OPTIONS');
-    await testPath(204, '/api/status.js', '', headers, 'OPTIONS');
+    await testPath(200, '/', 'status api', headers, { method: 'GET' });
+    await testPath(200, '/', 'status api', headers, { method: 'POST' });
+    await testPath(200, '/api/status.js', 'status api', headers, {
+      method: 'GET',
+    });
+    await testPath(200, '/api/status.js', 'status api', headers, {
+      method: 'POST',
+    });
+    await testPath(204, '/', '', headers, { method: 'OPTIONS' });
+    await testPath(204, '/api/status.js', '', headers, { method: 'OPTIONS' });
   })
 );
 
@@ -1177,6 +1183,14 @@ test(
     await testPath(200, '/support', /Contact Page/);
     // TODO: Fix this test assertion that fails intermittently
     // await testPath(404, '/nothing', /Custom Next 404/);
+  })
+);
+
+test(
+  '[vercel dev] 10a-nextjs-routes',
+  testFixtureStdio('10a-nextjs-routes', async testPath => {
+    await testPath(200, '/', /Next.js with routes/m);
+    await testPath(200, '/hello', /Hello Routes/m);
   })
 );
 
@@ -1588,6 +1602,61 @@ test(
 );
 
 test(
+  '[vercel dev] 30-next-image-optimization',
+  testFixtureStdio('30-next-image-optimization', async testPath => {
+    const toUrl = (url, w, q) => {
+      const query = new URLSearchParams();
+      query.append('url', url);
+      query.append('w', w);
+      query.append('q', q);
+      return `/_next/image?${query}`;
+    };
+
+    const expectHeader = accept => ({
+      'content-type': accept,
+      'cache-control': 'public, max-age=0, must-revalidate',
+    });
+    const fetchOpts = accept => ({ method: 'GET', headers: { accept } });
+    await testPath(200, '/', /Home Page/m);
+    await testPath(
+      200,
+      toUrl('/test.jpg', 64, 100),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/test.png', 64, 90),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/test.gif', 64, 80),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/test.svg', 64, 70),
+      null,
+      expectHeader('image/svg+xml'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/animated.gif', 64, 60),
+      null,
+      expectHeader('image/gif'),
+      fetchOpts('image/gif')
+    );
+  })
+);
+
+test(
   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
@@ -1685,5 +1754,13 @@ test(
         t.is(env.VERCEL_REGION, 'dev1');
       }
     });
+  })
+);
+
+test(
+  '[vercel dev] Do not fail if `src` is missing',
+  testFixtureStdio('missing-src-property', async testPath => {
+    await testPath(200, '/', /hello:index.txt/m);
+    await testPath(404, '/i-do-not-exist');
   })
 );

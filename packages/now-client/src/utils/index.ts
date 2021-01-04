@@ -136,6 +136,7 @@ export async function getVercelIgnore(
     '__pycache__',
     'venv',
     'CVS',
+    '.vercel_build_output',
   ];
 
   const cwds = Array.isArray(cwd) ? cwd : [cwd];

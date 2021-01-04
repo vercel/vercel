@@ -3,6 +3,7 @@
   "builds": [
     { "src": "index.js", "use": "@vercel/node" },
     { "src": "ts/index.ts", "use": "@vercel/node" },
+    { "src": "ts-legacy/index.ts", "use": "@vercel/node" },
     { "src": "micro-compat/index.js", "use": "@vercel/node" },
     {
       "src": "no-helpers/index.js",
@@ -39,6 +40,10 @@
     {
       "path": "/ts",
       "mustContain": "hello:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/ts-legacy",
+      "mustContain": "hello legacy:RANDOMNESS_PLACEHOLDER"
     },
     {
       "path": "/micro-compat",

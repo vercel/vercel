@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { ProjectEnvTarget, Project } from '../../types';
+import { ProjectEnvTarget, Project, ProjectEnvVariableV5 } from '../../types';
 import { Output } from '../../util/output';
-import promptBool from '../../util/prompt-bool';
+import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvVariables from '../../util/env/get-env-records';
 import {
@@ -30,6 +30,9 @@ export default async function rm(
   args: string[],
   output: Output
 ) {
+  // improve the way we show inquirer prompts
+  require('../../util/input/patch-inquirer');
+
   if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
@@ -69,7 +72,20 @@ export default async function rm(
     envName = inputName;
   }
 
-  const envs = await getEnvVariables(output, client, project.id, 4);
+  const data = await getEnvVariables(output, client, project.id);
+
+  // we expand env vars with multiple targets
+  const envs: ProjectEnvVariableV5[] = [];
+  for (let env of data.envs) {
+    if (Array.isArray(env.target)) {
+      for (let target of env.target) {
+        envs.push({ ...env, target });
+      }
+    } else {
+      envs.push({ ...env, target: env.target });
+    }
+  }
+
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
@@ -79,7 +95,7 @@ export default async function rm(
     return 1;
   }
 
-  if (envTargets.length === 0) {
+  while (envTargets.length === 0) {
     const choices = getEnvTargetChoices().filter(c => existing.has(c.value));
     if (choices.length === 0) {
       output.error(
@@ -97,6 +113,13 @@ export default async function rm(
         message: `Remove ${envName} from which Environments (select multiple)?`,
         choices,
       });
+
+      if (inputTargets.length === 0) {
+        output.error(
+          'Please select an Environment to remove the Environment Variable from.'
+        );
+      }
+
       envTargets = inputTargets;
     }
   }
@@ -104,11 +127,11 @@ export default async function rm(
   const skipConfirmation = opts['--yes'];
   if (
     !skipConfirmation &&
-    !(await promptBool(
-      output,
+    !(await confirm(
       `Removing Environment Variable ${param(
         envName
-      )} from Project ${chalk.bold(project.name)}. Are you sure?`
+      )} from Project ${chalk.bold(project.name)}. Are you sure?`,
+      false
     ))
   ) {
     output.log('Aborted');

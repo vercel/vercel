@@ -36,6 +36,21 @@ describe('normalizeRoutes', () => {
 
   test('accepts valid routes', () => {
     const routes = [
+      {
+        src: '^(?:/(?<value>en|fr))?(?<path>/.*)$',
+        locale: {
+          value: '$value',
+          path: '$path',
+          default: 'en',
+          cookie: 'NEXT_LOCALE',
+        },
+      },
+      {
+        src: '^/(?:en/?|fr/?)$',
+        locale: {
+          redirect: { en: '/en', fr: '/fr' },
+        },
+      },
       { src: '^/about$' },
       {
         src: '^/blog$',
@@ -57,6 +72,7 @@ describe('normalizeRoutes', () => {
         src: '^/missed-me$',
         headers: { 'Cache-Control': 'max-age=10' },
         continue: true,
+        important: true,
       },
       { handle: 'rewrite' },
       { src: '^.*$', dest: '/somewhere' },
@@ -220,13 +236,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].src',
           keyword: 'type',
+          dataPath: '[0].src',
+          schemaPath: '#/items/anyOf/0/properties/src/type',
+          params: { type: 'string' },
           message: 'should be string',
-          params: {
-            type: 'string',
-          },
-          schemaPath: '#/items/properties/src/type',
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'src' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -242,13 +270,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].dest',
-          keyword: 'type',
-          message: 'should be string',
-          params: {
-            type: 'string',
-          },
-          schemaPath: '#/items/properties/dest/type',
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/required',
+          params: { missingProperty: 'src' },
+          message: "should have required property 'src'",
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'dest' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -264,13 +304,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].methods',
-          keyword: 'type',
-          message: 'should be array',
-          params: {
-            type: 'array',
-          },
-          schemaPath: '#/items/properties/methods/type',
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/required',
+          params: { missingProperty: 'src' },
+          message: "should have required property 'src'",
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'methods' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -286,13 +338,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].methods[0]',
-          keyword: 'type',
-          message: 'should be string',
-          params: {
-            type: 'string',
-          },
-          schemaPath: '#/items/properties/methods/items/type',
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/required',
+          params: { missingProperty: 'src' },
+          message: "should have required property 'src'",
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'methods' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -308,13 +372,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].headers',
-          keyword: 'type',
-          message: 'should be object',
-          params: {
-            type: 'object',
-          },
-          schemaPath: '#/items/properties/headers/type',
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/required',
+          params: { missingProperty: 'src' },
+          message: "should have required property 'src'",
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'headers' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -332,14 +408,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: "[0].headers['test']",
-          keyword: 'type',
-          message: 'should be string',
-          params: {
-            type: 'string',
-          },
-          schemaPath:
-            '#/items/properties/headers/patternProperties/%5E.%7B1%2C256%7D%24/type',
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/required',
+          params: { missingProperty: 'src' },
+          message: "should have required property 'src'",
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'headers' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -355,13 +442,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].handle',
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/additionalProperties',
+          params: { additionalProperty: 'handle' },
+          message: 'should NOT have additional properties',
+        },
+        {
           keyword: 'type',
+          dataPath: '[0].handle',
+          schemaPath: '#/items/anyOf/1/properties/handle/type',
+          params: { type: 'string' },
           message: 'should be string',
-          params: {
-            type: 'string',
-          },
-          schemaPath: '#/items/properties/handle/type',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -377,13 +476,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].continue',
-          keyword: 'type',
-          message: 'should be boolean',
-          params: {
-            type: 'boolean',
-          },
-          schemaPath: '#/items/properties/continue/type',
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/required',
+          params: { missingProperty: 'src' },
+          message: "should have required property 'src'",
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'continue' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -399,13 +510,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].check',
-          keyword: 'type',
-          message: 'should be boolean',
-          params: {
-            type: 'boolean',
-          },
-          schemaPath: '#/items/properties/check/type',
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/required',
+          params: { missingProperty: 'src' },
+          message: "should have required property 'src'",
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'check' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -421,13 +544,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0].status',
-          keyword: 'type',
-          message: 'should be integer',
-          params: {
-            type: 'integer',
-          },
-          schemaPath: '#/items/properties/status/type',
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/required',
+          params: { missingProperty: 'src' },
+          message: "should have required property 'src'",
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'status' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );
@@ -443,13 +578,25 @@ describe('normalizeRoutes', () => {
       ],
       [
         {
-          dataPath: '[0]',
           keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/additionalProperties',
+          params: { additionalProperty: 'doesNotExist' },
           message: 'should NOT have additional properties',
-          params: {
-            additionalProperty: 'doesNotExist',
-          },
-          schemaPath: '#/items/additionalProperties',
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'doesNotExist' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
       ]
     );

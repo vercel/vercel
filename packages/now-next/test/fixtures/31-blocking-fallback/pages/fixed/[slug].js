@@ -19,5 +19,5 @@ export function getStaticProps({ params }) {
 }
 
 export function getStaticPaths() {
-  return { paths: [], fallback: 'unstable_blocking' };
+  return { paths: [], fallback: 'blocking' };
 }

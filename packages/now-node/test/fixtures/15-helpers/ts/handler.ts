@@ -1,6 +1,6 @@
-import { NowApiHandler } from './types';
+import { VercelApiHandler } from './types';
 
-const listener: NowApiHandler = (req, res) => {
+const listener: VercelApiHandler = (req, res) => {
   res.status(200);
   res.send('hello:RANDOMNESS_PLACEHOLDER');
 };

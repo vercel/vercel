@@ -5,53 +5,104 @@ export const routesSchema = {
   type: 'array',
   maxItems: 1024,
   items: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      src: {
-        type: 'string',
-        maxLength: 4096,
-      },
-      dest: {
-        type: 'string',
-        maxLength: 4096,
-      },
-      methods: {
-        type: 'array',
-        maxItems: 10,
-        items: {
-          type: 'string',
-          maxLength: 32,
-        },
-      },
-      headers: {
+    anyOf: [
+      {
         type: 'object',
+        required: ['src'],
         additionalProperties: false,
-        minProperties: 1,
-        maxProperties: 100,
-        patternProperties: {
-          '^.{1,256}$': {
+        properties: {
+          src: {
             type: 'string',
             maxLength: 4096,
           },
+          dest: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          headers: {
+            type: 'object',
+            additionalProperties: false,
+            minProperties: 1,
+            maxProperties: 100,
+            patternProperties: {
+              '^.{1,256}$': {
+                type: 'string',
+                maxLength: 4096,
+              },
+            },
+          },
+          methods: {
+            type: 'array',
+            maxItems: 10,
+            items: {
+              type: 'string',
+              maxLength: 32,
+            },
+          },
+          important: {
+            type: 'boolean',
+          },
+          continue: {
+            type: 'boolean',
+          },
+          check: {
+            type: 'boolean',
+          },
+          status: {
+            type: 'integer',
+            minimum: 100,
+            maximum: 999,
+          },
+          locale: {
+            type: 'object',
+            additionalProperties: false,
+            minProperties: 1,
+            properties: {
+              redirect: {
+                type: 'object',
+                additionalProperties: false,
+                minProperties: 1,
+                maxProperties: 100,
+                patternProperties: {
+                  '^.{1,256}$': {
+                    type: 'string',
+                    maxLength: 4096,
+                  },
+                },
+              },
+              value: {
+                type: 'string',
+                maxLength: 4096,
+              },
+              path: {
+                type: 'string',
+                maxLength: 4096,
+              },
+              cookie: {
+                type: 'string',
+                maxLength: 4096,
+              },
+              default: {
+                type: 'string',
+                maxLength: 4096,
+              },
+            },
+          },
         },
       },
-      handle: {
-        type: 'string',
-        maxLength: 32,
+      {
+        type: 'object',
+        required: ['handle'],
+        additionalProperties: false,
+        properties: {
+          handle: {
+            type: 'string',
+            maxLength: 32,
+            enum: ['error', 'filesystem', 'hit', 'miss', 'resource', 'rewrite'],
+          },
+        },
       },
-      continue: {
-        type: 'boolean',
-      },
-      check: {
-        type: 'boolean',
-      },
-      status: {
-        type: 'integer',
-        minimum: 100,
-        maximum: 999,
-      },
-    },
+    ],
   },
 };
 

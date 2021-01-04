@@ -35,6 +35,37 @@ it(
 );
 
 it(
+  'Should build the gip-gsp-404 example',
+  async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'gip-gsp-404'));
+    expect(output.goodbye).not.toBeDefined();
+    expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
+    expect(output['404']).toBeDefined();
+    expect(output['404'].type).toBe('FileFsRef');
+    expect(output['_next/data/testing-build-id/404.json']).toBeDefined();
+    expect(output['_next/data/testing-build-id/404.json'].type).toBe(
+      'FileFsRef'
+    );
+    const filePaths = Object.keys(output);
+    const serverlessError = filePaths.some(filePath =>
+      filePath.match(/_error/)
+    );
+    const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_app-.*\.js$/)
+    );
+    const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
+      filePath.match(/static.*\/pages\/_error-.*\.js$/)
+    );
+    expect(hasUnderScoreAppStaticFile).toBeTruthy();
+    expect(hasUnderScoreErrorStaticFile).toBeTruthy();
+    expect(serverlessError).toBeTruthy();
+  },
+  FOUR_MINUTES
+);
+
+it(
   'Should not deploy preview lambdas for static site',
   async () => {
     const {
@@ -207,7 +238,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeTruthy();
   },
   FOUR_MINUTES
@@ -278,7 +311,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeTruthy();
   },
   FOUR_MINUTES
@@ -345,7 +380,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeTruthy();
   },
   FOUR_MINUTES
@@ -380,7 +417,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeFalsy();
   },
   FOUR_MINUTES
@@ -422,7 +461,9 @@ it(
 
     expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
     expect(
-      contents.some(name => name.includes('next.config.original.'))
+      contents.some(name =>
+        name.includes('next.config.__vercel_builder_backup__')
+      )
     ).toBeFalsy();
   },
   FOUR_MINUTES

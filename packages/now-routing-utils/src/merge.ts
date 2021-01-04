@@ -89,6 +89,7 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
 
   const outputRoutes: Route[] = [];
   const uniqueHandleValues = new Set([
+    null,
     ...userHandleMap.keys(),
     ...builderHandleMap.keys(),
   ]);

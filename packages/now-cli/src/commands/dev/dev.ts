@@ -3,15 +3,15 @@ import { resolve, join } from 'path';
 import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
 import { Output } from '../../util/output';
-import { NowContext } from '../../types';
+import { NowContext, ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
 import { isSettingValue } from '../../util/is-setting-value';
-import { ProjectSettings, ProjectEnvTarget } from '../../types';
+import { ProjectSettings } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
-import { Env } from '@vercel/build-utils';
 import setupAndLink from '../../util/link/setup-and-link';
+import getSystemEnvValues from '../../util/env/get-system-env-values';
 
 type Options = {
   '--debug'?: boolean;
@@ -70,7 +70,8 @@ export default async function dev(
   let devCommand: string | undefined;
   let frameworkSlug: string | undefined;
   let projectSettings: ProjectSettings | undefined;
-  let environmentVars: Env | undefined;
+  let projectEnvs: ProjectEnvVariable[] = [];
+  let systemEnvValues: string[] = [];
   if (link.status === 'linked') {
     const { project, org } = link;
     client.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -98,12 +99,12 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
-    environmentVars = await getDecryptedEnvRecords(
-      output,
-      client,
-      project,
-      ProjectEnvTarget.Development
-    );
+    [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
+      getDecryptedEnvRecords(output, client, project.id),
+      project.autoExposeSystemEnvs
+        ? getSystemEnvValues(output, client, project.id)
+        : { systemEnvValues: [] },
+    ]);
   }
 
   const devServer = new DevServer(cwd, {
@@ -112,7 +113,8 @@ export default async function dev(
     devCommand,
     frameworkSlug,
     projectSettings,
-    environmentVars,
+    projectEnvs,
+    systemEnvValues,
   });
 
   process.once('SIGINT', () => devServer.stop());

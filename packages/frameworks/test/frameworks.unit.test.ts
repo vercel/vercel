@@ -89,12 +89,37 @@ const Schema = {
       },
       settings: {
         type: 'object',
-        required: ['buildCommand', 'devCommand', 'outputDirectory'],
+        required: [
+          'installCommand',
+          'buildCommand',
+          'devCommand',
+          'outputDirectory',
+        ],
         additionalProperties: false,
         properties: {
+          installCommand: SchemaSettings,
           buildCommand: SchemaSettings,
           devCommand: SchemaSettings,
           outputDirectory: SchemaSettings,
+        },
+      },
+      recommendedIntegrations: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['id', 'dependencies'],
+          additionalProperties: false,
+          properties: {
+            id: {
+              type: 'string',
+            },
+            dependencies: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+            },
+          },
         },
       },
     },
