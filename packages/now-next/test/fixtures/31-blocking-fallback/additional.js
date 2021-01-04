@@ -1,6 +1,6 @@
 /* eslint-env jest */
-const fetch = require('node-fetch');
 const cheerio = require('cheerio');
+const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
 module.exports = function (ctx) {
   it('should revalidate content properly from dynamic pathname', async () => {
