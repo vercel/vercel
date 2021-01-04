@@ -2417,7 +2417,9 @@ export async function build({
                         ...(static404Page
                           ? {}
                           : {
-                              'x-nextjs-page': page404Path,
+                              headers: {
+                                'x-nextjs-page': page404Path,
+                              },
                             }),
                       }
                     : {
