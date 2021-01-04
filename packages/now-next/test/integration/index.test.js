@@ -42,14 +42,7 @@ it(
     );
     const { output, routes } = buildResult;
 
-    let handleErrorIdx = -1;
-
-    (routes || []).some((route, idx) => {
-      if (route.handle === 'error') {
-        handleErrorIdx = idx;
-        return true;
-      }
-    });
+    const handleErrorIdx = (routes || []).findIndex(r => r.handle === 'error')
     expect(routes[handleErrorIdx + 1].dest).toBe('/404');
     expect(routes[handleErrorIdx + 1].headers).toBe(undefined);
     expect(output.goodbye).not.toBeDefined();
