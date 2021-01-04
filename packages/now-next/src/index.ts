@@ -1037,7 +1037,7 @@ export async function build({
 
       if (
         initialRevalidate === false &&
-        !canUsePreviewMode &&
+        (!canUsePreviewMode || (hasPages404 && routeKey === '/404')) &&
         !prerenderManifest.fallbackRoutes[route] &&
         !prerenderManifest.blockingFallbackRoutes[route]
       ) {
@@ -2414,9 +2414,11 @@ export async function build({
                         ),
 
                         status: 404,
-                        headers: {
-                          'x-nextjs-page': page404Path,
-                        },
+                        ...(static404Page
+                          ? {}
+                          : {
+                              'x-nextjs-page': page404Path,
+                            }),
                       }
                     : {
                         src: path.join('/', entryDirectory, '.*'),

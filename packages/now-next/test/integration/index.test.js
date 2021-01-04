@@ -37,9 +37,21 @@ it(
 it(
   'Should build the gip-gsp-404 example',
   async () => {
-    const {
-      buildResult: { output },
-    } = await runBuildLambda(path.join(__dirname, 'gip-gsp-404'));
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, 'gip-gsp-404')
+    );
+    const { output, routes } = buildResult;
+
+    let handleErrorIdx = -1;
+
+    (routes || []).some((route, idx) => {
+      if (route.handle === 'error') {
+        handleErrorIdx = idx;
+        return true;
+      }
+    });
+    expect(routes[handleErrorIdx + 1].dest).toBe('/404');
+    expect(routes[handleErrorIdx + 1].headers).toBe(undefined);
     expect(output.goodbye).not.toBeDefined();
     expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
     expect(output['404']).toBeDefined();
