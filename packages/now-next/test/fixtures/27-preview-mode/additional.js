@@ -1,7 +1,7 @@
 /* eslint-env jest */
 const cheerio = require('cheerio');
-const fetch = require('node-fetch');
 const setCookieParser = require('set-cookie-parser');
+const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
 module.exports = function (ctx) {
   let previewCookie;
