@@ -1,9 +1,0 @@
-{
-  "private": true,
-  "dependencies": {
-    "copee": "1.0.6"
-  },
-  "scripts": {
-    "build": "echo 'Output Page' > output.html && echo 'foo' > .env && git init && ls -lA"
-  }
-}
