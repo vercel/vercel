@@ -2,17 +2,11 @@
 set -euo pipefail
 
 # Copy shared dependencies
-bridge_defs="$(dirname $(pwd))/now-node-bridge/src/bridge.ts"
-launcher_defs="$(dirname $(pwd))/now-node/src/launcher.ts"
-
-cp -v "$bridge_defs" src
-cp -v "$launcher_defs" src
+bridge_dir="$(dirname $(pwd))/now-node-bridge"
+cp -v "$bridge_dir/src/bridge.ts" "$bridge_dir/src/launcher.ts" src
 
 # Start fresh
 rm -rf dist
 
-## Build ts files
+# Build TypeScript files
 tsc
-
-# Build with `ncc`
-#ncc build src/index.ts -e @vercel/build-utils -e @now/build-utils -o dist
