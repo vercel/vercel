@@ -1,8 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
-  "probes": [
-    { "path": "/hello1", "mustContain": "Hello World 1" },
-    { "path": "/nested/hello2", "mustContain": "Hello World 2" }
-  ]
-}
