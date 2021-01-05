@@ -41,7 +41,7 @@ export function getNowLauncher({
   helpersPath,
   shouldAddHelpers = false,
 }: LauncherConfiguration) {
-  return function(): Bridge {
+  return function (): Bridge {
     let bridge = new Bridge();
     let isServerListening = false;
 
@@ -133,7 +133,7 @@ export function getAwsLauncher({
   }
 
   // @ts-ignore
-  return function(e, context, callback) {
+  return function (e, context, callback) {
     const { path, method: httpMethod, body, headers } = JSON.parse(e.body);
     const { query } = parse(path, true);
     const queryStringParameters: { [i: string]: string } = {};
