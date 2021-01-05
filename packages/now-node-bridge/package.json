@@ -10,6 +10,7 @@
   },
   "files": [
     "bridge.*",
+    "launcher.*",
     "index.js"
   ],
   "scripts": {
