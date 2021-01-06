@@ -43,6 +43,7 @@ import {
 } from '@vercel/build-utils';
 import _frameworks, { Framework } from '@vercel/frameworks';
 
+import cmd from '../output/cmd';
 import link from '../output/link';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
@@ -1340,7 +1341,7 @@ export default class DevServer {
     routes: Route[] | undefined = nowConfig.routes,
     callLevel: number = 0
   ) => {
-    const { debug } = this.output;
+    const { debug, log, error } = this.output;
 
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
@@ -1681,7 +1682,18 @@ export default class DevServer {
         // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
-        debug(`Error starting "${builderPkg.name}" dev server: ${err}`);
+        if (err.code === 'ENOENT') {
+          log(
+            `${chalk.red('Error:')} Command not found: ${chalk.cyan(
+              err.path,
+              ...err.spawnargs
+            )}`,
+            chalk.red
+          );
+          log(`Please ensure that ${cmd(err.path)} is properly installed`);
+        } else {
+          error(`Failed to start "${builderPkg.name}" dev server: ${err}`);
+        }
         await this.sendError(
           req,
           res,
