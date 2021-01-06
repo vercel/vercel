@@ -1690,10 +1690,7 @@ export default class DevServer {
             )}`,
             chalk.red
           );
-          log(
-            `Please ensure that ${cmd(err.path)} is properly installed`,
-            chalk.red
-          );
+          log(`Please ensure that ${cmd(err.path)} is properly installed`);
         } else {
           error(`Failed to start "${builderPkg.name}" dev server: ${err}`);
         }
