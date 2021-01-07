@@ -51,12 +51,6 @@ const help = () => {
 
     ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
 
-  ${chalk.gray(
-    '–'
-  )} List all deployments and all instances for the app ${chalk.dim('`my-app`')}
-
-    ${chalk.cyan(`$ ${getPkgName()} ls my-app --all`)}
-
   ${chalk.gray('–')} Filter deployments by metadata
 
     ${chalk.cyan(`$ ${getPkgName()} ls -m key1=value1 -m key2=value2`)}
