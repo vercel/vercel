@@ -258,7 +258,7 @@ elif 'app' in __now_variables:
             elif not isinstance(body, bytes):
                 body = body.encode()
 
-            url = urlparse(unquote(payload['path']))
+            url = urlparse(payload['path'])
             query = url.query.encode()
             path = url.path
 
