@@ -1340,7 +1340,7 @@ test('try to purchase a domain', async t => {
     ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
     {
       reject: false,
-      input: 'y',
+      input: 'y\ny',
     }
   );
 
