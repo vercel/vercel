@@ -7,11 +7,11 @@ from importlib import util
 from http.server import BaseHTTPRequestHandler
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-__now_spec = util.spec_from_file_location("__NOW_HANDLER_MODULE_NAME", "./__NOW_HANDLER_ENTRYPOINT")
-__now_module = util.module_from_spec(__now_spec)
-sys.modules["__NOW_HANDLER_MODULE_NAME"] = __now_module
-__now_spec.loader.exec_module(__now_module)
-__now_variables = dir(__now_module)
+__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
+__vc_module = util.module_from_spec(__vc_spec)
+sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
+__vc_spec.loader.exec_module(__vc_module)
+__vc_variables = dir(__vc_module)
 
 
 def format_headers(headers, decode=False):
@@ -26,8 +26,8 @@ def format_headers(headers, decode=False):
     return keyToList
 
 
-if 'handler' in __now_variables or 'Handler' in __now_variables:
-    base = __now_module.handler if ('handler' in __now_variables) else  __now_module.Handler
+if 'handler' in __vc_variables or 'Handler' in __vc_variables:
+    base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
         print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
@@ -42,7 +42,7 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
     server = HTTPServer(('', 0), base)
     port = server.server_address[1]
 
-    def now_handler(event, context):
+    def vc_handler(event, context):
         _thread.start_new_thread(server.handle_request, ())
 
         payload = json.loads(event['body'])
@@ -79,10 +79,10 @@ if 'handler' in __now_variables or 'Handler' in __now_variables:
 
         return return_dict
 
-elif 'app' in __now_variables:
+elif 'app' in __vc_variables:
     if (
-        not inspect.iscoroutinefunction(__now_module.app) and
-        not inspect.iscoroutinefunction(__now_module.app.__call__)
+        not inspect.iscoroutinefunction(__vc_module.app) and
+        not inspect.iscoroutinefunction(__vc_module.app.__call__)
     ):
         print('using Web Server Gateway Interface (WSGI)')
         from urllib.parse import urlparse, unquote
@@ -93,7 +93,7 @@ elif 'app' in __now_variables:
         from werkzeug.datastructures import Headers
         from werkzeug.wrappers import Response
 
-        def now_handler(event, context):
+        def vc_handler(event, context):
             payload = json.loads(event['body'])
 
             headers = Headers(payload.get('headers', {}))
@@ -142,7 +142,7 @@ elif 'app' in __now_variables:
                 if key not in ('HTTP_CONTENT_TYPE', 'HTTP_CONTENT_LENGTH'):
                     environ[key] = value
 
-            response = Response.from_app(__now_module.app, environ)
+            response = Response.from_app(__vc_module.app, environ)
 
             return_dict = {
                 'statusCode': response.status_code,
@@ -247,7 +247,7 @@ elif 'app' in __now_variables:
                     self.response['body'] = base64.b64encode(self.body).decode('utf-8')
                     self.response['encoding'] = 'base64'
 
-        def now_handler(event, context):
+        def vc_handler(event, context):
             payload = json.loads(event['body'])
 
             headers = payload.get('headers', {})
@@ -280,10 +280,10 @@ elif 'app' in __now_variables:
             }
 
             asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(__now_module.app, body)
+            response = asgi_cycle(__vc_module.app, body)
             return response
 
 else:
-    print('Missing variable `handler` or `app` in file "__NOW_HANDLER_ENTRYPOINT".')
+    print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
     print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
     exit(1)
