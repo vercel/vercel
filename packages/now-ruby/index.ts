@@ -153,24 +153,24 @@ export async function build({
     // don't do anything here
   }
 
-  const originalRbPath = join(__dirname, '..', 'now_init.rb');
-  const originalNowHandlerRbContents = await readFile(originalRbPath, 'utf8');
+  const originalRbPath = join(__dirname, '..', 'vc_init.rb');
+  const originalHandlerRbContents = await readFile(originalRbPath, 'utf8');
 
   // will be used on `require_relative '$here'` or for loading rack config.ru file
   // for example, `require_relative 'api/users'`
   debug('entrypoint is', entrypoint);
   const userHandlerFilePath = entrypoint.replace(/\.rb$/, '');
-  const nowHandlerRbContents = originalNowHandlerRbContents.replace(
-    /__NOW_HANDLER_FILENAME/g,
+  const nowHandlerRbContents = originalHandlerRbContents.replace(
+    /__VC_HANDLER_FILENAME/g,
     userHandlerFilePath
   );
 
   // in order to allow the user to have `server.rb`, we need our `server.rb` to be called
   // somethig else
-  const nowHandlerRbFilename = 'now__handler__ruby';
+  const handlerRbFilename = 'vc__handler__ruby';
 
   await writeFile(
-    join(workPath, `${nowHandlerRbFilename}.rb`),
+    join(workPath, `${handlerRbFilename}.rb`),
     nowHandlerRbContents
   );
 
@@ -192,7 +192,7 @@ export async function build({
       }
 
       // whitelist handler
-      if (excludedPaths[i] === `${nowHandlerRbFilename}.rb`) {
+      if (excludedPaths[i] === `${handlerRbFilename}.rb`) {
         continue;
       }
 
@@ -207,7 +207,7 @@ export async function build({
 
   const lambda = await createLambda({
     files: outputFiles,
-    handler: `${nowHandlerRbFilename}.now__handler`,
+    handler: `${handlerRbFilename}.vc__handler`,
     runtime,
     environment: {},
   });

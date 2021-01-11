@@ -76,10 +76,10 @@ const tscPath = resolve(
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
 
-const LAUNCHER_FILENAME = '___now_launcher';
-const BRIDGE_FILENAME = '___now_bridge';
-const HELPERS_FILENAME = '___now_helpers';
-const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support';
+const LAUNCHER_FILENAME = '___vc_launcher';
+const BRIDGE_FILENAME = '___vc_bridge';
+const HELPERS_FILENAME = '___vc_helpers';
+const SOURCEMAP_SUPPORT_FILENAME = '___vc_sourcemap_support';
 
 async function downloadInstallAndBundle({
   files,

@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	vc.Start(http.HandlerFunc(__NOW_HANDLER_FUNC_NAME))
+	vc.Start(http.HandlerFunc(__VC_HANDLER_FUNC_NAME))
 }
