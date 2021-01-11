@@ -4,7 +4,7 @@ require 'net/http'
 require 'base64'
 require 'json'
 
-$entrypoint = '__NOW_HANDLER_FILENAME'
+$entrypoint = '__VC_HANDLER_FILENAME'
 
 ENV['RAILS_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
@@ -77,7 +77,7 @@ def webrick_handler(httpMethod, path, body, headers)
   }
 end
 
-def now__handler(event:, context:)
+def vc__handler(event:, context:)
   payload = JSON.parse(event['body'])
   path = payload['path']
   headers = payload['headers']
