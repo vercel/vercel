@@ -285,8 +285,8 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
     }
 
     const mainModGoContents = modMainGoContents
-      .replace('__NOW_HANDLER_PACKAGE_NAME', goPackageName)
-      .replace('__NOW_HANDLER_FUNC_NAME', goFuncName);
+      .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
+      .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
 
     if (isGoModExist && isGoModInRootDir) {
       debug('[mod-root] Write main file to ' + downloadPath);
@@ -405,13 +405,13 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
       'utf8'
     );
     const mainGoContents = origianlMainGoContents.replace(
-      '__NOW_HANDLER_FUNC_NAME',
+      '__VC_HANDLER_FUNC_NAME',
       handlerFunctionName
     );
 
     // in order to allow the user to have `main.go`,
     // we need our `main.go` to be called something else
-    const mainGoFileName = 'main__now__go__.go';
+    const mainGoFileName = 'main__vc__go__.go';
 
     // Go doesn't like to build files in different directories,
     // so now we place `main.go` together with the user code
