@@ -264,7 +264,7 @@ async function npmInstall(
           (result as any).code === 'ENOENT'
             ? `Command not found: ${chalk.cyan(
                 'npm'
-              )}\nPlease ensure that ${chalk.cyan('npm')} is properly installed`
+              )}\nPlease ensure that ${cmd('npm')} is properly installed`
             : 'Failed to install `vercel dev` dependencies',
         code: 'NPM_INSTALL_ERROR',
         link: 'https://vercel.link/npm-install-failed-dev',
