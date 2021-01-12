@@ -1337,9 +1337,9 @@ test('try to purchase a domain', async t => {
   }
 
   const stream = new Readable();
-stream.push('y\n');
-stream.push('y\n');
-stream.push(null);
+  stream.push('y\n');
+  stream.push('y\n');
+  stream.push(null);
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
