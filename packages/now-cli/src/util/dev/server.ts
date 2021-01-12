@@ -887,7 +887,7 @@ export default class DevServer {
         })
         .catch(err => {
           this.updateBuildersPromise = null;
-          this.output.error(`Failed to update builders: ${err.message}`);
+          this.output.prettyError(err);
           this.output.debug(err.stack);
         });
     }, ms('30s'));
@@ -1341,7 +1341,7 @@ export default class DevServer {
     routes: Route[] | undefined = nowConfig.routes,
     callLevel: number = 0
   ) => {
-    const { debug, log, error } = this.output;
+    const { debug } = this.output;
 
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
@@ -1683,17 +1683,15 @@ export default class DevServer {
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
         if (err.code === 'ENOENT') {
-          log(
-            `${chalk.red('Error:')} Command not found: ${chalk.cyan(
-              err.path,
-              ...err.spawnargs
-            )}`,
-            chalk.red
-          );
-          log(`Please ensure that ${cmd(err.path)} is properly installed`);
-        } else {
-          error(`Failed to start "${builderPkg.name}" dev server: ${err}`);
+          err.message = `Command not found: ${chalk.cyan(
+            err.path,
+            ...err.spawnargs
+          )}\nPlease ensure that ${cmd(err.path)} is properly installed`;
+          err.link = 'https://vercel.link/command-not-found';
         }
+
+        this.output.prettyError(err);
+
         await this.sendError(
           req,
           res,
