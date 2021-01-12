@@ -3,7 +3,7 @@ import path from 'path';
 import { URL, parse as parseUrl } from 'url';
 import test from 'ava';
 import semVer from 'semver';
-import { Writable } from 'stream';
+import { Readable } from 'stream';
 import { homedir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
@@ -1336,12 +1336,10 @@ test('try to purchase a domain', async t => {
     return;
   }
 
-  const stream = new Writable();
-  stream.pipe = dest => {
-    dest.write('y');
-    dest.write('y');
-    return dest;
-  };
+  const stream = new Readable();
+stream.push('y\n');
+stream.push('y\n');
+stream.push(null);
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
