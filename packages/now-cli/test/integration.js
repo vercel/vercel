@@ -1347,8 +1347,8 @@ test('try to purchase a domain', async t => {
     }
   );
 
-  stream.push('y\n');
-  stream.push('y\n');
+  stream.push('y');
+  stream.push('y');
   stream.push(null);
 
   const { stderr, stdout, exitCode } = await execaP;
