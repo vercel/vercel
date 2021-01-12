@@ -339,10 +339,6 @@ test(
   })
 );
 
-// Directory listing is skipped for now until the project flag is respected
-// in `vc dev`. Note that this test will need to be updated to patch the project
-// to enable directory listing. See CH-18434.
-/*
 test(
   '[DevServer] Test directory listing',
   testFixture('now-dev-directory-listing', async (t, server) => {
@@ -371,7 +367,6 @@ test(
     }
   })
 );
-*/
 
 test(
   '[DevServer] Test `public` directory with zero config',
