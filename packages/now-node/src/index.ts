@@ -471,7 +471,7 @@ export async function startDevServer(
   } else {
     // Got "exit" event from child process
     const [exitCode, signal] = result;
-    const reason = signal ? `${signal} signal` : `${exitCode} exit code`;
+    const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
   }
 }
