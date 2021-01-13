@@ -651,7 +651,7 @@ export default class DevServer {
       const cloudEnv = exposeSystemEnvs(
         this.projectEnvs || [],
         this.systemEnvValues || [],
-        this.projectSettings && this.projectSettings.autoExposeSystemEnvs,
+        this.projectSettings?.autoExposeSystemEnvs,
         new URL(this.address).host
       );
 
@@ -668,7 +668,7 @@ export default class DevServer {
     // mirror how VERCEL_REGION is injected in prod/preview
     // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
     // and should not contain VERCEL_REGION
-    if (this.projectSettings && this.projectSettings.autoExposeSystemEnvs) {
+    if (this.projectSettings?.autoExposeSystemEnvs) {
       runEnv['VERCEL_REGION'] = 'dev1';
     }
 
@@ -1904,6 +1904,12 @@ export default class DevServer {
     requestPath: string,
     nowRequestId: string
   ): boolean {
+    // If the "directory listing" feature is disabled in the
+    // Project's settings, then don't render the directory listing
+    if (this.projectSettings?.directoryListing === false) {
+      return false;
+    }
+
     let prefix = requestPath;
     if (prefix.length > 0 && !prefix.endsWith('/')) {
       prefix += '/';

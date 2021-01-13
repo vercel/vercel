@@ -232,7 +232,7 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { expectedCode = 0, skipDeploy, isExample } = {}
+  { expectedCode = 0, skipDeploy, isExample, projectSettings } = {}
 ) {
   return async t => {
     const nodeMajor = Number(process.versions.node.split('.')[0]);
@@ -249,24 +249,51 @@ function testFixtureStdio(
 
     // Deploy fixture and link project
     if (!skipDeploy) {
-      const project = join(cwd, '.vercel', 'project.json');
-      if (await fs.exists(project)) {
-        await fs.unlink(project);
-      }
+      const projectJsonPath = join(cwd, '.vercel', 'project.json');
+      await fs.remove(projectJsonPath);
       const gitignore = join(cwd, '.gitignore');
-      const gitignoreOrig = await fs.exists(gitignore);
-      let { stdout, stderr, exitCode } = await execa(
-        binaryPath,
-        ['-t', token, '--confirm', '--public', '--no-clipboard', '--debug'],
-        { cwd, reject: false }
-      );
-      console.log({ stdout, stderr, exitCode });
-      if (!gitignoreOrig && (await fs.exists(gitignore))) {
-        await fs.unlink(gitignore);
-      }
-      t.is(exitCode, expectedCode);
-      if (expectedCode === 0) {
-        deploymentUrl = new URL(stdout).host;
+      const hasGitignore = await fs.exists(gitignore);
+
+      try {
+        // Run `vc link`
+        const { exitCode: linkExitCode } = await execa(
+          binaryPath,
+          ['-t', token, 'link', '--confirm'],
+          { cwd, stdio: 'inherit', reject: false }
+        );
+        t.is(linkExitCode, 0);
+
+        // Patch the project with any non-default properties
+        if (projectSettings) {
+          const { projectId } = await fs.readJson(projectJsonPath);
+          const res = await fetch(
+            `https://api.vercel.com/v2/projects/${projectId}`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(projectSettings),
+            }
+          );
+          t.is(res.status, 200);
+        }
+
+        // Run `vc deploy`
+        let { exitCode, stdout } = await execa(
+          binaryPath,
+          ['-t', token, 'deploy', '--public', '--no-clipboard', '--debug'],
+          { cwd, stdio: ['ignore', 'pipe', 'inherit'], reject: false }
+        );
+        console.log({ exitCode, stdout });
+        t.is(exitCode, expectedCode);
+        if (expectedCode === 0) {
+          deploymentUrl = new URL(stdout).host;
+        }
+      } finally {
+        if (!hasGitignore) {
+          await fs.remove(gitignore);
+        }
       }
     }
 
@@ -622,14 +649,6 @@ test(
     });
   })
 );
-/*
-test(
-  '[vercel dev] displays directory listing after miss',
-  testFixtureStdio('handle-miss-display-dir-list', async (testPath) => {
-    await testPath(404, '/post', /one.html/m);
-  })
-);
-*/
 
 test(
   '[vercel dev] does not display directory listing after 404',
@@ -1054,20 +1073,19 @@ test(
   })
 );
 
-// Directory listing is skipped for now until the project flag is respected
-// in `vc dev`. Note that this test will need to be updated to patch the project
-// to enable directory listing. See CH-18434.
-/*
 test(
   '[vercel dev] 00-list-directory',
-  testFixtureStdio('00-list-directory', async testPath => {
-    await testPath(200, '/', /Files within/m);
-    await testPath(200, '/', /test[0-3]\.txt/m);
-    await testPath(200, '/', /\.well-known/m);
-    await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
-  })
+  testFixtureStdio(
+    '00-list-directory',
+    async testPath => {
+      await testPath(200, '/', /Files within/m);
+      await testPath(200, '/', /test[0-3]\.txt/m);
+      await testPath(200, '/', /\.well-known/m);
+      await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
+    },
+    { projectSettings: { directoryListing: true } }
+  )
 );
-*/
 
 test(
   '[vercel dev] 01-node',
@@ -1387,10 +1405,6 @@ test('[vercel dev] 24-ember', async t => {
   await tester(t);
 });
 
-// Directory listing is skipped for now until the project flag is respected
-// in `vc dev`. Note that this test will need to be updated to patch the project
-// to enable directory listing. See CH-18434.
-/*
 test(
   '[vercel dev] temporary directory listing',
   testFixtureStdio(
@@ -1423,7 +1437,6 @@ test(
     { skipDeploy: true }
   )
 );
-*/
 
 test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async t => {
   const directory = fixture('trigger-static-build');
