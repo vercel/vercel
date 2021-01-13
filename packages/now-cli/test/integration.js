@@ -1337,6 +1337,7 @@ test('try to purchase a domain', async t => {
   }
 
   const stream = new Readable();
+  stream._read = () => {};
 
   const execaP = execa(
     binaryPath,
@@ -1347,14 +1348,17 @@ test('try to purchase a domain', async t => {
     }
   );
 
+  await sleep(ms('1s'));
   stream.push('y');
+  await sleep(ms('1s'));
   stream.push('y');
+  await sleep(ms('1s'));
   stream.push(null);
 
   const { stderr, stdout, exitCode } = await execaP;
 
-  console.log(stderr);
   console.log(stdout);
+  console.log(stderr);
   console.log(exitCode);
 
   t.is(exitCode, 1);
