@@ -1352,13 +1352,12 @@ test('try to purchase a domain', async t => {
   stream.push('y');
   await sleep(ms('1s'));
   stream.push('y');
-  await sleep(ms('1s'));
   stream.push(null);
 
   const { stderr, stdout, exitCode } = await execaP;
 
-  console.log(stdout);
   console.log(stderr);
+  console.log(stdout);
   console.log(exitCode);
 
   t.is(exitCode, 1);
