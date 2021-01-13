@@ -1339,22 +1339,22 @@ test('try to purchase a domain', async t => {
   const stream = new Readable();
   stream._read = () => {};
 
-  const execaP = execa(
+  setTimeout(async () => {
+    await sleep(ms('1s'));
+    stream.push('y');
+    await sleep(ms('1s'));
+    stream.push('y');
+    stream.push(null);
+  }, ms('1s'));
+
+  const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
+    ['domains', 'buy', `test001.space`],
     {
       reject: false,
       input: stream,
     }
   );
-
-  await sleep(ms('1s'));
-  stream.push('y');
-  await sleep(ms('1s'));
-  stream.push('y');
-  stream.push(null);
-
-  const { stderr, stdout, exitCode } = await execaP;
 
   console.log(stderr);
   console.log(stdout);
