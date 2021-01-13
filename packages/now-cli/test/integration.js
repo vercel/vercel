@@ -1349,7 +1349,7 @@ test('try to purchase a domain', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['domains', 'buy', `test001.space`],
+    ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
     {
       reject: false,
       input: stream,
