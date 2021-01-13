@@ -581,7 +581,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   } else if (Array.isArray(result)) {
     // Got "exit" event from child process
     const [exitCode, signal] = result;
-    const reason = signal ? `${signal} signal` : `${exitCode} exit code`;
+    const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`\`go run ${entrypointWithExt}\` failed with ${reason}`);
   } else {
     throw new Error(`Unexpected result type: ${typeof result}`);
