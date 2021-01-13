@@ -800,9 +800,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(homeJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
     t.is(homeJson['MY_DECRYPTABLE_SECRET_ENV'], 'decryptable value');
 
-    // system env vars are not automatically exposed
-    t.is(apiJson['VERCEL'], undefined);
-    t.is(homeJson['VERCEL'], undefined);
+    // system env vars are automatically exposed
+    t.is(apiJson['VERCEL'], '1');
+    t.is(homeJson['VERCEL'], '1');
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 

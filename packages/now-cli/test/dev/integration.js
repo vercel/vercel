@@ -1054,6 +1054,10 @@ test(
   })
 );
 
+// Directory listing is skipped for now until the project flag is respected
+// in `vc dev`. Note that this test will need to be updated to patch the project
+// to enable directory listing. See CH-18434.
+/*
 test(
   '[vercel dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async testPath => {
@@ -1063,6 +1067,7 @@ test(
     await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
   })
 );
+*/
 
 test(
   '[vercel dev] 01-node',
@@ -1382,6 +1387,10 @@ test('[vercel dev] 24-ember', async t => {
   await tester(t);
 });
 
+// Directory listing is skipped for now until the project flag is respected
+// in `vc dev`. Note that this test will need to be updated to patch the project
+// to enable directory listing. See CH-18434.
+/*
 test(
   '[vercel dev] temporary directory listing',
   testFixtureStdio(
@@ -1414,6 +1423,7 @@ test(
     { skipDeploy: true }
   )
 );
+*/
 
 test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async t => {
   const directory = fixture('trigger-static-build');
