@@ -580,9 +580,9 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     };
   } else if (Array.isArray(result)) {
     // Got "exit" event from child process
-    throw new Error(
-      `Failed to start dev server for "${entrypointWithExt}" (code=${result[0]}, signal=${result[1]})`
-    );
+    const [exitCode, signal] = result;
+    const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
+    throw new Error(`\`go run ${entrypointWithExt}\` failed with ${reason}`);
   } else {
     throw new Error(`Unexpected result type: ${typeof result}`);
   }

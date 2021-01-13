@@ -458,7 +458,6 @@ export async function startDevServer(
 
   if (isPortInfo(result)) {
     // "message" event
-
     const ext = extname(entrypoint);
     if (ext === '.ts' || ext === '.tsx') {
       // Invoke `tsc --noEmit` asynchronously in the background, so
@@ -470,10 +469,10 @@ export async function startDevServer(
 
     return { port: result.port, pid };
   } else {
-    // "exit" event
-    throw new Error(
-      `Failed to start dev server for "${entrypoint}" (code=${result[0]}, signal=${result[1]})`
-    );
+    // Got "exit" event from child process
+    const [exitCode, signal] = result;
+    const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
+    throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
   }
 }
 
