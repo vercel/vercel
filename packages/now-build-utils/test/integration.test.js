@@ -39,7 +39,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
 
 // few foreign tests
 
-const buildersToTestWith = ['now-next', 'now-node', 'now-static-build'];
+const buildersToTestWith = ['now-node'];
 
 // eslint-disable-next-line no-restricted-syntax
 for (const builder of buildersToTestWith) {
