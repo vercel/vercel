@@ -6,6 +6,7 @@ import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import createOutput, { Output } from './output/create-output';
 import responseError from './response-error';
 import ua from './ua';
+import printIndications from './print-indications';
 
 export interface FetchOptions {
   body?: NodeJS.ReadableStream | object | string;
@@ -116,6 +117,8 @@ export default class Client extends EventEmitter {
         if (!res.headers.get('content-type')) {
           return null;
         }
+
+        printIndications(res);
 
         return res.headers.get('content-type').includes('application/json')
           ? res.json()

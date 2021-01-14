@@ -14,6 +14,7 @@ import createOutput from './output';
 import { responseError } from './error';
 import stamp from './output/stamp';
 import { BuildError } from './errors-ts';
+import printIndications from './print-indications.ts';
 
 export default class Now extends EventEmitter {
   constructor({
@@ -426,7 +427,7 @@ export default class Now extends EventEmitter {
     return this._syncAmount;
   }
 
-  _fetch(_url, opts = {}) {
+  async _fetch(_url, opts = {}) {
     if (opts.useCurrentTeam !== false && this.currentTeam) {
       const parsedUrl = parseUrl(_url, true);
       const query = parsedUrl.query;
@@ -449,11 +450,12 @@ export default class Now extends EventEmitter {
       opts.body = JSON.stringify(opts.body);
       opts.headers['Content-Type'] = 'application/json';
     }
-
-    return this._output.time(
+    const res = await this._output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      fetch(`${this._apiUrl}${_url}`, opts)
+      fetch(`http://localhost:3000${_url}`, opts)
     );
+    printIndications(res);
+    return res;
   }
 
   // public retry with built-in retrying that can be
