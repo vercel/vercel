@@ -70,7 +70,10 @@ export default async function buy(
   }
 
   const availableStamp = stamp();
-  const domainPrice = await getDomainPrice(client, domainName);
+  const [domainPrice, renewalPrice] = await Promise.all([
+    getDomainPrice(client, domainName),
+    getDomainPrice(client, domainName, 'renewal'),
+  ]);
 
   if (domainPrice instanceof Error) {
     output.prettyError(domainPrice);
@@ -102,12 +105,21 @@ export default async function buy(
     return 0;
   }
 
+  const autoRenew = await promptBool(
+    renewalPrice.period === 1
+      ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
+      : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
+          `$${price}`
+        )}?`,
+    { defaultValue: true }
+  );
+
   let buyResult;
   const purchaseStamp = stamp();
   const stopPurchaseSpinner = output.spinner('Purchasing');
 
   try {
-    buyResult = await purchaseDomain(client, domainName, price);
+    buyResult = await purchaseDomain(client, domainName, price, autoRenew);
   } catch (err) {
     stopPurchaseSpinner();
     output.error(

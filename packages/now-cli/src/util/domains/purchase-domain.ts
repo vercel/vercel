@@ -12,11 +12,12 @@ type Response = {
 export default async function purchaseDomain(
   client: Client,
   name: string,
-  expectedPrice: number
+  expectedPrice: number,
+  renew: boolean = true
 ) {
   try {
     return await client.fetch<Response>(`/v3/domains/buy`, {
-      body: { name, expectedPrice },
+      body: { name, expectedPrice, renew },
       method: 'POST',
     });
   } catch (error) {
