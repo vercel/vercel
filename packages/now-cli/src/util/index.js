@@ -452,7 +452,7 @@ export default class Now extends EventEmitter {
     }
     const res = await this._output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      fetch(`http://localhost:3000${_url}`, opts)
+      fetch(`${this._apiUrl}${_url}`, opts)
     );
     printIndications(res);
     return res;
