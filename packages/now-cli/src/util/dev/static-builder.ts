@@ -13,37 +13,30 @@ export function build({
   entrypoint,
   config: { zeroConfig, outputDirectory },
 }: BuildOptions): BuildResult {
-  let path = entrypoint;
-
-  // Add the output directory prefix
-  if (zeroConfig && outputDirectory) {
-    path = `${outputDirectory}/${path}`;
-  }
-
-  const output = {
-    [entrypoint]: files[path] as FileFsRef,
+  const path =
+    zeroConfig && outputDirectory
+      ? `${outputDirectory}/${entrypoint}`
+      : entrypoint;
+  return {
+    output: {
+      [entrypoint]: files[path] as FileFsRef,
+    },
+    routes: [],
+    watch: [path],
   };
-  const watch = [path];
-
-  return { output, routes: [], watch };
 }
 
-export function shouldServe(opts: ShouldServeOptions) {
+export function shouldServe(_opts: ShouldServeOptions) {
+  const opts = { ..._opts };
   let {
-    entrypoint,
-    requestPath,
     config: { zeroConfig, outputDirectory },
   } = opts;
 
   // Add the output directory prefix
   if (zeroConfig && outputDirectory) {
-    entrypoint = `${outputDirectory}/${entrypoint}`;
-    requestPath = `${outputDirectory}/${requestPath}`;
+    opts.entrypoint = `${outputDirectory}/${opts.entrypoint}`;
+    opts.requestPath = `${outputDirectory}/${opts.requestPath}`;
   }
 
-  return defaultShouldServe({
-    ...opts,
-    entrypoint,
-    requestPath,
-  });
+  return defaultShouldServe(opts);
 }
