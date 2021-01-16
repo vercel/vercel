@@ -280,7 +280,6 @@ export async function executeBuild(
       path = extensionless;
     }
 
-    delete output[path];
     output[path] = value;
   });
 
@@ -402,7 +401,7 @@ export async function getBuildMatches(
   const builds = nowConfig.builds || [{ src: '**', use: '@vercel/static' }];
 
   for (const buildConfig of builds) {
-    let { src = '**', use } = buildConfig;
+    let { src = '**', use, config = {} } = buildConfig;
 
     if (!use) {
       continue;
@@ -437,6 +436,15 @@ export async function getBuildMatches(
 
     for (const file of files) {
       src = relative(cwd, file);
+
+      // Remove the output directory prefix
+      if (config.zeroConfig && config.outputDirectory) {
+        const outputMatch = config.outputDirectory + '/';
+        if (src.startsWith(outputMatch)) {
+          src = src.slice(outputMatch.length);
+        }
+      }
+
       const builderWithPkg = await getBuilder(use, output);
       matches.push({
         ...buildConfig,
