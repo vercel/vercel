@@ -14,6 +14,10 @@ async function fetchRetry(...args) {
           // request to https://api-gru1.vercel.com/v3/now/deployments/dpl_FBWWhpQomjgwjJLu396snLrGZYCm failed, reason:
           // connect ETIMEDOUT 18.228.143.224:443
           throw canRetry(error);
+        } else if (error.code === 'ECONNREFUSED') {
+          // request to https://test2020-dhdy1xrfa.vercel.app/blog/post-3 failed, reason:
+          // connect ECONNREFUSED 76.76.21.21:443
+          throw canRetry(error);
         } else if (error.code === 'ECONNRESET') {
           throw canRetry(error);
         }

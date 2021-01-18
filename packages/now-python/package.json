@@ -1,12 +1,12 @@
 {
   "name": "@vercel/python",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
   "files": [
     "dist",
-    "now_init.py"
+    "vc_init.py"
   ],
   "repository": {
     "type": "git",

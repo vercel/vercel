@@ -43,6 +43,7 @@ import {
 } from '@vercel/build-utils';
 import _frameworks, { Framework } from '@vercel/frameworks';
 
+import cmd from '../output/cmd';
 import link from '../output/link';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
@@ -650,7 +651,7 @@ export default class DevServer {
       const cloudEnv = exposeSystemEnvs(
         this.projectEnvs || [],
         this.systemEnvValues || [],
-        this.projectSettings && this.projectSettings.autoExposeSystemEnvs,
+        this.projectSettings?.autoExposeSystemEnvs,
         new URL(this.address).host
       );
 
@@ -667,7 +668,7 @@ export default class DevServer {
     // mirror how VERCEL_REGION is injected in prod/preview
     // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
     // and should not contain VERCEL_REGION
-    if (this.projectSettings && this.projectSettings.autoExposeSystemEnvs) {
+    if (this.projectSettings?.autoExposeSystemEnvs) {
       runEnv['VERCEL_REGION'] = 'dev1';
     }
 
@@ -886,7 +887,7 @@ export default class DevServer {
         })
         .catch(err => {
           this.updateBuildersPromise = null;
-          this.output.error(`Failed to update builders: ${err.message}`);
+          this.output.prettyError(err);
           this.output.debug(err.stack);
         });
     }, ms('30s'));
@@ -1681,7 +1682,16 @@ export default class DevServer {
         // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
-        debug(`Error starting "${builderPkg.name}" dev server: ${err}`);
+        if (err.code === 'ENOENT') {
+          err.message = `Command not found: ${chalk.cyan(
+            err.path,
+            ...err.spawnargs
+          )}\nPlease ensure that ${cmd(err.path)} is properly installed`;
+          err.link = 'https://vercel.link/command-not-found';
+        }
+
+        this.output.prettyError(err);
+
         await this.sendError(
           req,
           res,
@@ -1894,6 +1904,12 @@ export default class DevServer {
     requestPath: string,
     nowRequestId: string
   ): boolean {
+    // If the "directory listing" feature is disabled in the
+    // Project's settings, then don't render the directory listing
+    if (this.projectSettings?.directoryListing === false) {
+      return false;
+    }
+
     let prefix = requestPath;
     if (prefix.length > 0 && !prefix.endsWith('/')) {
       prefix += '/';

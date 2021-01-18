@@ -23,7 +23,7 @@ export default async function promptBool(label: string, options: Options = {}) {
     trailing = '',
   } = options;
 
-  return new Promise(resolve => {
+  return new Promise<boolean>(resolve => {
     const isRaw = Boolean(stdin && stdin.isRaw);
 
     if (stdin) {

@@ -3,6 +3,7 @@ import path from 'path';
 import { URL, parse as parseUrl } from 'url';
 import test from 'ava';
 import semVer from 'semver';
+import { Readable } from 'stream';
 import { homedir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
@@ -800,9 +801,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(homeJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
     t.is(homeJson['MY_DECRYPTABLE_SECRET_ENV'], 'decryptable value');
 
-    // system env vars are not automatically exposed
-    t.is(apiJson['VERCEL'], undefined);
-    t.is(homeJson['VERCEL'], undefined);
+    // system env vars are automatically exposed
+    t.is(apiJson['VERCEL'], '1');
+    t.is(homeJson['VERCEL'], '1');
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
@@ -1335,12 +1336,23 @@ test('try to purchase a domain', async t => {
     return;
   }
 
+  const stream = new Readable();
+  stream._read = () => {};
+
+  setTimeout(async () => {
+    await sleep(ms('1s'));
+    stream.push('y');
+    await sleep(ms('1s'));
+    stream.push('y');
+    stream.push(null);
+  }, ms('1s'));
+
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
     {
       reject: false,
-      input: 'y',
+      input: stream,
     }
   );
 

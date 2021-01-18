@@ -76,10 +76,10 @@ const tscPath = resolve(
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
 
-const LAUNCHER_FILENAME = '___now_launcher';
-const BRIDGE_FILENAME = '___now_bridge';
-const HELPERS_FILENAME = '___now_helpers';
-const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support';
+const LAUNCHER_FILENAME = '___vc_launcher';
+const BRIDGE_FILENAME = '___vc_bridge';
+const HELPERS_FILENAME = '___vc_helpers';
+const SOURCEMAP_SUPPORT_FILENAME = '___vc_sourcemap_support';
 
 async function downloadInstallAndBundle({
   files,
@@ -458,7 +458,6 @@ export async function startDevServer(
 
   if (isPortInfo(result)) {
     // "message" event
-
     const ext = extname(entrypoint);
     if (ext === '.ts' || ext === '.tsx') {
       // Invoke `tsc --noEmit` asynchronously in the background, so
@@ -470,10 +469,10 @@ export async function startDevServer(
 
     return { port: result.port, pid };
   } else {
-    // "exit" event
-    throw new Error(
-      `Failed to start dev server for "${entrypoint}" (code=${result[0]}, signal=${result[1]})`
-    );
+    // Got "exit" event from child process
+    const [exitCode, signal] = result;
+    const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
+    throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
   }
 }
 
