@@ -122,7 +122,17 @@ export default async function add(
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
-  const choices = getEnvTargetChoices().filter(c => !existing.has(c.value));
+  const choices = getEnvTargetChoices().filter(c => {
+    // hide Development if "Secret" is chosen
+    if (
+      envType === ProjectEnvType.Secret &&
+      c.value === ProjectEnvTarget.Development
+    ) {
+      return false;
+    }
+
+    return !existing.has(c.value);
+  });
 
   if (choices.length === 0) {
     output.error(
