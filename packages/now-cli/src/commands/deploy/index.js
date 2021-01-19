@@ -3,7 +3,6 @@ import { resolve, basename } from 'path';
 import { fileNameSymbol } from '@vercel/client';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
-import createOutput from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
@@ -15,6 +14,7 @@ import deploy from './latest';
 export default async ctx => {
   const {
     authConfig,
+    output,
     config: { currentTeam },
     apiUrl,
   } = ctx;
@@ -48,7 +48,6 @@ export default async ctx => {
     localConfig = readLocalConfig(paths[0]);
   }
   const debugEnabled = argv['--debug'];
-  const output = createOutput({ debug: debugEnabled });
   const stats = {};
 
   if (argv['--help']) {
@@ -74,6 +73,7 @@ export default async ctx => {
       apiUrl,
       token: authConfig.token,
       currentTeam,
+      output,
       debug: debugEnabled,
     });
     try {
