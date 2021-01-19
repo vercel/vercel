@@ -14,7 +14,6 @@ import success from '../../util/output/success';
 import getUser from '../../util/get-user.ts';
 import Client from '../../util/client.ts';
 import { getCommandName } from '../../util/pkg-name.ts';
-import createOutput from '../../util/output';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 
@@ -65,8 +64,8 @@ export default async function ({
   noopMsg = 'No changes made',
   apiUrl,
   token,
+  output,
 } = {}) {
-  const output = createOutput();
   const { currentTeam: currentTeamId } = config;
 
   const stopSpinner = wait('Fetching teams');

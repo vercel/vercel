@@ -8,7 +8,6 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
-import { Output } from '../../util/output';
 import { NowContext, Cert } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
@@ -21,11 +20,11 @@ interface Options {
 async function ls(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ): Promise<number> {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;

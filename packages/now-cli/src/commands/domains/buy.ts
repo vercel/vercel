@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import psl from 'psl';
 
 import { NowContext } from '../../types';
-import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getDomainPrice from '../../util/domains/get-domain-price';
@@ -21,11 +20,11 @@ type Options = {
 export default async function buy(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;

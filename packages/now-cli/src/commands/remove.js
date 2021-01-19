@@ -5,7 +5,6 @@ import plural from 'pluralize';
 import table from 'text-table';
 import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
-import createOutput from '../util/output';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
 import { normalizeURL } from '../util/url';
@@ -79,12 +78,11 @@ export default async function main(ctx) {
 
   argv._ = argv._.slice(1);
 
-  const apiUrl = ctx.apiUrl;
+  const { apiUrl, output } = ctx;
   const hard = argv.hard || false;
   const skipConfirmation = argv.yes || false;
   const ids = argv._;
   const debugEnabled = argv.debug;
-  const output = createOutput({ debug: debugEnabled });
   const { success, error, log } = output;
 
   if (argv.help || ids[0] === 'help') {
@@ -235,11 +233,9 @@ export default async function main(ctx) {
   }
 
   if (!skipConfirmation) {
-    const confirmation = (await readConfirmation(
-      deployments,
-      projects,
-      output
-    )).toLowerCase();
+    const confirmation = (
+      await readConfirmation(deployments, projects, output)
+    ).toLowerCase();
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
       output.log('Aborted');

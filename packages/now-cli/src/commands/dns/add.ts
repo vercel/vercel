@@ -6,7 +6,6 @@ import {
   DNSInvalidType,
 } from '../../util/errors-ts';
 import { NowContext } from '../../types';
-import { Output } from '../../util/output';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -22,11 +21,11 @@ type Options = {
 export default async function add(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;

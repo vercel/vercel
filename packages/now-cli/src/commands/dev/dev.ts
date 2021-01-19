@@ -49,7 +49,6 @@ export default async function dev(
 
     link = await setupAndLink(
       ctx,
-      output,
       cwd,
       forceDelete,
       autoConfirm,

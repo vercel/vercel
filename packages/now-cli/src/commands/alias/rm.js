@@ -12,9 +12,10 @@ import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 import { getCommandName } from '../../util/pkg-name.ts';
 
-export default async function rm(ctx, opts, args, output) {
+export default async function rm(ctx, opts, args) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;

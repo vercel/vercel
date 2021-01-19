@@ -17,11 +17,11 @@ type Options = {
 export default async function rm(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
@@ -100,12 +100,7 @@ function readConfirmation(
     process.stdin
       .on('data', d => {
         process.stdin.pause();
-        resolve(
-          d
-            .toString()
-            .trim()
-            .toLowerCase() === 'y'
-        );
+        resolve(d.toString().trim().toLowerCase() === 'y');
       })
       .resume();
   });

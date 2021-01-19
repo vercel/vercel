@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 
 import { NowContext } from '../../types';
-import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
@@ -106,24 +105,23 @@ export default async function main(ctx: NowContext) {
     return 2;
   }
 
-  const output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'add':
-      return add(ctx, argv, args, output);
+      return add(ctx, argv, args);
     case 'inspect':
-      return inspect(ctx, argv, args, output);
+      return inspect(ctx, argv, args);
     case 'move':
-      return move(ctx, argv, args, output);
+      return move(ctx, argv, args);
     case 'buy':
-      return buy(ctx, argv, args, output);
+      return buy(ctx, argv, args);
     case 'rm':
-      return rm(ctx, argv, args, output);
+      return rm(ctx, argv, args);
     case 'transferIn':
-      return transferIn(ctx, argv, args, output);
+      return transferIn(ctx, argv, args);
     case 'verify':
-      return verify(ctx, argv, args, output);
+      return verify(ctx, argv, args);
     default:
-      return ls(ctx, argv, args, output);
+      return ls(ctx, argv, args);
   }
 }

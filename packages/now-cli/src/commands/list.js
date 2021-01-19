@@ -3,7 +3,6 @@ import ms from 'ms';
 import table from 'text-table';
 import Now from '../util';
 import getArgs from '../util/get-args';
-import createOutput from '../util/output';
 import { handleError } from '../util/error';
 import cmd from '../util/output/cmd.ts';
 import logo from '../util/output/logo';
@@ -78,11 +77,15 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const debugEnabled = argv['--debug'];
+  const {
+    authConfig: { token },
+    output,
+    apiUrl,
+    config,
+  } = ctx;
 
-  const { print, log, error, note, debug } = createOutput({
-    debug: debugEnabled,
-  });
+  const debugEnabled = argv['--debug'];
+  const { print, log, error, note, debug } = output;
 
   if (argv._.length > 2) {
     error(`${getCommandName('ls [app]')} accepts at most one argument`);
@@ -92,24 +95,19 @@ export default async function main(ctx) {
   let app = argv._[1];
   let host = null;
 
-  const apiUrl = ctx.apiUrl;
-
   if (argv['--help']) {
     help();
     return 0;
   }
 
   const meta = parseMeta(argv['--meta']);
-  const {
-    authConfig: { token },
-    config,
-  } = ctx;
   const { currentTeam, includeScheme } = config;
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -135,7 +133,13 @@ export default async function main(ctx) {
     `Fetching deployments in ${chalk.bold(contextName)}`
   );
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    output,
+    currentTeam,
+  });
   const start = new Date();
 
   if (app && !isValidName(app)) {

@@ -8,7 +8,6 @@ import exit from '../util/exit';
 import Client from '../util/client.ts';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
-import createOutput from '../util/output';
 import getCommandFlags from '../util/get-command-flags';
 import wait from '../util/output/wait';
 import { getPkgName, getCommandName } from '../util/pkg-name.ts';
@@ -76,13 +75,12 @@ const main = async ctx => {
     return exit(2);
   }
 
-  const output = createOutput({ debug });
-
   const {
     authConfig: { token },
     config: { currentTeam },
+    output,
   } = ctx;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
 
   let contextName = null;
 
@@ -288,12 +286,7 @@ function readConfirmation(projectName) {
     process.stdin
       .on('data', d => {
         process.stdin.pause();
-        resolve(
-          d
-            .toString()
-            .trim()
-            .toLowerCase() === 'y'
-        );
+        resolve(d.toString().trim().toLowerCase() === 'y');
       })
       .resume();
   });

@@ -18,14 +18,10 @@ type Options = {
   '--debug': boolean;
 };
 
-async function rm(
-  ctx: NowContext,
-  opts: Options,
-  args: string[],
-  output: Output
-) {
+async function rm(ctx: NowContext, opts: Options, args: string[]) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;

@@ -29,11 +29,11 @@ type Options = {
 export default async function set(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const {
     authConfig: { token },
+    output,
     config,
     localConfig,
   } = ctx;

@@ -5,7 +5,6 @@ import logo from '../util/output/logo';
 import handleError from '../util/handle-error';
 import getArgs from '../util/get-args';
 import { NowContext } from '../types';
-import createOutput from '../util/output';
 import getUpdateCommand from '../util/get-update-command';
 import { getPkgName, getTitleName } from '../util/pkg-name';
 
@@ -35,6 +34,7 @@ const help = () => {
 
 export default async function main(ctx: NowContext): Promise<number> {
   let argv;
+  const { output } = ctx;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -55,8 +55,6 @@ export default async function main(ctx: NowContext): Promise<number> {
     return 2;
   }
 
-  const debugEnabled = argv['--debug'];
-  const output = createOutput({ debug: debugEnabled });
   output.log(
     `Please run ${cmd(
       await getUpdateCommand()

@@ -3,7 +3,6 @@ import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { NowContext, ProjectLinkResult, ProjectSettings } from '../../types';
 import { NowConfig } from '../dev/types';
-import { Output } from '../output';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -30,7 +29,6 @@ import Now from '../index';
 
 export default async function setupAndLink(
   ctx: NowContext,
-  output: Output,
   path: string,
   forceDelete: boolean,
   autoConfirm: boolean,
@@ -39,9 +37,10 @@ export default async function setupAndLink(
 ): Promise<ProjectLinkResult> {
   const {
     authConfig: { token },
+    apiUrl,
+    output,
     config,
   } = ctx;
-  const { apiUrl } = ctx;
   const debug = output.isDebugEnabled();
   const client = new Client({
     apiUrl,

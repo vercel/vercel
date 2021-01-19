@@ -19,7 +19,6 @@ import getGlobalPathConfig from '../util/config/global-path';
 import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
-import createOutput from '../util/output';
 import executeLogin from '../util/login/login.ts';
 import { prependEmoji, emoji } from '../util/emoji';
 import { getCommandName, getPkgName } from '../util/pkg-name.ts';
@@ -141,12 +140,10 @@ const login = async ctx => {
     await exit(0);
   }
 
-  const debugEnabled = argv['--debug'];
-  const output = createOutput({ debug: debugEnabled });
+  const { apiUrl, output } = ctx.apiUrl;
 
   argv._ = argv._.slice(1);
 
-  const apiUrl = ctx.apiUrl;
   let email;
   let emailIsValid = false;
   let stopSpinner;
@@ -190,7 +187,7 @@ const login = async ctx => {
   let verificationToken;
   let securityCode;
 
-  stopSpinner = output.spinner('Sending you an email');
+  output.spinner('Sending you an email');
 
   try {
     const data = await executeLogin(apiUrl, email);
@@ -202,7 +199,7 @@ const login = async ctx => {
     return 1;
   }
 
-  stopSpinner();
+  output.stopSpinner();
 
   // Clear up `Sending email` success message
   process.stdout.write(eraseLines(possibleAddress ? 1 : 2));
@@ -215,7 +212,7 @@ const login = async ctx => {
     )}.\n`
   );
 
-  stopSpinner = output.spinner('Waiting for your confirmation');
+  output.spinner('Waiting for your confirmation');
 
   let token;
 
@@ -235,7 +232,7 @@ const login = async ctx => {
     }
   }
 
-  stopSpinner();
+  output.stopSpinner();
   console.log(ok('Email confirmed'));
 
   // There's no need to save the user since we always
