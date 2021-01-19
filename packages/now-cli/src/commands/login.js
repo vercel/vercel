@@ -146,7 +146,6 @@ const login = async ctx => {
 
   let email;
   let emailIsValid = false;
-  let stopSpinner;
 
   const possibleAddress = argv._[0];
 
@@ -194,8 +193,7 @@ const login = async ctx => {
     verificationToken = data.token;
     securityCode = data.securityCode;
   } catch (err) {
-    stopSpinner();
-    console.log(error(err.message));
+    output.error(err.message);
     return 1;
   }
 
@@ -225,8 +223,7 @@ const login = async ctx => {
         // /now/registraton is currently returning plain text in that case
         // we just wait for the user to click on the link
       } else {
-        stopSpinner();
-        console.log(err.message);
+        output.error(err.message);
         return 1;
       }
     }
