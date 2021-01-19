@@ -1172,7 +1172,7 @@ test('login with unregistered user', async t => {
   console.log(exitCode);
 
   const goal = `Error! Please sign up: https://vercel.com/signup`;
-  const lines = stdout.trim().split('\n');
+  const lines = stderr.trim().split('\n');
   const last = lines[lines.length - 1];
 
   t.is(exitCode, 1);
