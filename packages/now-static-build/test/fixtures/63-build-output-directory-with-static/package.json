@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "build": "mkdir -p public && echo static > public/index.txt && cp -r fake .vercel_build_output"
-  }
-}

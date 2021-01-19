@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import execa from 'execa';
 import semver from 'semver';
 import npa from 'npm-package-arg';
@@ -8,9 +9,10 @@ import { mkdirp, readJSON, writeJSON } from 'fs-extra';
 import { NowBuildError, PackageJson } from '@vercel/build-utils';
 import cliPkg from '../pkg';
 
-import { NoBuilderCacheError } from '../errors-ts';
+import cmd from '../output/cmd';
 import { Output } from '../output';
 import { getDistTag } from '../get-dist-tag';
+import { NoBuilderCacheError } from '../errors-ts';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
@@ -261,7 +263,9 @@ async function npmInstall(
       throw new NowBuildError({
         message:
           (result as any).code === 'ENOENT'
-            ? '`npm` is not installed'
+            ? `Command not found: ${chalk.cyan(
+                'npm'
+              )}\nPlease ensure that ${cmd('npm')} is properly installed`
             : 'Failed to install `vercel dev` dependencies',
         code: 'NPM_INSTALL_ERROR',
         link: 'https://vercel.link/npm-install-failed-dev',

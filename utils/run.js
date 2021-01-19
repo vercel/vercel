@@ -9,10 +9,7 @@ const allPackages = [
   'now-cgi',
   'now-client',
   'now-node-bridge',
-  'now-next',
   'now-node',
-  'redwood',
-  'now-static-build',
   'now-go',
   'now-python',
   'now-ruby',
@@ -36,9 +33,7 @@ async function main() {
   } else {
     const branch =
       process.env.GITHUB_HEAD_REF ||
-      execSync('git branch --show-current')
-        .toString()
-        .trim();
+      execSync('git branch --show-current').toString().trim();
 
     const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
@@ -92,8 +87,9 @@ function runScript(pkgName, script) {
         }
         reject(
           new Error(
-            `[${pkgName}] Exited script "${script}" with code ${code ||
-              signal}.`
+            `[${pkgName}] Exited script "${script}" with code ${
+              code || signal
+            }.`
           )
         );
       });

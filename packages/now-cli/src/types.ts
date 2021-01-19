@@ -231,6 +231,7 @@ export interface ProjectSettings {
   outputDirectory?: string | null;
   rootDirectory?: string | null;
   autoExposeSystemEnvs?: boolean;
+  directoryListing?: boolean;
 }
 
 export interface Project extends ProjectSettings {

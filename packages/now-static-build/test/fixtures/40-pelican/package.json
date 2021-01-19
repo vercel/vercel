@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "build": "pelican && mv output public"
-  }
-}
