@@ -3,7 +3,7 @@ import boxen from 'boxen';
 import { format } from 'util';
 import { Console } from 'console';
 import renderLink from './link';
-import wait from './wait';
+import wait, { StopSpinner } from './wait';
 
 export type Output = ReturnType<typeof createOutput>;
 
@@ -94,15 +94,17 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
-  function spinner(message: string, delay: number = 300) {
+  function spinner(message: string, delay: number = 300): StopSpinner {
     if (debugEnabled) {
       debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       let isEnded = false;
-      return () => {
+      const stop = (() => {
         if (isEnded) return;
         isEnded = true;
         debug(`Spinner ended (${message})`);
-      };
+      }) as StopSpinner;
+      stop.text = message;
+      return stop;
     }
 
     return wait(message, delay);

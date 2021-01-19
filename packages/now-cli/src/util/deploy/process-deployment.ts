@@ -6,7 +6,7 @@ import {
   DeploymentOptions,
   NowClientOptions,
 } from '@vercel/client';
-import { Output } from '../output';
+import { Output, StopSpinner } from '../output';
 // @ts-ignore
 import Now from '../../util';
 import { NowConfig } from '../dev/types';
@@ -100,15 +100,28 @@ export default async function processDeployment({
     skipAutoDetectionConfirmation,
   };
 
-  let queuedSpinner = null;
-  let buildSpinner = null;
-  let deploySpinner = null;
+  let spinner: StopSpinner | null = null;
 
-  const deployingSpinner = output.spinner(
+  const setSpinner = (msg: string): StopSpinner => {
+    if (spinner) {
+      spinner.text = msg;
+    } else {
+      spinner = output.spinner(msg, 0);
+    }
+    return spinner;
+  };
+
+  const stopSpinner = () => {
+    if (spinner) {
+      spinner();
+      spinner = null;
+    }
+  };
+
+  setSpinner(
     isSettingUpProject
       ? 'Setting up project'
-      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
-    0
+      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`
   );
 
   // collect indications to show the user once
@@ -138,16 +151,7 @@ export default async function processDeployment({
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-        if (deploySpinner) {
-          deploySpinner();
-        }
-        deployingSpinner();
+        stopSpinner();
         bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
           width: 20,
           complete: '=',
@@ -170,7 +174,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'created') {
-        deployingSpinner();
+        stopSpinner();
 
         if (bar && !bar.complete) {
           bar.tick(bar.total + 1);
@@ -197,57 +201,27 @@ export default async function processDeployment({
           process.stdout.write(`https://${event.payload.url}`);
         }
 
-        if (queuedSpinner === null) {
-          queuedSpinner =
-            event.payload.readyState === 'QUEUED'
-              ? output.spinner('Queued', 0)
-              : output.spinner('Building', 0);
-        }
+        setSpinner(
+          event.payload.readyState === 'QUEUED' ? 'Queued' : 'Building'
+        );
       }
 
       if (event.type === 'building') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-
-        if (buildSpinner === null) {
-          buildSpinner = output.spinner('Building', 0);
-        }
+        setSpinner('Building');
       }
 
       if (event.type === 'canceled') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
+        stopSpinner();
         return event.payload;
       }
 
       if (event.type === 'ready') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-
-        deploySpinner = output.spinner('Completing', 0);
+        setSpinner('Completing');
       }
 
       // Handle error events
       if (event.type === 'error') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-        if (deploySpinner) {
-          deploySpinner();
-        }
-        deployingSpinner();
+        stopSpinner();
 
         const error = await now.handleDeploymentError(event.payload, {
           hashes,
@@ -263,32 +237,13 @@ export default async function processDeployment({
 
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-        if (deploySpinner) {
-          deploySpinner();
-        }
-        deployingSpinner();
-
+        stopSpinner();
         event.payload.indications = indications;
         return event.payload;
       }
     }
   } catch (err) {
-    if (queuedSpinner) {
-      queuedSpinner();
-    }
-    if (buildSpinner) {
-      buildSpinner();
-    }
-    if (deploySpinner) {
-      deploySpinner();
-    }
-    deployingSpinner();
+    stopSpinner();
     throw err;
   }
 }
