@@ -100,11 +100,7 @@ export default async function processDeployment({
     skipAutoDetectionConfirmation,
   };
 
-  let queuedSpinner = null;
-  let buildSpinner = null;
-  let deploySpinner = null;
-
-  const deployingSpinner = output.spinner(
+  output.spinner(
     isSettingUpProject
       ? 'Setting up project'
       : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
@@ -138,16 +134,7 @@ export default async function processDeployment({
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-        if (deploySpinner) {
-          deploySpinner();
-        }
-        deployingSpinner();
+        output.stopSpinner();
         bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
           width: 20,
           complete: '=',
@@ -170,8 +157,6 @@ export default async function processDeployment({
       }
 
       if (event.type === 'created') {
-        deployingSpinner();
-
         if (bar && !bar.complete) {
           bar.tick(bar.total + 1);
         }
@@ -191,63 +176,36 @@ export default async function processDeployment({
 
         now.url = event.payload.url;
 
+        output.stopSpinner();
+
         printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
         if (quiet) {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
-        if (queuedSpinner === null) {
-          queuedSpinner =
-            event.payload.readyState === 'QUEUED'
-              ? output.spinner('Queued', 0)
-              : output.spinner('Building', 0);
-        }
+        output.spinner(
+          event.payload.readyState === 'QUEUED' ? 'Queued' : 'Building',
+          0
+        );
       }
 
       if (event.type === 'building') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-
-        if (buildSpinner === null) {
-          buildSpinner = output.spinner('Building', 0);
-        }
+        output.spinner('Building', 0);
       }
 
       if (event.type === 'canceled') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
+        output.stopSpinner();
         return event.payload;
       }
 
       if (event.type === 'ready') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-
-        deploySpinner = output.spinner('Completing', 0);
+        output.spinner('Completing', 0);
       }
 
       // Handle error events
       if (event.type === 'error') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-        if (deploySpinner) {
-          deploySpinner();
-        }
-        deployingSpinner();
+        output.stopSpinner();
 
         const error = await now.handleDeploymentError(event.payload, {
           hashes,
@@ -263,32 +221,12 @@ export default async function processDeployment({
 
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
-        if (queuedSpinner) {
-          queuedSpinner();
-        }
-        if (buildSpinner) {
-          buildSpinner();
-        }
-        if (deploySpinner) {
-          deploySpinner();
-        }
-        deployingSpinner();
-
         event.payload.indications = indications;
         return event.payload;
       }
     }
   } catch (err) {
-    if (queuedSpinner) {
-      queuedSpinner();
-    }
-    if (buildSpinner) {
-      buildSpinner();
-    }
-    if (deploySpinner) {
-      deploySpinner();
-    }
-    deployingSpinner();
+    output.stopSpinner();
     throw err;
   }
 }

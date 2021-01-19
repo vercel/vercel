@@ -1,4 +1,5 @@
 import { NowConfig } from './util/dev/types';
+import { Output } from './util/output';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
@@ -8,6 +9,7 @@ export interface NowContext {
   authConfig: {
     token: string;
   };
+  output: Output;
   config: {
     currentTeam: string;
     updateChannel: string;

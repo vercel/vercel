@@ -39,7 +39,6 @@ export default async function rm(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   const [aliasOrId] = args;
 
