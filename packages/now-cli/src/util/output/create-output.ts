@@ -5,14 +5,31 @@ import { Console } from 'console';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 
-export type Output = ReturnType<typeof createOutput>;
+export type Output = ReturnType<typeof _createOutput>;
 
-export default function createOutput({ debug: debugEnabled = false } = {}) {
+export interface OutputOptions {
+  debug?: boolean;
+}
+
+// Singleton
+let instance: Output | null = null;
+
+export default function createOutput(opts?: OutputOptions) {
+  if (!instance) {
+    instance = _createOutput(opts);
+  }
+  return instance;
+}
+
+function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
+  let spinner: StopSpinner | null = null;
+
   function isDebugEnabled() {
     return debugEnabled;
   }
 
   function print(str: string) {
+    stopSpinner();
     process.stderr.write(str);
   }
 
@@ -94,7 +111,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     }
   }
 
-  function spinner(message: string, delay: number = 300): StopSpinner {
+  function setSpinner(message: string, delay: number = 300): StopSpinner {
     if (debugEnabled) {
       debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       let isEnded = false;
@@ -107,7 +124,19 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
       return stop;
     }
 
-    return wait(message, delay);
+    if (spinner) {
+      spinner.text = message;
+    } else {
+      spinner = wait(message, delay);
+    }
+    return spinner;
+  }
+
+  function stopSpinner() {
+    if (spinner) {
+      spinner();
+      spinner = null;
+    }
   }
 
   const c = {
@@ -143,6 +172,7 @@ export default function createOutput({ debug: debugEnabled = false } = {}) {
     dim,
     time,
     note,
-    spinner,
+    spinner: setSpinner,
+    stopSpinner,
   };
 }

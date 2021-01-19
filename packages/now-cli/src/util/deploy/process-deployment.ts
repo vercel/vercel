@@ -6,7 +6,7 @@ import {
   DeploymentOptions,
   NowClientOptions,
 } from '@vercel/client';
-import { Output, StopSpinner } from '../output';
+import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';
 import { NowConfig } from '../dev/types';
@@ -100,28 +100,11 @@ export default async function processDeployment({
     skipAutoDetectionConfirmation,
   };
 
-  let spinner: StopSpinner | null = null;
-
-  const setSpinner = (msg: string): StopSpinner => {
-    if (spinner) {
-      spinner.text = msg;
-    } else {
-      spinner = output.spinner(msg, 0);
-    }
-    return spinner;
-  };
-
-  const stopSpinner = () => {
-    if (spinner) {
-      spinner();
-      spinner = null;
-    }
-  };
-
-  setSpinner(
+  output.spinner(
     isSettingUpProject
       ? 'Setting up project'
-      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`
+      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
+    0
   );
 
   // collect indications to show the user once
@@ -151,7 +134,7 @@ export default async function processDeployment({
           .map((sha: string) => event.payload.total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
-        stopSpinner();
+        output.stopSpinner();
         bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
           width: 20,
           complete: '=',
@@ -174,8 +157,6 @@ export default async function processDeployment({
       }
 
       if (event.type === 'created') {
-        stopSpinner();
-
         if (bar && !bar.complete) {
           bar.tick(bar.total + 1);
         }
@@ -195,33 +176,36 @@ export default async function processDeployment({
 
         now.url = event.payload.url;
 
+        output.stopSpinner();
+
         printInspectUrl(output, event.payload.url, deployStamp, org.slug);
 
         if (quiet) {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
-        setSpinner(
-          event.payload.readyState === 'QUEUED' ? 'Queued' : 'Building'
+        output.spinner(
+          event.payload.readyState === 'QUEUED' ? 'Queued' : 'Building',
+          0
         );
       }
 
       if (event.type === 'building') {
-        setSpinner('Building');
+        output.spinner('Building', 0);
       }
 
       if (event.type === 'canceled') {
-        stopSpinner();
+        output.stopSpinner();
         return event.payload;
       }
 
       if (event.type === 'ready') {
-        setSpinner('Completing');
+        output.spinner('Completing', 0);
       }
 
       // Handle error events
       if (event.type === 'error') {
-        stopSpinner();
+        output.stopSpinner();
 
         const error = await now.handleDeploymentError(event.payload, {
           hashes,
@@ -237,13 +221,12 @@ export default async function processDeployment({
 
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
-        stopSpinner();
         event.payload.indications = indications;
         return event.payload;
       }
     }
   } catch (err) {
-    stopSpinner();
+    output.stopSpinner();
     throw err;
   }
 }

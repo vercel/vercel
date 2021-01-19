@@ -346,6 +346,7 @@ const main = async argv_ => {
 
   // the context object to supply to the providers or the commands
   const ctx = {
+    output,
     config,
     authConfig,
     localConfig,

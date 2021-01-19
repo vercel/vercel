@@ -23,6 +23,7 @@ export default class Now extends EventEmitter {
     forceNew = false,
     withCache = false,
     debug = false,
+    output = createOutput({ debug }),
   }) {
     super();
 
@@ -30,7 +31,7 @@ export default class Now extends EventEmitter {
     this._debug = debug;
     this._forceNew = forceNew;
     this._withCache = withCache;
-    this._output = createOutput({ debug });
+    this._output = output;
     this._apiUrl = apiUrl;
     this._onRetry = this._onRetry.bind(this);
     this.currentTeam = currentTeam;
