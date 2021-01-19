@@ -140,7 +140,7 @@ const login = async ctx => {
     await exit(0);
   }
 
-  const { apiUrl, output } = ctx.apiUrl;
+  const { apiUrl, output } = ctx;
 
   argv._ = argv._.slice(1);
 
