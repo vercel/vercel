@@ -1174,10 +1174,9 @@ test('login with unregistered user', async t => {
   const goal = `Error! Please sign up: https://vercel.com/signup`;
   const lines = stderr.trim().split('\n');
   const last = lines[lines.length - 1];
-  console.error({ last, goal });
 
   t.is(exitCode, 1);
-  t.is(last, goal);
+  t.true(last.includes(goal));
 });
 
 test('ignore files specified in .nowignore', async t => {
