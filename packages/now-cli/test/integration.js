@@ -1174,6 +1174,7 @@ test('login with unregistered user', async t => {
   const goal = `Error! Please sign up: https://vercel.com/signup`;
   const lines = stderr.trim().split('\n');
   const last = lines[lines.length - 1];
+  console.error({ last, goal });
 
   t.is(exitCode, 1);
   t.is(last, goal);
@@ -1250,10 +1251,10 @@ test('list the scopes', async t => {
 
   t.is(exitCode, 0);
 
-  const include = `✔ ${contextName}     ${email}`;
+  const include = new RegExp(`✔ ${contextName}\\s+${email}`);
 
   t.true(
-    stdout.includes(include),
+    include.test(stdout),
     `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`
   );
 });
