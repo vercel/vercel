@@ -81,6 +81,10 @@ it('should only match supported node versions', async () => {
     'major',
     12
   );
+  expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
+    'major',
+    14
+  );
   expect(getSupportedNodeVersion('8.11.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('6.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('999.x', false)).rejects.toThrow();
@@ -104,6 +108,10 @@ it('should only match supported node versions', async () => {
     'major',
     12
   );
+  expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
+    'major',
+    14
+  );
   const foundMessage = /Found `engines` in `package\.json` with an invalid Node\.js version range/;
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', false),
@@ -125,8 +133,8 @@ it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('10.0.0')).toHaveProperty('major', 10);
   expect(await getSupportedNodeVersion('10.x')).toHaveProperty('major', 10);
-  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 12);
-  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 12);
+  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 14);
+  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 14);
   expect(await getSupportedNodeVersion('8.5.0 - 10.5.0')).toHaveProperty(
     'major',
     10
