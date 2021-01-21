@@ -85,7 +85,6 @@ export default async function main(ctx) {
     return 2;
   }
 
-  const debugEnabled = argv.debug;
   const {
     authConfig: { token },
     apiUrl,
@@ -133,7 +132,7 @@ export default async function main(ctx) {
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled,
+    debug,
     output,
   });
   let contextName = null;
