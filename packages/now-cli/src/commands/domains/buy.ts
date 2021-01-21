@@ -30,7 +30,7 @@ export default async function buy(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {

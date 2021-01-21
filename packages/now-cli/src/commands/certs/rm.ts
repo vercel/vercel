@@ -28,7 +28,7 @@ async function rm(ctx: NowContext, opts: Options, args: string[]) {
   const { apiUrl } = ctx;
   const rmStamp = stamp();
   const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
 
   let contextName = null;
 

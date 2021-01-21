@@ -34,7 +34,7 @@ export default async function ({ teams, config, apiUrl, token, output, argv }) {
   stopSpinner();
 
   const stopUserSpinner = wait('Fetching user information');
-  const client = new Client({ apiUrl, token, currentTeam });
+  const client = new Client({ apiUrl, token, currentTeam, output });
   let user;
   try {
     user = await getUser(client);

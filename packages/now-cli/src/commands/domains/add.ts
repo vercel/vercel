@@ -34,7 +34,7 @@ export default async function add(
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
   const force = opts['--force'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {

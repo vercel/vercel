@@ -26,6 +26,7 @@ export default async function rm(ctx, opts, args) {
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -40,7 +41,13 @@ export default async function rm(ctx, opts, args) {
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+    output,
+  });
   const [aliasOrId] = args;
 
   if (args.length !== 1) {

@@ -117,7 +117,7 @@ export default async function main(ctx: NowContext) {
   }
 
   try {
-    return await dev(ctx, argv, args, output);
+    return await dev(ctx, argv, args);
   } catch (err) {
     if (err.code === 'ENOTFOUND') {
       // Error message will look like the following:

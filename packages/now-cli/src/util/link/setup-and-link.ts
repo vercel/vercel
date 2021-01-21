@@ -47,6 +47,7 @@ export default async function setupAndLink(
     token,
     currentTeam: config.currentTeam,
     debug,
+    output,
   });
 
   const isFile = !isDirectory(path);
@@ -160,6 +161,7 @@ export default async function setupAndLink(
         apiUrl,
         token,
         debug,
+        output,
         currentTeam: client.currentTeam,
       });
       const createArgs: any = {

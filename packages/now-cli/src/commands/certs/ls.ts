@@ -30,7 +30,7 @@ async function ls(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debug, '--next': nextTimestamp } = opts;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {
@@ -47,7 +47,7 @@ async function ls(
     output.error('Please provide a number for flag --next');
     return 1;
   }
-  const now = new Now({ apiUrl, token, debug, currentTeam });
+  const now = new Now({ apiUrl, token, debug, currentTeam, output });
   const lsStamp = stamp();
 
   if (args.length !== 0) {

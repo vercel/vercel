@@ -49,6 +49,7 @@ export default async function set(
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
 
   let user: User;

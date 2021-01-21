@@ -106,7 +106,7 @@ const main = async ctx => {
     output,
     config: { currentTeam },
   } = ctx;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {
@@ -138,7 +138,7 @@ export default async ctx => {
 };
 
 async function run({ output, token, contextName, currentTeam, ctx }) {
-  const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam });
+  const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam, output });
   const args = argv._.slice(1);
   const start = Date.now();
 

@@ -78,7 +78,12 @@ export default async function main(ctx) {
 
   argv._ = argv._.slice(1);
 
-  const { apiUrl, output } = ctx;
+  const {
+    apiUrl,
+    authConfig: { token },
+    output,
+    config,
+  } = ctx;
   const hard = argv.hard || false;
   const skipConfirmation = argv.yes || false;
   const ids = argv._;
@@ -105,16 +110,13 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const {
-    authConfig: { token },
-    config,
-  } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -244,7 +246,13 @@ export default async function main(ctx) {
     }
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+    output,
+  });
   const start = new Date();
 
   await Promise.all([

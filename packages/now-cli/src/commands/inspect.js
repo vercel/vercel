@@ -58,7 +58,12 @@ export default async function main(ctx) {
     return 2;
   }
 
-  const { apiUrl, output } = ctx;
+  const {
+    apiUrl,
+    output,
+    authConfig: { token },
+    config,
+  } = ctx;
   const debugEnabled = argv['--debug'];
   const { print, log, error } = output;
 
@@ -71,16 +76,13 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const {
-    authConfig: { token },
-    config,
-  } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -95,7 +97,13 @@ export default async function main(ctx) {
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+    output,
+  });
 
   // resolve the deployment, since we might have been given an alias
   const depFetchStart = Date.now();

@@ -128,12 +128,13 @@ export default async function main(ctx) {
   outputMode = argv.output in logPrinters ? argv.output : 'short';
 
   const { currentTeam } = config;
-  const now = new Now({ apiUrl, token, debug, currentTeam });
+  const now = new Now({ apiUrl, token, debug, currentTeam, output });
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 

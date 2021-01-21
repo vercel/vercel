@@ -55,6 +55,7 @@ export default async function issue(
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 

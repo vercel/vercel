@@ -24,14 +24,14 @@ export default async function add(
   args: string[]
 ) {
   const {
+    apiUrl,
     authConfig: { token },
     output,
     config,
   } = ctx;
   const { currentTeam } = config;
-  const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {

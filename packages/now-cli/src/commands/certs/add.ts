@@ -48,6 +48,7 @@ async function add(
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
 
   try {
@@ -61,7 +62,13 @@ async function add(
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+    output,
+  });
 
   if (overwite) {
     output.error('Overwrite option is deprecated');

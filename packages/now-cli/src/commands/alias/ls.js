@@ -24,6 +24,7 @@ export default async function ls(ctx, opts, args) {
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -48,6 +49,7 @@ export default async function ls(ctx, opts, args) {
     token,
     debug: debugEnabled,
     currentTeam,
+    output,
   });
   const lsStamp = stamp();
   let cancelWait;

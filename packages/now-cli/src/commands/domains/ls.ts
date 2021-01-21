@@ -33,7 +33,7 @@ export default async function ls(
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debug, '--next': nextTimestamp } = opts;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {

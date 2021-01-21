@@ -116,7 +116,7 @@ export default async function main(ctx: NowContext) {
     config,
   } = ctx;
   const { currentTeam } = config;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   const link = await getLinkedProject(output, client);
   if (link.status === 'error') {
     return link.exitCode;

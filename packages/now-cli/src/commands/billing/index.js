@@ -108,8 +108,14 @@ function buildInquirerChoices(cards) {
 
 async function run({ token, output, config: { currentTeam } }) {
   const start = new Date();
-  const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam });
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const creditCards = new NowCreditCards({
+    apiUrl,
+    token,
+    debug,
+    currentTeam,
+    output,
+  });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {
