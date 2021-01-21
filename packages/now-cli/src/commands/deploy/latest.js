@@ -233,8 +233,7 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
-  // $FlowFixMe
-  const isTTY = process.stdout.isTTY;
+  const { isTTY } = process.stdout;
   const quiet = !isTTY;
 
   // check paths
