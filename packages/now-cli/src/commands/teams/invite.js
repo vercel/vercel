@@ -76,7 +76,7 @@ export default async function ({
   stopSpinner();
 
   const stopUserSpinner = wait('Fetching user information');
-  const client = new Client({ apiUrl, token });
+  const client = new Client({ apiUrl, token, output });
   let user;
   try {
     user = await getUser(client);
