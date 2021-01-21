@@ -165,7 +165,7 @@ export function getSpawnOptions(
 export async function getNodeVersion(
   destPath: string,
   _nodeVersion?: string,
-  config?: Config,
+  _config?: Config,
   meta?: Meta
 ): Promise<NodeVersion> {
   if (meta && meta.isDev) {
@@ -174,7 +174,7 @@ export async function getNodeVersion(
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  let range = config?.nodeVersion;
+  let range: string | undefined;
   let isAuto = true;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
     range = packageJson.engines.node;

@@ -5,7 +5,6 @@ import { NowBuildError } from '../errors';
 import debug from '../debug';
 
 const allOptions: NodeVersion[] = [
-  { major: 14, range: '14.x', runtime: 'nodejs14.x' },
   { major: 12, range: '12.x', runtime: 'nodejs12.x' },
   { major: 10, range: '10.x', runtime: 'nodejs10.x' },
   {
@@ -27,7 +26,7 @@ const upstreamProvider =
   '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html';
 
 export function getLatestNodeVersion(): NodeVersion {
-  return allOptions[1]; // TODO: Change once AWS introduces 14.x
+  return allOptions[0];
 }
 
 export function getDiscontinuedNodeVersions(): NodeVersion[] {
