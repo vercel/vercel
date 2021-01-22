@@ -25,10 +25,14 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 it('should match the probes against Python dev servers', async () => {
   const fixture = path.join(fixturesPath, '00-request-path');
 
-  await execa('pip3', ['install', '--user', '--upgrade', 'setuptools'], {
-    cwd: fixture,
-    stdio: 'inherit',
-  });
+  await execa(
+    'pip3',
+    ['install', '--user', '--upgrade', 'setuptools', 'wheel'],
+    {
+      cwd: fixture,
+      stdio: 'inherit',
+    }
+  );
   await execa('pip3', ['install', '--user', '-r', 'requirements.txt'], {
     cwd: fixture,
     stdio: 'inherit',
