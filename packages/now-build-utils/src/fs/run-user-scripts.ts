@@ -174,18 +174,22 @@ export async function getNodeVersion(
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  let range = config.nodeVersion;
+  let { nodeVersion } = config;
   let isAuto = true;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
-    if (config.nodeVersion && !meta.isDev) {
+    if (
+      nodeVersion &&
+      nodeVersion !== packageJson.engines.node &&
+      !meta.isDev
+    ) {
       console.warn(
         'Warning: Due to `engines` existing in your `package.json` file, the Node Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version'
       );
     }
-    range = packageJson.engines.node;
+    nodeVersion = packageJson.engines.node;
     isAuto = false;
   }
-  return getSupportedNodeVersion(range, isAuto);
+  return getSupportedNodeVersion(nodeVersion, isAuto);
 }
 
 async function scanParentDirs(destPath: string, readPackageJson = false) {

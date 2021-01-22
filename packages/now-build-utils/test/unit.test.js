@@ -184,6 +184,18 @@ it('should prefer package.json engines over project setting from config and warn
   ]);
 });
 
+it('should not warn when package.json engines matches project setting from config', async () => {
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node'),
+      undefined,
+      { nodeVersion: '10.x' },
+      {}
+    )
+  ).toHaveProperty('range', '10.x');
+  expect(warningMessages).toStrictEqual([]);
+});
+
 it('should get latest node version', async () => {
   expect(await getLatestNodeVersion()).toHaveProperty('major', 12);
 });
