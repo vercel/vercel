@@ -3,8 +3,8 @@
   "builds": [{ "src": "api/*.py", "use": "@vercel/python" }],
   "probes": [
     {
-      "path": "/api/python.py?query=hello%20%21world",
-      "mustContain": "query=hello%20%21world"
+      "path": "/api/python.py?query=hello%20%40world",
+      "mustContain": "query=hello%20%40world"
     },
     { "path": "/api/python.py?hello=/", "mustContain": "?hello=%2F" },
     {
