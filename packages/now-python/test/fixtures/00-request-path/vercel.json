@@ -3,16 +3,16 @@
   "builds": [{ "src": "api/*.py", "use": "@vercel/python" }],
   "probes": [
     {
-      "path": "/api/python.py?query=hello%20world",
-      "mustContain": "query=hello%20world"
+      "path": "/api/python.py?query=hello%20%21world",
+      "mustContain": "query=hello%20%21world"
     },
     {
       "path": "/api/wsgi.py?query=hello%20world",
-      "mustContain": "query=hello%20world"
+      "mustContain": "query=hello%20%21world"
     },
     {
       "path": "/api/asgi.py?query=hello%20world",
-      "mustContain": "query=hello%20world"
+      "mustContain": "query=hello%20%21world"
     }
   ]
 }

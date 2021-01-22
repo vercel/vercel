@@ -1,4 +1,3 @@
-
 import sys
 import base64
 import json
@@ -46,8 +45,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         _thread.start_new_thread(server.handle_request, ())
 
         payload = json.loads(event['body'])
-        path = unquote(payload['path'])
-        path = path.replace(' ', '%20')
+        path = payload['path']
         headers = payload['headers']
         method = payload['method']
         encoding = payload.get('encoding')
@@ -105,7 +103,7 @@ elif 'app' in __vc_variables:
             if isinstance(body, string_types):
                 body = to_bytes(body, charset='utf-8')
 
-            url = urlparse(unquote(payload['path']))
+            url = urlparse(payload['path'])
             query = url.query
             path = url.path
 
@@ -258,7 +256,7 @@ elif 'app' in __vc_variables:
             elif not isinstance(body, bytes):
                 body = body.encode()
 
-            url = urlparse(unquote(payload['path']))
+            url = urlparse(payload['path'])
             query = url.query.encode()
             path = url.path
 
