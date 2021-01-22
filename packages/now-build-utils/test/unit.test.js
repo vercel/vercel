@@ -24,6 +24,19 @@ async function expectBuilderError(promise, pattern) {
   );
 }
 
+let warningMessages;
+const originalConsoleWarn = console.warn;
+beforeEach(() => {
+  warningMessages = [];
+  console.warn = m => {
+    warningMessages.push(m);
+  };
+});
+
+afterEach(() => {
+  console.warn = originalConsoleWarn;
+});
+
 it('should re-create symlinks properly', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on windows');
@@ -140,9 +153,6 @@ it('should match all semver ranges', async () => {
 });
 
 it('should ignore node version in vercel dev getNodeVersion()', async () => {
-  let message;
-  const original = console.warn;
-  console.warn = m => (message = m);
   expect(
     await getNodeVersion(
       '/tmp',
@@ -151,25 +161,16 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
       { isDev: true }
     )
   ).toHaveProperty('runtime', 'nodejs');
-  console.warn = original;
-  expect(message).toBe(undefined);
 });
 
 it('should select project setting from config when no package.json is found', async () => {
-  let message;
-  const original = console.warn;
-  console.warn = m => (message = m);
   expect(
     await getNodeVersion('/tmp', undefined, { nodeVersion: '10.x' }, {})
   ).toHaveProperty('range', '10.x');
-  console.warn = original;
-  expect(message).toBe(undefined);
+  expect(warningMessages).toStrictEqual([]);
 });
 
 it('should prefer package.json engines over project setting from config and warn', async () => {
-  let message;
-  const original = console.warn;
-  console.warn = m => (message = m);
   expect(
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
@@ -178,10 +179,9 @@ it('should prefer package.json engines over project setting from config and warn
       {}
     )
   ).toHaveProperty('range', '10.x');
-  console.warn = original;
-  expect(message).toBe(
-    'Warning: Due to `engines` existing in your `package.json` file, the Node Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version'
-  );
+  expect(warningMessages).toStrictEqual([
+    'Warning: Due to `engines` existing in your `package.json` file, the Node Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version',
+  ]);
 });
 
 it('should get latest node version', async () => {
