@@ -47,14 +47,17 @@ it('should match the probes against Python dev servers', async () => {
 
   const pythonServer = spawn('python3', ['api/python.py'], {
     cwd: fixture,
+    stdio: 'inherit',
   });
 
   const wsgiServer = spawn('python3', ['api/wsgi.py'], {
     cwd: fixture,
+    stdio: 'inherit',
   });
 
   const asgiServer = spawn('python3', ['api/asgi.py'], {
     cwd: fixture,
+    stdio: 'inherit',
   });
 
   try {
