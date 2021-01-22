@@ -165,8 +165,8 @@ export function getSpawnOptions(
 export async function getNodeVersion(
   destPath: string,
   _nodeVersion?: string,
-  _config?: Config,
-  meta?: Meta
+  config: Config = {},
+  meta: Meta = {}
 ): Promise<NodeVersion> {
   if (meta && meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
@@ -174,13 +174,22 @@ export async function getNodeVersion(
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  let range: string | undefined;
+  let { nodeVersion } = config;
   let isAuto = true;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
-    range = packageJson.engines.node;
+    if (
+      nodeVersion &&
+      nodeVersion !== packageJson.engines.node &&
+      !meta.isDev
+    ) {
+      console.warn(
+        'Warning: Due to `engines` existing in your `package.json` file, the Node Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version'
+      );
+    }
+    nodeVersion = packageJson.engines.node;
     isAuto = false;
   }
-  return getSupportedNodeVersion(range, isAuto);
+  return getSupportedNodeVersion(nodeVersion, isAuto);
 }
 
 async function scanParentDirs(destPath: string, readPackageJson = false) {
