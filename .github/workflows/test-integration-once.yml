@@ -17,7 +17,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 100
-      - run: sudo apt-get install -y python-setuptools
       - run: git --version
       - run: git fetch origin master --depth=100
       - run: git fetch origin ${{ github.ref }} --depth=100

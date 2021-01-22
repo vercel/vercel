@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const fetch = require('node-fetch');
+const execa = require('execa');
 const { spawn } = require('child_process');
 
-const { installRequirementsFile } = require('../');
 const {
   packAndDeploy,
   testDeployment,
@@ -25,10 +25,9 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 it('should match the probes against Python dev servers', async () => {
   const fixture = path.join(fixturesPath, '00-request-path');
 
-  await installRequirementsFile({
-    filePath: 'requirements.txt',
-    workPath: fixture,
-    meta: {},
+  await execa('pip3', ['install', '-r', 'requirements.txt', '--user'], {
+    cwd: fixture,
+    stdio: 'inherit',
   });
 
   const ports = new Map();
