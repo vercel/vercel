@@ -34,7 +34,6 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
 
     print('using HTTP Handler')
     from http.server import HTTPServer
-    from urllib.parse import unquote
     import http
     import _thread
 
@@ -83,7 +82,7 @@ elif 'app' in __vc_variables:
         not inspect.iscoroutinefunction(__vc_module.app.__call__)
     ):
         print('using Web Server Gateway Interface (WSGI)')
-        from urllib.parse import urlparse, unquote
+        from urllib.parse import urlparse
         from werkzeug._compat import BytesIO
         from werkzeug._compat import string_types
         from werkzeug._compat import to_bytes
@@ -159,7 +158,7 @@ elif 'app' in __vc_variables:
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
         import asyncio
         import enum
-        from urllib.parse import urlparse, unquote, urlencode
+        from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
 
 
