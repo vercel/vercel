@@ -3,7 +3,6 @@ import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
 import routesList from '../util/output/routes';
 import indent from '../util/output/indent';
-import createOutput from '../util/output';
 import Now from '../util';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
@@ -59,9 +58,13 @@ export default async function main(ctx) {
     return 2;
   }
 
-  const apiUrl = ctx.apiUrl;
+  const {
+    apiUrl,
+    output,
+    authConfig: { token },
+    config,
+  } = ctx;
   const debugEnabled = argv['--debug'];
-  const output = createOutput({ debug: debugEnabled });
   const { print, log, error } = output;
 
   // extract the first parameter
@@ -73,16 +76,13 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const {
-    authConfig: { token },
-    config,
-  } = ctx;
   const { currentTeam } = config;
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -90,25 +90,30 @@ export default async function main(ctx) {
     ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
+      error(err.message);
       return 1;
     }
 
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+    output,
+  });
 
   // resolve the deployment, since we might have been given an alias
   const depFetchStart = Date.now();
-  const cancelWait = output.spinner(
+  output.spinner(
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
 
   try {
     deployment = await now.findDeployment(deploymentIdOrHost);
   } catch (err) {
-    cancelWait();
     if (err.status === 404) {
       error(
         `Failed to find deployment "${deploymentIdOrHost}" in ${chalk.bold(
@@ -136,7 +141,6 @@ export default async function main(ctx) {
       ? await now.fetch(`/v1/now/deployments/${id}/builds`)
       : { builds: [] };
 
-  cancelWait();
   log(
     `Fetched deployment "${url}" in ${chalk.bold(contextName)} ${elapsed(
       Date.now() - depFetchStart

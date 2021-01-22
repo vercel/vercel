@@ -17,17 +17,17 @@ type Options = {
 export default async function rm(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const {
+    apiUrl,
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
-  const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
 
   try {
     await getScope(client);
@@ -100,12 +100,7 @@ function readConfirmation(
     process.stdin
       .on('data', d => {
         process.stdin.pause();
-        resolve(
-          d
-            .toString()
-            .trim()
-            .toLowerCase() === 'y'
-        );
+        resolve(d.toString().trim().toLowerCase() === 'y');
       })
       .resume();
   });

@@ -4,7 +4,6 @@ import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { NowContext } from '../../types';
 import handleError from '../../util/handle-error';
-import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import error from '../../util/output/error';
 import init from './init';
@@ -47,7 +46,6 @@ const help = () => {
 export default async function main(ctx: NowContext) {
   let argv;
   let args;
-  let output;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -55,7 +53,6 @@ export default async function main(ctx: NowContext) {
       '-f': Boolean,
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
-    output = createOutput({ debug: argv['--debug'] });
   } catch (err) {
     handleError(err);
     return 1;
@@ -67,15 +64,15 @@ export default async function main(ctx: NowContext) {
   }
 
   if (argv._.length > 3) {
-    output.error('Too much arguments.');
+    ctx.output.error('Too much arguments.');
     return 1;
   }
 
   try {
-    return await init(ctx, argv, args, output);
+    return await init(ctx, argv, args);
   } catch (err) {
     console.log(error(err.message));
-    output.debug(err.stack);
+    ctx.output.debug(err.stack);
     return 1;
   }
 }

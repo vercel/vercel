@@ -7,16 +7,21 @@ import { eraseLines } from 'ansi-escapes';
 import jsonlines from 'jsonlines';
 import retry from 'async-retry';
 
-// Utilities
-import createOutput from './output';
-
 async function printEvents(
   now,
   deploymentIdOrURL,
   currentTeam = null,
-  { mode, onOpen = () => {}, onEvent, quiet, debugEnabled, findOpts } = {}
+  {
+    mode,
+    onOpen = () => {},
+    onEvent,
+    quiet,
+    debugEnabled,
+    findOpts,
+    output,
+  } = {}
 ) {
-  const { log, debug } = createOutput({ debug: debugEnabled });
+  const { log, debug } = output;
 
   let onOpenCalled = false;
   function callOnOpenOnce() {

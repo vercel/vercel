@@ -105,7 +105,8 @@ function validateResponseHeaders(t, res) {
 }
 
 async function exec(directory, args = []) {
-  return execa(binaryPath, ['dev', directory, ...args], {
+  const token = await fetchCachedToken();
+  return execa(binaryPath, ['dev', directory, '-t', token, ...args], {
     reject: false,
     shell: true,
     env: { __VERCEL_SKIP_DEV_CMD: 1 },
@@ -166,9 +167,10 @@ async function testPath(
 async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
+  const token = await fetchCachedToken();
   const dev = execa(
     binaryPath,
-    ['dev', directory, '-l', String(port), ...args],
+    ['dev', directory, '-t', token, '-l', String(port), ...args],
     {
       reject: false,
       detached: true,

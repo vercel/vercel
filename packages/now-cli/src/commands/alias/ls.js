@@ -10,9 +10,10 @@ import strlen from '../../util/strlen.ts';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name.ts';
 
-export default async function ls(ctx, opts, args, output) {
+export default async function ls(ctx, opts, args) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
@@ -23,6 +24,7 @@ export default async function ls(ctx, opts, args, output) {
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -47,6 +49,7 @@ export default async function ls(ctx, opts, args, output) {
     token,
     debug: debugEnabled,
     currentTeam,
+    output,
   });
   const lsStamp = stamp();
   let cancelWait;

@@ -18,21 +18,17 @@ type Options = {
   '--debug': boolean;
 };
 
-async function rm(
-  ctx: NowContext,
-  opts: Options,
-  args: string[],
-  output: Output
-) {
+async function rm(ctx: NowContext, opts: Options, args: string[]) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const rmStamp = stamp();
   const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
 
   let contextName = null;
 

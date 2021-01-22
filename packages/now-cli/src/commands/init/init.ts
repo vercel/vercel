@@ -34,9 +34,9 @@ const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 export default async function init(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
+  const { output } = ctx;
   const [name, dir] = args;
   const force = opts['-f'] || opts['--force'];
 

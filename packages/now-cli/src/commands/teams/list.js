@@ -8,7 +8,6 @@ import info from '../../util/output/info';
 import error from '../../util/output/error';
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
-import createOutput from '../../util/output';
 import getUser from '../../util/get-user.ts';
 import Client from '../../util/client.ts';
 import getPrefixedFlags from '../../util/get-prefixed-flags';
@@ -16,9 +15,8 @@ import { getPkgName } from '../../util/pkg-name.ts';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd.ts';
 
-export default async function({ teams, config, apiUrl, token, argv }) {
+export default async function ({ teams, config, apiUrl, token, output, argv }) {
   const { next } = argv;
-  const output = createOutput({ debug: argv['--debug'] });
 
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {
     output.error('Please provide a number for flag --next');
@@ -36,7 +34,7 @@ export default async function({ teams, config, apiUrl, token, argv }) {
   stopSpinner();
 
   const stopUserSpinner = wait('Fetching user information');
-  const client = new Client({ apiUrl, token, currentTeam });
+  const client = new Client({ apiUrl, token, currentTeam, output });
   let user;
   try {
     user = await getUser(client);
