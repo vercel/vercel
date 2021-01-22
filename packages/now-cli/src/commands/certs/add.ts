@@ -8,7 +8,6 @@ import stamp from '../../util/output/stamp';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { NowContext } from '../../types';
-import { Output } from '../../util/output';
 import { getCommandName } from '../../util/pkg-name';
 
 interface Options {
@@ -22,11 +21,11 @@ interface Options {
 async function add(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ): Promise<number> {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
@@ -49,6 +48,7 @@ async function add(
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
 
   try {
@@ -62,7 +62,13 @@ async function add(
     throw err;
   }
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+    output,
+  });
 
   if (overwite) {
     output.error('Overwrite option is deprecated');
@@ -71,7 +77,7 @@ async function add(
   }
 
   if (crtPath || keyPath || caPath) {
-    if (args.length !== 0 || (!crtPath || !keyPath || !caPath)) {
+    if (args.length !== 0 || !crtPath || !keyPath || !caPath) {
       output.error(
         `Invalid number of arguments to create a custom certificate entry. Usage:`
       );

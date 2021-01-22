@@ -2,7 +2,6 @@ import chalk from 'chalk';
 
 import { handleError } from '../../util/error';
 
-import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
@@ -92,15 +91,14 @@ export default async function main(ctx) {
     return 2;
   }
 
-  const output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
 
   switch (subcommand) {
     case 'ls':
-      return ls(ctx, argv, args, output);
+      return ls(ctx, argv, args);
     case 'rm':
-      return rm(ctx, argv, args, output);
+      return rm(ctx, argv, args);
     default:
-      return set(ctx, argv, args, output);
+      return set(ctx, argv, args);
   }
 }

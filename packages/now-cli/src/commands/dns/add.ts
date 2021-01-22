@@ -6,7 +6,6 @@ import {
   DNSInvalidType,
 } from '../../util/errors-ts';
 import { NowContext } from '../../types';
-import { Output } from '../../util/output';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -22,17 +21,17 @@ type Options = {
 export default async function add(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const {
+    apiUrl,
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
-  const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {

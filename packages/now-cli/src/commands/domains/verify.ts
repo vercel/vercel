@@ -1,13 +1,11 @@
 import { NowContext } from '../../types';
-import { Output } from '../../util/output';
 import { NowBuildError } from '@vercel/build-utils';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function verify(
-  _ctx: NowContext,
+  { output }: NowContext,
   _opts: {},
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const [domainName] = args;
 

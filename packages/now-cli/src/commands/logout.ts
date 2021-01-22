@@ -11,7 +11,7 @@ import {
 } from '../util/config/files';
 import getArgs from '../util/get-args';
 import { NowContext } from '../types';
-import createOutput, { Output } from '../util/output';
+import { Output } from '../util/output';
 import { getPkgName } from '../util/pkg-name';
 
 const help = () => {
@@ -54,9 +54,7 @@ export default async function main(ctx: NowContext): Promise<number> {
     return 2;
   }
 
-  const debugEnabled = argv['--debug'];
-  const output = createOutput({ debug: debugEnabled });
-  return logout(ctx.apiUrl, output);
+  return logout(ctx.apiUrl, ctx.output);
 }
 
 const logout = async (apiUrl: string, output: Output) => {

@@ -9,7 +9,6 @@ import exit from '../util/exit';
 import logo from '../util/output/logo';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
-import createOutput from '../util/output';
 import confirm from '../util/input/confirm';
 import getCommandFlags from '../util/get-command-flags';
 import getPrefixedFlags from '../util/get-prefixed-flags';
@@ -104,10 +103,10 @@ const main = async ctx => {
 
   const {
     authConfig: { token },
+    output,
     config: { currentTeam },
   } = ctx;
-  const output = createOutput({ debug });
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {
@@ -139,7 +138,7 @@ export default async ctx => {
 };
 
 async function run({ output, token, contextName, currentTeam, ctx }) {
-  const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam });
+  const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam, output });
   const args = argv._.slice(1);
   const start = Date.now();
 

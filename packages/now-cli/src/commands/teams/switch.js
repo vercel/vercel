@@ -24,22 +24,21 @@ const updateCurrentTeam = (config, newTeam) => {
   writeToConfigFile(config);
 };
 
-export default async function({ apiUrl, token, debug, args, config }) {
-  let stopSpinner = wait('Fetching teams');
+export default async function ({ apiUrl, token, debug, args, config, output }) {
+  let stopSpinner;
+  output.spinner('Fetching teams');
 
   // We're loading the teams here without `currentTeam`, so that
   // people can use `vercel switch` in the case that their
   // current team was deleted.
-  const teams = new NowTeams({ apiUrl, token, debug });
+  const teams = new NowTeams({ apiUrl, token, debug, output });
   const list = (await teams.ls()).teams;
 
   let { currentTeam } = config;
   const accountIsCurrent = !currentTeam;
 
-  stopSpinner();
-
-  const stopUserSpinner = wait('Fetching user information');
-  const client = new Client({ apiUrl, token });
+  output.spinner('Fetching user information');
+  const client = new Client({ apiUrl, token, output });
   let user;
   try {
     user = await getUser(client);
@@ -51,8 +50,6 @@ export default async function({ apiUrl, token, debug, args, config }) {
 
     throw err;
   }
-
-  stopUserSpinner();
 
   if (accountIsCurrent) {
     currentTeam = {

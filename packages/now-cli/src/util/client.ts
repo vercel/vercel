@@ -33,6 +33,7 @@ export default class Client extends EventEmitter {
     forceNew = false,
     withCache = false,
     debug = false,
+    output = createOutput({ debug }),
   }: {
     apiUrl: string;
     token: string;
@@ -40,13 +41,14 @@ export default class Client extends EventEmitter {
     forceNew?: boolean;
     withCache?: boolean;
     debug?: boolean;
+    output?: Output;
   }) {
     super();
     this._token = token;
     this._debug = debug;
     this._forceNew = forceNew;
     this._withCache = withCache;
-    this._output = createOutput({ debug });
+    this._output = output;
     this._apiUrl = apiUrl;
     this._onRetry = this._onRetry.bind(this);
     this.currentTeam = currentTeam;

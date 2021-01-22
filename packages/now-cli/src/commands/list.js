@@ -3,12 +3,10 @@ import ms from 'ms';
 import table from 'text-table';
 import Now from '../util';
 import getArgs from '../util/get-args';
-import createOutput from '../util/output';
 import { handleError } from '../util/error';
 import cmd from '../util/output/cmd.ts';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
-import wait from '../util/output/wait';
 import strlen from '../util/strlen.ts';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
@@ -78,11 +76,15 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const debugEnabled = argv['--debug'];
+  const {
+    authConfig: { token },
+    output,
+    apiUrl,
+    config,
+  } = ctx;
 
-  const { print, log, error, note, debug } = createOutput({
-    debug: debugEnabled,
-  });
+  const debugEnabled = argv['--debug'];
+  const { print, log, error, note, debug, spinner } = output;
 
   if (argv._.length > 2) {
     error(`${getCommandName('ls [app]')} accepts at most one argument`);
@@ -92,24 +94,19 @@ export default async function main(ctx) {
   let app = argv._[1];
   let host = null;
 
-  const apiUrl = ctx.apiUrl;
-
   if (argv['--help']) {
     help();
     return 0;
   }
 
   const meta = parseMeta(argv['--meta']);
-  const {
-    authConfig: { token },
-    config,
-  } = ctx;
   const { currentTeam, includeScheme } = config;
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -131,11 +128,15 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const stopSpinner = wait(
-    `Fetching deployments in ${chalk.bold(contextName)}`
-  );
+  spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
 
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    output,
+    currentTeam,
+  });
   const start = new Date();
 
   if (app && !isValidName(app)) {
@@ -156,7 +157,6 @@ export default async function main(ctx) {
     const hostParts = asHost.split('-');
 
     if (hostParts < 2) {
-      stopSpinner();
       error('Only deployment hostnames are allowed, no aliases');
       return 1;
     }
@@ -165,19 +165,12 @@ export default async function main(ctx) {
     host = asHost;
   }
 
-  let response;
-
-  try {
-    debug('Fetching deployments');
-    response = await now.list(app, {
-      version: 6,
-      meta,
-      nextTimestamp,
-    });
-  } catch (err) {
-    stopSpinner();
-    throw err;
-  }
+  debug('Fetching deployments');
+  const response = await now.list(app, {
+    version: 6,
+    meta,
+    nextTimestamp,
+  });
 
   let { deployments, pagination } = response;
 
@@ -193,7 +186,6 @@ export default async function main(ctx) {
       if (err.status === 404) {
         debug('Ignore findDeployment 404');
       } else {
-        stopSpinner();
         throw err;
       }
     }
@@ -210,7 +202,6 @@ export default async function main(ctx) {
     deployments = deployments.filter(deployment => deployment.url === host);
   }
 
-  stopSpinner();
   log(
     `Deployments under ${chalk.bold(contextName)} ${elapsed(
       Date.now() - start
