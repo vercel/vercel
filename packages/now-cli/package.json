@@ -61,7 +61,7 @@
     "node": ">= 10"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.7.1-canary.2",
+    "@vercel/build-utils": "2.8.0",
     "@vercel/go": "1.1.7",
     "@vercel/node": "1.9.0",
     "@vercel/python": "1.2.4",
