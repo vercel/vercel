@@ -6,13 +6,18 @@
       "path": "/api/python.py?query=hello%20%21world",
       "mustContain": "query=hello%20%21world"
     },
+    { "path": "/api/python.py?hello=/", "mustContain": "?hello=%2F" },
     {
-      "path": "/api/wsgi.py?query=hello%20world",
-      "mustContain": "query=hello%20%21world"
+      "path": "/api/python.py?say=hello%20world",
+      "mustContain": "?say=hello%20world"
     },
     {
-      "path": "/api/asgi.py?query=hello%20world",
-      "mustContain": "query=hello%20%21world"
+      "path": "/api/python.py?say%20hello=nice",
+      "mustContain": "?say%20hello=nice"
+    },
+    {
+      "path": "/api/python.py?%E6%82%A8%E5%A5%BD=/",
+      "mustContain": "%E6%82%A8%E5%A5%BD=/"
     }
   ]
 }
