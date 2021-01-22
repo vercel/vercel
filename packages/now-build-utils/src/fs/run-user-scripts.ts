@@ -183,7 +183,7 @@ export async function getNodeVersion(
       !meta.isDev
     ) {
       console.warn(
-        'Warning: Due to `engines` existing in your `package.json` file, the Node Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version'
+        'Warning: Due to `engines` existing in your `package.json` file, the Node.js Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version'
       );
     }
     nodeVersion = packageJson.engines.node;
