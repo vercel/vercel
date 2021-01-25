@@ -27,29 +27,38 @@ async function main() {
   console.log(`Changes since the last stable release (${tag_name}):`);
   console.log(`\n${log}\n`);
 
-  const pkgs =
-    Array.from(
-      new Set(
-        execSync(`git diff --name-only ${tag_name}...HEAD`)
-          .toString()
-          .trim()
-          .split('\n')
-          .filter(line => line.startsWith('packages/'))
-          .map(line => line.split('/')[1])
-          .map(pkgName => {
-            try {
-              return require(`../packages/${pkgName}/package.json`).name;
-            } catch {
-              // Failed to read package.json (perhaps the pkg was deleted)
-            }
-          })
-          .filter(s => Boolean(s))
-      )
-    ).join(',') || 'now';
+  const pkgs = new Set(
+    execSync(`git diff --name-only ${tag_name}...HEAD`)
+      .toString()
+      .trim()
+      .split('\n')
+      .filter(line => line.startsWith('packages/'))
+      .map(line => line.split('/')[1])
+      .map(pkgName => {
+        try {
+          return require(`../packages/${pkgName}/package.json`).name;
+        } catch {
+          // Failed to read package.json (perhaps the pkg was deleted)
+        }
+      })
+      .filter(s => Boolean(s))
+  );
+
+  if (pkgs.size === 0) {
+    pkgs.add('vercel');
+  }
+
+  // NOTE: `@vercel/python` stable must not be released
+  // until March 1st, 2021 due to breaking behavior with
+  // the request URL (https://github.com/vercel/vercel/pull/5739).
+  // After that date this can be removed.
+  pkgs.delete('@vercel/python');
+
+  const pub = Array.from(pkgs).join(',');
 
   console.log('To publish a stable release, execute the following:');
   console.log(
-    `\nnpx lerna version --message 'Publish Stable' --exact --force-publish=${pkgs}\n`
+    `\nnpx lerna version --message 'Publish Stable' --exact --force-publish=${pub}\n`
   );
 }
 
