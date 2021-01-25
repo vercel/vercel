@@ -8,7 +8,6 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
-import { Output } from '../../util/output';
 import { NowContext, Cert } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
@@ -21,17 +20,17 @@ interface Options {
 async function ls(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ): Promise<number> {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debug, '--next': nextTimestamp } = opts;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {
@@ -48,7 +47,7 @@ async function ls(
     output.error('Please provide a number for flag --next');
     return 1;
   }
-  const now = new Now({ apiUrl, token, debug, currentTeam });
+  const now = new Now({ apiUrl, token, debug, currentTeam, output });
   const lsStamp = stamp();
 
   if (args.length !== 0) {

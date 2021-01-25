@@ -26,17 +26,17 @@ type Options = {
 export default async function rm(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   const [domainName] = args;
   let contextName = null;
 

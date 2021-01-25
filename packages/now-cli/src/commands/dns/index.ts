@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 
 import { NowContext } from '../../types';
-import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
@@ -112,16 +111,15 @@ export default async function main(ctx: NowContext) {
     return 2;
   }
 
-  const output = createOutput({ debug: argv['--debug'] });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'add':
-      return add(ctx, argv, args, output);
+      return add(ctx, argv, args);
     case 'import':
-      return importZone(ctx, argv, args, output);
+      return importZone(ctx, argv, args);
     case 'rm':
-      return rm(ctx, argv, args, output);
+      return rm(ctx, argv, args);
     default:
-      return ls(ctx, argv, args, output);
+      return ls(ctx, argv, args);
   }
 }
