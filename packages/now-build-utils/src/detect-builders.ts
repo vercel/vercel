@@ -945,8 +945,8 @@ function getRouteResult(
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
   const framework = frontendBuilder?.config?.framework || '';
-  const use = frontendBuilder?.use || '';
-  const isNextjs = framework === 'nextjs' || use.startsWith('@vercel/next');
+  const isNextjs =
+    framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
   const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
 
   if (apiRoutes && apiRoutes.length > 0) {
