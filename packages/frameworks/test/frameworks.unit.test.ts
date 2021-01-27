@@ -2,8 +2,7 @@ import Ajv from 'ajv';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
-import { Framework } from '../';
-const frameworkList = require('../frameworks.json') as Framework[];
+import frameworkList from '../';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',

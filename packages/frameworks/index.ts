@@ -1,3 +1,5 @@
+import _frameworks from './frameworks.json';
+
 export interface FrameworkDetectionItem {
   path: string;
   matchContent?: string;
@@ -6,9 +8,11 @@ export interface FrameworkDetectionItem {
 export interface SettingPlaceholder {
   placeholder: string;
 }
+
 export interface SettingValue {
   value: string;
 }
+
 export type Setting = SettingValue | SettingPlaceholder;
 
 export interface Framework {
@@ -36,3 +40,7 @@ export interface Framework {
     dependencies: string[];
   }[];
 }
+
+export const frameworks = _frameworks as Framework[];
+
+export default frameworks;

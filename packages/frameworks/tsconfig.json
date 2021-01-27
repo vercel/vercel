@@ -10,11 +10,11 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "outDir": "./dist",
+    "resolveJsonModule": true,
     "types": ["node", "jest"],
     "strict": true,
     "target": "esnext"
   },
-  "include": ["src/**/*", "test/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["*.ts"],
+  "exclude": ["*.d.ts", "node_modules"]
 }
