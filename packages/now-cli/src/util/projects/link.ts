@@ -138,17 +138,17 @@ export async function getLinkedProject(
     return { status: 'not_linked', org: null, project: null };
   }
 
+  const spinner = output.spinner('Retrieving project…', 1000);
   let org: Org | null = null;
   let project: Project | ProjectNotFound | null = null;
   try {
-    output.spinner('Retrieving project…', 1000);
     [org, project] = await Promise.all([
       getOrgById(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
   } catch (err) {
     if (err?.status === 403) {
-      output.stopSpinner();
+      spinner();
       throw new NowBuildError({
         message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
           VERCEL_DIR
@@ -161,7 +161,7 @@ export async function getLinkedProject(
     // Not a special case 403, we should still throw it
     throw err;
   } finally {
-    output.stopSpinner();
+    spinner();
   }
 
   if (!org || !project || project instanceof ProjectNotFound) {
