@@ -13,20 +13,21 @@ export default async function createCertificateForAlias(
   alias: string,
   shouldBeWildcard: boolean
 ) {
+  output.spinner(`Generating a certificate…`);
   const cns = shouldBeWildcard ? getWildcardCnsForAlias(alias) : [alias];
-  const cancelMessage = output.spinner(`Generating a certificate...`);
   const certStamp = stamp();
   const cert = await createCertForCns(client, cns, context);
+
   if (cert instanceof NowError) {
-    cancelMessage();
+    output.stopSpinner();
     return cert;
   }
 
-  cancelMessage();
   output.log(
     `Certificate for ${joinWords(cert.cns)} (${
       cert.uid
     }) created ${certStamp()}`
   );
+
   return cert;
 }
