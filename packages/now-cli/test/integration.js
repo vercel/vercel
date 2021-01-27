@@ -2557,6 +2557,19 @@ test('vercel secret ls', async t => {
   t.regex(output.stdout, new RegExp(), formatOutput(output));
 });
 
+test('vercel secret ls --test-warning', async t => {
+  const output = await execute(['secret', 'ls', '--test-warning']);
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Test warning message./gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Learn more: https:\/\/vercel.com/gm,
+    formatOutput(output)
+  );
+  t.regex(output.stdout, /No secrets found under/gm, formatOutput(output));
+});
+
 test('vercel secret rename', async t => {
   const nextName = `renamed-secret-${Date.now().toString(36)}`;
   const output = await execute([

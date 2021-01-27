@@ -225,12 +225,16 @@ export default class Now extends EventEmitter {
     return new Error(error.message);
   }
 
-  async listSecrets(next) {
+  async listSecrets(next, testWarningFlag) {
     const payload = await this.retry(async bail => {
       let secretsUrl = '/v3/now/secrets?limit=20';
 
       if (next) {
         secretsUrl += `&until=${next}`;
+      }
+
+      if (testWarningFlag) {
+        secretsUrl += '&testWarning=1';
       }
 
       const res = await this._fetch(secretsUrl);

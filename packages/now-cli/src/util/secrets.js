@@ -1,8 +1,8 @@
 import Now from '.';
 
 export default class Secrets extends Now {
-  ls(next) {
-    return this.listSecrets(next);
+  ls(next, testWarningFlag) {
+    return this.listSecrets(next, testWarningFlag);
   }
 
   getSecretByNameOrId(nameOrId) {
