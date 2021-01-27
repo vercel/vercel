@@ -41,6 +41,7 @@ export default function wait(
       msg = v;
       if (spinner) {
         spinner.text = chalk.gray(v);
+        spinner.start();
       }
     },
   });
