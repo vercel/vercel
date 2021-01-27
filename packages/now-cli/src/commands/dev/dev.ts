@@ -2,7 +2,6 @@ import { resolve, join } from 'path';
 
 import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
-import { Output } from '../../util/output';
 import { NowContext, ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
@@ -22,9 +21,9 @@ type Options = {
 export default async function dev(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
+  const { output } = ctx;
   const [dir = '.'] = args;
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
@@ -35,6 +34,7 @@ export default async function dev(
     token: ctx.authConfig.token,
     currentTeam: ctx.config.currentTeam,
     debug,
+    output,
   });
 
   // retrieve dev command
@@ -49,7 +49,6 @@ export default async function dev(
 
     link = await setupAndLink(
       ctx,
-      output,
       cwd,
       forceDelete,
       autoConfirm,

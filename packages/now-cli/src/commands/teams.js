@@ -52,7 +52,7 @@ const help = () => {
   ${chalk.gray('–')} Invite new members (interactively)
 
       ${chalk.cyan(`$ ${getPkgName()} teams invite`)}
-  
+
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
@@ -97,10 +97,11 @@ const main = async ctx => {
 
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
 
-  return run({ token, config });
+  return run({ token, config, output });
 };
 
 export default async ctx => {
@@ -112,7 +113,7 @@ export default async ctx => {
   }
 };
 
-async function run({ token, config }) {
+async function run({ token, config, output }) {
   const { currentTeam } = config;
   const teams = new NowTeams({ apiUrl, token, debug, currentTeam });
   const args = argv._;
@@ -126,6 +127,7 @@ async function run({ token, config }) {
         config,
         apiUrl,
         token,
+        output,
         argv,
       });
       break;
@@ -138,6 +140,7 @@ async function run({ token, config }) {
         apiUrl,
         token,
         debug,
+        output,
       });
       break;
     }
@@ -154,6 +157,7 @@ async function run({ token, config }) {
         config,
         apiUrl,
         token,
+        output,
       });
       break;
     }

@@ -7,7 +7,6 @@ import getSubcommand from '../../util/get-subcommand';
 import { NowContext } from '../../types';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
-import createOutput from '../../util/output/create-output';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
@@ -51,7 +50,7 @@ const help = () => {
 export default async function main(ctx: NowContext) {
   let argv;
   let args;
-  let output;
+  const { output } = ctx;
 
   try {
     argv = getArgs(ctx.argv.slice(2), {
@@ -63,9 +62,7 @@ export default async function main(ctx: NowContext) {
       '--port': Number,
       '-p': '--port',
     });
-    const debug = argv['--debug'];
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
-    output = createOutput({ debug });
 
     if ('--port' in argv) {
       output.warn('`--port` is deprecated, please use `--listen` instead');
@@ -120,7 +117,7 @@ export default async function main(ctx: NowContext) {
   }
 
   try {
-    return await dev(ctx, argv, args, output);
+    return await dev(ctx, argv, args);
   } catch (err) {
     if (err.code === 'ENOTFOUND') {
       // Error message will look like the following:

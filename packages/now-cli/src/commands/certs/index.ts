@@ -3,7 +3,6 @@ import chalk from 'chalk';
 // @ts-ignore
 import { handleError } from '../../util/error';
 
-import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
@@ -104,17 +103,17 @@ export default async function main(ctx: NowContext) {
     return 0;
   }
 
-  const output = createOutput({ debug: argv['--debug'] });
+  const { output } = ctx;
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'issue':
-      return issue(ctx, argv, args, output);
+      return issue(ctx, argv, args);
     case 'ls':
-      return ls(ctx, argv, args, output);
+      return ls(ctx, argv, args);
     case 'rm':
-      return rm(ctx, argv, args, output);
+      return rm(ctx, argv, args);
     case 'add':
-      return add(ctx, argv, args, output);
+      return add(ctx, argv, args);
     case 'renew':
       output.error('Renewing certificates is deprecated, issue a new one.');
       return 1;

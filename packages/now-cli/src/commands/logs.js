@@ -1,7 +1,6 @@
 import mri from 'mri';
 import chalk from 'chalk';
 import Now from '../util';
-import createOutput from '../util/output';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
 import { maybeURL, normalizeURL } from '../util/url';
@@ -59,7 +58,6 @@ export default async function main(ctx) {
   let deploymentIdOrURL;
 
   let debug;
-  let apiUrl;
   let head;
   let limit;
   let follow;
@@ -87,8 +85,12 @@ export default async function main(ctx) {
     return 2;
   }
 
-  const debugEnabled = argv.debug;
-  const output = createOutput({ debug: debugEnabled });
+  const {
+    authConfig: { token },
+    apiUrl,
+    output,
+    config,
+  } = ctx;
 
   try {
     since = argv.since ? toTimestamp(argv.since) : 0;
@@ -117,7 +119,6 @@ export default async function main(ctx) {
   }
 
   debug = argv.debug;
-  apiUrl = ctx.apiUrl;
 
   head = argv.head;
   limit = typeof argv.n === 'number' ? argv.n : 100;
@@ -125,17 +126,14 @@ export default async function main(ctx) {
   if (follow) until = 0;
   outputMode = argv.output in logPrinters ? argv.output : 'short';
 
-  const {
-    authConfig: { token },
-    config,
-  } = ctx;
   const { currentTeam } = config;
-  const now = new Now({ apiUrl, token, debug, currentTeam });
+  const now = new Now({ apiUrl, token, debug, currentTeam, output });
   const client = new Client({
     apiUrl,
     token,
     currentTeam,
-    debug: debugEnabled,
+    debug,
+    output,
   });
   let contextName = null;
 
@@ -206,6 +204,7 @@ export default async function main(ctx) {
     quiet: false,
     debug,
     findOpts: findOpts1,
+    output,
   });
 
   const printedEventIds = new Set();
@@ -232,6 +231,7 @@ export default async function main(ctx) {
       quiet: false,
       debug,
       findOpts: findOpts2,
+      output,
     });
   }
 

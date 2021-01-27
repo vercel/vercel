@@ -291,7 +291,7 @@ const main = async argv_ => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = ['login', 'help', 'init', 'dev', 'update'];
+  const subcommandsWithoutToken = ['login', 'help', 'init', 'update'];
 
   if (authConfigExists) {
     try {
@@ -346,6 +346,7 @@ const main = async argv_ => {
 
   // the context object to supply to the providers or the commands
   const ctx = {
+    output,
     config,
     authConfig,
     localConfig,
@@ -536,7 +537,7 @@ const main = async argv_ => {
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
     let user = null;
-    const client = new Client({ apiUrl, token });
+    const client = new Client({ apiUrl, token, output });
 
     try {
       user = await getUser(client);

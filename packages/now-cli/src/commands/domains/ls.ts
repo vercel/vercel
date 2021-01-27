@@ -7,7 +7,6 @@ import Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import { Output } from '../../util/output';
 import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
 import { Domain, NowContext } from '../../types';
@@ -24,17 +23,17 @@ type Options = {
 export default async function ls(
   ctx: NowContext,
   opts: Options,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
   const { apiUrl } = ctx;
   const { '--debug': debug, '--next': nextTimestamp } = opts;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {

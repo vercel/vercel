@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { NowContext } from '../../types';
-import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
@@ -66,8 +65,6 @@ export default async function main(ctx: NowContext) {
     return 2;
   }
 
-  const debug = argv['--debug'];
-  const output = createOutput({ debug });
   const { args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   const path = args[0] || process.cwd();
   const autoConfirm = argv['--confirm'];
@@ -75,7 +72,6 @@ export default async function main(ctx: NowContext) {
 
   const link = await setupAndLink(
     ctx,
-    output,
     path,
     forceDelete,
     autoConfirm,

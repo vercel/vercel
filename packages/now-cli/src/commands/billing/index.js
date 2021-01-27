@@ -14,7 +14,6 @@ import addBilling from './add';
 import exit from '../../util/exit';
 import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
-import createOutput from '../../util/output';
 import { getPkgName } from '../../util/pkg-name.ts';
 
 const help = () => {
@@ -90,8 +89,9 @@ function buildInquirerChoices(cards) {
     const _default =
       source.id === cards.defaultSource ? ` ${chalk.bold('(default)')}` : '';
     const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`;
-    const number = `${chalk.gray('#### ').repeat(3)}${source.last4 ||
-      source.card.last4}`;
+    const number = `${chalk.gray('#### ').repeat(3)}${
+      source.last4 || source.card.last4
+    }`;
     const str = [
       id,
       indent(source.name || source.owner.name, 2),
@@ -106,11 +106,16 @@ function buildInquirerChoices(cards) {
   });
 }
 
-async function run({ token, config: { currentTeam } }) {
+async function run({ token, output, config: { currentTeam } }) {
   const start = new Date();
-  const creditCards = new NowCreditCards({ apiUrl, token, debug, currentTeam });
-  const output = createOutput({ debug });
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const creditCards = new NowCreditCards({
+    apiUrl,
+    token,
+    debug,
+    currentTeam,
+    output,
+  });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {
@@ -147,8 +152,9 @@ async function run({ token, config: { currentTeam } }) {
           const id = `${chalk.gray('-')} ${chalk.cyan(
             `ID: ${source.id}`
           )}${_default}`;
-          const number = `${chalk.gray('#### ').repeat(3)}${source.last4 ||
-            source.card.last4}`;
+          const number = `${chalk.gray('#### ').repeat(3)}${
+            source.last4 || source.card.last4
+          }`;
 
           return [
             id,
@@ -231,8 +237,9 @@ async function run({ token, config: { currentTeam } }) {
         const elapsed = ms(new Date() - start);
         console.log(
           success(
-            `${card.brand || card.card.brand} ending in ${card.last4 ||
-              card.card.last4} is now the default ${chalk.gray(`[${elapsed}]`)}`
+            `${card.brand || card.card.brand} ending in ${
+              card.last4 || card.card.last4
+            } is now the default ${chalk.gray(`[${elapsed}]`)}`
           )
         );
       } else {
@@ -301,9 +308,9 @@ async function run({ token, config: { currentTeam } }) {
         const deletedCard = cards.sources.find(card => card.id === cardId);
         const remainingCards = cards.sources.filter(card => card.id !== cardId);
 
-        let text = `${deletedCard.brand ||
-          deletedCard.card.brand} ending in ${deletedCard.last4 ||
-          deletedCard.card.last4} was deleted`;
+        let text = `${deletedCard.brand || deletedCard.card.brand} ending in ${
+          deletedCard.last4 || deletedCard.card.last4
+        } was deleted`;
         //  ${chalk.gray(`[${elapsed}]`)}
 
         if (cardId === cards.defaultSource) {
@@ -317,11 +324,11 @@ async function run({ token, config: { currentTeam } }) {
               card => card.id === cards.defaultCardId
             );
 
-            text += `\n${newDefaultCard.brand ||
-              newDefaultCard.card.brand} ending in ${newDefaultCard.last4 ||
-              newDefaultCard.card.last4} in now default for ${chalk.bold(
-              contextName
-            )}`;
+            text += `\n${
+              newDefaultCard.brand || newDefaultCard.card.brand
+            } ending in ${
+              newDefaultCard.last4 || newDefaultCard.card.last4
+            } in now default for ${chalk.bold(contextName)}`;
           }
         }
 

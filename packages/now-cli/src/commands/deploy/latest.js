@@ -233,8 +233,7 @@ export default async function main(
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
-  // $FlowFixMe
-  const isTTY = process.stdout.isTTY;
+  const { isTTY } = process.stdout;
   const quiet = !isTTY;
 
   // check paths
@@ -263,6 +262,7 @@ export default async function main(
     apiUrl: ctx.apiUrl,
     token: ctx.authConfig.token,
     debug: debugEnabled,
+    output,
   });
 
   // retrieve `project` and `org` from .vercel
@@ -645,6 +645,7 @@ export default async function main(
           token: ctx.authConfig.token,
           currentTeam: org.id,
           debug: debugEnabled,
+          output,
         }),
         err.meta.domain,
         contextName
@@ -727,6 +728,7 @@ export default async function main(
       token: ctx.authConfig.token,
       currentTeam: org.type === 'team' ? org.id : null,
       debug: debugEnabled,
+      output,
     }),
     deployment,
     deployStamp,

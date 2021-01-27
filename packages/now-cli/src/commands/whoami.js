@@ -4,7 +4,6 @@ import logo from '../util/output/logo';
 import { handleError } from '../util/error';
 import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
-import createOutput from '../util/output';
 import { getPkgName } from '../util/pkg-name.ts';
 
 const help = () => {
@@ -55,10 +54,10 @@ const main = async ctx => {
   const debug = argv['--debug'];
   const {
     authConfig: { token },
+    output,
     apiUrl,
   } = ctx;
-  const output = createOutput({ debug });
-  const client = new Client({ apiUrl, token, debug });
+  const client = new Client({ apiUrl, token, debug, output });
   let contextName = null;
 
   try {

@@ -105,7 +105,8 @@ function validateResponseHeaders(t, res) {
 }
 
 async function exec(directory, args = []) {
-  return execa(binaryPath, ['dev', directory, ...args], {
+  const token = await fetchCachedToken();
+  return execa(binaryPath, ['dev', directory, '-t', token, ...args], {
     reject: false,
     shell: true,
     env: { __VERCEL_SKIP_DEV_CMD: 1 },
@@ -166,9 +167,10 @@ async function testPath(
 async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
+  const token = await fetchCachedToken();
   const dev = execa(
     binaryPath,
-    ['dev', directory, '-l', String(port), ...args],
+    ['dev', directory, '-t', token, '-l', String(port), ...args],
     {
       reject: false,
       detached: true,
@@ -895,6 +897,32 @@ test(
 test(
   '[vercel dev] test cleanUrls serve correct content',
   testFixtureStdio('test-clean-urls', async testPath => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/about', 'About Page');
+    await testPath(200, '/sub', 'Sub Index Page');
+    await testPath(200, '/sub/another', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(308, '/index.html', 'Redirecting to / (308)', {
+      Location: '/',
+    });
+    await testPath(308, '/about.html', 'Redirecting to /about (308)', {
+      Location: '/about',
+    });
+    await testPath(308, '/sub/index.html', 'Redirecting to /sub (308)', {
+      Location: '/sub',
+    });
+    await testPath(
+      308,
+      '/sub/another.html',
+      'Redirecting to /sub/another (308)',
+      { Location: '/sub/another' }
+    );
+  })
+);
+
+test(
+  '[vercel dev] test cleanUrls serve correct content when using `outputDirectory`',
+  testFixtureStdio('test-clean-urls-with-output-directory', async testPath => {
     await testPath(200, '/', 'Index Page');
     await testPath(200, '/about', 'About Page');
     await testPath(200, '/sub', 'Sub Index Page');

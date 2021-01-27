@@ -12,9 +12,10 @@ import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 import { getCommandName } from '../../util/pkg-name.ts';
 
-export default async function rm(ctx, opts, args, output) {
+export default async function rm(ctx, opts, args) {
   const {
     authConfig: { token },
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
@@ -25,6 +26,7 @@ export default async function rm(ctx, opts, args, output) {
     token,
     currentTeam,
     debug: debugEnabled,
+    output,
   });
   let contextName = null;
 
@@ -39,8 +41,13 @@ export default async function rm(ctx, opts, args, output) {
     throw err;
   }
 
-  // $FlowFixMe
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+    output,
+  });
   const [aliasOrId] = args;
 
   if (args.length !== 1) {

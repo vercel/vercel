@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 
 import { NowContext } from '../../types';
-import createOutput from '../../util/output';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
@@ -109,15 +108,15 @@ export default async function main(ctx: NowContext) {
   }
 
   const debug = argv['--debug'];
-  const output = createOutput({ debug });
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   const {
     authConfig: { token },
+    apiUrl,
+    output,
     config,
   } = ctx;
   const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const client = new Client({ apiUrl, token, currentTeam, debug });
+  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   const link = await getLinkedProject(output, client);
   if (link.status === 'error') {
     return link.exitCode;
