@@ -30,7 +30,7 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
   }
 
   function print(str: string) {
-    if (spinnerMessage) stopSpinner();
+    stopSpinner();
     process.stderr.write(str);
   }
 
