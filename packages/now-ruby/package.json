@@ -15,9 +15,9 @@
     "directory": "packages/now-ruby"
   },
   "scripts": {
-    "build": "./build.sh",
+    "build": "node build",
     "test-integration-once": "jest --env node --verbose --runInBand --bail",
-    "prepublishOnly": "./build.sh"
+    "prepublishOnly": "node build"
   },
   "devDependencies": {
     "@types/fs-extra": "8.0.0",

@@ -8,7 +8,8 @@
     "directory": "packages/now-cgi"
   },
   "scripts": {
-    "prepublish": "./build.sh"
+    "build": "node build",
+    "prepublishOnly": "node build"
   },
   "files": [
     "index.js",

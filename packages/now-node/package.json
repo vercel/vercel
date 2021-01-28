@@ -10,10 +10,10 @@
     "directory": "packages/now-node"
   },
   "scripts": {
-    "build": "./build.sh",
+    "build": "node build",
     "test-unit": "jest --env node --verbose --runInBand --bail test/helpers.test.js",
     "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "node build"
   },
   "files": [
     "dist"
