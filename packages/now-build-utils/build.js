@@ -6,7 +6,7 @@ const { join } = require('path');
 async function main() {
   const outDir = join(__dirname, 'dist');
 
-  // Clean slate
+  // Start fresh
   await fs.remove(outDir);
 
   // Compile TypeScript
