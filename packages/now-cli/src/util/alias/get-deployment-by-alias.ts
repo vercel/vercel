@@ -37,9 +37,7 @@ export async function getDeploymentForAlias(
   contextName: string,
   localConfig: NowConfig
 ) {
-  const cancelWait = output.spinner(
-    `Fetching deployment to alias in ${chalk.bold(contextName)}`
-  );
+  output.spinner(`Fetching deployment to alias in ${chalk.bold(contextName)}`);
 
   // When there are no args at all we try to get the targets from the config
   if (args.length === 2) {
@@ -49,7 +47,7 @@ export async function getDeploymentForAlias(
       contextName,
       deploymentId
     );
-    cancelWait();
+    output.stopSpinner();
     return deployment;
   }
 
@@ -68,6 +66,6 @@ export async function getDeploymentForAlias(
     user,
     contextName
   );
-  cancelWait();
+  output.stopSpinner();
   return deployment;
 }
