@@ -22,6 +22,7 @@ export default function createOutput(opts?: OutputOptions) {
 }
 
 function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
+  let spinnerMessage = '';
   let spinner: StopSpinner | null = null;
 
   function isDebugEnabled() {
@@ -29,7 +30,7 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
   }
 
   function print(str: string) {
-    stopSpinner();
+    if (spinnerMessage) stopSpinner();
     process.stderr.write(str);
   }
 
@@ -112,6 +113,7 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
   }
 
   function setSpinner(message: string, delay: number = 300): void {
+    spinnerMessage = message;
     if (debugEnabled) {
       debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       return;
@@ -124,9 +126,10 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
   }
 
   function stopSpinner() {
-    if (debugEnabled) {
-      debug('Spinner stopped');
+    if (debugEnabled && spinnerMessage) {
+      debug(`Spinner stopped (${spinnerMessage})`);
     }
+    spinnerMessage = '';
     if (spinner) {
       spinner();
       spinner = null;
