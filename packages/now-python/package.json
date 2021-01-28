@@ -14,9 +14,9 @@
     "directory": "packages/now-python"
   },
   "scripts": {
-    "build": "./build.sh",
+    "build": "node build",
     "test-integration-once": "jest --env node --verbose --runInBand --bail",
-    "prepublishOnly": "./build.sh"
+    "prepublishOnly": "node build"
   },
   "devDependencies": {
     "@types/execa": "^0.9.0",
