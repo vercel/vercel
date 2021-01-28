@@ -3,4 +3,3 @@ dist
 *.log
 /go
 /analyze
-*.js
