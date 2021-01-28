@@ -32,7 +32,7 @@ async function main() {
     'ncc',
     [
       'build',
-      'index.ts',
+      'install.ts',
       '-e',
       '@vercel/build-utils',
       '-e',
