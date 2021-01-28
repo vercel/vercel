@@ -127,12 +127,14 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
 
   function stopSpinner() {
     if (debugEnabled && spinnerMessage) {
-      debug(`Spinner stopped (${spinnerMessage})`);
+      const msg = `Spinner stopped (${spinnerMessage})`;
+      spinnerMessage = '';
+      debug(msg);
     }
-    spinnerMessage = '';
     if (spinner) {
       spinner();
       spinner = null;
+      spinnerMessage = '';
     }
   }
 
