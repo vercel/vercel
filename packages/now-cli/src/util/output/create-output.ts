@@ -111,28 +111,22 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
     }
   }
 
-  function setSpinner(message: string, delay: number = 300): StopSpinner {
+  function setSpinner(message: string, delay: number = 300): void {
     if (debugEnabled) {
       debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
-      let isEnded = false;
-      const stop = (() => {
-        if (isEnded) return;
-        isEnded = true;
-        debug(`Spinner ended (${message})`);
-      }) as StopSpinner;
-      stop.text = message;
-      return stop;
+      return;
     }
-
     if (spinner) {
       spinner.text = message;
     } else {
       spinner = wait(message, delay);
     }
-    return spinner;
   }
 
   function stopSpinner() {
+    if (debugEnabled) {
+      debug('Spinner stopped');
+    }
     if (spinner) {
       spinner();
       spinner = null;
