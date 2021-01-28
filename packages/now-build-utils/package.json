@@ -11,10 +11,10 @@
     "directory": "packages/now-build-utils"
   },
   "scripts": {
-    "build": "./build.sh",
+    "build": "node build",
     "test-unit": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
     "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
-    "prepublishOnly": "./build.sh"
+    "prepublishOnly": "node build"
   },
   "devDependencies": {
     "@iarna/toml": "2.2.3",
