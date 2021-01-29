@@ -115,12 +115,11 @@ export default async function buy(
 
   let buyResult;
   const purchaseStamp = stamp();
-  const stopPurchaseSpinner = output.spinner('Purchasing');
+  output.spinner('Purchasing');
 
   try {
     buyResult = await purchaseDomain(client, domainName, price, autoRenew);
   } catch (err) {
-    stopPurchaseSpinner();
     output.error(
       'An unexpected error occurred while purchasing your domain. Please try again later.'
     );
@@ -128,7 +127,7 @@ export default async function buy(
     return 1;
   }
 
-  stopPurchaseSpinner();
+  output.stopSpinner();
 
   if (buyResult instanceof ERRORS.SourceNotFound) {
     output.error(

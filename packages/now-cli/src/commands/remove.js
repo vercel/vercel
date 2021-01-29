@@ -133,7 +133,7 @@ export default async function main(ctx) {
     throw err;
   }
 
-  const cancelWait = output.spinner(
+  output.spinner(
     `Fetching deployment(s) ${ids
       .map(id => `"${id}"`)
       .join(' ')} in ${chalk.bold(contextName)}`
@@ -198,7 +198,7 @@ export default async function main(ctx) {
       })
     );
   } finally {
-    cancelWait();
+    output.stopSpinner();
   }
 
   deployments = deployments.filter((match, i) => {

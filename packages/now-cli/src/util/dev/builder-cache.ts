@@ -222,14 +222,14 @@ async function npmInstall(
 ) {
   const sortedPackages = packagesToInstall.sort();
 
-  const stopSpinner = silent
-    ? () => {}
-    : output.spinner(
-        `Installing ${pluralize(
-          'Runtime',
-          sortedPackages.length
-        )}: ${sortedPackages.join(', ')}`
-      );
+  if (!silent) {
+    output.spinner(
+      `Installing ${pluralize(
+        'Runtime',
+        sortedPackages.length
+      )}: ${sortedPackages.join(', ')}`
+    );
+  }
 
   output.debug(`Running npm install in ${cwd}`);
 
@@ -253,7 +253,7 @@ async function npmInstall(
       stdio: output.isDebugEnabled() ? 'inherit' : 'pipe',
     });
     if (result.failed) {
-      stopSpinner();
+      output.stopSpinner();
       if (result.stdout) {
         console.log(result.stdout);
       }
@@ -272,7 +272,7 @@ async function npmInstall(
       });
     }
   } finally {
-    stopSpinner();
+    output.stopSpinner();
   }
 }
 
