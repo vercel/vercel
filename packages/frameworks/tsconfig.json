@@ -10,9 +10,8 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "resolveJsonModule": true,
-    "types": ["node", "jest"],
     "outDir": "./dist",
+    "types": ["node", "jest"],
     "strict": true,
     "target": "esnext"
   },
