@@ -1556,7 +1556,7 @@ export const frameworks: Framework[] = [
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/zola.png',
     tagline: 'Everything you need to make a static site engine in one binary.',
-    description: '',
+    description: 'A Zola app, created with the "Getting Started" tutorial.',
     website: 'https://www.getzola.org',
     settings: {
       installCommand: {
