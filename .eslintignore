@@ -38,7 +38,3 @@ packages/now-static-build/test/build-fixtures
 
 # redwood
 packages/redwood/test/fixtures
-
-# frameworks
-packages/frameworks/*.js
-packages/frameworks/*.d.ts
