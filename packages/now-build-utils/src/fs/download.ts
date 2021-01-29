@@ -25,7 +25,7 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
     await symlink(target, fsPath);
     return FileFsRef.fromFsPath({ mode, fsPath });
   } else {
-    const stream = file.toStreamAsync ? await file.toStreamAsync() : file.toStream();
+    const stream = ('toStreamAsync' in file) ? await file.toStreamAsync() : file.toStream();
     return FileFsRef.fromStream({ mode, stream, fsPath });
   }
 }
