@@ -1552,6 +1552,7 @@ export const frameworks: Framework[] = [
   {
     name: 'Zola',
     slug: 'zola',
+    demo: 'https://zola.now-examples.vercel.app',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/zola.png',
     tagline: 'Everything you need to make a static site engine in one binary.',
