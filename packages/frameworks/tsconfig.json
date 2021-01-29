@@ -12,9 +12,10 @@
     "noUnusedParameters": true,
     "resolveJsonModule": true,
     "types": ["node", "jest"],
+    "outDir": "./dist",
     "strict": true,
     "target": "esnext"
   },
-  "include": ["*.ts"],
+  "include": ["src/*.ts"],
   "exclude": ["node_modules"]
 }

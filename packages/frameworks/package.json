@@ -1,8 +1,8 @@
 {
   "name": "@vercel/frameworks",
   "version": "0.2.0",
-  "main": "./index.js",
-  "types": "./index.d.ts",
+  "main": "./dist/frameworks.js",
+  "types": "./dist/frameworks.d.ts",
   "license": "UNLICENSED",
   "scripts": {
     "build": "tsc",

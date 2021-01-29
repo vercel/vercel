@@ -53,7 +53,6 @@ const Schema = {
   items: {
     type: 'object',
     required: ['name', 'slug', 'logo', 'description', 'settings'],
-    additionalProperties: false,
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },

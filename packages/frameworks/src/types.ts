@@ -1,4 +1,4 @@
-import _frameworks from './frameworks.json';
+import { Route } from '@vercel/routing-utils/dist/types';
 
 export interface FrameworkDetectionItem {
   path: string;
@@ -31,6 +31,7 @@ export interface Framework {
     some?: FrameworkDetectionItem[];
   };
   settings: {
+    installCommand: Setting;
     buildCommand: Setting;
     devCommand: Setting;
     outputDirectory: Setting;
@@ -39,8 +40,11 @@ export interface Framework {
     id: string;
     dependencies: string[];
   }[];
+
+  dependency?: string;
+  getOutputDirName: (dirPrefix: string) => Promise<string>;
+  defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
+  cachePattern?: string;
+  buildCommand?: string;
+  devCommand?: string;
 }
-
-export const frameworks = _frameworks as Framework[];
-
-export default frameworks;
