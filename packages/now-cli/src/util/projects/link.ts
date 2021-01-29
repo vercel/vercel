@@ -176,7 +176,7 @@ export async function getLinkedProject(
     } else {
       output.print(
         prependEmoji(
-          'Your project was either removed from Vercel or you’re not a member of it anymore.\n',
+          'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
           emoji('warning')
         )
       );
