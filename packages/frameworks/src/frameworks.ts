@@ -53,6 +53,8 @@ export const frameworks: Framework[] = [
         placeholder: 'Next.js default',
       },
     },
+    devCommand: 'blitz start',
+    buildCommand: 'blitz build',
     getOutputDirName: async () => 'public',
   },
   {
@@ -96,6 +98,8 @@ export const frameworks: Framework[] = [
         dependencies: ['next-plugin-sentry', 'next-sentry-source-maps'],
       },
     ],
+    devCommand: 'next dev --port $PORT',
+    buildCommand: 'next build',
     getOutputDirName: async () => 'public',
   },
   {
@@ -134,6 +138,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'gatsby',
+    devCommand: 'gatsby develop --port $PORT',
     buildCommand: 'gatsby build',
     getOutputDirName: async () => 'public',
     defaultRoutes: async (dirPrefix: string) => {
@@ -220,6 +225,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'hexo',
+    devCommand: 'hexo server --port $PORT',
     buildCommand: 'hexo generate',
     getOutputDirName: async () => 'public',
   },
@@ -258,6 +264,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@11ty/eleventy',
+    devCommand: 'npx @11ty/eleventy --serve --watch --port $PORT',
     buildCommand: 'npx @11ty/eleventy',
     getOutputDirName: async () => '_site',
     cachePattern: '.cache/**',
@@ -297,6 +304,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@docusaurus/core',
+    devCommand: 'docusaurus start --port $PORT',
     buildCommand: 'docusaurus build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
@@ -387,6 +395,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'preact-cli',
+    devCommand: 'preact watch --port $PORT',
     buildCommand: 'preact build',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -436,6 +445,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@dojo/cli',
+    devCommand: 'dojo build -m dev -w -s -p $PORT',
     buildCommand: 'dojo build',
     getOutputDirName: async () => join('output', 'dist'),
     defaultRoutes: [
@@ -487,6 +497,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'ember-cli',
+    devCommand: 'ember serve --port $PORT',
     buildCommand: 'ember build',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -533,6 +544,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@vue/cli-service',
+    devCommand: 'vue-cli-service serve --port $PORT',
     buildCommand: 'vue-cli-service build',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -588,6 +600,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@scullyio/init',
+    devCommand: 'ng serve --port $PORT',
     buildCommand: 'ng build && scully',
     getOutputDirName: async () => 'dist/static',
   },
@@ -625,6 +638,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@ionic/angular',
+    devCommand: 'ng start',
     buildCommand: 'ng build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
@@ -671,6 +685,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@angular/cli',
+    devCommand: 'ng serve --port $PORT',
     buildCommand: 'ng build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'dist';
@@ -731,6 +746,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'polymer-cli',
+    devCommand: 'polymer serve --port $PORT',
     buildCommand: 'polymer build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
@@ -789,6 +805,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'sirv-cli',
+    devCommand: 'sirv public --single --dev --port $PORT',
     buildCommand: 'rollup -c',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
@@ -835,6 +852,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@ionic/react',
+    devCommand: 'react-scripts start',
     buildCommand: 'react-scripts build',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -901,6 +919,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'react-scripts',
+    devCommand: 'react-scripts start',
     buildCommand: 'react-scripts build',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -952,6 +971,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'react-dev-utils',
+    devCommand: 'react-scripts start',
     buildCommand: 'react-scripts build',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -1013,6 +1033,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'gridsome',
+    devCommand: 'gridsome develop -p $PORT',
     buildCommand: 'gridsome build',
     getOutputDirName: async () => 'dist',
   },
@@ -1050,6 +1071,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'umi',
+    devCommand: 'umi dev --port $PORT',
     buildCommand: 'umi build',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -1097,6 +1119,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'docusaurus',
+    devCommand: 'docusaurus-start --port $PORT',
     buildCommand: 'docusaurus-build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
@@ -1148,6 +1171,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'sapper',
+    devCommand: 'sapper dev --port $PORT',
     buildCommand: 'sapper export',
     getOutputDirName: async () => '__sapper__/export',
   },
@@ -1185,6 +1209,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'saber',
+    devCommand: 'saber --port $PORT',
     buildCommand: 'saber build',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
@@ -1236,6 +1261,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: '@stencil/core',
+    devCommand: 'stencil build --dev --watch --serve --port $PORT',
     buildCommand: 'stencil build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
@@ -1297,6 +1323,7 @@ export const frameworks: Framework[] = [
       },
     },
     dependency: 'nuxt',
+    devCommand: 'nuxt',
     buildCommand: 'nuxt generate',
     getOutputDirName: async () => 'dist',
     cachePattern: '.nuxt/**',
@@ -1358,6 +1385,7 @@ export const frameworks: Framework[] = [
         placeholder: '`public` or `publishDir` from the `config` file',
       },
     },
+    devCommand: 'hugo server -D -w -p $PORT',
     buildCommand: 'hugo -D --gc',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
       type HugoConfig = { publishDir?: string };
@@ -1401,6 +1429,7 @@ export const frameworks: Framework[] = [
         placeholder: '`_site` or `destination` from `_config.yml`',
       },
     },
+    devCommand: 'bundle exec jekyll serve --watch --port $PORT',
     buildCommand: 'jekyll build',
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
       type JekyllConfig = { destination?: string };
@@ -1441,6 +1470,7 @@ export const frameworks: Framework[] = [
         value: 'public',
       },
     },
+    devCommand: 'brunch watch --server --port $PORT',
     buildCommand: 'brunch build --production',
     getOutputDirName: async () => 'public',
   },
@@ -1475,6 +1505,7 @@ export const frameworks: Framework[] = [
         value: 'build',
       },
     },
+    devCommand: 'bundle exec middleman server -p $PORT',
     buildCommand: 'bundle exec middleman build',
     getOutputDirName: async () => 'build',
   },
@@ -1513,6 +1544,9 @@ export const frameworks: Framework[] = [
         placeholder: 'RedwoodJS default',
       },
     },
+    devCommand: 'yarn rw dev --fwd="--port=$PORT --open=false',
+    buildCommand:
+      'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
     getOutputDirName: async () => 'public',
   },
   {
@@ -1531,12 +1565,13 @@ export const frameworks: Framework[] = [
         value: 'zola build',
       },
       devCommand: {
-        value: 'zola serve',
+        value: 'zola serve --port $PORT',
       },
       outputDirectory: {
         value: 'public',
       },
     },
+    devCommand: 'zola serve --port $PORT',
     buildCommand: 'zola build',
     getOutputDirName: async () => 'public',
   },
@@ -1560,6 +1595,8 @@ export const frameworks: Framework[] = [
         placeholder: '`public` if it exists, or `.`',
       },
     },
+    devCommand: null,
+    buildCommand: null,
     getOutputDirName: async () => 'public',
   },
 ];

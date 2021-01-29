@@ -45,6 +45,6 @@ export interface Framework {
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   cachePattern?: string;
-  buildCommand?: string;
-  devCommand?: string;
+  buildCommand: string | null;
+  devCommand: string | null;
 }
