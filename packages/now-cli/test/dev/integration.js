@@ -134,7 +134,7 @@ async function testPath(
 ) {
   const opts = { ...fetchOpts, redirect: 'manual-dont-change' };
   const url = `${origin}${path}`;
-  const res = await fetchWithRetry(url, opts);
+  const res = await fetchWithRetry(url, 5, opts);
   const msg = `Testing response from ${fetchOpts.method || 'GET'} ${url}`;
   console.log(msg);
   t.is(res.status, status, msg);
@@ -270,6 +270,7 @@ function testFixtureStdio(
           const { projectId } = await fs.readJson(projectJsonPath);
           const res = await fetchWithRetry(
             `https://api.vercel.com/v2/projects/${projectId}`,
+            3,
             {
               method: 'PATCH',
               headers: {
