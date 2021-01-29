@@ -1,6 +1,6 @@
 {
   "name": "@vercel/cgi",
-  "version": "1.0.6",
+  "version": "1.0.7-canary.0",
   "license": "MIT",
   "repository": {
     "type": "git",
