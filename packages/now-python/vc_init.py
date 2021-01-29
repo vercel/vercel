@@ -1,4 +1,3 @@
-
 import sys
 import base64
 import json
@@ -35,7 +34,6 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
 
     print('using HTTP Handler')
     from http.server import HTTPServer
-    from urllib.parse import unquote
     import http
     import _thread
 
@@ -46,8 +44,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         _thread.start_new_thread(server.handle_request, ())
 
         payload = json.loads(event['body'])
-        path = unquote(payload['path'])
-        path = path.replace(' ', '%20')
+        path = payload['path']
         headers = payload['headers']
         method = payload['method']
         encoding = payload.get('encoding')
@@ -85,7 +82,7 @@ elif 'app' in __vc_variables:
         not inspect.iscoroutinefunction(__vc_module.app.__call__)
     ):
         print('using Web Server Gateway Interface (WSGI)')
-        from urllib.parse import urlparse, unquote
+        from urllib.parse import urlparse
         from werkzeug._compat import BytesIO
         from werkzeug._compat import string_types
         from werkzeug._compat import to_bytes
@@ -105,7 +102,7 @@ elif 'app' in __vc_variables:
             if isinstance(body, string_types):
                 body = to_bytes(body, charset='utf-8')
 
-            url = urlparse(unquote(payload['path']))
+            url = urlparse(payload['path'])
             query = url.query
             path = url.path
 
@@ -161,7 +158,7 @@ elif 'app' in __vc_variables:
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
         import asyncio
         import enum
-        from urllib.parse import urlparse, unquote, urlencode
+        from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
 
 
@@ -258,7 +255,7 @@ elif 'app' in __vc_variables:
             elif not isinstance(body, bytes):
                 body = body.encode()
 
-            url = urlparse(unquote(payload['path']))
+            url = urlparse(payload['path'])
             query = url.query.encode()
             path = url.path
 

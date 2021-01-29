@@ -1600,7 +1600,8 @@ test('output logs with "short" output', async t => {
   t.truthy(
     stdout.match(
       /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/
-    )
+    ),
+    formatOutput({ stderr, stdout })
   );
 
   t.is(exitCode, 0);
@@ -3132,7 +3133,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async t =>
     detectedNotice =
       detectedNotice ||
       chunk.includes(
-        'Your project was either removed from Vercel or you’re not a member of it anymore'
+        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
     return /Set up and deploy [^?]+\?/.test(chunk);

@@ -19,14 +19,14 @@ export default async function createAlias(
   alias: string,
   externalDomain: boolean
 ) {
-  let cancelMessage = output.spinner(`Creating alias`);
+  output.spinner(`Creating alias`);
   const result = await performCreateAlias(
     client,
     contextName,
     deployment,
     alias
   );
-  cancelMessage();
+  output.stopSpinner();
 
   if (result instanceof ERRORS.CertMissing) {
     const cert = await createCertForAlias(
@@ -40,14 +40,14 @@ export default async function createAlias(
       return cert;
     }
 
-    let cancelMessage = output.spinner(`Creating alias`);
+    output.spinner(`Creating alias`);
     const secondTry = await performCreateAlias(
       client,
       contextName,
       deployment,
       alias
     );
-    cancelMessage();
+    output.stopSpinner();
     return secondTry;
   }
 

@@ -52,7 +52,6 @@ export default async function ls(ctx, opts, args) {
     output,
   });
   const lsStamp = stamp();
-  let cancelWait;
 
   if (args.length > 0) {
     output.error(
@@ -63,17 +62,13 @@ export default async function ls(ctx, opts, args) {
     return 1;
   }
 
-  cancelWait = output.spinner(
-    `Fetching aliases under ${chalk.bold(contextName)}`
-  );
+  output.spinner(`Fetching aliases under ${chalk.bold(contextName)}`);
 
   const { aliases, pagination } = await getAliases(
     now,
     undefined,
     nextTimestamp
   );
-  if (cancelWait) cancelWait();
-
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
   console.log(printAliasTable(aliases));
 

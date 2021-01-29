@@ -19,7 +19,7 @@ export default async function purchaseDomainIfAvailable(
   domain: string,
   contextName: string
 ) {
-  const cancelWait = output.spinner(`Checking status of ${chalk.bold(domain)}`);
+  output.spinner(`Checking status of ${chalk.bold(domain)}`);
   const buyDomainStamp = stamp();
   const { available } = await getDomainStatus(client, domain);
 
@@ -32,7 +32,7 @@ export default async function purchaseDomainIfAvailable(
     output.debug(`Domain ${domain} is available to be purchased`);
 
     const domainPrice = await getDomainPrice(client, domain).finally(() => {
-      cancelWait();
+      output.stopSpinner();
     });
 
     if (domainPrice instanceof ERRORS.UnsupportedTLD) {

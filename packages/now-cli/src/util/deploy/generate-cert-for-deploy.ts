@@ -22,25 +22,21 @@ export default async function generateCertForDeploy(
     return new InvalidDomain(deployURL);
   }
 
-  const cancelSetupWait = output.spinner(
-    `Setting custom suffix domain ${domain}`
-  );
+  output.spinner(`Setting custom suffix domain ${domain}`);
   const result = await setupDomain(output, client, domain, contextName);
-  cancelSetupWait();
+  output.stopSpinner();
   if (result instanceof NowError) {
     return result;
   }
 
   // Generate the certificate with the given parameters
-  const cancelCertWait = output.spinner(
-    `Generating a wildcard certificate for ${domain}`
-  );
+  output.spinner(`Generating a wildcard certificate for ${domain}`);
   const cert = await createCertForCns(
     client,
     [domain, `*.${domain}`],
     contextName
   );
-  cancelCertWait();
+  output.stopSpinner();
   if (cert instanceof NowError) {
     return cert;
   }
