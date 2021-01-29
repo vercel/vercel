@@ -1603,34 +1603,3 @@ export const frameworks: Framework[] = [
 ];
 
 export default frameworks;
-
-/*
-function getValue(
-  framework: Framework | undefined,
-  name: keyof Framework['settings']
-) {
-  const setting = framework && framework.settings && framework.settings[name];
-  return setting && (setting as SettingValue).value;
-}
-
-export const frameworks: Framework[] = frameworkList.map(partialFramework => {
-  const frameworkItem = nowFrameworks.find(
-    f => f.slug === partialFramework.slug
-  );
-
-  const devCommand = getValue(frameworkItem, 'devCommand');
-  const buildCommand = getValue(frameworkItem, 'buildCommand');
-  const outputDirectory = getValue(frameworkItem, 'outputDirectory');
-
-  const getOutputDirName = partialFramework.getOutputDirName
-    ? partialFramework.getOutputDirName
-    : async () => outputDirectory || 'public';
-
-  return {
-    devCommand,
-    buildCommand,
-    ...partialFramework,
-    getOutputDirName,
-  };
-});
-*/
