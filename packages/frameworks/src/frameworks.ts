@@ -20,44 +20,6 @@ const isDir = async (file: string): Promise<boolean> =>
 
 export const frameworks: Framework[] = [
   {
-    name: 'Blitz.js',
-    slug: 'blitzjs',
-    demo: 'https://blitzjs.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg',
-    tagline: 'Blitz.js: The Fullstack React Framework',
-    description:
-      'A brand new Blitz.js app - the result of running `npx blitz new`.',
-    website: 'https://blitzjs.com',
-    useRuntime: { src: 'package.json', use: '@vercel/next' },
-    detectors: {
-      every: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install` or `npm install`',
-      },
-      buildCommand: {
-        placeholder: '`npm run build` or `blitz build`',
-      },
-      devCommand: {
-        value: 'blitz start',
-      },
-      outputDirectory: {
-        placeholder: 'Next.js default',
-      },
-    },
-    devCommand: 'blitz start',
-    buildCommand: 'blitz build',
-    getOutputDirName: async () => 'public',
-  },
-  {
     name: 'Next.js',
     slug: 'nextjs',
     demo: 'https://nextjs.now-examples.now.sh',
@@ -270,6 +232,95 @@ export const frameworks: Framework[] = [
     cachePattern: '.cache/**',
   },
   {
+    name: 'Hugo',
+    slug: 'hugo',
+    demo: 'https://hugo.now-examples.now.sh',
+    logo:
+      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hugo.svg',
+    tagline:
+      'Hugo is the world’s fastest framework for building websites, written in Go.',
+    description: 'A Hugo site, created with the Hugo CLI.',
+    website: 'https://gohugo.io',
+    sort: 5,
+    detectors: {
+      some: [
+        {
+          path: 'config.yaml',
+        },
+        {
+          path: 'config.toml',
+        },
+        {
+          path: 'config.json',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `hugo -D --gc`',
+      },
+      devCommand: {
+        value: 'hugo server -D -w -p $PORT',
+      },
+      outputDirectory: {
+        placeholder: '`public` or `publishDir` from the `config` file',
+      },
+    },
+    devCommand: 'hugo server -D -w -p $PORT',
+    buildCommand: 'hugo -D --gc',
+    getOutputDirName: async (dirPrefix: string): Promise<string> => {
+      type HugoConfig = { publishDir?: string };
+      const config = await readConfigFile<HugoConfig>(
+        ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
+          return join(dirPrefix, fileName);
+        })
+      );
+
+      return (config && config.publishDir) || 'public';
+    },
+  },
+  {
+    name: 'Blitz.js',
+    slug: 'blitzjs',
+    demo: 'https://blitzjs.now-examples.now.sh',
+    logo:
+      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg',
+    tagline: 'Blitz.js: The Fullstack React Framework',
+    description:
+      'A brand new Blitz.js app - the result of running `npx blitz new`.',
+    website: 'https://blitzjs.com',
+    useRuntime: { src: 'package.json', use: '@vercel/next' },
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `blitz build`',
+      },
+      devCommand: {
+        value: 'blitz start',
+      },
+      outputDirectory: {
+        placeholder: 'Next.js default',
+      },
+    },
+    devCommand: 'blitz start',
+    buildCommand: 'blitz build',
+    getOutputDirName: async () => 'public',
+  },
+  {
     name: 'Docusaurus 2',
     slug: 'docusaurus-2',
     demo: 'https://docusaurus-2.now-examples.now.sh',
@@ -360,6 +411,59 @@ export const frameworks: Framework[] = [
         dest: '404.html',
       },
     ],
+  },
+  {
+    name: 'Docusaurus 1.0',
+    slug: 'docusaurus',
+    demo: 'https://docusaurus.now-examples.now.sh',
+    logo:
+      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg',
+    tagline:
+      'Docusaurus makes it easy to maintain Open Source documentation websites.',
+    description:
+      'A static Docusaurus site that makes it easy to maintain OSS documentation.',
+    website: 'https://docusaurus.io/',
+    detectors: {
+      some: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"docusaurus":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `docusaurus-build`',
+      },
+      devCommand: {
+        value: 'docusaurus-start --port $PORT',
+      },
+      outputDirectory: {
+        value: 'build',
+      },
+    },
+    dependency: 'docusaurus',
+    devCommand: 'docusaurus-start --port $PORT',
+    buildCommand: 'docusaurus-build',
+    getOutputDirName: async (dirPrefix: string) => {
+      const base = 'build';
+      try {
+        const location = join(dirPrefix, base);
+        const content = await readdir(location);
+
+        // If there is only one file in it that is a dir we'll use it as dist dir
+        if (content.length === 1 && (await isDir(join(location, content[0])))) {
+          return join(base, content[0]);
+        }
+      } catch (error) {
+        console.error(`Error detecting output directory: `, error);
+      }
+      return base;
+    },
   },
   {
     name: 'Preact',
@@ -1085,59 +1189,6 @@ export const frameworks: Framework[] = [
     ],
   },
   {
-    name: 'Docusaurus 1.0',
-    slug: 'docusaurus',
-    demo: 'https://docusaurus.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg',
-    tagline:
-      'Docusaurus makes it easy to maintain Open Source documentation websites.',
-    description:
-      'A static Docusaurus site that makes it easy to maintain OSS documentation.',
-    website: 'https://docusaurus.io/',
-    detectors: {
-      some: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"docusaurus":\\s*".+?"[^}]*}',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install` or `npm install`',
-      },
-      buildCommand: {
-        placeholder: '`npm run build` or `docusaurus-build`',
-      },
-      devCommand: {
-        value: 'docusaurus-start --port $PORT',
-      },
-      outputDirectory: {
-        value: 'build',
-      },
-    },
-    dependency: 'docusaurus',
-    devCommand: 'docusaurus-start --port $PORT',
-    buildCommand: 'docusaurus-build',
-    getOutputDirName: async (dirPrefix: string) => {
-      const base = 'build';
-      try {
-        const location = join(dirPrefix, base);
-        const content = await readdir(location);
-
-        // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && (await isDir(join(location, content[0])))) {
-          return join(base, content[0]);
-        }
-      } catch (error) {
-        console.error(`Error detecting output directory: `, error);
-      }
-      return base;
-    },
-  },
-  {
     name: 'Sapper',
     slug: 'sapper',
     demo: 'https://sapper.now-examples.now.sh',
@@ -1348,55 +1399,44 @@ export const frameworks: Framework[] = [
     ],
   },
   {
-    name: 'Hugo',
-    slug: 'hugo',
-    demo: 'https://hugo.now-examples.now.sh',
+    name: 'RedwoodJS',
+    slug: 'redwoodjs',
+    demo: 'https://redwoodjs.now-examples.now.sh',
     logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hugo.svg',
-    tagline:
-      'Hugo is the world’s fastest framework for building websites, written in Go.',
-    description: 'A Hugo site, created with the Hugo CLI.',
-    website: 'https://gohugo.io',
-    sort: 5,
+      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/redwoodjs.svg',
+    tagline: 'RedwoodJS is a full-stack framework for the Jamstack.',
+    description: 'A RedwoodJS app, bootstraped with create-redwood-app.',
+    website: 'https://redwoodjs.com',
+    useRuntime: { src: 'package.json', use: '@vercel/redwood' },
+    ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      some: [
+      every: [
         {
-          path: 'config.yaml',
-        },
-        {
-          path: 'config.toml',
-        },
-        {
-          path: 'config.json',
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@redwoodjs\\/core":\\s*".+?"[^}]*}',
         },
       ],
     },
     settings: {
       installCommand: {
-        placeholder: 'None',
+        placeholder: '`yarn install` or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `hugo -D --gc`',
+        value:
+          'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
       },
       devCommand: {
-        value: 'hugo server -D -w -p $PORT',
+        value: 'yarn rw dev --fwd="--port=$PORT --open=false"',
       },
       outputDirectory: {
-        placeholder: '`public` or `publishDir` from the `config` file',
+        placeholder: 'RedwoodJS default',
       },
     },
-    devCommand: 'hugo server -D -w -p $PORT',
-    buildCommand: 'hugo -D --gc',
-    getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      type HugoConfig = { publishDir?: string };
-      const config = await readConfigFile<HugoConfig>(
-        ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
-          return join(dirPrefix, fileName);
-        })
-      );
-
-      return (config && config.publishDir) || 'public';
-    },
+    devCommand: 'yarn rw dev --fwd="--port=$PORT --open=false',
+    buildCommand:
+      'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
+    getOutputDirName: async () => 'public',
   },
   {
     name: 'Jekyll',
@@ -1508,46 +1548,6 @@ export const frameworks: Framework[] = [
     devCommand: 'bundle exec middleman server -p $PORT',
     buildCommand: 'bundle exec middleman build',
     getOutputDirName: async () => 'build',
-  },
-  {
-    name: 'RedwoodJS',
-    slug: 'redwoodjs',
-    demo: 'https://redwoodjs.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/redwoodjs.svg',
-    tagline: 'RedwoodJS is a full-stack framework for the Jamstack.',
-    description: 'A RedwoodJS app, bootstraped with create-redwood-app.',
-    website: 'https://redwoodjs.com',
-    useRuntime: { src: 'package.json', use: '@vercel/redwood' },
-    ignoreRuntimes: ['@vercel/node'],
-    detectors: {
-      every: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@redwoodjs\\/core":\\s*".+?"[^}]*}',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install` or `npm install`',
-      },
-      buildCommand: {
-        value:
-          'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
-      },
-      devCommand: {
-        value: 'yarn rw dev --fwd="--port=$PORT --open=false"',
-      },
-      outputDirectory: {
-        placeholder: 'RedwoodJS default',
-      },
-    },
-    devCommand: 'yarn rw dev --fwd="--port=$PORT --open=false',
-    buildCommand:
-      'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
-    getOutputDirName: async () => 'public',
   },
   {
     name: 'Zola',
