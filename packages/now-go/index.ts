@@ -125,7 +125,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
 
   const forceMove = Boolean(meta.isDev);
   const srcPath = join(goPath, 'src', 'lambda');
-  let downloadPath = meta.isDev ? workPath : srcPath;
+  let downloadPath = (meta.isDev || meta.skipDownload) ? workPath : srcPath;
   let downloadedFiles = await download(files, downloadPath, meta);
 
   debug(`Parsing AST for "${entrypoint}"`);

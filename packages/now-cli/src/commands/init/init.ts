@@ -82,12 +82,12 @@ export default async function init(
  * Fetch example list json
  */
 async function fetchExampleList(output: Output) {
-  const stopSpinner = output.spinner('Fetching examples');
+  output.spinner('Fetching examples');
   const url = `${EXAMPLE_API}/v2/list.json`;
 
   try {
     const resp = await fetch(url);
-    stopSpinner();
+    output.stopSpinner();
 
     if (resp.status !== 200) {
       throw new Error(`Failed fetching list.json (${resp.statusText}).`);
@@ -95,7 +95,7 @@ async function fetchExampleList(output: Output) {
 
     return (await resp.json()) as Example[];
   } catch (e) {
-    stopSpinner();
+    output.stopSpinner();
   }
 }
 
@@ -127,13 +127,13 @@ async function extractExample(
   ver: string = 'v2'
 ) {
   const folder = prepareFolder(process.cwd(), dir || name, force);
-  const stopSpinner = output.spinner(`Fetching ${name}`);
+  output.spinner(`Fetching ${name}`);
 
   const url = `${EXAMPLE_API}/${ver}/download/${name}.tar.gz`;
 
   return fetch(url)
     .then(async resp => {
-      stopSpinner();
+      output.stopSpinner();
 
       if (resp.status !== 200) {
         throw new Error(`Could not get ${name}.tar.gz`);
@@ -163,7 +163,7 @@ async function extractExample(
       return 0;
     })
     .catch(e => {
-      stopSpinner();
+      output.stopSpinner();
       throw e;
     });
 }

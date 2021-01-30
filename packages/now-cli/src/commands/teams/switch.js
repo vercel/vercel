@@ -2,8 +2,6 @@
 import chalk from 'chalk';
 
 // Utilities
-import wait from '../../util/output/wait';
-
 import listInput from '../../util/input/list';
 import success from '../../util/output/success';
 import info from '../../util/output/info';
@@ -25,7 +23,6 @@ const updateCurrentTeam = (config, newTeam) => {
 };
 
 export default async function ({ apiUrl, token, debug, args, config, output }) {
-  let stopSpinner;
   output.spinner('Fetching teams');
 
   // We're loading the teams here without `currentTeam`, so that
@@ -81,10 +78,10 @@ export default async function ({ apiUrl, token, debug, args, config, output }) {
     }
 
     if (desiredSlug === user.username) {
-      stopSpinner = wait('Saving');
+      output.spinner('Saving');
       updateCurrentTeam(config);
 
-      stopSpinner();
+      output.stopSpinner();
       console.log(
         success(`Your account (${chalk.bold(desiredSlug)}) is now active!`)
       );
@@ -160,10 +157,10 @@ export default async function ({ apiUrl, token, debug, args, config, output }) {
       return 0;
     }
 
-    stopSpinner = wait('Saving');
+    output.spinner('Saving');
     updateCurrentTeam(config);
 
-    stopSpinner();
+    output.stopSpinner();
     console.log(success(`Your account (${chalk.bold(choice)}) is now active!`));
     return 0;
   }
@@ -173,10 +170,10 @@ export default async function ({ apiUrl, token, debug, args, config, output }) {
     return 0;
   }
 
-  stopSpinner = wait('Saving');
+  output.spinner('Saving');
   updateCurrentTeam(config, newTeam);
 
-  stopSpinner();
+  output.stopSpinner();
   console.log(
     success(
       `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`

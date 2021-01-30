@@ -119,12 +119,12 @@ async function add(
       (res, item) => res.concat(item.split(',')),
       []
     );
-    const cancelWait = output.spinner(
+    output.spinner(
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
 
     cert = await createCertForCns(now, cns, contextName);
-    cancelWait();
+    output.stopSpinner();
   }
 
   if (cert instanceof Error) {

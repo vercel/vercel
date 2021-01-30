@@ -1,6 +1,6 @@
 {
   "name": "@vercel/go",
-  "version": "1.1.7",
+  "version": "1.1.8-canary.0",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/go",
@@ -10,9 +10,9 @@
     "directory": "packages/now-go"
   },
   "scripts": {
-    "build": "./build.sh",
+    "build": "node build",
     "test-integration-once": "jest --env node --verbose --runInBand --bail",
-    "prepublish": "./build.sh",
+    "prepublish": "node build",
     "now-postinstall": "node dist/install.js"
   },
   "files": [

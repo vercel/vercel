@@ -140,6 +140,7 @@ async function run({ token, config, output }) {
         apiUrl,
         token,
         debug,
+        output,
       });
       break;
     }
