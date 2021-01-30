@@ -3,6 +3,9 @@
   "version": "0.2.0",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
+  "files": [
+    "dist"
+  ],
   "license": "UNLICENSED",
   "scripts": {
     "build": "tsc",
