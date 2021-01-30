@@ -52,7 +52,15 @@ const Schema = {
   type: 'array',
   items: {
     type: 'object',
-    required: ['name', 'slug', 'logo', 'description', 'settings'],
+    required: [
+      'name',
+      'slug',
+      'logo',
+      'description',
+      'settings',
+      'buildCommand',
+      'devCommand',
+    ],
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
@@ -120,6 +128,11 @@ const Schema = {
           },
         },
       },
+
+      dependency: { type: 'string' },
+      cachePattern: { type: 'string' },
+      buildCommand: { type: ['string', 'null'] },
+      devCommand: { type: ['string', 'null'] },
     },
   },
 };
