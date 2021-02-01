@@ -1,4 +1,4 @@
-import { Route } from '@vercel/routing-utils/dist/types';
+import { Route } from '@vercel/routing-utils';
 
 export interface FrameworkDetectionItem {
   path: string;
