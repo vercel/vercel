@@ -22,7 +22,7 @@ const allOptions = [
 ] as const;
 
 const pleaseSet =
-  'Please set "engines": { "node": "' +
+  'Please change your Project Settings or set "engines": { "node": "' +
   getLatestNodeVersion().range +
   '" } in your `package.json` file to use Node.js ' +
   getLatestNodeVersion().major +
