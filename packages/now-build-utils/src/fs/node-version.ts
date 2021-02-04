@@ -7,7 +7,12 @@ import debug from '../debug';
 const allOptions = [
   { major: 14, range: '14.x', runtime: 'nodejs14.x' },
   { major: 12, range: '12.x', runtime: 'nodejs12.x' },
-  { major: 10, range: '10.x', runtime: 'nodejs10.x' },
+  {
+    major: 10,
+    range: '10.x',
+    runtime: 'nodejs10.x',
+    discontinueDate: new Date('2021-03-30'),
+  },
   {
     major: 8,
     range: '8.10.x',
