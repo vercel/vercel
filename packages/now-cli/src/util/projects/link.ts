@@ -138,7 +138,7 @@ export async function getLinkedProject(
     return { status: 'not_linked', org: null, project: null };
   }
 
-  const spinner = output.spinner('Retrieving project…', 1000);
+  output.spinner('Retrieving project…', 1000);
   let org: Org | null = null;
   let project: Project | ProjectNotFound | null = null;
   try {
@@ -148,7 +148,7 @@ export async function getLinkedProject(
     ]);
   } catch (err) {
     if (err?.status === 403) {
-      spinner();
+      output.stopSpinner();
       throw new NowBuildError({
         message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
           VERCEL_DIR
@@ -161,7 +161,7 @@ export async function getLinkedProject(
     // Not a special case 403, we should still throw it
     throw err;
   } finally {
-    spinner();
+    output.stopSpinner();
   }
 
   if (!org || !project || project instanceof ProjectNotFound) {
@@ -176,7 +176,7 @@ export async function getLinkedProject(
     } else {
       output.print(
         prependEmoji(
-          'Your project was either removed from Vercel or you’re not a member of it anymore.\n',
+          'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
           emoji('warning')
         )
       );

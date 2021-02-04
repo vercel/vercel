@@ -16,13 +16,13 @@ export default async function selectOrg(
 ): Promise<Org> {
   require('./patch-inquirer');
 
-  const spinner = output.spinner('Loading scopes…', 1000);
+  output.spinner('Loading scopes…', 1000);
   let user: User;
   let teams: Team[];
   try {
     [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
   } finally {
-    spinner();
+    output.stopSpinner();
   }
 
   const choices: Choice[] = [
