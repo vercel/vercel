@@ -19,10 +19,7 @@ export default async function inputProject(
 
   // attempt to auto-detect a project to link
   let detectedProject = null;
-  const existingProjectSpinner = output.spinner(
-    'Searching for existing projects…',
-    1000
-  );
+  output.spinner('Searching for existing projects…', 1000);
   try {
     const [project, slugifiedProject] = await Promise.all([
       getProjectByIdOrName(client, detectedProjectName, org.id),
@@ -36,7 +33,7 @@ export default async function inputProject(
       ? slugifiedProject
       : null;
   } catch (error) {}
-  existingProjectSpinner();
+  output.stopSpinner();
 
   if (autoConfirm) {
     return detectedProject || detectedProjectName;
@@ -84,11 +81,11 @@ export default async function inputProject(
         continue;
       }
 
-      const spinner = output.spinner('Verifying project name…', 1000);
+      output.spinner('Verifying project name…', 1000);
       try {
         project = await getProjectByIdOrName(client, projectName, org.id);
       } finally {
-        spinner();
+        output.stopSpinner();
       }
 
       if (project instanceof ProjectNotFound) {
@@ -116,7 +113,7 @@ export default async function inputProject(
       continue;
     }
 
-    const spinner = output.spinner('Verifying project name…', 1000);
+    output.spinner('Verifying project name…', 1000);
     let existingProject: Project | ProjectNotFound;
     try {
       existingProject = await getProjectByIdOrName(
@@ -125,7 +122,7 @@ export default async function inputProject(
         org.id
       );
     } finally {
-      spinner();
+      output.stopSpinner();
     }
 
     if (existingProject && !(existingProject instanceof ProjectNotFound)) {

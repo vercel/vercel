@@ -152,14 +152,12 @@ export default async function main(ctx) {
   const id = deploymentIdOrURL;
 
   const depFetchStart = Date.now();
-  const cancelWait = output.spinner(
-    `Fetching deployment "${id}" in ${chalk.bold(contextName)}`
-  );
+  output.spinner(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
 
   try {
     deployment = await now.findDeployment(id);
   } catch (err) {
-    cancelWait();
+    output.stopSpinner();
     now.close();
 
     if (err.status === 404) {
@@ -180,7 +178,6 @@ export default async function main(ctx) {
     throw err;
   }
 
-  cancelWait();
   output.log(
     `Fetched deployment "${deployment.url}" in ${chalk.bold(
       contextName

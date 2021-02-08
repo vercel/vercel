@@ -3146,7 +3146,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async t =>
     detectedNotice =
       detectedNotice ||
       chunk.includes(
-        'Your project was either removed from Vercel or you’re not a member of it anymore'
+        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
     return /Set up and deploy [^?]+\?/.test(chunk);
