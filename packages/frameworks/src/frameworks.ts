@@ -1052,58 +1052,6 @@ export const frameworks: Framework[] = [
     ],
   },
   {
-    name: 'Create React App (ejected)',
-    slug: 'create-react-app',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/react.svg',
-    tagline: 'Create React App allows you to get going with React in no time.',
-    description:
-      'A React app, bootstrapped with create-react-app, and a Serverless Function API.',
-    website: 'https://create-react-app.dev',
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install` or `npm install`',
-      },
-      buildCommand: {
-        placeholder: '`npm run build` or `react-scripts build`',
-      },
-      devCommand: {
-        value: 'react-scripts start',
-      },
-      outputDirectory: {
-        value: 'build',
-      },
-    },
-    dependency: 'react-dev-utils',
-    devCommand: 'react-scripts start',
-    buildCommand: 'react-scripts build',
-    getOutputDirName: async () => 'build',
-    defaultRoutes: [
-      {
-        src: '/static/(.*)',
-        headers: { 'cache-control': 's-maxage=31536000, immutable' },
-        continue: true,
-      },
-      {
-        src: '/service-worker.js',
-        headers: { 'cache-control': 's-maxage=0' },
-        continue: true,
-      },
-      {
-        src: '/sockjs-node/(.*)',
-        dest: '/sockjs-node/$1',
-      },
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        headers: { 'cache-control': 's-maxage=0' },
-        dest: '/index.html',
-      },
-    ],
-  },
-  {
     name: 'Gridsome',
     slug: 'gridsome',
     demo: 'https://gridsome.now-examples.now.sh',
