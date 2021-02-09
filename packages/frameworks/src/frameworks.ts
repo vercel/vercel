@@ -413,7 +413,7 @@ export const frameworks: Framework[] = [
     ],
   },
   {
-    name: 'Docusaurus 1.0',
+    name: 'Docusaurus 1',
     slug: 'docusaurus',
     demo: 'https://docusaurus.now-examples.now.sh',
     logo:
@@ -568,7 +568,7 @@ export const frameworks: Framework[] = [
     ],
   },
   {
-    name: 'Ember',
+    name: 'Ember.js',
     slug: 'ember',
     demo: 'https://ember.now-examples.now.sh',
     logo:
