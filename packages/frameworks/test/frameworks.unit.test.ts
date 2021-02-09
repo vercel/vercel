@@ -1,8 +1,9 @@
 import Ajv from 'ajv';
+import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
-import frameworkList from '../';
+import frameworkList from '../src/frameworks';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -183,5 +184,15 @@ describe('frameworks', () => {
         sortNumToSlug.set(f.sort, f.slug);
       }
     });
+  });
+
+  it('ensure unique slug', async () => {
+    const slugs = new Set<string>();
+    for (const { slug } of frameworkList) {
+      if (typeof slug === 'string') {
+        assert(!slugs.has(slug), `Slug "${slug}" is not unique`);
+        slugs.add(slug);
+      }
+    }
   });
 });
