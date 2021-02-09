@@ -3,8 +3,8 @@ const { join, relative, sep } = require('path');
 
 // The order matters because we must build dependencies first
 const allPackages = [
-  'frameworks',
   'now-routing-utils',
+  'frameworks',
   'now-build-utils',
   'now-cgi',
   'now-client',
