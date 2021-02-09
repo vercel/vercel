@@ -5,6 +5,7 @@
     "strict": false,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
+    "noEmitOnError": true,
     "esModuleInterop": true,
     "module": "commonjs",
     "moduleResolution": "node",

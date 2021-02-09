@@ -39,7 +39,7 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "node utils/run.js build all",
-    "now-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
+    "vercel-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
     "test-unit": "node utils/run.js test-unit",
     "test-integration-cli": "node utils/run.js test-integration-cli",
     "test-integration-once": "node utils/run.js test-integration-once",

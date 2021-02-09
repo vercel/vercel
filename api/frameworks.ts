@@ -12,6 +12,11 @@ const frameworks = (_frameworks as Framework[])
       ...frameworkItem,
       detectors: undefined,
       sort: undefined,
+      dependency: undefined,
+      defaultRoutes: undefined,
+      cachePattern: undefined,
+      devCommand: undefined,
+      buildCommand: undefined,
     };
 
     if (framework.logo) {
