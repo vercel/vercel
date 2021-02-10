@@ -8,6 +8,7 @@
 
 [![CI Status](https://badgen.net/github/checks/vercel/vercel?label=CI)](https://github.com/vercel/vercel/actions?workflow=CI)
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
+[![codecov](https://codecov.io/gh/vercel/vercel/branch/master/graph/badge.svg)](https://codecov.io/gh/vercel/vercel)
 
 ## Usage
 
