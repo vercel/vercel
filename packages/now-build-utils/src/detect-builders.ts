@@ -2,10 +2,9 @@ import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
 import { Route, Source } from '@vercel/routing-utils';
-import _frameworks, { Framework } from '@vercel/frameworks';
+import frameworkList, { Framework } from '@vercel/frameworks';
 import { PackageJson, Builder, Config, BuilderFunctions } from './types';
 import { isOfficialRuntime } from './';
-const frameworkList = _frameworks as Framework[];
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );

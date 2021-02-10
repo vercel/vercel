@@ -41,7 +41,7 @@ import {
   spawnCommand,
   isOfficialRuntime,
 } from '@vercel/build-utils';
-import _frameworks, { Framework } from '@vercel/frameworks';
+import frameworkList from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
 import link from '../output/link';
@@ -90,7 +90,6 @@ import {
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
 
-const frameworkList = _frameworks as Framework[];
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
 );
