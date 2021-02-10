@@ -42,6 +42,9 @@ export const routesSchema = {
           important: {
             type: 'boolean',
           },
+          user: {
+            type: 'boolean',
+          },
           continue: {
             type: 'boolean',
           },

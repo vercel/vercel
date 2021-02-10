@@ -1,13 +1,5 @@
-import path from 'path';
-import { readFileSync } from 'fs-extra';
-import { Framework } from '@vercel/frameworks';
+import frameworkList from '@vercel/frameworks';
 import { detectFramework, DetectorFilesystem } from '../src';
-
-const frameworkList = JSON.parse(
-  readFileSync(
-    path.join(__dirname, '..', '..', 'frameworks', 'frameworks.json')
-  ).toString()
-) as Framework[];
 
 class VirtualFilesystem extends DetectorFilesystem {
   private files: Map<string, Buffer>;
