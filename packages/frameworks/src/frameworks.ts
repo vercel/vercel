@@ -18,7 +18,7 @@ const isDir = async (file: string): Promise<boolean> =>
  * CLI projects.
  */
 
-export const frameworks: Framework[] = [
+export const frameworks = [
   {
     name: 'Next.js',
     slug: 'nextjs',
@@ -1548,6 +1548,7 @@ export const frameworks: Framework[] = [
     buildCommand: null,
     getOutputDirName: async () => 'public',
   },
-];
+] as const;
 
-export default frameworks;
+const def = frameworks as readonly Framework[];
+export default def;
