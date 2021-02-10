@@ -215,7 +215,11 @@ describe('frameworks', () => {
         .map(async f => {
           const url = new URL(f.demo!);
           const deployment = await getDeployment(url.hostname);
-          assert.equal(deployment.public, true, `adsf`);
+          assert.equal(
+            deployment.public,
+            true,
+            `Demo URL ${f.demo} is not "public"`
+          );
         })
     );
   });
