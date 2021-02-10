@@ -52,7 +52,7 @@ export interface Framework {
   logo: string;
   /**
    * A URL to a deployed example of the framework
-   * @example https://nextjs.now-examples.now.sh
+   * @example https://nextjs.now-examples.vercel.app
    */
   demo?: string;
   /**
@@ -81,7 +81,7 @@ export interface Framework {
   useRuntime?: {
     /**
      * Runtime source
-     * @example "package.json"
+     * @example package.json
      */
     src: string;
     /**
@@ -108,15 +108,15 @@ export interface Framework {
   };
   settings: {
     /**
-     * Default install command or a placeholder
+     * Default Install Command or a placeholder
      */
     installCommand: Setting;
     /**
-     * Default build command or a placeholder
+     * Default Build Command or a placeholder
      */
     buildCommand: Setting;
     /**
-     * Default dev command or a placeholder
+     * Default Development Command or a placeholder
      */
     devCommand: Setting;
     /**
@@ -163,12 +163,12 @@ export interface Framework {
   cachePattern?: string;
   /**
    * The default build command for the framework.
-   * @example nuxt generate
+   * @example next build
    */
   buildCommand: string | null;
   /**
    * The default development command for the framework.
-   * @example nuxt
+   * @example next dev
    */
   devCommand: string | null;
 }
