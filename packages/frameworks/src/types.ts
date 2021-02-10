@@ -1,3 +1,5 @@
+import { Route } from '@vercel/routing-utils';
+
 export interface FrameworkDetectionItem {
   path: string;
   matchContent?: string;
@@ -6,9 +8,11 @@ export interface FrameworkDetectionItem {
 export interface SettingPlaceholder {
   placeholder: string;
 }
+
 export interface SettingValue {
   value: string;
 }
+
 export type Setting = SettingValue | SettingPlaceholder;
 
 export interface Framework {
@@ -27,6 +31,7 @@ export interface Framework {
     some?: FrameworkDetectionItem[];
   };
   settings: {
+    installCommand: Setting;
     buildCommand: Setting;
     devCommand: Setting;
     outputDirectory: Setting;
@@ -35,4 +40,11 @@ export interface Framework {
     id: string;
     dependencies: string[];
   }[];
+
+  dependency?: string;
+  getOutputDirName: (dirPrefix: string) => Promise<string>;
+  defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
+  cachePattern?: string;
+  buildCommand: string | null;
+  devCommand: string | null;
 }

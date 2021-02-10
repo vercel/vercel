@@ -36,23 +36,22 @@ function execa(...args) {
   return child;
 }
 
-function fetchWithRetry(url, retries = 3, opts = {}) {
+function fetchWithRetry(url, opts = {}) {
   return retry(
     async () => {
       const res = await fetch(url, opts);
 
-      if (!res.ok) {
+      if (res.status !== opts.status) {
         const text = await res.text();
         throw new Error(
-          `Failed to fetch ${url} with status ${res.status}:` +
-            `\n\n${text}\n\n`
+          `Failed to fetch ${url} with status ${res.status} (expected ${opts.status}):\n\n${text}\n\n`
         );
       }
 
       return res;
     },
     {
-      retries,
+      retries: opts.retries || 3,
       factor: 1,
     }
   );
@@ -132,9 +131,14 @@ async function testPath(
   expectedHeaders = {},
   fetchOpts = {}
 ) {
-  const opts = { ...fetchOpts, redirect: 'manual-dont-change' };
+  const opts = {
+    ...fetchOpts,
+    redirect: 'manual-dont-change',
+    retries: 5,
+    status,
+  };
   const url = `${origin}${path}`;
-  const res = await fetch(url, opts);
+  const res = await fetchWithRetry(url, opts);
   const msg = `Testing response from ${fetchOpts.method || 'GET'} ${url}`;
   console.log(msg);
   t.is(res.status, status, msg);
@@ -268,7 +272,7 @@ function testFixtureStdio(
         // Patch the project with any non-default properties
         if (projectSettings) {
           const { projectId } = await fs.readJson(projectJsonPath);
-          const res = await fetch(
+          const res = await fetchWithRetry(
             `https://api.vercel.com/v2/projects/${projectId}`,
             {
               method: 'PATCH',
@@ -276,6 +280,8 @@ function testFixtureStdio(
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify(projectSettings),
+              retries: 3,
+              status: 200,
             }
           );
           t.is(res.status, 200);
@@ -1141,7 +1147,10 @@ test('[vercel dev] 02-angular-node', async t => {
     // start `vercel dev` detached in child_process
     dev.unref();
 
-    const response = await fetchWithRetry(`http://localhost:${port}`, 180);
+    const response = await fetchWithRetry(`http://localhost:${port}`, {
+      retries: 180,
+      status: 200,
+    });
 
     validateResponseHeaders(t, response);
 

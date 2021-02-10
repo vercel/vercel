@@ -1,9 +1,9 @@
 import Ajv from 'ajv';
+import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
-import { Framework } from '../';
-const frameworkList = require('../frameworks.json') as Framework[];
+import frameworkList from '../src/frameworks';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -53,8 +53,15 @@ const Schema = {
   type: 'array',
   items: {
     type: 'object',
-    required: ['name', 'slug', 'logo', 'description', 'settings'],
-    additionalProperties: false,
+    required: [
+      'name',
+      'slug',
+      'logo',
+      'description',
+      'settings',
+      'buildCommand',
+      'devCommand',
+    ],
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
@@ -122,6 +129,11 @@ const Schema = {
           },
         },
       },
+
+      dependency: { type: 'string' },
+      cachePattern: { type: 'string' },
+      buildCommand: { type: ['string', 'null'] },
+      devCommand: { type: ['string', 'null'] },
     },
   },
 };
@@ -172,5 +184,15 @@ describe('frameworks', () => {
         sortNumToSlug.set(f.sort, f.slug);
       }
     });
+  });
+
+  it('ensure unique slug', async () => {
+    const slugs = new Set<string>();
+    for (const { slug } of frameworkList) {
+      if (typeof slug === 'string') {
+        assert(!slugs.has(slug), `Slug "${slug}" is not unique`);
+        slugs.add(slug);
+      }
+    }
   });
 });
