@@ -3,12 +3,12 @@ import { Route } from '@vercel/routing-utils';
 export interface FrameworkDetectionItem {
   /**
    * A file path
-   * @example package.json
+   * @example "package.json"
    */
   path: string;
   /**
    * A matcher
-   * @example \"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}
+   * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
    */
   matchContent?: string;
 }
@@ -16,7 +16,7 @@ export interface FrameworkDetectionItem {
 export interface SettingPlaceholder {
   /**
    * A placeholder value for when the framework has not a predefined one
-   * @example `npm run build` or `next build`
+   * @example "`npm run build` or `next build`"
    */
   placeholder: string;
 }
@@ -24,7 +24,7 @@ export interface SettingPlaceholder {
 export interface SettingValue {
   /**
    * A predefined setting for the detected framework
-   * @example next dev --port $PORT
+   * @example "next dev --port $PORT"
    */
   value: string;
 }
@@ -37,22 +37,22 @@ export type Setting = SettingValue | SettingPlaceholder;
 export interface Framework {
   /**
    * Name of the framework
-   * @example Next.js
+   * @example "Next.js"
    */
   name: string;
   /**
    * A unique identifier for the framework
-   * @example nextjs
+   * @example "nextjs"
    */
   slug: string | null;
   /**
    * A URL to the logo of the framework
-   * @example https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg
+   * @example "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg"
    */
   logo: string;
   /**
    * A URL to a deployed example of the framework
-   * @example https://nextjs.now-examples.vercel.app
+   * @example "https://nextjs.now-examples.vercel.app"
    */
   demo?: string;
   /**
@@ -62,12 +62,12 @@ export interface Framework {
   tagline?: string;
   /**
    * A URL to the official website of the framework
-   * @example https://nextjs.org
+   * @example "https://nextjs.org"
    */
   website?: string;
   /**
    * Short description of the framework
-   * @example A Next.js app and a Serverless Function API.
+   * @example "A Next.js app and a Serverless Function API."
    */
   description: string;
   /**
@@ -81,12 +81,12 @@ export interface Framework {
   useRuntime?: {
     /**
      * Runtime source
-     * @example package.json
+     * @example "package.json"
      */
     src: string;
     /**
      * Runtime
-     * @example @vercel/next
+     * @example "@vercel/next"
      */
     use: string;
   };
@@ -130,7 +130,7 @@ export interface Framework {
   recommendedIntegrations?: {
     /**
      * Id of the recommended integration
-     * @example oac_5lUsiANun1DEzgLg0NZx5Es3
+     * @example "oac_5lUsiANun1DEzgLg0NZx5Es3"
      */
     id: string;
     /**
@@ -141,13 +141,12 @@ export interface Framework {
   }[];
   /**
    * Name of a dependency in `package.json` to detect this framework.
-   * @example hexo
+   * @example "hexo"
    */
   dependency?: string;
   /**
    * Function that returns the name of the directory that the framework outputs
    * its build results to. In some cases this is read from a configuration file.
-   * @example async () => 'public'
    */
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   /**
@@ -158,17 +157,17 @@ export interface Framework {
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
   /**
    * A glob string of files to cache for future deployments.
-   * @example .nuxt/**
+   * @example ".cache/**"
    */
   cachePattern?: string;
   /**
    * The default build command for the framework.
-   * @example next build
+   * @example "next build"
    */
   buildCommand: string | null;
   /**
    * The default development command for the framework.
-   * @example next dev
+   * @example "next dev"
    */
   devCommand: string | null;
 }
