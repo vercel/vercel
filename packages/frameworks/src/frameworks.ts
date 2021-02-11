@@ -20,6 +20,44 @@ const isDir = async (file: string): Promise<boolean> =>
 
 export const frameworks = [
   {
+    name: 'Blitz.js',
+    slug: 'blitzjs',
+    demo: 'https://blitzjs.now-examples.now.sh',
+    logo:
+      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg',
+    tagline: 'Blitz.js: The Fullstack React Framework',
+    description:
+      'A brand new Blitz.js app - the result of running `npx blitz new`.',
+    website: 'https://blitzjs.com',
+    useRuntime: { src: 'package.json', use: '@vercel/next' },
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `blitz build`',
+      },
+      devCommand: {
+        value: 'blitz start',
+      },
+      outputDirectory: {
+        placeholder: 'Next.js default',
+      },
+    },
+    devCommand: 'blitz start',
+    buildCommand: 'blitz build',
+    getOutputDirName: async () => 'public',
+  },
+  {
     name: 'Next.js',
     slug: 'nextjs',
     demo: 'https://nextjs.now-examples.now.sh',
@@ -230,95 +268,6 @@ export const frameworks = [
     buildCommand: 'npx @11ty/eleventy',
     getOutputDirName: async () => '_site',
     cachePattern: '.cache/**',
-  },
-  {
-    name: 'Hugo',
-    slug: 'hugo',
-    demo: 'https://hugo.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hugo.svg',
-    tagline:
-      'Hugo is the world’s fastest framework for building websites, written in Go.',
-    description: 'A Hugo site, created with the Hugo CLI.',
-    website: 'https://gohugo.io',
-    sort: 5,
-    detectors: {
-      some: [
-        {
-          path: 'config.yaml',
-        },
-        {
-          path: 'config.toml',
-        },
-        {
-          path: 'config.json',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: 'None',
-      },
-      buildCommand: {
-        placeholder: '`npm run build` or `hugo -D --gc`',
-      },
-      devCommand: {
-        value: 'hugo server -D -w -p $PORT',
-      },
-      outputDirectory: {
-        placeholder: '`public` or `publishDir` from the `config` file',
-      },
-    },
-    devCommand: 'hugo server -D -w -p $PORT',
-    buildCommand: 'hugo -D --gc',
-    getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      type HugoConfig = { publishDir?: string };
-      const config = await readConfigFile<HugoConfig>(
-        ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
-          return join(dirPrefix, fileName);
-        })
-      );
-
-      return (config && config.publishDir) || 'public';
-    },
-  },
-  {
-    name: 'Blitz.js',
-    slug: 'blitzjs',
-    demo: 'https://blitzjs.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg',
-    tagline: 'Blitz.js: The Fullstack React Framework',
-    description:
-      'A brand new Blitz.js app - the result of running `npx blitz new`.',
-    website: 'https://blitzjs.com',
-    useRuntime: { src: 'package.json', use: '@vercel/next' },
-    detectors: {
-      every: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install` or `npm install`',
-      },
-      buildCommand: {
-        placeholder: '`npm run build` or `blitz build`',
-      },
-      devCommand: {
-        value: 'blitz start',
-      },
-      outputDirectory: {
-        placeholder: 'Next.js default',
-      },
-    },
-    devCommand: 'blitz start',
-    buildCommand: 'blitz build',
-    getOutputDirName: async () => 'public',
   },
   {
     name: 'Docusaurus 2',
@@ -1385,6 +1334,57 @@ export const frameworks = [
     buildCommand:
       'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
     getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Hugo',
+    slug: 'hugo',
+    demo: 'https://hugo.now-examples.now.sh',
+    logo:
+      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hugo.svg',
+    tagline:
+      'Hugo is the world’s fastest framework for building websites, written in Go.',
+    description: 'A Hugo site, created with the Hugo CLI.',
+    website: 'https://gohugo.io',
+    sort: 5,
+    detectors: {
+      some: [
+        {
+          path: 'config.yaml',
+        },
+        {
+          path: 'config.toml',
+        },
+        {
+          path: 'config.json',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `hugo -D --gc`',
+      },
+      devCommand: {
+        value: 'hugo server -D -w -p $PORT',
+      },
+      outputDirectory: {
+        placeholder: '`public` or `publishDir` from the `config` file',
+      },
+    },
+    devCommand: 'hugo server -D -w -p $PORT',
+    buildCommand: 'hugo -D --gc',
+    getOutputDirName: async (dirPrefix: string): Promise<string> => {
+      type HugoConfig = { publishDir?: string };
+      const config = await readConfigFile<HugoConfig>(
+        ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
+          return join(dirPrefix, fileName);
+        })
+      );
+
+      return (config && config.publishDir) || 'public';
+    },
   },
   {
     name: 'Jekyll',
