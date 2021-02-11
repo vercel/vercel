@@ -2,15 +2,14 @@ import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
 import debug from '../debug';
-import spawn from 'cross-spawn';
-import { SpawnOptions } from 'child_process';
+import execa from 'execa';
 import { deprecate } from 'util';
 import { cpus } from 'os';
 import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 
-interface SpawnOptionsExtended extends SpawnOptions {
+interface SpawnOptionsExtended extends execa.Options {
   prettyCommand?: string;
 }
 
@@ -22,7 +21,7 @@ export function spawnAsync(
   return new Promise<void>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
     opts = { stdio: 'inherit', ...opts };
-    const child = spawn(command, args, opts);
+    const child = execa(command, args, opts);
 
     if (opts.stdio === 'pipe' && child.stderr) {
       child.stderr.on('data', data => stderrLogs.push(data));
@@ -57,12 +56,10 @@ export function execAsync(
 ) {
   return new Promise<{ stdout: string; stderr: string; code: number }>(
     (resolve, reject) => {
-      opts.stdio = 'pipe';
-
       const stdoutList: Buffer[] = [];
       const stderrList: Buffer[] = [];
 
-      const child = spawn(command, args, opts);
+      const child = execa(command, args, { ...opts, stdio: 'pipe' });
 
       child.stderr!.on('data', data => {
         stderrList.push(data);
@@ -97,16 +94,19 @@ export function execAsync(
   );
 }
 
-export function spawnCommand(command: string, options: SpawnOptions = {}) {
+export function spawnCommand(command: string, options: execa.Options = {}) {
   const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {
-    return spawn('cmd.exe', ['/C', command], opts);
+    return execa('cmd.exe', ['/C', command], opts);
   }
 
-  return spawn('sh', ['-c', command], opts);
+  return execa('sh', ['-c', command], opts);
 }
 
-export async function execCommand(command: string, options: SpawnOptions = {}) {
+export async function execCommand(
+  command: string,
+  options: execa.Options = {}
+) {
   const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {
     await spawnAsync('cmd.exe', ['/C', command], opts);
@@ -133,7 +133,7 @@ async function chmodPlusX(fsPath: string) {
 export async function runShellScript(
   fsPath: string,
   args: string[] = [],
-  spawnOpts?: SpawnOptions
+  spawnOpts?: execa.Options
 ) {
   assert(path.isAbsolute(fsPath));
   const destPath = path.dirname(fsPath);
@@ -150,7 +150,7 @@ export async function runShellScript(
 export function getSpawnOptions(
   meta: Meta,
   nodeVersion: NodeVersion
-): SpawnOptions {
+): execa.Options {
   const opts = {
     env: { ...process.env },
   };
@@ -271,7 +271,7 @@ export async function walkParentDirs({
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
-  spawnOpts?: SpawnOptions,
+  spawnOpts?: execa.Options,
   meta?: Meta
 ) {
   if (meta && meta.isDev) {
@@ -286,7 +286,6 @@ export async function runNpmInstall(
   const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
   const env = opts.env ? { ...opts.env } : { ...process.env };
   delete env.NODE_ENV;
-  opts.env = env;
 
   let command: 'npm' | 'yarn';
   let commandArgs: string[];
@@ -311,13 +310,13 @@ export async function runNpmInstall(
   if (process.env.NPM_ONLY_PRODUCTION) {
     commandArgs.push('--production');
   }
-  await spawnAsync(command, commandArgs, opts);
+  await spawnAsync(command, commandArgs, { ...opts, env });
 }
 
 export async function runBundleInstall(
   destPath: string,
   args: string[] = [],
-  spawnOpts?: SpawnOptions,
+  spawnOpts?: execa.Options,
   meta?: Meta
 ) {
   if (meta && meta.isDev) {
@@ -345,7 +344,7 @@ export async function runBundleInstall(
 export async function runPipInstall(
   destPath: string,
   args: string[] = [],
-  spawnOpts?: SpawnOptions,
+  spawnOpts?: execa.Options,
   meta?: Meta
 ) {
   if (meta && meta.isDev) {
@@ -380,7 +379,7 @@ export function getScriptName(
 export async function runPackageJsonScript(
   destPath: string,
   scriptNames: string | Iterable<string>,
-  spawnOpts?: SpawnOptions
+  spawnOpts?: execa.Options
 ) {
   assert(path.isAbsolute(destPath));
   const { packageJson, cliType } = await scanParentDirs(destPath, true);
