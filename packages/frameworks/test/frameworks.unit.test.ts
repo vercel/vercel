@@ -3,6 +3,8 @@ import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
+import fetch from 'node-fetch';
+import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
 
 const SchemaFrameworkDetectionItem = {
@@ -138,6 +140,16 @@ const Schema = {
   },
 };
 
+async function getDeployment(host: string) {
+  const query = new URLSearchParams();
+  query.set('url', host);
+  const res = await fetch(
+    `https://api.vercel.com/v11/deployments/get?${query}`
+  );
+  const body = await res.json();
+  return body;
+}
+
 describe('frameworks', () => {
   it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');
@@ -194,5 +206,21 @@ describe('frameworks', () => {
         slugs.add(slug);
       }
     }
+  });
+
+  it('ensure all demo URLs are "public"', async () => {
+    await Promise.all(
+      frameworkList
+        .filter(f => typeof f.demo === 'string')
+        .map(async f => {
+          const url = new URL(f.demo!);
+          const deployment = await getDeployment(url.hostname);
+          assert.equal(
+            deployment.public,
+            true,
+            `Demo URL ${f.demo} is not "public"`
+          );
+        })
+    );
   });
 });
