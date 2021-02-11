@@ -248,7 +248,7 @@ async function run({ client, contextName }) {
     }
 
     const [name] = args;
-    await client.fetch('/projects/ensure-project', {
+    await client.fetch('/projects', {
       method: 'POST',
       body: { name },
     });
