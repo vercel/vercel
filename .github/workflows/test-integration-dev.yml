@@ -29,7 +29,7 @@ jobs:
       - name: Install Hugo
         if: matrix.os == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
-      - run: yarn install
+      - run: yarn install --network-timeout 1000000
       - run: yarn run build
       - uses: actions/setup-node@v1
         with:

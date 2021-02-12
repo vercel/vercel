@@ -17,7 +17,7 @@ jobs:
       with:
         node-version: 12
     - name: Install
-      run: yarn install --check-files --frozen-lockfile
+      run: yarn install --check-files --frozen-lockfile --network-timeout 1000000
     - name: Build
       run: yarn build
       env:
