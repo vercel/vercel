@@ -170,4 +170,10 @@ export interface Framework {
    * @example "next dev"
    */
   devCommand: string | null;
+  /**
+   * The default version of the framework command that is available within the
+   * build image. Usually an environment variable can be set to override this.
+   * @example "v0.13.0"
+   */
+  defaultVersion?: string;
 }
