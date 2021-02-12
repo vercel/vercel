@@ -8,6 +8,7 @@ const {
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  runNpmInstall,
   runPackageJsonScript,
 } = require('../dist');
 
@@ -259,6 +260,7 @@ it('should support require by path for legacy builders', () => {
 
 it('should have correct $PATH when running `runPackageJsonScript()` with yarn', async () => {
   const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
+  await runNpmInstall(fixture);
   await runPackageJsonScript(fixture, 'env');
 
   // `yarn` was failing with ENOENT before, so as long as the
