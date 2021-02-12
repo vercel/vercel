@@ -141,6 +141,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
   const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam, output });
   const args = argv._.slice(1);
   const start = Date.now();
+  const { 'test-warning': testWarningFlag } = argv;
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length > 1) {
@@ -154,7 +155,10 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       return exit(1);
     }
 
-    const { secrets: list, pagination } = await secrets.ls(nextTimestamp);
+    const { secrets: list, pagination } = await secrets.ls(
+      nextTimestamp,
+      testWarningFlag
+    );
     const elapsed = ms(Date.now() - start);
 
     console.log(
