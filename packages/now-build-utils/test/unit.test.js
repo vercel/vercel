@@ -267,4 +267,4 @@ it('should have correct $PATH when running `runPackageJsonScript()` with yarn', 
   // script was invoked at all is enough to verify the fix
   const out = await fs.readFile(path.join(fixture, 'env.txt'), 'utf8');
   expect(out.trim()).toBeTruthy();
-});
+}, 10000);
