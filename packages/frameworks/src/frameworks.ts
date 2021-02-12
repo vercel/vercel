@@ -1385,7 +1385,7 @@ export const frameworks = [
 
       return (config && config.publishDir) || 'public';
     },
-    defaultVersion: 'v0.58.2',
+    defaultVersion: '0.58.2',
   },
   {
     name: 'Jekyll',
@@ -1524,7 +1524,7 @@ export const frameworks = [
     devCommand: 'zola serve --port $PORT',
     buildCommand: 'zola build',
     getOutputDirName: async () => 'public',
-    defaultVersion: 'v0.13.0',
+    defaultVersion: '0.13.0',
   },
   {
     name: 'Other',
