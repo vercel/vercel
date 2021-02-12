@@ -1,3 +1,4 @@
+const ms = require('ms');
 const path = require('path');
 const fs = require('fs-extra');
 const assert = require('assert').strict;
@@ -8,6 +9,8 @@ const {
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  runNpmInstall,
+  runPackageJsonScript,
 } = require('../dist');
 
 async function expectBuilderError(promise, pattern) {
@@ -255,3 +258,18 @@ it('should support require by path for legacy builders', () => {
   expect(FileRef2).toBe(index.FileRef);
   expect(Lambda2).toBe(index.Lambda);
 });
+
+it(
+  'should have correct $PATH when running `runPackageJsonScript()` with yarn',
+  async () => {
+    const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
+    await runNpmInstall(fixture);
+    await runPackageJsonScript(fixture, 'env');
+
+    // `yarn` was failing with ENOENT before, so as long as the
+    // script was invoked at all is enough to verify the fix
+    const out = await fs.readFile(path.join(fixture, 'env.txt'), 'utf8');
+    expect(out.trim()).toBeTruthy();
+  },
+  ms('1m')
+);
