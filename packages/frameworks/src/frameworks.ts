@@ -1350,12 +1350,15 @@ export const frameworks = [
       some: [
         {
           path: 'config.yaml',
+          matchContent: 'baseURL',
         },
         {
           path: 'config.toml',
+          matchContent: 'baseURL',
         },
         {
           path: 'config.json',
+          matchContent: 'baseURL',
         },
       ],
     },
