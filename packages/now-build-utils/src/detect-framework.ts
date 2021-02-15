@@ -3,7 +3,7 @@ import { DetectorFilesystem } from './detectors/filesystem';
 
 export interface DetectFrameworkOptions {
   fs: DetectorFilesystem;
-  frameworkList: Framework[];
+  frameworkList: readonly Framework[];
 }
 
 async function matches(fs: DetectorFilesystem, framework: Framework) {
