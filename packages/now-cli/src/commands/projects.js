@@ -248,10 +248,19 @@ async function run({ client, contextName }) {
     }
 
     const [name] = args;
-    await client.fetch('/projects/ensure-project', {
-      method: 'POST',
-      body: { name },
-    });
+    try {
+      await client.fetch('/projects', {
+        method: 'POST',
+        body: { name },
+      });
+    } catch (error) {
+      if (error.status === 409) {
+        // project already exists, so we can
+        // show a success message
+      } else {
+        throw error;
+      }
+    }
     const elapsed = ms(new Date() - start);
 
     console.log(
