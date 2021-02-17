@@ -5,5 +5,5 @@
       "src/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "../.redwood/index.d.ts"]
 }
