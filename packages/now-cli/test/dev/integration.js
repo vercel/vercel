@@ -425,7 +425,7 @@ test(
         method: 'POST',
         body: '{"query":"{redwood{version}}"}',
       };
-      const resBody = '{"data":{"redwood":{"version":"0.15.0"}}}';
+      const resBody = '{"data":{"redwood":{"version":"0.25.0"}}}';
       await testPath(200, '/api/graphql', resBody, {}, fetchOpts);
     },
     { isExample: true }
