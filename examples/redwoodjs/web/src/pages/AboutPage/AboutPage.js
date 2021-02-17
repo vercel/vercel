@@ -1,4 +1,6 @@
-export default () => (
+import { Link, routes } from '@redwoodjs/router'
+
+const AboutPage = () => (
   <main>
     <style
       dangerouslySetInnerHTML={{
@@ -36,9 +38,16 @@ export default () => (
       }}
     />
     <section>
-      <h1>
-        <span>About RedwoodJS</span>
-      </h1>
+      <h1>About</h1>
+      <p>
+        Find me in <code>./web/src/pages/AboutPage/AboutPage.js</code>
+      </p>
+      <p>
+        My default route is named <code>about</code>, link to me with `
+        <Link to={routes.about()}>About</Link>`
+      </p>
     </section>
   </main>
 )
+
+export default AboutPage

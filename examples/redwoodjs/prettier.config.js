@@ -6,4 +6,12 @@ module.exports = {
   semi: false,
   singleQuote: true,
   arrowParens: 'always',
+  overrides: [
+    {
+      files: 'Routes.js',
+      options: {
+        printWidth: 200,
+      },
+    },
+  ],
 }

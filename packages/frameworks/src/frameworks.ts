@@ -1320,8 +1320,7 @@ export const frameworks = [
         placeholder: '`yarn install` or `npm install`',
       },
       buildCommand: {
-        value:
-          'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
+        value: 'yarn rw deploy vercel',
       },
       devCommand: {
         value: 'yarn rw dev --fwd="--port=$PORT --open=false"',
@@ -1331,8 +1330,7 @@ export const frameworks = [
       },
     },
     devCommand: 'yarn rw dev --fwd="--port=$PORT --open=false',
-    buildCommand:
-      'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
+    buildCommand: 'yarn rw deploy vercel',
     getOutputDirName: async () => 'public',
   },
   {
