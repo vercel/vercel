@@ -403,7 +403,7 @@ export async function runPackageJsonScript(
     });
   } else {
     // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
-    const env: typeof process.env = { ...spawnOpts?.env };
+    const env: typeof process.env = { ...process.env, ...spawnOpts?.env };
     if (!env.YARN_NODE_LINKER) {
       env.YARN_NODE_LINKER = 'node-modules';
     }

@@ -1348,12 +1348,15 @@ export const frameworks = [
       some: [
         {
           path: 'config.yaml',
+          matchContent: 'baseURL',
         },
         {
           path: 'config.toml',
+          matchContent: 'baseURL',
         },
         {
           path: 'config.json',
+          matchContent: 'baseURL',
         },
       ],
     },
@@ -1505,6 +1508,14 @@ export const frameworks = [
     tagline: 'Everything you need to make a static site engine in one binary.',
     description: 'A Zola app, created with the "Getting Started" tutorial.',
     website: 'https://www.getzola.org',
+    detectors: {
+      every: [
+        {
+          path: 'config.toml',
+          matchContent: 'base_url',
+        },
+      ],
+    },
     settings: {
       installCommand: {
         placeholder: 'None',

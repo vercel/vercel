@@ -90,7 +90,7 @@ describe('#detectFramework', () => {
 
   it('Detect Hugo #1', async () => {
     const fs = new VirtualFilesystem({
-      'config.yaml': 'config',
+      'config.yaml': 'baseURL: http://example.org/',
       'content/post.md': '# hello world',
     });
 
@@ -99,7 +99,7 @@ describe('#detectFramework', () => {
 
   it('Detect Hugo #2', async () => {
     const fs = new VirtualFilesystem({
-      'config.json': 'config',
+      'config.json': '{ "baseURL": "http://example.org/" }',
       'content/post.md': '# hello world',
     });
 
@@ -108,7 +108,7 @@ describe('#detectFramework', () => {
 
   it('Detect Hugo #3', async () => {
     const fs = new VirtualFilesystem({
-      'config.toml': 'config',
+      'config.toml': 'baseURL = "http://example.org/"',
       'content/post.md': '# hello world',
     });
 
@@ -142,5 +142,13 @@ describe('#detectFramework', () => {
     });
 
     expect(await detectFramework({ fs, frameworkList })).toBe('scully');
+  });
+
+  it('Detect Zola', async () => {
+    const fs = new VirtualFilesystem({
+      'config.toml': 'base_url = "/"',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('zola');
   });
 });
