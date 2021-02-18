@@ -5,7 +5,6 @@ import debug from '../debug';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
-import { cpus } from 'os';
 import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
@@ -328,18 +327,7 @@ export async function runBundleInstall(
   assert(path.isAbsolute(destPath));
   const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'bundle install' };
 
-  await spawnAsync(
-    'bundle',
-    args.concat([
-      'install',
-      '--no-prune',
-      '--retry',
-      '3',
-      '--jobs',
-      String(cpus().length || 1),
-    ]),
-    opts
-  );
+  await spawnAsync('bundle', args.concat(['install']), opts);
 }
 
 export async function runPipInstall(
