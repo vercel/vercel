@@ -1428,6 +1428,7 @@ export const frameworks = [
       );
       return (config && config.destination) || '_site';
     },
+    cachePattern: '{vendor/bin,vendor/cache,vendor/bundle}/**',
   },
   {
     name: 'Brunch',
@@ -1498,6 +1499,7 @@ export const frameworks = [
     devCommand: 'bundle exec middleman server -p $PORT',
     buildCommand: 'bundle exec middleman build',
     getOutputDirName: async () => 'build',
+    cachePattern: '{vendor/bin,vendor/cache,vendor/bundle}/**',
   },
   {
     name: 'Zola',
