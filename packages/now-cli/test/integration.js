@@ -2726,7 +2726,7 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
 });
 
 test('fail to add a domain without a project', async t => {
-  const output = await execute(['domains', 'add', 'my-domain.now.sh']);
+  const output = await execute(['domains', 'add', 'my-domain.vercel.app']);
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /expects two arguments/gm, formatOutput(output));
 });
@@ -2759,7 +2759,7 @@ test('change user', async t => {
 });
 
 test('assign a domain to a project', async t => {
-  const domain = `project-domain.${contextName}.now.sh`;
+  const domain = `project-domain.${contextName}.vercel.app`;
   const directory = fixture('static-deployment');
 
   const deploymentOutput = await execute([directory, '--public', '--confirm']);
