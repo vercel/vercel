@@ -51,8 +51,8 @@ export default async function glob(
       stat,
       `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
     );
-    if (stat.isFile()) {
-      const isSymlink = options.symlinks![fsPath];
+    const isSymlink = options.symlinks![fsPath];
+    if (isSymlink || stat.isFile()) {
       if (isSymlink) {
         stat = await lstat(fsPath);
       }
