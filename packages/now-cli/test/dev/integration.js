@@ -1692,6 +1692,9 @@ test(
       expectHeader('image/webp'),
       fetchOpts('image/webp')
     );
+    /*
+     * Disabled gif in https://github.com/vercel/next.js/pull/22253
+     * Eventually we should enable again when `next dev` supports it
     await testPath(
       200,
       toUrl('/test.gif', 64, 80),
@@ -1699,6 +1702,7 @@ test(
       expectHeader('image/webp'),
       fetchOpts('image/webp')
     );
+    */
     await testPath(
       200,
       toUrl('/test.svg', 64, 70),
