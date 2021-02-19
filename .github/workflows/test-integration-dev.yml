@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        node: [10, 12]
+        node: [12]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
