@@ -46,19 +46,21 @@ it('should re-create symlinks properly', async () => {
     return;
   }
   const files = await glob('**', path.join(__dirname, 'symlinks'));
-  assert.equal(Object.keys(files).length, 2);
+  assert.equal(Object.keys(files).length, 4);
 
   const outDir = path.join(__dirname, 'symlinks-out');
   await fs.remove(outDir);
 
   const files2 = await download(files, outDir);
-  assert.equal(Object.keys(files2).length, 2);
+  assert.equal(Object.keys(files2).length, 4);
 
-  const [linkStat, aStat] = await Promise.all([
+  const [linkStat, linkDirStat, aStat] = await Promise.all([
     fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'link-dir')),
     fs.lstat(path.join(outDir, 'a.txt')),
   ]);
   assert(linkStat.isSymbolicLink());
+  assert(linkDirStat.isSymbolicLink());
   assert(aStat.isFile());
 });
 
@@ -68,7 +70,7 @@ it('should create zip files with symlinks properly', async () => {
     return;
   }
   const files = await glob('**', path.join(__dirname, 'symlinks'));
-  assert.equal(Object.keys(files).length, 2);
+  assert.equal(Object.keys(files).length, 4);
 
   const outFile = path.join(__dirname, 'symlinks.zip');
   await fs.remove(outFile);
@@ -80,11 +82,13 @@ it('should create zip files with symlinks properly', async () => {
   await fs.writeFile(outFile, await createZip(files));
   await spawnAsync('unzip', [outFile], { cwd: outDir });
 
-  const [linkStat, aStat] = await Promise.all([
+  const [linkStat, linkDirStat, aStat] = await Promise.all([
     fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'link-dir')),
     fs.lstat(path.join(outDir, 'a.txt')),
   ]);
   assert(linkStat.isSymbolicLink());
+  assert(linkDirStat.isSymbolicLink());
   assert(aStat.isFile());
 });
 
