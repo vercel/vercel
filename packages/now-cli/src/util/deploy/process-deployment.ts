@@ -21,7 +21,9 @@ function printInspectUrl(
   deployStamp: () => string,
   orgSlug: string
 ) {
-  const inspectUrl = `https://vercel.com/${orgSlug}/${deployment.name}/${deployment.id}`;
+  const inspectUrl = `https://vercel.com/${orgSlug}/${
+    deployment.name
+  }/${deployment.id.replace('dpl_', '')}`;
   output.print(
     prependEmoji(
       `Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}`,
