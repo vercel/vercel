@@ -17,26 +17,11 @@ import { prependEmoji, emoji } from '../emoji';
 
 function printInspectUrl(
   output: Output,
-  deploymentUrl: string,
+  deployment: { id: string; name: string },
   deployStamp: () => string,
   orgSlug: string
 ) {
-  const url = deploymentUrl.replace('https://', '');
-
-  // example urls:
-  // lucim-fyulaijvg.now.sh
-  // s-66p6vb23x.n8.io (custom domain suffix)
-  const [sub, ...p] = url.split('.');
-  const apex = p.join('.');
-
-  const q = sub.split('-');
-  const deploymentShortId = q.pop();
-  const projectName = q.join('-');
-
-  const inspectUrl = `https://vercel.com/${orgSlug}/${projectName}/${deploymentShortId}${
-    apex !== 'now.sh' && apex !== 'vercel.app' ? `/${apex}` : ''
-  }`;
-
+  const inspectUrl = `https://vercel.com/${orgSlug}/${deployment.name}/${deployment.id}`;
   output.print(
     prependEmoji(
       `Inspect: ${chalk.bold(inspectUrl)} ${deployStamp()}`,
@@ -178,7 +163,7 @@ export default async function processDeployment({
 
         output.stopSpinner();
 
-        printInspectUrl(output, event.payload.url, deployStamp, org.slug);
+        printInspectUrl(output, event.payload, deployStamp, org.slug);
 
         if (quiet) {
           process.stdout.write(`https://${event.payload.url}`);
