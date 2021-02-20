@@ -1,12 +1,15 @@
 import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
-import { mkdirp, pathExists } from 'fs-extra';
+import { existsSync, mkdirp, pathExists, readFile } from 'fs-extra';
 import { dirname, join } from 'path';
 import buildUtils from './build-utils';
 import stringArgv from 'string-argv';
 const { debug } = buildUtils;
-const archMap = new Map([['x64', 'amd64'], ['x86', '386']]);
+const archMap = new Map([
+  ['x64', 'amd64'],
+  ['x86', '386'],
+]);
 const platformMap = new Map([['win32', 'windows']]);
 
 // Location where the `go` binary will be installed after `postinstall`
@@ -32,7 +35,7 @@ export async function getAnalyzedEntrypoint(filePath: string, modulePath = '') {
   const isAnalyzeExist = await pathExists(bin);
   if (!isAnalyzeExist) {
     const src = join(__dirname, 'util', 'analyze.go');
-    const go = await downloadGo();
+    const go = await downloadGo(modulePath);
     await go.build(src, bin);
   }
 
@@ -120,12 +123,10 @@ export async function createGo(
   return new GoWrapper(env, opts);
 }
 
-export async function downloadGo(
-  dir = GO_DIR,
-  version = '1.16',
-  platform = process.platform,
-  arch = process.arch
-) {
+export async function downloadGo(modulePath: string) {
+  const dir = GO_DIR;
+  const { platform, arch } = process;
+
   // Check if `go` is already installed in user's `$PATH`
   const { failed, stdout } = await execa('go', ['version'], { reject: false });
 
@@ -137,6 +138,7 @@ export async function downloadGo(
   // Check `go` bin in builder CWD
   const isGoExist = await pathExists(join(dir, 'bin'));
   if (!isGoExist) {
+    const version = await parseGoVersion(modulePath);
     debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
     const url = getGoUrl(version, platform, arch);
     debug('Downloading `go` URL: %o', url);
@@ -157,4 +159,18 @@ export async function downloadGo(
     });
   }
   return createGo(dir, platform, arch);
+}
+
+async function parseGoVersion(modulePath: string): Promise<string> {
+  let version = '1.16';
+  const file = join(modulePath, 'go.mod');
+  if (!existsSync(file)) {
+    return version;
+  }
+  const content = await readFile(file, 'utf8');
+  const match = /^go (\d+\.\d+)(\.\d+)?$/g.exec(content);
+  if (match && match[0]) {
+    version = match[0];
+  }
+  return version;
 }
