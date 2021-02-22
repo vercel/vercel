@@ -11,7 +11,7 @@ const archMap = new Map([
   ['x86', '386'],
 ]);
 const platformMap = new Map([['win32', 'windows']]);
-export const cachDir = '.vercel-go-cache';
+export const cacheDir = '.vercel-go-cache';
 const getGoDir = (workPath: string) => join(workPath, cachDir);
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 
@@ -178,7 +178,7 @@ async function parseGoVersion(modulePath: string): Promise<string> {
   }
   const content = await readFile(file, 'utf8');
   const match = /^go (\d+\.\d+)\.?$/gm.exec(content);
-  if (match && match[1]) {
+  if (match?[1]) {
     version = match[1];
   }
   return version;
