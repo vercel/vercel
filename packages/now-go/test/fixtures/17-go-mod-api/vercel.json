@@ -10,7 +10,7 @@
   "probes": [
     {
       "path": "/api/v1/routes/someroute.go",
-      "mustContain": "version:1.13:Hello Dependency:RANDOMNESS_PLACEHOLDER"
+      "mustContain": "version:go1.13:Hello Dependency:RANDOMNESS_PLACEHOLDER"
     }
   ]
 }
