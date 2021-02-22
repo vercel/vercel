@@ -17,6 +17,7 @@ import {
   BuildOptions,
   Meta,
   Files,
+  PrepareCacheOptions,
   StartDevServerOptions,
   StartDevServerResult,
 } from '@vercel/build-utils';
@@ -33,7 +34,12 @@ const {
 
 const TMP = tmpdir();
 
-import { createGo, getAnalyzedEntrypoint, OUT_EXTENSION } from './go-helpers';
+import {
+  createGo,
+  getAnalyzedEntrypoint,
+  cachDir,
+  OUT_EXTENSION,
+} from './go-helpers';
 const handlerFileName = `handler${OUT_EXTENSION}`;
 
 export { shouldServe };
@@ -141,6 +147,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
       debug(`Found ${fileName} file in "${goModAbsPathDir}"`);
     }
     analyzed = await getAnalyzedEntrypoint(
+      workPath,
       downloadedFiles[entrypoint].fsPath,
       goModAbsPathDir
     );
@@ -247,6 +254,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
 
   if (packageName !== 'main') {
     const go = await createGo(
+      workPath,
       goPath,
       process.platform,
       process.arch,
@@ -395,6 +403,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
     // we need `main.go` in the same dir as the entrypoint,
     // otherwise `go build` will refuse to build
     const go = await createGo(
+      workPath,
       goPath,
       process.platform,
       process.arch,
@@ -518,6 +527,7 @@ export async function startDevServer(
     goModAbsPathDir = workPath;
   }
   const analyzedRaw = await getAnalyzedEntrypoint(
+    workPath,
     entrypointWithExt,
     goModAbsPathDir
   );
@@ -622,4 +632,11 @@ async function waitForPortFile_(opts: {
       }
     }
   }
+}
+
+export async function prepareCache({
+  workPath,
+}: PrepareCacheOptions): Promise<Files> {
+  const cache = await glob(`${cachDir}/**`, workPath);
+  return cache;
 }

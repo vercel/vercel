@@ -2,7 +2,7 @@ import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import { existsSync, mkdirp, pathExists, readFile } from 'fs-extra';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import buildUtils from './build-utils';
 import stringArgv from 'string-argv';
 const { debug } = buildUtils;
@@ -11,10 +11,8 @@ const archMap = new Map([
   ['x86', '386'],
 ]);
 const platformMap = new Map([['win32', 'windows']]);
-
-// Location where the `go` binary will be installed after `postinstall`
-const GO_DIR = join(__dirname, 'go');
-const GO_BIN = join(GO_DIR, 'bin', 'go');
+export const cachDir = '.vercel-go-cache';
+const getGoDir = (workPath: string) => join(workPath, cachDir);
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 
 const getPlatform = (p: string) => platformMap.get(p) || p;
@@ -29,6 +27,7 @@ const getGoUrl = (version: string, platform: string, arch: string) => {
 export const OUT_EXTENSION = process.platform === 'win32' ? '.exe' : '';
 
 export async function getAnalyzedEntrypoint(
+  workPath: string,
   filePath: string,
   modulePath: string
 ) {
@@ -38,7 +37,7 @@ export async function getAnalyzedEntrypoint(
   const isAnalyzeExist = await pathExists(bin);
   if (!isAnalyzeExist) {
     const src = join(__dirname, 'util', 'analyze.go');
-    const go = await downloadGo(modulePath);
+    const go = await downloadGo(workPath, modulePath);
     await go.build(src, bin);
   }
 
@@ -106,13 +105,16 @@ class GoWrapper {
 }
 
 export async function createGo(
+  workPath: string,
   goPath: string,
   platform = process.platform,
   arch = process.arch,
   opts: execa.Options = {},
   goMod = false
 ) {
-  const path = `${dirname(GO_BIN)}:${process.env.PATH}`;
+  const binPath = join(getGoDir(workPath), 'bin');
+  debug(`Adding ${binPath} to PATH`);
+  const path = `${binPath}:${process.env.PATH}`;
   const env: { [key: string]: string } = {
     ...process.env,
     PATH: path,
@@ -126,22 +128,25 @@ export async function createGo(
   return new GoWrapper(env, opts);
 }
 
-export async function downloadGo(modulePath: string) {
-  const dir = GO_DIR;
+export async function downloadGo(workPath: string, modulePath: string) {
+  const dir = getGoDir(workPath);
   const { platform, arch } = process;
+  const version = await parseGoVersion(modulePath);
 
   // Check if `go` is already installed in user's `$PATH`
   const { failed, stdout } = await execa('go', ['version'], { reject: false });
 
-  if (!failed && parseInt(stdout.split('.')[1]) >= 11) {
+  if (
+    !failed &&
+    parseInt(stdout.split('.')[1]) >= parseInt(version.split('.')[1])
+  ) {
     debug('Using system installed version of `go`: %o', stdout.trim());
-    return createGo(dir, platform, arch);
+    return createGo(workPath, dir, platform, arch);
   }
 
   // Check `go` bin in builder CWD
   const isGoExist = await pathExists(join(dir, 'bin'));
   if (!isGoExist) {
-    const version = await parseGoVersion(modulePath);
     debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
     const url = getGoUrl(version, platform, arch);
     debug('Downloading `go` URL: %o', url);
@@ -161,7 +166,7 @@ export async function downloadGo(modulePath: string) {
         .on('finish', resolve);
     });
   }
-  return createGo(dir, platform, arch);
+  return createGo(workPath, dir, platform, arch);
 }
 
 async function parseGoVersion(modulePath: string): Promise<string> {
