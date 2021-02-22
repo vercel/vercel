@@ -125,7 +125,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
 
   const forceMove = Boolean(meta.isDev);
   const srcPath = join(goPath, 'src', 'lambda');
-  let downloadPath = (meta.isDev || meta.skipDownload) ? workPath : srcPath;
+  let downloadPath = meta.isDev || meta.skipDownload ? workPath : srcPath;
   let downloadedFiles = await download(files, downloadPath, meta);
 
   debug(`Parsing AST for "${entrypoint}"`);
@@ -135,6 +135,9 @@ Learn more: https://github.com/golang/go/wiki/Modules
     const fileName = 'go.mod';
     if (fileName in downloadedFiles) {
       goModAbsPathDir = dirname(downloadedFiles[fileName].fsPath);
+      debug(`Found ${fileName} file in "${goModAbsPathDir}"`);
+    } else if ('api/go.mod' in downloadedFiles) {
+      goModAbsPathDir = dirname(downloadedFiles['api/go.mod'].fsPath);
       debug(`Found ${fileName} file in "${goModAbsPathDir}"`);
     }
     analyzed = await getAnalyzedEntrypoint(

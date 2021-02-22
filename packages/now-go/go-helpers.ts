@@ -28,8 +28,11 @@ const getGoUrl = (version: string, platform: string, arch: string) => {
 
 export const OUT_EXTENSION = process.platform === 'win32' ? '.exe' : '';
 
-export async function getAnalyzedEntrypoint(filePath: string, modulePath = '') {
-  debug('Analyzing entrypoint %o', filePath);
+export async function getAnalyzedEntrypoint(
+  filePath: string,
+  modulePath: string
+) {
+  debug('Analyzing entrypoint %o with modulePath %o', filePath, modulePath);
   const bin = join(__dirname, `analyze${OUT_EXTENSION}`);
 
   const isAnalyzeExist = await pathExists(bin);
@@ -165,7 +168,7 @@ async function parseGoVersion(modulePath: string): Promise<string> {
   let version = '1.16';
   const file = join(modulePath, 'go.mod');
   if (!existsSync(file)) {
-    debug('Not found: go.mod');
+    debug(`go.mod not found: ${file}`);
     return version;
   }
   const content = await readFile(file, 'utf8');
