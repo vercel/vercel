@@ -2674,7 +2674,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   ]);
 
   t.is(response1.status, 200, url);
-  t.is(response2.status, 502, url);
+  t.is(response2.status, 504, url);
 });
 
 test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {
