@@ -165,12 +165,13 @@ async function parseGoVersion(modulePath: string): Promise<string> {
   let version = '1.16';
   const file = join(modulePath, 'go.mod');
   if (!existsSync(file)) {
+    debug('Not found: go.mod');
     return version;
   }
   const content = await readFile(file, 'utf8');
-  const match = /^go (\d+\.\d+)(\.\d+)?$/g.exec(content);
-  if (match && match[0]) {
-    version = match[0];
+  const match = /^go (\d+\.\d+)\.?$/gm.exec(content);
+  if (match && match[1]) {
+    version = match[1];
   }
   return version;
 }
