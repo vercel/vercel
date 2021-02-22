@@ -1,7 +1,7 @@
 import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
-import { existsSync, mkdirp, pathExists, readFile } from 'fs-extra';
+import { mkdirp, pathExists, readFile } from 'fs-extra';
 import { join } from 'path';
 import buildUtils from './build-utils';
 import stringArgv from 'string-argv';
@@ -12,7 +12,7 @@ const archMap = new Map([
 ]);
 const platformMap = new Map([['win32', 'windows']]);
 export const cacheDir = '.vercel-go-cache';
-const getGoDir = (workPath: string) => join(workPath, cachDir);
+const getGoDir = (workPath: string) => join(workPath, cacheDir);
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 
 const getPlatform = (p: string) => platformMap.get(p) || p;
@@ -170,16 +170,17 @@ export async function downloadGo(workPath: string, modulePath: string) {
 }
 
 async function parseGoVersion(modulePath: string): Promise<string> {
-  let version = '1.16';
+  const version = '1.16';
   const file = join(modulePath, 'go.mod');
-  if (!existsSync(file)) {
-    debug(`go.mod not found: ${file}`);
-    return version;
+  try {
+    const content = await readFile(file, 'utf8');
+    const match = /^go (\d+\.\d+)\.?$/gm.exec(content) || [];
+    return match[1] || version;
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      debug(`File not found: ${file}`);
+      return version;
+    }
+    throw err;
   }
-  const content = await readFile(file, 'utf8');
-  const match = /^go (\d+\.\d+)\.?$/gm.exec(content);
-  if (match?[1]) {
-    version = match[1];
-  }
-  return version;
 }
