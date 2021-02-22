@@ -1391,7 +1391,7 @@ export const frameworks = [
   {
     name: 'Jekyll',
     slug: 'jekyll',
-    demo: 'https://jekyll.now-examples.now.sh',
+    demo: 'https://jekyll.now-examples.vercel.app',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/jekyll.svg',
     tagline:
@@ -1468,7 +1468,7 @@ export const frameworks = [
   {
     name: 'Middleman',
     slug: 'middleman',
-    demo: 'https://middleman.now-examples.now.sh',
+    demo: 'https://middleman.now-examples.vercel.app',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/middleman.svg',
     tagline:

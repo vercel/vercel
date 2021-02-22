@@ -3,3 +3,4 @@
 .DS_Store
 .sass-cache
 build/
+.vercel
