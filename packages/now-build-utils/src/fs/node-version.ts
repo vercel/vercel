@@ -28,8 +28,7 @@ function getHint(isAuto: boolean) {
 }
 
 const upstreamProvider =
-  'This change is the result of a decision made by an upstream infrastructure provider (AWS).' +
-  '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html';
+  'This change is the result of a decision made by an upstream infrastructure provider (AWS).';
 
 export function getLatestNodeVersion() {
   return allOptions[0];
@@ -57,9 +56,8 @@ export async function getSupportedNodeVersion(
     if (!found) {
       throw new NowBuildError({
         code: 'BUILD_UTILS_NODE_VERSION_INVALID',
-        link:
-          'https://vercel.com/docs/runtimes#official-runtimes/node-js/node-js-version',
-        message: `Found invalid Node.js Version: "${engineRange}".\n${getHint(
+        link: 'http://vercel.link/node-version',
+        message: `Found invalid Node.js Version: "${engineRange}". ${getHint(
           isAuto
         )}`,
       });
@@ -70,9 +68,8 @@ export async function getSupportedNodeVersion(
     const intro = `Node.js Version "${selection.range}" is discontinued and must be upgraded.`;
     throw new NowBuildError({
       code: 'BUILD_UTILS_NODE_VERSION_DISCONTINUED',
-      link:
-        'https://vercel.com/docs/runtimes#official-runtimes/node-js/node-js-version',
-      message: intro + '\n' + getHint(isAuto) + '\n' + upstreamProvider,
+      link: 'http://vercel.link/node-version',
+      message: `${intro} ${getHint(isAuto)} ${upstreamProvider}`,
     });
   }
 
@@ -81,13 +78,12 @@ export async function getSupportedNodeVersion(
   if (selection.discontinueDate) {
     const d = selection.discontinueDate.toISOString().split('T')[0];
     console.warn(
-      `Warning: Node.js version ${
+      `Error: Node.js version ${
         selection.range
       } is deprecated. Deployments created on or after ${d} will fail to build. ${getHint(
         isAuto
-      )}`
+      )} ${upstreamProvider}`
     );
-    console.log(upstreamProvider);
   }
 
   return selection;

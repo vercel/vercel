@@ -236,6 +236,27 @@ it('should throw for discontinued versions', async () => {
   global.Date.now = realDateNow;
 });
 
+it('should warn for deprecated versions, soon to be discontinued', async () => {
+  // Mock a future date so that Node 10 warns
+  const realDateNow = Date.now.bind(global.Date);
+  global.Date.now = () => new Date('2021-02-23').getTime();
+
+  expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
+    'major',
+    10
+  );
+  expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
+    'major',
+    10
+  );
+  expect(warningMessages).toStrictEqual([
+    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "14.x" } in your `package.json` file to use Node.js 14. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 14.x in your Project Settings to use Node.js 14. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+  ]);
+
+  global.Date.now = realDateNow;
+});
+
 it('should support require by path for legacy builders', () => {
   const index = require('@vercel/build-utils');
 
