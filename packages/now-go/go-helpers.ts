@@ -181,8 +181,9 @@ async function parseGoVersion(modulePath: string): Promise<string> {
   } catch (err) {
     if (err.code === 'ENOENT') {
       debug(`File not found: ${file}`);
+    } else {
+      throw err;
     }
-    throw err;
   }
   return '1.16';
 }
