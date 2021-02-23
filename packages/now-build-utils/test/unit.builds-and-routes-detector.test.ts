@@ -2573,6 +2573,43 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
   }
 
   {
+    const files = ['api/external.js', 'pages/api/internal.js'];
+    const {
+      defaultRoutes,
+      rewriteRoutes,
+      redirectRoutes,
+      errorRoutes,
+      warnings,
+    } = await detectBuilders(files, null, {
+      featHandleMiss,
+      projectSettings: { framework: 'nextjs' },
+    });
+    expect(defaultRoutes).toStrictEqual([
+      { handle: 'miss' },
+      {
+        src: '^/api/(.+)(?:\\.(?:js))$',
+        dest: '/api/$1',
+        check: true,
+      },
+    ]);
+    expect(rewriteRoutes).toStrictEqual([
+      {
+        status: 404,
+        src: '^/api(/.*)?$',
+      },
+    ]);
+    expect(redirectRoutes).toStrictEqual([]);
+    expect(errorRoutes).toStrictEqual([]);
+    expect(warnings).toStrictEqual([
+      {
+        code: 'conflicting_files',
+        message:
+          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+      },
+    ]);
+  }
+
+  {
     const files = ['public/index.html'];
 
     const { defaultRoutes } = await detectBuilders(files, null, {
