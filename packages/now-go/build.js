@@ -26,30 +26,6 @@ async function main() {
       stdio: 'inherit',
     }
   );
-
-  const installDir = join(outDir, 'install');
-  await execa(
-    'ncc',
-    [
-      'build',
-      'install.ts',
-      '-e',
-      '@vercel/build-utils',
-      '-e',
-      '@now/build-utils',
-      '-o',
-      installDir,
-    ],
-    {
-      stdio: 'inherit',
-    }
-  );
-
-  // Move compiled ncc file to out dir
-  await fs.rename(join(installDir, 'index.js'), join(outDir, 'install.js'));
-
-  // Delete leftover "install" dir
-  await fs.remove(installDir);
 }
 
 main().catch(err => {

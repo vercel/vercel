@@ -1,5 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "index.go", "use": "@vercel/go" }],
-  "probes": [{ "path": "/", "mustContain": "RANDOMNESS_PLACEHOLDER" }]
-}

@@ -1,19 +1,26 @@
 import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
-import { mkdirp, pathExists } from 'fs-extra';
-import { dirname, join } from 'path';
+import { mkdirp, pathExists, readFile } from 'fs-extra';
+import { join } from 'path';
 import buildUtils from './build-utils';
 import stringArgv from 'string-argv';
 const { debug } = buildUtils;
-const archMap = new Map([['x64', 'amd64'], ['x86', '386']]);
+const versionMap = new Map([
+  ['1.16', '1.16'],
+  ['1.15', '1.15.8'],
+  ['1.14', '1.14.15'],
+  ['1.13', '1.13.15'],
+]);
+const archMap = new Map([
+  ['x64', 'amd64'],
+  ['x86', '386'],
+]);
 const platformMap = new Map([['win32', 'windows']]);
-
-// Location where the `go` binary will be installed after `postinstall`
-const GO_DIR = join(__dirname, 'go');
-const GO_BIN = join(GO_DIR, 'bin', 'go');
+export const cacheDir = join('.vercel', 'cache', 'golang');
+const getGoDir = (workPath: string) => join(workPath, cacheDir);
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
-
+const GO_MIN_VERSION = 13;
 const getPlatform = (p: string) => platformMap.get(p) || p;
 const getArch = (a: string) => archMap.get(a) || a;
 const getGoUrl = (version: string, platform: string, arch: string) => {
@@ -25,14 +32,18 @@ const getGoUrl = (version: string, platform: string, arch: string) => {
 
 export const OUT_EXTENSION = process.platform === 'win32' ? '.exe' : '';
 
-export async function getAnalyzedEntrypoint(filePath: string, modulePath = '') {
-  debug('Analyzing entrypoint %o', filePath);
+export async function getAnalyzedEntrypoint(
+  workPath: string,
+  filePath: string,
+  modulePath: string
+) {
+  debug('Analyzing entrypoint %o with modulePath %o', filePath, modulePath);
   const bin = join(__dirname, `analyze${OUT_EXTENSION}`);
 
   const isAnalyzeExist = await pathExists(bin);
   if (!isAnalyzeExist) {
     const src = join(__dirname, 'util', 'analyze.go');
-    const go = await downloadGo();
+    const go = await downloadGo(workPath, modulePath);
     await go.build(src, bin);
   }
 
@@ -100,13 +111,16 @@ class GoWrapper {
 }
 
 export async function createGo(
+  workPath: string,
   goPath: string,
   platform = process.platform,
   arch = process.arch,
   opts: execa.Options = {},
   goMod = false
 ) {
-  const path = `${dirname(GO_BIN)}:${process.env.PATH}`;
+  const binPath = join(getGoDir(workPath), 'bin');
+  debug(`Adding ${binPath} to PATH`);
+  const path = `${binPath}:${process.env.PATH}`;
   const env: { [key: string]: string } = {
     ...process.env,
     PATH: path,
@@ -120,21 +134,20 @@ export async function createGo(
   return new GoWrapper(env, opts);
 }
 
-export async function downloadGo(
-  dir = GO_DIR,
-  version = '1.16',
-  platform = process.platform,
-  arch = process.arch
-) {
+export async function downloadGo(workPath: string, modulePath: string) {
+  const dir = getGoDir(workPath);
+  const { platform, arch } = process;
+  const version = await parseGoVersion(modulePath);
+
   // Check if `go` is already installed in user's `$PATH`
   const { failed, stdout } = await execa('go', ['version'], { reject: false });
 
-  if (!failed && parseInt(stdout.split('.')[1]) >= 11) {
+  if (!failed && parseInt(stdout.split('.')[1]) >= GO_MIN_VERSION) {
     debug('Using system installed version of `go`: %o', stdout.trim());
-    return createGo(dir, platform, arch);
+    return createGo(workPath, dir, platform, arch);
   }
 
-  // Check `go` bin in builder CWD
+  // Check `go` bin in cacheDir
   const isGoExist = await pathExists(join(dir, 'bin'));
   if (!isGoExist) {
     debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
@@ -156,5 +169,32 @@ export async function downloadGo(
         .on('finish', resolve);
     });
   }
-  return createGo(dir, platform, arch);
+  return createGo(workPath, dir, platform, arch);
+}
+
+async function parseGoVersion(modulePath: string): Promise<string> {
+  // default to newest (first)
+  let version = Array.from(versionMap.values())[0];
+  const file = join(modulePath, 'go.mod');
+  try {
+    const content = await readFile(file, 'utf8');
+    const matches = /^go (\d+)\.(\d+)\.?$/gm.exec(content) || [];
+    const major = parseInt(matches[1], 10);
+    const minor = parseInt(matches[2], 10);
+    const full = versionMap.get(`${major}.${minor}`);
+    if (major === 1 && minor >= GO_MIN_VERSION && full) {
+      version = full;
+    } else {
+      console.log(`Warning: Unknown Go version in ${file}`);
+    }
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      debug(`File not found: ${file}`);
+    } else {
+      throw err;
+    }
+  }
+
+  debug(`Selected Go version ${version}`);
+  return version;
 }
