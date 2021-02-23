@@ -2605,6 +2605,8 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         code: 'conflicting_files',
         message:
           'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+        link: 'https://nextjs.org/docs/api-routes/introduction',
+        action: 'Learn More',
       },
     ]);
   }
