@@ -22,7 +22,11 @@ async function expectBuilderError(promise, pattern) {
   }
   assert('message' in result, `Expected error message but found ${result}`);
   assert(
-    pattern.test(result.message),
+    typeof result.message === 'string',
+    `Expected error to be a string but found ${typeof result.message}`
+  );
+  assert(
+    result.message.includes(pattern),
     `Expected ${pattern} but found "${result.message}"`
   );
 }
@@ -92,7 +96,7 @@ it('should create zip files with symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
-it('should only match supported node versions', async () => {
+it('should only match supported node versions, otherwise throw an error', async () => {
   expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
     'major',
     10
@@ -105,12 +109,9 @@ it('should only match supported node versions', async () => {
     'major',
     14
   );
-  expect(getSupportedNodeVersion('8.11.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('6.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('999.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('foo', false)).rejects.toThrow();
 
-  const autoMessage = /This project is using an invalid version of Node.js and must be changed/;
+  const autoMessage =
+    'Please set Node.js Version to 14.x in your Project Settings to use Node.js 14.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', true),
     autoMessage
@@ -132,7 +133,9 @@ it('should only match supported node versions', async () => {
     'major',
     14
   );
-  const foundMessage = /Found `engines` in `package\.json` with an invalid Node\.js version range/;
+
+  const foundMessage =
+    'Please set "engines": { "node": "14.x" } in your `package.json` file to use Node.js 14.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', false),
     foundMessage
@@ -216,9 +219,9 @@ it('should get latest node version', async () => {
 });
 
 it('should throw for discontinued versions', async () => {
-  // Mock a future date so that Node 8 becomes discontinued
+  // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2021-04-01').getTime();
+  global.Date.now = () => new Date('2021-05-01').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();

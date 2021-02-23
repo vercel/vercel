@@ -1,5 +1,4 @@
 import { intersects, validRange } from 'semver';
-import boxen from 'boxen';
 import { NodeVersion } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
@@ -11,7 +10,7 @@ const allOptions = [
     major: 10,
     range: '10.x',
     runtime: 'nodejs10.x',
-    discontinueDate: new Date('2021-03-30'),
+    discontinueDate: new Date('2021-04-20'),
   },
   {
     major: 8,
@@ -21,12 +20,13 @@ const allOptions = [
   },
 ] as const;
 
-const pleaseSet =
-  'Please change your Project Settings or set "engines": { "node": "' +
-  getLatestNodeVersion().range +
-  '" } in your `package.json` file to use Node.js ' +
-  getLatestNodeVersion().major +
-  '.';
+function getHint(isAuto: boolean) {
+  const { major, range } = getLatestNodeVersion();
+  return isAuto
+    ? `Please set Node.js Version to ${range} in your Project Settings to use Node.js ${major}.`
+    : `Please set "engines": { "node": "${range}" } in your \`package.json\` file to use Node.js ${major}.`;
+}
+
 const upstreamProvider =
   'This change is the result of a decision made by an upstream infrastructure provider (AWS).' +
   '\nRead more: https://docs.aws.amazon.com/lambda/latest/dg/runtime-support-policy.html';
@@ -40,8 +40,8 @@ export function getDiscontinuedNodeVersions(): NodeVersion[] {
 }
 
 export async function getSupportedNodeVersion(
-  engineRange?: string,
-  isAuto?: boolean
+  engineRange: string | undefined,
+  isAuto: boolean
 ): Promise<NodeVersion> {
   let selection: NodeVersion = getLatestNodeVersion();
 
@@ -55,61 +55,39 @@ export async function getSupportedNodeVersion(
         return intersects(o.range, engineRange);
       });
     if (!found) {
-      const intro =
-        isAuto || !engineRange
-          ? 'This project is using an invalid version of Node.js and must be changed.'
-          : 'Found `engines` in `package.json` with an invalid Node.js version range: "' +
-            engineRange +
-            '".';
       throw new NowBuildError({
         code: 'BUILD_UTILS_NODE_VERSION_INVALID',
         link:
           'https://vercel.com/docs/runtimes#official-runtimes/node-js/node-js-version',
-        message: intro + '\n' + pleaseSet,
+        message: `Found invalid Node.js Version: "${engineRange}".\n${getHint(
+          isAuto
+        )}`,
       });
     }
   }
 
   if (isDiscontinued(selection)) {
-    const intro =
-      isAuto || !engineRange
-        ? 'This project is using a discontinued version of Node.js (' +
-          selection.range +
-          ') and must be upgraded.'
-        : 'Found `engines` in `package.json` with a discontinued Node.js version range: "' +
-          engineRange +
-          '".';
+    const intro = `Node.js Version "${selection.range}" is discontinued and must be upgraded.`;
     throw new NowBuildError({
       code: 'BUILD_UTILS_NODE_VERSION_DISCONTINUED',
       link:
         'https://vercel.com/docs/runtimes#official-runtimes/node-js/node-js-version',
-      message: intro + '\n' + pleaseSet + '\n' + upstreamProvider,
+      message: intro + '\n' + getHint(isAuto) + '\n' + upstreamProvider,
     });
   }
 
-  debug(
-    isAuto || !engineRange
-      ? 'Using default Node.js range: "' + selection.range + '".'
-      : 'Found `engines` in `package.json`, selecting range: "' +
-          selection.range +
-          '".'
-  );
+  debug(`Selected Node.js ${selection.range}`);
 
   if (selection.discontinueDate) {
     const d = selection.discontinueDate.toISOString().split('T')[0];
     console.warn(
-      boxen(
-        'NOTICE' +
-          '\n' +
-          `\nNode.js version ${selection.range} has reached end-of-life.` +
-          `\nAs a result, deployments created on or after ${d} will fail to build.` +
-          '\n' +
-          pleaseSet +
-          '\n' +
-          upstreamProvider,
-        { padding: 1 }
-      )
+      `Warning: Node.js version ${
+        selection.range
+      } is deprecated. Deployments created on or after ${d} will fail to build. ${getHint(
+        isAuto
+      )}`
     );
+    console.log(upstreamProvider);
   }
 
   return selection;
