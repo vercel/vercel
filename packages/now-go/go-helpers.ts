@@ -6,6 +6,12 @@ import { join } from 'path';
 import buildUtils from './build-utils';
 import stringArgv from 'string-argv';
 const { debug } = buildUtils;
+const versionMap = new Map([
+  ['1.16', '1.16'],
+  ['1.15', '1.15.8'],
+  ['1.14', '1.14.15'],
+  ['1.13', '1.13.15'],
+]);
 const archMap = new Map([
   ['x64', 'amd64'],
   ['x86', '386'],
@@ -167,16 +173,19 @@ export async function downloadGo(workPath: string, modulePath: string) {
 }
 
 async function parseGoVersion(modulePath: string): Promise<string> {
+  // default to newest (first)
+  let version = Array.from(versionMap.values())[0];
   const file = join(modulePath, 'go.mod');
   try {
     const content = await readFile(file, 'utf8');
     const matches = /^go (\d+)\.(\d+)\.?$/gm.exec(content) || [];
     const major = parseInt(matches[1], 10);
     const minor = parseInt(matches[2], 10);
-    if (major === 1 && minor >= GO_MIN_VERSION) {
-      return `${major}.${minor}`;
+    const full = versionMap.get(`${major}.${minor}`);
+    if (major === 1 && minor >= GO_MIN_VERSION && full) {
+      version = full;
     } else {
-      debug(`Failed to parse version or its too old: ${file}`);
+      console.log(`Warning: Unknown Go version in ${file}`);
     }
   } catch (err) {
     if (err.code === 'ENOENT') {
@@ -185,5 +194,7 @@ async function parseGoVersion(modulePath: string): Promise<string> {
       throw err;
     }
   }
-  return '1.16';
+
+  debug(`Selected Go version ${version}`);
+  return version;
 }
