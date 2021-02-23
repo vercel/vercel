@@ -5,7 +5,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "version:go1.14:first:RANDOMNESS_PLACEHOLDER"
+      "mustContain": "version:go1.14.15:first:RANDOMNESS_PLACEHOLDER"
     }
   ]
 }
