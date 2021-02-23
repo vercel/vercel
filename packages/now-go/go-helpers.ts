@@ -167,17 +167,22 @@ export async function downloadGo(workPath: string, modulePath: string) {
 }
 
 async function parseGoVersion(modulePath: string): Promise<string> {
-  const version = '1.16';
   const file = join(modulePath, 'go.mod');
   try {
     const content = await readFile(file, 'utf8');
-    const match = /^go (\d+\.\d+)\.?$/gm.exec(content) || [];
-    return match[1] || version;
+    const matches = /^go (\d+)\.(\d+)\.?$/gm.exec(content) || [];
+    const major = parseInt(matches[1], 10);
+    const minor = parseInt(matches[2], 10);
+    if (major === 1 && minor > 12) {
+      return `${major}.${minor}`;
+    } else {
+      debug(`Failed to parse version or its too old: ${file}`);
+    }
   } catch (err) {
     if (err.code === 'ENOENT') {
       debug(`File not found: ${file}`);
-      return version;
     }
     throw err;
   }
+  return '1.16';
 }
