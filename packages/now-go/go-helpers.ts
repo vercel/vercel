@@ -14,7 +14,7 @@ const platformMap = new Map([['win32', 'windows']]);
 export const cacheDir = join('.vercel', 'cache', 'golang');
 const getGoDir = (workPath: string) => join(workPath, cacheDir);
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
-
+const GO_MIN_VERSION = 13;
 const getPlatform = (p: string) => platformMap.get(p) || p;
 const getArch = (a: string) => archMap.get(a) || a;
 const getGoUrl = (version: string, platform: string, arch: string) => {
@@ -136,7 +136,7 @@ export async function downloadGo(workPath: string, modulePath: string) {
   // Check if `go` is already installed in user's `$PATH`
   const { failed, stdout } = await execa('go', ['version'], { reject: false });
 
-  if (!failed && parseInt(stdout.split('.')[1]) >= 11) {
+  if (!failed && parseInt(stdout.split('.')[1]) >= GO_MIN_VERSION) {
     debug('Using system installed version of `go`: %o', stdout.trim());
     return createGo(workPath, dir, platform, arch);
   }
@@ -173,7 +173,7 @@ async function parseGoVersion(modulePath: string): Promise<string> {
     const matches = /^go (\d+)\.(\d+)\.?$/gm.exec(content) || [];
     const major = parseInt(matches[1], 10);
     const minor = parseInt(matches[2], 10);
-    if (major === 1 && minor > 12) {
+    if (major === 1 && minor >= GO_MIN_VERSION) {
       return `${major}.${minor}`;
     } else {
       debug(`Failed to parse version or its too old: ${file}`);
