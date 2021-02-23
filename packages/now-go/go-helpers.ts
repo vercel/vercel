@@ -11,7 +11,7 @@ const archMap = new Map([
   ['x86', '386'],
 ]);
 const platformMap = new Map([['win32', 'windows']]);
-export const cacheDir = '.vercel-go-cache';
+export const cacheDir = join('.vercel', 'cache', 'golang');
 const getGoDir = (workPath: string) => join(workPath, cacheDir);
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 
@@ -141,7 +141,7 @@ export async function downloadGo(workPath: string, modulePath: string) {
     return createGo(workPath, dir, platform, arch);
   }
 
-  // Check `go` bin in builder CWD
+  // Check `go` bin in cacheDir
   const isGoExist = await pathExists(join(dir, 'bin'));
   if (!isGoExist) {
     debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
