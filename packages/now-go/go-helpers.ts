@@ -136,10 +136,7 @@ export async function downloadGo(workPath: string, modulePath: string) {
   // Check if `go` is already installed in user's `$PATH`
   const { failed, stdout } = await execa('go', ['version'], { reject: false });
 
-  if (
-    !failed &&
-    parseInt(stdout.split('.')[1]) >= parseInt(version.split('.')[1])
-  ) {
+  if (!failed && parseInt(stdout.split('.')[1]) >= 11) {
     debug('Using system installed version of `go`: %o', stdout.trim());
     return createGo(workPath, dir, platform, arch);
   }
