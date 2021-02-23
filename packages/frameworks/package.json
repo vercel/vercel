@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "0.2.1-canary.6",
+  "version": "0.2.1-canary.7",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
   "files": [
