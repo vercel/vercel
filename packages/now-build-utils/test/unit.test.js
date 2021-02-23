@@ -22,7 +22,11 @@ async function expectBuilderError(promise, pattern) {
   }
   assert('message' in result, `Expected error message but found ${result}`);
   assert(
-    pattern.test(result.message),
+    typeof result.message === 'string',
+    `Expected error to be a string but found ${typeof result.message}`
+  );
+  assert(
+    result.message.includes(pattern),
     `Expected ${pattern} but found "${result.message}"`
   );
 }
@@ -92,7 +96,7 @@ it('should create zip files with symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
-it('should only match supported node versions', async () => {
+it('should only match supported node versions, otherwise throw an error', async () => {
   expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
     'major',
     10
@@ -105,12 +109,9 @@ it('should only match supported node versions', async () => {
     'major',
     14
   );
-  expect(getSupportedNodeVersion('8.11.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('6.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('999.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('foo', false)).rejects.toThrow();
 
-  const autoMessage = /This project is using an invalid version of Node.js and must be changed/;
+  const autoMessage =
+    'Please set Node.js Version to 14.x in your Project Settings to use Node.js 14.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', true),
     autoMessage
@@ -132,7 +133,9 @@ it('should only match supported node versions', async () => {
     'major',
     14
   );
-  const foundMessage = /Found `engines` in `package\.json` with an invalid Node\.js version range/;
+
+  const foundMessage =
+    'Please set "engines": { "node": "14.x" } in your `package.json` file to use Node.js 14.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', false),
     foundMessage
@@ -195,7 +198,7 @@ it('should prefer package.json engines over project setting from config and warn
     )
   ).toHaveProperty('range', '14.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to `engines` existing in your `package.json` file, the Node.js Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": "14.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
   ]);
 });
 
@@ -216,9 +219,9 @@ it('should get latest node version', async () => {
 });
 
 it('should throw for discontinued versions', async () => {
-  // Mock a future date so that Node 8 becomes discontinued
+  // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2021-04-01').getTime();
+  global.Date.now = () => new Date('2021-05-01').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
@@ -229,6 +232,27 @@ it('should throw for discontinued versions', async () => {
   expect(discontinued.length).toBe(2);
   expect(discontinued[0]).toHaveProperty('range', '10.x');
   expect(discontinued[1]).toHaveProperty('range', '8.10.x');
+
+  global.Date.now = realDateNow;
+});
+
+it('should warn for deprecated versions, soon to be discontinued', async () => {
+  // Mock a future date so that Node 10 warns
+  const realDateNow = Date.now.bind(global.Date);
+  global.Date.now = () => new Date('2021-02-23').getTime();
+
+  expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
+    'major',
+    10
+  );
+  expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
+    'major',
+    10
+  );
+  expect(warningMessages).toStrictEqual([
+    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "14.x" } in your `package.json` file to use Node.js 14. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 14.x in your Project Settings to use Node.js 14. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+  ]);
 
   global.Date.now = realDateNow;
 });
