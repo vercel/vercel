@@ -1029,6 +1029,41 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await nowEnvLsIsEmpty();
 });
 
+test('[vc projects] should create a project successfully', async t => {
+  const projectName = `vc-projects-add-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  const vc = execa(binaryPath, [
+    'projects',
+    'add',
+    projectName,
+    ...defaultArgs,
+  ]);
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(`Success! Project ${projectName} added`)
+  );
+
+  const { exitCode, stderr, stdout } = await vc;
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  // creating the same project again should succeed
+  const vc2 = execa(binaryPath, [
+    'projects',
+    'add',
+    projectName,
+    ...defaultArgs,
+  ]);
+
+  await waitForPrompt(vc2, chunk =>
+    chunk.includes(`Success! Project ${projectName} added`)
+  );
+
+  const { exitCode: exitCode2, stderr: stderr2, stdout: stdout2 } = await vc;
+  t.is(exitCode2, 0, formatOutput({ stderr2, stdout2 }));
+});
+
 test('deploy with metadata containing "=" in the value', async t => {
   const target = fixture('static-v2-meta');
 
@@ -2639,7 +2674,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   ]);
 
   t.is(response1.status, 200, url);
-  t.is(response2.status, 502, url);
+  t.is(response2.status, 504, url);
 });
 
 test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {
@@ -2691,7 +2726,7 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
 });
 
 test('fail to add a domain without a project', async t => {
-  const output = await execute(['domains', 'add', 'my-domain.now.sh']);
+  const output = await execute(['domains', 'add', 'my-domain.vercel.app']);
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /expects two arguments/gm, formatOutput(output));
 });
@@ -2724,7 +2759,7 @@ test('change user', async t => {
 });
 
 test('assign a domain to a project', async t => {
-  const domain = `project-domain.${contextName}.now.sh`;
+  const domain = `project-domain.${contextName}.vercel.app`;
   const directory = fixture('static-deployment');
 
   const deploymentOutput = await execute([directory, '--public', '--confirm']);

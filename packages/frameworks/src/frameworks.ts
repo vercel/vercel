@@ -1320,8 +1320,7 @@ export const frameworks = [
         placeholder: '`yarn install` or `npm install`',
       },
       buildCommand: {
-        value:
-          'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
+        value: 'yarn rw deploy vercel',
       },
       devCommand: {
         value: 'yarn rw dev --fwd="--port=$PORT --open=false"',
@@ -1331,8 +1330,7 @@ export const frameworks = [
       },
     },
     devCommand: 'yarn rw dev --fwd="--port=$PORT --open=false',
-    buildCommand:
-      'yarn rw build && yarn rw db up --no-db-client --auto-approve && yarn rw dataMigrate up',
+    buildCommand: 'yarn rw deploy vercel',
     getOutputDirName: async () => 'public',
   },
   {
@@ -1393,7 +1391,7 @@ export const frameworks = [
   {
     name: 'Jekyll',
     slug: 'jekyll',
-    demo: 'https://jekyll.now-examples.now.sh',
+    demo: 'https://jekyll.now-examples.vercel.app',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/jekyll.svg',
     tagline:
@@ -1430,6 +1428,7 @@ export const frameworks = [
       );
       return (config && config.destination) || '_site';
     },
+    cachePattern: '{vendor/bin,vendor/cache,vendor/bundle}/**',
   },
   {
     name: 'Brunch',
@@ -1469,7 +1468,7 @@ export const frameworks = [
   {
     name: 'Middleman',
     slug: 'middleman',
-    demo: 'https://middleman.now-examples.now.sh',
+    demo: 'https://middleman.now-examples.vercel.app',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/middleman.svg',
     tagline:
@@ -1500,6 +1499,7 @@ export const frameworks = [
     devCommand: 'bundle exec middleman server -p $PORT',
     buildCommand: 'bundle exec middleman build',
     getOutputDirName: async () => 'build',
+    cachePattern: '{vendor/bin,vendor/cache,vendor/bundle}/**',
   },
   {
     name: 'Zola',

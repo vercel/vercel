@@ -425,7 +425,7 @@ test(
         method: 'POST',
         body: '{"query":"{redwood{version}}"}',
       };
-      const resBody = '{"data":{"redwood":{"version":"0.15.0"}}}';
+      const resBody = '{"data":{"redwood":{"version":"0.25.0"}}}';
       await testPath(200, '/api/graphql', resBody, {}, fetchOpts);
     },
     { isExample: true }
@@ -1692,6 +1692,9 @@ test(
       expectHeader('image/webp'),
       fetchOpts('image/webp')
     );
+    /*
+     * Disabled gif in https://github.com/vercel/next.js/pull/22253
+     * Eventually we should enable again when `next dev` supports it
     await testPath(
       200,
       toUrl('/test.gif', 64, 80),
@@ -1699,6 +1702,7 @@ test(
       expectHeader('image/webp'),
       fetchOpts('image/webp')
     );
+    */
     await testPath(
       200,
       toUrl('/test.svg', 64, 70),
@@ -1706,12 +1710,13 @@ test(
       expectHeader('image/svg+xml'),
       fetchOpts('image/webp')
     );
+    // animated gif should bypass: serve as-is
     await testPath(
       200,
       toUrl('/animated.gif', 64, 60),
       null,
       expectHeader('image/gif'),
-      fetchOpts('image/gif')
+      fetchOpts('image/webp')
     );
   })
 );
