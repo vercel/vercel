@@ -176,16 +176,13 @@ export async function getNodeVersion(
   let { nodeVersion } = config;
   let isAuto = true;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
-    if (
-      nodeVersion &&
-      nodeVersion !== packageJson.engines.node &&
-      !meta.isDev
-    ) {
+    const { node } = packageJson.engines;
+    if (nodeVersion && nodeVersion !== node && !meta.isDev) {
       console.warn(
-        'Warning: Due to `engines` existing in your `package.json` file, the Node.js Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version'
+        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
       );
     }
-    nodeVersion = packageJson.engines.node;
+    nodeVersion = node;
     isAuto = false;
   }
   return getSupportedNodeVersion(nodeVersion, isAuto);

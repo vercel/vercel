@@ -198,7 +198,7 @@ it('should prefer package.json engines over project setting from config and warn
     )
   ).toHaveProperty('range', '14.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to `engines` existing in your `package.json` file, the Node.js Version defined in your Project Settings will not apply. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": "14.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
   ]);
 });
 
