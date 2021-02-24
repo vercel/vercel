@@ -311,7 +311,10 @@ export async function detectBuilders(
   if (frontendBuilder) {
     builders.push(frontendBuilder);
 
-    if (hasNextApiFiles && apiBuilders.some(b => b.use === '@vercel/node')) {
+    if (
+      hasNextApiFiles &&
+      apiBuilders.some(b => isOfficialRuntime('node', b.use))
+    ) {
       warnings.push({
         code: 'conflicting_files',
         message:
@@ -946,8 +949,8 @@ function getRouteResult(
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
   const framework = frontendBuilder?.config?.framework || '';
-  const use = frontendBuilder?.use || '';
-  const isNextjs = framework === 'nextjs' || use.startsWith('@vercel/next');
+  const isNextjs =
+    framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
   const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
 
   if (apiRoutes && apiRoutes.length > 0) {
