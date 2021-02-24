@@ -2574,32 +2574,27 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
 
   {
     const files = ['api/external.js', 'pages/api/internal.js'];
-    const {
-      defaultRoutes,
-      rewriteRoutes,
-      redirectRoutes,
-      errorRoutes,
-      warnings,
-    } = await detectBuilders(files, null, {
+    const { builders, warnings } = await detectBuilders(files, null, {
       featHandleMiss,
       projectSettings: { framework: 'nextjs' },
     });
-    expect(defaultRoutes).toStrictEqual([
-      { handle: 'miss' },
+    expect(builders).toStrictEqual([
       {
-        src: '^/api/(.+)(?:\\.(?:js))$',
-        dest: '/api/$1',
-        check: true,
+        config: {
+          zeroConfig: true,
+        },
+        src: 'api/external.js',
+        use: '@vercel/node',
+      },
+      {
+        config: {
+          framework: 'nextjs',
+          zeroConfig: true,
+        },
+        src: 'package.json',
+        use: '@vercel/next',
       },
     ]);
-    expect(rewriteRoutes).toStrictEqual([
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
-      },
-    ]);
-    expect(redirectRoutes).toStrictEqual([]);
-    expect(errorRoutes).toStrictEqual([]);
     expect(warnings).toStrictEqual([
       {
         code: 'conflicting_files',
@@ -2609,6 +2604,32 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         action: 'Learn More',
       },
     ]);
+  }
+
+  {
+    const files = ['api/external.go', 'pages/api/internal.js'];
+    const { builders, warnings } = await detectBuilders(files, null, {
+      featHandleMiss,
+      projectSettings: { framework: 'nextjs' },
+    });
+    expect(builders).toStrictEqual([
+      {
+        config: {
+          zeroConfig: true,
+        },
+        src: 'api/external.go',
+        use: '@vercel/go',
+      },
+      {
+        config: {
+          framework: 'nextjs',
+          zeroConfig: true,
+        },
+        src: 'package.json',
+        use: '@vercel/next',
+      },
+    ]);
+    expect(warnings).toStrictEqual([]);
   }
 
   {
