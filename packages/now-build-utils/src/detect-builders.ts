@@ -311,11 +311,7 @@ export async function detectBuilders(
   if (frontendBuilder) {
     builders.push(frontendBuilder);
 
-    if (
-      hasNextApiFiles &&
-      apiBuilders.length &&
-      apiBuilders.some(b => b.use === '@vercel/node')
-    ) {
+    if (hasNextApiFiles && apiBuilders.some(b => b.use === '@vercel/node')) {
       warnings.push({
         code: 'conflicting_files',
         message:
