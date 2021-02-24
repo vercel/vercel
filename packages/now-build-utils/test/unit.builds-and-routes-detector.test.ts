@@ -2573,6 +2573,66 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
   }
 
   {
+    const files = ['api/external.js', 'pages/api/internal.js'];
+    const { builders, warnings } = await detectBuilders(files, null, {
+      featHandleMiss,
+      projectSettings: { framework: 'nextjs' },
+    });
+    expect(builders).toStrictEqual([
+      {
+        config: {
+          zeroConfig: true,
+        },
+        src: 'api/external.js',
+        use: '@vercel/node',
+      },
+      {
+        config: {
+          framework: 'nextjs',
+          zeroConfig: true,
+        },
+        src: 'package.json',
+        use: '@vercel/next',
+      },
+    ]);
+    expect(warnings).toStrictEqual([
+      {
+        code: 'conflicting_files',
+        message:
+          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+        link: 'https://nextjs.org/docs/api-routes/introduction',
+        action: 'Learn More',
+      },
+    ]);
+  }
+
+  {
+    const files = ['api/external.go', 'pages/api/internal.js'];
+    const { builders, warnings } = await detectBuilders(files, null, {
+      featHandleMiss,
+      projectSettings: { framework: 'nextjs' },
+    });
+    expect(builders).toStrictEqual([
+      {
+        config: {
+          zeroConfig: true,
+        },
+        src: 'api/external.go',
+        use: '@vercel/go',
+      },
+      {
+        config: {
+          framework: 'nextjs',
+          zeroConfig: true,
+        },
+        src: 'package.json',
+        use: '@vercel/next',
+      },
+    ]);
+    expect(warnings).toStrictEqual([]);
+  }
+
+  {
     const files = ['public/index.html'];
 
     const { defaultRoutes } = await detectBuilders(files, null, {

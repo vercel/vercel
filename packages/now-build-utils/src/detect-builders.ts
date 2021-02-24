@@ -311,11 +311,13 @@ export async function detectBuilders(
   if (frontendBuilder) {
     builders.push(frontendBuilder);
 
-    if (hasNextApiFiles && apiBuilders.length) {
+    if (hasNextApiFiles && apiBuilders.some(b => b.use === '@vercel/node')) {
       warnings.push({
         code: 'conflicting_files',
         message:
-          'It is not possible to use `api` and `pages/api` at the same time, please only use one option',
+          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+        link: 'https://nextjs.org/docs/api-routes/introduction',
+        action: 'Learn More',
       });
     }
   }

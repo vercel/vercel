@@ -589,7 +589,9 @@ export default class DevServer {
       }
 
       if (warnings && warnings.length > 0) {
-        warnings.forEach(warning => this.output.warn(warning.message));
+        warnings.forEach(warning =>
+          this.output.warn(warning.message, null, warning.link, warning.action)
+        );
       }
 
       if (builders) {
