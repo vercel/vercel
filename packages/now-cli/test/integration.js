@@ -1939,6 +1939,11 @@ test('create a production deployment', async t => {
     /Setting target to production/gm,
     formatOutput(targetCall)
   );
+  t.regex(
+    targetCall.stderr,
+    /Inspect: https:\/\/vercel.com\//gm,
+    formatOutput(targetCall)
+  );
   t.regex(targetCall.stdout, /https:\/\//gm);
 
   const { host: targetHost } = new URL(targetCall.stdout);
