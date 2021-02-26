@@ -48,7 +48,7 @@ func parse(fileName string) *ast.File {
 // ensure we only working with interest go file(s)
 func visit(files *[]string) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
-		itf, err := filepath.Match("*test.go", path)
+		itf, err := filepath.Match("*test.go", info.Name())
 		if err != nil {
 			log.Fatal(err)
 		}
