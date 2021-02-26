@@ -1590,7 +1590,7 @@ export const frameworks = [
         placeholder: '`yarn install` or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `react-scripts build`',
+        placeholder: '`npm run build` or `snowpack build`',
       },
       devCommand: {
         value: 'snowpack dev',
