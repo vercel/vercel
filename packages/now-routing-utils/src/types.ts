@@ -18,6 +18,11 @@ export type Source = {
   check?: boolean;
   important?: boolean;
   status?: number;
+  has?: Array<{
+    type: 'header' | 'cookie' | 'query';
+    key: string;
+    value?: string;
+  }>;
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
@@ -67,6 +72,11 @@ export interface NowConfig {
 export interface NowRewrite {
   source: string;
   destination: string;
+  has?: Array<{
+    type: 'header' | 'cookie' | 'query';
+    key: string;
+    value?: string;
+  }>;
 }
 
 export interface NowRedirect {
@@ -74,11 +84,21 @@ export interface NowRedirect {
   destination: string;
   permanent?: boolean;
   statusCode?: number;
+  has?: Array<{
+    type: 'header' | 'cookie' | 'query';
+    key: string;
+    value?: string;
+  }>;
 }
 
 export interface NowHeader {
   source: string;
   headers: NowHeaderKeyValue[];
+  has?: Array<{
+    type: 'header' | 'cookie' | 'query';
+    key: string;
+    value?: string;
+  }>;
 }
 
 export interface NowHeaderKeyValue {

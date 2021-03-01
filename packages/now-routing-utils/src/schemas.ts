@@ -1,6 +1,6 @@
 const hasSchema = {
   type: 'array',
-  maxItems: 1024,
+  maxItems: 16,
   items: {
     type: 'object',
     additionalProperties: false,

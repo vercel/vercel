@@ -65,6 +65,10 @@ export function convertRedirects(
         headers: { Location: loc },
         status,
       };
+
+      if (r.has) {
+        route.has = r.has;
+      }
       return route;
     } catch (e) {
       throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
@@ -78,6 +82,10 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
     try {
       const dest = replaceSegments(segments, r.destination);
       const route: Route = { src, dest, check: true };
+
+      if (r.has) {
+        route.has = r.has;
+      }
       return route;
     } catch (e) {
       throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
@@ -112,6 +120,10 @@ export function convertHeaders(headers: NowHeader[]): Route[] {
       headers: obj,
       continue: true,
     };
+
+    if (h.has) {
+      route.has = h.has;
+    }
     return route;
   });
 }
@@ -120,7 +132,7 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   const routes: Route[] = [];
   if (enable) {
     routes.push({
-      src: '^/\\.well-known(?:/.*)?$'
+      src: '^/\\.well-known(?:/.*)?$',
     });
     routes.push({
       src: '^/((?:[^/]+/)*[^/\\.]+)$',
