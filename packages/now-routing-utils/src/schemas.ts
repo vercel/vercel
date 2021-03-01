@@ -1,3 +1,27 @@
+const hasSchema = {
+  type: 'array',
+  maxItems: 1024,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['type', 'key'],
+    properties: {
+      type: {
+        type: 'string',
+        enum: ['header', 'cookie', 'query'],
+      },
+      key: {
+        type: 'string',
+        maxLength: 4096,
+      },
+      value: {
+        type: 'string',
+        maxLength: 4096,
+      },
+    },
+  },
+};
+
 /**
  * An ajv schema for the routes array
  */
@@ -91,6 +115,7 @@ export const routesSchema = {
               },
             },
           },
+          has: hasSchema,
         },
       },
       {
@@ -125,6 +150,7 @@ export const rewritesSchema = {
         type: 'string',
         maxLength: 4096,
       },
+      has: hasSchema,
     },
   },
 };
@@ -154,6 +180,7 @@ export const redirectsSchema = {
         minimum: 100,
         maximum: 999,
       },
+      has: hasSchema,
     },
   },
 };
@@ -189,6 +216,7 @@ export const headersSchema = {
           },
         },
       },
+      has: hasSchema,
     },
   },
 };
