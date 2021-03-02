@@ -48,12 +48,6 @@ async function main() {
     pkgs.add('vercel');
   }
 
-  // NOTE: `@vercel/python` stable must not be released
-  // until March 1st, 2021 due to breaking behavior with
-  // the request URL (https://github.com/vercel/vercel/pull/5739).
-  // After that date this can be removed.
-  pkgs.delete('@vercel/python');
-
   const pub = Array.from(pkgs).join(',');
 
   console.log('To publish a stable release, execute the following:');
