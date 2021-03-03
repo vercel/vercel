@@ -105,6 +105,7 @@ async function main() {
   );
   await fs.rename(join(mainDir, 'index.js'), join(outDir, 'index.js'));
   await fs.remove(mainDir);
+  await fs.remove(outDir, 'example-import.js');
 }
 
 main().catch(err => {
