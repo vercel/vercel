@@ -24,7 +24,7 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 1. [Fork](https://help.github.com/articles/fork-a-repo/) this repository to your own GitHub account and then [clone](https://help.github.com/articles/cloning-a-repository/) it to your local device
 2. Install dependencies with `yarn install`
 3. Compile the code: `yarn build`
-4. Link the package to the global module directory: `cd ./packages/now-cli && yarn link`
+4. Link the package to the global module directory: `cd ./packages/cli && yarn link`
 5. You can start using `vercel` anywhere inside the command line
 
 As always, you should use `yarn test-unit` to run the tests and see if your changes have broken anything.

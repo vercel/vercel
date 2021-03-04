@@ -5,7 +5,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/vercel/vercel.git",
-    "directory": "packages/now-cgi"
+    "directory": "packages/cgi"
   },
   "scripts": {
     "build": "node build",

@@ -172,7 +172,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
     // Create cache so Go rebuilds fast with `vercel dev`
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
-    goPath = join(devCacheDir, 'now-go', basename(entrypoint, '.go'));
+    goPath = join(devCacheDir, 'go', basename(entrypoint, '.go'));
     const destLambda = join(goPath, 'src', 'lambda');
     await download(downloadedFiles, destLambda);
     downloadedFiles = await glob('**', destLambda);
