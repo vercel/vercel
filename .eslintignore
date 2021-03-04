@@ -5,36 +5,36 @@ examples
 # gatsby-plugin-now
 packages/gatsby-plugin-now/test/fixtures
 
-# now-build-utils
-packages/now-build-utils/test/fixtures
+# build-utils
+packages/build-utils/test/fixtures
 
-# now-cli
-packages/now-cli/@types
-packages/now-cli/download
-packages/now-cli/dist
-packages/now-cli/test/fixtures
-packages/now-cli/test/dev/fixtures
-packages/now-cli/bin
-packages/now-cli/link
-packages/now-cli/src/util/dev/templates/*.ts
+# cli
+packages/cli/@types
+packages/cli/download
+packages/cli/dist
+packages/cli/test/fixtures
+packages/cli/test/dev/fixtures
+packages/cli/bin
+packages/cli/link
+packages/cli/src/util/dev/templates/*.ts
 
-# now-client
-packages/now-client/tests/fixtures
-packages/now-client/lib
+# client
+packages/client/tests/fixtures
+packages/client/lib
 
-# now-next
-packages/now-next/test/fixtures
+# next
+packages/next/test/fixtures
 
-# now-node
-packages/now-node/src/bridge.ts
-packages/now-node/test/fixtures
+# node
+packages/node/src/bridge.ts
+packages/node/test/fixtures
 
-# now-node-bridge
-packages/now-node-bridge/bridge.*
+# node-bridge
+packages/node-bridge/bridge.*
 
-# now-static-build
-packages/now-static-build/test/fixtures
-packages/now-static-build/test/build-fixtures
+# static-build
+packages/static-build/test/fixtures
+packages/static-build/test/build-fixtures
 
 # redwood
 packages/redwood/test/fixtures
