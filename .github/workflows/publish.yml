@@ -12,10 +12,13 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-node@v1
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.13.15'
+    - uses: actions/setup-node@v2
       with:
         node-version: 12
+    - uses: actions/checkout@v1
     - name: Install
       run: yarn install --check-files --frozen-lockfile --network-timeout 1000000
     - name: Build

@@ -19,6 +19,12 @@ jobs:
         node: [12]
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.13.15'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 100
@@ -26,9 +32,6 @@ jobs:
       - run: git fetch origin master --depth=100
       - run: git fetch origin ${{ github.ref }} --depth=100
       - run: git diff origin/master...HEAD --name-only
-      - uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node }}
       - run: yarn install --network-timeout 1000000
       - run: yarn run build
       - run: yarn run lint
