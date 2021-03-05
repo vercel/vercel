@@ -2290,7 +2290,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const { name } = JSON.parse(
     fs.readFileSync(path.join(firstDeployment, 'now.json'))
   );
-  const url = `https://${name}.user.now.sh`;
+  const url = `https://${name}.user.vercel.app`;
 
   {
     const { stdout: deploymentUrl, stderr, exitCode } = await execute([
