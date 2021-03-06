@@ -42,7 +42,7 @@ async function main() {
       .split('\n')
       .filter(item => Boolean(item) && item.startsWith('packages'))
       .map(item => relative('packages', item).split(sep)[0])
-      .concat('cli'); // Always run tests for Now CLI
+      .concat('cli'); // Always run tests for Vercel CLI
 
     modifiedPackages = new Set(changed);
 
