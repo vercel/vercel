@@ -114,7 +114,7 @@
       },
       {
         "files": [
-          "packages/now-cli/**/*"
+          "packages/cli/**/*"
         ],
         "rules": {
           "lines-between-class-members": 0,
@@ -134,7 +134,7 @@
       },
       {
         "files": [
-          "packages/now-client/**/*"
+          "packages/client/**/*"
         ],
         "rules": {
           "prefer-const": 0,

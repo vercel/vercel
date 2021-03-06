@@ -6,7 +6,7 @@ const { join } = require('path');
 async function main() {
   const srcDir = join(__dirname, 'src');
   const outDir = join(__dirname, 'dist');
-  const bridgeDir = join(__dirname, '../now-node-bridge');
+  const bridgeDir = join(__dirname, '../node-bridge');
 
   // Copy shared dependencies
   await Promise.all([

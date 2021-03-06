@@ -6,18 +6,13 @@ const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
-jest.setTimeout(4 * 60 * 1000);
+jest.setTimeout(5 * 60 * 1000);
 let buildUtilsUrl;
 let builderUrl;
 
 beforeAll(async () => {
   if (!buildUtilsUrl) {
-    const buildUtilsPath = path.resolve(
-      __dirname,
-      '..',
-      '..',
-      'now-build-utils'
-    );
+    const buildUtilsPath = path.resolve(__dirname, '..', '..', 'build-utils');
     buildUtilsUrl = await packAndDeploy(buildUtilsPath);
     console.log('buildUtilsUrl', buildUtilsUrl);
   }

@@ -11,7 +11,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/vercel/vercel.git",
-    "directory": "packages/now-client"
+    "directory": "packages/client"
   },
   "scripts": {
     "build": "tsc",
