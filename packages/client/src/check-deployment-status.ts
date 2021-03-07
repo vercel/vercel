@@ -11,7 +11,7 @@ import {
 import { createDebug } from './utils';
 import {
   Deployment,
-  NowClientOptions,
+  VercelClientOptions,
   DeploymentBuild,
   DeploymentEventType,
 } from './types';
@@ -24,7 +24,7 @@ interface DeploymentStatus {
 /* eslint-disable */
 export async function* checkDeploymentStatus(
   deployment: Deployment,
-  clientOptions: NowClientOptions
+  clientOptions: VercelClientOptions
 ): AsyncIterableIterator<DeploymentStatus> {
   const { token, teamId, apiUrl, userAgent } = clientOptions;
   const debug = createDebug(clientOptions.debug);

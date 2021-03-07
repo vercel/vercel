@@ -39,7 +39,7 @@ export type NormalizedRoutes = {
 };
 
 export interface GetRoutesProps {
-  nowConfig: NowConfig;
+  nowConfig: VercelConfig;
 }
 
 export interface MergeRoutesProps {
@@ -53,35 +53,35 @@ export interface Build {
   routes?: Route[];
 }
 
-export interface NowConfig {
+export interface VercelConfig {
   name?: string;
   version?: number;
   routes?: Route[];
   cleanUrls?: boolean;
-  rewrites?: NowRewrite[];
-  redirects?: NowRedirect[];
-  headers?: NowHeader[];
+  rewrites?: Rewrite[];
+  redirects?: Redirect[];
+  headers?: Header[];
   trailingSlash?: boolean;
 }
 
-export interface NowRewrite {
+export interface Rewrite {
   source: string;
   destination: string;
 }
 
-export interface NowRedirect {
+export interface Redirect {
   source: string;
   destination: string;
   permanent?: boolean;
   statusCode?: number;
 }
 
-export interface NowHeader {
+export interface Header {
   source: string;
-  headers: NowHeaderKeyValue[];
+  headers: HeaderKeyValue[];
 }
 
-export interface NowHeaderKeyValue {
+export interface HeaderKeyValue {
   key: string;
   value: string;
 }
@@ -100,3 +100,18 @@ export interface AppendRoutesToPhaseProps {
    */
   phase: HandleValue;
 }
+
+/** @deprecated Use VercelConfig instead. */
+export type NowConfig = VercelConfig;
+
+/** @deprecated Use Rewrite instead. */
+export type NowRewrite = Rewrite;
+
+/** @deprecated Use Redirect instead. */
+export type NowRedirect = Redirect;
+
+/** @deprecated Use Header instead. */
+export type NowHeader = Header;
+
+/** @deprecated Use HeaderKeyValue instead. */
+export type NowHeaderKeyValue = HeaderKeyValue;

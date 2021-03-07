@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import {
   createDeployment,
   DeploymentOptions,
-  NowClientOptions,
+  VercelClientOptions,
 } from '@vercel/client';
 import { Output } from '../output';
 // @ts-ignore
@@ -71,7 +71,7 @@ export default async function processDeployment({
 
   const { env = {} } = requestBody;
 
-  const nowClientOptions: NowClientOptions = {
+  const clientOptions: VercelClientOptions = {
     teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
     token: now._token,
@@ -96,7 +96,7 @@ export default async function processDeployment({
 
   try {
     for await (const event of createDeployment(
-      nowClientOptions,
+      clientOptions,
       requestBody,
       nowConfig
     )) {

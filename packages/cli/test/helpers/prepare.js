@@ -14,7 +14,7 @@ const getRevertAliasConfigFile = () => {
     builds: [
       {
         src: '*.json',
-        use: '@now/static',
+        use: '@vercel/static',
       },
     ],
   });
@@ -30,11 +30,11 @@ module.exports = async function prepare(session) {
     },
     'empty-directory': {},
     'config-scope-property-email': {
-      'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
+      'now.json': `{ "scope": "${session}@zeit.pub", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
       'index.html': '<span>test scope email</span',
     },
     'config-scope-property-username': {
-      'now.json': `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@now/static" } ] }`,
+      'now.json': `{ "scope": "${session}", "builds": [ { "src": "*.html", "use": "@vercel/static" } ] }`,
       'index.html': '<span>test scope username</span',
     },
     'builds-wrong': {
@@ -78,7 +78,7 @@ module.exports = async function prepare(session) {
     },
     'build-env-debug': {
       'now.json': JSON.stringify({
-        builds: [{ src: 'index.js', use: '@now/node' }],
+        builds: [{ src: 'index.js', use: '@vercel/node' }],
       }),
       'package.json': JSON.stringify({
         scripts: {
@@ -156,12 +156,12 @@ module.exports = async function prepare(session) {
       [`test-${session}.html`]: '<h1>hello test</h1>',
       'now.json': JSON.stringify({
         name: 'original',
-        builds: [{ src: `main-${session}.html`, use: '@now/static' }],
+        builds: [{ src: `main-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
       'now-test.json': JSON.stringify({
         name: 'secondary',
-        builds: [{ src: `test-${session}.html`, use: '@now/static' }],
+        builds: [{ src: `test-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
       }),
     },
@@ -372,10 +372,10 @@ module.exports = async function prepare(session) {
     'conflicting-now-json-vercel-json': {
       'index.html': '<h1>I am a website.</h1>',
       'vercel.json': JSON.stringify({
-        builds: [{ src: '*.html', use: '@now/static' }],
+        builds: [{ src: '*.html', use: '@vercel/static' }],
       }),
       'now.json': JSON.stringify({
-        builds: [{ src: '*.html', use: '@now/static' }],
+        builds: [{ src: '*.html', use: '@vercel/static' }],
       }),
     },
     'unauthorized-vercel-config': {

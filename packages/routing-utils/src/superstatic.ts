@@ -4,7 +4,7 @@
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
-import { Route, NowRedirect, NowRewrite, NowHeader } from './types';
+import { Route, Redirect, Rewrite, Header } from './types';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -45,7 +45,7 @@ export function convertCleanUrls(
 }
 
 export function convertRedirects(
-  redirects: NowRedirect[],
+  redirects: Redirect[],
   defaultStatus = 308
 ): Route[] {
   return redirects.map(r => {
@@ -72,7 +72,7 @@ export function convertRedirects(
   });
 }
 
-export function convertRewrites(rewrites: NowRewrite[]): Route[] {
+export function convertRewrites(rewrites: Rewrite[]): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     try {
@@ -85,7 +85,7 @@ export function convertRewrites(rewrites: NowRewrite[]): Route[] {
   });
 }
 
-export function convertHeaders(headers: NowHeader[]): Route[] {
+export function convertHeaders(headers: Header[]): Route[] {
   return headers.map(h => {
     const obj: { [key: string]: string } = {};
     const { src, segments } = sourceToRegex(h.source);
@@ -120,7 +120,7 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   const routes: Route[] = [];
   if (enable) {
     routes.push({
-      src: '^/\\.well-known(?:/.*)?$'
+      src: '^/\\.well-known(?:/.*)?$',
     });
     routes.push({
       src: '^/((?:[^/]+/)*[^/\\.]+)$',

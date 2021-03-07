@@ -178,87 +178,87 @@ test('[dev-builder] filter install not bundled tagged, cached tagged', t => {
 });
 
 test('[dev-builder] isBundledBuilder() - stable', t => {
-  const nowCliPkg = {
+  const cliPkg = {
     dependencies: {
-      '@now/node': '1.5.2',
+      '@vercel/node': '1.6.1',
     },
   };
 
   // "canary" tag
   {
-    const parsed = npa('@now/node@canary');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const parsed = npa('@vercel/node@canary');
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, false);
   }
 
   // "latest" tag
   {
-    const parsed = npa('@now/node');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const parsed = npa('@vercel/node');
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, true);
   }
 
   // specific matching version
   {
-    const parsed = npa('@now/node@1.5.2');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const parsed = npa('@vercel/node@1.6.1');
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, true);
   }
 
   // specific non-matching version
   {
-    const parsed = npa('@now/node@1.5.1');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const parsed = npa('@vercel/node@1.6.0');
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, false);
   }
 
   // URL
   {
     const parsed = npa('https://example.com');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, false);
   }
 });
 
 test('[dev-builder] isBundledBuilder() - canary', t => {
-  const nowCliPkg = {
+  const cliPkg = {
     dependencies: {
-      '@now/node': '1.5.2-canary.3',
+      '@vercel/node': '1.6.1-canary.0',
     },
   };
 
   // "canary" tag
   {
-    const parsed = npa('@now/node@canary');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const parsed = npa('@vercel/node@canary');
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, true);
   }
 
   // "latest" tag
   {
-    const parsed = npa('@now/node');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const parsed = npa('@vercel/node');
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, false);
   }
 
   // specific matching version
   {
-    const parsed = npa('@now/node@1.5.2-canary.3');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const parsed = npa('@vercel/node@1.6.1-canary.0');
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, true);
   }
 
   // specific non-matching version
   {
-    const parsed = npa('@now/node@1.5.2-canary.2');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const parsed = npa('@vercel/node@1.5.2-canary.9');
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, false);
   }
 
   // URL
   {
     const parsed = npa('https://example.com');
-    const result = isBundledBuilder(parsed, nowCliPkg);
+    const result = isBundledBuilder(parsed, cliPkg);
     t.is(result, false);
   }
 });

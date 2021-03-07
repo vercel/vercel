@@ -1,10 +1,5 @@
 import { Builder, BuilderFunctions } from '@vercel/build-utils';
-import {
-  NowHeader,
-  Route,
-  NowRedirect,
-  NowRewrite,
-} from '@vercel/routing-utils';
+import { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
@@ -12,12 +7,7 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
-/**
- * Options for `now-client` or
- * properties that should not
- * be part of the payload.
- */
-export interface NowClientOptions {
+export interface VercelClientOptions {
   token: string;
   path: string | string[];
   debug?: boolean;
@@ -30,6 +20,12 @@ export interface NowClientOptions {
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
 }
+
+/** @deprecated Use VercelClientOptions instead. */
+export type NowClientOptions = VercelClientOptions;
+
+/** @deprecated Use VercelConfig instead. */
+export type NowConfig = VercelConfig;
 
 export interface Deployment {
   id: string;
@@ -103,7 +99,7 @@ export interface DeploymentGithubData {
 
 export const fileNameSymbol = Symbol('fileName');
 
-export interface NowConfig {
+export interface VercelConfig {
   [fileNameSymbol]?: string;
   name?: string;
   version?: number;
@@ -116,9 +112,9 @@ export interface NowConfig {
   routes?: Route[];
   files?: string[];
   cleanUrls?: boolean;
-  rewrites?: NowRewrite[];
-  redirects?: NowRedirect[];
-  headers?: NowHeader[];
+  rewrites?: Rewrite[];
+  redirects?: Redirect[];
+  headers?: Header[];
   trailingSlash?: boolean;
   functions?: BuilderFunctions;
   github?: DeploymentGithubData;
@@ -141,9 +137,9 @@ export interface DeploymentOptions {
   regions?: string[];
   routes?: Route[];
   cleanUrls?: boolean;
-  rewrites?: NowRewrite[];
-  redirects?: NowRedirect[];
-  headers?: NowHeader[];
+  rewrites?: Rewrite[];
+  redirects?: Redirect[];
+  headers?: Header[];
   trailingSlash?: boolean;
   builds?: Builder[];
   functions?: BuilderFunctions;

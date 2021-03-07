@@ -22,10 +22,20 @@ export type VercelApiHandler = (
   res: VercelResponse
 ) => void;
 
-// Backwards-compat
+/** @deprecated Use VercelRequestCookies instead. */
 export type NowRequestCookies = VercelRequestCookies;
+
+/** @deprecated Use VercelRequestQuery instead. */
 export type NowRequestQuery = VercelRequestQuery;
+
+/** @deprecated Use `any` instead. */
 export type NowRequestBody = any;
+
+/** @deprecated Use VercelRequest instead. */
 export type NowRequest = VercelRequest;
+
+/** @deprecated Use VercelResponse instead. */
 export type NowResponse = VercelResponse;
+
+/** @deprecated Use VercelApiHandler instead. */
 export type NowApiHandler = VercelApiHandler;

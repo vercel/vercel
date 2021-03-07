@@ -7,7 +7,7 @@ import ignore from 'ignore';
 type Ignore = ReturnType<typeof ignore>;
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
-import { NowClientOptions, DeploymentOptions, NowConfig } from '../types';
+import { VercelClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 import readdir from 'recursive-readdir';
@@ -205,7 +205,7 @@ export const fetch = async (
     delete opts.teamId;
   }
 
-  const userAgent = opts.userAgent || `now-client-v${pkgVersion}`;
+  const userAgent = opts.userAgent || `client-v${pkgVersion}`;
   delete opts.userAgent;
 
   opts.headers = {
@@ -237,7 +237,7 @@ const isWin = process.platform.includes('win');
 
 export const prepareFiles = (
   files: Map<string, DeploymentFile>,
-  clientOptions: NowClientOptions
+  clientOptions: VercelClientOptions
 ): PreparedFile[] => {
   const preparedFiles = [...files.keys()].reduce(
     (acc: PreparedFile[], sha: string): PreparedFile[] => {
@@ -280,8 +280,7 @@ export function createDebug(debug?: boolean) {
   if (debug) {
     return (...logs: string[]) => {
       process.stderr.write(
-        [`[now-client-debug] ${new Date().toISOString()}`, ...logs].join(' ') +
-          '\n'
+        [`[client-debug] ${new Date().toISOString()}`, ...logs].join(' ') + '\n'
       );
     };
   }

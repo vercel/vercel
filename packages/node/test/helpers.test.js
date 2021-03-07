@@ -42,7 +42,7 @@ afterEach(async () => {
   await server.close();
 });
 
-describe('contract with @now/node-bridge', () => {
+describe('contract with @vercel/node-bridge', () => {
   test('should call consumeEvent with the correct reqId', async () => {
     await fetchWithProxyReq(`${url}/`);
 

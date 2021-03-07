@@ -7,7 +7,7 @@ const {
   shouldServe,
   createLambda,
   getWritableDirectory,
-} = require('@now/build-utils');
+} = require('@vercel/build-utils');
 
 exports.analyze = ({ files, entrypoint }) => files[entrypoint].digest;
 

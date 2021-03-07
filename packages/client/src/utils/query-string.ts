@@ -1,7 +1,9 @@
 import { URLSearchParams } from 'url';
-import { NowClientOptions } from '../types';
+import { VercelClientOptions } from '../types';
 
-export function generateQueryString(clientOptions: NowClientOptions): string {
+export function generateQueryString(
+  clientOptions: VercelClientOptions
+): string {
   const options = new URLSearchParams();
 
   if (clientOptions.teamId) {

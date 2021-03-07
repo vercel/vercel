@@ -1,15 +1,15 @@
 import {
-  NowRequest,
-  NowResponse,
-  NowRequestCookies,
-  NowRequestQuery,
-  NowRequestBody,
+  VercelRequest,
+  VercelResponse,
+  VercelRequestCookies,
+  VercelRequestQuery,
+  VercelRequestBody,
 } from './types';
 import { Server } from 'http';
 import { Bridge } from './bridge';
 
-function getBodyParser(req: NowRequest, body: Buffer) {
-  return function parseBody(): NowRequestBody {
+function getBodyParser(req: VercelRequest, body: Buffer) {
+  return function parseBody(): VercelRequestBody {
     if (!req.headers['content-type']) {
       return undefined;
     }
@@ -46,16 +46,16 @@ function getBodyParser(req: NowRequest, body: Buffer) {
   };
 }
 
-function getQueryParser({ url = '/' }: NowRequest) {
-  return function parseQuery(): NowRequestQuery {
+function getQueryParser({ url = '/' }: VercelRequest) {
+  return function parseQuery(): VercelRequestQuery {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { parse: parseURL } = require('url');
     return parseURL(url, true).query;
   };
 }
 
-function getCookieParser(req: NowRequest) {
-  return function parseCookie(): NowRequestCookies {
+function getCookieParser(req: VercelRequest) {
+  return function parseCookie(): VercelRequestCookies {
     const header: undefined | string | string[] = req.headers.cookie;
 
     if (!header) {
@@ -68,16 +68,16 @@ function getCookieParser(req: NowRequest) {
   };
 }
 
-function status(res: NowResponse, statusCode: number): NowResponse {
+function status(res: VercelResponse, statusCode: number): VercelResponse {
   res.statusCode = statusCode;
   return res;
 }
 
 function redirect(
-  res: NowResponse,
+  res: VercelResponse,
   statusOrUrl: string | number,
   url?: string
-): NowResponse {
+): VercelResponse {
   if (typeof statusOrUrl === 'string') {
     url = statusOrUrl;
     statusOrUrl = 307;
@@ -108,7 +108,11 @@ function createETag(body: any, encoding: 'utf8' | undefined) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function send(req: NowRequest, res: NowResponse, body: any): NowResponse {
+function send(
+  req: VercelRequest,
+  res: VercelResponse,
+  body: any
+): VercelResponse {
   let chunk: unknown = body;
   let encoding: 'utf8' | undefined;
 
@@ -206,7 +210,11 @@ function send(req: NowRequest, res: NowResponse, body: any): NowResponse {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function json(req: NowRequest, res: NowResponse, jsonBody: any): NowResponse {
+function json(
+  req: VercelRequest,
+  res: VercelResponse,
+  jsonBody: any
+): VercelResponse {
   const body = JSON.stringify(jsonBody);
 
   // content-type
@@ -227,7 +235,7 @@ export class ApiError extends Error {
 }
 
 export function sendError(
-  res: NowResponse,
+  res: VercelResponse,
   statusCode: number,
   message: string
 ) {
@@ -236,7 +244,7 @@ export function sendError(
   res.end();
 }
 
-function setLazyProp<T>(req: NowRequest, prop: string, getter: () => T) {
+function setLazyProp<T>(req: VercelRequest, prop: string, getter: () => T) {
   const opts = { configurable: true, enumerable: true };
   const optsReset = { ...opts, writable: true };
 
@@ -255,12 +263,12 @@ function setLazyProp<T>(req: NowRequest, prop: string, getter: () => T) {
 }
 
 export function createServerWithHelpers(
-  handler: (req: NowRequest, res: NowResponse) => void | Promise<void>,
+  handler: (req: VercelRequest, res: VercelResponse) => void | Promise<void>,
   bridge: Bridge
 ) {
   const server = new Server(async (_req, _res) => {
-    const req = _req as NowRequest;
-    const res = _res as NowResponse;
+    const req = _req as VercelRequest;
+    const res = _res as VercelResponse;
 
     try {
       const reqId = req.headers['x-now-bridge-request-id'];
@@ -274,9 +282,13 @@ export function createServerWithHelpers(
 
       const event = bridge.consumeEvent(reqId);
 
-      setLazyProp<NowRequestCookies>(req, 'cookies', getCookieParser(req));
-      setLazyProp<NowRequestQuery>(req, 'query', getQueryParser(req));
-      setLazyProp<NowRequestBody>(req, 'body', getBodyParser(req, event.body));
+      setLazyProp<VercelRequestCookies>(req, 'cookies', getCookieParser(req));
+      setLazyProp<VercelRequestQuery>(req, 'query', getQueryParser(req));
+      setLazyProp<VercelRequestBody>(
+        req,
+        'body',
+        getBodyParser(req, event.body)
+      );
 
       res.status = statusCode => status(res, statusCode);
       res.redirect = (statusOrUrl, url) => redirect(res, statusOrUrl, url);

@@ -12,7 +12,7 @@ type LauncherConfiguration = {
   awsLambdaHandler?: string;
 };
 
-export function makeNowLauncher(config: LauncherConfiguration): string {
+export function makeVercelLauncher(config: LauncherConfiguration): string {
   const {
     entrypointPath,
     bridgePath,

@@ -17,10 +17,7 @@ yarn add @vercel/client
 Next, load it:
 
 ```js
-// v2
 const { createDeployment } = require('@vercel/client');
-// v1
-const { createLegacyDeployment } = require('@vercel/client');
 ```
 
 Then call inside a `for...of` loop to follow the progress with the following arguments:
@@ -34,7 +31,7 @@ async function deploy() {
 
   for await (const event of createDeployment({
     token: process.env.TOKEN,
-    path: '/Users/vercel-user/projects/front',
+    path: '/Users/me/Code/myproject',
   })) {
     if (event.type === 'ready') {
       deployment = event.payload;
