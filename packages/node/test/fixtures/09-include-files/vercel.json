@@ -42,6 +42,10 @@
     {
       "path": "/root.js",
       "mustContain": "hello Root!"
+    },
+    {
+      "path": "/include-ts-file.js",
+      "mustContain": "hello TS!"
     }
   ]
 }

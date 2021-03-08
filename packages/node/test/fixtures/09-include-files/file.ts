@@ -1,1 +1,1 @@
-const foo = 'TS File';
+const foo = 'hello TS!';
