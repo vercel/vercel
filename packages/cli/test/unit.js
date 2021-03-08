@@ -1,5 +1,4 @@
 import { basename, join, sep } from 'path';
-import { send } from 'micro';
 import test from 'ava';
 import sinon from 'sinon';
 import { asc as alpha } from 'alpha-sort';
@@ -21,6 +20,12 @@ const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, 'fixtures', 'unit')}${sep}`;
 const base = path => path.replace(prefix, '');
 const fixture = name => join(prefix, name);
+
+const send = (res, statusCode, body) => {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json; charset=utf8');
+  res.end(JSON.stringify(body));
+};
 
 const getStaticFiles = async dir => {
   const files = await getStaticFiles_(dir, {
@@ -163,7 +168,7 @@ test('`wait` utility does not invoke spinner when stopped before delay', async t
 });
 
 test('4xx response error with fallback message', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 404, {});
   };
 
@@ -175,7 +180,7 @@ test('4xx response error with fallback message', async t => {
 });
 
 test('4xx response error without fallback message', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 404, {});
   };
 
@@ -187,7 +192,7 @@ test('4xx response error without fallback message', async t => {
 });
 
 test('5xx response error without fallback message', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 500, '');
   };
 
@@ -199,7 +204,7 @@ test('5xx response error without fallback message', async t => {
 });
 
 test('4xx response error as correct JSON', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 400, {
       error: {
         message: 'The request is not correct',
@@ -215,7 +220,7 @@ test('4xx response error as correct JSON', async t => {
 });
 
 test('5xx response error as HTML', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 500, 'This is a malformed error');
   };
 
@@ -227,7 +232,7 @@ test('5xx response error as HTML', async t => {
 });
 
 test('5xx response error with random JSON', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 500, {
       wrong: 'property',
     });
@@ -294,7 +299,7 @@ test('getProjectName with a directory', t => {
 });
 
 test('4xx error message with broken JSON', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 403, `32puuuh2332`);
   };
 
@@ -306,7 +311,7 @@ test('4xx error message with broken JSON', async t => {
 });
 
 test('4xx error message with proper message', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 403, {
       error: {
         message: 'This is a test',
@@ -322,7 +327,7 @@ test('4xx error message with proper message', async t => {
 });
 
 test('5xx error message with proper message', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 500, {
       error: {
         message: 'This is a test',
@@ -338,7 +343,7 @@ test('5xx error message with proper message', async t => {
 });
 
 test('4xx response error with broken JSON', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 403, `122{"sss"`);
   };
 
@@ -350,7 +355,7 @@ test('4xx response error with broken JSON', async t => {
 });
 
 test('4xx response error as correct JSON with more properties', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 403, {
       error: {
         message: 'The request is not correct',
@@ -368,7 +373,7 @@ test('4xx response error as correct JSON with more properties', async t => {
 });
 
 test('429 response error with retry header', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     res.setHeader('Retry-After', '20');
 
     send(res, 429, {
@@ -387,7 +392,7 @@ test('429 response error with retry header', async t => {
 });
 
 test('429 response error without retry header', async t => {
-  const fn = async (req, res) => {
+  const fn = (req, res) => {
     send(res, 429, {
       error: {
         message: 'You were rate limited',
