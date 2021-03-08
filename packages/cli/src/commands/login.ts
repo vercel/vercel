@@ -1,6 +1,7 @@
 import { stringify as stringifyQuery } from 'querystring';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
+// @ts-ignore
 import promptEmail from 'email-prompt';
 import ms from 'ms';
 import { validate as validateEmail } from 'email-validator';
@@ -13,7 +14,7 @@ import ok from '../util/output/ok';
 import param from '../util/output/param';
 import eraseLines from '../util/output/erase-lines';
 import sleep from '../util/sleep';
-import { handleError } from '../util/error';
+import handleError from '../util/handle-error';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
 import getGlobalPathConfig from '../util/config/global-path';
 import hp from '../util/humanize-path';
@@ -204,10 +205,8 @@ const login = async (ctx: NowContext) => {
     return 1;
   }
 
-  output.stopSpinner();
-
   // Clear up `Sending email` success message
-  process.stdout.write(eraseLines(possibleAddress ? 1 : 2));
+  output.print(eraseLines(possibleAddress ? 1 : 2));
 
   output.print(
     `We sent an email to ${highlight(
