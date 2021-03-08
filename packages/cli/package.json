@@ -140,6 +140,7 @@
     "jaro-winkler": "0.2.8",
     "jsonlines": "0.1.1",
     "load-json-file": "3.0.0",
+    "micro": "9.3.5-canary.3",
     "mime-types": "2.1.24",
     "minimatch": "3.0.4",
     "mri": "1.1.5",

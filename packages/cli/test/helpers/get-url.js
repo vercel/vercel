@@ -1,10 +1,9 @@
 // Packages
-const listen = require('test-listen');
+const http = require('http');
 const micro = require('micro');
-console.log(micro);
+const listen = require('test-listen');
 
 module.exports = fn => {
-  const srv = micro(fn);
-  console.log({ srv });
+  const srv = http.createServer(micro(fn));
   return listen(srv);
 };
