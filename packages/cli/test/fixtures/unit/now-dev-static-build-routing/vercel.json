@@ -3,14 +3,14 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@now/static-build@canary",
+      "use": "@vercel/static-build@canary",
       "config": {
         "distDir": "public"
       }
     },
     {
       "src": "api/**/*.js",
-      "use": "@now/node"
+      "use": "@vercel/node"
     }
   ],
   "routes": [{ "src": "^/api/date$", "dest": "api/date.js" }]

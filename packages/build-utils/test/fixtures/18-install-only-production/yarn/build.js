@@ -18,7 +18,7 @@ if (development) {
   throw new Error('Expected development dependencies to _NOT_ be installed.');
 }
 
-// This is to satisfy `@now/static-build` which needs a `dist` directory.
+// This is to satisfy `@vercel/static-build` which needs a `dist` directory.
 const { execSync } = require('child_process');
 execSync('mkdir dist');
 execSync('echo "yarn-prod:RANDOMNESS_PLACEHOLDER" > dist/index.html');

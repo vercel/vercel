@@ -1,13 +1,13 @@
-# @now/routing-utils
+# @vercel/routing-utils
 
 Route validation utilities
 
 ## Usage
 
-`yarn add @now/routing-utils`
+`yarn add @vercel/routing-utils`
 
 ```ts
-import { normalizeRoutes } from '@now/routing-utils';
+import { normalizeRoutes } from '@vercel/routing-utils';
 
 const { routes, error } = normalizeRoutes(inputRoutes);
 
@@ -17,7 +17,7 @@ if (error) {
 ```
 
 ```ts
-import { routesSchema } from '@now/routing-utils';
+import { routesSchema } from '@vercel/routing-utils';
 
 const ajv = new Ajv();
 const validate = ajv.compile(routesSchema);

@@ -15,7 +15,7 @@ function checkPkgOrThrow(pkgname) {
 checkPkgOrThrow('tls-check');
 checkPkgOrThrow('exeggcute');
 
-// This is to satisfy `@now/static-build` which needs a `dist` directory.
+// This is to satisfy `@vercel/static-build` which needs a `dist` directory.
 const { exec } = require('exeggcute');
 exec('mkdir dist', __dirname);
 exec('echo "node-env:RANDOMNESS_PLACEHOLDER" > dist/index.html', __dirname);

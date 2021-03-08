@@ -7,14 +7,14 @@ import { buildFileTree, createDebug, parseVercelConfig } from './utils';
 import { DeploymentError } from './errors';
 import {
   NowConfig,
-  NowClientOptions,
+  VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
-    clientOptions: NowClientOptions,
+    clientOptions: VercelClientOptions,
     deploymentOptions: DeploymentOptions = {},
     nowConfig: NowConfig = {}
   ): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {

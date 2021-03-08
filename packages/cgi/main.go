@@ -22,7 +22,7 @@ func (h *CgiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Env: []string{
 			"HTTPS=on",
 			"SERVER_PORT=443",
-			"SERVER_SOFTWARE=@now/cgi",
+			"SERVER_SOFTWARE=@vercel/cgi",
 		},
 	}
 	handler.ServeHTTP(w, r)

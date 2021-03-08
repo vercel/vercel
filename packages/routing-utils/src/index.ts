@@ -7,7 +7,7 @@ import {
   NormalizedRoutes,
   GetRoutesProps,
   RouteApiError,
-  NowRedirect,
+  Redirect,
 } from './types';
 import {
   convertCleanUrls,
@@ -211,7 +211,7 @@ function checkPatternSyntax(
   return null;
 }
 
-function checkRedirect(r: NowRedirect, index: number) {
+function checkRedirect(r: Redirect, index: number) {
   if (
     typeof r.permanent !== 'undefined' &&
     typeof r.statusCode !== 'undefined'

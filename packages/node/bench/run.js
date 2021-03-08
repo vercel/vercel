@@ -8,15 +8,15 @@ const setupFiles = async (entrypoint, shouldAddHelpers) => {
 
   await fs.copyFile(
     join(__dirname, '../dist/helpers.js'),
-    join(__dirname, 'lambda/helpers.js'),
+    join(__dirname, 'lambda/helpers.js')
   );
   await fs.copyFile(
-    require.resolve('@now/node-bridge/bridge'),
-    join(__dirname, 'lambda/bridge.js'),
+    require.resolve('@vercel/node-bridge/bridge'),
+    join(__dirname, 'lambda/bridge.js')
   );
   await fs.copyFile(
     join(process.cwd(), entrypoint),
-    join(__dirname, 'lambda/entrypoint.js'),
+    join(__dirname, 'lambda/entrypoint.js')
   );
 
   let launcher = makeLauncher('./entrypoint', shouldAddHelpers);
@@ -47,7 +47,7 @@ const runTests = async (entrypoint, shouldAddHelpers = true, nb) => {
   console.log(
     `setting up files with entrypoint ${entrypoint} and ${
       shouldAddHelpers ? 'helpers' : 'no helpers'
-    }`,
+    }`
   );
   await setupFiles(entrypoint, shouldAddHelpers);
 
@@ -76,7 +76,7 @@ const runTests = async (entrypoint, shouldAddHelpers = true, nb) => {
 const main = async () => {
   if (process.argv.length !== 5) {
     console.log(
-      'usage : node run.js <entrypoint-file> <add-helpers> <nb-of-request>',
+      'usage : node run.js <entrypoint-file> <add-helpers> <nb-of-request>'
     );
     return;
   }

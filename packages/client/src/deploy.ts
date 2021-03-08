@@ -11,13 +11,13 @@ import {
 import {
   Deployment,
   DeploymentOptions,
-  NowClientOptions,
+  VercelClientOptions,
   DeploymentEventType,
 } from './types';
 
 async function* postDeployment(
   files: Map<string, DeploymentFile>,
-  clientOptions: NowClientOptions,
+  clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<{
   type: DeploymentEventType;
@@ -91,7 +91,7 @@ async function* postDeployment(
 
 function getDefaultName(
   files: Map<string, DeploymentFile>,
-  clientOptions: NowClientOptions
+  clientOptions: VercelClientOptions
 ): string {
   const debug = createDebug(clientOptions.debug);
   const { isDirectory, path } = clientOptions;
@@ -110,7 +110,7 @@ function getDefaultName(
 
 export async function* deploy(
   files: Map<string, DeploymentFile>,
-  clientOptions: NowClientOptions,
+  clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(clientOptions.debug);

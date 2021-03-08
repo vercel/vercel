@@ -2,5 +2,13 @@
 // which will fail at compile time if exports
 // are not found in the index file
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { NowRequest, NowResponse } from './index';
+import {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  NowRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  NowResponse,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  VercelRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  VercelResponse,
+} from './index';

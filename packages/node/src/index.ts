@@ -46,11 +46,16 @@ const {
   isSymbolicLink,
   walkParentDirs,
 } = buildUtils;
-import { makeNowLauncher, makeAwsLauncher } from './launcher';
+import { makeVercelLauncher, makeAwsLauncher } from './launcher';
 import { Register, register } from './typescript';
 
 export { shouldServe };
-export { NowRequest, NowResponse } from './types';
+export {
+  NowRequest,
+  NowResponse,
+  VercelRequest,
+  VercelResponse,
+} from './types';
 
 interface DownloadOptions {
   files: Files;
@@ -373,11 +378,11 @@ export async function build({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const makeLauncher = awsLambdaHandler ? makeAwsLauncher : makeNowLauncher;
+  const launcher = awsLambdaHandler ? makeAwsLauncher : makeVercelLauncher;
 
   const launcherFiles: Files = {
     [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
-      data: makeLauncher({
+      data: launcher({
         entrypointPath: `./${relative(baseDir, entrypointPath)}`,
         bridgePath: `./${BRIDGE_FILENAME}`,
         helpersPath: `./${HELPERS_FILENAME}`,

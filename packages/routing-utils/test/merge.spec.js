@@ -8,7 +8,7 @@ test('mergeRoutes simple', () => {
   ];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { src: '/node1', dest: '/n1' },
@@ -16,7 +16,7 @@ test('mergeRoutes simple', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { src: '/python1', dest: '/py1' },
@@ -44,7 +44,7 @@ test('mergeRoutes handle filesystem user routes', () => {
   ];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { src: '/node1', dest: '/n1' },
@@ -52,7 +52,7 @@ test('mergeRoutes handle filesystem user routes', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { src: '/python1', dest: '/py1' },
@@ -80,7 +80,7 @@ test('mergeRoutes handle filesystem build routes', () => {
   ];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { src: '/node1', dest: '/n1' },
@@ -89,7 +89,7 @@ test('mergeRoutes handle filesystem build routes', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { src: '/python1', dest: '/py1' },
@@ -119,7 +119,7 @@ test('mergeRoutes handle filesystem both user and builds', () => {
   ];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { src: '/node1', dest: '/n1' },
@@ -128,7 +128,7 @@ test('mergeRoutes handle filesystem both user and builds', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { src: '/python1', dest: '/py1' },
@@ -158,7 +158,7 @@ test('mergeRoutes continue true', () => {
   ];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { src: '/node1', dest: '/n1' },
@@ -167,7 +167,7 @@ test('mergeRoutes continue true', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { src: '/python1', dest: '/py1' },
@@ -199,7 +199,7 @@ test('mergeRoutes check true', () => {
   ];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { src: '/node1', dest: '/n1' },
@@ -208,7 +208,7 @@ test('mergeRoutes check true', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { src: '/python1', dest: '/py1' },
@@ -241,7 +241,7 @@ test('mergeRoutes check true, continue true, handle filesystem middle', () => {
   ];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { src: '/node1', dest: '/n1', continue: true },
@@ -251,7 +251,7 @@ test('mergeRoutes check true, continue true, handle filesystem middle', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { src: '/python1', dest: '/py1', check: true },
@@ -281,7 +281,7 @@ test('mergeRoutes check true, continue true, handle filesystem top', () => {
   const userRoutes = [{ handle: 'filesystem' }, { src: '/user1', dest: '/u1' }];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { handle: 'filesystem' },
@@ -291,7 +291,7 @@ test('mergeRoutes check true, continue true, handle filesystem top', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { handle: 'filesystem' },
@@ -326,7 +326,7 @@ test('mergeRoutes multiple handle values', () => {
   ];
   const builds = [
     {
-      use: '@now/node',
+      use: '@vercel/node',
       entrypoint: 'api/home.js',
       routes: [
         { handle: 'filesystem' },
@@ -338,7 +338,7 @@ test('mergeRoutes multiple handle values', () => {
       ],
     },
     {
-      use: '@now/python',
+      use: '@vercel/python',
       entrypoint: 'api/users.py',
       routes: [
         { handle: 'filesystem' },

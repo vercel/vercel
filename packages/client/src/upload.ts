@@ -6,7 +6,7 @@ import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
-import { NowClientOptions, DeploymentOptions } from './types';
+import { VercelClientOptions, DeploymentOptions } from './types';
 
 const isClientNetworkError = (err: Error | DeploymentError) => {
   if (err.message) {
@@ -27,7 +27,7 @@ const isClientNetworkError = (err: Error | DeploymentError) => {
 
 export async function* upload(
   files: Map<string, DeploymentFile>,
-  clientOptions: NowClientOptions,
+  clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<any> {
   const { token, teamId, apiUrl, userAgent } = clientOptions;
