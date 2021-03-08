@@ -129,7 +129,7 @@ async function compile(
   watch: string[];
 }> {
   const inputFiles = new Set<string>([entrypointPath]);
-
+  const preparedFiles: Files = {};
   const sourceCache = new Map<string, string | Buffer | null>();
   const fsCache = new Map<string, File>();
   const tsCompiled = new Set<string>();
@@ -149,17 +149,7 @@ async function compile(
           const { fsPath } = entry;
           const relPath = relative(baseDir, fsPath);
           fsCache.set(relPath, entry);
-          const stream = entry.toStream();
-          const { data } = await FileBlob.fromStream({ stream });
-          if (relPath.endsWith('.ts') || relPath.endsWith('.tsx')) {
-            sourceCache.set(
-              relPath,
-              compileTypeScript(fsPath, data.toString())
-            );
-          } else {
-            sourceCache.set(relPath, data);
-          }
-          inputFiles.add(fsPath);
+          preparedFiles[relPath] = entry;
         })
       );
     }
@@ -169,8 +159,6 @@ async function compile(
     'Tracing input files: ' +
       [...inputFiles].map(p => relative(workPath, p)).join(', ')
   );
-
-  const preparedFiles: Files = {};
 
   let tsCompile: Register;
   function compileTypeScript(path: string, source: string): string {

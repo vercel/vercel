@@ -21,6 +21,13 @@
       "config": {
         "includeFiles": "templates/accepts-string.edge"
       }
+    },
+    {
+      "src": "include-ts-file.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": "file.ts"
+      }
     }
   ],
   "probes": [
@@ -35,6 +42,10 @@
     {
       "path": "/root.js",
       "mustContain": "hello Root!"
+    },
+    {
+      "path": "/include-ts-file.js",
+      "mustContain": "hello TS!"
     }
   ]
 }
