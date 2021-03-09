@@ -1,18 +1,12 @@
 import ms from 'ms';
-import chalk from 'chalk';
 import { stringify as stringifyQuery } from 'querystring';
 import fetch from 'node-fetch';
 import sleep from '../sleep';
 import ua from '../ua';
-import hp from '../humanize-path';
-import { getCommandName } from '../pkg-name';
 import ok from '../output/ok';
 import error from '../output/error';
 import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
-import { prependEmoji, emoji } from '../emoji';
-import { writeToAuthConfigFile, writeToConfigFile } from '../config/files';
-import getGlobalPathConfig from '../config/global-path';
 import executeLogin from './login';
 import { LoginParams } from './types';
 
@@ -20,7 +14,7 @@ async function verify(
   email: string,
   verificationToken: string,
   { apiUrl, output }: LoginParams
-) {
+): Promise<string> {
   const query = {
     email,
     token: verificationToken,
@@ -69,7 +63,7 @@ async function verify(
 export default async function doEmailLogin(
   email: string,
   { apiUrl, output, ctx }: LoginParams
-) {
+): Promise<number | string> {
   let securityCode;
   let verificationToken;
 
@@ -98,7 +92,7 @@ export default async function doEmailLogin(
 
   output.spinner('Waiting for your confirmation');
 
-  let token;
+  let token = '';
 
   while (!token) {
     try {
@@ -116,30 +110,5 @@ export default async function doEmailLogin(
   }
 
   output.log(ok('Email confirmed'));
-
-  // There's no need to save the user since we always
-  // pull the user data fresh from the server.
-  ctx.authConfig.token = token;
-
-  // New user, so we can't keep the team
-  delete ctx.config.currentTeam;
-
-  writeToAuthConfigFile(ctx.authConfig);
-  writeToConfigFile(ctx.config);
-
-  output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
-
-  console.log(
-    `${chalk.cyan('Congratulations!')} ` +
-      `You are now logged in. In order to deploy something, run ${getCommandName()}.`
-  );
-
-  output.print(
-    `${prependEmoji(
-      `Connect your Git Repositories to deploy every branch push automatically (https://vercel.link/git).`,
-      emoji('tip')
-    )}\n`
-  );
-
-  return 0;
+  return token;
 }

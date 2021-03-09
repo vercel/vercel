@@ -1,13 +1,17 @@
 import inquirer from 'inquirer';
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
+import hp from '../util/humanize-path';
 import getArgs from '../util/get-args';
 import error from '../util/output/error';
 import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
 import doSsoLogin from '../util/login/sso';
 import doEmailLogin from '../util/login/email';
+import { prependEmoji, emoji } from '../util/emoji';
 import { getCommandName, getPkgName } from '../util/pkg-name';
+import getGlobalPathConfig from '../util/config/global-path';
+import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
 import { NowContext } from '../types';
 
 const help = () => {
@@ -89,53 +93,49 @@ export default async function login(ctx: NowContext): Promise<number> {
 
   const input = argv._[1] || (await readInput());
 
-  // if the last arg is not the command itself, then maybe it's an email
-  /*
-  if (possibleAddress) {
-    if (!validateEmail(possibleAddress)) {
-      // if it's not a valid email, let's just error
-      console.log(error(`Invalid email: ${param(possibleAddress)}.`));
-      return 1;
-    }
-
-    // valid email, no need to prompt the user
-    email = possibleAddress;
-  } else {
-    let emailIsValid = false;
-    while (!emailIsValid) {
-      try {
-        email = await readEmail();
-      } catch (err) {
-        let erase = '';
-        if (err.message.includes('Aborted')) {
-          // no need to keep the prompt if the user `ctrl+c`ed
-          erase = eraseLines(2);
-        }
-        console.log(erase + err.message);
-        return 1;
-      }
-      emailIsValid = validateEmail(email);
-      if (!emailIsValid) {
-        // let's erase the `> Enter email [...]`
-        // we can't use `console.log()` because it appends a `\n`
-        // we need this check because `email-prompt` doesn't print
-        // anything if there's no TTY
-        process.stdout.write(eraseLines(2));
-      }
-    }
-  }
-  */
-
   // TODO: add proper validation
   const isValidSlug = true;
 
+  let result: number | string = 1;
+
   if (validateEmail(input)) {
-    return doEmailLogin(input, { output, apiUrl, ctx });
+    result = await doEmailLogin(input, { output, apiUrl, ctx });
   } else if (isValidSlug) {
-    return doSsoLogin(input, { output, apiUrl, ctx });
+    result = await doSsoLogin(input, { output, apiUrl, ctx });
   } else {
     output.error(`Invalid input: "${input}"`);
     output.log(`Please enter a valid email address or team slug`);
     return 2;
   }
+
+  // The login function failed, so it returned an exit code
+  if (typeof result === 'number') {
+    return result;
+  }
+
+  // When `result` is a string it's the user's authentication token.
+  // It needs to be saved to the configuration file.
+  ctx.authConfig.token = result;
+
+  // New user, so we can't keep the team
+  delete ctx.config.currentTeam;
+
+  writeToAuthConfigFile(ctx.authConfig);
+  writeToConfigFile(ctx.config);
+
+  output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+
+  console.log(
+    `${chalk.cyan('Congratulations!')} ` +
+      `You are now logged in. In order to deploy something, run ${getCommandName()}.`
+  );
+
+  output.print(
+    `${prependEmoji(
+      `Connect your Git Repositories to deploy every branch push automatically (https://vercel.link/git).`,
+      emoji('tip')
+    )}\n`
+  );
+
+  return 0;
 }

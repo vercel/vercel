@@ -1,5 +1,6 @@
 import http from 'http';
 import open from 'open';
+import fetch from 'node-fetch';
 import { hostname } from 'os';
 import { URL, URLSearchParams } from 'url';
 import listen from 'async-listen';
@@ -9,7 +10,7 @@ import { LoginParams } from './types';
 export default async function doSsoLogin(
   slug: string,
   { apiUrl, output }: LoginParams
-): Promise<number> {
+): Promise<number | string> {
   output.print(`Logging in to team "${slug}"`);
 
   const hyphens = new RegExp('-', 'g');
@@ -60,7 +61,34 @@ export default async function doSsoLogin(
       return 1;
     }
 
-    console.log({ query, headers: req.headers });
+    const email = query.get('email');
+    const verificationToken = query.get('token');
+    if (!email || !verificationToken) {
+      output.error(
+        'Verification token was not provided. Please contact support.'
+      );
+      return 1;
+    }
+
+    output.spinner('Verifying authentication token');
+    const verifyUrl = new URL('/registration/verify', apiUrl);
+    verifyUrl.searchParams.append('email', email);
+    verifyUrl.searchParams.append('token', verificationToken);
+    verifyUrl.searchParams.append('t', String(Date.now()));
+
+    const verifyRes = await fetch(verifyUrl.href);
+    output.log('got it');
+
+    if (!verifyRes.ok) {
+      output.error(
+        `Unexpected ${verifyRes.status} status code from verify API`
+      );
+      output.debug(await verifyRes.text());
+      return 1;
+    }
+
+    const body = await verifyRes.json();
+    return body.token;
   } finally {
     server.close();
   }

@@ -41,7 +41,7 @@ export default async function ({ apiUrl, token, debug, args, config, output }) {
     user = await getUser(client);
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      console.error(error(err.message));
+      output.error(err.message);
       return 1;
     }
 
@@ -56,7 +56,7 @@ export default async function ({ apiUrl, token, debug, args, config, output }) {
     currentTeam = list.find(team => team.id === currentTeam);
 
     if (!currentTeam) {
-      console.error(error(`You are not a part of the current team anymore`));
+      output.error(`You are not a part of the current team anymore`);
       return 1;
     }
   }
@@ -128,6 +128,8 @@ export default async function ({ apiUrl, token, debug, args, config, output }) {
     const choice = choices.splice(index, 1)[0];
     choices.unshift(choice);
   }
+
+  output.stopSpinner();
 
   let message;
 
