@@ -13,11 +13,11 @@ interface Spec {
 
 export default function getArgs<T extends Spec>(
   argv: string[],
-  argsOptions: T,
+  argsOptions?: T,
   argOptions: ArgOptions = {}
 ) {
   return arg(Object.assign({}, getCommonArgs(), argsOptions), {
     ...argOptions,
-    argv
+    argv,
   });
 }

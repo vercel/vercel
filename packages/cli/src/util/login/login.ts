@@ -13,11 +13,9 @@ export default async function login(
   apiUrl: string,
   email: string,
   mode: 'login' | 'signup' = 'login'
-): Promise<LoginData | InvalidEmail | AccountNotFound> {
+): Promise<LoginData> {
   const hyphens = new RegExp('-', 'g');
-  const host = hostname()
-    .replace(hyphens, ' ')
-    .replace('.local', '');
+  const host = hostname().replace(hyphens, ' ').replace('.local', '');
   const tokenName = `${getTitleName()} CLI on ${host}`;
 
   const response = await fetch(`${apiUrl}/now/registration?mode=${mode}`, {

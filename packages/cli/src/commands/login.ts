@@ -1,29 +1,37 @@
 import { stringify as stringifyQuery } from 'querystring';
 import fetch from 'node-fetch';
-import debugFactory from 'debug';
+import createDebug from 'debug';
+// @ts-ignore
 import promptEmail from 'email-prompt';
 import ms from 'ms';
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
-import ua from '../util/ua.ts';
+import ua from '../util/ua';
 import getArgs from '../util/get-args';
 import error from '../util/output/error';
 import highlight from '../util/output/highlight';
 import ok from '../util/output/ok';
-import param from '../util/output/param.ts';
+import param from '../util/output/param';
 import eraseLines from '../util/output/erase-lines';
 import sleep from '../util/sleep';
-import { handleError } from '../util/error';
+import handleError from '../util/handle-error';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
 import getGlobalPathConfig from '../util/config/global-path';
 import hp from '../util/humanize-path';
 import logo from '../util/output/logo';
 import exit from '../util/exit';
-import executeLogin from '../util/login/login.ts';
+import executeLogin from '../util/login/login';
 import { prependEmoji, emoji } from '../util/emoji';
-import { getCommandName, getPkgName } from '../util/pkg-name.ts';
+import { getCommandName, getPkgName } from '../util/pkg-name';
+import { NowContext } from '../types';
 
-const debug = debugFactory(`${getPkgName()}:login`);
+interface VerifyParams {
+  apiUrl: string;
+  email: string;
+  verificationToken: string;
+}
+
+const debug = createDebug(`${getPkgName()}:login`);
 
 const help = () => {
   console.log(`
@@ -51,7 +59,7 @@ const help = () => {
 `);
 };
 
-const verify = async ({ apiUrl, email, verificationToken }) => {
+const verify = async ({ apiUrl, email, verificationToken }: VerifyParams) => {
   const query = {
     email,
     token: verificationToken,
@@ -125,7 +133,7 @@ const readEmail = async () => {
   return email;
 };
 
-const login = async ctx => {
+const login = async (ctx: NowContext) => {
   let argv;
 
   try {
@@ -197,10 +205,8 @@ const login = async ctx => {
     return 1;
   }
 
-  output.stopSpinner();
-
   // Clear up `Sending email` success message
-  process.stdout.write(eraseLines(possibleAddress ? 1 : 2));
+  output.print(eraseLines(possibleAddress ? 1 : 2));
 
   output.print(
     `We sent an email to ${highlight(
