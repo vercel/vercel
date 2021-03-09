@@ -12,7 +12,7 @@
     "react-helmet": "^5.2.0"
   },
   "devDependencies": {
-    "@vercel/node": "1.8.5"
+    "@vercel/node": "1.9.0"
   },
   "scripts": {
     "dev": "gatsby develop",
