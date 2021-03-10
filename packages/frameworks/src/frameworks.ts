@@ -22,7 +22,7 @@ export const frameworks = [
   {
     name: 'Blitz.js',
     slug: 'blitzjs',
-    demo: 'https://blitzjs.now-examples.now.sh',
+    demo: 'https://blitzjs.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg',
     tagline: 'Blitz.js: The Fullstack React Framework',
@@ -60,7 +60,7 @@ export const frameworks = [
   {
     name: 'Next.js',
     slug: 'nextjs',
-    demo: 'https://nextjs.now-examples.now.sh',
+    demo: 'https://nextjs.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg',
     tagline:
@@ -105,7 +105,7 @@ export const frameworks = [
   {
     name: 'Gatsby.js',
     slug: 'gatsby',
-    demo: 'https://gatsby.now-examples.now.sh',
+    demo: 'https://gatsby.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gatsby.svg',
     tagline:
@@ -193,7 +193,7 @@ export const frameworks = [
   {
     name: 'Hexo',
     slug: 'hexo',
-    demo: 'https://hexo.now-examples.now.sh',
+    demo: 'https://hexo.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hexo.svg',
     tagline:
@@ -272,7 +272,7 @@ export const frameworks = [
   {
     name: 'Docusaurus 2',
     slug: 'docusaurus-2',
-    demo: 'https://docusaurus-2.now-examples.now.sh',
+    demo: 'https://docusaurus-2.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg',
     tagline:
@@ -364,7 +364,7 @@ export const frameworks = [
   {
     name: 'Docusaurus 1',
     slug: 'docusaurus',
-    demo: 'https://docusaurus.now-examples.now.sh',
+    demo: 'https://docusaurus.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg',
     tagline:
@@ -417,7 +417,7 @@ export const frameworks = [
   {
     name: 'Preact',
     slug: 'preact',
-    demo: 'https://preact.now-examples.now.sh',
+    demo: 'https://preact.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/preact.svg',
     tagline:
@@ -464,7 +464,7 @@ export const frameworks = [
   {
     name: 'Dojo',
     slug: 'dojo',
-    demo: 'https://dojo.now-examples.now.sh',
+    demo: 'https://dojo.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/dojo.png',
     tagline: 'Dojo is a modern progressive, TypeScript first framework.',
@@ -519,7 +519,7 @@ export const frameworks = [
   {
     name: 'Ember.js',
     slug: 'ember',
-    demo: 'https://ember.now-examples.now.sh',
+    demo: 'https://ember.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ember.svg',
     tagline:
@@ -566,7 +566,7 @@ export const frameworks = [
   {
     name: 'Vue.js',
     slug: 'vue',
-    demo: 'https://vue.now-examples.now.sh',
+    demo: 'https://vue.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/vue.svg',
     tagline:
@@ -623,7 +623,7 @@ export const frameworks = [
   {
     name: 'Scully',
     slug: 'scully',
-    demo: 'https://scully.now-examples.now.sh',
+    demo: 'https://scully.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/scullyio-logo.png',
     tagline: 'Scully is a static site generator for Angular.',
@@ -660,7 +660,7 @@ export const frameworks = [
   {
     name: 'Ionic Angular',
     slug: 'ionic-angular',
-    demo: 'https://ionic-angular.now-examples.now.sh',
+    demo: 'https://ionic-angular.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ionic.svg',
     tagline:
@@ -707,7 +707,7 @@ export const frameworks = [
   {
     name: 'Angular',
     slug: 'angular',
-    demo: 'https://angular.now-examples.now.sh',
+    demo: 'https://angular.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/angular.svg',
     tagline:
@@ -826,7 +826,7 @@ export const frameworks = [
   {
     name: 'Svelte',
     slug: 'svelte',
-    demo: 'https://svelte.now-examples.now.sh',
+    demo: 'https://svelte.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/svelte.svg',
     tagline:
@@ -874,7 +874,7 @@ export const frameworks = [
   {
     name: 'Ionic React',
     slug: 'ionic-react',
-    demo: 'https://ionic-react.now-examples.now.sh',
+    demo: 'https://ionic-react.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ionic.svg',
     tagline:
@@ -936,7 +936,7 @@ export const frameworks = [
   {
     name: 'Create React App',
     slug: 'create-react-app',
-    demo: 'https://react-functions.now-examples.now.sh',
+    demo: 'https://react-functions.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/react.svg',
     tagline: 'Create React App allows you to get going with React in no time.',
@@ -1003,7 +1003,7 @@ export const frameworks = [
   {
     name: 'Gridsome',
     slug: 'gridsome',
-    demo: 'https://gridsome.now-examples.now.sh',
+    demo: 'https://gridsome.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gridsome.svg',
     tagline:
@@ -1041,7 +1041,7 @@ export const frameworks = [
   {
     name: 'UmiJS',
     slug: 'umijs',
-    demo: 'https://umijs.now-examples.now.sh',
+    demo: 'https://umijs.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/umi.svg',
     tagline:
@@ -1088,7 +1088,7 @@ export const frameworks = [
   {
     name: 'Sapper',
     slug: 'sapper',
-    demo: 'https://sapper.now-examples.now.sh',
+    demo: 'https://sapper.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/svelte.svg',
     tagline:
@@ -1126,7 +1126,7 @@ export const frameworks = [
   {
     name: 'Saber',
     slug: 'saber',
-    demo: 'https://saber.now-examples.now.sh',
+    demo: 'https://saber.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/saber.svg',
     tagline:
@@ -1178,7 +1178,7 @@ export const frameworks = [
   {
     name: 'Stencil',
     slug: 'stencil',
-    demo: 'https://stencil.now-examples.now.sh',
+    demo: 'https://stencil.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/stencil.svg',
     tagline:
@@ -1240,7 +1240,7 @@ export const frameworks = [
   {
     name: 'Nuxt.js',
     slug: 'nuxtjs',
-    demo: 'https://nuxtjs.now-examples.now.sh',
+    demo: 'https://nuxtjs.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/nuxt.svg',
     tagline:
@@ -1298,7 +1298,7 @@ export const frameworks = [
   {
     name: 'RedwoodJS',
     slug: 'redwoodjs',
-    demo: 'https://redwoodjs.now-examples.now.sh',
+    demo: 'https://redwoodjs.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/redwoodjs.svg',
     tagline: 'RedwoodJS is a full-stack framework for the Jamstack.',
@@ -1336,7 +1336,7 @@ export const frameworks = [
   {
     name: 'Hugo',
     slug: 'hugo',
-    demo: 'https://hugo.now-examples.now.sh',
+    demo: 'https://hugo.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hugo.svg',
     tagline:
@@ -1391,7 +1391,7 @@ export const frameworks = [
   {
     name: 'Jekyll',
     slug: 'jekyll',
-    demo: 'https://jekyll.now-examples.vercel.app',
+    demo: 'https://jekyll.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/jekyll.svg',
     tagline:
@@ -1433,7 +1433,7 @@ export const frameworks = [
   {
     name: 'Brunch',
     slug: 'brunch',
-    demo: 'https://brunch.now-examples.now.sh',
+    demo: 'https://brunch.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/brunch.svg',
     tagline:
@@ -1468,7 +1468,7 @@ export const frameworks = [
   {
     name: 'Middleman',
     slug: 'middleman',
-    demo: 'https://middleman.now-examples.vercel.app',
+    demo: 'https://middleman.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/middleman.svg',
     tagline:
@@ -1504,7 +1504,7 @@ export const frameworks = [
   {
     name: 'Zola',
     slug: 'zola',
-    demo: 'https://zola.now-examples.vercel.app',
+    demo: 'https://zola.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/zola.png',
     tagline: 'Everything you need to make a static site engine in one binary.',
