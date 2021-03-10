@@ -232,7 +232,7 @@ export const frameworks = [
   {
     name: 'Eleventy',
     slug: 'eleventy',
-    demo: 'https://eleventy.now-examples.now.sh',
+    demo: 'https://eleventy.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/eleventy.svg',
     tagline:
@@ -768,7 +768,7 @@ export const frameworks = [
   {
     name: 'Polymer',
     slug: 'polymer',
-    demo: 'https://polymer.now-examples.now.sh',
+    demo: 'https://polymer.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/polymer.svg',
     tagline:
