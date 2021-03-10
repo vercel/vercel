@@ -1,5 +1,6 @@
 import http from 'http';
 import open from 'open';
+import chalk from 'chalk';
 import fetch from 'node-fetch';
 import { hostname } from 'os';
 import { URL, URLSearchParams } from 'url';
@@ -62,6 +63,7 @@ export default async function doSsoLogin(
     }
 
     const email = query.get('email');
+    const username = query.get('username');
     const verificationToken = query.get('token');
     if (!email || !verificationToken) {
       output.error(
@@ -74,10 +76,8 @@ export default async function doSsoLogin(
     const verifyUrl = new URL('/registration/verify', apiUrl);
     verifyUrl.searchParams.append('email', email);
     verifyUrl.searchParams.append('token', verificationToken);
-    verifyUrl.searchParams.append('t', String(Date.now()));
 
     const verifyRes = await fetch(verifyUrl.href);
-    output.log('got it');
 
     if (!verifyRes.ok) {
       output.error(
@@ -87,6 +87,11 @@ export default async function doSsoLogin(
       return 1;
     }
 
+    output.success(
+      `Successfully logged in to "${slug}" team as ${chalk.bold(
+        username || email
+      )}`
+    );
     const body = await verifyRes.json();
     return body.token;
   } finally {
