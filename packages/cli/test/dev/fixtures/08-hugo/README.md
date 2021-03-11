@@ -10,7 +10,7 @@ A Fast and Flexible Static Site Generator built with love by [bep](https://githu
 [Twitter](https://twitter.com/gohugoio)
 
 [![GoDoc](https://godoc.org/github.com/gohugoio/hugo?status.svg)](https://godoc.org/github.com/gohugoio/hugo)
-[![Linux and macOS Build Status](https://api.travis-ci.org/gohugoio/hugo.svg?branch=master&label=Windows+and+Linux+and+macOS+build 'Windows, Linux and macOS Build Status')](https://travis-ci.org/gohugoio/hugo)
+[![Linux and macOS Build Status](https://api.travis-ci.org/gohugoio/hugo.svg?branch=master&label=Windows+and+Linux+and+macOS+build "Windows, Linux and macOS Build Status")](https://travis-ci.org/gohugoio/hugo)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gohugoio/hugo)](https://goreportcard.com/report/github.com/gohugoio/hugo)
 
 ## Overview
@@ -53,8 +53,8 @@ Use the [installation instructions in the Hugo documentation](https://gohugo.io/
 
 #### Prerequisite Tools
 
-- [Git](https://git-scm.com/)
-- [Go (at least Go 1.11)](https://golang.org/dl/)
+* [Git](https://git-scm.com/)
+* [Go (at least Go 1.11)](https://golang.org/dl/)
 
 #### Fetch from GitHub
 
@@ -69,7 +69,7 @@ go install
 ```
 
 **If you are a Windows user, substitute the `$HOME` environment variable above with `%USERPROFILE%`.**
-
+	
 ## The Hugo Documentation
 
 The Hugo documentation now lives in its own repository, see https://github.com/gohugoio/hugoDocs. But we do keep a version of that documentation as a `git subtree` in this repository. To build the sub folder `/docs` as a Hugo site, you need to clone this repo:
@@ -77,7 +77,6 @@ The Hugo documentation now lives in its own repository, see https://github.com/g
 ```bash
 git clone git@github.com:gohugoio/hugo.git
 ```
-
 ## Contributing to Hugo
 
 For a complete guide to contributing to Hugo, see the [Contribution Guide](CONTRIBUTING.md).
@@ -116,66 +115,73 @@ For a complete guide to contributing code to Hugo, see the [Contribution Guide](
 
 [![Analytics](https://ga-beacon.appspot.com/UA-7131036-6/hugo/readme)](https://github.com/igrigorik/ga-beacon)
 
-[go]: https://golang.org/
-[hugo documentation]: https://gohugo.io/overview/introduction/
+[Go]: https://golang.org/
+[Hugo Documentation]: https://gohugo.io/overview/introduction/
 
 ## Dependencies
 
 Hugo stands on the shoulder of many great open source libraries, in lexical order:
 
-| Dependency                                                                                     | License                                 |
-| :--------------------------------------------------------------------------------------------- | :-------------------------------------- |
-| [github.com/BurntSushi/locker](https://github.com/BurntSushi/locker)                           | The Unlicense                           |
-| [github.com/BurntSushi/toml](https://github.com/BurntSushi/toml)                               | MIT License                             |
-| [github.com/PuerkitoBio/purell](https://github.com/PuerkitoBio/purell)                         | BSD 3-Clause "New" or "Revised" License |
-| [github.com/PuerkitoBio/urlesc](https://github.com/PuerkitoBio/urlesc)                         | BSD 3-Clause "New" or "Revised" License |
-| [github.com/alecthomas/chroma](https://github.com/alecthomas/chroma)                           | MIT License                             |
-| [github.com/bep/debounce](https://github.com/bep/debounce)                                     | MIT License                             |
-| [github.com/bep/gitmap](https://github.com/bep/gitmap)                                         | MIT License                             |
-| [github.com/bep/go-tocss](https://github.com/bep/go-tocss)                                     | MIT License                             |
-| [github.com/chaseadamsio/goorgeous](https://github.com/chaseadamsio/goorgeous)                 | MIT License                             |
-| [github.com/cpuguy83/go-md2man](https://github.com/cpuguy83/go-md2man)                         | MIT License                             |
-| [github.com/danwakefield/fnmatch](https://github.com/danwakefield/fnmatch)                     | BSD 2-Clause "Simplified" License       |
-| [github.com/disintegration/imaging](https://github.com/disintegration/imaging)                 | MIT License                             |
-| [github.com/dlclark/regexp2](https://github.com/dlclark/regexp2)                               | MIT License                             |
-| [github.com/eknkc/amber](https://github.com/eknkc/amber)                                       | MIT License                             |
-| [github.com/fsnotify/fsnotify](https://github.com/fsnotify/fsnotify)                           | BSD 3-Clause "New" or "Revised" License |
-| [github.com/gobwas/glob](https://github.com/gobwas/glob)                                       | MIT License                             |
-| [github.com/gorilla/websocket](https://github.com/gorilla/websocket)                           | BSD 2-Clause "Simplified" License       |
-| [github.com/hashicorp/go-immutable-radix](https://github.com/hashicorp/go-immutable-radix)     | Mozilla Public License 2.0              |
-| [github.com/hashicorp/golang-lru](https://github.com/hashicorp/golang-lru)                     | Mozilla Public License 2.0              |
-| [github.com/hashicorp/hcl](https://github.com/hashicorp/hcl)                                   | Mozilla Public License 2.0              |
-| [github.com/jdkato/prose](https://github.com/jdkato/prose)                                     | MIT License                             |
-| [github.com/kyokomi/emoji](https://github.com/kyokomi/emoji)                                   | MIT License                             |
-| [github.com/magiconair/properties](https://github.com/magiconair/properties)                   | BSD 2-Clause "Simplified" License       |
-| [github.com/markbates/inflect](https://github.com/markbates/inflect)                           | MIT License                             |
-| [github.com/mattn/go-isatty](https://github.com/mattn/go-isatty)                               | MIT License                             |
-| [github.com/mattn/go-runewidth](https://github.com/mattn/go-runewidth)                         | MIT License                             |
-| [github.com/miekg/mmark](https://github.com/miekg/mmark)                                       | Simplified BSD License                  |
-| [github.com/mitchellh/hashstructure](https://github.com/mitchellh/hashstructure)               | MIT License                             |
-| [github.com/mitchellh/mapstructure](https://github.com/mitchellh/mapstructure)                 | MIT License                             |
-| [github.com/muesli/smartcrop](https://github.com/muesli/smartcrop)                             | MIT License                             |
-| [github.com/nicksnyder/go-i18n](https://github.com/nicksnyder/go-i18n)                         | MIT License                             |
-| [github.com/olekukonko/tablewriter](https://github.com/olekukonko/tablewriter)                 | MIT License                             |
-| [github.com/pelletier/go-toml](https://github.com/pelletier/go-toml)                           | MIT License                             |
-| [github.com/pkg/errors](https://github.com/pkg/errors)                                         | BSD 2-Clause "Simplified" License       |
-| [github.com/russross/blackfriday](https://github.com/russross/blackfriday)                     | Simplified BSD License                  |
-| [github.com/shurcooL/sanitized_anchor_name](https://github.com/shurcooL/sanitized_anchor_name) | MIT License                             |
-| [github.com/spf13/afero](https://github.com/spf13/afero)                                       | Apache License 2.0                      |
-| [github.com/spf13/cast](https://github.com/spf13/cast)                                         | MIT License                             |
-| [github.com/spf13/cobra](https://github.com/spf13/cobra)                                       | Apache License 2.0                      |
-| [github.com/spf13/fsync](https://github.com/spf13/fsync)                                       | MIT License                             |
-| [github.com/spf13/jwalterweatherman](https://github.com/spf13/jwalterweatherman)               | MIT License                             |
-| [github.com/spf13/nitro](https://github.com/spf13/nitro)                                       | Apache License 2.0                      |
-| [github.com/spf13/pflag](https://github.com/spf13/pflag)                                       | BSD 3-Clause "New" or "Revised" License |
-| [github.com/spf13/viper](https://github.com/spf13/viper)                                       | MIT License                             |
-| [github.com/tdewolff/minify](https://github.com/tdewolff/minify)                               | MIT License                             |
-| [github.com/tdewolff/parse](https://github.com/tdewolff/parse)                                 | MIT License                             |
-| [github.com/wellington/go-libsass](https://github.com/wellington/go-libsass)                   | Apache License 2.0                      |
-| [github.com/yosssi/ace](https://github.com/yosssi/ace)                                         | MIT License                             |
-| [golang.org/x/image](https://golang.org/x/image)                                               | BSD 3-Clause "New" or "Revised" License |
-| [golang.org/x/net](https://golang.org/x/net)                                                   | BSD 3-Clause "New" or "Revised" License |
-| [golang.org/x/sync](https://golang.org/x/sync)                                                 | BSD 3-Clause "New" or "Revised" License |
-| [golang.org/x/sys](https://golang.org/x/sys)                                                   | BSD 3-Clause "New" or "Revised" License |
-| [golang.org/x/text](https://golang.org/x/text)                                                 | BSD 3-Clause "New" or "Revised" License |
-| [gopkg.in/yaml.v2](https://gopkg.in/yaml.v2)                                                   | Apache License 2.0                      |
+ | Dependency  | License |
+ | :------------- | :------------- |
+ | [github.com/BurntSushi/locker](https://github.com/BurntSushi/locker) | The Unlicense |
+ | [github.com/BurntSushi/toml](https://github.com/BurntSushi/toml) | MIT License |
+ | [github.com/PuerkitoBio/purell](https://github.com/PuerkitoBio/purell) | BSD 3-Clause "New" or "Revised" License |
+ | [github.com/PuerkitoBio/urlesc](https://github.com/PuerkitoBio/urlesc) | BSD 3-Clause "New" or "Revised" License |
+ | [github.com/alecthomas/chroma](https://github.com/alecthomas/chroma) |  MIT License |
+ | [github.com/bep/debounce](https://github.com/bep/debounce) |    MIT License |
+ | [github.com/bep/gitmap](https://github.com/bep/gitmap) |  MIT License |
+ | [github.com/bep/go-tocss](https://github.com/bep/go-tocss) | MIT License |
+ | [github.com/chaseadamsio/goorgeous](https://github.com/chaseadamsio/goorgeous) | MIT License |
+ | [github.com/cpuguy83/go-md2man](https://github.com/cpuguy83/go-md2man) | MIT License |
+ | [github.com/danwakefield/fnmatch](https://github.com/danwakefield/fnmatch) | BSD 2-Clause "Simplified" License |
+ | [github.com/disintegration/imaging](https://github.com/disintegration/imaging) |  MIT License |
+ | [github.com/dlclark/regexp2](https://github.com/dlclark/regexp2) | MIT License |
+ | [github.com/eknkc/amber](https://github.com/eknkc/amber) | MIT License |
+ | [github.com/fsnotify/fsnotify](https://github.com/fsnotify/fsnotify) |  BSD 3-Clause "New" or "Revised" License |
+ | [github.com/gobwas/glob](https://github.com/gobwas/glob) | MIT License |
+ | [github.com/gorilla/websocket](https://github.com/gorilla/websocket) |  BSD 2-Clause "Simplified" License |
+ | [github.com/hashicorp/go-immutable-radix](https://github.com/hashicorp/go-immutable-radix) | Mozilla Public License 2.0 |
+ | [github.com/hashicorp/golang-lru](https://github.com/hashicorp/golang-lru) | Mozilla Public License 2.0 |
+ | [github.com/hashicorp/hcl](https://github.com/hashicorp/hcl) |   Mozilla Public License 2.0 |
+ | [github.com/jdkato/prose](https://github.com/jdkato/prose) |    MIT License |
+ | [github.com/kyokomi/emoji](https://github.com/kyokomi/emoji) |   MIT License |
+ | [github.com/magiconair/properties](https://github.com/magiconair/properties) | BSD 2-Clause "Simplified" License |
+ | [github.com/markbates/inflect](https://github.com/markbates/inflect) |  MIT License |
+ | [github.com/mattn/go-isatty](https://github.com/mattn/go-isatty) | MIT License |
+ | [github.com/mattn/go-runewidth](https://github.com/mattn/go-runewidth) | MIT License |
+ | [github.com/miekg/mmark](https://github.com/miekg/mmark) | Simplified BSD License |
+ | [github.com/mitchellh/hashstructure](https://github.com/mitchellh/hashstructure) | MIT License |
+ | [github.com/mitchellh/mapstructure](https://github.com/mitchellh/mapstructure) | MIT License |
+ | [github.com/muesli/smartcrop](https://github.com/muesli/smartcrop) |   MIT License |
+ | [github.com/nicksnyder/go-i18n](https://github.com/nicksnyder/go-i18n) | MIT License |
+ | [github.com/olekukonko/tablewriter](https://github.com/olekukonko/tablewriter) | MIT License |
+ | [github.com/pelletier/go-toml](https://github.com/pelletier/go-toml) |  MIT License |
+ | [github.com/pkg/errors](https://github.com/pkg/errors) |  BSD 2-Clause "Simplified" License |
+ | [github.com/russross/blackfriday](https://github.com/russross/blackfriday)  | Simplified BSD License |
+ | [github.com/shurcooL/sanitized_anchor_name](https://github.com/shurcooL/sanitized_anchor_name) | MIT License |
+ | [github.com/spf13/afero](https://github.com/spf13/afero) | Apache License 2.0 |
+ | [github.com/spf13/cast](https://github.com/spf13/cast) |  MIT License |
+ | [github.com/spf13/cobra](https://github.com/spf13/cobra) | Apache License 2.0 |
+ | [github.com/spf13/fsync](https://github.com/spf13/fsync) | MIT License |
+ | [github.com/spf13/jwalterweatherman](https://github.com/spf13/jwalterweatherman) | MIT License |
+ | [github.com/spf13/nitro](https://github.com/spf13/nitro) | Apache License 2.0 |
+ | [github.com/spf13/pflag](https://github.com/spf13/pflag) | BSD 3-Clause "New" or "Revised" License |
+ | [github.com/spf13/viper](https://github.com/spf13/viper) | MIT License |
+ | [github.com/tdewolff/minify](https://github.com/tdewolff/minify) | MIT License |
+ | [github.com/tdewolff/parse](https://github.com/tdewolff/parse) | MIT License |
+ | [github.com/wellington/go-libsass](https://github.com/wellington/go-libsass) | Apache License 2.0 |
+ | [github.com/yosssi/ace](https://github.com/yosssi/ace) |  MIT License |
+ | [golang.org/x/image](https://golang.org/x/image) | BSD 3-Clause "New" or "Revised" License |
+ | [golang.org/x/net](https://golang.org/x/net) | BSD 3-Clause "New" or "Revised" License |
+ | [golang.org/x/sync](https://golang.org/x/sync) | BSD 3-Clause "New" or "Revised" License |
+ | [golang.org/x/sys](https://golang.org/x/sys) | BSD 3-Clause "New" or "Revised" License |
+ | [golang.org/x/text](https://golang.org/x/text) | BSD 3-Clause "New" or "Revised" License
+ | [gopkg.in/yaml.v2](https://gopkg.in/yaml.v2) |    Apache License 2.0 |
+
+  
+ 
+  
+ 
+ 
+ 

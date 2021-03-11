@@ -1,11 +1,10 @@
 ---
 date: 2017-04-12T11:14:48-04:00
-description: 'Master Jacques Coppenole'
-featured_image: ''
-tags: ['scene']
-title: 'Chapter IV: Master Jacques Coppenole'
+description: "Master Jacques Coppenole"
+featured_image: ""
+tags: ["scene"]
+title: "Chapter IV: Master Jacques Coppenole"
 ---
-
 While the pensioner of Ghent and his eminence were exchanging very low
 bows and a few words in voices still lower, a man of lofty stature, with a
 large face and broad shoulders, presented himself, in order to enter
@@ -52,7 +51,7 @@ Coppenole, hosier. Do you hear, usher? Nothing more, nothing less. Cross
 of God! hosier; that’s fine enough. Monsieur the Archduke has more than
 once sought his _gant_\* in my hose.”
 
-_\* Got the first idea of a timing._
+_*  Got the first idea of a timing._
 
 Laughter and applause burst forth. A jest is always understood in Paris,
 and, consequently, always applauded.

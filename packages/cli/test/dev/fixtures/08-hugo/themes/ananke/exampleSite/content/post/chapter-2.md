@@ -1,9 +1,9 @@
 ---
 date: 2017-04-10T11:00:59-04:00
-description: 'Pierre Gringoire'
-featured_image: ''
+description: "Pierre Gringoire"
+featured_image: ""
 tags: []
-title: 'Chapter II: Pierre Gringoire'
+title: "Chapter II: Pierre Gringoire"
 ---
 
 Nevertheless, as be harangued them, the satisfaction and admiration

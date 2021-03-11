@@ -8,7 +8,7 @@ A brand new default theme for [Hexo].
 
 ### Install
 
-```bash
+``` bash
 $ git clone https://github.com/hexojs/hexo-theme-landscape.git themes/landscape
 ```
 
@@ -20,14 +20,14 @@ Modify `theme` setting in `_config.yml` to `landscape`.
 
 ### Update
 
-```bash
+``` bash
 cd themes/landscape
 git pull
 ```
 
 ## Configuration
 
-```yml
+``` yml
 # Header
 menu:
   Home: /
@@ -41,11 +41,11 @@ fancybox: true
 # Sidebar
 sidebar: right
 widgets:
-  - category
-  - tag
-  - tagcloud
-  - archives
-  - recent_posts
+- category
+- tag
+- tagcloud
+- archives
+- recent_posts
 
 # Miscellaneous
 google_analytics:
@@ -105,8 +105,8 @@ All of them are enabled by default. You can edit them in `widget` setting.
 - **fancybox** - Only download [Fancybox].
 - **clean** - Clean temporarily files and downloaded files.
 
-[hexo]: https://hexo.io/
-[fancybox]: http://fancyapps.com/fancybox/
-[font awesome]: http://fontawesome.io/
-[grunt]: http://gruntjs.com/
+[Hexo]: https://hexo.io/
+[Fancybox]: http://fancyapps.com/fancybox/
+[Font Awesome]: http://fontawesome.io/
+[Grunt]: http://gruntjs.com/
 [hexo-generate-feed]: https://github.com/hexojs/hexo-generator-feed
