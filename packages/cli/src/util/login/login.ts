@@ -3,11 +3,7 @@ import { hostname } from 'os';
 import { InvalidEmail, AccountNotFound } from '../errors-ts';
 import ua from '../ua';
 import { getTitleName } from '../pkg-name';
-
-type LoginData = {
-  token: string;
-  securityCode: string;
-};
+import { LoginData } from './types';
 
 export default async function login(
   apiUrl: string,
