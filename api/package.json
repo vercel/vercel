@@ -10,7 +10,7 @@
   "dependencies": {
     "@sentry/node": "5.11.1",
     "got": "10.2.1",
-    "node-fetch": "2.6.0",
+    "node-fetch": "2.6.1",
     "parse-github-url": "1.0.2",
     "tar-fs": "2.0.0",
     "unzip-stream": "0.3.0"
