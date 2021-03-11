@@ -2,7 +2,7 @@ import http from 'http';
 import open from 'open';
 import fetch from 'node-fetch';
 import { hostname } from 'os';
-import { URL, URLSearchParams } from 'url';
+import { URL } from 'url';
 import listen from 'async-listen';
 import { getTitleName } from '../pkg-name';
 import { LoginParams } from './types';
@@ -51,8 +51,7 @@ export default async function doSsoLogin(
       open(url.href),
     ]);
 
-    const rawQuery = req.url!.slice(req.url!.indexOf('?') + 1);
-    const query = new URLSearchParams(rawQuery);
+    const query = new URL(req.url || '/', 'http://localhost').searchParams;
 
     const loginError = query.get('loginError');
     if (loginError) {
