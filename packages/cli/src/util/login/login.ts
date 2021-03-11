@@ -14,7 +14,7 @@ export default async function login(
   const host = hostname().replace(hyphens, ' ').replace('.local', '');
   const tokenName = `${getTitleName()} CLI on ${host}`;
 
-  const response = await fetch(`${apiUrl}/registration?mode=${mode}`, {
+  const response = await fetch(`${apiUrl}/now/registration?mode=${mode}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
