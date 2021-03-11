@@ -9,10 +9,10 @@ import { getTitleName } from '../pkg-name';
 import { LoginParams } from './types';
 
 export default async function doSsoLogin(
-  slug: string,
+  teamIdOrSlug: string,
   { apiUrl, output }: LoginParams
 ): Promise<number | string> {
-  output.print(`Logging in to team "${slug}"`);
+  output.print(`Logging in to team "${teamIdOrSlug}"`);
 
   const hyphens = new RegExp('-', 'g');
   const host = hostname().replace(hyphens, ' ').replace('.local', '');
@@ -26,7 +26,7 @@ export default async function doSsoLogin(
     const url = new URL('/registration/sso/auth', apiUrl);
     url.searchParams.append('mode', 'login');
     url.searchParams.append('next', `http://localhost:${port}`);
-    url.searchParams.append('slug', slug);
+    url.searchParams.append('teamId', teamIdOrSlug);
     url.searchParams.append('tokenName', tokenName);
 
     output.spinner(
@@ -88,7 +88,7 @@ export default async function doSsoLogin(
     }
 
     output.success(
-      `Successfully logged in to "${slug}" team as ${chalk.bold(
+      `Successfully logged in to "${teamIdOrSlug}" team as ${chalk.bold(
         username || email
       )}`
     );
