@@ -9,6 +9,12 @@ export type RouteApiError = {
   errors?: string[]; // array of all error messages
 };
 
+export type HasField = Array<{
+  type: 'header' | 'cookie' | 'query';
+  key: string;
+  value?: string;
+}>;
+
 export type Source = {
   src: string;
   dest?: string;
@@ -18,11 +24,7 @@ export type Source = {
   check?: boolean;
   important?: boolean;
   status?: number;
-  has?: Array<{
-    type: 'header' | 'cookie' | 'query';
-    key: string;
-    value?: string;
-  }>;
+  has?: HasField;
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
@@ -72,11 +74,7 @@ export interface VercelConfig {
 export interface Rewrite {
   source: string;
   destination: string;
-  has?: Array<{
-    type: 'header' | 'cookie' | 'query';
-    key: string;
-    value?: string;
-  }>;
+  has?: HasField;
 }
 
 export interface Redirect {
@@ -84,21 +82,13 @@ export interface Redirect {
   destination: string;
   permanent?: boolean;
   statusCode?: number;
-  has?: Array<{
-    type: 'header' | 'cookie' | 'query';
-    key: string;
-    value?: string;
-  }>;
+  has?: HasField;
 }
 
 export interface Header {
   source: string;
-  has?: Array<{
-    type: 'header' | 'cookie' | 'query';
-    key: string;
-    value?: string;
-  }>;
   headers: HeaderKeyValue[];
+  has?: HasField;
 }
 
 export interface HeaderKeyValue {
