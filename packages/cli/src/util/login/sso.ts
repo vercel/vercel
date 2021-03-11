@@ -3,7 +3,7 @@ import open from 'open';
 import chalk from 'chalk';
 import fetch from 'node-fetch';
 import { hostname } from 'os';
-import { URL, URLSearchParams } from 'url';
+import { URL } from 'url';
 import listen from 'async-listen';
 import { getTitleName } from '../pkg-name';
 import { LoginParams } from './types';
