@@ -1,6 +1,5 @@
 import http from 'http';
 import open from 'open';
-import chalk from 'chalk';
 import fetch from 'node-fetch';
 import { hostname } from 'os';
 import { URL, URLSearchParams } from 'url';
@@ -63,7 +62,6 @@ export default async function doSsoLogin(
     }
 
     const email = query.get('email');
-    const username = query.get('username');
     const verificationToken = query.get('token');
     if (!email || !verificationToken) {
       output.error(
@@ -87,16 +85,10 @@ export default async function doSsoLogin(
       return 1;
     }
 
-    output.success(
-      `Successfully logged in to "${teamIdOrSlug}" team as ${chalk.bold(
-        username || email
-      )}`
-    );
+    output.success(`SAML authentication complete`);
     const body = await verifyRes.json();
     return body.token;
   } finally {
     server.close();
   }
-
-  return 0;
 }

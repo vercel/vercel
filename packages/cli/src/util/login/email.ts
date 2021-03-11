@@ -3,7 +3,6 @@ import { stringify as stringifyQuery } from 'querystring';
 import fetch from 'node-fetch';
 import sleep from '../sleep';
 import ua from '../ua';
-import ok from '../output/ok';
 import error from '../output/error';
 import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
@@ -79,7 +78,6 @@ export default async function doEmailLogin(
   }
 
   // Clear up `Sending email` success message
-  //output.print(eraseLines(possibleAddress ? 1 : 2));
   output.print(eraseLines(1));
 
   output.print(
@@ -109,6 +107,6 @@ export default async function doEmailLogin(
     }
   }
 
-  output.log(ok('Email confirmed'));
+  output.success('Email confirmed');
   return token;
 }
