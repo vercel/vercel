@@ -82,6 +82,15 @@ describe('normalizeRoutes', () => {
         dest: '/404',
         status: 404,
       },
+      {
+        src: '^/hello$',
+        dest: '/another',
+        has: [
+          { type: 'header', key: 'x-rewrite' },
+          { type: 'cookie', key: 'loggedIn', value: 'yup' },
+          { type: 'query', key: 'authorized', value: 'yup' },
+        ],
+      },
     ];
 
     assertValid(routes);
@@ -942,11 +951,30 @@ describe('getTransformedRoutes', () => {
       rewrites: [
         { source: '/page', destination: '/page.html' },
         { source: '/home', destination: '/index.html' },
+        {
+          source: '/home',
+          destination: '/another',
+          has: [
+            { type: 'header', key: 'x-rewrite' },
+            { type: 'cookie', key: 'loggedIn', value: 'yup' },
+            { type: 'query', key: 'authorized', value: 'yup' },
+          ],
+        },
       ],
       redirects: [
         { source: '/version1', destination: '/api1.py' },
         { source: '/version2', destination: '/api2.py', statusCode: 302 },
         { source: '/version3', destination: '/api3.py', permanent: true },
+        {
+          source: '/version4',
+          destination: '/api4.py',
+          has: [
+            { type: 'header', key: 'x-redirect' },
+            { type: 'cookie', key: 'loggedIn', value: 'yup' },
+            { type: 'query', key: 'authorized', value: 'yup' },
+          ],
+          permanent: false,
+        },
       ],
       headers: [
         {
@@ -968,6 +996,20 @@ describe('getTransformedRoutes', () => {
             {
               key: 'Set-Cookie',
               value: 'error=404',
+            },
+          ],
+        },
+        {
+          source: '/add-header',
+          has: [
+            { type: 'header', key: 'x-header' },
+            { type: 'cookie', key: 'loggedIn', value: 'yup' },
+            { type: 'query', key: 'authorized', value: 'yup' },
+          ],
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'max-age=forever',
             },
           ],
         },
