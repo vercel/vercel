@@ -52,8 +52,7 @@ export default async function doSsoLogin(
       open(url.href),
     ]);
 
-    const rawQuery = req.url!.slice(req.url!.indexOf('?') + 1);
-    const query = new URLSearchParams(rawQuery);
+    const query = new URL(req.url || '/', 'http://localhost').searchParams;
 
     const loginError = query.get('loginError');
     if (loginError) {
