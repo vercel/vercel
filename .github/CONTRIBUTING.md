@@ -88,7 +88,7 @@ When you run this script, you'll see all imported files. If anything file is mis
 
 Sometimes you want to test changes to a Builder against an existing project, maybe with `vercel dev` or an actual deployment. You can avoid publishing every Builder change to npm by uploading the Builder as a tarball.
 
-1. Change directory to the desired Builder `cd ./packages/now-node`
+1. Change directory to the desired Builder `cd ./packages/node`
 2. Run `yarn build` to compile typescript and other build steps
 3. Run `npm pack` to create a tarball file
 4. Run `vercel *.tgz` to upload the tarball file and get a URL

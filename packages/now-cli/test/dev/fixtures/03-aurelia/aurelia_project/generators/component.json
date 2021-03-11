@@ -1,4 +1,0 @@
-{
-  "name": "component",
-  "description": "Creates a custom component class and template (view model and view), placing them in the project source folder (or optionally in sub folders)."
-}

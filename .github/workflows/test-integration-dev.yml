@@ -19,6 +19,12 @@ jobs:
         node: [12]
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.13.15'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 100
@@ -28,12 +34,9 @@ jobs:
       - run: git diff origin/master...HEAD --name-only
       - name: Install Hugo
         if: matrix.os == 'macos-latest'
-        run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/now-cli/test/dev/fixtures/08-hugo/
+        run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
       - run: yarn install --network-timeout 1000000
       - run: yarn run build
-      - uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node }}
       - run: yarn test-integration-dev --clean false
         env:
           VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}

@@ -1,0 +1,4 @@
+{
+  "name": "value-converter",
+  "description": "Creates a value converter class and places it in the project resources."
+}

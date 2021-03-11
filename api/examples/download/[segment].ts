@@ -2,7 +2,7 @@ import fs from 'fs';
 // @ts-ignore
 import tar from 'tar-fs';
 import { extract } from '../../_lib/examples/extract';
-import { NowRequest, NowResponse } from '@vercel/node';
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { withApiHandler } from '../../_lib/util/with-api-handler';
 
 const TMP_DIR = '/tmp';
@@ -11,7 +11,7 @@ function isDirectory(path: string) {
   return fs.existsSync(path) && fs.lstatSync(path).isDirectory();
 }
 
-function notFound(res: NowResponse, message: string) {
+function notFound(res: VercelResponse, message: string) {
   return res.status(404).send({
     error: {
       code: 'not_found',
@@ -36,8 +36,8 @@ function streamToBuffer(stream: any) {
 }
 
 export default withApiHandler(async function (
-  req: NowRequest,
-  res: NowResponse
+  req: VercelRequest,
+  res: VercelResponse
 ) {
   const ext = '.tar.gz';
   const { segment = '' } = req.query;

@@ -18,7 +18,7 @@
   "devDependencies": {
     "@types/node": "13.1.4",
     "@types/node-fetch": "2.5.4",
-    "@vercel/node": "1.7.2",
+    "@vercel/node": "1.9.0",
     "typescript": "3.9.6"
   }
 }
