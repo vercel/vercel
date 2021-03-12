@@ -926,6 +926,7 @@ export const frameworks = [
       {
         handle: 'filesystem',
       },
+      { src: '/static/(.*)', status: 404, dest: '/404.html' },
       {
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
@@ -993,6 +994,7 @@ export const frameworks = [
       {
         handle: 'filesystem',
       },
+      { src: '/static/(.*)', status: 404, dest: '/404.html' },
       {
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
