@@ -76,6 +76,11 @@ export interface Framework {
    */
   sort?: number;
   /**
+   * The environment variable prefix used to inline values into the browser bundle.
+   * @example "NEXT_PUBLIC_"
+   */
+  envPrefix?: string;
+  /**
    * Runtime configuration required to run the framework in Vercel
    */
   useRuntime?: {
