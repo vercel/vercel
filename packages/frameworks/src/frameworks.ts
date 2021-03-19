@@ -855,14 +855,14 @@ export const frameworks = [
         placeholder: '`npm run build` or `rollup -c`',
       },
       devCommand: {
-        value: 'sirv public --single --dev --port $PORT',
+        value: 'rollup -c -w',
       },
       outputDirectory: {
         value: 'public',
       },
     },
     dependency: 'sirv-cli',
-    devCommand: 'sirv public --single --dev --port $PORT',
+    devCommand: 'rollup -c -w',
     buildCommand: 'rollup -c',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
