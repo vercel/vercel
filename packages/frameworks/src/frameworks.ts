@@ -843,6 +843,11 @@ export const frameworks = [
         {
           path: 'package.json',
           matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"svelte":\\s*".+?"[^}]*}',
+        },
+        {
+          path: 'package.json',
+          matchContent:
             '"(dev)?(d|D)ependencies":\\s*{[^}]*"sirv-cli":\\s*".+?"[^}]*}',
         },
       ],
