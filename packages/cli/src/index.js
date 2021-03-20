@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-import error from './util/output/error';
-import param from './util/output/param';
-import info from './util/output/info';
 try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
@@ -13,6 +10,7 @@ try {
     process.exit(1);
   }
 }
+
 import { join } from 'path';
 import { existsSync, lstatSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
@@ -23,25 +21,28 @@ import updateNotifier from 'update-notifier';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import { NowBuildError } from '@vercel/build-utils';
+import hp from './util/humanize-path';
+import commands from './commands/index.ts';
+import pkg from './util/pkg.ts';
+import createOutput from './util/output';
+import cmd from './util/output/cmd';
+import info from './util/output/info';
+import error from './util/output/error';
+import param from './util/output/param';
+import highlight from './util/output/highlight';
+import getArgs from './util/get-args';
+import getUser from './util/get-user.ts';
+import Client from './util/client.ts';
+import NowTeams from './util/teams';
+import { handleError } from './util/error';
+import reportError from './util/report-error';
+import getConfig from './util/get-config';
+import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
 import {
   getDefaultConfig,
   getDefaultAuthConfig,
 } from './util/config/get-default';
-import hp from './util/humanize-path';
-import commands from './commands/index.ts';
-import * as configFiles from './util/config/files';
-import pkg from './util/pkg.ts';
-import createOutput from './util/output';
-import getArgs from './util/get-args';
-import getUser from './util/get-user.ts';
-import Client from './util/client.ts';
-import NowTeams from './util/teams';
-import cmd from './util/output/cmd';
-import { handleError } from './util/error';
-import highlight from './util/output/highlight';
-import reportError from './util/report-error';
-import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
 import { APIError } from './util/errors-ts.ts';
@@ -78,14 +79,14 @@ Sentry.init({
 let debug = () => {};
 let apiUrl = 'https://api.vercel.com';
 
-const main = async argv_ => {
+const main = async () => {
   const { isTTY } = process.stdout;
 
-  let argv = null;
+  let argv;
 
   try {
     argv = getArgs(
-      argv_,
+      process.argv,
       {
         '--version': Boolean,
         '-v': '--version',
@@ -129,11 +130,7 @@ const main = async argv_ => {
     return 1;
   }
 
-  // the second argument to the command can be a path
-  // (as in: `vercel path/`) or a subcommand / provider
-  // (as in: `vercel ls`)
-  const targetOrSubcommand = argv._[2];
-
+  // Print update information, if available
   if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
     const { latest } = notifier.update;
     console.log(
@@ -152,6 +149,12 @@ const main = async argv_ => {
     );
   }
 
+  // The second argument to the command can be:
+  //
+  //  * a path to deploy (as in: `vercel path/`)
+  //  * a subcommand (as in: `vercel ls`)
+  const targetOrSubcommand = argv._[2];
+
   output.print(
     `${chalk.grey(
       `${getTitleName()} CLI ${pkg.version}${
@@ -164,41 +167,24 @@ const main = async argv_ => {
     )}\n`
   );
 
-  // we want to handle version or help directly only
-  if (!targetOrSubcommand) {
-    if (argv['--version']) {
-      console.log(pkg.version);
-      return 0;
-    }
+  // Handle `--version` directly
+  if (!targetOrSubcommand && argv['--version']) {
+    console.log(pkg.version);
+    return 0;
   }
 
-  let nowDirExists;
-
+  // Ensure that the Vercel global configuration directory exists
   try {
-    nowDirExists = existsSync(VERCEL_DIR);
+    await mkdirp(VERCEL_DIR);
   } catch (err) {
     console.error(
       error(
-        `An unexpected error occurred while trying to find the global directory: ${err.message}`
+        `${
+          'An unexpected error occurred while trying to create the ' +
+          `global directory "${hp(VERCEL_DIR)}" `
+        }${err.message}`
       )
     );
-
-    return 1;
-  }
-
-  if (!nowDirExists) {
-    try {
-      await mkdirp(VERCEL_DIR);
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to create the ' +
-            `global directory "${hp(VERCEL_DIR)}" `
-          }${err.message}`
-        )
-      );
-    }
   }
 
   let migrated = false;
@@ -350,7 +336,7 @@ const main = async argv_ => {
     config,
     authConfig,
     localConfig,
-    argv: argv_,
+    argv: process.argv,
   };
 
   let subcommand;
@@ -411,8 +397,9 @@ const main = async argv_ => {
     subcommand = argv._[3] || 'deploy';
     ctx.argv.push('-h');
   }
+  console.log(ctx.config);
 
-  if (argv['--api'] && typeof argv['--api'] === 'string') {
+  if (typeof argv['--api'] === 'string') {
     apiUrl = argv['--api'];
   } else if (ctx.config && ctx.config.api) {
     apiUrl = ctx.config.api;
@@ -424,8 +411,8 @@ const main = async argv_ => {
     // eslint-disable-next-line no-new
     new URL(ctx.apiUrl);
   } catch (err) {
-    console.error(
-      error(`Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`)
+    output.error(
+      `Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`
     );
     return 1;
   }
@@ -440,7 +427,7 @@ const main = async argv_ => {
     !subcommandsWithoutToken.includes(subcommand)
   ) {
     if (isTTY) {
-      console.log(info(`No existing credentials found. Please log in:`));
+      output.log(info(`No existing credentials found. Please log in:`));
 
       subcommand = 'login';
       ctx.argv[2] = 'login';
@@ -449,15 +436,12 @@ const main = async argv_ => {
       // no credentials are defined
       ctx.argv = ctx.argv.splice(0, 3);
     } else {
-      console.error(
-        error({
-          message:
-            'No existing credentials found. Please run ' +
-            `${getCommandName('login')} or pass ${param('--token')}`,
-          slug: 'no-credentials-found',
-        })
-      );
-
+      output.prettyError({
+        message:
+          'No existing credentials found. Please run ' +
+          `${getCommandName('login')} or pass ${param('--token')}`,
+        link: 'https://err.sh/vercel/no-credentials-found',
+      });
       return 1;
     }
   }
@@ -712,11 +696,8 @@ const handleUnexpected = async err => {
   }
 
   await reportError(Sentry, err, apiUrl, configFiles);
-  debug('handling unexpected error');
 
-  console.error(
-    error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
-  );
+  console.error(error(`An unexpected error occurred!\n${err.stack}`));
 
   process.exit(1);
 };
@@ -724,9 +705,7 @@ const handleUnexpected = async err => {
 process.on('unhandledRejection', handleRejection);
 process.on('uncaughtException', handleUnexpected);
 
-// Don't use `.then` here. We need to shutdown gracefully, otherwise
-// subcommands waiting for further data won't work (like `logs` and `logout`)!
-main(process.argv)
+main()
   .then(exitCode => {
     process.exitCode = exitCode;
     process.emit('nowExit');

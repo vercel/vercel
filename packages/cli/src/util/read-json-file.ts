@@ -18,10 +18,9 @@ export default async function readJSONFile(
 }
 
 async function readFileSafe(file: string) {
-  if (fs.existsSync(file)) {
-    const content = await fs.readFile(file);
-    return content.toString();
+  try {
+    return await fs.readFile(file, 'utf8');
+  } catch (_) {
+    return null;
   }
-
-  return null;
 }

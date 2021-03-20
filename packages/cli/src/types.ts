@@ -6,15 +6,21 @@ export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 export interface NowContext {
   argv: string[];
   apiUrl: string;
-  authConfig: {
-    token: string;
-  };
+  authConfig: AuthConfig;
   output: Output;
-  config: {
-    currentTeam: string;
-    updateChannel: string;
-  };
+  config: GlobalConfig;
   localConfig: NowConfig;
+}
+
+export interface AuthConfig {
+  token: string;
+}
+
+export interface GlobalConfig {
+  currentTeam?: string;
+  updateChannel?: string;
+  collectMetrics?: boolean;
+  api?: string;
 }
 
 type Billing = {

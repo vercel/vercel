@@ -444,7 +444,7 @@ export default class Now extends EventEmitter {
 
     opts.headers = opts.headers || {};
     opts.headers.accept = 'application/json';
-    opts.headers.Authorization = `Bearer ${this._token}`;
+    opts.headers.authorization = `Bearer ${this._token}`;
     opts.headers['user-agent'] = ua;
 
     if (
@@ -453,7 +453,7 @@ export default class Now extends EventEmitter {
       opts.body.constructor === Object
     ) {
       opts.body = JSON.stringify(opts.body);
-      opts.headers['Content-Type'] = 'application/json';
+      opts.headers['content-type'] = 'application/json; charset=utf-8';
     }
     const res = await this._output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
@@ -463,7 +463,7 @@ export default class Now extends EventEmitter {
     return res;
   }
 
-  // public retry with built-in retrying that can be
+  // public fetch with built-in retrying that can be
   // used from external utilities. it optioanlly
   // receives a `retry` object in the opts that is
   // passed to the retry utility

@@ -70,12 +70,12 @@ const readInput = async () => {
     }
   }
 
-  console.log(); // \n
   return input;
 };
 
 export default async function login(ctx: NowContext): Promise<number> {
   let argv;
+  const { apiUrl, output } = ctx;
 
   try {
     argv = getArgs(ctx.argv.slice(2));
@@ -89,7 +89,10 @@ export default async function login(ctx: NowContext): Promise<number> {
     return 2;
   }
 
-  const { apiUrl, output } = ctx;
+  if (argv['--token']) {
+    output.error('`--token` may not be used with the "login" command');
+    return 2;
+  }
 
   const input = argv._[1] || (await readInput());
 
@@ -99,9 +102,9 @@ export default async function login(ctx: NowContext): Promise<number> {
   let result: number | string = 1;
 
   if (validateEmail(input)) {
-    result = await doEmailLogin(input, { output, apiUrl, ctx });
+    result = await doEmailLogin(input, { output, apiUrl });
   } else if (isValidSlug) {
-    result = await doSsoLogin(input, { output, apiUrl, ctx });
+    result = await doSsoLogin(input, { output, apiUrl });
   } else {
     output.error(`Invalid input: "${input}"`);
     output.log(`Please enter a valid email address or team slug`);

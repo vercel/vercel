@@ -7,6 +7,7 @@ import createOutput, { Output } from './output/create-output';
 import responseError from './response-error';
 import ua from './ua';
 import printIndications from './print-indications';
+import doSsoLogin from './login/sso';
 
 export interface FetchOptions {
   body?: NodeJS.ReadableStream | object | string;
@@ -127,6 +128,26 @@ export default class Client extends EventEmitter {
           : res;
       }
       const error = await responseError(res);
+
+      if (error.saml) {
+        this._output.warn(error.message);
+        const result = await doSsoLogin(error.teamId, {
+          apiUrl: this._apiUrl,
+          output: this._output,
+        });
+
+        // The login function failed, so it returned an exit code
+        if (typeof result === 'number') {
+          process.exit(result);
+          return;
+        }
+
+        console.log({ result });
+        this._token = result;
+        this.currentTeam = error.teamId;
+        throw new Error('retry');
+      }
+
       if (res.status >= 400 && res.status < 500) {
         return bail(error);
       }
