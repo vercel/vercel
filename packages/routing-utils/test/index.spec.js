@@ -89,6 +89,7 @@ describe('normalizeRoutes', () => {
           { type: 'header', key: 'x-rewrite' },
           { type: 'cookie', key: 'loggedIn', value: 'yup' },
           { type: 'query', key: 'authorized', value: 'yup' },
+          { type: 'host', value: 'vercel.com' },
         ],
       },
     ];
@@ -958,6 +959,7 @@ describe('getTransformedRoutes', () => {
             { type: 'header', key: 'x-rewrite' },
             { type: 'cookie', key: 'loggedIn', value: 'yup' },
             { type: 'query', key: 'authorized', value: 'yup' },
+            { type: 'host', value: 'vercel.com' },
           ],
         },
       ],
@@ -972,6 +974,7 @@ describe('getTransformedRoutes', () => {
             { type: 'header', key: 'x-redirect' },
             { type: 'cookie', key: 'loggedIn', value: 'yup' },
             { type: 'query', key: 'authorized', value: 'yup' },
+            { type: 'host', value: 'vercel.com' },
           ],
           permanent: false,
         },
@@ -1005,6 +1008,7 @@ describe('getTransformedRoutes', () => {
             { type: 'header', key: 'x-header' },
             { type: 'cookie', key: 'loggedIn', value: 'yup' },
             { type: 'query', key: 'authorized', value: 'yup' },
+            { type: 'host', value: 'vercel.com' },
           ],
           headers: [
             {
