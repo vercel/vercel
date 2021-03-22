@@ -9,11 +9,17 @@ export type RouteApiError = {
   errors?: string[]; // array of all error messages
 };
 
-export type HasField = Array<{
-  type: 'header' | 'cookie' | 'query';
-  key: string;
-  value?: string;
-}>;
+export type HasField = Array<
+  | {
+      type: 'host';
+      value: string;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: string;
+    }
+>;
 
 export type Source = {
   src: string;

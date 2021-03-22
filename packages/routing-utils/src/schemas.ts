@@ -2,23 +2,42 @@ const hasSchema = {
   type: 'array',
   maxItems: 16,
   items: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['type', 'key'],
-    properties: {
-      type: {
-        type: 'string',
-        enum: ['header', 'cookie', 'query'],
+    anyOf: [
+      {
+        type: 'object',
+        additionalProperties: false,
+        required: ['type', 'value'],
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['host'],
+          },
+          value: {
+            type: 'string',
+            maxLength: 4096,
+          },
+        },
       },
-      key: {
-        type: 'string',
-        maxLength: 4096,
+      {
+        type: 'object',
+        additionalProperties: false,
+        required: ['type', 'key'],
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['header', 'cookie', 'query'],
+          },
+          key: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          value: {
+            type: 'string',
+            maxLength: 4096,
+          },
+        },
       },
-      value: {
-        type: 'string',
-        maxLength: 4096,
-      },
-    },
+    ],
   },
 };
 

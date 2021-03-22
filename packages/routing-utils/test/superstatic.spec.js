@@ -211,6 +211,10 @@ test('convertRedirects', () => {
           key: 'loggedIn',
           value: '1',
         },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
       ],
       permanent: false,
     },
@@ -314,6 +318,10 @@ test('convertRedirects', () => {
           key: 'loggedIn',
           type: 'cookie',
           value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
         },
       ],
       headers: {
@@ -433,6 +441,10 @@ test('convertRewrites', () => {
           key: 'loggedIn',
           value: '1',
         },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
       ],
     },
   ]);
@@ -533,6 +545,10 @@ test('convertRewrites', () => {
           key: 'loggedIn',
           type: 'cookie',
           value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
         },
       ],
       src: '^\\/hello$',
@@ -697,6 +713,10 @@ test('convertHeaders', () => {
           type: 'cookie',
           value: '1',
         },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
       ],
     },
   ]);
@@ -747,6 +767,10 @@ test('convertHeaders', () => {
           key: 'loggedIn',
           type: 'cookie',
           value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
         },
       ],
       headers: {
