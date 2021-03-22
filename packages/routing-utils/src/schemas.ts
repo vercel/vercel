@@ -1,4 +1,4 @@
-const hasSchema = {
+export const hasSchema = {
   description: 'An array of requirements that are needed to match',
   type: 'array',
   maxItems: 16,
@@ -48,7 +48,7 @@ const hasSchema = {
       },
     ],
   },
-};
+} as const;
 
 /**
  * An ajv schema for the routes array
@@ -164,7 +164,7 @@ export const routesSchema = {
       },
     ],
   },
-};
+} as const;
 
 export const rewritesSchema = {
   type: 'array',
@@ -190,7 +190,7 @@ export const rewritesSchema = {
       has: hasSchema,
     },
   },
-};
+} as const;
 
 export const redirectsSchema = {
   title: 'Redirects',
@@ -228,7 +228,7 @@ export const redirectsSchema = {
       has: hasSchema,
     },
   },
-};
+} as const;
 
 export const headersSchema = {
   type: 'array',
@@ -269,16 +269,16 @@ export const headersSchema = {
       has: hasSchema,
     },
   },
-};
+} as const;
 
 export const cleanUrlsSchema = {
   description:
     'When set to `true`, all HTML files and Serverless Functions will have their extension removed. When visiting a path that ends with the extension, a 308 response will redirect the client to the extensionless path.',
   type: 'boolean',
-};
+} as const;
 
 export const trailingSlashSchema = {
   description:
     'When `false`, visiting a path that ends with a forward slash will respond with a `308` status code and redirect to the path without the trailing slash.',
   type: 'boolean',
-};
+} as const;
