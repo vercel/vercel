@@ -1,4 +1,5 @@
 const hasSchema = {
+  description: 'An array of requirements that are needed to match',
   type: 'array',
   maxItems: 16,
   items: {
@@ -9,10 +10,13 @@ const hasSchema = {
         required: ['type', 'value'],
         properties: {
           type: {
+            description: 'The type of request element to check',
             type: 'string',
             enum: ['host'],
           },
           value: {
+            description:
+              'A regular expression used to match the value. Named groups can be used in the destination',
             type: 'string',
             maxLength: 4096,
           },
@@ -24,14 +28,19 @@ const hasSchema = {
         required: ['type', 'key'],
         properties: {
           type: {
+            description: 'The type of request element to check',
             type: 'string',
             enum: ['header', 'cookie', 'query'],
           },
           key: {
+            description:
+              'The name of the element contained in the particular type',
             type: 'string',
             maxLength: 4096,
           },
           value: {
+            description:
+              'A regular expression used to match the value. Named groups can be used in the destination',
             type: 'string',
             maxLength: 4096,
           },
@@ -47,6 +56,10 @@ const hasSchema = {
 export const routesSchema = {
   type: 'array',
   maxItems: 1024,
+  deprecated: true,
+  description:
+    'A list of routes objects used to rewrite paths to point towards other internal or external paths',
+  example: [{ dest: 'https://docs.example.com', src: '/docs' }],
   items: {
     anyOf: [
       {
@@ -156,16 +169,21 @@ export const routesSchema = {
 export const rewritesSchema = {
   type: 'array',
   maxItems: 1024,
+  description: 'A list of rewrite definitions.',
   items: {
     type: 'object',
     additionalProperties: false,
     required: ['source', 'destination'],
     properties: {
       source: {
+        description:
+          'A pattern that matches each incoming pathname (excluding querystring).',
         type: 'string',
         maxLength: 4096,
       },
       destination: {
+        description:
+          'An absolute pathname to an existing resource or an external URL.',
         type: 'string',
         maxLength: 4096,
       },
@@ -178,23 +196,31 @@ export const redirectsSchema = {
   title: 'Redirects',
   type: 'array',
   maxItems: 1024,
+  description: 'A list of redirect definitions.',
   items: {
     type: 'object',
     additionalProperties: false,
     required: ['source', 'destination'],
     properties: {
       source: {
+        description:
+          'A pattern that matches each incoming pathname (excluding querystring).',
         type: 'string',
         maxLength: 4096,
       },
       destination: {
+        description:
+          'A location destination defined as an absolute pathname or external URL.',
         type: 'string',
         maxLength: 4096,
       },
       permanent: {
+        description:
+          'A boolean to toggle between permanent and temporary redirect. When `true`, the status code is `308`. When `false` the status code is `307`.',
         type: 'boolean',
       },
       statusCode: {
+        private: true,
         type: 'integer',
         minimum: 100,
         maximum: 999,
@@ -207,16 +233,21 @@ export const redirectsSchema = {
 export const headersSchema = {
   type: 'array',
   maxItems: 1024,
+  description: 'A list of header definitions.',
   items: {
     type: 'object',
     additionalProperties: false,
     required: ['source', 'headers'],
     properties: {
       source: {
+        description:
+          'A pattern that matches each incoming pathname (excluding querystring)',
         type: 'string',
         maxLength: 4096,
       },
       headers: {
+        description:
+          'An array of key/value pairs representing each response header.',
         type: 'array',
         maxItems: 1024,
         items: {
@@ -241,9 +272,13 @@ export const headersSchema = {
 };
 
 export const cleanUrlsSchema = {
+  description:
+    'When set to `true`, all HTML files and Serverless Functions will have their extension removed. When visiting a path that ends with the extension, a 308 response will redirect the client to the extensionless path.',
   type: 'boolean',
 };
 
 export const trailingSlashSchema = {
+  description:
+    'When `false`, visiting a path that ends with a forward slash will respond with a `308` status code and redirect to the path without the trailing slash.',
   type: 'boolean',
 };
