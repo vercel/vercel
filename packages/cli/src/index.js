@@ -397,7 +397,6 @@ const main = async () => {
     subcommand = argv._[3] || 'deploy';
     ctx.argv.push('-h');
   }
-  console.log(ctx.config);
 
   if (typeof argv['--api'] === 'string') {
     apiUrl = argv['--api'];
