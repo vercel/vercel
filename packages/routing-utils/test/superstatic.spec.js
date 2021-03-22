@@ -213,7 +213,7 @@ test('convertRedirects', () => {
         },
         {
           type: 'host',
-          value: 'vercel.com'
+          value: 'vercel.com',
         },
       ],
       permanent: false,
@@ -321,7 +321,7 @@ test('convertRedirects', () => {
         },
         {
           type: 'host',
-          value: 'vercel.com'
+          value: 'vercel.com',
         },
       ],
       headers: {
@@ -443,7 +443,7 @@ test('convertRewrites', () => {
         },
         {
           type: 'host',
-          value: 'vercel.com'
+          value: 'vercel.com',
         },
       ],
     },
@@ -548,7 +548,7 @@ test('convertRewrites', () => {
         },
         {
           type: 'host',
-          value: 'vercel.com'
+          value: 'vercel.com',
         },
       ],
       src: '^\\/hello$',
@@ -715,7 +715,7 @@ test('convertHeaders', () => {
         },
         {
           type: 'host',
-          value: 'vercel.com'
+          value: 'vercel.com',
         },
       ],
     },
@@ -770,7 +770,7 @@ test('convertHeaders', () => {
         },
         {
           type: 'host',
-          value: 'vercel.com'
+          value: 'vercel.com',
         },
       ],
       headers: {
