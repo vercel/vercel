@@ -1717,6 +1717,13 @@ test(
       null,
       expectHeader('image/gif'),
       fetchOpts('image/webp')
+    ); // bmp should bypass: serve as-is
+    await testPath(
+      200,
+      toUrl('/animated.bmp', 64, 50),
+      null,
+      expectHeader('image/bmp'),
+      fetchOpts('image/webp')
     );
   })
 );
