@@ -12,3 +12,5 @@ i18n/*
 
 .env
 .env.build
+
+.vercel
