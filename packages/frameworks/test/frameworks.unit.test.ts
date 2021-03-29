@@ -73,6 +73,7 @@ const Schema = {
       tagline: { type: 'string' },
       website: { type: 'string' },
       description: { type: 'string' },
+      envPrefix: { type: 'string' },
       useRuntime: {
         type: 'object',
         required: ['src', 'use'],
@@ -136,6 +137,7 @@ const Schema = {
       cachePattern: { type: 'string' },
       buildCommand: { type: ['string', 'null'] },
       devCommand: { type: ['string', 'null'] },
+      defaultVersion: { type: 'string' },
     },
   },
 };

@@ -1710,6 +1710,14 @@ test(
       expectHeader('image/svg+xml'),
       fetchOpts('image/webp')
     );
+    // bmp should bypass: serve as-is
+    await testPath(
+      200,
+      toUrl('/test.bmp', 64, 50),
+      null,
+      expectHeader('image/bmp'),
+      fetchOpts('image/webp')
+    );
     // animated gif should bypass: serve as-is
     await testPath(
       200,

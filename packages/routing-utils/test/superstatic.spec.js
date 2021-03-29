@@ -198,6 +198,26 @@ test('convertRedirects', () => {
       source: '/hello/:world',
       destination: '/somewhere?else={:world}',
     },
+    {
+      source: '/hello',
+      destination: '/another',
+      has: [
+        {
+          type: 'header',
+          key: 'x-rewrite',
+        },
+        {
+          type: 'cookie',
+          key: 'loggedIn',
+          value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
+      ],
+      permanent: false,
+    },
   ]);
 
   const expected = [
@@ -288,6 +308,28 @@ test('convertRedirects', () => {
       src: '^\\/hello(?:\\/([^\\/]+?))$',
       status: 308,
     },
+    {
+      has: [
+        {
+          key: 'x-rewrite',
+          type: 'header',
+        },
+        {
+          key: 'loggedIn',
+          type: 'cookie',
+          value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
+      ],
+      headers: {
+        Location: '/another',
+      },
+      src: '^\\/hello$',
+      status: 307,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -309,6 +351,7 @@ test('convertRedirects', () => {
     ['/optional', '/optional/1'],
     ['/feature-first', '/feature-second'],
     ['/hello/world', '/hello/again'],
+    ['/hello'],
   ];
 
   const mustNotMatch = [
@@ -328,6 +371,7 @@ test('convertRedirects', () => {
     ['/optionalnope', '/optionally'],
     ['/feature/first', '/feature'],
     ['/hello', '/hello/another/one'],
+    ['/helloooo'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -383,6 +427,25 @@ test('convertRewrites', () => {
     {
       source: '/hello/:world',
       destination: '/somewhere?else={:world}',
+    },
+    {
+      source: '/hello',
+      destination: '/another',
+      has: [
+        {
+          type: 'header',
+          key: 'x-rewrite',
+        },
+        {
+          type: 'cookie',
+          key: 'loggedIn',
+          value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
+      ],
     },
   ]);
 
@@ -470,6 +533,26 @@ test('convertRewrites', () => {
       src: '^\\/hello(?:\\/([^\\/]+?))$',
       check: true,
     },
+    {
+      check: true,
+      dest: '/another',
+      has: [
+        {
+          key: 'x-rewrite',
+          type: 'header',
+        },
+        {
+          key: 'loggedIn',
+          type: 'cookie',
+          value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
+      ],
+      src: '^\\/hello$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -493,6 +576,7 @@ test('convertRewrites', () => {
     ['/hello/post-123.html', '/post-123.html'],
     ['/feature-first', '/feature-second'],
     ['/hello/world', '/hello/again'],
+    ['/hello'],
   ];
 
   const mustNotMatch = [
@@ -514,6 +598,7 @@ test('convertRewrites', () => {
     ['/hello/post.html'],
     ['/feature/first', '/feature'],
     ['/hello', '/hello/another/one'],
+    ['/hllooo'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -610,6 +695,30 @@ test('convertHeaders', () => {
         },
       ],
     },
+    {
+      source: '/hello',
+      headers: [
+        {
+          key: 'x-header',
+          value: 'something',
+        },
+      ],
+      has: [
+        {
+          key: 'x-rewrite',
+          type: 'header',
+        },
+        {
+          key: 'loggedIn',
+          type: 'cookie',
+          value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
+      ],
+    },
   ]);
 
   const expected = [
@@ -647,6 +756,28 @@ test('convertHeaders', () => {
       },
       src: '^\\/like\\/params(?:\\/([^\\/]+?))$',
     },
+    {
+      continue: true,
+      has: [
+        {
+          key: 'x-rewrite',
+          type: 'header',
+        },
+        {
+          key: 'loggedIn',
+          type: 'cookie',
+          value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
+      ],
+      headers: {
+        'x-header': 'something',
+      },
+      src: '^\\/hello$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -656,6 +787,7 @@ test('convertHeaders', () => {
     ['404.html'],
     ['/blog/first-post', '/blog/another/one'],
     ['/like/params/first', '/like/params/second'],
+    ['/hello'],
   ];
 
   const mustNotMatch = [
@@ -663,6 +795,7 @@ test('convertHeaders', () => {
     ['403.html', '500.html'],
     ['/blogg', '/random'],
     ['/non-match', '/like/params', '/like/params/'],
+    ['/hellooo'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
