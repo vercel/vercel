@@ -70,8 +70,8 @@ export default async function ls(
 
 function getTable(records: ProjectEnvVariable[]) {
   return formatTable(
-    ['name', 'value', 'environments', 'created'],
-    ['l', 'l', 'l', 'l', 'l'],
+    ['name', 'value', 'environments', 'git branch', 'created'],
+    ['l', 'l', 'l', 'l', 'l', 'l'],
     [
       {
         name: '',
@@ -102,6 +102,7 @@ function getRow(env: ProjectEnvVariable) {
     (Array.isArray(env.target) ? env.target : [env.target || ''])
       .map(title)
       .join(', '),
+    env.gitBranch || '',
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }

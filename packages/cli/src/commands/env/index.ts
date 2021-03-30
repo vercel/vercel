@@ -59,7 +59,7 @@ const help = () => {
   )} Add a new variable for a specific Environment and Git Branch
 
       ${chalk.cyan(
-        `$ ${getPkgName()} env add <name> ${targetPlaceholder} <branch>`
+        `$ ${getPkgName()} env add <name> ${targetPlaceholder} <gitbranch>`
       )}
       ${chalk.cyan(`$ ${getPkgName()} env add DB_PASS preview feat1`)}
 
@@ -86,7 +86,7 @@ const help = () => {
   )} Remove a variable from a specific Environment and Git Branch
 
       ${chalk.cyan(
-        `$ ${getPkgName()} env rm <name> ${targetPlaceholder} <branch>`
+        `$ ${getPkgName()} env rm <name> ${targetPlaceholder} <gitbranch>`
       )}
       ${chalk.cyan(`$ ${getPkgName()} env rm NPM_RC preview feat1`)}
 `);
