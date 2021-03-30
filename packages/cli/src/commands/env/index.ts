@@ -5,7 +5,6 @@ import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { getEnvTypePlaceholder } from '../../util/env/env-type';
 import { getLinkedProject } from '../../util/projects/link';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
@@ -18,17 +17,16 @@ import ls from './ls';
 import rm from './rm';
 
 const help = () => {
-  const typePlaceholder = getEnvTypePlaceholder();
   const targetPlaceholder = getEnvTargetPlaceholder();
   console.log(`
   ${chalk.bold(`${logo} ${getPkgName()} env`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
-    ls      [environment]                   List all variables for the specified Environment
-    add     [type] [name] [environment]     Add an Environment Variable (see examples below)
-    rm      [name] [environment]            Remove an Environment Variable (see examples below)
-    pull    [filename]                      Pull all Development Environment Variables from the cloud and write to a file [.env]
+    ls      [environment] [gitbranch]         List all variables for the specified Environment
+    add     [name] [environment] [gitbranch]  Add an Environment Variable (see examples below)
+    rm      [name] [environment] [gitbranch]  Remove an Environment Variable (see examples below)
+    pull    [filename]                        Pull all Development Environment Variables from the cloud and write to a file [.env]
 
   ${chalk.dim('Options:')}
 
@@ -48,27 +46,30 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new variable to multiple Environments
 
-      ${chalk.cyan(`$ ${getPkgName()} env add ${typePlaceholder} <name>`)}
-      ${chalk.cyan(`$ ${getPkgName()} env add secret API_TOKEN`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add <name>`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add API_TOKEN`)}
 
   ${chalk.gray('–')} Add a new variable for a specific Environment
 
+      ${chalk.cyan(`$ ${getPkgName()} env add <name> ${targetPlaceholder}`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add DB_PASS production`)}
+
+  ${chalk.gray(
+    '–'
+  )} Add a new variable for a specific Environment and Git Branch
+
       ${chalk.cyan(
-        `$ ${getPkgName()} env add ${typePlaceholder} <name> ${targetPlaceholder}`
+        `$ ${getPkgName()} env add <name> ${targetPlaceholder} <branch>`
       )}
-      ${chalk.cyan(`$ ${getPkgName()} env add secret DB_PASS production`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add DB_PASS preview feat1`)}
 
   ${chalk.gray('–')} Add a new Environment Variable from stdin
 
       ${chalk.cyan(
-        `$ cat <file> | ${getPkgName()} env add ${typePlaceholder} <name> ${targetPlaceholder}`
+        `$ cat <file> | ${getPkgName()} env add <name> ${targetPlaceholder}`
       )}
-      ${chalk.cyan(
-        `$ cat ~/.npmrc | ${getPkgName()} env add plain NPM_RC preview`
-      )}
-      ${chalk.cyan(
-        `$ ${getPkgName()} env add plain API_URL production < url.txt`
-      )}
+      ${chalk.cyan(`$ cat ~/.npmrc | ${getPkgName()} env add NPM_RC preview`)}
+      ${chalk.cyan(`$ ${getPkgName()} env add API_URL production < url.txt`)}
 
   ${chalk.gray('–')} Remove an variable from multiple Environments
 
@@ -79,6 +80,15 @@ const help = () => {
 
       ${chalk.cyan(`$ ${getPkgName()} env rm <name> ${targetPlaceholder}`)}
       ${chalk.cyan(`$ ${getPkgName()} env rm NPM_RC preview`)}
+
+  ${chalk.gray(
+    '–'
+  )} Remove a variable from a specific Environment and Git Branch
+
+      ${chalk.cyan(
+        `$ ${getPkgName()} env rm <name> ${targetPlaceholder} <branch>`
+      )}
+      ${chalk.cyan(`$ ${getPkgName()} env rm NPM_RC preview feat1`)}
 `);
 };
 
