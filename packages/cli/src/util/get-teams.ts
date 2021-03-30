@@ -12,9 +12,9 @@ export default async function getTeams(client: Client): Promise<Team[]> {
   try {
     // we're using NowTeams because `client.fetch` hangs on windows
     const teamClient = new NowTeams({
-      apiUrl: client._apiUrl,
-      token: client._token,
-      debug: client._debug,
+      apiUrl: client.apiUrl,
+      token: client.authConfig.token,
+      debug: client.output.isDebugEnabled(),
     });
 
     teams = (await teamClient.ls()).teams;

@@ -1,16 +1,9 @@
-import { NowConfig } from './util/dev/types';
-import { Output } from './util/output';
+import Client from './util/client';
+
+// Backwards-compat
+export { Client as NowContext };
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
-
-export interface NowContext {
-  argv: string[];
-  apiUrl: string;
-  authConfig: AuthConfig;
-  output: Output;
-  config: GlobalConfig;
-  localConfig: NowConfig;
-}
 
 export interface AuthConfig {
   token: string;

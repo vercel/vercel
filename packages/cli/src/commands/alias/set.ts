@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
 import { AliasRecord } from '../../util/alias/create-alias';
-import { NowContext, Domain } from '../../types';
+import { Domain } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
@@ -27,30 +27,13 @@ type Options = {
 };
 
 export default async function set(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-    localConfig,
-  } = ctx;
+  const { output, localConfig } = client;
 
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
   const setStamp = stamp();
-
-  const { '--debug': debugEnabled } = opts;
-
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
 
   let user: User;
   let contextName: string | null = null;

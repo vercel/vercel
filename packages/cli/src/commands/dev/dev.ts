@@ -2,7 +2,7 @@ import { resolve, join } from 'path';
 
 import DevServer from '../../util/dev/server';
 import parseListen from '../../util/dev/parse-listen';
-import { NowContext, ProjectEnvVariable } from '../../types';
+import { ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
@@ -19,27 +19,19 @@ type Options = {
 };
 
 export default async function dev(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const { output } = ctx;
+  const { output } = client;
   const [dir = '.'] = args;
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
   const debug = opts['--debug'] || false;
 
-  const client = new Client({
-    apiUrl: ctx.apiUrl,
-    token: ctx.authConfig.token,
-    currentTeam: ctx.config.currentTeam,
-    debug,
-    output,
-  });
-
   // retrieve dev command
   let [link, frameworks] = await Promise.all([
-    getLinkedProject(output, client, cwd),
+    getLinkedProject(client, cwd),
     getFrameworks(client),
   ]);
 
@@ -48,7 +40,7 @@ export default async function dev(
     const forceDelete = false;
 
     link = await setupAndLink(
-      ctx,
+      client,
       cwd,
       forceDelete,
       autoConfirm,
@@ -73,7 +65,7 @@ export default async function dev(
   let systemEnvValues: string[] = [];
   if (link.status === 'linked') {
     const { project, org } = link;
-    client.currentTeam = org.type === 'team' ? org.id : undefined;
+    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
 

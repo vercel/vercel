@@ -76,6 +76,7 @@ Sentry.init({
   environment: isCanary ? 'canary' : 'stable',
 });
 
+let client;
 let debug = () => {};
 let apiUrl = 'https://api.vercel.com';
 
@@ -330,14 +331,30 @@ const main = async () => {
     );
   }
 
-  // the context object to supply to the providers or the commands
-  const ctx = {
+  if (typeof argv['--api'] === 'string') {
+    apiUrl = argv['--api'];
+  } else if (config && config.api) {
+    apiUrl = config.api;
+  }
+
+  try {
+    // eslint-disable-next-line no-new
+    new URL(apiUrl);
+  } catch (err) {
+    output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
+    return 1;
+  }
+
+  // Shared API `Client` instance for all sub-commands to utilize
+  client = new Client({
+    apiUrl,
     output,
     config,
     authConfig,
     localConfig,
     argv: process.argv,
-  };
+  });
+  console.log(client);
 
   let subcommand;
 
@@ -395,33 +412,14 @@ const main = async () => {
 
   if (subcommand === 'help') {
     subcommand = argv._[3] || 'deploy';
-    ctx.argv.push('-h');
+    client.argv.push('-h');
   }
 
-  if (typeof argv['--api'] === 'string') {
-    apiUrl = argv['--api'];
-  } else if (ctx.config && ctx.config.api) {
-    apiUrl = ctx.config.api;
-  }
-
-  ctx.apiUrl = apiUrl;
-
-  try {
-    // eslint-disable-next-line no-new
-    new URL(ctx.apiUrl);
-  } catch (err) {
-    output.error(
-      `Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`
-    );
-    return 1;
-  }
-
-  // If no credentials are set at all, prompt for
-  // login to the .sh provider
+  // Prompt for login if there is not current token
   if (
     (!authConfig || !authConfig.token) &&
-    !ctx.argv.includes('-h') &&
-    !ctx.argv.includes('--help') &&
+    !client.argv.includes('-h') &&
+    !client.argv.includes('--help') &&
     !argv['--token'] &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
@@ -429,11 +427,11 @@ const main = async () => {
       output.log(info(`No existing credentials found. Please log in:`));
 
       subcommand = 'login';
-      ctx.argv[2] = 'login';
+      client.argv[2] = 'login';
 
       // Ensure that subcommands lead to login as well, if
       // no credentials are defined
-      ctx.argv = ctx.argv.splice(0, 3);
+      client.argv = client.argv.splice(0, 3);
     } else {
       output.prettyError({
         message:
@@ -489,11 +487,11 @@ const main = async () => {
       return 1;
     }
 
-    ctx.authConfig.token = token;
+    client.authConfig.token = token;
 
     // Don't use team from config if `--token` was set
-    if (ctx.config && ctx.config.currentTeam) {
-      delete ctx.config.currentTeam;
+    if (client.config && client.config.currentTeam) {
+      delete client.config.currentTeam;
     }
   }
 
@@ -507,7 +505,7 @@ const main = async () => {
 
   const {
     authConfig: { token },
-  } = ctx;
+  } = client;
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
@@ -520,7 +518,6 @@ const main = async () => {
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
     let user = null;
-    const client = new Client({ apiUrl, token, output });
 
     try {
       user = await getUser(client);
@@ -541,7 +538,7 @@ const main = async () => {
     }
 
     if (user.uid === scope || user.email === scope || user.username === scope) {
-      delete ctx.config.currentTeam;
+      delete client.config.currentTeam;
     } else {
       let list = [];
 
@@ -578,7 +575,7 @@ const main = async () => {
         return 1;
       }
 
-      ctx.config.currentTeam = related.id;
+      client.config.currentTeam = related.id;
     }
   }
 
@@ -595,7 +592,7 @@ const main = async () => {
   try {
     const start = new Date();
     const full = require(`./commands/${targetCommand}`).default;
-    exitCode = await full(ctx);
+    exitCode = await full(client);
     const end = new Date() - start;
 
     if (shouldCollectMetrics) {
@@ -649,7 +646,7 @@ const main = async () => {
       output.debug(err.stack);
       output.prettyError(err);
     } else {
-      await reportError(Sentry, err, apiUrl, configFiles);
+      await reportError(Sentry, client, err);
 
       // Otherwise it is an unexpected error and we should show the trace
       // and an unexpected error message
@@ -676,7 +673,7 @@ const handleRejection = async err => {
       await handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
-      await reportError(Sentry, err, apiUrl, configFiles);
+      await reportError(Sentry, client, err);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
@@ -694,7 +691,7 @@ const handleUnexpected = async err => {
     return;
   }
 
-  await reportError(Sentry, err, apiUrl, configFiles);
+  await reportError(Sentry, client, err);
 
   console.error(error(`An unexpected error occurred!\n${err.stack}`));
 

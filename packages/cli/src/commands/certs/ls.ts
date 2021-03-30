@@ -8,7 +8,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
-import { NowContext, Cert } from '../../types';
+import { Cert } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -18,7 +18,7 @@ interface Options {
 }
 
 async function ls(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ): Promise<number> {
@@ -26,11 +26,10 @@ async function ls(
     authConfig: { token },
     output,
     config,
-  } = ctx;
+  } = client;
   const { currentTeam } = config;
-  const { apiUrl } = ctx;
+  const { apiUrl } = client;
   const { '--debug': debug, '--next': nextTimestamp } = opts;
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {

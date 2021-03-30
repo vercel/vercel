@@ -1,7 +1,7 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
-import { NowContext, ProjectLinkResult, ProjectSettings } from '../../types';
+import { ProjectLinkResult, ProjectSettings } from '../../types';
 import { NowConfig } from '../dev/types';
 import {
   getLinkedProject,
@@ -28,7 +28,7 @@ import createDeploy from '../deploy/create-deploy';
 import Now from '../index';
 
 export default async function setupAndLink(
-  ctx: NowContext,
+  client: Client,
   path: string,
   forceDelete: boolean,
   autoConfirm: boolean,
@@ -40,22 +40,15 @@ export default async function setupAndLink(
     apiUrl,
     output,
     config,
-  } = ctx;
+  } = client;
   const debug = output.isDebugEnabled();
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam: config.currentTeam,
-    debug,
-    output,
-  });
 
   const isFile = !isDirectory(path);
   if (isFile) {
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1 };
   }
-  const link = await getLinkedProject(output, client, path);
+  const link = await getLinkedProject(client, path);
   const isTTY = process.stdout.isTTY;
   const quiet = !isTTY;
   let rootDirectory: string | null = null;
@@ -146,11 +139,11 @@ export default async function setupAndLink(
   }
 
   let localConfig: NowConfig = {};
-  if (ctx.localConfig && !(ctx.localConfig instanceof Error)) {
-    localConfig = ctx.localConfig;
+  if (client.localConfig && !(client.localConfig instanceof Error)) {
+    localConfig = client.localConfig;
   }
 
-  client.currentTeam = org.type === 'team' ? org.id : undefined;
+  config.currentTeam = org.type === 'team' ? org.id : undefined;
   const isZeroConfig = !localConfig.builds || localConfig.builds.length === 0;
 
   try {
@@ -162,7 +155,7 @@ export default async function setupAndLink(
         token,
         debug,
         output,
-        currentTeam: client.currentTeam,
+        currentTeam: config.currentTeam,
       });
       const createArgs: any = {
         name: newProjectName,
@@ -190,7 +183,7 @@ export default async function setupAndLink(
       const deployment = await createDeploy(
         output,
         now,
-        client.currentTeam || 'current user',
+        config.currentTeam || 'current user',
         [sourcePath],
         createArgs,
         org,
@@ -204,7 +197,7 @@ export default async function setupAndLink(
         deployment.code !== 'missing_project_settings'
       ) {
         output.error('Failed to detect project settings. Please try again.');
-        if (output.isDebugEnabled()) {
+        if (debug) {
           console.log(deployment);
         }
         return { status: 'error', exitCode: 1 };

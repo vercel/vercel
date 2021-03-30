@@ -7,7 +7,6 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
-import { NowContext } from '../../types';
 import { getCommandName } from '../../util/pkg-name';
 
 interface Options {
@@ -19,7 +18,7 @@ interface Options {
 }
 
 async function add(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ): Promise<number> {
@@ -27,9 +26,9 @@ async function add(
     authConfig: { token },
     output,
     config,
-  } = ctx;
+  } = client;
   const { currentTeam } = config;
-  const { apiUrl } = ctx;
+  const { apiUrl } = client;
   const addStamp = stamp();
 
   let cert;
@@ -43,13 +42,6 @@ async function add(
   } = opts;
 
   let contextName = null;
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
 
   try {
     ({ contextName } = await getScope(client));

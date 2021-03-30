@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { NowContext, User, Team } from '../../types';
+import { User, Team } from '../../types';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -17,24 +17,15 @@ import getTeams from '../../util/get-teams';
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
-  '--debug': boolean;
   '--yes': boolean;
 };
 
 export default async function move(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
   let contextName = null;
   let user = null;
 

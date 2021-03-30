@@ -47,13 +47,13 @@ const help = () => {
   `);
 };
 
-export default async function main(ctx: NowContext) {
+export default async function main(client: NowContext) {
   let argv;
   let args;
-  const { output } = ctx;
+  const { output } = client;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--listen': String,
       '-l': '--listen',
       '--confirm': Boolean,
@@ -117,7 +117,7 @@ export default async function main(ctx: NowContext) {
   }
 
   try {
-    return await dev(ctx, argv, args);
+    return await dev(client, argv, args);
   } catch (err) {
     if (err.code === 'ENOTFOUND') {
       // Error message will look like the following:
