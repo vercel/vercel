@@ -1,12 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { Output } from '../../util/output';
-import {
-  ProjectEnvTarget,
-  Project,
-  ProjectEnvVariable,
-  ProjectEnvType,
-} from '../../types';
+import { Project, ProjectEnvVariable, ProjectEnvType } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvVariables from '../../util/env/get-env-records';
@@ -32,16 +27,16 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  if (args.length > 1) {
+  if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env ls ${getEnvTargetPlaceholder()}`
+        `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
       )}`
     );
     return 1;
   }
 
-  const envTarget = args[0] as ProjectEnvTarget | undefined;
+  const [envTarget, envGitBranch] = args;
 
   if (!isValidEnvTarget(envTarget)) {
     output.error(
@@ -56,6 +51,7 @@ export default async function ls(
 
   const { envs } = await getEnvVariables(output, client, project.id, {
     target: envTarget,
+    gitBranch: envGitBranch,
   });
 
   output.log(
