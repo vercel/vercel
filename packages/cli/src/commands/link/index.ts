@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
@@ -48,11 +48,11 @@ const COMMAND_CONFIG = {
   // No subcommands yet
 };
 
-export default async function main(ctx: NowContext) {
+export default async function main(client: Client) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--confirm': Boolean,
     });
   } catch (error) {
@@ -71,7 +71,7 @@ export default async function main(ctx: NowContext) {
   const forceDelete = true;
 
   const link = await setupAndLink(
-    ctx,
+    client,
     path,
     forceDelete,
     autoConfirm,

@@ -5,7 +5,6 @@ import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
 import { maybeURL, normalizeURL } from '../util/url';
 import printEvents from '../util/events';
-import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import { getPkgName } from '../util/pkg-name.ts';
 
@@ -53,7 +52,7 @@ const help = () => {
 `);
 };
 
-export default async function main(ctx) {
+export default async function main(client) {
   let argv;
   let deploymentIdOrURL;
 
@@ -66,7 +65,7 @@ export default async function main(ctx) {
   let since;
   let until;
 
-  argv = mri(ctx.argv.slice(2), {
+  argv = mri(client.argv.slice(2), {
     string: ['since', 'until', 'output'],
     boolean: ['help', 'debug', 'head', 'follow'],
     alias: {
@@ -90,7 +89,7 @@ export default async function main(ctx) {
     apiUrl,
     output,
     config,
-  } = ctx;
+  } = client;
 
   try {
     since = argv.since ? toTimestamp(argv.since) : 0;
@@ -128,13 +127,6 @@ export default async function main(ctx) {
 
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam, output });
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug,
-    output,
-  });
   let contextName = null;
 
   try {

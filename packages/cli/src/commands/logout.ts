@@ -10,7 +10,7 @@ import {
   writeToAuthConfigFile,
 } from '../util/config/files';
 import getArgs from '../util/get-args';
-import { NowContext } from '../types';
+import Client from '../util/client';
 import { Output } from '../util/output';
 import { getPkgName } from '../util/pkg-name';
 
@@ -36,11 +36,11 @@ const help = () => {
 `);
 };
 
-export default async function main(ctx: NowContext): Promise<number> {
+export default async function main(client: Client): Promise<number> {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--help': Boolean,
       '-h': '--help',
     });
@@ -54,7 +54,7 @@ export default async function main(ctx: NowContext): Promise<number> {
     return 2;
   }
 
-  return logout(ctx.apiUrl, ctx.output);
+  return logout(client.apiUrl, client.output);
 }
 
 const logout = async (apiUrl: string, output: Output) => {

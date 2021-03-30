@@ -66,8 +66,8 @@ let debug;
 let apiUrl;
 let subcommand;
 
-const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
+const main = async client => {
+  argv = mri(client.argv.slice(2), {
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
@@ -78,7 +78,7 @@ const main = async ctx => {
   });
 
   debug = argv.debug;
-  apiUrl = ctx.apiUrl;
+  apiUrl = client.apiUrl;
 
   const isSwitch = argv._[0] && argv._[0] === 'switch';
 
@@ -99,14 +99,14 @@ const main = async ctx => {
     authConfig: { token },
     output,
     config,
-  } = ctx;
+  } = client;
 
   return run({ token, config, output });
 };
 
-export default async ctx => {
+export default async client => {
   try {
-    return main(ctx);
+    return main(client);
   } catch (err) {
     handleError(err);
     return 1;

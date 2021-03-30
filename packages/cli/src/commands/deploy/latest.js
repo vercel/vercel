@@ -5,7 +5,6 @@ import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
 import { fileNameSymbol } from '@vercel/client';
 import { getPrettyError } from '@vercel/build-utils';
-import Client from '../../util/client';
 import { handleError } from '../../util/error';
 import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
@@ -209,7 +208,7 @@ const parseEnv = env => {
 };
 
 export default async function main(
-  ctx,
+  client,
   contextName,
   output,
   stats,
@@ -219,7 +218,7 @@ export default async function main(
   let argv = null;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), args);
+    argv = getArgs(client.argv.slice(2), args);
   } catch (error) {
     handleError(error);
     return 1;
@@ -228,7 +227,7 @@ export default async function main(
   const {
     apiUrl,
     authConfig: { token },
-  } = ctx;
+  } = client;
   const { log, debug, error, warn } = output;
   const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
@@ -257,13 +256,6 @@ export default async function main(
       )}\n`
     );
   }
-
-  const client = new Client({
-    apiUrl: ctx.apiUrl,
-    token: ctx.authConfig.token,
-    debug: debugEnabled,
-    output,
-  });
 
   // retrieve `project` and `org` from .vercel
   const link = await getLinkedProject(client, path);
@@ -295,7 +287,7 @@ export default async function main(
         output,
         'Which scope do you want to deploy to?',
         client,
-        ctx.config.currentTeam,
+        client.config.currentTeam,
         autoConfirm
       );
     } catch (err) {
@@ -640,13 +632,7 @@ export default async function main(
 
       const purchase = await purchaseDomainIfAvailable(
         output,
-        new Client({
-          apiUrl: ctx.apiUrl,
-          token: ctx.authConfig.token,
-          currentTeam: org.id,
-          debug: debugEnabled,
-          output,
-        }),
+        client,
         err.meta.domain,
         contextName
       );
@@ -723,13 +709,7 @@ export default async function main(
 
   return printDeploymentStatus(
     output,
-    new Client({
-      apiUrl: ctx.apiUrl,
-      token: ctx.authConfig.token,
-      currentTeam: org.type === 'team' ? org.id : null,
-      debug: debugEnabled,
-      output,
-    }),
+    client,
     deployment,
     deployStamp,
     !argv['--no-clipboard'],

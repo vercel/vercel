@@ -70,11 +70,11 @@ const COMMAND_CONFIG = {
   set: ['set'],
 };
 
-export default async function main(ctx) {
+export default async function main(client) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--json': Boolean,
       '--yes': Boolean,
       '--next': Number,
@@ -95,10 +95,10 @@ export default async function main(ctx) {
 
   switch (subcommand) {
     case 'ls':
-      return ls(ctx, argv, args);
+      return ls(client, argv, args);
     case 'rm':
-      return rm(ctx, argv, args);
+      return rm(client, argv, args);
     default:
-      return set(ctx, argv, args);
+      return set(client, argv, args);
   }
 }

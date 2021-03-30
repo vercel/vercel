@@ -92,6 +92,7 @@ export default class Client extends EventEmitter {
     }
 
     opts.headers = opts.headers || {};
+    console.log('authConfig', this.authConfig);
     opts.headers.Authorization = `Bearer ${this.authConfig.token}`;
     opts.headers['user-agent'] = ua;
 

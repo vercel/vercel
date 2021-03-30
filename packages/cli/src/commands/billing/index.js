@@ -55,8 +55,8 @@ let debug;
 let apiUrl;
 let subcommand;
 
-export default async ctx => {
-  argv = mri(ctx.argv.slice(2), {
+export default async client => {
+  argv = mri(client.argv.slice(2), {
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
@@ -67,7 +67,7 @@ export default async ctx => {
   argv._ = argv._.slice(1);
 
   debug = argv.debug;
-  apiUrl = ctx.apiUrl;
+  apiUrl = client.apiUrl;
   subcommand = argv._[0];
 
   if (argv.help || !subcommand) {
@@ -78,7 +78,7 @@ export default async ctx => {
   const {
     authConfig: { token },
     config,
-  } = ctx;
+  } = client;
 
   return run({ token, config });
 };

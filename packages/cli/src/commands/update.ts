@@ -4,7 +4,7 @@ import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
 import handleError from '../util/handle-error';
 import getArgs from '../util/get-args';
-import { NowContext } from '../types';
+import Client from '../util/client';
 import getUpdateCommand from '../util/get-update-command';
 import { getPkgName, getTitleName } from '../util/pkg-name';
 
@@ -32,12 +32,12 @@ const help = () => {
   `);
 };
 
-export default async function main(ctx: NowContext): Promise<number> {
+export default async function main(client: Client): Promise<number> {
   let argv;
-  const { output } = ctx;
+  const { output } = client;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--channel': String,
       '-c': '--channel',
       '--release': String,

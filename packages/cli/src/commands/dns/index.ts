@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
@@ -96,11 +96,11 @@ const COMMAND_CONFIG = {
   rm: ['rm', 'remove'],
 };
 
-export default async function main(ctx: NowContext) {
+export default async function main(client: Client) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), { '--next': Number, '-N': '--next' });
+    argv = getArgs(client.argv.slice(2), { '--next': Number, '-N': '--next' });
   } catch (error) {
     handleError(error);
     return 1;
@@ -114,12 +114,12 @@ export default async function main(ctx: NowContext) {
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'add':
-      return add(ctx, argv, args);
+      return add(client, argv, args);
     case 'import':
-      return importZone(ctx, argv, args);
+      return importZone(client, argv, args);
     case 'rm':
-      return rm(ctx, argv, args);
+      return rm(client, argv, args);
     default:
-      return ls(ctx, argv, args);
+      return ls(client, argv, args);
   }
 }

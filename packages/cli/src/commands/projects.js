@@ -5,7 +5,6 @@ import strlen from '../util/strlen';
 import getArgs from '../util/get-args';
 import { handleError, error } from '../util/error';
 import exit from '../util/exit';
-import Client from '../util/client.ts';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import getCommandFlags from '../util/get-command-flags';
@@ -49,13 +48,11 @@ const help = () => {
 
 // Options
 let argv;
-let debug;
-let apiUrl;
 let subcommand;
 
-const main = async ctx => {
+const main = async client => {
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--next': Number,
       '-N': '--next',
     });
@@ -66,8 +63,6 @@ const main = async ctx => {
 
   argv._ = argv._.slice(1);
 
-  debug = argv['--debug'];
-  apiUrl = ctx.apiUrl;
   subcommand = argv._[0] || 'list';
 
   if (argv['--help']) {
@@ -75,12 +70,7 @@ const main = async ctx => {
     return exit(2);
   }
 
-  const {
-    authConfig: { token },
-    config: { currentTeam },
-    output,
-  } = ctx;
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
 
   let contextName = null;
 
@@ -103,9 +93,9 @@ const main = async ctx => {
   }
 };
 
-export default async ctx => {
+export default async client => {
   try {
-    await main(ctx);
+    await main(client);
   } catch (err) {
     handleError(err);
     process.exit(1);
