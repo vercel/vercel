@@ -266,7 +266,7 @@ export default async function main(
   });
 
   // retrieve `project` and `org` from .vercel
-  const link = await getLinkedProject(output, client, path);
+  const link = await getLinkedProject(client, path);
 
   if (link.status === 'error') {
     return link.exitCode;
