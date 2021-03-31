@@ -142,6 +142,7 @@ export default async client => {
   try {
     return await main(client);
   } catch (err) {
+    console.error(err);
     handleError(err);
     return 1;
   }

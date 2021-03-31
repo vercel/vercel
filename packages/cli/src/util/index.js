@@ -20,7 +20,7 @@ export default class Now extends EventEmitter {
   constructor({
     apiUrl,
     token,
-    currentTeam,
+    currentTeam = null,
     forceNew = false,
     withCache = false,
     debug = false,
@@ -88,7 +88,6 @@ export default class Now extends EventEmitter {
     const deployment = await processDeployment({
       now: this,
       output: this._output,
-      hashes,
       paths,
       requestBody,
       uploadStamp,

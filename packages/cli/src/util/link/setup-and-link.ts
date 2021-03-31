@@ -22,9 +22,7 @@ import { inputRootDirectory } from '../input/input-root-directory';
 import editProjectSettings from '../input/edit-project-settings';
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
-//@ts-expect-error
 import createDeploy from '../deploy/create-deploy';
-//@ts-expect-error
 import Now from '../index';
 
 export default async function setupAndLink(

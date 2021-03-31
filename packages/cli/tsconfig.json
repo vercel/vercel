@@ -6,6 +6,7 @@
     "module": "CommonJS",
     "target": "ES2018",
     "esModuleInterop": true,
+    "allowJs": true,
     "lib": ["ES2018"],
     "resolveJsonModule": true,
     "sourceMap": true,

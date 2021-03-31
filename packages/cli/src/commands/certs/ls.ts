@@ -1,8 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-// @ts-ignore
-import Now from '../../util';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -13,7 +11,6 @@ import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
 interface Options {
-  '--debug'?: boolean;
   '--next'?: number;
 }
 
@@ -22,14 +19,8 @@ async function ls(
   opts: Options,
   args: string[]
 ): Promise<number> {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = client;
-  const { currentTeam } = config;
-  const { apiUrl } = client;
-  const { '--debug': debug, '--next': nextTimestamp } = opts;
+  const { output } = client;
+  const { '--next': nextTimestamp } = opts;
   let contextName = null;
 
   try {
@@ -46,7 +37,6 @@ async function ls(
     output.error('Please provide a number for flag --next');
     return 1;
   }
-  const now = new Now({ apiUrl, token, debug, currentTeam, output });
   const lsStamp = stamp();
 
   if (args.length !== 0) {
@@ -59,7 +49,7 @@ async function ls(
   }
 
   // Get the list of certificates
-  const { certs, pagination } = await getCerts(now, nextTimestamp).catch(
+  const { certs, pagination } = await getCerts(client, nextTimestamp).catch(
     err => err
   );
 
