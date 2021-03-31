@@ -123,10 +123,8 @@ export default class Client extends EventEmitter {
 
           this.authConfig.token = result;
           writeToAuthConfigFile(this.authConfig);
-          throw error;
-        }
-
-        if (res.status >= 400 && res.status < 500) {
+        } else if (res.status >= 400 && res.status < 500) {
+          // Any other 4xx should bail without retrying
           return bail(error);
         }
 
