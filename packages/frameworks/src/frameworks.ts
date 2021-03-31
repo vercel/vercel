@@ -29,6 +29,7 @@ export const frameworks = [
     description:
       'A brand new Blitz.js app - the result of running `npx blitz new`.',
     website: 'https://blitzjs.com',
+    envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
       every: [
@@ -68,6 +69,7 @@ export const frameworks = [
     description: 'A Next.js app and a Serverless Function API.',
     website: 'https://nextjs.org',
     sort: 1,
+    envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
       every: [
@@ -114,6 +116,7 @@ export const frameworks = [
       'A Gatsby app, using the default starter theme and a Serverless Function API.',
     website: 'https://gatsbyjs.org',
     sort: 2,
+    envPrefix: 'GATSBY_',
     detectors: {
       every: [
         {
@@ -573,6 +576,7 @@ export const frameworks = [
       'Vue.js is a versatile JavaScript framework that is as approachable as it is performant.',
     description: 'A Vue.js app, created with the Vue CLI.',
     website: 'https://vuejs.org',
+    envPrefix: 'VUE_APP_',
     detectors: {
       every: [
         {
@@ -839,6 +843,11 @@ export const frameworks = [
         {
           path: 'package.json',
           matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"svelte":\\s*".+?"[^}]*}',
+        },
+        {
+          path: 'package.json',
+          matchContent:
             '"(dev)?(d|D)ependencies":\\s*{[^}]*"sirv-cli":\\s*".+?"[^}]*}',
         },
       ],
@@ -851,14 +860,14 @@ export const frameworks = [
         placeholder: '`npm run build` or `rollup -c`',
       },
       devCommand: {
-        value: 'sirv public --single --dev --port $PORT',
+        value: 'rollup -c -w',
       },
       outputDirectory: {
         value: 'public',
       },
     },
     dependency: 'sirv-cli',
-    devCommand: 'sirv public --single --dev --port $PORT',
+    devCommand: 'rollup -c -w',
     buildCommand: 'rollup -c',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
@@ -944,6 +953,7 @@ export const frameworks = [
     description:
       'A React app, bootstrapped with create-react-app, and a Serverless Function API.',
     website: 'https://create-react-app.dev',
+    envPrefix: 'REACT_APP_',
     detectors: {
       some: [
         {
@@ -1249,6 +1259,7 @@ export const frameworks = [
       'Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.',
     description: 'A Nuxt.js app, bootstrapped with create-nuxt-app.',
     website: 'https://nuxtjs.org',
+    envPrefix: 'NUXT_ENV_',
     detectors: {
       every: [
         {
@@ -1306,6 +1317,7 @@ export const frameworks = [
     tagline: 'RedwoodJS is a full-stack framework for the Jamstack.',
     description: 'A RedwoodJS app, bootstraped with create-redwood-app.',
     website: 'https://redwoodjs.com',
+    envPrefix: 'REDWOOD_ENV_',
     useRuntime: { src: 'package.json', use: '@vercel/redwood' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
