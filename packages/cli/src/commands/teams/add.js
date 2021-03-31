@@ -144,8 +144,7 @@ export default async function add(client, teams) {
 
   stopSpinner();
 
-  client.argv._ = [];
-  await invite(client, teams, {
+  await invite(client, { _: [] }, teams, {
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${getCommandName(
       `teams invite`
