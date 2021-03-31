@@ -9,6 +9,8 @@ import ua from './ua';
 import printIndications from './print-indications';
 import { AuthConfig, GlobalConfig } from '../types';
 import { NowConfig } from './dev/types';
+import doSsoLogin from './login/sso';
+import { writeToAuthConfigFile } from './config/files';
 
 export interface FetchOptions {
   body?: NodeJS.ReadableStream | object | string;
@@ -107,6 +109,22 @@ export default class Client extends EventEmitter {
 
       if (!res.ok) {
         const error = await responseError(res);
+
+        if (error.saml && error.teamId) {
+          // If a SAML error is encountered then we re-trigger the SAML
+          // authentication flow for the team specified in the error.
+          const result = await doSsoLogin(error.teamId, this);
+
+          if (typeof result === 'number') {
+            this.output.prettyError(error);
+            process.exit(1);
+            return;
+          }
+
+          this.authConfig.token = result;
+          writeToAuthConfigFile(this.authConfig);
+          throw error;
+        }
 
         if (res.status >= 400 && res.status < 500) {
           return bail(error);

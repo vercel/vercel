@@ -62,9 +62,7 @@ const logout = async (apiUrl: string, output: Output) => {
 
   const configContent = readConfigFile();
   const authContent = readAuthConfigFile();
-
-  // Copy the content
-  const token = `${authContent.token}`;
+  const { token } = authContent;
 
   delete configContent.currentTeam;
 
