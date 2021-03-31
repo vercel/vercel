@@ -102,11 +102,17 @@ export default class Client extends EventEmitter {
   }
 
   async fetch<T>(url: string, opts: FetchOptions = {}): Promise<T> {
-    return this.retry(async () => {
+    return this.retry(async bail => {
       const res = await this._fetch(url, opts);
 
       if (!res.ok) {
         const error = await responseError(res);
+
+        if (res.status >= 400 && res.status < 500) {
+          return bail(error);
+        }
+
+        // Retry
         throw error;
       }
 
