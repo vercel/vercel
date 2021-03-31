@@ -77,10 +77,8 @@ export default async function setupAndLink(
 
   try {
     org = await selectOrg(
-      output,
-      'Which scope should contain your project?',
       client,
-      config.currentTeam,
+      'Which scope should contain your project?',
       autoConfirm
     );
   } catch (err) {

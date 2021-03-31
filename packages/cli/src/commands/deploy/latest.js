@@ -284,10 +284,8 @@ export default async function main(
 
     try {
       org = await selectOrg(
-        output,
-        'Which scope do you want to deploy to?',
         client,
-        client.config.currentTeam,
+        'Which scope do you want to deploy to?',
         autoConfirm
       );
     } catch (err) {
