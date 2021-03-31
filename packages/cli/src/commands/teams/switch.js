@@ -9,7 +9,6 @@ import error from '../../util/output/error';
 import param from '../../util/output/param.ts';
 import { writeToConfigFile } from '../../util/config/files';
 import getUser from '../../util/get-user.ts';
-import Client from '../../util/client.ts';
 import NowTeams from '../../util/teams';
 
 const updateCurrentTeam = (config, newTeam) => {
@@ -22,7 +21,15 @@ const updateCurrentTeam = (config, newTeam) => {
   writeToConfigFile(config);
 };
 
-export default async function ({ apiUrl, token, debug, args, config, output }) {
+export default async function change(client) {
+  const {
+    apiUrl,
+    authConfig: { token },
+    debug,
+    argv,
+    config,
+    output,
+  } = client;
   output.spinner('Fetching teams');
 
   // We're loading the teams here without `currentTeam`, so that
@@ -35,7 +42,6 @@ export default async function ({ apiUrl, token, debug, args, config, output }) {
   const accountIsCurrent = !currentTeam;
 
   output.spinner('Fetching user information');
-  const client = new Client({ apiUrl, token, output });
   let user;
   try {
     user = await getUser(client);
@@ -61,8 +67,8 @@ export default async function ({ apiUrl, token, debug, args, config, output }) {
     }
   }
 
-  if (args.length !== 0) {
-    const desiredSlug = args[0];
+  if (argv._.length !== 0) {
+    const desiredSlug = argv._[0];
     const newTeam = list.find(team => team.slug === desiredSlug);
 
     if (newTeam) {

@@ -12,7 +12,6 @@ import info from '../../util/output/info';
 import logo from '../../util/output/logo';
 import addBilling from './add';
 import exit from '../../util/exit';
-import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import { getPkgName } from '../../util/pkg-name.ts';
 
@@ -76,37 +75,11 @@ export default async client => {
   }
 
   const {
+    output,
     authConfig: { token },
-    config,
+    config: { currentTeam },
   } = client;
 
-  return run({ token, config });
-};
-
-// Builds a `choices` object that can be passesd to inquirer.prompt()
-function buildInquirerChoices(cards) {
-  return cards.sources.map(source => {
-    const _default =
-      source.id === cards.defaultSource ? ` ${chalk.bold('(default)')}` : '';
-    const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`;
-    const number = `${chalk.gray('#### ').repeat(3)}${
-      source.last4 || source.card.last4
-    }`;
-    const str = [
-      id,
-      indent(source.name || source.owner.name, 2),
-      indent(`${source.brand || source.card.brand} ${number}`, 2),
-    ].join('\n');
-
-    return {
-      name: str, // Will be displayed by Inquirer
-      value: source.id, // Will be used to identify the answer
-      short: source.id, // Will be displayed after the users answers
-    };
-  });
-}
-
-async function run({ token, output, config: { currentTeam } }) {
   const start = new Date();
   const creditCards = new NowCreditCards({
     apiUrl,
@@ -115,7 +88,7 @@ async function run({ token, output, config: { currentTeam } }) {
     currentTeam,
     output,
   });
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+
   let contextName = null;
 
   try {
@@ -361,4 +334,27 @@ async function run({ token, output, config: { currentTeam } }) {
 
   // This is required, otherwise we get those weird zlib errors
   return exit(0);
+};
+
+// Builds a `choices` object that can be passesd to inquirer.prompt()
+function buildInquirerChoices(cards) {
+  return cards.sources.map(source => {
+    const _default =
+      source.id === cards.defaultSource ? ` ${chalk.bold('(default)')}` : '';
+    const id = `${chalk.cyan(`ID: ${source.id}`)}${_default}`;
+    const number = `${chalk.gray('#### ').repeat(3)}${
+      source.last4 || source.card.last4
+    }`;
+    const str = [
+      id,
+      indent(source.name || source.owner.name, 2),
+      indent(`${source.brand || source.card.brand} ${number}`, 2),
+    ].join('\n');
+
+    return {
+      name: str, // Will be displayed by Inquirer
+      value: source.id, // Will be used to identify the answer
+      short: source.id, // Will be displayed after the users answers
+    };
+  });
 }

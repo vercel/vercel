@@ -354,7 +354,6 @@ const main = async () => {
     localConfig,
     argv: process.argv,
   });
-  console.log(client);
 
   let subcommand;
 

@@ -3,7 +3,6 @@ import mri from 'mri';
 import error from '../util/output/error';
 import NowTeams from '../util/teams';
 import logo from '../util/output/logo';
-import exit from '../util/exit';
 import { handleError } from '../util/error';
 import list from './teams/list';
 import add from './teams/add';
@@ -92,73 +91,37 @@ const main = async client => {
 
   if (argv.help || !subcommand) {
     help();
-    await exit(0);
+    return 2;
   }
 
   const {
     authConfig: { token },
-    output,
     config,
   } = client;
 
-  return run({ token, config, output });
-};
-
-export default async client => {
-  try {
-    return main(client);
-  } catch (err) {
-    handleError(err);
-    return 1;
-  }
-};
-
-async function run({ token, config, output }) {
   const { currentTeam } = config;
   const teams = new NowTeams({ apiUrl, token, debug, currentTeam });
-  const args = argv._;
 
   let exitCode;
   switch (subcommand) {
     case 'list':
     case 'ls': {
-      exitCode = await list({
-        teams,
-        config,
-        apiUrl,
-        token,
-        output,
-        argv,
-      });
+      exitCode = await list(client, teams);
       break;
     }
     case 'switch':
     case 'change': {
-      exitCode = await change({
-        args,
-        config,
-        apiUrl,
-        token,
-        debug,
-        output,
-      });
+      exitCode = await change(client);
       break;
     }
     case 'add':
     case 'create': {
-      exitCode = await add({ apiUrl, token, teams, config });
+      exitCode = await add(client, teams);
       break;
     }
 
     case 'invite': {
-      exitCode = await invite({
-        teams,
-        args,
-        config,
-        apiUrl,
-        token,
-        output,
-      });
+      exitCode = await invite(client, teams);
       break;
     }
     default: {
@@ -166,11 +129,20 @@ async function run({ token, config, output }) {
         console.error(
           error('Please specify a valid subcommand: add | ls | switch | invite')
         );
-        exitCode = 1;
       }
+      exitCode = 2;
       help();
     }
   }
   teams.close();
   return exitCode || 0;
-}
+};
+
+export default async client => {
+  try {
+    return await main(client);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+};
