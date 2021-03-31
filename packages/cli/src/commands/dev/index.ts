@@ -4,7 +4,7 @@ import { PackageJson } from '@vercel/build-utils';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
@@ -47,7 +47,7 @@ const help = () => {
   `);
 };
 
-export default async function main(client: NowContext) {
+export default async function main(client: Client) {
   let argv;
   let args;
   const { output } = client;

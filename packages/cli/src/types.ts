@@ -1,8 +1,3 @@
-import Client from './util/client';
-
-// Backwards-compat
-export { Client as NowContext };
-
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
 export interface AuthConfig {
