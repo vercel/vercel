@@ -14,8 +14,8 @@ import { getPkgName } from '../../util/pkg-name.ts';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd.ts';
 
-export default async function list(client, teams) {
-  const { config, output, argv } = client;
+export default async function list(client, argv, teams) {
+  const { config, output } = client;
   const { next } = argv;
 
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {

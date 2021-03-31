@@ -53,10 +53,11 @@ const emailAutoComplete = (value, teamSlug) => {
 
 export default async function invite(
   client,
+  argv,
   teams,
   { introMsg, noopMsg = 'No changes made' } = {}
 ) {
-  const { argv, config, output } = client;
+  const { config, output } = client;
   const { currentTeam: currentTeamId } = config;
 
   output.spinner('Fetching teams');

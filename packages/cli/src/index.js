@@ -357,7 +357,7 @@ const main = async () => {
 
   let subcommand;
 
-  // we check if we are deploying something
+  // Check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(process.cwd(), targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
@@ -400,8 +400,6 @@ const main = async () => {
       subcommand = targetOrSubcommand;
     } else {
       debug('user supplied a possible target for deployment');
-      // our default command is deployment
-      // at this point we're
       subcommand = 'deploy';
     }
   } else {
@@ -414,7 +412,7 @@ const main = async () => {
     client.argv.push('-h');
   }
 
-  // Prompt for login if there is not current token
+  // Prompt for login if there is no current token
   if (
     (!authConfig || !authConfig.token) &&
     !client.argv.includes('-h') &&

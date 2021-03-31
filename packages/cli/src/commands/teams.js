@@ -106,22 +106,22 @@ const main = async client => {
   switch (subcommand) {
     case 'list':
     case 'ls': {
-      exitCode = await list(client, teams);
+      exitCode = await list(client, argv, teams);
       break;
     }
     case 'switch':
     case 'change': {
-      exitCode = await change(client);
+      exitCode = await change(client, argv);
       break;
     }
     case 'add':
     case 'create': {
-      exitCode = await add(client, teams);
+      exitCode = await add(client, argv, teams);
       break;
     }
 
     case 'invite': {
-      exitCode = await invite(client, teams);
+      exitCode = await invite(client, argv, teams);
       break;
     }
     default: {

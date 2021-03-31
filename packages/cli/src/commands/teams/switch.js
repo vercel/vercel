@@ -21,12 +21,11 @@ const updateCurrentTeam = (config, newTeam) => {
   writeToConfigFile(config);
 };
 
-export default async function change(client) {
+export default async function change(client, argv) {
   const {
     apiUrl,
     authConfig: { token },
     debug,
-    argv,
     config,
     output,
   } = client;
