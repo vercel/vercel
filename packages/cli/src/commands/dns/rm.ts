@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import { NowContext, DNSRecord } from '../../types';
+import { DNSRecord } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
@@ -10,24 +10,14 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 
-type Options = {
-  '--debug': boolean;
-};
+type Options = {};
 
 export default async function rm(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    apiUrl,
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
 
   try {
     await getScope(client);

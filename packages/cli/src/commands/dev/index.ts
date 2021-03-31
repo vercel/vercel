@@ -4,7 +4,7 @@ import { PackageJson } from '@vercel/build-utils';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
@@ -47,13 +47,13 @@ const help = () => {
   `);
 };
 
-export default async function main(ctx: NowContext) {
+export default async function main(client: Client) {
   let argv;
   let args;
-  const { output } = ctx;
+  const { output } = client;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--listen': String,
       '-l': '--listen',
       '--confirm': Boolean,
@@ -117,7 +117,7 @@ export default async function main(ctx: NowContext) {
   }
 
   try {
-    return await dev(ctx, argv, args);
+    return await dev(client, argv, args);
   } catch (err) {
     if (err.code === 'ENOTFOUND') {
       // Error message will look like the following:

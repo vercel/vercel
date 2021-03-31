@@ -1,20 +1,14 @@
-import { NowConfig } from './util/dev/types';
-import { Output } from './util/output';
-
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
-export interface NowContext {
-  argv: string[];
-  apiUrl: string;
-  authConfig: {
-    token: string;
-  };
-  output: Output;
-  config: {
-    currentTeam: string;
-    updateChannel: string;
-  };
-  localConfig: NowConfig;
+export interface AuthConfig {
+  token: string;
+}
+
+export interface GlobalConfig {
+  currentTeam?: string;
+  updateChannel?: string;
+  collectMetrics?: boolean;
+  api?: string;
 }
 
 type Billing = {

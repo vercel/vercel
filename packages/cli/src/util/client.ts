@@ -3,10 +3,12 @@ import { EventEmitter } from 'events';
 import { parse as parseUrl } from 'url';
 import fetch, { RequestInit } from 'node-fetch';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
-import createOutput, { Output } from './output/create-output';
+import { Output } from './output/create-output';
 import responseError from './response-error';
 import ua from './ua';
 import printIndications from './print-indications';
+import { AuthConfig, GlobalConfig } from '../types';
+import { NowConfig } from './dev/types';
 
 export interface FetchOptions {
   body?: NodeJS.ReadableStream | object | string;
@@ -18,41 +20,32 @@ export interface FetchOptions {
   accountId?: string;
 }
 
-export default class Client extends EventEmitter {
-  _apiUrl: string;
-  _debug: boolean;
-  _forceNew: boolean;
-  _withCache: boolean;
-  _output: Output;
-  _token: string;
-  currentTeam?: string | null;
+export interface ClientOptions {
+  argv: string[];
+  apiUrl: string;
+  authConfig: AuthConfig;
+  output: Output;
+  config: GlobalConfig;
+  localConfig: NowConfig;
+}
 
-  constructor({
-    apiUrl,
-    token,
-    currentTeam,
-    forceNew = false,
-    withCache = false,
-    debug = false,
-    output = createOutput({ debug }),
-  }: {
-    apiUrl: string;
-    token: string;
-    currentTeam?: string | null;
-    forceNew?: boolean;
-    withCache?: boolean;
-    debug?: boolean;
-    output?: Output;
-  }) {
+export default class Client extends EventEmitter {
+  argv: string[];
+  apiUrl: string;
+  authConfig: AuthConfig;
+  output: Output;
+  config: GlobalConfig;
+  localConfig: NowConfig;
+
+  constructor(opts: ClientOptions) {
     super();
-    this._token = token;
-    this._debug = debug;
-    this._forceNew = forceNew;
-    this._withCache = withCache;
-    this._output = output;
-    this._apiUrl = apiUrl;
+    this.argv = opts.argv;
+    this.apiUrl = opts.apiUrl;
+    this.authConfig = opts.authConfig;
+    this.output = opts.output;
+    this.config = opts.config;
+    this.localConfig = opts.localConfig;
     this._onRetry = this._onRetry.bind(this);
-    this.currentTeam = currentTeam;
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -78,8 +71,8 @@ export default class Client extends EventEmitter {
         } else {
           query.delete('teamId');
         }
-      } else if (opts.useCurrentTeam !== false && this.currentTeam) {
-        query.set('teamId', this.currentTeam);
+      } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
+        query.set('teamId', this.config.currentTeam);
       }
 
       _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
@@ -98,11 +91,11 @@ export default class Client extends EventEmitter {
     }
 
     opts.headers = opts.headers || {};
-    opts.headers.Authorization = `Bearer ${this._token}`;
+    opts.headers.Authorization = `Bearer ${this.authConfig.token}`;
     opts.headers['user-agent'] = ua;
 
-    const url = `${apiUrl ? '' : this._apiUrl}${_url}`;
-    return this._output.time(
+    const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
+    return this.output.time(
       `${opts.method || 'GET'} ${url} ${JSON.stringify(opts.body) || ''}`,
       fetch(url, opts as RequestInit)
     );
@@ -111,32 +104,36 @@ export default class Client extends EventEmitter {
   async fetch<T>(url: string, opts: FetchOptions = {}): Promise<T> {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
-      if (res.ok) {
-        if (opts.json === false) {
-          return res;
+
+      if (!res.ok) {
+        const error = await responseError(res);
+
+        if (res.status >= 400 && res.status < 500) {
+          return bail(error);
         }
 
-        if (!res.headers.get('content-type')) {
-          return null;
-        }
-
-        printIndications(res);
-
-        return res.headers.get('content-type').includes('application/json')
-          ? res.json()
-          : res;
-      }
-      const error = await responseError(res);
-      if (res.status >= 400 && res.status < 500) {
-        return bail(error);
+        // Retry
+        throw error;
       }
 
-      throw error;
+      if (opts.json === false) {
+        return res;
+      }
+
+      if (!res.headers.get('content-type')) {
+        return null;
+      }
+
+      printIndications(res);
+
+      return res.headers.get('content-type').includes('application/json')
+        ? res.json()
+        : res;
     }, opts.retry);
   }
 
   _onRetry(error: Error) {
-    this._output.debug(`Retrying: ${error}\n${error.stack}`);
+    this.output.debug(`Retrying: ${error}\n${error.stack}`);
   }
 
   close() {}

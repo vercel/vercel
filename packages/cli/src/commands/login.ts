@@ -12,7 +12,7 @@ import { prependEmoji, emoji } from '../util/emoji';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
-import { NowContext } from '../types';
+import Client from '../util/client';
 
 const help = () => {
   console.log(`
@@ -70,15 +70,15 @@ const readInput = async () => {
     }
   }
 
-  console.log(); // \n
   return input;
 };
 
-export default async function login(ctx: NowContext): Promise<number> {
+export default async function login(client: Client): Promise<number> {
   let argv;
+  const { apiUrl, output } = client;
 
   try {
-    argv = getArgs(ctx.argv.slice(2));
+    argv = getArgs(client.argv.slice(2));
   } catch (err) {
     handleError(err);
     return 1;
@@ -89,7 +89,10 @@ export default async function login(ctx: NowContext): Promise<number> {
     return 2;
   }
 
-  const { apiUrl, output } = ctx;
+  if (argv['--token']) {
+    output.error('`--token` may not be used with the "login" command');
+    return 2;
+  }
 
   const input = argv._[1] || (await readInput());
 
@@ -99,9 +102,9 @@ export default async function login(ctx: NowContext): Promise<number> {
   let result: number | string = 1;
 
   if (validateEmail(input)) {
-    result = await doEmailLogin(input, { output, apiUrl, ctx });
+    result = await doEmailLogin(input, { output, apiUrl });
   } else if (isValidSlug) {
-    result = await doSsoLogin(input, { output, apiUrl, ctx });
+    result = await doSsoLogin(input, { output, apiUrl });
   } else {
     output.error(`Invalid input: "${input}"`);
     output.log(`Please enter a valid email address or team slug`);
@@ -115,13 +118,13 @@ export default async function login(ctx: NowContext): Promise<number> {
 
   // When `result` is a string it's the user's authentication token.
   // It needs to be saved to the configuration file.
-  ctx.authConfig.token = result;
+  client.authConfig.token = result;
 
   // New user, so we can't keep the team
-  delete ctx.config.currentTeam;
+  delete client.config.currentTeam;
 
-  writeToAuthConfigFile(ctx.authConfig);
-  writeToConfigFile(ctx.config);
+  writeToAuthConfigFile(client.authConfig);
+  writeToConfigFile(client.config);
 
   output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 

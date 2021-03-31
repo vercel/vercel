@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
@@ -84,11 +84,11 @@ const COMMAND_CONFIG = {
   verify: ['verify'],
 };
 
-export default async function main(ctx: NowContext) {
+export default async function main(client: Client) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--code': String,
       '--yes': Boolean,
       '--force': Boolean,
@@ -108,20 +108,20 @@ export default async function main(ctx: NowContext) {
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'add':
-      return add(ctx, argv, args);
+      return add(client, argv, args);
     case 'inspect':
-      return inspect(ctx, argv, args);
+      return inspect(client, argv, args);
     case 'move':
-      return move(ctx, argv, args);
+      return move(client, argv, args);
     case 'buy':
-      return buy(ctx, argv, args);
+      return buy(client, argv, args);
     case 'rm':
-      return rm(ctx, argv, args);
+      return rm(client, argv, args);
     case 'transferIn':
-      return transferIn(ctx, argv, args);
+      return transferIn(client, argv, args);
     case 'verify':
-      return verify(ctx, argv, args);
+      return verify(client, argv, args);
     default:
-      return ls(ctx, argv, args);
+      return ls(client, argv, args);
   }
 }

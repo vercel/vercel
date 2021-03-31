@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import Now from '../../util';
-import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp.ts';
@@ -12,22 +11,14 @@ import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 import { getCommandName } from '../../util/pkg-name.ts';
 
-export default async function rm(ctx, opts, args) {
+export default async function rm(client, opts, args) {
   const {
+    apiUrl,
     authConfig: { token },
     output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const { '--debug': debugEnabled } = opts;
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
+    config: { currentTeam },
+  } = client;
+
   let contextName = null;
 
   try {
@@ -44,7 +35,7 @@ export default async function rm(ctx, opts, args) {
   const now = new Now({
     apiUrl,
     token,
-    debug: debugEnabled,
+    debug: client.output.isDebugEnabled(),
     currentTeam,
     output,
   });

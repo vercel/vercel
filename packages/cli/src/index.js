@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-import error from './util/output/error';
-import param from './util/output/param';
-import info from './util/output/info';
 try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
@@ -13,6 +10,7 @@ try {
     process.exit(1);
   }
 }
+
 import { join } from 'path';
 import { existsSync, lstatSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
@@ -23,25 +21,28 @@ import updateNotifier from 'update-notifier';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import { NowBuildError } from '@vercel/build-utils';
+import hp from './util/humanize-path';
+import commands from './commands/index.ts';
+import pkg from './util/pkg.ts';
+import createOutput from './util/output';
+import cmd from './util/output/cmd';
+import info from './util/output/info';
+import error from './util/output/error';
+import param from './util/output/param';
+import highlight from './util/output/highlight';
+import getArgs from './util/get-args';
+import getUser from './util/get-user.ts';
+import Client from './util/client.ts';
+import NowTeams from './util/teams';
+import { handleError } from './util/error';
+import reportError from './util/report-error';
+import getConfig from './util/get-config';
+import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
 import {
   getDefaultConfig,
   getDefaultAuthConfig,
 } from './util/config/get-default';
-import hp from './util/humanize-path';
-import commands from './commands/index.ts';
-import * as configFiles from './util/config/files';
-import pkg from './util/pkg.ts';
-import createOutput from './util/output';
-import getArgs from './util/get-args';
-import getUser from './util/get-user.ts';
-import Client from './util/client.ts';
-import NowTeams from './util/teams';
-import cmd from './util/output/cmd';
-import { handleError } from './util/error';
-import highlight from './util/output/highlight';
-import reportError from './util/report-error';
-import getConfig from './util/get-config';
 import * as ERRORS from './util/errors-ts';
 import { NowError } from './util/now-error';
 import { APIError } from './util/errors-ts.ts';
@@ -75,17 +76,18 @@ Sentry.init({
   environment: isCanary ? 'canary' : 'stable',
 });
 
+let client;
 let debug = () => {};
 let apiUrl = 'https://api.vercel.com';
 
-const main = async argv_ => {
+const main = async () => {
   const { isTTY } = process.stdout;
 
-  let argv = null;
+  let argv;
 
   try {
     argv = getArgs(
-      argv_,
+      process.argv,
       {
         '--version': Boolean,
         '-v': '--version',
@@ -129,11 +131,7 @@ const main = async argv_ => {
     return 1;
   }
 
-  // the second argument to the command can be a path
-  // (as in: `vercel path/`) or a subcommand / provider
-  // (as in: `vercel ls`)
-  const targetOrSubcommand = argv._[2];
-
+  // Print update information, if available
   if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
     const { latest } = notifier.update;
     console.log(
@@ -152,6 +150,12 @@ const main = async argv_ => {
     );
   }
 
+  // The second argument to the command can be:
+  //
+  //  * a path to deploy (as in: `vercel path/`)
+  //  * a subcommand (as in: `vercel ls`)
+  const targetOrSubcommand = argv._[2];
+
   output.print(
     `${chalk.grey(
       `${getTitleName()} CLI ${pkg.version}${
@@ -164,41 +168,24 @@ const main = async argv_ => {
     )}\n`
   );
 
-  // we want to handle version or help directly only
-  if (!targetOrSubcommand) {
-    if (argv['--version']) {
-      console.log(pkg.version);
-      return 0;
-    }
+  // Handle `--version` directly
+  if (!targetOrSubcommand && argv['--version']) {
+    console.log(pkg.version);
+    return 0;
   }
 
-  let nowDirExists;
-
+  // Ensure that the Vercel global configuration directory exists
   try {
-    nowDirExists = existsSync(VERCEL_DIR);
+    await mkdirp(VERCEL_DIR);
   } catch (err) {
     console.error(
       error(
-        `An unexpected error occurred while trying to find the global directory: ${err.message}`
+        `${
+          'An unexpected error occurred while trying to create the ' +
+          `global directory "${hp(VERCEL_DIR)}" `
+        }${err.message}`
       )
     );
-
-    return 1;
-  }
-
-  if (!nowDirExists) {
-    try {
-      await mkdirp(VERCEL_DIR);
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to create the ' +
-            `global directory "${hp(VERCEL_DIR)}" `
-          }${err.message}`
-        )
-      );
-    }
   }
 
   let migrated = false;
@@ -344,18 +331,33 @@ const main = async argv_ => {
     );
   }
 
-  // the context object to supply to the providers or the commands
-  const ctx = {
+  if (typeof argv['--api'] === 'string') {
+    apiUrl = argv['--api'];
+  } else if (config && config.api) {
+    apiUrl = config.api;
+  }
+
+  try {
+    // eslint-disable-next-line no-new
+    new URL(apiUrl);
+  } catch (err) {
+    output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
+    return 1;
+  }
+
+  // Shared API `Client` instance for all sub-commands to utilize
+  client = new Client({
+    apiUrl,
     output,
     config,
     authConfig,
     localConfig,
-    argv: argv_,
-  };
+    argv: process.argv,
+  });
 
   let subcommand;
 
-  // we check if we are deploying something
+  // Check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(process.cwd(), targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
@@ -398,8 +400,6 @@ const main = async argv_ => {
       subcommand = targetOrSubcommand;
     } else {
       debug('user supplied a possible target for deployment');
-      // our default command is deployment
-      // at this point we're
       subcommand = 'deploy';
     }
   } else {
@@ -409,55 +409,33 @@ const main = async argv_ => {
 
   if (subcommand === 'help') {
     subcommand = argv._[3] || 'deploy';
-    ctx.argv.push('-h');
+    client.argv.push('-h');
   }
 
-  if (argv['--api'] && typeof argv['--api'] === 'string') {
-    apiUrl = argv['--api'];
-  } else if (ctx.config && ctx.config.api) {
-    apiUrl = ctx.config.api;
-  }
-
-  ctx.apiUrl = apiUrl;
-
-  try {
-    // eslint-disable-next-line no-new
-    new URL(ctx.apiUrl);
-  } catch (err) {
-    console.error(
-      error(`Please provide a valid URL instead of ${highlight(ctx.apiUrl)}.`)
-    );
-    return 1;
-  }
-
-  // If no credentials are set at all, prompt for
-  // login to the .sh provider
+  // Prompt for login if there is no current token
   if (
     (!authConfig || !authConfig.token) &&
-    !ctx.argv.includes('-h') &&
-    !ctx.argv.includes('--help') &&
+    !client.argv.includes('-h') &&
+    !client.argv.includes('--help') &&
     !argv['--token'] &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
     if (isTTY) {
-      console.log(info(`No existing credentials found. Please log in:`));
+      output.log(info(`No existing credentials found. Please log in:`));
 
       subcommand = 'login';
-      ctx.argv[2] = 'login';
+      client.argv[2] = 'login';
 
       // Ensure that subcommands lead to login as well, if
       // no credentials are defined
-      ctx.argv = ctx.argv.splice(0, 3);
+      client.argv = client.argv.splice(0, 3);
     } else {
-      console.error(
-        error({
-          message:
-            'No existing credentials found. Please run ' +
-            `${getCommandName('login')} or pass ${param('--token')}`,
-          slug: 'no-credentials-found',
-        })
-      );
-
+      output.prettyError({
+        message:
+          'No existing credentials found. Please run ' +
+          `${getCommandName('login')} or pass ${param('--token')}`,
+        link: 'https://err.sh/vercel/no-credentials-found',
+      });
       return 1;
     }
   }
@@ -506,11 +484,11 @@ const main = async argv_ => {
       return 1;
     }
 
-    ctx.authConfig.token = token;
+    client.authConfig.token = token;
 
     // Don't use team from config if `--token` was set
-    if (ctx.config && ctx.config.currentTeam) {
-      delete ctx.config.currentTeam;
+    if (client.config && client.config.currentTeam) {
+      delete client.config.currentTeam;
     }
   }
 
@@ -524,7 +502,7 @@ const main = async argv_ => {
 
   const {
     authConfig: { token },
-  } = ctx;
+  } = client;
 
   let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
@@ -537,7 +515,6 @@ const main = async argv_ => {
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
     let user = null;
-    const client = new Client({ apiUrl, token, output });
 
     try {
       user = await getUser(client);
@@ -558,7 +535,7 @@ const main = async argv_ => {
     }
 
     if (user.uid === scope || user.email === scope || user.username === scope) {
-      delete ctx.config.currentTeam;
+      delete client.config.currentTeam;
     } else {
       let list = [];
 
@@ -595,7 +572,7 @@ const main = async argv_ => {
         return 1;
       }
 
-      ctx.config.currentTeam = related.id;
+      client.config.currentTeam = related.id;
     }
   }
 
@@ -612,7 +589,7 @@ const main = async argv_ => {
   try {
     const start = new Date();
     const full = require(`./commands/${targetCommand}`).default;
-    exitCode = await full(ctx);
+    exitCode = await full(client);
     const end = new Date() - start;
 
     if (shouldCollectMetrics) {
@@ -666,7 +643,7 @@ const main = async argv_ => {
       output.debug(err.stack);
       output.prettyError(err);
     } else {
-      await reportError(Sentry, err, apiUrl, configFiles);
+      await reportError(Sentry, client, err);
 
       // Otherwise it is an unexpected error and we should show the trace
       // and an unexpected error message
@@ -693,7 +670,7 @@ const handleRejection = async err => {
       await handleUnexpected(err);
     } else {
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
-      await reportError(Sentry, err, apiUrl, configFiles);
+      await reportError(Sentry, client, err);
     }
   } else {
     console.error(error('An unexpected empty rejection occurred'));
@@ -711,12 +688,9 @@ const handleUnexpected = async err => {
     return;
   }
 
-  await reportError(Sentry, err, apiUrl, configFiles);
-  debug('handling unexpected error');
+  await reportError(Sentry, client, err);
 
-  console.error(
-    error(`An unexpected error occurred!\n  ${err.stack} ${err.stack}`)
-  );
+  console.error(error(`An unexpected error occurred!\n${err.stack}`));
 
   process.exit(1);
 };
@@ -724,9 +698,7 @@ const handleUnexpected = async err => {
 process.on('unhandledRejection', handleRejection);
 process.on('uncaughtException', handleUnexpected);
 
-// Don't use `.then` here. We need to shutdown gracefully, otherwise
-// subcommands waiting for further data won't work (like `logs` and `logout`)!
-main(process.argv)
+main()
   .then(exitCode => {
     process.exitCode = exitCode;
     process.emit('nowExit');

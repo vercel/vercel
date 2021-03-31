@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import plural from 'pluralize';
 
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { NowContext, Domain } from '../../types';
+import { Domain } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
@@ -19,24 +19,15 @@ import { findProjectsForDomain } from '../../util/projects/find-projects-for-dom
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
-  '--debug': boolean;
   '--yes': boolean;
 };
 
 export default async function rm(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
   const [domainName] = args;
   let contextName = null;
 

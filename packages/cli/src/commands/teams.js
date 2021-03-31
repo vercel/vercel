@@ -3,7 +3,6 @@ import mri from 'mri';
 import error from '../util/output/error';
 import NowTeams from '../util/teams';
 import logo from '../util/output/logo';
-import exit from '../util/exit';
 import { handleError } from '../util/error';
 import list from './teams/list';
 import add from './teams/add';
@@ -66,8 +65,8 @@ let debug;
 let apiUrl;
 let subcommand;
 
-const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
+const main = async client => {
+  argv = mri(client.argv.slice(2), {
     boolean: ['help', 'debug'],
     alias: {
       help: 'h',
@@ -78,7 +77,7 @@ const main = async ctx => {
   });
 
   debug = argv.debug;
-  apiUrl = ctx.apiUrl;
+  apiUrl = client.apiUrl;
 
   const isSwitch = argv._[0] && argv._[0] === 'switch';
 
@@ -92,73 +91,37 @@ const main = async ctx => {
 
   if (argv.help || !subcommand) {
     help();
-    await exit(0);
+    return 2;
   }
 
   const {
     authConfig: { token },
-    output,
     config,
-  } = ctx;
+  } = client;
 
-  return run({ token, config, output });
-};
-
-export default async ctx => {
-  try {
-    return main(ctx);
-  } catch (err) {
-    handleError(err);
-    return 1;
-  }
-};
-
-async function run({ token, config, output }) {
   const { currentTeam } = config;
   const teams = new NowTeams({ apiUrl, token, debug, currentTeam });
-  const args = argv._;
 
   let exitCode;
   switch (subcommand) {
     case 'list':
     case 'ls': {
-      exitCode = await list({
-        teams,
-        config,
-        apiUrl,
-        token,
-        output,
-        argv,
-      });
+      exitCode = await list(client, argv, teams);
       break;
     }
     case 'switch':
     case 'change': {
-      exitCode = await change({
-        args,
-        config,
-        apiUrl,
-        token,
-        debug,
-        output,
-      });
+      exitCode = await change(client, argv);
       break;
     }
     case 'add':
     case 'create': {
-      exitCode = await add({ apiUrl, token, teams, config });
+      exitCode = await add(client, argv, teams);
       break;
     }
 
     case 'invite': {
-      exitCode = await invite({
-        teams,
-        args,
-        config,
-        apiUrl,
-        token,
-        output,
-      });
+      exitCode = await invite(client, argv, teams);
       break;
     }
     default: {
@@ -166,11 +129,21 @@ async function run({ token, config, output }) {
         console.error(
           error('Please specify a valid subcommand: add | ls | switch | invite')
         );
-        exitCode = 1;
       }
+      exitCode = 2;
       help();
     }
   }
   teams.close();
   return exitCode || 0;
-}
+};
+
+export default async client => {
+  try {
+    return await main(client);
+  } catch (err) {
+    console.error(err);
+    handleError(err);
+    return 1;
+  }
+};

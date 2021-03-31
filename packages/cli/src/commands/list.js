@@ -8,7 +8,6 @@ import cmd from '../util/output/cmd.ts';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
 import strlen from '../util/strlen.ts';
-import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
@@ -61,11 +60,11 @@ const help = () => {
 `);
 };
 
-export default async function main(ctx) {
+export default async function main(client) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--meta': [String],
       '-m': '--meta',
       '--next': Number,
@@ -81,7 +80,7 @@ export default async function main(ctx) {
     output,
     apiUrl,
     config,
-  } = ctx;
+  } = client;
 
   const debugEnabled = argv['--debug'];
   const { print, log, error, note, debug, spinner } = output;
@@ -96,18 +95,12 @@ export default async function main(ctx) {
 
   if (argv['--help']) {
     help();
-    return 0;
+    return 2;
   }
 
   const meta = parseMeta(argv['--meta']);
   const { currentTeam, includeScheme } = config;
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
+
   let contextName = null;
 
   try {
