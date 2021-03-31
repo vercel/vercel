@@ -7,7 +7,6 @@ import { Output } from './output/create-output';
 import responseError from './response-error';
 import ua from './ua';
 import printIndications from './print-indications';
-import doSsoLogin from './login/sso';
 import { AuthConfig, GlobalConfig } from '../types';
 import { NowConfig } from './dev/types';
 
@@ -103,51 +102,27 @@ export default class Client extends EventEmitter {
   }
 
   async fetch<T>(url: string, opts: FetchOptions = {}): Promise<T> {
-    return this.retry(async bail => {
+    return this.retry(async () => {
       const res = await this._fetch(url, opts);
-      if (res.ok) {
-        if (opts.json === false) {
-          return res;
-        }
 
-        if (!res.headers.get('content-type')) {
-          return null;
-        }
-
-        printIndications(res);
-
-        return res.headers.get('content-type').includes('application/json')
-          ? res.json()
-          : res;
-      }
-      const error = await responseError(res);
-
-      if (error.saml) {
-        this.output.warn(error.message);
-        const result = await doSsoLogin(error.teamId, {
-          apiUrl: this.apiUrl,
-          output: this.output,
-        });
-
-        // The login function failed, so it returned an exit code
-        if (typeof result === 'number') {
-          process.exit(result);
-          return;
-        }
-
-        console.log({ result });
-        this.authConfig.token = result;
-        this.config.currentTeam = error.teamId;
-
-        // Retry the HTTP request using the updated token
-        throw new Error();
+      if (!res.ok) {
+        const error = await responseError(res);
+        throw error;
       }
 
-      if (res.status >= 400 && res.status < 500) {
-        return bail(error);
+      if (opts.json === false) {
+        return res;
       }
 
-      throw error;
+      if (!res.headers.get('content-type')) {
+        return null;
+      }
+
+      printIndications(res);
+
+      return res.headers.get('content-type').includes('application/json')
+        ? res.json()
+        : res;
     }, opts.retry);
   }
 
