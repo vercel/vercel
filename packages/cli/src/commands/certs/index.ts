@@ -11,7 +11,7 @@ import add from './add';
 import issue from './issue';
 import ls from './ls';
 import rm from './rm';
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
 
 const help = () => {
@@ -79,11 +79,11 @@ const COMMAND_CONFIG = {
   rm: ['rm', 'remove'],
 };
 
-export default async function main(ctx: NowContext) {
+export default async function main(client: Client) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--challenge-only': Boolean,
       '--overwrite': Boolean,
       '--output': String,
@@ -100,20 +100,20 @@ export default async function main(ctx: NowContext) {
 
   if (argv['--help']) {
     help();
-    return 0;
+    return 2;
   }
 
-  const { output } = ctx;
+  const { output } = client;
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   switch (subcommand) {
     case 'issue':
-      return issue(ctx, argv, args);
+      return issue(client, argv, args);
     case 'ls':
-      return ls(ctx, argv, args);
+      return ls(client, argv, args);
     case 'rm':
-      return rm(ctx, argv, args);
+      return rm(client, argv, args);
     case 'add':
-      return add(ctx, argv, args);
+      return add(client, argv, args);
     case 'renew':
       output.error('Renewing certificates is deprecated, issue a new one.');
       return 1;

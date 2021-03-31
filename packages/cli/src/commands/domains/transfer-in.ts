@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 
-import { NowContext } from '../../types';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -16,24 +15,15 @@ import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
-  '--debug': boolean;
   '--code': string;
 };
 
 export default async function transferIn(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
   let contextName = null;
 
   try {

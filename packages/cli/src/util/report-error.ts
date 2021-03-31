@@ -5,9 +5,8 @@ import { Team, User } from '../types';
 
 export default async function reportError(
   sentry: typeof import('@sentry/node'),
-  error: Error,
-  apiUrl: string,
-  configFiles: typeof import('./config/files')
+  client: Client,
+  error: Error
 ) {
   if (ignoreError(error)) {
     return;
@@ -17,9 +16,6 @@ export default async function reportError(
   let scopeError: Error | undefined;
 
   try {
-    const { token } = configFiles.readAuthConfigFile();
-    const { currentTeam } = configFiles.readConfigFile();
-    const client = new Client({ apiUrl, token, currentTeam, debug: false });
     ({ user, team } = await getScope(client));
   } catch (err) {
     // We can safely ignore this, as the error
@@ -91,10 +87,9 @@ export default async function reportError(
     sentry.captureException(error);
   });
 
-  const client = sentry.getCurrentHub().getClient();
-
-  if (client) {
-    await client.close();
+  const sentryClient = sentry.getCurrentHub().getClient();
+  if (sentryClient) {
+    await sentryClient.close();
   }
 }
 

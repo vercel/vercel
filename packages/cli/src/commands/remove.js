@@ -8,7 +8,6 @@ import getAliases from '../util/alias/get-aliases';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
 import { normalizeURL } from '../util/url';
-import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import { NowError } from '../util/now-error';
 import { isValidName } from '../util/is-valid-name';
@@ -61,12 +60,8 @@ const help = () => {
 `);
 };
 
-// Options
-
-export default async function main(ctx) {
-  let argv;
-
-  argv = mri(ctx.argv.slice(2), {
+export default async function main(client) {
+  const argv = mri(client.argv.slice(2), {
     boolean: ['help', 'debug', 'hard', 'yes', 'safe'],
     alias: {
       help: 'h',
@@ -82,8 +77,8 @@ export default async function main(ctx) {
     apiUrl,
     authConfig: { token },
     output,
-    config,
-  } = ctx;
+    config: { currentTeam },
+  } = client;
   const hard = argv.hard || false;
   const skipConfirmation = argv.yes || false;
   const ids = argv._;
@@ -110,14 +105,6 @@ export default async function main(ctx) {
     return 1;
   }
 
-  const { currentTeam } = config;
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
   let contextName = null;
 
   try {
