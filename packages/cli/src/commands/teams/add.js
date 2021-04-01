@@ -36,7 +36,7 @@ const gracefulExit = () => {
 const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('vercel.com/');
 const teamNamePrefix = rightPad('Team Name', 14);
 
-export default async function({ apiUrl, token, teams, config }) {
+export default async function add(client, teams) {
   let slug;
   let team;
   let elapsed;
@@ -132,7 +132,7 @@ export default async function({ apiUrl, token, teams, config }) {
   stopSpinner = wait('Saving');
 
   // Update config file
-  const configCopy = Object.assign({}, config);
+  const configCopy = Object.assign({}, client.config);
 
   if (configCopy.sh) {
     configCopy.sh.currentTeam = team;
@@ -144,12 +144,7 @@ export default async function({ apiUrl, token, teams, config }) {
 
   stopSpinner();
 
-  await invite({
-    teams,
-    args: [],
-    token,
-    apiUrl,
-    config,
+  await invite(client, { _: [] }, teams, {
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${getCommandName(
       `teams invite`

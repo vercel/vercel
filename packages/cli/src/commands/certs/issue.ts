@@ -1,7 +1,6 @@
 import { parse } from 'psl';
 import chalk from 'chalk';
 
-import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
@@ -20,43 +19,26 @@ type Options = {
   '--ca': string;
   '--challenge-only': boolean;
   '--crt': string;
-  '--debug': boolean;
   '--key': string;
   '--overwrite': boolean;
 };
 
 export default async function issue(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const addStamp = stamp();
-
   let cert;
-
+  const { output } = client;
+  const addStamp = stamp();
   const {
     '--challenge-only': challengeOnly,
     '--overwrite': overwite,
-    '--debug': debugEnabled,
     '--crt': crtPath,
     '--key': keyPath,
     '--ca': caPath,
   } = opts;
 
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
   let contextName = null;
 
   try {

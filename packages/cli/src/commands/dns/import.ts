@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { NowContext } from '../../types';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
@@ -7,24 +6,14 @@ import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
 import { getCommandName } from '../../util/pkg-name';
 
-type Options = {
-  '--debug': boolean;
-};
+type Options = {};
 
 export default async function add(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    apiUrl,
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
   let contextName = null;
 
   try {

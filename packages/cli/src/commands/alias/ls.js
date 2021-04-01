@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import Now from '../../util';
-import Client from '../../util/client.ts';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope.ts';
 import stamp from '../../util/output/stamp.ts';
@@ -10,22 +9,15 @@ import strlen from '../../util/strlen.ts';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name.ts';
 
-export default async function ls(ctx, opts, args) {
+export default async function ls(client, opts, args) {
   const {
+    apiUrl,
     authConfig: { token },
     output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const { '--debug': debugEnabled, '--next': nextTimestamp } = opts;
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
+    config: { currentTeam },
+  } = client;
+  const { '--next': nextTimestamp } = opts;
+
   let contextName = null;
 
   try {
@@ -47,7 +39,7 @@ export default async function ls(ctx, opts, args) {
   const now = new Now({
     apiUrl,
     token,
-    debug: debugEnabled,
+    debug: client.output.isDebugEnabled(),
     currentTeam,
     output,
   });

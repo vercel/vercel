@@ -1,18 +1,13 @@
 import chalk from 'chalk';
 import { email as regexEmail } from '../../util/input/regexes';
-import wait from '../../util/output/wait';
 import cmd from '../../util/output/cmd.ts';
-import info from '../../util/output/info';
 import stamp from '../../util/output/stamp.ts';
 import param from '../../util/output/param.ts';
-import error from '../../util/output/error.ts';
 import chars from '../../util/output/chars';
 import rightPad from '../../util/output/right-pad';
 import textInput from '../../util/input/text';
 import eraseLines from '../../util/output/erase-lines';
-import success from '../../util/output/success';
 import getUser from '../../util/get-user.ts';
-import Client from '../../util/client.ts';
 import { getCommandName } from '../../util/pkg-name.ts';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
@@ -56,40 +51,31 @@ const emailAutoComplete = (value, teamSlug) => {
   return false;
 };
 
-export default async function ({
+export default async function invite(
+  client,
+  argv,
   teams,
-  args,
-  config,
-  introMsg,
-  noopMsg = 'No changes made',
-  apiUrl,
-  token,
-  output,
-} = {}) {
+  { introMsg, noopMsg = 'No changes made' } = {}
+) {
+  const { config, output } = client;
   const { currentTeam: currentTeamId } = config;
 
-  const stopSpinner = wait('Fetching teams');
-
+  output.spinner('Fetching teams');
   const list = (await teams.ls()).teams;
   const currentTeam = list.find(team => team.id === currentTeamId);
 
-  stopSpinner();
-
-  const stopUserSpinner = wait('Fetching user information');
-  const client = new Client({ apiUrl, token, output });
+  output.spinner('Fetching user information');
   let user;
   try {
     user = await getUser(client);
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      console.error(error(err.message));
+      output.error(err.message);
       return 1;
     }
 
     throw err;
   }
-
-  stopUserSpinner();
 
   domains.push(user.email.split('@')[1]);
 
@@ -104,14 +90,14 @@ export default async function ({
     return 1;
   }
 
-  console.log(
-    info(introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`)
+  output.log(
+    introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`
   );
 
-  if (args.length > 0) {
-    for (const email of args) {
+  if (argv._.length > 0) {
+    for (const email of argv._) {
       if (regexEmail.test(email)) {
-        const stopSpinner = wait(email);
+        output.spinner(email);
         const elapsed = stamp();
         let userInfo = null;
 
@@ -121,23 +107,20 @@ export default async function ({
           userInfo = res.name || res.username;
         } catch (err) {
           if (err.code === 'user_not_found') {
-            console.error(
-              error(`No user exists with the email address "${email}".`)
-            );
+            output.error(`No user exists with the email address "${email}".`);
             return 1;
           }
 
           throw err;
         }
 
-        stopSpinner();
-        console.log(
+        output.log(
           `${chalk.cyan(chars.tick)} ${email}${
             userInfo ? ` (${userInfo})` : ''
           } ${elapsed()}`
         );
       } else {
-        console.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
+        output.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
       }
     }
     return;
@@ -163,57 +146,52 @@ export default async function ({
       }
     }
     let elapsed;
-    let stopSpinner;
     if (email) {
       elapsed = stamp();
-      stopSpinner = wait(inviteUserPrefix + email);
+      output.spinner(inviteUserPrefix + email);
       try {
         // eslint-disable-next-line no-await-in-loop
         const { name, username } = await teams.inviteUser({
           teamId: currentTeam.id,
           email,
         });
-        stopSpinner();
         const userInfo = name || username;
         email = `${email}${userInfo ? ` (${userInfo})` : ''} ${elapsed()}`;
         emails.push(email);
-        console.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
+        output.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
         if (hasError) {
           hasError = false;
-          process.stdout.write(eraseLines(emails.length + 2));
-          console.log(
-            info(
-              introMsg ||
-                `Inviting team members to ${chalk.bold(currentTeam.name)}`
-            )
+          process.stderr.write(eraseLines(emails.length + 2));
+          output.log(
+            introMsg ||
+              `Inviting team members to ${chalk.bold(currentTeam.name)}`
           );
           for (const email of emails) {
-            console.log(
-              `${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`
-            );
+            output.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
           }
         }
       } catch (err) {
-        stopSpinner();
-        process.stdout.write(eraseLines(emails.length + 2));
-        console.error(error(err.message));
+        output.stopSpinner();
+        process.stderr.write(eraseLines(emails.length + 2));
+        output.error(err.message);
         hasError = true;
         for (const email of emails) {
-          console.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
+          output.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
         }
       }
     }
   } while (email !== '');
 
-  process.stdout.write(eraseLines(emails.length + 2));
+  output.stopSpinner();
+  process.stderr.write(eraseLines(emails.length + 2));
 
   const n = emails.length;
   if (emails.length === 0) {
-    console.log(info(noopMsg));
+    output.log(noopMsg);
   } else {
-    console.log(success(`Invited ${n} teammate${n > 1 ? 's' : ''}`));
+    output.success(`Invited ${n} teammate${n > 1 ? 's' : ''}`);
     for (const email of emails) {
-      console.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
+      output.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
     }
   }
 }

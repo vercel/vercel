@@ -7,7 +7,6 @@ import { handleError, error } from '../util/error';
 import NowSecrets from '../util/secrets';
 import exit from '../util/exit';
 import logo from '../util/output/logo';
-import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import confirm from '../util/input/confirm';
 import getCommandFlags from '../util/get-command-flags';
@@ -78,8 +77,8 @@ let apiUrl;
 let subcommand;
 let nextTimestamp;
 
-const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
+const main = async client => {
+  argv = mri(client.argv.slice(2), {
     boolean: ['help', 'debug', 'yes'],
     alias: {
       help: 'h',
@@ -92,7 +91,7 @@ const main = async ctx => {
   argv._ = argv._.slice(1);
 
   debug = argv.debug;
-  apiUrl = ctx.apiUrl;
+  apiUrl = client.apiUrl;
   subcommand = argv._[0];
   nextTimestamp = argv.next;
 
@@ -105,8 +104,7 @@ const main = async ctx => {
     authConfig: { token },
     output,
     config: { currentTeam },
-  } = ctx;
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  } = client;
   let contextName = null;
 
   try {
@@ -120,24 +118,19 @@ const main = async ctx => {
     throw err;
   }
 
-  try {
-    await run({ output, token, contextName, currentTeam, ctx });
-  } catch (err) {
-    handleError(err);
-    exit(1);
-  }
+  return run({ output, token, contextName, currentTeam, client });
 };
 
-export default async ctx => {
+export default async client => {
   try {
-    await main(ctx);
+    await main(client);
   } catch (err) {
     handleError(err);
     process.exit(1);
   }
 };
 
-async function run({ output, token, contextName, currentTeam, ctx }) {
+async function run({ output, token, contextName, currentTeam, client }) {
   const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam, output });
   const args = argv._.slice(1);
   const start = Date.now();
@@ -152,7 +145,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
           )}`
         )
       );
-      return exit(1);
+      return 1;
     }
 
     const { secrets: list, pagination } = await secrets.ls(
@@ -214,7 +207,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
           )}`
         )
       );
-      return exit(1);
+      return 1;
     }
 
     const theSecret = await secrets.getSecretByNameOrId(args[0]);
@@ -224,7 +217,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
         argv.yes || (await readConfirmation(output, theSecret, contextName));
       if (!yes) {
         output.print(`Aborted. Secret not deleted.\n`);
-        return exit(0);
+        return 0;
       }
     } else {
       console.error(
@@ -234,7 +227,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
           )}`
         )
       );
-      return exit(1);
+      return 1;
     }
 
     const secret = await secrets.rm(args[0]);
@@ -256,7 +249,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
           )}`
         )
       );
-      return exit(1);
+      return 1;
     }
     const secret = await secrets.rename(args[0], args[1]);
     const elapsed = ms(new Date() - start);
@@ -289,11 +282,11 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
         );
       }
 
-      return exit(1);
+      return 1;
     }
 
     const [name, parsedValue] = args;
-    const [originalName, originalValue] = ctx.argv.slice(-2);
+    const [originalName, originalValue] = client.argv.slice(-2);
 
     let value = parsedValue;
     if (
@@ -313,7 +306,7 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
       console.log(
         `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
       );
-      return exit(1);
+      return 1;
     }
 
     await secrets.add(name, value);
@@ -335,13 +328,8 @@ async function run({ output, token, contextName, currentTeam, ctx }) {
     error('Please specify a valid subcommand: ls | add | rename | rm')
   );
   help();
-  exit(1);
+  return 2;
 }
-
-process.on('uncaughtException', err => {
-  handleError(err);
-  exit(1);
-});
 
 async function readConfirmation(output, secret, contextName) {
   const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);

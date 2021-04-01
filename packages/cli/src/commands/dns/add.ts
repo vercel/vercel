@@ -5,7 +5,6 @@ import {
   DNSInvalidPort,
   DNSInvalidType,
 } from '../../util/errors-ts';
-import { NowContext } from '../../types';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -14,24 +13,14 @@ import stamp from '../../util/output/stamp';
 import getDNSData from '../../util/dns/get-dns-data';
 import { getCommandName } from '../../util/pkg-name';
 
-type Options = {
-  '--debug': boolean;
-};
+type Options = {};
 
 export default async function add(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    apiUrl,
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
   let contextName = null;
 
   try {

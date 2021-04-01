@@ -1,20 +1,21 @@
-import { NowConfig } from './util/dev/types';
-import { Output } from './util/output';
+import { fileNameSymbol } from '@vercel/client';
 
-export type ThenArg<T> = T extends Promise<infer U> ? U : T;
+export interface AuthConfig {
+  [fileNameSymbol]?: string;
+  token: string;
+}
 
-export interface NowContext {
-  argv: string[];
-  apiUrl: string;
-  authConfig: {
-    token: string;
+export interface GlobalConfig {
+  [fileNameSymbol]?: string;
+  currentTeam?: string;
+  collectMetrics?: boolean;
+  api?: string;
+
+  // TODO: legacy - remove
+  updateChannel?: string;
+  desktop?: {
+    teamOrder: any;
   };
-  output: Output;
-  config: {
-    currentTeam: string;
-    updateChannel: string;
-  };
-  localConfig: NowConfig;
 }
 
 type Billing = {

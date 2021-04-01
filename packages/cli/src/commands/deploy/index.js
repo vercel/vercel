@@ -1,7 +1,6 @@
 import fs from 'fs-extra';
 import { resolve, basename } from 'path';
 import { fileNameSymbol } from '@vercel/client';
-import Client from '../../util/client.ts';
 import getScope from '../../util/get-scope.ts';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
@@ -11,19 +10,17 @@ import { handleError } from '../../util/error';
 import { help, args } from './args';
 import deploy from './latest';
 
-export default async ctx => {
+export default async client => {
   const {
-    authConfig,
     output,
     config: { currentTeam },
-    apiUrl,
-  } = ctx;
+  } = client;
 
   let contextName = currentTeam || 'current user';
   let argv = null;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), args);
+    argv = getArgs(client.argv.slice(2), args);
   } catch (error) {
     handleError(error);
     return 1;
@@ -43,11 +40,10 @@ export default async ctx => {
     paths = [process.cwd()];
   }
 
-  let { localConfig } = ctx;
+  let { localConfig } = client;
   if (!localConfig || localConfig instanceof Error) {
     localConfig = readLocalConfig(paths[0]);
   }
-  const debugEnabled = argv['--debug'];
   const stats = {};
 
   if (argv['--help']) {
@@ -66,26 +62,15 @@ export default async ctx => {
     }
   }
 
-  let client = null;
-
-  if (authConfig && authConfig.token) {
-    client = new Client({
-      apiUrl,
-      token: authConfig.token,
-      currentTeam,
-      output,
-      debug: debugEnabled,
-    });
-    try {
-      ({ contextName } = await getScope(client));
-    } catch (err) {
-      if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-        output.error(err.message);
-        return 1;
-      }
-
-      throw err;
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      output.error(err.message);
+      return 1;
     }
+
+    throw err;
   }
 
   if (localConfig) {
@@ -112,5 +97,5 @@ export default async ctx => {
     }
   }
 
-  return deploy(ctx, contextName, output, stats, localConfig, args);
+  return deploy(client, contextName, output, stats, localConfig, args);
 };

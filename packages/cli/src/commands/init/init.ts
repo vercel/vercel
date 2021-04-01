@@ -10,7 +10,7 @@ import listItem from '../../util/output/list-item';
 import promptBool from '../../util/input/prompt-bool';
 import toHumanPath from '../../util/humanize-path';
 import { Output } from '../../util/output';
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import success from '../../util/output/success';
 import info from '../../util/output/info';
 import cmd from '../../util/output/cmd';
@@ -32,11 +32,11 @@ type Example = {
 const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
 export default async function init(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const { output } = ctx;
+  const { output } = client;
   const [name, dir] = args;
   const force = opts['-f'] || opts['--force'];
 

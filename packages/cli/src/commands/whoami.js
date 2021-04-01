@@ -2,7 +2,6 @@ import mri from 'mri';
 import chalk from 'chalk';
 import logo from '../util/output/logo';
 import { handleError } from '../util/error';
-import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import { getPkgName } from '../util/pkg-name.ts';
 
@@ -32,15 +31,13 @@ const help = () => {
 `);
 };
 
-// Options
-let argv;
+const main = async client => {
+  const { output } = client;
 
-const main = async ctx => {
-  argv = mri(ctx.argv.slice(2), {
-    boolean: ['help', 'debug', 'all'],
+  const argv = mri(client.argv.slice(2), {
+    boolean: ['help'],
     alias: {
       help: 'h',
-      debug: 'd',
     },
   });
 
@@ -48,20 +45,13 @@ const main = async ctx => {
 
   if (argv.help || argv._[0] === 'help') {
     help();
-    process.exit(0);
+    return 2;
   }
 
-  const debug = argv['--debug'];
-  const {
-    authConfig: { token },
-    output,
-    apiUrl,
-  } = ctx;
-  const client = new Client({ apiUrl, token, debug, output });
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    ({ contextName } = await getScope(client, { getTeam: false }));
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
@@ -71,22 +61,18 @@ const main = async ctx => {
     throw err;
   }
 
-  await whoami(contextName);
-};
-
-export default async ctx => {
-  try {
-    await main(ctx);
-  } catch (err) {
-    handleError(err);
-    process.exit(1);
-  }
-};
-
-async function whoami(contextName) {
   if (process.stdout.isTTY) {
     process.stdout.write('> ');
   }
 
   console.log(contextName);
-}
+};
+
+export default async client => {
+  try {
+    await main(client);
+  } catch (err) {
+    handleError(err);
+    process.exit(1);
+  }
+};

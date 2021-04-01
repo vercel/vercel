@@ -7,7 +7,6 @@ import Now from '../util';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed.ts';
 import { handleError } from '../util/error';
-import Client from '../util/client.ts';
 import getScope from '../util/get-scope.ts';
 import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
@@ -42,12 +41,12 @@ const help = () => {
   `);
 };
 
-export default async function main(ctx) {
+export default async function main(client) {
   let deployment;
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2));
+    argv = getArgs(client.argv.slice(2));
   } catch (err) {
     handleError(err);
     return 1;
@@ -63,7 +62,7 @@ export default async function main(ctx) {
     output,
     authConfig: { token },
     config,
-  } = ctx;
+  } = client;
   const debugEnabled = argv['--debug'];
   const { print, log, error } = output;
 
@@ -77,13 +76,7 @@ export default async function main(ctx) {
   }
 
   const { currentTeam } = config;
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
+
   let contextName = null;
 
   try {

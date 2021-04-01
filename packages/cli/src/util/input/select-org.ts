@@ -3,18 +3,19 @@ import inquirer from 'inquirer';
 import getUser from '../get-user';
 import getTeams from '../get-teams';
 import { User, Team, Org } from '../../types';
-import { Output } from '../output';
 
 type Choice = { name: string; value: Org };
 
 export default async function selectOrg(
-  output: Output,
-  question: string,
   client: Client,
-  currentTeam?: string,
+  question: string,
   autoConfirm?: boolean
 ): Promise<Org> {
   require('./patch-inquirer');
+  const {
+    output,
+    config: { currentTeam },
+  } = client;
 
   output.spinner('Loading scopes…', 1000);
   let user: User;

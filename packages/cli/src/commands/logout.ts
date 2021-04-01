@@ -3,16 +3,10 @@ import fetch from 'node-fetch';
 import logo from '../util/output/logo';
 // @ts-ignore
 import { handleError } from '../util/error';
-import {
-  readConfigFile,
-  writeToConfigFile,
-  readAuthConfigFile,
-  writeToAuthConfigFile,
-} from '../util/config/files';
+import { writeToConfigFile, writeToAuthConfigFile } from '../util/config/files';
 import getArgs from '../util/get-args';
-import { NowContext } from '../types';
-import { Output } from '../util/output';
-import { getPkgName } from '../util/pkg-name';
+import Client from '../util/client';
+import { getCommandName, getPkgName } from '../util/pkg-name';
 
 const help = () => {
   console.log(`
@@ -36,11 +30,11 @@ const help = () => {
 `);
 };
 
-export default async function main(ctx: NowContext): Promise<number> {
+export default async function main(client: Client): Promise<number> {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--help': Boolean,
       '-h': '--help',
     });
@@ -54,31 +48,31 @@ export default async function main(ctx: NowContext): Promise<number> {
     return 2;
   }
 
-  return logout(ctx.apiUrl, ctx.output);
-}
+  const { authConfig, config, apiUrl, output } = client;
+  const { token } = authConfig;
 
-const logout = async (apiUrl: string, output: Output) => {
+  if (!token) {
+    output.note(
+      `Not currently logged in, so ${getCommandName('logout')} did nothing`
+    );
+    return 0;
+  }
+
   output.spinner('Logging out…', 200);
 
-  const configContent = readConfigFile();
-  const authContent = readAuthConfigFile();
-
-  // Copy the content
-  const token = `${authContent.token}`;
-
-  delete configContent.currentTeam;
+  delete config.currentTeam;
 
   // The new user might have completely different teams, so
   // we should wipe the order.
-  if (configContent.desktop) {
-    delete configContent.desktop.teamOrder;
+  if (config.desktop) {
+    delete config.desktop.teamOrder;
   }
 
-  delete authContent.token;
+  delete authConfig.token;
 
   try {
-    writeToConfigFile(configContent);
-    writeToAuthConfigFile(authContent);
+    writeToConfigFile(config);
+    writeToAuthConfigFile(authConfig);
     output.debug('Configuration has been deleted');
   } catch (err) {
     output.error(`Couldn't remove config while logging out`);
@@ -103,4 +97,4 @@ const logout = async (apiUrl: string, output: Output) => {
 
   output.log('Logged out!');
   return 0;
-};
+}

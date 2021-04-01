@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 
-import { NowContext } from '../../types';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
@@ -89,11 +88,11 @@ const COMMAND_CONFIG = {
   pull: ['pull'],
 };
 
-export default async function main(ctx: NowContext) {
+export default async function main(client: Client) {
   let argv;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
       '-y': '--yes',
     });
@@ -107,17 +106,9 @@ export default async function main(ctx: NowContext) {
     return 2;
   }
 
-  const debug = argv['--debug'];
   const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
-  const {
-    authConfig: { token },
-    apiUrl,
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
-  const link = await getLinkedProject(output, client);
+  const { output, config } = client;
+  const link = await getLinkedProject(client);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -129,7 +120,7 @@ export default async function main(ctx: NowContext) {
     return 1;
   } else {
     const { project, org } = link;
-    client.currentTeam = org.type === 'team' ? org.id : undefined;
+    config.currentTeam = org.type === 'team' ? org.id : undefined;
     switch (subcommand) {
       case 'ls':
         return ls(client, project, argv, args, output);

@@ -1,55 +1,36 @@
 import chalk from 'chalk';
-
-// @ts-ignore
-import Now from '../../util';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
-import { NowContext } from '../../types';
 import { getCommandName } from '../../util/pkg-name';
 
 interface Options {
   '--overwrite'?: boolean;
-  '--debug'?: boolean;
   '--crt'?: string;
   '--key'?: string;
   '--ca'?: string;
 }
 
 async function add(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ): Promise<number> {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
+  const { output } = client;
   const addStamp = stamp();
 
   let cert;
 
   const {
     '--overwrite': overwite,
-    '--debug': debugEnabled,
     '--crt': crtPath,
     '--key': keyPath,
     '--ca': caPath,
   } = opts;
 
   let contextName = null;
-  const client = new Client({
-    apiUrl,
-    token,
-    currentTeam,
-    debug: debugEnabled,
-    output,
-  });
 
   try {
     ({ contextName } = await getScope(client));
@@ -62,17 +43,8 @@ async function add(
     throw err;
   }
 
-  const now = new Now({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    currentTeam,
-    output,
-  });
-
   if (overwite) {
     output.error('Overwrite option is deprecated');
-    now.close();
     return 1;
   }
 
@@ -88,12 +60,11 @@ async function add(
           )}`
         )}\n`
       );
-      now.close();
       return 1;
     }
 
     // Create a custom certificate from the given file paths
-    cert = await createCertFromFile(now, keyPath, crtPath, caPath);
+    cert = await createCertFromFile(client, keyPath, crtPath, caPath);
   } else {
     output.warn(
       `${chalk.cyan(
@@ -110,7 +81,6 @@ async function add(
       output.print(
         `  ${chalk.cyan(getCommandName('certs add <cn>[, <cn>]'))}\n`
       );
-      now.close();
       return 1;
     }
 
@@ -123,7 +93,7 @@ async function add(
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
 
-    cert = await createCertForCns(now, cns, contextName);
+    cert = await createCertForCns(client, cns, contextName);
     output.stopSpinner();
   }
 

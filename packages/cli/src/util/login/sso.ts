@@ -5,6 +5,7 @@ import { hostname } from 'os';
 import { URL } from 'url';
 import listen from 'async-listen';
 import { getTitleName } from '../pkg-name';
+import highlight from '../output/highlight';
 import { LoginParams } from './types';
 
 export default async function doSsoLogin(
@@ -31,19 +32,32 @@ export default async function doSsoLogin(
     output.spinner(
       'Please complete the SAML Single Sign-On authentication in your web browser'
     );
-    const [req] = await Promise.all([
-      new Promise<http.IncomingMessage>((resolve, reject) => {
+    const [query] = await Promise.all([
+      new Promise<URL['searchParams']>((resolve, reject) => {
         server.once('request', (req, res) => {
-          resolve(req);
+          const query = new URL(req.url || '/', 'http://localhost')
+            .searchParams;
+          resolve(query);
 
-          // Redirect the user's web browser back
-          // to the Vercel email confirmation page
-          res.statusCode = 302;
-          // TODO: maybe a dedicated page for CLI login success?
-          res.setHeader(
-            'location',
-            'https://vercel.com/notifications/email-confirmed'
+          // Redirect the user's web browser back to
+          // the Vercel CLI login notification page
+          const location = new URL(
+            'https://vercel.com/notifications/cli-login-'
           );
+          const loginError = query.get('loginError');
+          if (loginError) {
+            location.pathname += 'failed';
+            location.searchParams.set('loginError', loginError);
+          } else {
+            location.pathname += 'success';
+            const email = query.get('email');
+            if (email) {
+              location.searchParams.set('email', email);
+            }
+          }
+
+          res.statusCode = 302;
+          res.setHeader('location', location.href);
           res.end();
         });
         server.once('error', reject);
@@ -51,12 +65,10 @@ export default async function doSsoLogin(
       open(url.href),
     ]);
 
-    const query = new URL(req.url || '/', 'http://localhost').searchParams;
-
     const loginError = query.get('loginError');
     if (loginError) {
       const err = JSON.parse(loginError);
-      output.error(err.message);
+      output.prettyError(err);
       return 1;
     }
 
@@ -84,7 +96,7 @@ export default async function doSsoLogin(
       return 1;
     }
 
-    output.success(`SAML authentication complete`);
+    output.success(`SAML authentication complete for ${highlight(email)}`);
     const body = await verifyRes.json();
     return body.token;
   } finally {
