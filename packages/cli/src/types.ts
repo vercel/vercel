@@ -1,14 +1,21 @@
-export type ThenArg<T> = T extends Promise<infer U> ? U : T;
+import { fileNameSymbol } from '@vercel/client';
 
 export interface AuthConfig {
+  [fileNameSymbol]?: string;
   token: string;
 }
 
 export interface GlobalConfig {
+  [fileNameSymbol]?: string;
   currentTeam?: string;
-  updateChannel?: string;
   collectMetrics?: boolean;
   api?: string;
+
+  // TODO: legacy - remove
+  updateChannel?: string;
+  desktop?: {
+    teamOrder: any;
+  };
 }
 
 type Billing = {
