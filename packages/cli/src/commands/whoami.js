@@ -51,7 +51,7 @@ const main = async client => {
   let contextName = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    ({ contextName } = await getScope(client, { getTeam: false }));
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);

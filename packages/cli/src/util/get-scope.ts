@@ -4,12 +4,19 @@ import getTeamById from './get-team-by-id';
 import { TeamDeleted } from './errors-ts';
 import { Team } from '../types';
 
-export default async function getScope(client: Client) {
+interface GetScopeOptions {
+  getTeam?: boolean;
+}
+
+export default async function getScope(
+  client: Client,
+  opts: GetScopeOptions = {}
+) {
   const user = await getUser(client);
   let contextName = user.username || user.email;
   let team: Team | null = null;
 
-  if (client.config.currentTeam) {
+  if (client.config.currentTeam && opts.getTeam !== false) {
     team = await getTeamById(client, client.config.currentTeam);
 
     if (!team) {
