@@ -5,6 +5,7 @@
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, Redirect, Rewrite, Header } from './types';
+import { HasField } from '.';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -50,8 +51,9 @@ export function convertRedirects(
 ): Route[] {
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
+    const hasSegments = collectHasSegments(r.has);
     try {
-      const loc = replaceSegments(segments, r.destination, true);
+      const loc = replaceSegments(segments, hasSegments, r.destination, true);
       let status: number;
       if (typeof r.permanent === 'boolean') {
         status = r.permanent ? 308 : 307;
@@ -79,8 +81,9 @@ export function convertRedirects(
 export function convertRewrites(rewrites: Rewrite[]): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
+    const hasSegments = collectHasSegments(r.has);
     try {
-      const dest = replaceSegments(segments, r.destination);
+      const dest = replaceSegments(segments, hasSegments, r.destination);
       const route: Route = { src, dest, check: true };
 
       if (r.has) {
@@ -97,11 +100,16 @@ export function convertHeaders(headers: Header[]): Route[] {
   return headers.map(h => {
     const obj: { [key: string]: string } = {};
     const { src, segments } = sourceToRegex(h.source);
+    const hasSegments = collectHasSegments(h.has);
     const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
     const indexes: { [k: string]: string } = {};
 
     segments.forEach((name, index) => {
       indexes[name] = toSegmentDest(index);
+    });
+
+    hasSegments.forEach(name => {
+      indexes[name] = '$' + name;
     });
 
     h.headers.forEach(({ key, value }) => {
@@ -174,15 +182,42 @@ export function sourceToRegex(
   return { src: r.source, segments };
 }
 
+function collectHasSegments(has?: HasField) {
+  const hasSegments = new Set<string>();
+
+  for (const hasItem of has || []) {
+    if (!hasItem.value && (hasItem as any).key) {
+      hasSegments.add((hasItem as any).key);
+    }
+
+    if (hasItem.value) {
+      const matcher = new RegExp(`^${hasItem.value}$`);
+      const matches = matcher.exec('');
+
+      if (matches) {
+        if (matches.groups) {
+          Object.keys(matches.groups).forEach(groupKey => {
+            hasSegments.add(groupKey);
+          });
+        } else {
+          hasSegments.add((hasItem as any).key || 'host');
+        }
+      }
+    }
+  }
+  return [...hasSegments];
+}
+
 function replaceSegments(
   segments: string[],
+  hasItemSegments: string[],
   destination: string,
   isRedirect?: boolean
 ): string {
   const parsedDestination = parseUrl(destination, true);
-  delete parsedDestination.href;
-  delete parsedDestination.path;
-  delete parsedDestination.search;
+  delete (parsedDestination as any).href;
+  delete (parsedDestination as any).path;
+  delete (parsedDestination as any).search;
   // eslint-disable-next-line prefer-const
   let { pathname, hash, query, ...rest } = parsedDestination;
   pathname = pathname || '';
@@ -190,10 +225,15 @@ function replaceSegments(
 
   const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
 
-  if (namedSegments.length > 0) {
+  if (namedSegments.length > 0 || hasItemSegments.length > 0) {
     const indexes: { [k: string]: string } = {};
     segments.forEach((name, index) => {
       indexes[name] = toSegmentDest(index);
+    });
+
+    // 'has' matches override 'source' matches
+    hasItemSegments.forEach(name => {
+      indexes[name] = '$' + name;
     });
 
     let destParams = new Set<string>();
