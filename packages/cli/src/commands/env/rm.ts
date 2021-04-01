@@ -4,7 +4,7 @@ import { Project } from '../../types';
 import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
-import getEnvVariables from '../../util/env/get-env-records';
+import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvTarget from '../../util/env/format-env-target';
 import {
   isValidEnvTarget,
@@ -68,7 +68,7 @@ export default async function rm(
     return 1;
   }
 
-  const result = await getEnvVariables(output, client, project.id, {
+  const result = await getEnvRecords(output, client, project.id, {
     target: envTarget,
     gitBranch: envGitBranch,
   });

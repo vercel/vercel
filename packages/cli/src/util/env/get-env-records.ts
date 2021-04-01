@@ -3,7 +3,7 @@ import Client from '../client';
 import { ProjectEnvVariable, ProjectEnvTarget } from '../../types';
 import { URLSearchParams } from 'url';
 
-export default async function getEnvVariables(
+export default async function getEnvRecords(
   output: Output,
   client: Client,
   projectId: string,

@@ -4,7 +4,7 @@ import { Output } from '../../util/output';
 import { Project, ProjectEnvVariable, ProjectEnvType } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import getEnvVariables from '../../util/env/get-env-records';
+import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvTarget from '../../util/env/format-env-target';
 import {
   isValidEnvTarget,
@@ -48,7 +48,7 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  const { envs } = await getEnvVariables(output, client, project.id, {
+  const { envs } = await getEnvRecords(output, client, project.id, {
     target: envTarget,
     gitBranch: envGitBranch,
   });
@@ -64,9 +64,12 @@ export default async function ls(
 }
 
 function getTable(records: ProjectEnvVariable[]) {
+  const label = records.some(env => env.gitBranch)
+    ? 'environments (git branch)'
+    : 'environments';
   return formatTable(
-    ['name', 'value', 'environments', 'git branch', 'created'],
-    ['l', 'l', 'l', 'l', 'l', 'l'],
+    ['name', 'value', label, 'created'],
+    ['l', 'l', 'l', 'l', 'l'],
     [
       {
         name: '',
@@ -95,7 +98,6 @@ function getRow(env: ProjectEnvVariable) {
     chalk.bold(env.key),
     value,
     formatEnvTarget(env),
-    env.gitBranch || '',
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }

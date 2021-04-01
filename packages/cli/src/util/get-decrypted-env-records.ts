@@ -15,6 +15,7 @@ export default async function getDecryptedEnvRecords(
 ): Promise<{ envs: ProjectEnvVariable[] }> {
   const { envs } = await getEnvRecords(output, client, projectId, {
     target: ProjectEnvTarget.Development,
+    decrypt: true,
   });
 
   const envsWithDecryptedSecrets = await Promise.all(
