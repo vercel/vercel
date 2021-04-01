@@ -539,8 +539,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
 
     const previewEnvs = lines.filter(line => line.includes('MY_PREVIEW'));
     t.is(previewEnvs.length, 2);
-    t.regex(previewEnvs[0], / Preview (staging) /gm);
-    t.regex(previewEnvs[1], / Preview /gm);
+    t.regex(previewEnvs[0], /Encrypted .* Preview \(staging\) /gm);
+    t.regex(previewEnvs[1], /Encrypted .* Preview /gm);
   }
 
   // we create a "legacy" env variable that contains a decryptable secret
