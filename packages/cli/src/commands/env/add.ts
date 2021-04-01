@@ -35,10 +35,10 @@ export default async function add(
   const stdInput = await readStandardInput();
   let [envName, envTargetArg, envGitBranch] = args;
 
-  if (args.length > 2) {
+  if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> ${getEnvTargetPlaceholder()}`
+        `env add <name> ${getEnvTargetPlaceholder()} <gitbranch>`
       )}`
     );
     return 1;
@@ -47,7 +47,7 @@ export default async function add(
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> < <file>`
+        `env add <name> <target> <gitbranch> < <file>`
       )}`
     );
     return 1;
@@ -126,8 +126,12 @@ export default async function add(
     }
   }
 
-  if (envTargets.length === 1 && envTargets[0] === ProjectEnvTarget.Preview) {
-    envGitBranch;
+  if (
+    !stdInput &&
+    !envGitBranch &&
+    envTargets.length === 1 &&
+    envTargets[0] === ProjectEnvTarget.Preview
+  ) {
     const { inputValue } = await inquirer.prompt({
       type: 'input',
       name: 'inputValue',

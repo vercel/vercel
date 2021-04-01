@@ -213,7 +213,7 @@ export enum ProjectEnvType {
 }
 
 export interface ProjectEnvVariable {
-  id?: string;
+  id: string;
   key: string;
   value: string;
   type: ProjectEnvType;

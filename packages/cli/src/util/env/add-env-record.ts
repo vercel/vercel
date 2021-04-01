@@ -19,18 +19,15 @@ export default async function addEnvRecord(
   output.debug(
     `Adding ${type} Environment Variable ${key} to ${targets.length} targets`
   );
-  const body: ProjectEnvVariable = {
+  const body: Omit<ProjectEnvVariable, 'id'> = {
     type,
     key,
     value,
     target: targets,
-    gitBranch,
+    gitBranch: gitBranch || undefined,
   };
-  if (!gitBranch) {
-    delete body.gitBranch;
-  }
-  const urlProject = `/v7/projects/${projectId}/env`;
-  await client.fetch<ProjectEnvVariable>(urlProject, {
+  const url = `/v7/projects/${projectId}/env`;
+  await client.fetch<ProjectEnvVariable>(url, {
     method: 'POST',
     body: JSON.stringify(body),
   });

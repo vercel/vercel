@@ -8,12 +8,10 @@ export default async function getEnvVariables(
   client: Client,
   projectId: string,
   {
-    key,
     target,
     gitBranch,
     decrypt,
   }: {
-    key?: string;
     target?: ProjectEnvTarget | string;
     gitBranch?: string;
     decrypt?: boolean;
@@ -24,9 +22,6 @@ export default async function getEnvVariables(
   );
   const query = new URLSearchParams();
 
-  if (key) {
-    query.set('key', key);
-  }
   if (target) {
     query.set('target', target);
   }

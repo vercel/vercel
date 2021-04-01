@@ -5,6 +5,7 @@ import { Project, ProjectEnvVariable, ProjectEnvType } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvVariables from '../../util/env/get-env-records';
+import formatEnvTarget from '../../util/env/format-env-target';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -13,8 +14,6 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
-// @ts-ignore
-import title from 'title';
 
 type Options = {
   '--debug': boolean;
@@ -95,9 +94,7 @@ function getRow(env: ProjectEnvVariable) {
   return [
     chalk.bold(env.key),
     value,
-    (Array.isArray(env.target) ? env.target : [env.target || ''])
-      .map(title)
-      .join(', '),
+    formatEnvTarget(env),
     env.gitBranch || '',
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];

@@ -5,6 +5,7 @@ import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvVariables from '../../util/env/get-env-records';
+import formatEnvTarget from '../../util/env/format-env-target';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -67,15 +68,30 @@ export default async function rm(
     return 1;
   }
 
-  const { envs } = await getEnvVariables(output, client, project.id, {
-    key: envName,
+  const result = await getEnvVariables(output, client, project.id, {
     target: envTarget,
     gitBranch: envGitBranch,
   });
 
+  let envs = result.envs.filter(env => env.key === envName);
+
   if (envs.length === 0) {
     output.error(`The Environment Variable ${param(envName)} was not found.\n`);
     return 1;
+  }
+
+  while (envs.length > 1) {
+    const { id } = await inquirer.prompt({
+      name: 'id',
+      type: 'list',
+      message: `Remove ${envName} from which Environments?`,
+      choices: envs.map(env => ({ value: env.id, name: formatEnvTarget(env) })),
+    });
+
+    if (!id) {
+      output.error('Please select at least one Environment Variable to remove');
+    }
+    envs = envs.filter(env => env.id === id);
   }
   const env = envs[0];
 
@@ -83,9 +99,9 @@ export default async function rm(
   if (
     !skipConfirmation &&
     !(await confirm(
-      `Removing Environment Variable ${param(env.key)} (${
-        Array.isArray(env.target) ? env.target.join(',') : env.target
-      }) from Project ${chalk.bold(project.name)}. Are you sure?`,
+      `Removing Environment Variable ${param(env.key)} ${formatEnvTarget(
+        env
+      )} from Project ${chalk.bold(project.name)}. Are you sure?`,
       false
     ))
   ) {
