@@ -1,24 +1,18 @@
 import { Output } from '../output';
 import Client from '../client';
-import { ProjectEnvTarget, ProjectEnvVariableV5 } from '../../types';
+import { ProjectEnvVariable } from '../../types';
 
 export default async function removeEnvRecord(
   output: Output,
   client: Client,
   projectId: string,
-  envName: string,
-  target?: ProjectEnvTarget
+  env: ProjectEnvVariable
 ): Promise<void> {
-  output.debug(
-    `Removing Environment Variable ${envName} from target ${target}`
-  );
+  output.debug(`Removing Environment Variable ${env.key}`);
 
-  const qs = target ? `?target=${encodeURIComponent(target)}` : '';
-  const urlProject = `/v4/projects/${projectId}/env/${encodeURIComponent(
-    envName
-  )}${qs}`;
+  const urlProject = `/v7/projects/${projectId}/env/${env.id}`;
 
-  await client.fetch<ProjectEnvVariableV5>(urlProject, {
+  await client.fetch<ProjectEnvVariable>(urlProject, {
     method: 'DELETE',
   });
 }

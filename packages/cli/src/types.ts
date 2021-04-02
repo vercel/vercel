@@ -209,10 +209,12 @@ export enum ProjectEnvTarget {
 export enum ProjectEnvType {
   Plaintext = 'plain',
   Secret = 'secret',
+  Encrypted = 'encrypted',
   System = 'system',
 }
 
 export interface ProjectEnvVariable {
+  id: string;
   key: string;
   value: string;
   type: ProjectEnvType;
@@ -220,11 +222,8 @@ export interface ProjectEnvVariable {
   createdAt?: number;
   updatedAt?: number;
   target?: ProjectEnvTarget | ProjectEnvTarget[];
-}
-
-export interface ProjectEnvVariableV5 extends ProjectEnvVariable {
-  target?: ProjectEnvTarget;
   system?: boolean;
+  gitBranch?: string;
 }
 
 export interface ProjectSettings {

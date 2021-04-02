@@ -13,15 +13,13 @@ export default async function getDecryptedEnvRecords(
   client: Client,
   projectId: string
 ): Promise<{ envs: ProjectEnvVariable[] }> {
-  const { envs } = await getEnvRecords(
-    output,
-    client,
-    projectId,
-    ProjectEnvTarget.Development
-  );
+  const { envs } = await getEnvRecords(output, client, projectId, {
+    target: ProjectEnvTarget.Development,
+    decrypt: true,
+  });
 
   const envsWithDecryptedSecrets = await Promise.all(
-    envs.map(async ({ type, key, value }) => {
+    envs.map(async ({ id, type, key, value }) => {
       // it's not possible to create secret env variables for development
       // anymore but we keep this because legacy env variables with "decryptable"
       // secret values still exit in our system
@@ -30,7 +28,7 @@ export default async function getDecryptedEnvRecords(
           const secretIdOrName = value;
 
           if (!secretIdOrName) {
-            return { type, key, value: '', found: true };
+            return { id, type, key, value: '', found: true };
           }
 
           output.debug(`Fetching decrypted secret ${secretIdOrName}`);
@@ -38,17 +36,17 @@ export default async function getDecryptedEnvRecords(
             `/v2/now/secrets/${secretIdOrName}?decrypt=true`
           );
 
-          return { type, key, value: secret.value, found: true };
+          return { id, type, key, value: secret.value, found: true };
         } catch (error) {
           if (error && error.status === 404) {
-            return { type, key, value: '', found: false };
+            return { id, type, key, value: '', found: false };
           }
 
           throw error;
         }
       }
 
-      return { type, key, value, found: true };
+      return { id, type, key, value, found: true };
     })
   );
 

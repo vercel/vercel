@@ -1,24 +1,22 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { ProjectEnvTarget, Project, Secret, ProjectEnvType } from '../../types';
+import { ProjectEnvTarget, Project, ProjectEnvType } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
-import getEnvVariables from '../../util/env/get-env-records';
+import getEnvRecords from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
   getEnvTargetChoices,
 } from '../../util/env/env-target';
-import { isValidEnvType, getEnvTypePlaceholder } from '../../util/env/env-type';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
-import getSystemEnvValues from '../../util/env/get-system-env-values';
 
 type Options = {
   '--debug': boolean;
@@ -35,21 +33,21 @@ export default async function add(
   require('../../util/input/patch-inquirer');
 
   const stdInput = await readStandardInput();
-  let [envTypeArg, envName, envTargetArg] = args;
+  let [envName, envTargetArg, envGitBranch] = args;
 
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add ${getEnvTypePlaceholder()} <name> ${getEnvTargetPlaceholder()}`
+        `env add <name> ${getEnvTargetPlaceholder()} <gitbranch>`
       )}`
     );
     return 1;
   }
 
-  if (stdInput && (!envTypeArg || !envName || !envTargetArg)) {
+  if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add ${getEnvTypePlaceholder()} <name> <target> < <file>`
+        `env add <name> <target> <gitbranch> < <file>`
       )}`
     );
     return 1;
@@ -68,39 +66,6 @@ export default async function add(
     envTargets.push(envTargetArg);
   }
 
-  let envType: ProjectEnvType;
-  if (envTypeArg) {
-    if (!isValidEnvType(envTypeArg)) {
-      output.error(
-        `The Environment Variable type ${param(
-          envTypeArg
-        )} is invalid. It must be one of: ${getEnvTypePlaceholder()}.`
-      );
-      return 1;
-    }
-
-    envType = envTypeArg;
-  } else {
-    const answers = (await inquirer.prompt({
-      name: 'inputEnvType',
-      type: 'list',
-      message: `Which type of Environment Variable do you want to add?`,
-      choices: [
-        { name: 'Plaintext', value: ProjectEnvType.Plaintext },
-        {
-          name: `Secret (can be created using ${getCommandName('secret add')})`,
-          value: ProjectEnvType.Secret,
-        },
-        {
-          name: 'Reference to System Environment Variable',
-          value: ProjectEnvType.System,
-        },
-      ],
-    })) as { inputEnvType: ProjectEnvType };
-
-    envType = answers.inputEnvType;
-  }
-
   while (!envName) {
     const { inputName } = await inquirer.prompt({
       type: 'input',
@@ -115,24 +80,11 @@ export default async function add(
     }
   }
 
-  const [{ envs }, { systemEnvValues }] = await Promise.all([
-    getEnvVariables(output, client, project.id),
-    getSystemEnvValues(output, client, project.id),
-  ]);
+  const { envs } = await getEnvRecords(output, client, project.id);
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
-  const choices = getEnvTargetChoices().filter(c => {
-    // hide Development if "Secret" is chosen
-    if (
-      envType === ProjectEnvType.Secret &&
-      c.value === ProjectEnvTarget.Development
-    ) {
-      return false;
-    }
-
-    return !existing.has(c.value);
-  });
+  const choices = getEnvTargetChoices().filter(c => !existing.has(c.value));
 
   if (choices.length === 0) {
     output.error(
@@ -149,7 +101,7 @@ export default async function add(
 
   if (stdInput) {
     envValue = stdInput;
-  } else if (envType === ProjectEnvType.Plaintext) {
+  } else {
     const { inputValue } = await inquirer.prompt({
       type: 'input',
       name: 'inputValue',
@@ -157,51 +109,6 @@ export default async function add(
     });
 
     envValue = inputValue || '';
-  } else if (envType === ProjectEnvType.Secret) {
-    let secretId: string | null = null;
-
-    while (!secretId) {
-      let { secretName } = await inquirer.prompt({
-        type: 'input',
-        name: 'secretName',
-        message: `What’s the value of ${envName}?`,
-      });
-
-      secretName = secretName || '';
-
-      if (secretName[0] === '@') {
-        secretName = secretName.slice(1);
-      }
-
-      try {
-        const secret = await client.fetch<Secret>(
-          `/v2/now/secrets/${encodeURIComponent(secretName)}`
-        );
-
-        secretId = secret.uid;
-      } catch (error) {
-        if (error.status === 404) {
-          output.error(
-            `Please enter the name of an existing Secret (can be created with ${getCommandName(
-              'secret add'
-            )}).`
-          );
-        } else {
-          throw error;
-        }
-      }
-    }
-
-    envValue = secretId;
-  } else {
-    const { systemEnvValue } = await inquirer.prompt({
-      name: 'systemEnvValue',
-      type: 'list',
-      message: `What’s the value of ${envName}?`,
-      choices: systemEnvValues.map(value => ({ name: value, value })),
-    });
-
-    envValue = systemEnvValue;
   }
 
   while (envTargets.length === 0) {
@@ -219,6 +126,20 @@ export default async function add(
     }
   }
 
+  if (
+    !stdInput &&
+    !envGitBranch &&
+    envTargets.length === 1 &&
+    envTargets[0] === ProjectEnvTarget.Preview
+  ) {
+    const { inputValue } = await inquirer.prompt({
+      type: 'input',
+      name: 'inputValue',
+      message: `Add ${envName} to which Git Branch? (leave empty for all Preview branches)?`,
+    });
+    envGitBranch = inputValue || '';
+  }
+
   const addStamp = stamp();
   try {
     await withSpinner('Saving', () =>
@@ -226,10 +147,11 @@ export default async function add(
         output,
         client,
         project.id,
-        envType,
+        ProjectEnvType.Encrypted,
         envName,
         envValue,
-        envTargets
+        envTargets,
+        envGitBranch
       )
     );
   } catch (error) {
