@@ -19,7 +19,7 @@ export default async function doSsoLogin(
   const tokenName = `${getTitleName()} CLI on ${host}`;
 
   const server = http.createServer();
-  const address = await listen(server);
+  const address = await listen(server, 0, '127.0.0.1');
   const { port } = new URL(address);
 
   try {
