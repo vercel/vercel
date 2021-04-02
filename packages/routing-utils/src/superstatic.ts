@@ -186,8 +186,8 @@ function collectHasSegments(has?: HasField) {
   const hasSegments = new Set<string>();
 
   for (const hasItem of has || []) {
-    if (!hasItem.value && (hasItem as any).key) {
-      hasSegments.add((hasItem as any).key);
+    if (!hasItem.value && 'key' in hasItem) {
+      hasSegments.add(hasItem.key);
     }
 
     if (hasItem.value) {
