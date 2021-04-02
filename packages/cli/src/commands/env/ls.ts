@@ -1,15 +1,11 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { Output } from '../../util/output';
-import {
-  ProjectEnvTarget,
-  Project,
-  ProjectEnvVariable,
-  ProjectEnvType,
-} from '../../types';
+import { Project, ProjectEnvVariable, ProjectEnvType } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import getEnvVariables from '../../util/env/get-env-records';
+import getEnvRecords from '../../util/env/get-env-records';
+import formatEnvTarget from '../../util/env/format-env-target';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -18,8 +14,6 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
-// @ts-ignore
-import title from 'title';
 
 type Options = {
   '--debug': boolean;
@@ -32,16 +26,16 @@ export default async function ls(
   args: string[],
   output: Output
 ) {
-  if (args.length > 1) {
+  if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env ls ${getEnvTargetPlaceholder()}`
+        `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
       )}`
     );
     return 1;
   }
 
-  const envTarget = args[0] as ProjectEnvTarget | undefined;
+  const [envTarget, envGitBranch] = args;
 
   if (!isValidEnvTarget(envTarget)) {
     output.error(
@@ -54,7 +48,10 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  const { envs } = await getEnvVariables(output, client, project.id, envTarget);
+  const { envs } = await getEnvRecords(output, client, project.id, {
+    target: envTarget,
+    gitBranch: envGitBranch,
+  });
 
   output.log(
     `${
@@ -67,8 +64,11 @@ export default async function ls(
 }
 
 function getTable(records: ProjectEnvVariable[]) {
+  const label = records.some(env => env.gitBranch)
+    ? 'environments (git branch)'
+    : 'environments';
   return formatTable(
-    ['name', 'value', 'environments', 'created'],
+    ['name', 'value', label, 'created'],
     ['l', 'l', 'l', 'l', 'l'],
     [
       {
@@ -97,9 +97,7 @@ function getRow(env: ProjectEnvVariable) {
   return [
     chalk.bold(env.key),
     value,
-    (Array.isArray(env.target) ? env.target : [env.target || ''])
-      .map(title)
-      .join(', '),
+    formatEnvTarget(env),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }
