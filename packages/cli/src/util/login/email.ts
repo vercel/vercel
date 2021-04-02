@@ -61,7 +61,7 @@ async function verify(
 
 export default async function doEmailLogin(
   email: string,
-  { apiUrl, output, ctx }: LoginParams
+  { apiUrl, output }: LoginParams
 ): Promise<number | string> {
   let securityCode;
   let verificationToken;
@@ -95,7 +95,7 @@ export default async function doEmailLogin(
   while (!token) {
     try {
       await sleep(ms('1s'));
-      token = await verify(email, verificationToken, { apiUrl, output, ctx });
+      token = await verify(email, verificationToken, { apiUrl, output });
     } catch (err) {
       if (/invalid json response body/.test(err.message)) {
         // /now/registraton is currently returning plain text in that case

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import error from '../../util/output/error';
@@ -43,12 +43,12 @@ const help = () => {
   `);
 };
 
-export default async function main(ctx: NowContext) {
+export default async function main(client: Client) {
   let argv;
   let args;
 
   try {
-    argv = getArgs(ctx.argv.slice(2), {
+    argv = getArgs(client.argv.slice(2), {
       '--force': Boolean,
       '-f': Boolean,
     });
@@ -64,15 +64,15 @@ export default async function main(ctx: NowContext) {
   }
 
   if (argv._.length > 3) {
-    ctx.output.error('Too much arguments.');
+    client.output.error('Too much arguments.');
     return 1;
   }
 
   try {
-    return await init(ctx, argv, args);
+    return await init(client, argv, args);
   } catch (err) {
     console.log(error(err.message));
-    ctx.output.debug(err.stack);
+    client.output.debug(err.stack);
     return 1;
   }
 }

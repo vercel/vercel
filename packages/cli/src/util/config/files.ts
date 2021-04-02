@@ -9,18 +9,26 @@ import { NowError } from '../now-error';
 import error from '../output/error';
 import highlight from '../output/highlight';
 import { NowConfig } from '../dev/types';
+import { AuthConfig, GlobalConfig } from '../../types';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
 const AUTH_CONFIG_FILE_PATH = join(VERCEL_DIR, 'auth.json');
 
-// reads `CONFIG_FILE_PATH` atomically
-export const readConfigFile = () => loadJSON.sync(CONFIG_FILE_PATH);
+// reads "global config" file atomically
+export const readConfigFile = (fileName = CONFIG_FILE_PATH): GlobalConfig => {
+  const config = loadJSON.sync(fileName);
+  config[fileNameSymbol] = fileName;
+  return config;
+};
 
-// writes whatever's in `stuff` to `CONFIG_FILE_PATH`, atomically
-export const writeToConfigFile = (stuff: object) => {
+// writes whatever's in `stuff` to "global config" file, atomically
+export const writeToConfigFile = (stuff: GlobalConfig): void => {
+  const fileName = stuff[fileNameSymbol];
+  if (!fileName) return;
+
   try {
-    return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
+    return writeJSON.sync(fileName, stuff, { indent: 2 });
   } catch (err) {
     if (err.code === 'EPERM') {
       console.error(
@@ -46,13 +54,22 @@ export const writeToConfigFile = (stuff: object) => {
   }
 };
 
-// reads `AUTH_CONFIG_FILE_PATH` atomically
-export const readAuthConfigFile = () => loadJSON.sync(AUTH_CONFIG_FILE_PATH);
+// reads "auth config" file atomically
+export const readAuthConfigFile = (
+  fileName = AUTH_CONFIG_FILE_PATH
+): AuthConfig => {
+  const config = loadJSON.sync(fileName);
+  config[fileNameSymbol] = fileName;
+  return config;
+};
 
-// writes whatever's in `stuff` to `AUTH_CONFIG_FILE_PATH`, atomically
-export const writeToAuthConfigFile = (stuff: object) => {
+// writes whatever's in `stuff` to "auth config" file, atomically
+export const writeToAuthConfigFile = (stuff: AuthConfig) => {
+  const fileName = stuff[fileNameSymbol];
+  if (!fileName) return;
+
   try {
-    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, {
+    return writeJSON.sync(fileName, stuff, {
       indent: 2,
       mode: 0o600,
     });

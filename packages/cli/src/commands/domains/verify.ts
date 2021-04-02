@@ -1,9 +1,9 @@
-import { NowContext } from '../../types';
+import Client from '../../util/client';
 import { NowBuildError } from '@vercel/build-utils';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function verify(
-  { output }: NowContext,
+  { output }: Client,
   _opts: {},
   args: string[]
 ) {

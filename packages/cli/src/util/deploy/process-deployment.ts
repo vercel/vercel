@@ -38,7 +38,6 @@ export default async function processDeployment({
 }: {
   now: Now;
   output: Output;
-  hashes: { [key: string]: any };
   paths: string[];
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
@@ -56,7 +55,6 @@ export default async function processDeployment({
   let {
     now,
     output,
-    hashes,
     paths,
     requestBody,
     deployStamp,
@@ -100,10 +98,6 @@ export default async function processDeployment({
       requestBody,
       nowConfig
     )) {
-      if (event.type === 'hashes-calculated') {
-        hashes = event.payload;
-      }
-
       if (['tip', 'notice', 'warning'].includes(event.type)) {
         indications.push(event);
       }
@@ -144,8 +138,6 @@ export default async function processDeployment({
           bar.tick(bar.total + 1);
         }
 
-        now._host = event.payload.url;
-
         await linkFolderToProject(
           output,
           cwd || paths[0],
@@ -157,6 +149,7 @@ export default async function processDeployment({
           org.slug
         );
 
+        // @ts-ignore
         now.url = event.payload.url;
 
         output.stopSpinner();
@@ -191,7 +184,6 @@ export default async function processDeployment({
         output.stopSpinner();
 
         const error = await now.handleDeploymentError(event.payload, {
-          hashes,
           env,
         });
 

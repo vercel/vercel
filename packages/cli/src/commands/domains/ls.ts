@@ -9,31 +9,23 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
-import { Domain, NowContext } from '../../types';
+import { Domain } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 
 type Options = {
-  '--debug': boolean;
   '--next': number;
 };
 
 export default async function ls(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const { '--debug': debug, '--next': nextTimestamp } = opts;
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
+  const { '--next': nextTimestamp } = opts;
   let contextName = null;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {

@@ -2,27 +2,29 @@ import Client from './client';
 import getUser from './get-user';
 import getTeamById from './get-team-by-id';
 import { TeamDeleted } from './errors-ts';
+import { Team } from '../types';
 
-export default async function getScope(client: Client) {
+interface GetScopeOptions {
+  getTeam?: boolean;
+}
+
+export default async function getScope(
+  client: Client,
+  opts: GetScopeOptions = {}
+) {
   const user = await getUser(client);
+  let contextName = user.username || user.email;
+  let team: Team | null = null;
 
-  if (client.currentTeam) {
-    const team = await getTeamById(client, client.currentTeam);
+  if (client.config.currentTeam && opts.getTeam !== false) {
+    team = await getTeamById(client, client.config.currentTeam);
 
     if (!team) {
       throw new TeamDeleted();
     }
 
-    return {
-      contextName: team.slug,
-      team,
-      user,
-    };
+    contextName = team.slug;
   }
 
-  return {
-    contextName: user.username || user.email,
-    team: null,
-    user,
-  };
+  return { contextName, team, user };
 }

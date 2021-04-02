@@ -110,10 +110,10 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
 }
 
 export async function getLinkedProject(
-  output: Output,
   client: Client,
   path?: string
 ): Promise<ProjectLinkResult> {
+  const { output } = client;
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);

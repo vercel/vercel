@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { NowContext } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -17,24 +16,14 @@ import code from '../../util/output/code';
 import wait from '../../util/output/wait';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 
-type Options = {
-  '--debug': boolean;
-};
+type Options = {};
 
 export default async function inspect(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
 
   let contextName = null;
 

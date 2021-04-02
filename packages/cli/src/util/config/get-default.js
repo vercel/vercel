@@ -3,7 +3,7 @@ export const getDefaultConfig = async existingCopy => {
 
   const config = {
     _:
-      'This is your Now config file. For more information see the global configuration documentation: https://vercel.com/docs/configuration#global',
+      'This is your Vercel config file. For more information see the global configuration documentation: https://vercel.com/docs/configuration#global',
     collectMetrics: true,
   };
 

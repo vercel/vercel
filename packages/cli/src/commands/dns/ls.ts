@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
-import { DNSRecord, NowContext } from '../../types';
+import { DNSRecord } from '../../types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getDNSRecords, {
@@ -14,24 +14,16 @@ import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
-  '--debug': boolean;
   '--next'?: number;
 };
 
 export default async function ls(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    apiUrl,
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { '--debug': debug, '--next': nextTimestamp } = opts;
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
+  const { output } = client;
+  const { '--next': nextTimestamp } = opts;
   let contextName = null;
 
   try {

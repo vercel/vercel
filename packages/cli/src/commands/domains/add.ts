@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 
-import { NowContext } from '../../types';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import formatNSTable from '../../util/format-ns-table';
@@ -21,20 +20,12 @@ type Options = {
 };
 
 export default async function add(
-  ctx: NowContext,
+  client: Client,
   opts: Options,
   args: string[]
 ) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
-  const debug = opts['--debug'];
+  const { output } = client;
   const force = opts['--force'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
   let contextName = null;
 
   try {
@@ -48,7 +39,7 @@ export default async function add(
     throw err;
   }
 
-  const project = await getLinkedProject(output, client).then(result => {
+  const project = await getLinkedProject(client).then(result => {
     if (result.status === 'linked') {
       return result.project;
     }

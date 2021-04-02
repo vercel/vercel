@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import { NowContext, Cert } from '../../types';
+import { Cert } from '../../types';
 import * as ERRORS from '../../util/errors-ts';
 import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
@@ -14,21 +14,11 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 
-type Options = {
-  '--debug': boolean;
-};
+type Options = {};
 
-async function rm(ctx: NowContext, opts: Options, args: string[]) {
-  const {
-    authConfig: { token },
-    output,
-    config,
-  } = ctx;
-  const { currentTeam } = config;
-  const { apiUrl } = ctx;
+async function rm(client: Client, opts: Options, args: string[]) {
+  const { output } = client;
   const rmStamp = stamp();
-  const debug = opts['--debug'];
-  const client = new Client({ apiUrl, token, currentTeam, debug, output });
 
   let contextName = null;
 
