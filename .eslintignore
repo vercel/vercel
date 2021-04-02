@@ -38,3 +38,6 @@ packages/static-build/test/build-fixtures
 
 # redwood
 packages/redwood/test/fixtures
+
+# routing-utils
+packages/routing-utils/src/regexr

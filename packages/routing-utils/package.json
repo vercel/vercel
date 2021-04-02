@@ -14,8 +14,8 @@
   },
   "license": "MIT",
   "scripts": {
-    "prepublishOnly": "tsc",
-    "build": "tsc",
+    "prepublishOnly": "yarn build",
+    "build": "tsc && cp -r src/regexr dist/",
     "watch": "tsc --watch",
     "test-unit": "jest --env node --verbose --runInBand --bail"
   },

@@ -6,6 +6,8 @@ import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, Redirect, Rewrite, Header } from './types';
 import { HasField } from '.';
+// @ts-ignore
+import Lexer from './regexr/expression-lexer.js';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -192,16 +194,15 @@ function collectHasSegments(has?: HasField) {
 
     if (hasItem.value) {
       const matcher = new RegExp(`^${hasItem.value}$`);
-      const matches = matcher.exec('');
+      const lexer = new Lexer();
+      lexer.parse(`/${matcher.source}/`);
 
-      if (matches) {
-        if (matches.groups) {
-          Object.keys(matches.groups).forEach(groupKey => {
-            hasSegments.add(groupKey);
-          });
-        } else {
-          hasSegments.add((hasItem as any).key || 'host');
-        }
+      Object.keys(lexer.namedGroups).forEach(groupKey => {
+        hasSegments.add(groupKey);
+      });
+
+      if (hasItem.type === 'host') {
+        hasSegments.add('host');
       }
     }
   }

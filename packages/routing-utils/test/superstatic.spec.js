@@ -200,7 +200,7 @@ test('convertRedirects', () => {
     },
     {
       source: '/hello/:first',
-      destination: '/another/:first/:username/:pathname',
+      destination: '/another/:first/:username/:pathname/:another/:host',
       has: [
         {
           type: 'header',
@@ -223,6 +223,11 @@ test('convertRedirects', () => {
           type: 'header',
           key: 'x-pathname',
           value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
         },
       ],
       permanent: false,
@@ -341,9 +346,14 @@ test('convertRedirects', () => {
           type: 'header',
           value: '(?<pathname>.*)',
         },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
+        },
       ],
       headers: {
-        Location: '/another/$1/$username/$pathname',
+        Location: '/another/$1/$username/$pathname/$another/$host',
       },
       src: '^\\/hello(?:\\/([^\\/]+?))$',
       status: 307,
@@ -448,7 +458,7 @@ test('convertRewrites', () => {
     },
     {
       source: '/hello/:first',
-      destination: '/another/:first/:username/:pathname',
+      destination: '/another/:first/:username/:pathname/:another/:host',
       has: [
         {
           type: 'header',
@@ -471,6 +481,11 @@ test('convertRewrites', () => {
           type: 'header',
           key: 'x-pathname',
           value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
         },
       ],
     },
@@ -562,7 +577,7 @@ test('convertRewrites', () => {
     },
     {
       check: true,
-      dest: '/another/$1/$username/$pathname',
+      dest: '/another/$1/$username/$pathname/$another/$host',
       has: [
         {
           key: 'x-rewrite',
@@ -585,6 +600,11 @@ test('convertRewrites', () => {
           type: 'header',
           key: 'x-pathname',
           value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
         },
       ],
       src: '^\\/hello(?:\\/([^\\/]+?))$',
@@ -756,6 +776,11 @@ test('convertHeaders', () => {
           key: 'x-pathname',
           value: '(?<pathname>.*)',
         },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
+        },
       ],
       headers: [
         {
@@ -763,8 +788,12 @@ test('convertHeaders', () => {
           value: 'something',
         },
         {
-          key: 'x-another',
+          key: 'x-user',
           value: ':username',
+        },
+        {
+          key: 'x-another',
+          value: ':another',
         },
       ],
     },
@@ -830,10 +859,16 @@ test('convertHeaders', () => {
           key: 'x-pathname',
           value: '(?<pathname>.*)',
         },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
+        },
       ],
       headers: {
         'x-header': 'something',
-        'x-another': '$username',
+        'x-user': '$username',
+        'x-another': '$another',
       },
       src: '^\\/hello(?:\\/([^\\/]+?))$',
     },
