@@ -27,7 +27,7 @@ export default async function addEnvRecord(
     gitBranch: gitBranch || undefined,
   };
   const url = `/v7/projects/${projectId}/env`;
-  await client.fetch<ProjectEnvVariable>(url, {
+  await client.fetch(url, {
     method: 'POST',
     body: JSON.stringify(body),
   });
