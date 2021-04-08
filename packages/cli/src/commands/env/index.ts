@@ -70,7 +70,7 @@ const help = () => {
       ${chalk.cyan(`$ cat ~/.npmrc | ${getPkgName()} env add NPM_RC preview`)}
       ${chalk.cyan(`$ ${getPkgName()} env add API_URL production < url.txt`)}
 
-  ${chalk.gray('–')} Remove an variable from multiple Environments
+  ${chalk.gray('–')} Remove a variable from multiple Environments
 
       ${chalk.cyan(`$ ${getPkgName()} env rm <name>`)}
       ${chalk.cyan(`$ ${getPkgName()} env rm API_TOKEN`)}
