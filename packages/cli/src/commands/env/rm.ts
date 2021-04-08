@@ -76,7 +76,7 @@ export default async function rm(
   let envs = result.envs.filter(env => env.key === envName);
 
   if (envs.length === 0) {
-    output.error(`The Environment Variable ${param(envName)} was not found.\n`);
+    output.error(`Environment Variable was not found.\n`);
     return 1;
   }
 
