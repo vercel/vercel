@@ -99,9 +99,9 @@ export default async function rm(
   if (
     !skipConfirmation &&
     !(await confirm(
-      `Removing Environment Variable ${param(env.key)} ${formatEnvTarget(
+      `Removing Environment Variable ${param(env.key)} from ${formatEnvTarget(
         env
-      )} from Project ${chalk.bold(project.name)}. Are you sure?`,
+      )} in Project ${chalk.bold(project.name)}. Are you sure?`,
       false
     ))
   ) {
