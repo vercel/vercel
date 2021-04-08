@@ -53,12 +53,20 @@ export default async function ls(
     gitBranch: envGitBranch,
   });
 
-  output.log(
-    `${
-      envs.length > 0 ? 'Environment Variables' : 'No Environment Variables'
-    } found in Project ${chalk.bold(project.name)} ${chalk.gray(lsStamp())}`
-  );
-  console.log(getTable(envs));
+  if (envs.length === 0) {
+    output.log(
+      `No Environment Variables found in Project ${chalk.bold(
+        project.name
+      )} ${chalk.gray(lsStamp())}`
+    );
+  } else {
+    output.log(
+      `Environment Variables found in Project ${chalk.bold(
+        project.name
+      )} ${chalk.gray(lsStamp())}`
+    );
+    console.log(getTable(envs));
+  }
 
   return 0;
 }
