@@ -136,7 +136,7 @@ const main = async () => {
     const { latest } = notifier.update;
     console.log(
       info(
-        `${chalk.black(chalk.bgCyan('UPDATE AVAILABLE'))} ` +
+        `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
           `Run ${cmd(
             await getUpdateCommand()
           )} to install ${getTitleName()} CLI ${latest}`
