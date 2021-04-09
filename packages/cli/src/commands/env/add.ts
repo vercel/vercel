@@ -135,7 +135,7 @@ export default async function add(
     const { inputValue } = await inquirer.prompt({
       type: 'input',
       name: 'inputValue',
-      message: `Add ${envName} to which Git Branch? (leave empty for all Preview branches)?`,
+      message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
     });
     envGitBranch = inputValue || '';
   }
