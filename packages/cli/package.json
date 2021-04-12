@@ -58,7 +58,7 @@
     ]
   },
   "engines": {
-    "node": ">= 10"
+    "node": ">= 12"
   },
   "dependencies": {
     "@vercel/build-utils": "2.10.2-canary.4",
