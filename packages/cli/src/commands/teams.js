@@ -116,7 +116,7 @@ const main = async client => {
     }
     case 'add':
     case 'create': {
-      exitCode = await add(client, argv, teams);
+      exitCode = await add(client, teams);
       break;
     }
 
