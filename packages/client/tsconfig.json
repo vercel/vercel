@@ -2,8 +2,8 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["ES2018"],
-    "module": "CommonJS",
+    "lib": ["esnext"],
+    "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "dist",
     "strictNullChecks": true,
@@ -12,7 +12,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
-    "target": "ES2018"
+    "target": "es2019"
   },
   "include": ["./src"]
 }
