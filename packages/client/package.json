@@ -18,6 +18,9 @@
     "test-integration-once": "jest --verbose --runInBand --bail tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test-unit": "jest --verbose --runInBand --bail tests/unit.*test.*"
   },
+  "engines": {
+    "node": ">= 12"
+  },
   "devDependencies": {
     "@types/async-retry": "1.4.1",
     "@types/fs-extra": "7.0.0",

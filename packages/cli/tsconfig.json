@@ -2,12 +2,13 @@
   "compilerOptions": {
     "strict": true,
     "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
-    "module": "CommonJS",
-    "target": "ES2018",
+    "module": "commonjs",
+    "target": "es2019",
     "esModuleInterop": true,
     "allowJs": true,
-    "lib": ["ES2018"],
+    "lib": ["esnext"],
     "resolveJsonModule": true,
     "sourceMap": true,
     "typeRoots": ["./@types", "./node_modules/@types"]

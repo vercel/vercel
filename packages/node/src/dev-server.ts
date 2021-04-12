@@ -30,13 +30,11 @@ const requireTypescript = (p: string): TypescriptModule => {
 
 let ts: TypescriptModule | null = null;
 
-// Assume Node 10 as the lowest common denominator
-let target = 'ES2018';
+// Assume Node.js 12 as the lowest common denominator
+let target = 'ES2019';
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 if (nodeMajor >= 14) {
   target = 'ES2020';
-} else if (nodeMajor >= 12) {
-  target = 'ES2019';
 }
 
 // Use the project's version of Typescript if available and supports `target`
