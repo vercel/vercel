@@ -7,7 +7,9 @@ import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, Redirect, Rewrite, Header } from './types';
 import { HasField } from '.';
 // @ts-ignore
-import Lexer from './regexr/expression-lexer.js';
+import Lexer from 'regexr/lexer-dist/lexer';
+// @ts-ignore
+import lexerProfiles from 'regexr/lexer-dist/profiles';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -195,6 +197,7 @@ function collectHasSegments(has?: HasField) {
     if (hasItem.value) {
       const matcher = new RegExp(`^${hasItem.value}$`);
       const lexer = new Lexer();
+      lexer.profile = lexerProfiles.js;
       lexer.parse(`/${matcher.source}/`);
 
       Object.keys(lexer.namedGroups).forEach(groupKey => {
