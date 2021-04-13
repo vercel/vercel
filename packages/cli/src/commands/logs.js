@@ -83,8 +83,8 @@ export default async function main(client) {
     return 1;
   }
 
-  const subcommands = argv._.slice(1);
-  deploymentIdOrURL = subcommands[0];
+  argv._ = argv._.slice(1);
+  deploymentIdOrURL = argv._[0];
 
   if (argv['--help'] || !deploymentIdOrURL || deploymentIdOrURL === 'help') {
     help();

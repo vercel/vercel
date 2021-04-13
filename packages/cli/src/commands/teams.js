@@ -81,8 +81,7 @@ const main = async client => {
   debug = argv['--debug'];
   apiUrl = client.apiUrl;
 
-  const firstCommand = argv._[0];
-  const isSwitch = firstCommand === 'switch' || firstCommand === 'change';
+  const isSwitch = argv._[0] && argv._[0] === 'switch';
 
   argv._ = argv._.slice(1);
 

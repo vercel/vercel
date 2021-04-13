@@ -77,6 +77,8 @@ export default async function main(client) {
     return 1;
   }
 
+  argv._ = argv._.slice(1);
+
   const {
     apiUrl,
     authConfig: { token },
@@ -85,7 +87,7 @@ export default async function main(client) {
   } = client;
   const hard = argv['--hard'];
   const skipConfirmation = argv['--yes'];
-  const ids = argv._.slice(1);
+  const ids = argv._;
   const { success, error, log } = output;
 
   if (argv['--help'] || ids[0] === 'help') {
