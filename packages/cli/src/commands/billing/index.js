@@ -13,8 +13,8 @@ import addBilling from './add';
 import exit from '../../util/exit';
 import getScope from '../../util/get-scope.ts';
 import { getPkgName } from '../../util/pkg-name.ts';
-import getArgs from '../util/get-args.ts';
-import handleError from '../util/handle-error.ts';
+import getArgs from '../../util/get-args.ts';
+import handleError from '../../util/handle-error.ts';
 
 const help = () => {
   console.log(`
