@@ -26,7 +26,7 @@ type Options = {
 export default async function rm(
   client: Client,
   project: Project,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[],
   output: Output
 ) {

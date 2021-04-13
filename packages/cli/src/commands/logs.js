@@ -1,4 +1,3 @@
-import mri from 'mri';
 import chalk from 'chalk';
 import Now from '../util';
 import logo from '../util/output/logo';
@@ -7,6 +6,8 @@ import { maybeURL, normalizeURL } from '../util/url';
 import printEvents from '../util/events';
 import getScope from '../util/get-scope.ts';
 import { getPkgName } from '../util/pkg-name.ts';
+import getArgs from '../util/get-args.ts';
+import handleError from '../util/handle-error.ts';
 
 const help = () => {
   console.log(`
@@ -65,21 +66,27 @@ export default async function main(client) {
   let since;
   let until;
 
-  argv = mri(client.argv.slice(2), {
-    string: ['since', 'until', 'output'],
-    boolean: ['help', 'debug', 'head', 'follow'],
-    alias: {
-      help: 'h',
-      debug: 'd',
-      follow: 'f',
-      output: 'o',
-    },
-  });
+  try {
+    argv = getArgs(client.argv.slice(2), {
+      '--since': String,
+      '--until': String,
+      '--output': String,
+      '--limit': Number,
+      '--head': Boolean,
+      '--follow': Boolean,
+      '-f': '--follow',
+      '-o': '--output',
+      '-n': '--limit',
+    });
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
 
   argv._ = argv._.slice(1);
   deploymentIdOrURL = argv._[0];
 
-  if (argv.help || !deploymentIdOrURL || deploymentIdOrURL === 'help') {
+  if (argv['--help'] || !deploymentIdOrURL || deploymentIdOrURL === 'help') {
     help();
     return 2;
   }
@@ -92,16 +99,16 @@ export default async function main(client) {
   } = client;
 
   try {
-    since = argv.since ? toTimestamp(argv.since) : 0;
+    since = argv['--since'] ? toTimestamp(argv['--since']) : 0;
   } catch (err) {
-    output.error(`Invalid date string: ${argv.since}`);
+    output.error(`Invalid date string: ${argv['--since']}`);
     return 1;
   }
 
   try {
-    until = argv.until ? toTimestamp(argv.until) : 0;
+    until = argv['--until'] ? toTimestamp(argv['--until']) : 0;
   } catch (err) {
-    output.error(`Invalid date string: ${argv.until}`);
+    output.error(`Invalid date string: ${argv['--until']}`);
     return 1;
   }
 
@@ -117,13 +124,13 @@ export default async function main(client) {
     deploymentIdOrURL = normalizedURL;
   }
 
-  debug = argv.debug;
+  debug = argv['--debug'];
 
-  head = argv.head;
-  limit = typeof argv.n === 'number' ? argv.n : 100;
-  follow = argv.f;
+  head = argv['--head'];
+  limit = argv['--limit'] || 100;
+  follow = argv['--follow'];
   if (follow) until = 0;
-  outputMode = argv.output in logPrinters ? argv.output : 'short';
+  outputMode = argv['--output'] in logPrinters ? argv['--output'] : 'short';
 
   const { currentTeam } = config;
   const now = new Now({ apiUrl, token, debug, currentTeam, output });

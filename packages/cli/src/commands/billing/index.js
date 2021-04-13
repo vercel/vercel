@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import mri from 'mri';
 import ms from 'ms';
 import plural from 'pluralize';
 import { error } from '../../util/error';
@@ -14,6 +13,8 @@ import addBilling from './add';
 import exit from '../../util/exit';
 import getScope from '../../util/get-scope.ts';
 import { getPkgName } from '../../util/pkg-name.ts';
+import getArgs from '../../util/get-args.ts';
+import handleError from '../../util/handle-error.ts';
 
 const help = () => {
   console.log(`
@@ -55,21 +56,20 @@ let apiUrl;
 let subcommand;
 
 export default async client => {
-  argv = mri(client.argv.slice(2), {
-    boolean: ['help', 'debug'],
-    alias: {
-      help: 'h',
-      debug: 'd',
-    },
-  });
+  try {
+    argv = getArgs(client.argv.slice(2), {});
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
 
   argv._ = argv._.slice(1);
 
-  debug = argv.debug;
+  debug = argv['--debug'];
   apiUrl = client.apiUrl;
   subcommand = argv._[0];
 
-  if (argv.help || !subcommand) {
+  if (argv['--help'] || !subcommand) {
     help();
     return 2;
   }
