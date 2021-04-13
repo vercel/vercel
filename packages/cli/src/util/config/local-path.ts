@@ -8,10 +8,7 @@ export default function getLocalPathConfig(prefix: string) {
   let customPath: string | undefined;
 
   try {
-    const argv = getArgs(process.argv.slice(2), {
-      '--local-config': String,
-      '-A': '--local-config',
-    });
+    const argv = getArgs(process.argv.slice(2), {});
     customPath = argv['--local-config'];
   } catch (_error) {
     // args are optional so consume error

@@ -19,10 +19,7 @@ const getGlobalPathConfig = (): string => {
   let customPath: string | undefined;
 
   try {
-    const argv = getArgs(process.argv.slice(2), {
-      '--global-config': String,
-      '-Q': '--global-config',
-    });
+    const argv = getArgs(process.argv.slice(2), {});
     customPath = argv['--global-config'];
   } catch (_error) {
     // args are optional so consume error
