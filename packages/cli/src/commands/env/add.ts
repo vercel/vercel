@@ -25,7 +25,7 @@ type Options = {
 export default async function add(
   client: Client,
   project: Project,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[],
   output: Output
 ) {

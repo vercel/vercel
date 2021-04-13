@@ -1,9 +1,9 @@
-import mri from 'mri';
 import chalk from 'chalk';
 import logo from '../util/output/logo';
-import { handleError } from '../util/error';
 import getScope from '../util/get-scope.ts';
 import { getPkgName } from '../util/pkg-name.ts';
+import getArgs from '../util/get-args.ts';
+import handleError from '../util/handle-error.ts';
 
 const help = () => {
   console.log(`
@@ -31,19 +31,19 @@ const help = () => {
 `);
 };
 
-const main = async client => {
+export default async client => {
   const { output } = client;
-
-  const argv = mri(client.argv.slice(2), {
-    boolean: ['help'],
-    alias: {
-      help: 'h',
-    },
-  });
+  let argv;
+  try {
+    argv = getArgs(client.argv.slice(2), {});
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
 
   argv._ = argv._.slice(1);
 
-  if (argv.help || argv._[0] === 'help') {
+  if (argv['--help'] || argv._[0] === 'help') {
     help();
     return 2;
   }
@@ -66,13 +66,4 @@ const main = async client => {
   }
 
   console.log(contextName);
-};
-
-export default async client => {
-  try {
-    await main(client);
-  } catch (err) {
-    handleError(err);
-    process.exit(1);
-  }
 };

@@ -24,7 +24,7 @@ type Options = {
 
 export default async function rm(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output } = client;
@@ -89,7 +89,7 @@ export default async function rm(
     );
   }
 
-  const skipConfirmation = opts['--yes'];
+  const skipConfirmation = opts['--yes'] || false;
   if (
     !skipConfirmation &&
     !(await promptBool(`Are you sure you want to remove ${param(domainName)}?`))

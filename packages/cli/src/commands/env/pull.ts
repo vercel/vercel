@@ -46,7 +46,7 @@ function tryReadHeadSync(path: string, length: number) {
 export default async function pull(
   client: Client,
   project: Project,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[],
   output: Output
 ) {

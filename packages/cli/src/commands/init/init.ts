@@ -33,7 +33,7 @@ const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
 export default async function init(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output } = client;

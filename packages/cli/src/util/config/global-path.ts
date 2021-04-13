@@ -1,12 +1,8 @@
-// Native
 import { homedir } from 'os';
-
 import fs from 'fs';
 import path from 'path';
-
-// Packages
-import mri from 'mri';
 import XDGAppPaths from 'xdg-app-paths';
+import getArgs from '../../util/get-args';
 
 // Returns whether a directory exists
 export const isDirectory = (path: string): boolean => {
@@ -20,14 +16,18 @@ export const isDirectory = (path: string): boolean => {
 
 // Returns in which directory the config should be present
 const getGlobalPathConfig = (): string => {
-  const args = mri(process.argv.slice(2), {
-    string: ['global-config'],
-    alias: {
-      'global-config': 'Q',
-    },
-  });
+  let customPath: string | undefined;
 
-  const customPath = args['global-config'];
+  try {
+    const argv = getArgs(process.argv.slice(2), {
+      '--global-config': String,
+      '-Q': '--global-config',
+    });
+    customPath = argv['--global-config'];
+  } catch (_error) {
+    // args are optional so consume error
+  }
+
   const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
 
   const possibleConfigPaths = [
