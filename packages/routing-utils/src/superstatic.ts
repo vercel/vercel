@@ -4,8 +4,7 @@
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
-import { Route, Redirect, Rewrite, Header } from './types';
-import { HasField } from '.';
+import { Route, Redirect, Rewrite, HasField, Header } from './types';
 // @ts-ignore
 import Lexer from 'regexr/lexer-dist/lexer';
 // @ts-ignore
