@@ -35,7 +35,7 @@ async function main() {
       process.env.GITHUB_HEAD_REF ||
       execSync('git branch --show-current').toString().trim();
 
-    const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
+    const gitPath = branch === 'main' ? 'HEAD~1' : 'origin/main...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
 
     const changed = diff
