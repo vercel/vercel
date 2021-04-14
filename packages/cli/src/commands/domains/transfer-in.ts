@@ -20,7 +20,7 @@ type Options = {
 
 export default async function transferIn(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output } = client;

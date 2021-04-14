@@ -20,7 +20,7 @@ type Options = {
 
 export default async function dev(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output } = client;
@@ -36,7 +36,7 @@ export default async function dev(
   ]);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    const autoConfirm = opts['--confirm'];
+    const autoConfirm = opts['--confirm'] || false;
     const forceDelete = false;
 
     link = await setupAndLink(

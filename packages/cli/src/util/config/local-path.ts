@@ -1,19 +1,20 @@
 import path from 'path';
-import mri from 'mri';
+import { existsSync } from 'fs';
 import { InvalidLocalConfig } from '../errors';
 import { ConflictingConfigFiles } from '../errors-ts';
-import { existsSync } from 'fs';
+import getArgs from '../../util/get-args';
 
 export default function getLocalPathConfig(prefix: string) {
-  const args = mri(process.argv.slice(2), {
-    string: ['local-config'],
-    alias: {
-      'local-config': 'A',
-    },
-  });
+  let customPath: string | undefined;
+
+  try {
+    const argv = getArgs(process.argv.slice(2), {});
+    customPath = argv['--local-config'];
+  } catch (_error) {
+    // args are optional so consume error
+  }
 
   // If `--local-config` flag was specified, then that takes priority
-  const customPath = args['local-config'];
   if (customPath) {
     if (typeof customPath !== 'string') {
       throw new InvalidLocalConfig(customPath);

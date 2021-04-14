@@ -22,7 +22,7 @@ type Options = {
 
 export default async function move(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output } = client;

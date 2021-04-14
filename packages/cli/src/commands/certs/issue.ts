@@ -25,7 +25,7 @@ type Options = {
 
 export default async function issue(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   let cert;

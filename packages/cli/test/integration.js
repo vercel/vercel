@@ -2286,6 +2286,17 @@ test('`vercel rm` removes a deployment', async t => {
   t.is(exitCode, 0);
 });
 
+test('`vercel rm` should fail with unexpected option', async t => {
+  const output = await execute(['rm', 'example.example.com', '--fake']);
+
+  t.is(output.exitCode, 1, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Error! unknown or unexpected option: --fake/gm,
+    formatOutput(output)
+  );
+});
+
 test('`vercel rm` 404 exits quickly', async t => {
   const start = Date.now();
   const { exitCode, stderr, stdout } = await execute([
