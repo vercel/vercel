@@ -1,4 +1,3 @@
-import mri from 'mri';
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
@@ -16,6 +15,8 @@ import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
 import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
 import { getPkgName, getCommandName } from '../util/pkg-name.ts';
+import getArgs from '../util/get-args.ts';
+import handleError from '../util/handle-error.ts';
 
 const help = () => {
   console.log(`
@@ -61,15 +62,20 @@ const help = () => {
 };
 
 export default async function main(client) {
-  const argv = mri(client.argv.slice(2), {
-    boolean: ['help', 'debug', 'hard', 'yes', 'safe'],
-    alias: {
-      help: 'h',
-      debug: 'd',
-      yes: 'y',
-      safe: 's',
-    },
-  });
+  let argv;
+
+  try {
+    argv = getArgs(client.argv.slice(2), {
+      '--hard': Boolean,
+      '--yes': Boolean,
+      '--safe': Boolean,
+      '-y': '--yes',
+      '-s': '--safe',
+    });
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
 
   argv._ = argv._.slice(1);
 
@@ -79,13 +85,12 @@ export default async function main(client) {
     output,
     config: { currentTeam },
   } = client;
-  const hard = argv.hard || false;
-  const skipConfirmation = argv.yes || false;
+  const hard = argv['--hard'];
+  const skipConfirmation = argv['--yes'];
   const ids = argv._;
-  const debugEnabled = argv.debug;
   const { success, error, log } = output;
 
-  if (argv.help || ids[0] === 'help') {
+  if (argv['--help'] || ids[0] === 'help') {
     help();
     return 2;
   }
@@ -156,7 +161,7 @@ export default async function main(client) {
 
     // When `--safe` is set we want to replace all projects
     // with deployments to verify the aliases
-    if (argv.safe) {
+    if (argv['--safe']) {
       const projectDeployments = await Promise.all(
         projects.map(project => {
           return getDeploymentsByProjectId(client, project.id, {
@@ -189,7 +194,7 @@ export default async function main(client) {
   }
 
   deployments = deployments.filter((match, i) => {
-    if (argv.safe && aliases[i].length > 0) {
+    if (argv['--safe'] && aliases[i].length > 0) {
       return false;
     }
 
@@ -199,7 +204,7 @@ export default async function main(client) {
 
   if (deployments.length === 0 && projects.length === 0) {
     log(
-      `Could not find ${argv.safe ? 'unaliased' : 'any'} deployments ` +
+      `Could not find ${argv['--safe'] ? 'unaliased' : 'any'} deployments ` +
         `or projects matching ` +
         `${ids
           .map(id => chalk.bold(`"${id}"`))
@@ -236,7 +241,7 @@ export default async function main(client) {
   const now = new Now({
     apiUrl,
     token,
-    debug: debugEnabled,
+    debug: argv['--debug'],
     currentTeam,
     output,
   });

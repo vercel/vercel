@@ -22,7 +22,7 @@ type Options = {
 export default async function ls(
   client: Client,
   project: Project,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[],
   output: Output
 ) {

@@ -67,7 +67,7 @@ export default async function main(client: Client) {
 
   const { args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
   const path = args[0] || process.cwd();
-  const autoConfirm = argv['--confirm'];
+  const autoConfirm = argv['--confirm'] || false;
   const forceDelete = true;
 
   const link = await setupAndLink(

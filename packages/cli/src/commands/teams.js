@@ -1,14 +1,14 @@
 import chalk from 'chalk';
-import mri from 'mri';
 import error from '../util/output/error';
 import NowTeams from '../util/teams';
 import logo from '../util/output/logo';
-import { handleError } from '../util/error';
 import list from './teams/list';
 import add from './teams/add';
 import change from './teams/switch';
 import invite from './teams/invite';
 import { getPkgName } from '../util/pkg-name.ts';
+import getArgs from '../util/get-args.ts';
+import handleError from '../util/handle-error.ts';
 
 const help = () => {
   console.log(`
@@ -66,17 +66,19 @@ let apiUrl;
 let subcommand;
 
 const main = async client => {
-  argv = mri(client.argv.slice(2), {
-    boolean: ['help', 'debug'],
-    alias: {
-      help: 'h',
-      debug: 'd',
-      switch: 'change',
-      next: 'N',
-    },
-  });
+  try {
+    argv = getArgs(client.argv.slice(2), {
+      '--since': String,
+      '--until': String,
+      '--next': Number,
+      '-N': '--next',
+    });
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
 
-  debug = argv.debug;
+  debug = argv['--debug'];
   apiUrl = client.apiUrl;
 
   const isSwitch = argv._[0] && argv._[0] === 'switch';
@@ -89,7 +91,7 @@ const main = async client => {
     subcommand = argv._.shift();
   }
 
-  if (argv.help || !subcommand) {
+  if (argv['--help'] || !subcommand) {
     help();
     return 2;
   }
@@ -116,7 +118,7 @@ const main = async client => {
     }
     case 'add':
     case 'create': {
-      exitCode = await add(client, argv, teams);
+      exitCode = await add(client, teams);
       break;
     }
 
