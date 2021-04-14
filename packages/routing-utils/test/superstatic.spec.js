@@ -199,8 +199,8 @@ test('convertRedirects', () => {
       destination: '/somewhere?else={:world}',
     },
     {
-      source: '/hello',
-      destination: '/another',
+      source: '/hello/:first',
+      destination: '/another/:first/:username/:pathname/:another/:host',
       has: [
         {
           type: 'header',
@@ -214,6 +214,20 @@ test('convertRedirects', () => {
         {
           type: 'host',
           value: 'vercel.com',
+        },
+        {
+          type: 'query',
+          key: 'username',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
         },
       ],
       permanent: false,
@@ -323,11 +337,25 @@ test('convertRedirects', () => {
           type: 'host',
           value: 'vercel.com',
         },
+        {
+          key: 'username',
+          type: 'query',
+        },
+        {
+          key: 'x-pathname',
+          type: 'header',
+          value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
+        },
       ],
       headers: {
-        Location: '/another',
+        Location: '/another/$1/$username/$pathname/$another/$host',
       },
-      src: '^\\/hello$',
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
       status: 307,
     },
   ];
@@ -351,7 +379,7 @@ test('convertRedirects', () => {
     ['/optional', '/optional/1'],
     ['/feature-first', '/feature-second'],
     ['/hello/world', '/hello/again'],
-    ['/hello'],
+    ['/hello/world'],
   ];
 
   const mustNotMatch = [
@@ -429,8 +457,8 @@ test('convertRewrites', () => {
       destination: '/somewhere?else={:world}',
     },
     {
-      source: '/hello',
-      destination: '/another',
+      source: '/hello/:first',
+      destination: '/another/:first/:username/:pathname/:another/:host',
       has: [
         {
           type: 'header',
@@ -444,6 +472,20 @@ test('convertRewrites', () => {
         {
           type: 'host',
           value: 'vercel.com',
+        },
+        {
+          type: 'query',
+          key: 'username',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
         },
       ],
     },
@@ -535,7 +577,7 @@ test('convertRewrites', () => {
     },
     {
       check: true,
-      dest: '/another',
+      dest: '/another/$1/$username/$pathname/$another/$host',
       has: [
         {
           key: 'x-rewrite',
@@ -550,8 +592,22 @@ test('convertRewrites', () => {
           type: 'host',
           value: 'vercel.com',
         },
+        {
+          type: 'query',
+          key: 'username',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
+        },
       ],
-      src: '^\\/hello$',
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
     },
   ];
 
@@ -576,7 +632,7 @@ test('convertRewrites', () => {
     ['/hello/post-123.html', '/post-123.html'],
     ['/feature-first', '/feature-second'],
     ['/hello/world', '/hello/again'],
-    ['/hello'],
+    ['/hello/world'],
   ];
 
   const mustNotMatch = [
@@ -696,26 +752,48 @@ test('convertHeaders', () => {
       ],
     },
     {
-      source: '/hello',
-      headers: [
-        {
-          key: 'x-header',
-          value: 'something',
-        },
-      ],
+      source: '/hello/:first',
       has: [
         {
-          key: 'x-rewrite',
           type: 'header',
+          key: 'x-rewrite',
         },
         {
-          key: 'loggedIn',
           type: 'cookie',
+          key: 'loggedIn',
           value: '1',
         },
         {
           type: 'host',
           value: 'vercel.com',
+        },
+        {
+          type: 'query',
+          key: 'username',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
+        },
+      ],
+      headers: [
+        {
+          key: 'x-header',
+          value: 'something',
+        },
+        {
+          key: 'x-user',
+          value: ':username',
+        },
+        {
+          key: 'x-another',
+          value: ':another',
         },
       ],
     },
@@ -772,11 +850,27 @@ test('convertHeaders', () => {
           type: 'host',
           value: 'vercel.com',
         },
+        {
+          type: 'query',
+          key: 'username',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
+        },
       ],
       headers: {
         'x-header': 'something',
+        'x-user': '$username',
+        'x-another': '$another',
       },
-      src: '^\\/hello$',
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
     },
   ];
 
@@ -787,7 +881,7 @@ test('convertHeaders', () => {
     ['404.html'],
     ['/blog/first-post', '/blog/another/one'],
     ['/like/params/first', '/like/params/second'],
-    ['/hello'],
+    ['/hello/world'],
   ];
 
   const mustNotMatch = [
