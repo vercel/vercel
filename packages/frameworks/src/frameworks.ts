@@ -273,8 +273,8 @@ export const frameworks = [
     cachePattern: '.cache/**',
   },
   {
-    name: 'Docusaurus 2',
-    slug: 'docusaurus-2',
+    name: 'Docusaurus',
+    slug: 'docusaurus',
     demo: 'https://docusaurus-2.examples.vercel.com',
     logo:
       'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg',
@@ -363,59 +363,6 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
-  },
-  {
-    name: 'Docusaurus 1',
-    slug: 'docusaurus',
-    demo: 'https://docusaurus.examples.vercel.com',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg',
-    tagline:
-      'Docusaurus makes it easy to maintain Open Source documentation websites.',
-    description:
-      'A static Docusaurus site that makes it easy to maintain OSS documentation.',
-    website: 'https://docusaurus.io/',
-    detectors: {
-      some: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"docusaurus":\\s*".+?"[^}]*}',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install` or `npm install`',
-      },
-      buildCommand: {
-        placeholder: '`npm run build` or `docusaurus-build`',
-      },
-      devCommand: {
-        value: 'docusaurus-start --port $PORT',
-      },
-      outputDirectory: {
-        value: 'build',
-      },
-    },
-    dependency: 'docusaurus',
-    devCommand: 'docusaurus-start --port $PORT',
-    buildCommand: 'docusaurus-build',
-    getOutputDirName: async (dirPrefix: string) => {
-      const base = 'build';
-      try {
-        const location = join(dirPrefix, base);
-        const content = await readdir(location);
-
-        // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && (await isDir(join(location, content[0])))) {
-          return join(base, content[0]);
-        }
-      } catch (error) {
-        console.error(`Error detecting output directory: `, error);
-      }
-      return base;
-    },
   },
   {
     name: 'Preact',
