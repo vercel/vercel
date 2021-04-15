@@ -47,7 +47,7 @@ export interface Framework {
   slug: string | null;
   /**
    * A URL to the logo of the framework
-   * @example "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg"
+   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg"
    */
   logo: string;
   /**
