@@ -132,6 +132,10 @@ export class Bridge {
     this.server = server;
   }
 
+  setStoreEvents(shouldStoreEvents: boolean) {
+    this.shouldStoreEvents = shouldStoreEvents;
+  }
+
   listen() {
     const { server, resolveListening } = this;
     if (!server) {

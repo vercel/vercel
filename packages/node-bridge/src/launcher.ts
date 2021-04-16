@@ -42,7 +42,7 @@ export function getNowLauncher({
   shouldAddHelpers = false,
 }: LauncherConfiguration) {
   return function (): Bridge {
-    let bridge = new Bridge();
+    const bridge = new Bridge();
     let isServerListening = false;
 
     const originalListen = Server.prototype.listen;
@@ -60,56 +60,56 @@ export function getNowLauncher({
       process.env.NODE_ENV = region === 'dev1' ? 'development' : 'production';
     }
 
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      let listener = require(entrypointPath);
-      if (listener.default) listener = listener.default;
+    import(entrypointPath)
+      .then(listener => {
+        if (listener.default) listener = listener.default;
 
-      if (typeof listener.listen === 'function') {
-        Server.prototype.listen = originalListen;
-        const server = listener;
-        bridge.setServer(server);
-        bridge.listen();
-      } else if (typeof listener === 'function') {
-        Server.prototype.listen = originalListen;
-        let server: Server;
-        if (shouldAddHelpers) {
-          bridge = new Bridge(undefined, true);
-          server = require(helpersPath).createServerWithHelpers(
-            listener,
-            bridge
+        if (typeof listener.listen === 'function') {
+          Server.prototype.listen = originalListen;
+          const server = listener;
+          bridge.setServer(server);
+          bridge.listen();
+        } else if (typeof listener === 'function') {
+          Server.prototype.listen = originalListen;
+          if (shouldAddHelpers) {
+            bridge.setStoreEvents(true);
+            import(helpersPath).then(helper => {
+              const server = helper.createServerWithHelpers(listener, bridge);
+              bridge.setServer(server);
+              bridge.listen();
+            });
+          } else {
+            const server = createServer(listener);
+            bridge.setServer(server);
+            bridge.listen();
+          }
+        } else if (
+          typeof listener === 'object' &&
+          Object.keys(listener).length === 0
+        ) {
+          setTimeout(() => {
+            if (!isServerListening) {
+              console.error('No exports found in module %j.', entrypointPath);
+              console.error('Did you forget to export a function or a server?');
+              process.exit(1);
+            }
+          }, 5000);
+        } else {
+          console.error('Invalid export found in module %j.', entrypointPath);
+          console.error('The default export must be a function or server.');
+        }
+      })
+      .catch(err => {
+        if (err.code === 'MODULE_NOT_FOUND') {
+          console.error(err.message);
+          console.error(
+            'Did you forget to add it to "dependencies" in `package.json`?'
           );
         } else {
-          server = createServer(listener);
+          console.error(err);
         }
-        bridge.setServer(server);
-        bridge.listen();
-      } else if (
-        typeof listener === 'object' &&
-        Object.keys(listener).length === 0
-      ) {
-        setTimeout(() => {
-          if (!isServerListening) {
-            console.error('No exports found in module %j.', entrypointPath);
-            console.error('Did you forget to export a function or a server?');
-            process.exit(1);
-          }
-        }, 5000);
-      } else {
-        console.error('Invalid export found in module %j.', entrypointPath);
-        console.error('The default export must be a function or server.');
-      }
-    } catch (err) {
-      if (err.code === 'MODULE_NOT_FOUND') {
-        console.error(err.message);
-        console.error(
-          'Did you forget to add it to "dependencies" in `package.json`?'
-        );
-      } else {
-        console.error(err);
-      }
-      process.exit(1);
-    }
+        process.exit(1);
+      });
 
     return bridge;
   };
