@@ -8,7 +8,7 @@ This directory is a brief example of an [Angular](https://angular.io/) app that 
 
 Deploy your own Angular project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/angular)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/angular)
 
 _Live Example: https://angular.now-examples.now.sh_
 

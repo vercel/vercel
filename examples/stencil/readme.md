@@ -6,7 +6,7 @@ This directory is a brief example of a [Stencil](https://stenciljs.com/) app tha
 
 Deploy your own Stencil project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/stencil)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/stencil)
 
 _Live Example: https://stencil.now-examples.now.sh_
 

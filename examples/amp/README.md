@@ -6,7 +6,7 @@ This directory is a brief example of an [AMP](https://amp.dev/) site that can be
 
 Deploy your own AMP project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/amp)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/amp)
 
 _Live Example: https://amp.now-examples.now.sh_
 
