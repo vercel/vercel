@@ -29,6 +29,7 @@ const help = () => {
     buy          [name]                 Buy a domain that you don't yet own
     move         [name] [destination]   Move a domain to another user or team.
     transfer-in  [name]                 Transfer in a domain to Vercel
+    verify       [name]                 Verify a domain for your account
 
   ${chalk.dim('Options:')}
 
