@@ -6,7 +6,7 @@ This directory is a brief example of a [Svelte](https://svelte.dev/) app with [S
 
 Deploy your own Svelte project, along with Serverless Functions, with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/svelte)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/svelte)
 
 _Live Example: https://svelte.now-examples.now.sh_
 

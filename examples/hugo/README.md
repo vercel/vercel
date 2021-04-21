@@ -6,7 +6,7 @@ This directory is a brief example of a [Hugo](https://gohugo.io/) app that can b
 
 Deploy your own Hugo project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/hugo)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/hugo)
 
 _Live Example: https://hugo.now-examples.now.sh_
 

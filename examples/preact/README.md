@@ -8,7 +8,7 @@ This directory is a brief example of a [Preact](https://preactjs.com/) app that 
 
 Deploy your own Preact project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/preact)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/preact)
 
 _Live Example: https://preact.now-examples.now.sh_
 

@@ -8,7 +8,7 @@ This directory is a brief example of a [RedwoodJS](https://redwoodjs.com) app wi
 
 Deploy your own RedwoodJS project, along with Serverless Functions, with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/redwoodjs)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/redwoodjs)
 
 _Live Example: https://redwoodjs.now-examples.now.sh_
 
