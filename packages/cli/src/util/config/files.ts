@@ -16,19 +16,15 @@ const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
 const AUTH_CONFIG_FILE_PATH = join(VERCEL_DIR, 'auth.json');
 
 // reads "global config" file atomically
-export const readConfigFile = (fileName = CONFIG_FILE_PATH): GlobalConfig => {
-  const config = loadJSON.sync(fileName);
-  config[fileNameSymbol] = fileName;
+export const readConfigFile = (): GlobalConfig => {
+  const config = loadJSON.sync(CONFIG_FILE_PATH);
   return config;
 };
 
 // writes whatever's in `stuff` to "global config" file, atomically
 export const writeToConfigFile = (stuff: GlobalConfig): void => {
-  const fileName = stuff[fileNameSymbol];
-  if (!fileName) return;
-
   try {
-    return writeJSON.sync(fileName, stuff, { indent: 2 });
+    return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
   } catch (err) {
     if (err.code === 'EPERM') {
       console.error(
@@ -55,21 +51,15 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
 };
 
 // reads "auth config" file atomically
-export const readAuthConfigFile = (
-  fileName = AUTH_CONFIG_FILE_PATH
-): AuthConfig => {
-  const config = loadJSON.sync(fileName);
-  config[fileNameSymbol] = fileName;
+export const readAuthConfigFile = (): AuthConfig => {
+  const config = loadJSON.sync(AUTH_CONFIG_FILE_PATH);
   return config;
 };
 
 // writes whatever's in `stuff` to "auth config" file, atomically
 export const writeToAuthConfigFile = (stuff: AuthConfig) => {
-  const fileName = stuff[fileNameSymbol];
-  if (!fileName) return;
-
   try {
-    return writeJSON.sync(fileName, stuff, {
+    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, {
       indent: 2,
       mode: 0o600,
     });
