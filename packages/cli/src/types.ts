@@ -1,5 +1,6 @@
 export interface AuthConfig {
   token: string;
+  skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
