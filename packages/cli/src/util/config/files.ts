@@ -56,10 +56,12 @@ export const readAuthConfigFile = (): AuthConfig => {
   return config;
 };
 
-// writes whatever's in `stuff` to "auth config" file, atomically
-export const writeToAuthConfigFile = (stuff: AuthConfig) => {
+export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
+  if (authConfig.skipWrite) {
+    return;
+  }
   try {
-    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, stuff, {
+    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, authConfig, {
       indent: 2,
       mode: 0o600,
     });
