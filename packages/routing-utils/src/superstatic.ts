@@ -241,7 +241,7 @@ function replaceSegments(
 
     let destParams = new Set<string>();
 
-    if (destination.includes(':') && segments.length > 0) {
+    if (destination.includes(':')) {
       const pathnameKeys: Key[] = [];
       const hashKeys: Key[] = [];
 
