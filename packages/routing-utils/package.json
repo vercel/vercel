@@ -20,7 +20,7 @@
     "test-unit": "jest --env node --verbose --runInBand --bail"
   },
   "dependencies": {
-    "path-to-regexp": "6.1.0",
+    "path-to-regexp": "6.2.0",
     "regexr": "https://github.com/ijjk/regexr-lexer.git#3bcf3d1c4bc6dd9239c47acb1fb7b419823f8337"
   },
   "devDependencies": {
