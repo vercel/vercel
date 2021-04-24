@@ -66,7 +66,7 @@ export const getDefaultAuthConfig = async existing => {
 
   const config = {
     _:
-      'This is your Now credentials file. DO NOT SHARE! More: https://vercel.com/docs/configuration#global',
+      'This is your Vercel credentials file. DO NOT SHARE! More: https://vercel.com/docs/configuration#global',
   };
 
   if (existing) {

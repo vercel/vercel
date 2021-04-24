@@ -484,7 +484,7 @@ const main = async () => {
       return 1;
     }
 
-    client.authConfig = { token };
+    client.authConfig = { token, skipWrite: true };
 
     // Don't use team from config if `--token` was set
     if (client.config && client.config.currentTeam) {

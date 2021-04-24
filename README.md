@@ -6,7 +6,7 @@
   <p align="center">Develop. Preview. Ship.</p>
 </p>
 
-[![CI Status](https://badgen.net/github/checks/vercel/vercel?label=CI)](https://github.com/vercel/vercel/actions?workflow=CI)
+[![CI Status](https://github.com/vercel/vercel/actions/workflows/test-unit.yml/badge.svg)](https://github.com/vercel/vercel/actions/workflows/test-unit.yml)
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
 
 ## Usage

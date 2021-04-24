@@ -6,7 +6,7 @@ This directory is a brief example of a [Sapper](https://sapper.svelte.dev/) app 
 
 Deploy your own Sapper project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/sapper)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/sapper)
 
 _Live Example: https://sapper.now-examples.now.sh_
 

@@ -6,7 +6,7 @@ This directory is a brief example of using a Custom Build script that can be dep
 
 Deploy your own Custom Built project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/custom-build)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/custom-build)
 
 _Live Example: https://custom-build.now-examples.now.sh_
 

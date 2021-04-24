@@ -8,7 +8,7 @@ This directory is a brief example of an [Ember](https://emberjs.com/) app that c
 
 Deploy your own Ember project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/ember)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/ember)
 
 _Live Example: https://ember.now-examples.now.sh_
 
