@@ -688,14 +688,14 @@ export const frameworks = [
         placeholder: '`npm run build` or `ng build`',
       },
       devCommand: {
-        value: 'ng start',
+        value: 'ng serve',
       },
       outputDirectory: {
         value: 'www',
       },
     },
     dependency: '@ionic/angular',
-    devCommand: 'ng start',
+    devCommand: 'ng serve',
     buildCommand: 'ng build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
