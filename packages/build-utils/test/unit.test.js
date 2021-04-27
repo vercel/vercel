@@ -97,10 +97,6 @@ it('should create zip files with symlinks properly', async () => {
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
-  expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
-    'major',
-    10
-  );
   expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
     'major',
     12
@@ -121,10 +117,6 @@ it('should only match supported node versions, otherwise throw an error', async 
   await expectBuilderError(getSupportedNodeVersion('foo', true), autoMessage);
   await expectBuilderError(getSupportedNodeVersion('=> 10', true), autoMessage);
 
-  expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
-    'major',
-    10
-  );
   expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
     'major',
     12
@@ -154,20 +146,20 @@ it('should only match supported node versions, otherwise throw an error', async 
 
 it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
-  expect(await getSupportedNodeVersion('10.0.0')).toHaveProperty('major', 10);
-  expect(await getSupportedNodeVersion('10.x')).toHaveProperty('major', 10);
+  expect(await getSupportedNodeVersion('12.0.0')).toHaveProperty('major', 12);
+  expect(await getSupportedNodeVersion('12.x')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 14);
   expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('8.5.0 - 10.5.0')).toHaveProperty(
+  expect(await getSupportedNodeVersion('11.5.0 - 12.5.0')).toHaveProperty(
     'major',
-    10
+    12
   );
-  expect(await getSupportedNodeVersion('>=9.5.0 <=10.5.0')).toHaveProperty(
+  expect(await getSupportedNodeVersion('>=9.5.0 <=12.5.0')).toHaveProperty(
     'major',
-    10
+    12
   );
-  expect(await getSupportedNodeVersion('~10.5.0')).toHaveProperty('major', 10);
-  expect(await getSupportedNodeVersion('^10.5.0')).toHaveProperty('major', 10);
+  expect(await getSupportedNodeVersion('~12.5.0')).toHaveProperty('major', 12);
+  expect(await getSupportedNodeVersion('^12.5.0')).toHaveProperty('major', 12);
 });
 
 it('should ignore node version in vercel dev getNodeVersion()', async () => {
