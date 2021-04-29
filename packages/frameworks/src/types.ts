@@ -27,6 +27,7 @@ export interface SettingValue {
    * @example "next dev --port $PORT"
    */
   value: string;
+  placeholder?: string;
 }
 
 export type Setting = SettingValue | SettingPlaceholder;
