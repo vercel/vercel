@@ -5,10 +5,6 @@
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, Redirect, Rewrite, HasField, Header } from './types';
-// @ts-ignore
-import Lexer from 'regexr/lexer-dist/lexer';
-// @ts-ignore
-import lexerProfiles from 'regexr/lexer-dist/profiles';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -185,6 +181,8 @@ export function sourceToRegex(
   return { src: r.source, segments };
 }
 
+const namedGroupsRegex = /\(\?<([a-zA-Z][a-zA-Z0-9]*)>/g;
+
 function collectHasSegments(has?: HasField) {
   const hasSegments = new Set<string>();
 
@@ -194,14 +192,11 @@ function collectHasSegments(has?: HasField) {
     }
 
     if (hasItem.value) {
-      const matcher = new RegExp(`^${hasItem.value}$`);
-      const lexer = new Lexer();
-      lexer.profile = lexerProfiles.js;
-      lexer.parse(`/${matcher.source}/`);
-
-      Object.keys(lexer.namedGroups).forEach(groupKey => {
-        hasSegments.add(groupKey);
-      });
+      for (const match of hasItem.value.matchAll(namedGroupsRegex)) {
+        if (match[1]) {
+          hasSegments.add(match[1]);
+        }
+      }
 
       if (hasItem.type === 'host') {
         hasSegments.add('host');
