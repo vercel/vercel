@@ -5,16 +5,23 @@ import listen from 'async-listen';
 import { LoginParams } from './types';
 import prompt from './prompt';
 import verify from './verify';
+import highlight from '../output/highlight';
 
 export default async function doOauthLogin(
   url: URL,
+  provider: string,
   params: LoginParams
 ): Promise<number | string> {
   const { output } = params;
 
+  output.spinner(
+    `Please complete the ${provider} authentication in your web browser`
+  );
+
   const server = http.createServer();
   const address = await listen(server, 0, '127.0.0.1');
   const { port } = new URL(address);
+  url.searchParams.append('mode', 'login');
   url.searchParams.append('next', `http://localhost:${port}`);
 
   try {
@@ -94,6 +101,9 @@ export default async function doOauthLogin(
 
     output.spinner('Verifying authentication token');
     const token = await verify(email, verificationToken, params);
+    output.success(
+      `${provider} authentication complete for ${highlight(email)}`
+    );
     return token;
   } finally {
     server.close();
