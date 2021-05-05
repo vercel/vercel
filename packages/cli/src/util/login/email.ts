@@ -51,6 +51,6 @@ export default async function doEmailLogin(
     }
   }
 
-  output.success('Email confirmed');
+  output.success(`Email authentication complete for ${email}`);
   return token;
 }
