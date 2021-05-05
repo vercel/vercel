@@ -44,14 +44,6 @@ const help = () => {
 `);
 };
 
-function isValidSlug(slug: string) {
-  return (
-    /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug) &&
-    slug.length >= 1 &&
-    slug.length <= 48
-  );
-}
-
 export default async function login(client: Client): Promise<number> {
   let argv;
   const { apiUrl, output } = client;
@@ -82,12 +74,8 @@ export default async function login(client: Client): Promise<number> {
     // Email or Team slug was provided via command line
     if (validateEmail(input)) {
       result = await doEmailLogin(input, params);
-    } else if (isValidSlug(input)) {
-      result = await doSsoLogin(input, params);
     } else {
-      output.error(`Invalid input: "${input}"`);
-      output.log(`Please enter a valid email address or team slug`);
-      return 2;
+      result = await doSsoLogin(input, params);
     }
   } else {
     // Interactive mode
