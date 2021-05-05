@@ -165,7 +165,7 @@ function mockLoginApi(req, res) {
     res.end(JSON.stringify({ token, securityCode }));
   } else if (
     method === 'GET' &&
-    pathname === '/now/registration/verify' &&
+    pathname === '/registration/verify' &&
     query.email === email
   ) {
     res.end(JSON.stringify({ token }));
