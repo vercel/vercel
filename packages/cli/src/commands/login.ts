@@ -1,18 +1,18 @@
-import inquirer from 'inquirer';
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
 import hp from '../util/humanize-path';
 import getArgs from '../util/get-args';
-import error from '../util/output/error';
 import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
+import prompt from '../util/login/prompt';
 import doSsoLogin from '../util/login/sso';
-import doEmailLogin from '../util/login/email';
+import doEmailLogin from '../util/login//email';
 import { prependEmoji, emoji } from '../util/emoji';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
 import Client from '../util/client';
+import { LoginParams } from '../util/login/types';
 
 const help = () => {
   console.log(`
@@ -44,34 +44,13 @@ const help = () => {
 `);
 };
 
-const readInput = async () => {
-  let input;
-
-  while (!input) {
-    try {
-      const { val } = await inquirer.prompt({
-        type: 'input',
-        name: 'val',
-        message: 'Enter your email or team slug:',
-      });
-      input = val;
-    } catch (err) {
-      console.log(); // \n
-
-      if (err.isTtyError) {
-        throw new Error(
-          error(
-            `Interactive mode not supported – please run ${getCommandName(
-              `login you@domain.com`
-            )}`
-          )
-        );
-      }
-    }
-  }
-
-  return input;
-};
+function isValidSlug(slug: string) {
+  return (
+    /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug) &&
+    slug.length >= 1 &&
+    slug.length <= 48
+  );
+}
 
 export default async function login(client: Client): Promise<number> {
   let argv;
@@ -94,21 +73,25 @@ export default async function login(client: Client): Promise<number> {
     return 2;
   }
 
-  const input = argv._[1] || (await readInput());
-
-  // TODO: add proper validation
-  const isValidSlug = true;
+  const input = argv._[1];
 
   let result: number | string = 1;
+  const params: LoginParams = { output, apiUrl };
 
-  if (validateEmail(input)) {
-    result = await doEmailLogin(input, { output, apiUrl });
-  } else if (isValidSlug) {
-    result = await doSsoLogin(input, { output, apiUrl });
+  if (input) {
+    // Email or Team slug was provided via command line
+    if (validateEmail(input)) {
+      result = await doEmailLogin(input, params);
+    } else if (isValidSlug(input)) {
+      result = await doSsoLogin(input, params);
+    } else {
+      output.error(`Invalid input: "${input}"`);
+      output.log(`Please enter a valid email address or team slug`);
+      return 2;
+    }
   } else {
-    output.error(`Invalid input: "${input}"`);
-    output.log(`Please enter a valid email address or team slug`);
-    return 2;
+    // Interactive mode
+    result = await prompt(params);
   }
 
   // The login function failed, so it returned an exit code

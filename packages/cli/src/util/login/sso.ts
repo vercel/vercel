@@ -1,17 +1,19 @@
 import http from 'http';
 import open from 'open';
-import fetch from 'node-fetch';
 import { hostname } from 'os';
 import { URL } from 'url';
 import listen from 'async-listen';
 import { getTitleName } from '../pkg-name';
 import highlight from '../output/highlight';
 import { LoginParams } from './types';
+import prompt from './prompt';
+import verify from './verify';
 
 export default async function doSsoLogin(
   teamIdOrSlug: string,
-  { apiUrl, output }: LoginParams
+  params: LoginParams
 ): Promise<number | string> {
+  const { apiUrl, output } = params;
   output.print(`Logging in to team "${teamIdOrSlug}"`);
 
   const hyphens = new RegExp('-', 'g');
@@ -45,9 +47,21 @@ export default async function doSsoLogin(
             'https://vercel.com/notifications/cli-login-'
           );
           const loginError = query.get('loginError');
+          const ssoEmail = query.get('ssoEmail');
           if (loginError) {
             location.pathname += 'failed';
             location.searchParams.set('loginError', loginError);
+          } else if (ssoEmail) {
+            location.pathname += 'incomplete';
+            location.searchParams.set('ssoEmail', ssoEmail);
+            const teamName = query.get('teamName');
+            const ssoType = query.get('ssoType');
+            if (teamName) {
+              location.searchParams.set('teamName', teamName);
+            }
+            if (ssoType) {
+              location.searchParams.set('ssoType', ssoType);
+            }
           } else {
             location.pathname += 'success';
             const email = query.get('email');
@@ -72,6 +86,19 @@ export default async function doSsoLogin(
       return 1;
     }
 
+    //console.log(query);
+
+    // If an `ssoUserId` was returned, then the SAML Profile is not yet connected
+    // to a Team member. Prompt the user to log in to a Vercel account now, which
+    // will complete the connection to the SAML Profile.
+    const ssoUserId = query.get('ssoUserId');
+    if (ssoUserId) {
+      output.log(
+        'Please log in to your Vercel account to complete SAML connection.'
+      );
+      return prompt({ ...params, ssoUserId });
+    }
+
     const email = query.get('email');
     const verificationToken = query.get('token');
     if (!email || !verificationToken) {
@@ -82,23 +109,9 @@ export default async function doSsoLogin(
     }
 
     output.spinner('Verifying authentication token');
-    const verifyUrl = new URL('/registration/verify', apiUrl);
-    verifyUrl.searchParams.append('email', email);
-    verifyUrl.searchParams.append('token', verificationToken);
-
-    const verifyRes = await fetch(verifyUrl.href);
-
-    if (!verifyRes.ok) {
-      output.error(
-        `Unexpected ${verifyRes.status} status code from verify API`
-      );
-      output.debug(await verifyRes.text());
-      return 1;
-    }
-
+    const token = await verify(email, verificationToken, params);
     output.success(`SAML authentication complete for ${highlight(email)}`);
-    const body = await verifyRes.json();
-    return body.token;
+    return token;
   } finally {
     server.close();
   }
