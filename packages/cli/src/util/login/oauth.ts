@@ -77,8 +77,6 @@ export default async function doOauthLogin(
       return 1;
     }
 
-    //console.log(query);
-
     // If an `ssoUserId` was returned, then the SAML Profile is not yet connected
     // to a Team member. Prompt the user to log in to a Vercel account now, which
     // will complete the connection to the SAML Profile.
