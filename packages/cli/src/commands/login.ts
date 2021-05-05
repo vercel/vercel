@@ -6,7 +6,7 @@ import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
 import prompt from '../util/login/prompt';
 import doSsoLogin from '../util/login/sso';
-import doEmailLogin from '../util/login//email';
+import doEmailLogin from '../util/login/email';
 import { prependEmoji, emoji } from '../util/emoji';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
