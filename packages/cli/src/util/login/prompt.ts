@@ -2,9 +2,12 @@ import inquirer from 'inquirer';
 import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
+import { LoginParams } from './types';
 import doSsoLogin from './sso';
 import doEmailLogin from './email';
-import { LoginParams } from './types';
+import doGithubLogin from './github';
+import doGitlabLogin from './gitlab';
+import doBitbucketLogin from './bitbucket';
 
 export default async function prompt(params: LoginParams) {
   let result: number | string = 1;
@@ -29,8 +32,11 @@ export default async function prompt(params: LoginParams) {
   });
 
   if (choice === 'github') {
+    result = await doGithubLogin(params);
   } else if (choice === 'gitlab') {
+    result = await doGitlabLogin(params);
   } else if (choice === 'bitbucket') {
+    result = await doBitbucketLogin(params);
   } else if (choice === 'email') {
     const email = await readInput('Enter your email address');
     result = await doEmailLogin(email, params);
