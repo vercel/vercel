@@ -2085,10 +2085,10 @@
   resolved "https://registry.yarnpkg.com/@vercel/ncc/-/ncc-0.24.0.tgz#a2e8783a185caa99b5d8961a57dfc9665de16296"
   integrity sha512-crqItMcIwCkvdXY/V3/TzrHJQx6nbIaRqE1cOopJhgGX6izvNov40SmD//nS5flfEvdK54YGjwVVq+zG6crjOg==
 
-"@vercel/nft@0.10.0":
-  version "0.10.0"
-  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.10.0.tgz#6dc99c28abd073633467371a1855f08820460d45"
-  integrity sha512-0WABTmfebmYDR9GKuM9uFNr6MCayfl/zB6uXzkMsWlXrd7LN/ZI7sdbC/Ua+h4HEzJtvEMOrxLkIYYKqfeUf9A==
+"@vercel/nft@0.11.2":
+  version "0.11.2"
+  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.11.2.tgz#e2978267a738a67d12c84390b18348d3ed6eaf49"
+  integrity sha512-bOrWwNqXsVhHe9KZ7I0oivmJIAUIQsYrMmk0QfKoKy+JVoEC7X0BpCH8bVd0G+ci8/l57rgsJDL7ahhIXN3kCQ==
   dependencies:
     acorn "^8.1.0"
     acorn-class-fields "^1.0.0"
