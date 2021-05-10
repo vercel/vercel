@@ -7,7 +7,8 @@
       "config": {
         "functions": {
           "**/*.js": {
-            "memory": 3008
+            "memory": 3008,
+            "maxDuration": 30
           }
         }
       }

@@ -1,5 +1,3 @@
 {
-  "engines": {
-    "node": "10.x"
-  }
+  "private": true
 }
