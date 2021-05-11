@@ -8,7 +8,7 @@ This directory is a brief example of a [UmiJS](https://umijs.org/) app that can 
 
 Deploy your own UmiJS project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/umijs)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/umijs)
 
 _Live Example: https://umijs.now-examples.now.sh_
 

@@ -36,6 +36,9 @@ const SchemaSettings = {
         value: {
           type: 'string',
         },
+        placeholder: {
+          type: 'string',
+        },
       },
     },
     {

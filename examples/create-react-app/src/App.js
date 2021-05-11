@@ -28,7 +28,7 @@ function App() {
       </h2>
       <p>
         <a
-          href="https://github.com/vercel/vercel/tree/master/examples/create-react-app"
+          href="https://github.com/vercel/vercel/tree/main/examples/create-react-app"
           target="_blank"
           rel="noreferrer noopener"
         >

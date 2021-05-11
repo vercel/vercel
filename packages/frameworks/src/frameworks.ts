@@ -89,6 +89,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'next dev --port $PORT',
+        placeholder: 'next',
       },
       outputDirectory: {
         placeholder: 'Next.js default',
@@ -135,6 +136,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'gatsby develop --port $PORT',
+        placeholder: 'gatsby develop',
       },
       outputDirectory: {
         value: 'public',
@@ -222,6 +224,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'hexo server --port $PORT',
+        placeholder: 'hexo server',
       },
       outputDirectory: {
         value: 'public',
@@ -261,6 +264,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'npx @11ty/eleventy --serve --watch --port $PORT',
+        placeholder: 'npx @11ty/eleventy --serve',
       },
       outputDirectory: {
         value: '_site',
@@ -301,6 +305,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'docusaurus start --port $PORT',
+        placeholder: 'docusaurus start',
       },
       outputDirectory: {
         value: 'build',
@@ -393,6 +398,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'docusaurus-start --port $PORT',
+        placeholder: 'docusaurus-start',
       },
       outputDirectory: {
         value: 'build',
@@ -445,6 +451,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'preact watch --port $PORT',
+        placeholder: 'preact watch',
       },
       outputDirectory: {
         value: 'build',
@@ -495,6 +502,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'dojo build -m dev -w -s -p $PORT',
+        placeholder: 'dojo build -m dev -w -s',
       },
       outputDirectory: {
         value: 'output/dist',
@@ -547,6 +555,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'ember serve --port $PORT',
+        placeholder: 'ember serve',
       },
       outputDirectory: {
         value: 'dist',
@@ -595,6 +604,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'vue-cli-service serve --port $PORT',
+        placeholder: 'vue-cli-service serve',
       },
       outputDirectory: {
         value: 'dist',
@@ -651,6 +661,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'ng serve --port $PORT',
+        placeholder: 'ng serve',
       },
       outputDirectory: {
         value: 'dist',
@@ -688,14 +699,14 @@ export const frameworks = [
         placeholder: '`npm run build` or `ng build`',
       },
       devCommand: {
-        value: 'ng start',
+        value: 'ng serve',
       },
       outputDirectory: {
         value: 'www',
       },
     },
     dependency: '@ionic/angular',
-    devCommand: 'ng start',
+    devCommand: 'ng serve',
     buildCommand: 'ng build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
@@ -736,6 +747,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'ng serve --port $PORT',
+        placeholder: 'ng serve',
       },
       outputDirectory: {
         value: 'dist',
@@ -797,6 +809,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'polymer serve --port $PORT',
+        placeholder: 'polymer serve',
       },
       outputDirectory: {
         value: 'build',
@@ -1040,6 +1053,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'gridsome develop -p $PORT',
+        placeholder: 'gridsome develop',
       },
       outputDirectory: {
         value: 'dist',
@@ -1078,6 +1092,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'umi dev --port $PORT',
+        placeholder: 'umi dev',
       },
       outputDirectory: {
         value: 'dist',
@@ -1125,6 +1140,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'sapper dev --port $PORT',
+        placeholder: 'sapper dev',
       },
       outputDirectory: {
         value: '__sapper__/export',
@@ -1163,6 +1179,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'saber --port $PORT',
+        placeholder: 'saber',
       },
       outputDirectory: {
         value: 'public',
@@ -1215,6 +1232,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'stencil build --dev --watch --serve --port $PORT',
+        placeholder: 'stencil build --dev --watch --serve',
       },
       outputDirectory: {
         value: 'www',
@@ -1338,6 +1356,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'yarn rw dev --fwd="--port=$PORT --open=false"',
+        placeholder: 'yarn rw dev',
       },
       outputDirectory: {
         placeholder: 'RedwoodJS default',
@@ -1383,6 +1402,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'hugo server -D -w -p $PORT',
+        placeholder: 'hugo server -D',
       },
       outputDirectory: {
         placeholder: '`public` or `publishDir` from the `config` file',
@@ -1428,6 +1448,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'bundle exec jekyll serve --watch --port $PORT',
+        placeholder: 'bundle exec jekyll serve',
       },
       outputDirectory: {
         placeholder: '`_site` or `destination` from `_config.yml`',
@@ -1470,6 +1491,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'brunch watch --server --port $PORT',
+        placeholder: 'brunch watch --server',
       },
       outputDirectory: {
         value: 'public',
@@ -1505,6 +1527,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'bundle exec middleman server -p $PORT',
+        placeholder: 'bundle exec middleman server',
       },
       outputDirectory: {
         value: 'build',
@@ -1541,6 +1564,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'zola serve --port $PORT',
+        placeholder: 'zola serve',
       },
       outputDirectory: {
         value: 'public',

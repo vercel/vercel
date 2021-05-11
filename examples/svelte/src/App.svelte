@@ -20,7 +20,7 @@
   </h2>
   <p>
     <a
-      href="https://github.com/vercel/vercel/tree/master/examples/svelte"
+      href="https://github.com/vercel/vercel/tree/main/examples/svelte"
       target="_blank"
       rel="noreferrer noopener">
       This project

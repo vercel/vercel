@@ -8,7 +8,7 @@ This directory is a brief example of a [Scully](https://scully.io) site that can
 
 Deploy your own Scully project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/scully)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/scully)
 
 _Live Example: https://scully.now-examples.now.sh_
 

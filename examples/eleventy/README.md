@@ -8,7 +8,7 @@ This directory is a brief example of a [Eleventy](https://www.11ty.io/) site tha
 
 Deploy your own Eleventy project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/eleventy)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/eleventy)
 
 _Live Example: https://eleventy.now-examples.now.sh_
 

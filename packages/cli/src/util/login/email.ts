@@ -1,70 +1,18 @@
 import ms from 'ms';
-import { stringify as stringifyQuery } from 'querystring';
-import fetch from 'node-fetch';
 import sleep from '../sleep';
-import ua from '../ua';
-import error from '../output/error';
 import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
+import verify from './verify';
 import executeLogin from './login';
 import { LoginParams } from './types';
 
-async function verify(
-  email: string,
-  verificationToken: string,
-  { apiUrl, output }: LoginParams
-): Promise<string> {
-  const query = {
-    email,
-    token: verificationToken,
-  };
-
-  output.debug('GET /now/registration/verify');
-
-  let res;
-
-  try {
-    res = await fetch(
-      `${apiUrl}/now/registration/verify?${stringifyQuery(query)}`,
-      {
-        headers: { 'User-Agent': ua },
-      }
-    );
-  } catch (err) {
-    output.debug(`error fetching /now/registration/verify: ${err.stack}`);
-
-    throw new Error(
-      error(
-        `An unexpected error occurred while trying to verify your login: ${err.message}`
-      )
-    );
-  }
-
-  output.debug('parsing response from GET /now/registration/verify');
-  let body;
-
-  try {
-    body = await res.json();
-  } catch (err) {
-    output.debug(
-      `error parsing the response from /now/registration/verify: ${err.stack}`
-    );
-    throw new Error(
-      error(
-        `An unexpected error occurred while trying to verify your login: ${err.message}`
-      )
-    );
-  }
-
-  return body.token;
-}
-
 export default async function doEmailLogin(
   email: string,
-  { apiUrl, output }: LoginParams
+  params: LoginParams
 ): Promise<number | string> {
   let securityCode;
   let verificationToken;
+  const { apiUrl, output } = params;
 
   output.spinner('Sending you an email');
 
@@ -91,22 +39,18 @@ export default async function doEmailLogin(
   output.spinner('Waiting for your confirmation');
 
   let token = '';
-
   while (!token) {
     try {
       await sleep(ms('1s'));
-      token = await verify(email, verificationToken, { apiUrl, output });
+      token = await verify(email, verificationToken, params);
     } catch (err) {
-      if (/invalid json response body/.test(err.message)) {
-        // /now/registraton is currently returning plain text in that case
-        // we just wait for the user to click on the link
-      } else {
+      if (err.message !== 'Confirmation incomplete') {
         output.error(err.message);
         return 1;
       }
     }
   }
 
-  output.success('Email confirmed');
+  output.success(`Email authentication complete for ${email}`);
   return token;
 }

@@ -6,7 +6,7 @@ This directory is a brief example of a [Dojo](https://dojo.io) site that can be 
 
 Deploy your own Dojo project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/dojo)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/dojo)
 
 ### How We Created This Example
 

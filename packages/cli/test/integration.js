@@ -165,7 +165,7 @@ function mockLoginApi(req, res) {
     res.end(JSON.stringify({ token, securityCode }));
   } else if (
     method === 'GET' &&
-    pathname === '/now/registration/verify' &&
+    pathname === '/registration/verify' &&
     query.email === email
   ) {
     res.end(JSON.stringify({ token }));
@@ -295,6 +295,7 @@ test('default command should prompt login with empty auth.json', async t => {
 test('login', async t => {
   t.timeout(ms('1m'));
 
+  await fs.remove(getConfigAuthPath());
   const loginOutput = await execa(binaryPath, [
     'login',
     email,
