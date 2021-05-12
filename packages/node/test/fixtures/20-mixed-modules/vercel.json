@@ -7,6 +7,10 @@
       "mustContain": "mixed-modules:js:RANDOMNESS_PLACEHOLDER"
     },
     {
+      "path": "/entrypoint.mjs",
+      "mustContain": "mixed-modules:mjs:RANDOMNESS_PLACEHOLDER"
+    },
+    {
       "path": "/entrypoint.ts",
       "mustContain": "mixed-modules:ts:RANDOMNESS_PLACEHOLDER"
     }
