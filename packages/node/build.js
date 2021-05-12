@@ -50,6 +50,8 @@ async function main() {
       'build',
       join(srcDir, 'helpers.ts'),
       '-e',
+      '@vercel/node-bridge',
+      '-e',
       '@vercel/build-utils',
       '-e',
       '@now/build-utils',
@@ -68,6 +70,8 @@ async function main() {
     [
       'build',
       join(__dirname, '../../node_modules/source-map-support/register'),
+      '-e',
+      '@vercel/node-bridge',
       '-e',
       '@vercel/build-utils',
       '-e',
@@ -89,6 +93,8 @@ async function main() {
     [
       'build',
       join(srcDir, 'index.ts'),
+      '-e',
+      '@vercel/node-bridge',
       '-e',
       '@vercel/build-utils',
       '-e',
