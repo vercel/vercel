@@ -1,18 +1,8 @@
-import { parse } from 'url';
-import { createServer, Server } from 'http';
-import { Bridge } from './bridge';
+const { parse } = require('url');
+const { createServer, Server } = require('http');
+const { Bridge } = require('./bridge.js');
 
-type LauncherConfiguration = {
-  entrypointPath: string;
-  bridgePath: string;
-  helpersPath: string;
-  sourcemapSupportPath: string;
-  shouldAddHelpers?: boolean;
-  shouldAddSourcemapSupport?: boolean;
-  awsLambdaHandler?: string;
-};
-
-export function makeVercelLauncher(config: LauncherConfiguration): string {
+function makeVercelLauncher(config) {
   const {
     entrypointPath,
     bridgePath,
@@ -21,8 +11,10 @@ export function makeVercelLauncher(config: LauncherConfiguration): string {
     shouldAddHelpers = false,
     shouldAddSourcemapSupport = false,
   } = config;
-  return `const bridge_1 = require(${JSON.stringify(bridgePath)});
-const http_1 = require("http");
+  return `
+const { parse } = require('url');
+const { createServer, Server } = require('http');
+const { Bridge } = require(${JSON.stringify(bridgePath)});
 ${
   shouldAddSourcemapSupport
     ? `require(${JSON.stringify(sourcemapSupportPath)});`
@@ -32,16 +24,16 @@ const entrypointPath = ${JSON.stringify(entrypointPath)};
 const shouldAddHelpers = ${JSON.stringify(shouldAddHelpers)};
 const helpersPath = ${JSON.stringify(helpersPath)};
 
-const bridge = (${getNowLauncher(config)})();
-exports.launcher = bridge.launcher;`;
+const func = (${getVercelLauncher(config).toString()})();
+exports.launcher = func.launcher;`;
 }
 
-export function getNowLauncher({
+function getVercelLauncher({
   entrypointPath,
   helpersPath,
   shouldAddHelpers = false,
-}: LauncherConfiguration) {
-  return function (): Bridge {
+}) {
+  return function () {
     const bridge = new Bridge();
     let isServerListening = false;
 
@@ -115,28 +107,24 @@ export function getNowLauncher({
   };
 }
 
-export function makeAwsLauncher(config: LauncherConfiguration): string {
+function makeAwsLauncher(config) {
   const { entrypointPath, awsLambdaHandler = '' } = config;
-  return `const url_1 = require("url");
+  return `const url = require("url");
 const funcName = ${JSON.stringify(awsLambdaHandler.split('.').pop())};
 const entrypointPath = ${JSON.stringify(entrypointPath)};
 exports.launcher = ${getAwsLauncher(config)}`;
 }
 
-export function getAwsLauncher({
-  entrypointPath,
-  awsLambdaHandler = '',
-}: LauncherConfiguration) {
+function getAwsLauncher({ entrypointPath, awsLambdaHandler = '' }) {
   const funcName = awsLambdaHandler.split('.').pop();
   if (typeof funcName !== 'string') {
     throw new TypeError('Expected "string"');
   }
 
-  // @ts-ignore
   return function (e, context, callback) {
     const { path, method: httpMethod, body, headers } = JSON.parse(e.body);
     const { query } = parse(path, true);
-    const queryStringParameters: { [i: string]: string } = {};
+    const queryStringParameters = {};
     for (const [key, value] of Object.entries(query)) {
       if (typeof value === 'string') {
         queryStringParameters[key] = value;
@@ -152,8 +140,15 @@ export function getAwsLauncher({
       multiValueQueryStringParameters: query,
       headers: headers,
     };
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+
     const mod = require(entrypointPath);
     return mod[funcName](awsGatewayEvent, context, callback);
   };
 }
+
+module.exports = {
+  makeVercelLauncher,
+  getVercelLauncher,
+  makeAwsLauncher,
+  getAwsLauncher,
+};

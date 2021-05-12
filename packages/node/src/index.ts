@@ -46,7 +46,10 @@ const {
   isSymbolicLink,
   walkParentDirs,
 } = buildUtils;
-import { makeVercelLauncher, makeAwsLauncher } from './launcher';
+import {
+  makeVercelLauncher,
+  makeAwsLauncher,
+} from '@vercel/node-bridge/launcher';
 import { Register, register } from './typescript';
 
 export { shouldServe };

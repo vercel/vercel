@@ -81,8 +81,8 @@ register({
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
-import { Bridge } from './bridge';
-import { getNowLauncher } from './launcher';
+import { Bridge } from '@vercel/node-bridge/bridge';
+import { getVercelLauncher } from '@vercel/node-bridge/launcher';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -105,7 +105,7 @@ async function main() {
     config.helpers === false || buildEnv.NODEJS_HELPERS === '0'
   );
 
-  bridge = getNowLauncher({
+  bridge = getVercelLauncher({
     entrypointPath: join(process.cwd(), entrypoint!),
     helpersPath: './helpers',
     shouldAddHelpers,

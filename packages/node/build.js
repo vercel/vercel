@@ -8,15 +8,6 @@ async function main() {
   const outDir = join(__dirname, 'dist');
   const bridgeDir = join(__dirname, '../node-bridge');
 
-  // Copy shared dependencies
-  await Promise.all([
-    fs.copyFile(join(bridgeDir, 'src/bridge.ts'), join(srcDir, 'bridge.ts')),
-    fs.copyFile(
-      join(bridgeDir, 'src/launcher.ts'),
-      join(srcDir, 'launcher.ts')
-    ),
-  ]);
-
   // Start fresh
   await fs.remove(outDir);
 
@@ -24,6 +15,12 @@ async function main() {
   await execa('tsc', [], {
     stdio: 'inherit',
   });
+
+  // Copy bridge and launcher as-is
+  await Promise.all([
+    fs.copyFile(join(bridgeDir, 'bridge.js'), join(outDir, 'bridge.js')),
+    fs.copyFile(join(bridgeDir, 'launcher.js'), join(outDir, 'launcher.js')),
+  ]);
 
   // Copy type file for ts test
   await fs.copyFile(
