@@ -33,7 +33,7 @@
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
     "@vercel/ncc": "0.24.0",
-    "@vercel/nft": "0.11.2",
+    "@vercel/nft": "0.12.0",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
