@@ -4,7 +4,7 @@ import PCRE from 'pcre-to-regexp';
 import isURL from './is-url';
 import DevServer from './server';
 
-import { NowConfig, HttpHeadersConfig, RouteResult } from './types';
+import { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
 import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
@@ -50,7 +50,7 @@ export async function devRouter(
   reqMethod?: string,
   routes?: Route[],
   devServer?: DevServer,
-  nowConfig?: NowConfig,
+  nowConfig?: VercelConfig,
   previousHeaders?: HttpHeadersConfig,
   missRoutes?: Route[],
   phase?: HandleValue | null

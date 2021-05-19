@@ -9,7 +9,7 @@ import {
 import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';
-import { NowConfig } from '../dev/types';
+import { VercelConfig } from '../dev/types';
 import { Org } from '../../types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
@@ -43,7 +43,7 @@ export default async function processDeployment({
   uploadStamp: () => string;
   deployStamp: () => string;
   quiet: boolean;
-  nowConfig?: NowConfig;
+  nowConfig?: VercelConfig;
   force?: boolean;
   withCache?: boolean;
   org: Org;
