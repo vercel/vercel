@@ -14,7 +14,7 @@ function getLength(string) {
   return biggestLength;
 }
 
-export default async function({
+export default async function ({
   message = 'the question',
   // eslint-disable-line no-unused-vars
   choices = [
@@ -27,10 +27,11 @@ export default async function({
   pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
   separator = true, // Puts a blank separator between each choice
   abort = 'end', // Wether the `abort` option will be at the `start` or the `end`,
-  eraseFinalAnswer = false, // If true, the line with the final answee that inquirer prints will be erased before returning
+  eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
 }) {
   require('./patch-inquirer-legacy');
 
+  let selected;
   let biggestLength = 0;
 
   choices = choices.map(choice => {
@@ -39,8 +40,17 @@ export default async function({
       if (length > biggestLength) {
         biggestLength = length;
       }
+      if (choice.selected) {
+        if (selected) throw new Error('Only one choice may be selected');
+        selected = choice.short;
+      }
       return choice;
     }
+
+    if (choice instanceof inquirer.Separator) {
+      return choice;
+    }
+
     throw new Error('Invalid choice');
   });
 
@@ -71,12 +81,15 @@ export default async function({
   const answer = await inquirer.prompt({
     name: nonce,
     type: 'list',
+    default: selected,
     message,
     choices,
     pageSize,
   });
+
   if (eraseFinalAnswer === true) {
     process.stdout.write(eraseLines(2));
   }
+
   return answer[nonce];
 }

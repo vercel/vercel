@@ -1,14 +1,15 @@
 import chalk from 'chalk';
-import error from '../util/output/error';
-import NowTeams from '../util/teams';
-import logo from '../util/output/logo';
-import list from './teams/list';
-import add from './teams/add';
-import change from './teams/switch';
-import invite from './teams/invite';
-import { getPkgName } from '../util/pkg-name.ts';
-import getArgs from '../util/get-args.ts';
-import handleError from '../util/handle-error.ts';
+import error from '../../util/output/error';
+import NowTeams from '../../util/teams';
+import logo from '../../util/output/logo';
+import list from './list';
+import add from './add';
+import change from './switch';
+import invite from './invite';
+import { getPkgName } from '../../util/pkg-name';
+import getArgs from '../../util/get-args';
+import handleError from '../../util/handle-error';
+import Client from '../../util/client';
 
 const help = () => {
   console.log(`
@@ -65,7 +66,7 @@ let debug;
 let apiUrl;
 let subcommand;
 
-const main = async client => {
+export default async (client: Client) => {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--since': String,
@@ -113,7 +114,7 @@ const main = async client => {
     }
     case 'switch':
     case 'change': {
-      exitCode = await change(client, argv);
+      exitCode = await change(client, argv._[0]);
       break;
     }
     case 'add':
@@ -138,14 +139,4 @@ const main = async client => {
   }
   teams.close();
   return exitCode || 0;
-};
-
-export default async client => {
-  try {
-    return await main(client);
-  } catch (err) {
-    console.error(err);
-    handleError(err);
-    return 1;
-  }
 };
