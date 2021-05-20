@@ -82,6 +82,7 @@
     "@types/fs-extra": "5.0.5",
     "@types/glob": "7.1.1",
     "@types/http-proxy": "1.16.2",
+    "@types/inquirer": "7.3.1",
     "@types/load-json-file": "2.0.7",
     "@types/mime-types": "2.1.0",
     "@types/minimatch": "3.0.3",
