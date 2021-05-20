@@ -43,21 +43,21 @@ export default async function change(client: Client, desiredSlug?: string) {
   }
 
   if (!desiredSlug) {
-    const choices = teams
+    const teamChoices = teams
       .slice(0)
       .sort((a, b) => {
         return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
       })
       .map(({ id, slug, name }) => {
+        let title = `${slug} (${name})`;
         const selected = id === currentTeam!.id;
-        name = `${slug} (${name})`;
 
         if (selected) {
-          name += ` ${chalk.bold('(current)')}`;
+          title += ` ${chalk.bold('(current)')}`;
         }
 
         return {
-          name,
+          name: title,
           value: slug,
           short: slug,
           selected,
@@ -67,20 +67,21 @@ export default async function change(client: Client, desiredSlug?: string) {
     // Add the User scope entry at the top
     const suffix = personalScopeSelected ? ` ${chalk.bold('(current)')}` : '';
 
-    const userEntryName = user.username
+    const userTitle = user.username
       ? `${user.username} (${user.email})${suffix}`
       : user.email;
 
-    choices.unshift(new inquirer.Separator(`── Teams`));
-
-    choices.unshift({
-      name: userEntryName,
-      value: user.email,
-      short: user.username,
-      selected: personalScopeSelected,
-    });
-
-    choices.unshift(new inquirer.Separator(`── Personal Account`));
+    const choices = [
+      new inquirer.Separator(`── Personal Account`),
+      {
+        name: userTitle,
+        value: user.email,
+        short: user.username,
+        selected: personalScopeSelected,
+      },
+      new inquirer.Separator(`── Teams`),
+      ...teamChoices,
+    ];
 
     output.stopSpinner();
     desiredSlug = await listInput({
@@ -97,9 +98,7 @@ export default async function change(client: Client, desiredSlug?: string) {
     return 0;
   }
 
-  const newTeam = teams.find(item => item.slug === desiredSlug);
-
-  if (!newTeam) {
+  if (desiredSlug === user.username || desiredSlug === user.email) {
     // Switch to user's personal account
     if (currentTeam.slug === user.username || currentTeam.slug === user.email) {
       output.log('No changes made');
@@ -110,6 +109,16 @@ export default async function change(client: Client, desiredSlug?: string) {
 
     output.success(`Your account (${chalk.bold(desiredSlug)}) is now active!`);
     return 0;
+  }
+
+  // Switch to selected team
+  const newTeam = teams.find(team => team.slug === desiredSlug);
+
+  if (!newTeam) {
+    output.error(
+      `You do not have permission to access scope ${chalk.bold(desiredSlug)}`
+    );
+    return 1;
   }
 
   if (newTeam.slug === currentTeam.slug) {
