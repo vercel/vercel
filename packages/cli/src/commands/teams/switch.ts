@@ -80,7 +80,6 @@ export default async function change(client: Client, desiredSlug?: string) {
     desiredSlug = await listInput({
       message: 'Switch to:',
       choices,
-      separator: false,
       eraseFinalAnswer: true,
     });
   }

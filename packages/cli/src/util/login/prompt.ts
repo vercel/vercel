@@ -27,7 +27,6 @@ export default async function prompt(params: LoginParams) {
 
   const choice = await listInput({
     message: 'Log in to Vercel',
-    separator: false,
     choices,
   });
 

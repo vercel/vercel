@@ -46,7 +46,7 @@ export default async function list({
     },
   ],
   pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
-  separator = true, // Puts a blank separator between each choice
+  separator = false, // Puts a blank separator between each choice
   abort = 'end', // Whether the `abort` option will be at the `start` or the `end`,
   eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
 }: ListOptions): Promise<string> {
