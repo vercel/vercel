@@ -19,7 +19,7 @@ const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   writeToConfigFile(config);
 };
 
-export default async function change(client: Client, desiredSlug?: string) {
+export default async function switch(client: Client, desiredSlug?: string) {
   const { config, output } = client;
   const personalScopeSelected = !config.currentTeam;
 
@@ -31,7 +31,7 @@ export default async function change(client: Client, desiredSlug?: string) {
     : teams.find(team => team.id === config.currentTeam);
 
   if (!personalScopeSelected && !currentTeam) {
-    output.error(`You are not a part of the current team anymore`);
+    output.error(`You are not a part of the current team anymore.`);
     return 1;
   }
 
@@ -86,7 +86,7 @@ export default async function change(client: Client, desiredSlug?: string) {
 
   // Abort
   if (!desiredSlug) {
-    output.log('No changes made');
+    output.log('No changes made.');
     return 0;
   }
 
@@ -108,7 +108,7 @@ export default async function change(client: Client, desiredSlug?: string) {
 
   if (!newTeam) {
     output.error(
-      `You do not have permission to access scope ${chalk.bold(desiredSlug)}`
+      `You do not have permission to access scope ${chalk.bold(desiredSlug)}.`
     );
     return 1;
   }
