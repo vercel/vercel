@@ -19,7 +19,7 @@ const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   writeToConfigFile(config);
 };
 
-export default async function switch(client: Client, desiredSlug?: string) {
+export default async function main(client: Client, desiredSlug?: string) {
   const { config, output } = client;
   const personalScopeSelected = !config.currentTeam;
 
