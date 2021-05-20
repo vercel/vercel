@@ -5,7 +5,6 @@ import inquirer from 'inquirer';
 // Utilities
 import Client from '../../util/client';
 import listInput from '../../util/input/list';
-import param from '../../util/output/param';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/get-teams';
 import { Team, GlobalConfig } from '../../types';
@@ -23,14 +22,13 @@ const updateCurrentTeam = (config: GlobalConfig, newTeam?: Team) => {
 
 export default async function change(client: Client, desiredSlug?: string) {
   const { config, output } = client;
-  const accountIsCurrent = !config.currentTeam;
+  const personalScopeSelected = !config.currentTeam;
 
   output.spinner('Fetching teams information');
   const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
-  //await new Promise((r) => setTimeout(r, 3000));
 
   let currentTeam: Pick<Team, 'id' | 'slug'> | undefined;
-  if (accountIsCurrent) {
+  if (personalScopeSelected) {
     currentTeam = {
       id: '',
       slug: user.username || user.email,
@@ -44,86 +42,65 @@ export default async function change(client: Client, desiredSlug?: string) {
     }
   }
 
-  if (desiredSlug) {
-    const newTeam = teams.find(team => team.slug === desiredSlug);
+  if (!desiredSlug) {
+    const choices = teams
+      .slice(0)
+      .sort((a, b) => {
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+      })
+      .map(({ id, slug, name }) => {
+        const selected = id === currentTeam!.id;
+        name = `${slug} (${name})`;
 
-    if (newTeam) {
-      updateCurrentTeam(config, newTeam);
-      output.success(
-        `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`
-      );
-      return 0;
-    }
+        if (selected) {
+          name += ` ${chalk.bold('(current)')}`;
+        }
 
-    if (desiredSlug === user.username) {
-      updateCurrentTeam(config);
-      output.success(
-        `Your account (${chalk.bold(desiredSlug)}) is now active!`
-      );
-      return 0;
-    }
+        return {
+          name,
+          value: slug,
+          short: slug,
+          selected,
+        };
+      });
 
-    output.error(`Could not find membership for team ${param(desiredSlug)}`);
-    return 1;
-  }
+    // Add the User scope entry at the top
+    const suffix = personalScopeSelected ? ` ${chalk.bold('(current)')}` : '';
 
-  const choices = teams
-    .slice(0)
-    .sort((a, b) => {
-      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-    })
-    .map(({ id, slug, name }) => {
-      const selected = id === currentTeam!.id;
-      name = `${slug} (${name})`;
+    const userEntryName = user.username
+      ? `${user.username} (${user.email})${suffix}`
+      : user.email;
 
-      if (selected) {
-        name += ` ${chalk.bold('(current)')}`;
-      }
+    choices.unshift(new inquirer.Separator(`── Teams`));
 
-      return {
-        name,
-        value: slug,
-        short: slug,
-        selected,
-      };
+    choices.unshift({
+      name: userEntryName,
+      value: user.email,
+      short: user.username,
+      selected: personalScopeSelected,
     });
 
-  // Add the User scope entry at the top
-  const suffix = accountIsCurrent ? ` ${chalk.bold('(current)')}` : '';
+    choices.unshift(new inquirer.Separator(`── Personal Account`));
 
-  const userEntryName = user.username
-    ? `${user.username} (${user.email})${suffix}`
-    : user.email;
-
-  choices.unshift(new inquirer.Separator(`── Teams`));
-
-  choices.unshift({
-    name: userEntryName,
-    value: user.email,
-    short: user.username,
-    selected: accountIsCurrent,
-  });
-
-  choices.unshift(new inquirer.Separator(`── Personal Account`));
-
-  output.stopSpinner();
-  const choice = await listInput({
-    message: 'Switch to:',
-    choices,
-    separator: false,
-    eraseFinalAnswer: true,
-  });
+    output.stopSpinner();
+    desiredSlug = await listInput({
+      message: 'Switch to:',
+      choices,
+      separator: false,
+      eraseFinalAnswer: true,
+    });
+  }
 
   // Abort
-  if (!choice) {
+  if (!desiredSlug) {
     output.log('No changes made');
     return 0;
   }
 
-  const newTeam = teams.find(item => item.slug === choice);
+  const newTeam = teams.find(item => item.slug === desiredSlug);
 
-  // Switch to account
   if (!newTeam) {
+    // Switch to user's personal account
     if (currentTeam.slug === user.username || currentTeam.slug === user.email) {
       output.log('No changes made');
       return 0;
@@ -131,7 +108,7 @@ export default async function change(client: Client, desiredSlug?: string) {
 
     updateCurrentTeam(config);
 
-    output.success(`Your account (${chalk.bold(choice)}) is now active!`);
+    output.success(`Your account (${chalk.bold(desiredSlug)}) is now active!`);
     return 0;
   }
 
