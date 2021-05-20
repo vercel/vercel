@@ -268,8 +268,3 @@ export type ProjectLinkResult =
   | { status: 'linked'; org: Org; project: Project }
   | { status: 'not_linked'; org: null; project: null }
   | { status: 'error'; exitCode: number };
-
-export interface Token {
-  origin?: string;
-  teamId?: string;
-}
