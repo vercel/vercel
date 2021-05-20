@@ -3,12 +3,14 @@ import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
 import routesList from '../util/output/routes';
 import indent from '../util/output/indent';
-import Now from '../util';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed.ts';
+import elapsed from '../util/output/elapsed';
 import { handleError } from '../util/error';
-import getScope from '../util/get-scope.ts';
-import { getPkgName, getCommandName } from '../util/pkg-name.ts';
+import getScope from '../util/get-scope';
+import { getPkgName, getCommandName } from '../util/pkg-name';
+import Client from '../util/client';
+import { getDeployment } from '../util/get-deployment';
+import { Deployment } from '@vercel/client';
 
 const help = () => {
   console.log(`
@@ -33,15 +35,15 @@ const help = () => {
 
   ${chalk.gray('–')} Get information about a deployment by its unique URL
 
-    ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment-ji2fjij2.now.sh`)}
+    ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment-ji2fjij2.vercel.app`)}
 
   ${chalk.gray('-')} Get information about the deployment an alias points to
 
-    ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment.now.sh`)}
+    ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment.vercel.app`)}
   `);
 };
 
-export default async function main(client) {
+export default async function main(client: Client) {
   let deployment;
   let argv;
 
@@ -57,14 +59,7 @@ export default async function main(client) {
     return 2;
   }
 
-  const {
-    apiUrl,
-    output,
-    authConfig: { token },
-    config,
-  } = client;
-  const debugEnabled = argv['--debug'];
-  const { print, log, error } = output;
+  const { print, log, error } = client.output;
 
   // extract the first parameter
   const [, deploymentIdOrHost] = argv._;
@@ -75,9 +70,7 @@ export default async function main(client) {
     return 1;
   }
 
-  const { currentTeam } = config;
-
-  let contextName = null;
+  let contextName: string | null = null;
 
   try {
     ({ contextName } = await getScope(client));
@@ -90,22 +83,14 @@ export default async function main(client) {
     throw err;
   }
 
-  const now = new Now({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    currentTeam,
-    output,
-  });
-
   // resolve the deployment, since we might have been given an alias
   const depFetchStart = Date.now();
-  output.spinner(
+  client.output.spinner(
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
 
   try {
-    deployment = await now.findDeployment(deploymentIdOrHost);
+    deployment = await getDeployment(client, deploymentIdOrHost);
   } catch (err) {
     if (err.status === 404) {
       error(
@@ -127,11 +112,11 @@ export default async function main(client) {
     throw err;
   }
 
-  const { id, name, url, created, routes, readyState } = deployment;
+  const { id, name, url, createdAt, routes, readyState } = deployment;
 
   const { builds } =
     deployment.version === 2
-      ? await now.fetch(`/v1/now/deployments/${id}/builds`)
+      ? await client.fetch(`/v1/now/deployments/${id}/builds`)
       : { builds: [] };
 
   log(
@@ -146,10 +131,10 @@ export default async function main(client) {
   print(`    ${chalk.cyan('name')}\t${name}\n`);
   print(`    ${chalk.cyan('readyState')}\t${stateString(readyState)}\n`);
   print(`    ${chalk.cyan('url')}\t\t${url}\n`);
-  if (created) {
+  if (createdAt) {
     print(
-      `    ${chalk.cyan('createdAt')}\t${new Date(created)} ${elapsed(
-        Date.now() - created,
+      `    ${chalk.cyan('createdAt')}\t${new Date(createdAt)} ${elapsed(
+        Date.now() - createdAt,
         true
       )}\n`
     );
@@ -157,7 +142,7 @@ export default async function main(client) {
   print('\n\n');
 
   if (builds.length > 0) {
-    const times = {};
+    const times: { [id: string]: string | null } = {};
 
     for (const build of builds) {
       const { id, createdAt, readyStateAt } = build;
@@ -179,7 +164,7 @@ export default async function main(client) {
 }
 
 // renders the state string
-function stateString(s) {
+function stateString(s: Deployment['readyState']) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);
