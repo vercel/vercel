@@ -42,7 +42,7 @@ export default async function main(client: Client, desiredSlug?: string) {
         return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
       })
       .map(({ id, slug, name }) => {
-        let title = `${slug} (${name})`;
+        let title = `${name} (${slug})`;
         const selected = id === currentTeam?.id;
 
         if (selected) {
@@ -60,14 +60,10 @@ export default async function main(client: Client, desiredSlug?: string) {
     // Add the User scope entry at the top
     const suffix = personalScopeSelected ? ` ${chalk.bold('(current)')}` : '';
 
-    const userTitle = user.username
-      ? `${user.username} (${user.email})${suffix}`
-      : user.email;
-
     const choices = [
       { separator: 'Personal Account' },
       {
-        name: userTitle,
+        name: `${user.email} (${user.username})${suffix}`,
         value: user.email,
         short: user.username,
         selected: personalScopeSelected,
