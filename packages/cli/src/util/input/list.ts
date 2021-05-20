@@ -2,22 +2,43 @@ import inquirer from 'inquirer';
 import stripAnsi from 'strip-ansi';
 import eraseLines from '../output/erase-lines';
 
-function getLength(string) {
+interface ListEntry {
+  name: string;
+  value: string;
+  short: string;
+  selected?: boolean;
+}
+
+interface ListSeparator {
+  separator: string;
+}
+
+type ListChoice = ListEntry | ListSeparator | typeof inquirer.Separator;
+
+interface ListOptions {
+  message: string;
+  choices: ListChoice[];
+  pageSize?: number;
+  separator?: boolean;
+  abort?: 'start' | 'end';
+  eraseFinalAnswer?: boolean;
+}
+
+function getLength(input: string): number {
   let biggestLength = 0;
-  string.split('\n').map(str => {
-    str = stripAnsi(str);
+  for (const line of input.split('\n')) {
+    const str = stripAnsi(line);
     if (str.length > biggestLength) {
       biggestLength = str.length;
     }
-    return undefined;
-  });
+  }
   return biggestLength;
 }
 
-export default async function ({
+export default async function list({
   message = 'the question',
   // eslint-disable-line no-unused-vars
-  choices = [
+  choices: _choices = [
     {
       name: 'something\ndescription\ndetails\netc',
       value: 'something unique',
@@ -26,20 +47,36 @@ export default async function ({
   ],
   pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
   separator = true, // Puts a blank separator between each choice
-  abort = 'end', // Wether the `abort` option will be at the `start` or the `end`,
+  abort = 'end', // Whether the `abort` option will be at the `start` or the `end`,
   eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
-}) {
+}: ListOptions): Promise<string> {
   require('./patch-inquirer-legacy');
 
-  let selected;
   let biggestLength = 0;
+  let selected: string | undefined;
 
-  choices = choices.map(choice => {
-    if (choice.name) {
+  // First calculate the biggest length
+  for (const choice of _choices) {
+    if ('name' in choice) {
       const length = getLength(choice.name);
       if (length > biggestLength) {
         biggestLength = length;
       }
+    }
+  }
+
+  const choices = _choices.map(choice => {
+    if (choice instanceof inquirer.Separator) {
+      return choice;
+    }
+
+    if ('separator' in choice) {
+      const prefix = `── ${choice.separator} `;
+      const suffix = '─'.repeat(biggestLength - getLength(prefix));
+      return new inquirer.Separator(`${prefix}${suffix}`);
+    }
+
+    if ('short' in choice) {
       if (choice.selected) {
         if (selected) throw new Error('Only one choice may be selected');
         selected = choice.short;
@@ -47,39 +84,30 @@ export default async function ({
       return choice;
     }
 
-    if (choice instanceof inquirer.Separator) {
-      return choice;
-    }
-
     throw new Error('Invalid choice');
   });
 
-  if (separator === true) {
-    choices = choices.reduce(
-      (prev, curr) => prev.concat(new inquirer.Separator(' '), curr),
-      []
-    );
+  if (separator) {
+    for (let i = 0; i < choices.length; i += 2) {
+      choices.splice(i, 0, new inquirer.Separator(' '));
+    }
   }
 
   const abortSeparator = new inquirer.Separator('─'.repeat(biggestLength));
   const _abort = {
     name: 'Abort',
-    value: undefined,
+    value: '',
+    short: '',
   };
 
   if (abort === 'start') {
-    const blankSep = choices.shift();
-    choices.unshift(abortSeparator);
-    choices.unshift(_abort);
-    choices.unshift(blankSep);
+    choices.unshift(_abort, abortSeparator);
   } else {
-    choices.push(abortSeparator);
-    choices.push(_abort);
+    choices.push(abortSeparator, _abort);
   }
 
-  const nonce = Date.now();
   const answer = await inquirer.prompt({
-    name: nonce,
+    name: 'value',
     type: 'list',
     default: selected,
     message,
@@ -91,5 +119,5 @@ export default async function ({
     process.stdout.write(eraseLines(2));
   }
 
-  return answer[nonce];
+  return answer.value;
 }

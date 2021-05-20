@@ -1,6 +1,5 @@
 // Packages
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 
 // Utilities
 import Client from '../../util/client';
@@ -10,9 +9,9 @@ import getTeams from '../../util/get-teams';
 import { Team, GlobalConfig } from '../../types';
 import { writeToConfigFile } from '../../util/config/files';
 
-const updateCurrentTeam = (config: GlobalConfig, newTeam?: Team) => {
-  if (newTeam) {
-    config.currentTeam = newTeam.id;
+const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
+  if (team) {
+    config.currentTeam = team.id;
   } else {
     delete config.currentTeam;
   }
@@ -27,19 +26,13 @@ export default async function change(client: Client, desiredSlug?: string) {
   output.spinner('Fetching teams information');
   const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
 
-  let currentTeam: Pick<Team, 'id' | 'slug'> | undefined;
-  if (personalScopeSelected) {
-    currentTeam = {
-      id: '',
-      slug: user.username || user.email,
-    };
-  } else {
-    currentTeam = teams.find(team => team.id === config.currentTeam);
+  const currentTeam = personalScopeSelected
+    ? undefined
+    : teams.find(team => team.id === config.currentTeam);
 
-    if (!currentTeam) {
-      output.error(`You are not a part of the current team anymore`);
-      return 1;
-    }
+  if (!personalScopeSelected && !currentTeam) {
+    output.error(`You are not a part of the current team anymore`);
+    return 1;
   }
 
   if (!desiredSlug) {
@@ -50,7 +43,7 @@ export default async function change(client: Client, desiredSlug?: string) {
       })
       .map(({ id, slug, name }) => {
         let title = `${slug} (${name})`;
-        const selected = id === currentTeam!.id;
+        const selected = id === currentTeam?.id;
 
         if (selected) {
           title += ` ${chalk.bold('(current)')}`;
@@ -72,14 +65,14 @@ export default async function change(client: Client, desiredSlug?: string) {
       : user.email;
 
     const choices = [
-      new inquirer.Separator(`── Personal Account`),
+      { separator: 'Personal Account' },
       {
         name: userTitle,
         value: user.email,
         short: user.username,
         selected: personalScopeSelected,
       },
-      new inquirer.Separator(`── Teams`),
+      { separator: 'Teams' },
       ...teamChoices,
     ];
 
@@ -100,7 +93,7 @@ export default async function change(client: Client, desiredSlug?: string) {
 
   if (desiredSlug === user.username || desiredSlug === user.email) {
     // Switch to user's personal account
-    if (currentTeam.slug === user.username || currentTeam.slug === user.email) {
+    if (personalScopeSelected) {
       output.log('No changes made');
       return 0;
     }
@@ -121,7 +114,7 @@ export default async function change(client: Client, desiredSlug?: string) {
     return 1;
   }
 
-  if (newTeam.slug === currentTeam.slug) {
+  if (newTeam.slug === currentTeam?.slug) {
     output.log('No changes made');
     return 0;
   }
