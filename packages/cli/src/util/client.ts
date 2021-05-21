@@ -8,7 +8,7 @@ import responseError from './response-error';
 import ua from './ua';
 import printIndications from './print-indications';
 import { AuthConfig, GlobalConfig } from '../types';
-import { NowConfig } from './dev/types';
+import { VercelConfig } from './dev/types';
 import doSsoLogin from './login/sso';
 import { writeToAuthConfigFile } from './config/files';
 
@@ -28,7 +28,7 @@ export interface ClientOptions {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: NowConfig;
+  localConfig: VercelConfig;
 }
 
 export default class Client extends EventEmitter {
@@ -37,7 +37,7 @@ export default class Client extends EventEmitter {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: NowConfig;
+  localConfig: VercelConfig;
 
   constructor(opts: ClientOptions) {
     super();

@@ -9,15 +9,15 @@ import {
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
 import readPackage from './read-package';
-import { NowConfig } from './dev/types';
+import { VercelConfig } from './dev/types';
 import { Output } from './output';
 
-let config: NowConfig;
+let config: VercelConfig;
 
 export default async function getConfig(
   output: Output,
   configFile?: string
-): Promise<NowConfig | Error> {
+): Promise<VercelConfig | Error> {
   // If config was already read, just return it
   if (config) {
     return config;
@@ -44,7 +44,7 @@ export default async function getConfig(
       return localConfig;
     }
     if (localConfig !== null) {
-      config = localConfig as NowConfig;
+      config = localConfig as VercelConfig;
       config[fileNameSymbol] = configFile;
       return config;
     }
@@ -68,13 +68,13 @@ export default async function getConfig(
   }
   if (vercelConfig !== null) {
     output.debug(`Found config in file "${vercelFilePath}"`);
-    config = vercelConfig as NowConfig;
+    config = vercelConfig as VercelConfig;
     config[fileNameSymbol] = 'vercel.json';
     return config;
   }
   if (nowConfig !== null) {
     output.debug(`Found config in file "${nowFilePath}"`);
-    config = nowConfig as NowConfig;
+    config = nowConfig as VercelConfig;
     config[fileNameSymbol] = 'now.json';
     return config;
   }
@@ -87,7 +87,7 @@ export default async function getConfig(
   }
   if (pkgConfig) {
     output.debug(`Found config in package ${pkgFilePath}`);
-    config = pkgConfig as NowConfig;
+    config = pkgConfig as VercelConfig;
     config[fileNameSymbol] = 'package.json';
     return config;
   }

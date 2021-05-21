@@ -14,12 +14,12 @@ import {
   Lambda,
   PackageJson,
 } from '@vercel/build-utils';
-import { NowConfig } from '@vercel/client';
+import { VercelConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 
-export { NowConfig };
+export { VercelConfig };
 
 export interface DevServerOptions {
   output: Output;

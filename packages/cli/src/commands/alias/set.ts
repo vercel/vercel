@@ -19,7 +19,7 @@ import link from '../../util/output/link';
 import { User } from '../../types';
 import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
-import { NowConfig } from '../../util/dev/types';
+import { VercelConfig } from '../../util/dev/types';
 
 type Options = {
   '--debug': boolean;
@@ -421,7 +421,7 @@ function handleCreateAliasError<T>(
   return error;
 }
 
-function getTargetsForAlias(args: string[], { alias }: NowConfig) {
+function getTargetsForAlias(args: string[], { alias }: VercelConfig) {
   if (args.length) {
     return [args[args.length - 1]]
       .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))

@@ -49,7 +49,7 @@ import sleep from '../sleep';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';
-import getNowConfigPath from '../config/local-path';
+import getVercelConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
 import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
@@ -73,7 +73,7 @@ import errorTemplate502 from './templates/error_502';
 import redirectTemplate from './templates/redirect';
 
 import {
-  NowConfig,
+  VercelConfig,
   DevServerOptions,
   BuildMatch,
   BuildResult,
@@ -145,7 +145,7 @@ export default class DevServer {
   private devServerPids: Set<number>;
   private projectSettings?: ProjectSettings;
 
-  private getNowConfigPromise: Promise<NowConfig> | null;
+  private getVercelConfigPromise: Promise<VercelConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
   private updateBuildersTimeout: NodeJS.Timeout | undefined;
@@ -181,7 +181,7 @@ export default class DevServer {
     this.inProgressBuilds = new Map();
     this.devCacheDir = join(getVercelDirectory(cwd), 'cache');
 
-    this.getNowConfigPromise = null;
+    this.getVercelConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.updateBuildersPromise = null;
     this.startPromise = null;
@@ -244,7 +244,7 @@ export default class DevServer {
       }
     }
 
-    const nowConfig = await this.getNowConfig();
+    const nowConfig = await this.getVercelConfig();
 
     // Update the build matches in case an entrypoint was created or deleted
     await this.updateBuildMatches(nowConfig);
@@ -375,7 +375,7 @@ export default class DevServer {
   }
 
   async updateBuildMatches(
-    nowConfig: NowConfig,
+    nowConfig: VercelConfig,
     isInitial = false
   ): Promise<void> {
     const fileList = this.resolveBuildFiles(this.files);
@@ -460,7 +460,7 @@ export default class DevServer {
   }
 
   async invalidateBuildMatches(
-    nowConfig: NowConfig,
+    nowConfig: VercelConfig,
     updatedBuilders: string[]
   ): Promise<void> {
     if (updatedBuilders.length === 0) {
@@ -516,25 +516,25 @@ export default class DevServer {
     return {};
   }
 
-  clearNowConfigPromise = () => {
-    this.getNowConfigPromise = null;
+  clearVercelConfigPromise = () => {
+    this.getVercelConfigPromise = null;
   };
 
-  getNowConfig(): Promise<NowConfig> {
-    if (this.getNowConfigPromise) {
-      return this.getNowConfigPromise;
+  getVercelConfig(): Promise<VercelConfig> {
+    if (this.getVercelConfigPromise) {
+      return this.getVercelConfigPromise;
     }
-    this.getNowConfigPromise = this._getNowConfig();
+    this.getVercelConfigPromise = this._getVercelConfig();
 
     // Clean up the promise once it has resolved
-    const clear = this.clearNowConfigPromise;
-    this.getNowConfigPromise.finally(clear);
+    const clear = this.clearVercelConfigPromise;
+    this.getVercelConfigPromise.finally(clear);
 
-    return this.getNowConfigPromise;
+    return this.getVercelConfigPromise;
   }
 
-  async _getNowConfig(): Promise<NowConfig> {
-    const configPath = getNowConfigPath(this.cwd);
+  async _getVercelConfig(): Promise<VercelConfig> {
+    const configPath = getVercelConfigPath(this.cwd);
 
     const [
       pkg = null,
@@ -543,10 +543,10 @@ export default class DevServer {
       config = { version: 2, [fileNameSymbol]: 'vercel.json' },
     ] = await Promise.all([
       this.readJsonFile<PackageJson>('package.json'),
-      this.readJsonFile<NowConfig>(configPath),
+      this.readJsonFile<VercelConfig>(configPath),
     ]);
 
-    await this.validateNowConfig(config);
+    await this.validateVercelConfig(config);
     const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
       nowConfig: config,
     });
@@ -634,7 +634,7 @@ export default class DevServer {
       config.builds.sort(sortBuilders);
     }
 
-    await this.validateNowConfig(config);
+    await this.validateVercelConfig(config);
 
     this.caseSensitive = hasNewRoutingProperties(config);
     this.apiDir = detectApiDirectory(config.builds || []);
@@ -710,8 +710,8 @@ export default class DevServer {
   }
 
   async tryValidateOrExit(
-    config: NowConfig,
-    validate: (c: NowConfig) => string | null
+    config: VercelConfig,
+    validate: (c: VercelConfig) => string | null
   ): Promise<void> {
     const message = validate(config);
 
@@ -721,7 +721,7 @@ export default class DevServer {
     }
   }
 
-  async validateNowConfig(config: NowConfig): Promise<void> {
+  async validateVercelConfig(config: VercelConfig): Promise<void> {
     if (config.version === 1) {
       this.output.error('Cannot run `version: 1` projects.');
       await this.exit(1);
@@ -855,7 +855,7 @@ export default class DevServer {
       .replace('[::]', 'localhost')
       .replace('127.0.0.1', 'localhost');
 
-    const nowConfig = await this.getNowConfig();
+    const nowConfig = await this.getVercelConfig();
     const devCommandPromise = this.runDevCommand();
 
     const files = await getFiles(this.cwd, { output: this.output });
@@ -982,7 +982,7 @@ export default class DevServer {
 
     if (devProcess) {
       ops.push(
-        new Promise((resolve, reject) => {
+        new Promise<void>((resolve, reject) => {
           devProcess.once('exit', () => resolve());
           try {
             process.kill(devProcess.pid);
@@ -1201,7 +1201,7 @@ export default class DevServer {
     match: BuildMatch,
     requestPath: string | null,
     req: http.IncomingMessage | null,
-    nowConfig: NowConfig,
+    nowConfig: VercelConfig,
     previousBuildResult?: BuildResult,
     filesChanged?: string[],
     filesRemoved?: string[]
@@ -1290,7 +1290,7 @@ export default class DevServer {
     this.output.debug(`${chalk.bold(method)} ${req.url}`);
 
     try {
-      const nowConfig = await this.getNowConfig();
+      const nowConfig = await this.getVercelConfig();
       await this.serveProjectAsNowV2(req, res, nowRequestId, nowConfig);
     } catch (err) {
       console.error(err);
@@ -1339,7 +1339,7 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse,
     nowRequestId: string,
-    nowConfig: NowConfig,
+    nowConfig: VercelConfig,
     routes: Route[] | undefined = nowConfig.routes,
     callLevel: number = 0
   ) => {
@@ -1992,7 +1992,7 @@ export default class DevServer {
     return true;
   }
 
-  async hasFilesystem(dest: string, nowConfig: NowConfig): Promise<boolean> {
+  async hasFilesystem(dest: string, nowConfig: VercelConfig): Promise<boolean> {
     if (
       await findBuildMatch(
         this.buildMatches,
@@ -2181,7 +2181,7 @@ async function findBuildMatch(
   files: BuilderInputs,
   requestPath: string,
   devServer: DevServer,
-  nowConfig: NowConfig,
+  nowConfig: VercelConfig,
   isFilesystem = false
 ): Promise<BuildMatch | null> {
   requestPath = requestPath.replace(/^\//, '');
@@ -2219,7 +2219,7 @@ async function shouldServe(
   files: BuilderInputs,
   requestPath: string,
   devServer: DevServer,
-  nowConfig: NowConfig,
+  nowConfig: VercelConfig,
   isFilesystem = false
 ): Promise<boolean> {
   const {
@@ -2284,7 +2284,7 @@ async function findMatchingRoute(
   match: BuildMatch,
   requestPath: string,
   devServer: DevServer,
-  nowConfig: NowConfig
+  nowConfig: VercelConfig
 ): Promise<RouteResult | void> {
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
@@ -2305,7 +2305,7 @@ async function findMatchingRoute(
 function findAsset(
   match: BuildMatch,
   requestPath: string,
-  nowConfig: NowConfig
+  nowConfig: VercelConfig
 ): { asset: BuilderOutput; assetKey: string } | void {
   if (!match.buildOutput) {
     return;
@@ -2397,7 +2397,7 @@ function filterFrontendBuilds(build: Builder) {
   return !frontendRuntimeSet.has(name || '');
 }
 
-function hasNewRoutingProperties(nowConfig: NowConfig) {
+function hasNewRoutingProperties(nowConfig: VercelConfig) {
   return (
     typeof nowConfig.cleanUrls !== undefined ||
     typeof nowConfig.headers !== undefined ||
