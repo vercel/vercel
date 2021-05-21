@@ -1,17 +1,18 @@
-import { URLSearchParams } from 'url';
 import { EventEmitter } from 'events';
+import { URLSearchParams } from 'url';
 import { parse as parseUrl } from 'url';
-import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
+import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
+import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
+import ua from './ua';
+import { APIError } from './errors-ts';
 import { Output } from './output/create-output';
 import responseError from './response-error';
-import ua from './ua';
 import printIndications from './print-indications';
-import { AuthConfig, GlobalConfig, JSONObject } from '../types';
-import { VercelConfig } from '@vercel/client';
 import reauthenticate from './login/reauthenticate';
 import { writeToAuthConfigFile } from './config/files';
-import { APIError } from './errors-ts';
+import { AuthConfig, GlobalConfig, JSONObject } from '../types';
+import { sharedPromise } from './promise';
 
 interface SAMLError extends APIError {
   saml: true;
@@ -50,7 +51,6 @@ export default class Client extends EventEmitter {
   output: Output;
   config: GlobalConfig;
   localConfig: VercelConfig;
-  reauthenticatePromise?: Promise<void>;
 
   constructor(opts: ClientOptions) {
     super();
@@ -60,7 +60,6 @@ export default class Client extends EventEmitter {
     this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
-    this._onRetry = this._onRetry.bind(this);
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -151,16 +150,10 @@ export default class Client extends EventEmitter {
     }, opts.retry);
   }
 
-  reauthenticate(...args: Parameters<Client['_reauthenticate']>) {
-    if (!this.reauthenticatePromise) {
-      this.reauthenticatePromise = this._reauthenticate(...args).finally(() => {
-        this.reauthenticatePromise = undefined;
-      });
-    }
-    return this.reauthenticatePromise;
-  }
-
-  async _reauthenticate(error: SAMLError) {
+  reauthenticate = sharedPromise(async function (
+    this: Client,
+    error: SAMLError
+  ) {
     const result = await reauthenticate(this, error.teamId);
 
     if (typeof result === 'number') {
@@ -170,9 +163,9 @@ export default class Client extends EventEmitter {
 
     this.authConfig.token = result;
     writeToAuthConfigFile(this.authConfig);
-  }
+  });
 
-  _onRetry(error: Error) {
+  _onRetry = (error: Error) => {
     this.output.debug(`Retrying: ${error}\n${error.stack}`);
-  }
+  };
 }
