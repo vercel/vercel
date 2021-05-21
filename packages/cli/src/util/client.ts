@@ -1,7 +1,7 @@
 import { URLSearchParams } from 'url';
 import { EventEmitter } from 'events';
 import { parse as parseUrl } from 'url';
-import fetch, { RequestInit } from 'node-fetch';
+import fetch, { RequestInit, Response } from 'node-fetch';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import { Output } from './output/create-output';
 import responseError from './response-error';
@@ -103,9 +103,13 @@ export default class Client extends EventEmitter {
     );
   }
 
+  fetch(url: string, opts: { json: false }): Promise<Response>;
+  fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   async fetch<T>(url: string, opts: FetchOptions = {}): Promise<T> {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
+
+      printIndications(res);
 
       if (!res.ok) {
         const error = await responseError(res);
@@ -139,8 +143,6 @@ export default class Client extends EventEmitter {
       if (!res.headers.get('content-type')) {
         return null;
       }
-
-      printIndications(res);
 
       return res.headers.get('content-type').includes('application/json')
         ? res.json()
