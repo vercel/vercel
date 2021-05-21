@@ -9,7 +9,14 @@ import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
 
-export default async function prompt(params: LoginParams) {
+interface PromptOptions {
+  showSso?: boolean;
+}
+
+export default async function prompt(
+  params: LoginParams,
+  { showSso }: PromptOptions = {}
+) {
   let result: number | string = 1;
 
   const choices = [
@@ -17,10 +24,10 @@ export default async function prompt(params: LoginParams) {
     { name: 'Continue with GitLab', value: 'gitlab', short: 'gitlab' },
     { name: 'Continue with Bitbucket', value: 'bitbucket', short: 'bitbucket' },
     { name: 'Continue with Email', value: 'email', short: 'email' },
-    { name: 'Continue with SAML Single Sign-On', value: 'saml', short: 'saml' },
+    { name: 'Continue with SAML Single Sign-On', value: 'sso', short: 'sso' },
   ];
 
-  if (params.ssoUserId) {
+  if (showSso === false || params.ssoUserId) {
     // Remove SAML login option if we're connecting SAML Profile
     choices.pop();
   }
@@ -38,10 +45,10 @@ export default async function prompt(params: LoginParams) {
     result = await doBitbucketLogin(params);
   } else if (choice === 'email') {
     const email = await readInput('Enter your email address');
-    result = await doEmailLogin(email, params);
-  } else if (choice === 'saml') {
+    result = await doEmailLogin(params, email);
+  } else if (choice === 'sso') {
     const slug = await readInput('Enter your Team slug');
-    result = await doSsoLogin(slug, params);
+    result = await doSsoLogin(params, slug);
   }
 
   return result;

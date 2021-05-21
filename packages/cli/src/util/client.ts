@@ -1,22 +1,30 @@
 import { URLSearchParams } from 'url';
 import { EventEmitter } from 'events';
 import { parse as parseUrl } from 'url';
-import fetch, { RequestInit, Response } from 'node-fetch';
+import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import { Output } from './output/create-output';
 import responseError from './response-error';
 import ua from './ua';
 import printIndications from './print-indications';
-import { AuthConfig, GlobalConfig } from '../types';
-import { VercelConfig } from './dev/types';
-import doSsoLogin from './login/sso';
+import { AuthConfig, GlobalConfig, JSONObject } from '../types';
+import { VercelConfig } from '@vercel/client';
+import reauthenticate from './login/reauthenticate';
 import { writeToAuthConfigFile } from './config/files';
+import { APIError } from './errors-ts';
 
-export interface FetchOptions {
-  body?: NodeJS.ReadableStream | object | string;
-  headers?: { [key: string]: string };
+interface SAMLError extends APIError {
+  saml: true;
+  teamId: string | null;
+}
+
+const isSAMLError = (v: any): v is SAMLError => {
+  return v && v.saml;
+};
+
+export interface FetchOptions extends Omit<RequestInit, 'body'> {
+  body?: BodyInit | JSONObject;
   json?: boolean;
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
   accountId?: string;
@@ -31,6 +39,10 @@ export interface ClientOptions {
   localConfig: VercelConfig;
 }
 
+const isJSONObject = (v: any): v is JSONObject => {
+  return v && typeof v == 'object' && v.constructor === Object;
+};
+
 export default class Client extends EventEmitter {
   argv: string[];
   apiUrl: string;
@@ -38,6 +50,7 @@ export default class Client extends EventEmitter {
   output: Output;
   config: GlobalConfig;
   localConfig: VercelConfig;
+  reauthenticatePromise?: Promise<void>;
 
   constructor(opts: ClientOptions) {
     super();
@@ -78,34 +91,30 @@ export default class Client extends EventEmitter {
       }
 
       _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
-
-      delete opts.useCurrentTeam;
-      delete opts.accountId;
     }
 
-    if (opts.json !== false && opts.body && typeof opts.body === 'object') {
-      Object.assign(opts, {
-        body: JSON.stringify(opts.body),
-        headers: Object.assign({}, opts.headers, {
-          'Content-Type': 'application/json',
-        }),
-      });
-    }
+    const headers = new Headers(opts.headers);
+    headers.set('authorization', `Bearer ${this.authConfig.token}`);
+    headers.set('user-agent', ua);
 
-    opts.headers = opts.headers || {};
-    opts.headers.Authorization = `Bearer ${this.authConfig.token}`;
-    opts.headers['user-agent'] = ua;
+    let body;
+    if (isJSONObject(opts.body)) {
+      body = JSON.stringify(opts.body);
+      headers.set('content-type', 'application/json; charset=utf8');
+    } else {
+      body = opts.body;
+    }
 
     const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
     return this.output.time(
       `${opts.method || 'GET'} ${url} ${JSON.stringify(opts.body) || ''}`,
-      fetch(url, opts as RequestInit)
+      fetch(url, { ...opts, headers, body })
     );
   }
 
   fetch(url: string, opts: { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
-  async fetch<T>(url: string, opts: FetchOptions = {}): Promise<T> {
+  fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
 
@@ -113,20 +122,13 @@ export default class Client extends EventEmitter {
 
       if (!res.ok) {
         const error = await responseError(res);
+        console.log(error);
 
-        if (error.saml && error.teamId) {
-          // If a SAML error is encountered then we re-trigger the SAML
-          // authentication flow for the team specified in the error.
-          const result = await doSsoLogin(error.teamId, this);
-
-          if (typeof result === 'number') {
-            this.output.prettyError(error);
-            process.exit(1);
-            return;
-          }
-
-          this.authConfig.token = result;
-          writeToAuthConfigFile(this.authConfig);
+        if (isSAMLError(error)) {
+          // A SAML error means the token is expired, or is not
+          // designated for the requested team, so the user needs
+          // to re-authenticate
+          await this.reauthenticate(error);
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);
@@ -140,19 +142,37 @@ export default class Client extends EventEmitter {
         return res;
       }
 
-      if (!res.headers.get('content-type')) {
+      const contentType = res.headers.get('content-type');
+      if (!contentType) {
         return null;
       }
 
-      return res.headers.get('content-type').includes('application/json')
-        ? res.json()
-        : res;
+      return contentType.includes('application/json') ? res.json() : res;
     }, opts.retry);
+  }
+
+  reauthenticate(...args: Parameters<Client['_reauthenticate']>) {
+    if (!this.reauthenticatePromise) {
+      this.reauthenticatePromise = this._reauthenticate(...args).finally(() => {
+        this.reauthenticatePromise = undefined;
+      });
+    }
+    return this.reauthenticatePromise;
+  }
+
+  async _reauthenticate(error: SAMLError) {
+    const result = await reauthenticate(this, error.teamId);
+
+    if (typeof result === 'number') {
+      this.output.prettyError(error);
+      process.exit(1);
+    }
+
+    this.authConfig.token = result;
+    writeToAuthConfigFile(this.authConfig);
   }
 
   _onRetry(error: Error) {
     this.output.debug(`Retrying: ${error}\n${error.stack}`);
   }
-
-  close() {}
 }

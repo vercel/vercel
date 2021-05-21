@@ -39,7 +39,9 @@ export default async function getDeploymentsByProjectId(
     query.set('from', options.from.toString());
   }
 
-  const { deployments } = await client.fetch<Response>(`/v4/now/deployments?${query}`);
+  const { deployments } = await client.fetch<Response>(
+    `/v4/now/deployments?${query}`
+  );
   total += deployments.length;
 
   if (options.max && total >= options.max) {
@@ -49,15 +51,15 @@ export default async function getDeploymentsByProjectId(
   if (options.continue && deployments.length === limit) {
     const nextFrom = deployments[deployments.length - 1].created;
     const nextOptions = Object.assign({}, options, { from: nextFrom });
-    deployments.push(...(await getDeploymentsByProjectId(client, projectId, nextOptions, total)));
+    deployments.push(
+      ...(await getDeploymentsByProjectId(
+        client,
+        projectId,
+        nextOptions,
+        total
+      ))
+    );
   }
 
   return deployments;
-}
-
-export async function getAllDeploymentsByProjectId(
-  client: Client,
-  projectId: string
-) {
-  return getDeploymentsByProjectId(client, projectId, { from: null, limit: 100, continue: true });
 }

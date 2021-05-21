@@ -4,7 +4,7 @@ import { getTitleName } from '../pkg-name';
 import { LoginParams } from './types';
 import doOauthLogin from './oauth';
 
-export default function doSsoLogin(teamIdOrSlug: string, params: LoginParams) {
+export default function doSsoLogin(params: LoginParams, teamIdOrSlug: string) {
   const hyphens = new RegExp('-', 'g');
   const host = hostname().replace(hyphens, ' ').replace('.local', '');
   const tokenName = `${getTitleName()} CLI on ${host}`;

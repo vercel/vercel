@@ -6,15 +6,12 @@ export default async function confirm(
 ): Promise<boolean> {
   require('./patch-inquirer');
 
-  const name = `${Date.now()}`;
-
   const answers = await inquirer.prompt({
     type: 'confirm',
-    name,
+    name: 'value',
     message,
     default: preferred,
   });
 
-  const answer = answers[name] as boolean;
-  return answer;
+  return answers.value;
 }
