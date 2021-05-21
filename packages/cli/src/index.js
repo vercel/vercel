@@ -587,10 +587,10 @@ const main = async () => {
   const eventCategory = 'Exit Code';
 
   try {
-    const start = new Date();
+    const start = Date.now();
     const full = require(`./commands/${targetCommand}`).default;
     exitCode = await full(client);
-    const end = new Date() - start;
+    const end = Date.now() - start;
 
     if (shouldCollectMetrics) {
       const category = 'Command Invocation';

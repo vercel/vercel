@@ -1,13 +1,13 @@
 import chalk from 'chalk';
-import Now from '../util';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed.ts';
+import elapsed from '../util/output/elapsed';
 import { maybeURL, normalizeURL } from '../util/url';
-import printEvents from '../util/events';
-import getScope from '../util/get-scope.ts';
-import { getPkgName } from '../util/pkg-name.ts';
-import getArgs from '../util/get-args.ts';
-import handleError from '../util/handle-error.ts';
+import printEvents, { DeploymentEvent } from '../util/events';
+import getScope from '../util/get-scope';
+import { getPkgName } from '../util/pkg-name';
+import getArgs from '../util/get-args';
+import Client from '../util/client';
+import { getDeployment } from '../util/get-deployment';
 
 const help = () => {
   console.log(`
@@ -53,35 +53,25 @@ const help = () => {
 `);
 };
 
-export default async function main(client) {
-  let argv;
-  let deploymentIdOrURL;
-
-  let debug;
+export default async function main(client: Client) {
   let head;
   let limit;
   let follow;
-  let outputMode;
-
   let since;
   let until;
+  let deploymentIdOrURL;
 
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--since': String,
-      '--until': String,
-      '--output': String,
-      '--limit': Number,
-      '--head': Boolean,
-      '--follow': Boolean,
-      '-f': '--follow',
-      '-o': '--output',
-      '-n': '--limit',
-    });
-  } catch (error) {
-    handleError(error);
-    return 1;
-  }
+  const argv = getArgs(client.argv.slice(2), {
+    '--since': String,
+    '--until': String,
+    '--output': String,
+    '--limit': Number,
+    '--head': Boolean,
+    '--follow': Boolean,
+    '-f': '--follow',
+    '-o': '--output',
+    '-n': '--limit',
+  });
 
   argv._ = argv._.slice(1);
   deploymentIdOrURL = argv._[0];
@@ -91,12 +81,7 @@ export default async function main(client) {
     return 2;
   }
 
-  const {
-    authConfig: { token },
-    apiUrl,
-    output,
-    config,
-  } = client;
+  const { output } = client;
 
   try {
     since = argv['--since'] ? toTimestamp(argv['--since']) : 0;
@@ -124,40 +109,24 @@ export default async function main(client) {
     deploymentIdOrURL = normalizedURL;
   }
 
-  debug = argv['--debug'];
-
   head = argv['--head'];
   limit = argv['--limit'] || 100;
   follow = argv['--follow'];
   if (follow) until = 0;
-  outputMode = argv['--output'] in logPrinters ? argv['--output'] : 'short';
+  const logPrinter = getLogPrinter(argv['--output'], 'short');
 
-  const { currentTeam } = config;
-  const now = new Now({ apiUrl, token, debug, currentTeam, output });
-  let contextName = null;
+  const { contextName } = await getScope(client);
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-
-  let deployment;
   const id = deploymentIdOrURL;
 
   const depFetchStart = Date.now();
   output.spinner(`Fetching deployment "${id}" in ${chalk.bold(contextName)}`);
 
+  let deployment;
   try {
-    deployment = await now.findDeployment(id);
+    deployment = await getDeployment(client, id);
   } catch (err) {
     output.stopSpinner();
-    now.close();
 
     if (err.status === 404) {
       output.error(
@@ -183,31 +152,28 @@ export default async function main(client) {
     )} ${elapsed(Date.now() - depFetchStart)}`
   );
 
-  let direction = head ? 'forward' : 'backward';
-  if (since && !until) direction = 'forward';
-  const findOpts1 = {
-    direction,
-    limit,
-    since,
-    until,
-  }; // no follow
-  const storage = [];
-  const storeEvent = event => storage.push(event);
+  const storage: DeploymentEvent[] = [];
 
-  await printEvents(now, deployment.uid || deployment.id, currentTeam, {
+  let direction = head ? ('forward' as const) : ('backward' as const);
+  if (since && !until) direction = 'forward';
+
+  await printEvents(client, deployment.id, {
     mode: 'logs',
-    onEvent: storeEvent,
+    onEvent: event => storage.push(event),
     quiet: false,
-    debug,
-    findOpts: findOpts1,
-    output,
+    findOpts: {
+      direction,
+      limit,
+      since,
+      until,
+    },
   });
 
-  const printedEventIds = new Set();
-  const printEvent = event => {
+  const printedEventIds = new Set<string>();
+  const printEvent = (event: DeploymentEvent) => {
     if (printedEventIds.has(event.id)) return 0;
     printedEventIds.add(event.id);
-    return logPrinters[outputMode](event);
+    return logPrinter(event);
   };
   storage.sort(compareEvents).forEach(printEvent);
 
@@ -216,26 +182,22 @@ export default async function main(client) {
     // NOTE: the API ignores `since` on follow mode.
     // (but not sure if it's always true on legacy deployments)
     const since2 = lastEvent ? lastEvent.date : Date.now();
-    const findOpts2 = {
-      direction: 'forward',
-      since: since2,
-      follow: true,
-    };
-    await printEvents(now, deployment.uid || deployment.id, currentTeam, {
+    await printEvents(client, deployment.id, {
       mode: 'logs',
       onEvent: printEvent,
       quiet: false,
-      debug,
-      findOpts: findOpts2,
-      output,
+      findOpts: {
+        direction: 'forward',
+        since: since2,
+        follow: true,
+      },
     });
   }
 
-  now.close();
   return 0;
 }
 
-function compareEvents(d1, d2) {
+function compareEvents(d1: DeploymentEvent, d2: DeploymentEvent) {
   const c1 = d1.date || d1.created;
   const c2 = d2.date || d2.created;
   if (c1 !== c2) return c1 - c2;
@@ -246,10 +208,10 @@ function compareEvents(d1, d2) {
   return d1.created - d2.created; // if date are equal and no serial
 }
 
-function printLogShort(log) {
+function printLogShort(log: any) {
   if (!log.created) return; // keepalive
 
-  let data;
+  let data: string;
   const obj = log.object;
   if (log.type === 'request') {
     data =
@@ -315,7 +277,7 @@ function printLogShort(log) {
   return 0;
 }
 
-function printLogRaw(log) {
+function printLogRaw(log: any) {
   if (!log.created) return; // keepalive
 
   if (log.object) {
@@ -340,7 +302,27 @@ const logPrinters = {
   raw: printLogRaw,
 };
 
-function toTimestamp(datestr) {
+type OutputMode = keyof typeof logPrinters;
+
+const isLogPrinter = (v: any): v is OutputMode => {
+  return v && v in logPrinters;
+};
+
+const getLogPrinter = (mode: string | undefined, def: OutputMode) => {
+  if (mode) {
+    if (isLogPrinter(mode)) {
+      return logPrinters[mode];
+    }
+    throw new TypeError(
+      `Invalid output mode "${mode}". Must be one of: ${Object.keys(
+        logPrinters
+      ).join(', ')}`
+    );
+  }
+  return logPrinters[def];
+};
+
+function toTimestamp(datestr: string) {
   const t = Date.parse(datestr);
   if (isNaN(t)) {
     throw new TypeError('Invalid date string');
