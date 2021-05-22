@@ -121,7 +121,6 @@ export default class Client extends EventEmitter {
 
       if (!res.ok) {
         const error = await responseError(res);
-        console.log(error);
 
         if (isSAMLError(error)) {
           // A SAML error means the token is expired, or is not
