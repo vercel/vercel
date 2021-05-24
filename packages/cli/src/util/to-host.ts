@@ -7,9 +7,9 @@ import { parse } from 'url';
  * google.com => google.com
  */
 
-function toHost(url: string) {
+function toHost(url: string): string {
   if (/^https?:\/\//.test(url)) {
-    return parse(url).host;
+    return parse(url).host!;
   }
 
   // Remove any path if present

@@ -10,9 +10,9 @@ import { getTitleName } from '../pkg-name';
 import highlight from '../output/highlight';
 
 export default async function doOauthLogin(
+  params: LoginParams,
   url: URL,
-  provider: string,
-  params: LoginParams
+  provider: string
 ): Promise<number | string> {
   const { output } = params;
 

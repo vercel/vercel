@@ -73,9 +73,9 @@ export default async function login(client: Client): Promise<number> {
   if (input) {
     // Email or Team slug was provided via command line
     if (validateEmail(input)) {
-      result = await doEmailLogin(input, params);
+      result = await doEmailLogin(params, input);
     } else {
-      result = await doSsoLogin(input, params);
+      result = await doSsoLogin(params, input);
     }
   } else {
     // Interactive mode

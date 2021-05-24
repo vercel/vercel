@@ -9,5 +9,5 @@ export default function doGithubLogin(params: LoginParams) {
     // cookie that the OAuth callback URL depends on
     'https://vercel.com'
   );
-  return doOauthLogin(url, 'GitHub', params);
+  return doOauthLogin(params, url, 'GitHub');
 }
