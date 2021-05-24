@@ -94,6 +94,7 @@ async function pipInstall(workPath: string, args: string[]) {
 
 interface InstallRequirementArg {
   dependency: string;
+  version: string;
   workPath: string;
   meta: Meta;
   args?: string[];
@@ -101,6 +102,7 @@ interface InstallRequirementArg {
 
 export async function installRequirement({
   dependency,
+  version,
   workPath,
   meta,
   args = [],
@@ -111,7 +113,8 @@ export async function installRequirement({
     );
     return;
   }
-  await pipInstall(workPath, [dependency, ...args]);
+  const exact = `${dependency}==${version}`;
+  await pipInstall(workPath, [exact, ...args]);
 }
 
 interface InstallRequirementsFileArg {
