@@ -17,8 +17,8 @@
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "prepublishOnly": "yarn build",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
-    "build": "ts-eager ./scripts/build.ts",
-    "build-dev": "ts-eager ./scripts/build.ts --dev"
+    "build": "node -r ts-eager/register ./scripts/build.ts",
+    "build-dev": "node -r ts-eager/register ./scripts/build.ts --dev"
   },
   "nyc": {
     "include": [
