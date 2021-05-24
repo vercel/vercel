@@ -5,19 +5,14 @@ import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
 import ua from './ua';
-import { APIError } from './errors-ts';
 import { Output } from './output/create-output';
 import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
+import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
 import { AuthConfig, GlobalConfig, JSONObject } from '../types';
 import { sharedPromise } from './promise';
-
-interface SAMLError extends APIError {
-  saml: true;
-  teamId: string | null;
-}
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -153,7 +148,7 @@ export default class Client extends EventEmitter {
     this: Client,
     error: SAMLError
   ) {
-    const result = await reauthenticate(this, error.teamId);
+    const result = await reauthenticate(this, error);
 
     if (typeof result === 'number') {
       this.output.prettyError(error);

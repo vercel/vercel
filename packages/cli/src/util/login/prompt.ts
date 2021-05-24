@@ -2,21 +2,14 @@ import inquirer from 'inquirer';
 import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
-import { LoginParams } from './types';
+import { LoginParams, SAMLError } from './types';
 import doSsoLogin from './sso';
 import doEmailLogin from './email';
 import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
 
-interface PromptOptions {
-  showSso?: boolean;
-}
-
-export default async function prompt(
-  params: LoginParams,
-  { showSso }: PromptOptions = {}
-) {
+export default async function prompt(params: LoginParams, error?: SAMLError) {
   let result: number | string = 1;
 
   const choices = [
@@ -27,8 +20,9 @@ export default async function prompt(
     { name: 'Continue with SAML Single Sign-On', value: 'sso', short: 'sso' },
   ];
 
-  if (showSso === false || params.ssoUserId) {
-    // Remove SAML login option if we're connecting SAML Profile
+  if (params.ssoUserId || (error && !error.teamId)) {
+    // Remove SAML login option if we're connecting SAML Profile,
+    // or if this is a SAML error for a Team/User without SAML
     choices.pop();
   }
 
@@ -47,7 +41,7 @@ export default async function prompt(
     const email = await readInput('Enter your email address');
     result = await doEmailLogin(params, email);
   } else if (choice === 'sso') {
-    const slug = await readInput('Enter your Team slug');
+    const slug = error?.teamId || (await readInput('Enter your Team slug'));
     result = await doSsoLogin(params, slug);
   }
 

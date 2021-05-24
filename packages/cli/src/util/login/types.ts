@@ -1,4 +1,5 @@
 import { Output } from '../output';
+import { APIError } from '../errors-ts';
 
 export interface LoginParams {
   apiUrl: string;
@@ -9,4 +10,11 @@ export interface LoginParams {
 export interface LoginData {
   token: string;
   securityCode: string;
+}
+
+export interface SAMLError extends APIError {
+  saml: true;
+  teamId: string | null;
+  scope: string;
+  enforced: boolean;
 }
