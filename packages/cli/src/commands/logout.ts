@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import fetch from 'node-fetch';
 import logo from '../util/output/logo';
 // @ts-ignore
 import { handleError } from '../util/error';
@@ -48,10 +47,9 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
-  const { authConfig, config, apiUrl, output } = client;
-  const { token } = authConfig;
+  const { authConfig, config, output } = client;
 
-  if (!token) {
+  if (!authConfig.token) {
     output.note(
       `Not currently logged in, so ${getCommandName('logout')} did nothing`
     );
@@ -59,6 +57,20 @@ export default async function main(client: Client): Promise<number> {
   }
 
   output.spinner('Logging out…', 200);
+  let exitCode = 0;
+
+  try {
+    await client.fetch(`/v3/user/tokens/current`, {
+      method: 'DELETE',
+    });
+  } catch (err) {
+    if (err.status === 403) {
+      output.debug('Token is invalid so it cannot be revoked');
+    } else if (err.status !== 200) {
+      output.debug(err?.message ?? '');
+      exitCode = 1;
+    }
+  }
 
   delete config.currentTeam;
 
@@ -75,26 +87,15 @@ export default async function main(client: Client): Promise<number> {
     writeToAuthConfigFile(authConfig);
     output.debug('Configuration has been deleted');
   } catch (err) {
-    output.error(`Couldn't remove config while logging out`);
-    return 1;
+    output.debug(err?.message ?? '');
+    exitCode = 1;
   }
 
-  const res = await fetch(`${apiUrl}/v3/user/tokens/current`, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (res.status === 403) {
-    output.debug('Token is invalid so it cannot be revoked');
-  } else if (res.status !== 200) {
-    const err = await res.json();
-    output.error('Failed to revoke token');
-    output.debug(err ? err.message : '');
-    return 1;
+  if (exitCode === 0) {
+    output.log('Logged out!');
+  } else {
+    output.error(`Failed during logout`);
   }
 
-  output.log('Logged out!');
-  return 0;
+  return exitCode;
 }
