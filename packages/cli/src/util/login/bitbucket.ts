@@ -9,5 +9,5 @@ export default function doBitbucketLogin(params: LoginParams) {
     // cookie that the OAuth callback URL depends on
     'https://vercel.com'
   );
-  return doOauthLogin(url, 'Bitbucket', params);
+  return doOauthLogin(params, url, 'Bitbucket');
 }
