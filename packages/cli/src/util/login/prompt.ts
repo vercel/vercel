@@ -22,7 +22,7 @@ export default async function prompt(params: LoginParams, error?: SAMLError) {
 
   if (params.ssoUserId || (error && !error.teamId)) {
     // Remove SAML login option if we're connecting SAML Profile,
-    // or if this is a SAML error for a Team/User without SAML
+    // or if this is a SAML error for a user / team without SAML
     choices.pop();
   }
 
