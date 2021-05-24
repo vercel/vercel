@@ -67,7 +67,6 @@ export default async function main(client: Client): Promise<number> {
     if (err.status === 403) {
       output.debug('Token is invalid so it cannot be revoked');
     } else if (err.status !== 200) {
-      output.error('Failed to revoke token');
       output.debug(err?.message ?? '');
       exitCode = 1;
     }
@@ -88,11 +87,15 @@ export default async function main(client: Client): Promise<number> {
     writeToAuthConfigFile(authConfig);
     output.debug('Configuration has been deleted');
   } catch (err) {
-    output.error(`Couldn't remove config while logging out`);
     output.debug(err?.message ?? '');
     exitCode = 1;
   }
 
-  output.log('Logged out!');
+  if (exitCode === 0) {
+    output.log('Logged out!');
+  } else {
+    output.error(`Failed during logout`);
+  }
+
   return exitCode;
 }
