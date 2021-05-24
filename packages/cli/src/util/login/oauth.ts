@@ -2,9 +2,11 @@ import http from 'http';
 import open from 'open';
 import { URL } from 'url';
 import listen from 'async-listen';
+import { hostname } from 'os';
 import { LoginParams } from './types';
 import prompt from './prompt';
 import verify from './verify';
+import { getTitleName } from '../pkg-name';
 import highlight from '../output/highlight';
 
 export default async function doOauthLogin(
@@ -23,6 +25,12 @@ export default async function doOauthLogin(
   const { port } = new URL(address);
   url.searchParams.append('mode', 'login');
   url.searchParams.append('next', `http://localhost:${port}`);
+
+  // Append token name param
+  const hyphens = new RegExp('-', 'g');
+  const host = hostname().replace(hyphens, ' ').replace('.local', '');
+  const tokenName = `${getTitleName()} CLI on ${host} via ${provider}`;
+  url.searchParams.append('tokenName', tokenName);
 
   try {
     const [query] = await Promise.all([
