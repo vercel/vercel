@@ -29,7 +29,7 @@ export default async function doOauthLogin(
   // Append token name param
   const hyphens = new RegExp('-', 'g');
   const host = hostname().replace(hyphens, ' ').replace('.local', '');
-  const tokenName = `${getTitleName()} CLI on ${host}`;
+  const tokenName = `${getTitleName()} CLI on ${host} via ${provider}`;
   url.searchParams.append('tokenName', tokenName);
 
   try {
