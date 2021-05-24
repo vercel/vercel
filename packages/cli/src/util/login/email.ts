@@ -7,8 +7,8 @@ import executeLogin from './login';
 import { LoginParams } from './types';
 
 export default async function doEmailLogin(
-  email: string,
-  params: LoginParams
+  params: LoginParams,
+  email: string
 ): Promise<number | string> {
   let securityCode;
   let verificationToken;
