@@ -61,33 +61,21 @@ async function pipInstall(workPath: string, args: string[]) {
   // distutils.errors.DistutilsOptionError: can't combine user with
   // prefix, exec_prefix/home, or install_(plat)base
   process.env.PIP_USER = '0';
-  debug(
-    `Running "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
-      ' '
-    )}"...`
-  );
+  const cmdArgs = [
+    'install',
+    '--disable-pip-version-check',
+    '--target',
+    target,
+    ...args,
+  ];
+  debug(`Running "pip3 ${cmdArgs.join(' ')}"...`);
   try {
-    await execa(
-      pipPath,
-      [
-        'install',
-        '--disable-pip-version-check',
-        '--target',
-        target,
-        '--upgrade',
-        ...args,
-      ],
-      {
-        cwd: workPath,
-        stdio: 'pipe',
-      }
-    );
+    await execa(pipPath, cmdArgs, {
+      cwd: workPath,
+      stdio: 'pipe',
+    });
   } catch (err) {
-    console.log(
-      `Failed to run "pip install --disable-pip-version-check --target ${target} --upgrade ${args.join(
-        ' '
-      )}"...`
-    );
+    console.log(`Failed to run "pip3 ${cmdArgs.join(' ')}"`);
     throw err;
   }
 }
