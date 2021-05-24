@@ -2275,7 +2275,6 @@ test('`vercel rm` removes a deployment', async t => {
       reject: false,
     }
   );
-  console.log({ stdout });
 
   const { host } = new URL(stdout);
   const { exitCode, stdout: stdoutRemove } = await execute([
@@ -2283,7 +2282,6 @@ test('`vercel rm` removes a deployment', async t => {
     host,
     '--yes',
   ]);
-  console.log({ exitCode, stdoutRemove });
 
   t.truthy(stdoutRemove.includes(host));
   t.is(exitCode, 0);
