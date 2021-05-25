@@ -3,9 +3,10 @@ import chalk from 'chalk';
 
 // Utilities
 import Client from '../../util/client';
-import listInput from '../../util/input/list';
+import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/get-teams';
+import listInput from '../../util/input/list';
 import { Team, GlobalConfig } from '../../types';
 import { writeToConfigFile } from '../../util/config/files';
 
@@ -31,7 +32,7 @@ export default async function main(client: Client, desiredSlug?: string) {
     : teams.find(team => team.id === config.currentTeam);
 
   if (!personalScopeSelected && !currentTeam) {
-    output.error(`You are not a part of the current team anymore.`);
+    output.error(`You are not a member of the current team anymore.`);
     return 1;
   }
 
@@ -41,24 +42,33 @@ export default async function main(client: Client, desiredSlug?: string) {
       .sort((a, b) => {
         return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
       })
-      .map(({ id, slug, name }) => {
-        let title = `${name} (${slug})`;
-        const selected = id === currentTeam?.id;
+      .map(team => {
+        let title = `${team.name} (${team.slug})`;
+        const selected = team.id === currentTeam?.id;
 
         if (selected) {
           title += ` ${chalk.bold('(current)')}`;
         }
 
+        if (team.limited) {
+          title += ` ${emoji('locked')}`;
+        }
+
         return {
           name: title,
-          value: slug,
-          short: slug,
+          value: team.slug,
+          short: team.slug,
           selected,
         };
       });
 
     // Add the User scope entry at the top
-    const suffix = personalScopeSelected ? ` ${chalk.bold('(current)')}` : '';
+    let suffix = personalScopeSelected ? ` ${chalk.bold('(current)')}` : '';
+
+    // SAML tokens can not interact with the user scope
+    if (user.limited) {
+      suffix += ` ${emoji('locked')}`;
+    }
 
     const choices = [
       { separator: 'Personal Account' },
@@ -93,6 +103,13 @@ export default async function main(client: Client, desiredSlug?: string) {
       return 0;
     }
 
+    if (user.limited) {
+      await client.reauthenticate({
+        scope: user.username,
+        teamId: null,
+      });
+    }
+
     updateCurrentTeam(config);
 
     output.success(`Your account (${chalk.bold(desiredSlug)}) is now active!`);
@@ -112,6 +129,15 @@ export default async function main(client: Client, desiredSlug?: string) {
   if (newTeam.slug === currentTeam?.slug) {
     output.log('No changes made');
     return 0;
+  }
+
+  if (newTeam.limited) {
+    const samlEnabled = newTeam.saml?.connection?.state === 'active';
+    await client.reauthenticate({
+      teamId: samlEnabled ? newTeam.id : null,
+      scope: newTeam.slug,
+      enforced: samlEnabled && newTeam.saml?.enforced === true,
+    });
   }
 
   updateCurrentTeam(config, newTeam);

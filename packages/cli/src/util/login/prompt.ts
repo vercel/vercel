@@ -9,7 +9,10 @@ import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
 
-export default async function prompt(params: LoginParams, error?: SAMLError) {
+export default async function prompt(
+  params: LoginParams,
+  error?: Pick<SAMLError, 'teamId'>
+) {
   let result: number | string = 1;
 
   const choices = [
