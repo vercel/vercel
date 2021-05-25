@@ -112,7 +112,9 @@ export default async function main(client: Client, desiredSlug?: string) {
 
     updateCurrentTeam(config);
 
-    output.success(`Your account (${chalk.bold(desiredSlug)}) is now active!`);
+    output.success(
+      `Your account (${chalk.bold(user.username)}) is now active!`
+    );
     return 0;
   }
 
