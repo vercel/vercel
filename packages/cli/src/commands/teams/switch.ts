@@ -73,8 +73,8 @@ export default async function main(client: Client, desiredSlug?: string) {
     const choices = [
       { separator: 'Personal Account' },
       {
-        name: `${user.email} (${user.username})${suffix}`,
-        value: user.email,
+        name: `${user.name || user.email} (${user.username})${suffix}`,
+        value: user.username,
         short: user.username,
         selected: personalScopeSelected,
       },
