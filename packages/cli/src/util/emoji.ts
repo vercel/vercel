@@ -5,6 +5,7 @@ export const emojiLabels = {
   link: '🔗',
   inspect: '🔍',
   success: '✅',
+  locked: '🔒',
 } as const;
 
 export type EmojiLabel = keyof typeof emojiLabels;
