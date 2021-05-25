@@ -2,7 +2,7 @@
   "name": "vercel-monorepo",
   "version": "0.0.0",
   "private": true,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "workspaces": {
     "packages": [
       "packages/*"
