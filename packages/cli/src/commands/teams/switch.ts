@@ -6,7 +6,6 @@ import Client from '../../util/client';
 import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/get-teams';
-import getToken from '../../util/get-token';
 import listInput from '../../util/input/list';
 import { Team, GlobalConfig } from '../../types';
 import { writeToConfigFile } from '../../util/config/files';
@@ -26,11 +25,7 @@ export default async function main(client: Client, desiredSlug?: string) {
   const personalScopeSelected = !config.currentTeam;
 
   output.spinner('Fetching teams information');
-  const [user, teams, token] = await Promise.all([
-    getUser(client),
-    getTeams(client),
-    getToken(client),
-  ]);
+  const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
 
   const currentTeam = personalScopeSelected
     ? undefined
@@ -71,7 +66,7 @@ export default async function main(client: Client, desiredSlug?: string) {
     let suffix = personalScopeSelected ? ` ${chalk.bold('(current)')}` : '';
 
     // SAML tokens can not interact with the user scope
-    if (token.type === 'token' && token.origin === 'saml') {
+    if (user.limited) {
       suffix += ` ${emoji('locked')}`;
     }
 
@@ -108,7 +103,7 @@ export default async function main(client: Client, desiredSlug?: string) {
       return 0;
     }
 
-    if (token.type === 'token' && token.origin === 'saml') {
+    if (user.limited) {
       await client.reauthenticate({
         scope: user.username,
         teamId: null,

@@ -62,6 +62,7 @@ export type User = {
     updatedAt: number;
   };
   name?: string;
+  limited?: boolean;
 };
 
 export interface Team {
