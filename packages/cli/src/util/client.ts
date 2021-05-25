@@ -13,6 +13,7 @@ import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
 import { AuthConfig, GlobalConfig, JSONObject } from '../types';
 import { sharedPromise } from './promise';
+import { APIError } from './errors-ts';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -151,7 +152,9 @@ export default class Client extends EventEmitter {
     const result = await reauthenticate(this, error);
 
     if (typeof result === 'number') {
-      this.output.prettyError(error);
+      if (error instanceof APIError) {
+        this.output.prettyError(error);
+      }
       process.exit(1);
     }
 

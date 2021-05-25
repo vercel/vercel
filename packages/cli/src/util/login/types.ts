@@ -1,5 +1,4 @@
 import { Output } from '../output';
-import { APIError } from '../errors-ts';
 
 export interface LoginParams {
   apiUrl: string;
@@ -12,9 +11,9 @@ export interface LoginData {
   securityCode: string;
 }
 
-export interface SAMLError extends APIError {
-  saml: true;
+export interface SAMLError {
+  saml?: true;
   teamId: string | null;
   scope: string;
-  enforced: boolean;
+  enforced?: boolean;
 }
