@@ -62,18 +62,26 @@ export type User = {
     updatedAt: number;
   };
   name?: string;
+  limited?: boolean;
 };
 
-export type Team = {
+export interface Team {
   id: string;
-  avatar?: string;
+  avatar?: string | null;
   billing: Billing;
   created: string;
   creatorId: string;
   membership: { uid: string; role: 'MEMBER' | 'OWNER'; created: number };
   name: string;
   slug: string;
-};
+  limited?: boolean;
+  saml?: {
+    enforced: boolean;
+    connection?: {
+      state: string;
+    };
+  };
+}
 
 export type Domain = {
   id: string;
@@ -285,3 +293,13 @@ export type ProjectLinkResult =
   | { status: 'linked'; org: Org; project: Project }
   | { status: 'not_linked'; org: null; project: null }
   | { status: 'error'; exitCode: number };
+
+export interface Token {
+  id: string;
+  name: string;
+  type: string;
+  origin?: string;
+  activeAt: number;
+  createdAt: number;
+  teamId?: string;
+}

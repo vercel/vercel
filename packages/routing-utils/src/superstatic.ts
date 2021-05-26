@@ -187,6 +187,10 @@ function collectHasSegments(has?: HasField) {
   const hasSegments = new Set<string>();
 
   for (const hasItem of has || []) {
+    if ('key' in hasItem && hasItem.type === 'header') {
+      hasItem.key = hasItem.key.toLowerCase();
+    }
+
     if (!hasItem.value && 'key' in hasItem) {
       hasSegments.add(hasItem.key);
     }
