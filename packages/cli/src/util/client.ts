@@ -13,6 +13,8 @@ import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
 import { AuthConfig, GlobalConfig, JSONObject } from '../types';
 import { sharedPromise } from './promise';
+import { APIError } from './errors-ts';
+import { bold } from 'chalk';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -151,7 +153,13 @@ export default class Client extends EventEmitter {
     const result = await reauthenticate(this, error);
 
     if (typeof result === 'number') {
-      this.output.prettyError(error);
+      if (error instanceof APIError) {
+        this.output.prettyError(error);
+      } else {
+        this.output.error(
+          `Failed to re-authenticate for ${bold(error.scope)} scope`
+        );
+      }
       process.exit(1);
     }
 
