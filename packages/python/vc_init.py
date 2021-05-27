@@ -88,10 +88,11 @@ elif 'app' in __vc_variables:
         from werkzeug.wrappers import Response
 
         string_types = (str,)
+
         def to_bytes(x, charset=sys.getdefaultencoding(), errors="strict"):
             if x is None:
                 return None
-            if isinstance(x, (bytes, bytearray, memoryview)):  # noqa
+            if isinstance(x, (bytes, bytearray, memoryview)):
                 return bytes(x)
             if isinstance(x, str):
                 return x.encode(charset, errors)
