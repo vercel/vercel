@@ -98,9 +98,9 @@ elif 'app' in __vc_variables:
             raise TypeError("Expected bytes")
 
         def wsgi_encoding_dance(s, charset="utf-8", errors="replace"):
-            if isinstance(s, bytes):
-                return s
-            return s.encode(charset, errors)
+            if isinstance(s, str):
+                s = s.encode(charset)
+            return s.decode("latin1", errors)
         
         def vc_handler(event, context):
             payload = json.loads(event['body'])
