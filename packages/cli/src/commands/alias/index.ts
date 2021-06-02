@@ -38,6 +38,7 @@ const help = () => {
   )}             Login token
     -S, --scope                         Set a custom scope
     -N, --next                          Show next page of results
+
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.vercel.app')}
