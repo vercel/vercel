@@ -1,8 +1,9 @@
-import { Alias } from '../../types';
+import { Alias, PaginationOptions } from '../../types';
 import Client from '../client';
 
 type Response = {
   aliases: Alias[];
+  pagination: PaginationOptions;
 };
 
 export default async function getAliases(
