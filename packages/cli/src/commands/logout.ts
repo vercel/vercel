@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import logo from '../util/output/logo';
-// @ts-ignore
 import { handleError } from '../util/error';
 import { writeToConfigFile, writeToAuthConfigFile } from '../util/config/files';
 import getArgs from '../util/get-args';
@@ -62,6 +61,7 @@ export default async function main(client: Client): Promise<number> {
   try {
     await client.fetch(`/v3/user/tokens/current`, {
       method: 'DELETE',
+      useCurrentTeam: false,
     });
   } catch (err) {
     if (err.status === 403) {
