@@ -85,7 +85,7 @@ function printAliasTable(aliases: Alias[]) {
         // not collected appropriately, and we need to handle it
         a.deployment && a.deployment.url ? a.deployment.url : chalk.gray('–'),
         a.alias,
-        ms(Date.now() - new Date(a.created).getTime()),
+        ms(Date.now() - a.createdAt),
       ]),
     ],
     {

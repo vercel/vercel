@@ -94,7 +94,7 @@ async function confirmAliasRemove(output: Output, alias: Alias) {
       [
         ...(srcUrl ? [srcUrl] : []),
         chalk.underline(alias.alias),
-        chalk.gray(`${ms(Date.now() - new Date(alias.created).getTime())} ago`),
+        chalk.gray(`${ms(Date.now() - alias.createdAt)} ago`),
       ],
     ],
     {
