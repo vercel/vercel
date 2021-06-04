@@ -12,7 +12,6 @@ import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
 import Client from '../util/client';
-import { LoginParams } from '../util/login/types';
 
 const help = () => {
   console.log(`
@@ -46,7 +45,7 @@ const help = () => {
 
 export default async function login(client: Client): Promise<number> {
   let argv;
-  const { apiUrl, output } = client;
+  const { output } = client;
 
   try {
     argv = getArgs(client.argv.slice(2));
@@ -68,18 +67,17 @@ export default async function login(client: Client): Promise<number> {
   const input = argv._[1];
 
   let result: number | string = 1;
-  const params: LoginParams = { output, apiUrl };
 
   if (input) {
     // Email or Team slug was provided via command line
     if (validateEmail(input)) {
-      result = await doEmailLogin(params, input);
+      result = await doEmailLogin(client, input);
     } else {
-      result = await doSsoLogin(params, input);
+      result = await doSsoLogin(client, input);
     }
   } else {
     // Interactive mode
-    result = await prompt(params);
+    result = await prompt(client);
   }
 
   // The login function failed, so it returned an exit code
