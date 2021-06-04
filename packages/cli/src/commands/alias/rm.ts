@@ -78,7 +78,7 @@ export default async function rm(
     return 0;
   }
 
-  await removeAliasById(client, aliasUrl);
+  await removeAliasById(client, alias.uid);
   console.log(
     `${chalk.cyan('> Success!')} Alias ${chalk.bold(
       aliasUrl
