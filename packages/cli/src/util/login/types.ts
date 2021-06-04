@@ -1,6 +1,8 @@
+import { AuthConfig } from '../../types';
 import { Output } from '../output';
 
 export interface LoginParams {
+  authConfig: AuthConfig;
   apiUrl: string;
   output: Output;
   ssoUserId?: string;

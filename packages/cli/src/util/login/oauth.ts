@@ -23,14 +23,14 @@ export default async function doOauthLogin(
   const server = http.createServer();
   const address = await listen(server, 0, '127.0.0.1');
   const { port } = new URL(address);
-  url.searchParams.append('mode', 'login');
-  url.searchParams.append('next', `http://localhost:${port}`);
+  url.searchParams.set('mode', 'login');
+  url.searchParams.set('next', `http://localhost:${port}`);
 
   // Append token name param
   const hyphens = new RegExp('-', 'g');
   const host = hostname().replace(hyphens, ' ').replace('.local', '');
   const tokenName = `${getTitleName()} CLI on ${host} via ${provider}`;
-  url.searchParams.append('tokenName', tokenName);
+  url.searchParams.set('tokenName', tokenName);
 
   try {
     const [query] = await Promise.all([
