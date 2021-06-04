@@ -1,24 +1,26 @@
 import { URL } from 'url';
-import fetch from 'node-fetch';
+import fetch, { Headers } from 'node-fetch';
 import ua from '../ua';
 import { LoginParams } from './types';
 
 export default async function verify(
   email: string,
   verificationToken: string,
-  { apiUrl, ssoUserId }: LoginParams
+  { authConfig, apiUrl, ssoUserId }: LoginParams
 ): Promise<string> {
   const url = new URL('/registration/verify', apiUrl);
-  url.searchParams.append('email', email);
-  url.searchParams.append('token', verificationToken);
+  url.searchParams.set('email', email);
+  url.searchParams.set('token', verificationToken);
   if (ssoUserId) {
-    url.searchParams.append('ssoUserId', ssoUserId);
+    url.searchParams.set('ssoUserId', ssoUserId);
   }
 
-  const res = await fetch(url.href, {
-    headers: { 'User-Agent': ua },
-  });
+  const headers = new Headers({ 'User-Agent': ua });
+  if (authConfig.token) {
+    headers.set('Authorization', `Bearer ${authConfig.token}`);
+  }
 
+  const res = await fetch(url.href, { headers });
   const body = await res.json();
 
   if (!res.ok) {
