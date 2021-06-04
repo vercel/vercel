@@ -20,7 +20,7 @@ type Options = {
 
 export default async function rm(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output } = client;
