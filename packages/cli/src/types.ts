@@ -16,7 +16,7 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
-  token: string;
+  token?: string;
   skipWrite?: boolean;
 }
 
