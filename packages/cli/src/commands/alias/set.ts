@@ -28,7 +28,7 @@ type Options = {
 
 export default async function set(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output, localConfig } = client;
