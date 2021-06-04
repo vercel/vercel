@@ -3,14 +3,6 @@ import { Alias } from '../../types';
 
 import Client from '../client';
 
-function getSafeAlias(alias: string): string {
-  return alias
-    .replace(/^https:\/\//i, '')
-    .replace(/^\.+/, '')
-    .replace(/\.+$/, '')
-    .toLowerCase();
-}
-
 export default async function findAliasByAliasOrId(
   output: Output,
   client: Client,
@@ -19,4 +11,11 @@ export default async function findAliasByAliasOrId(
   return client.fetch<Alias>(
     `/now/aliases/${encodeURIComponent(getSafeAlias(aliasOrId))}`
   );
+}
+function getSafeAlias(alias: string) {
+  return alias
+    .replace(/^https:\/\//i, '')
+    .replace(/^\.+/, '')
+    .replace(/\.+$/, '')
+    .toLowerCase();
 }
