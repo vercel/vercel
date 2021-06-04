@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 
-// @ts-ignore
 import { handleError } from '../../util/error';
 
 import Client from '../../util/client';
