@@ -1,21 +1,26 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Now from '../../util';
+import Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
-import getScope from '../../util/get-scope.ts';
-import stamp from '../../util/output/stamp.ts';
-import strlen from '../../util/strlen.ts';
+import getScope from '../../util/get-scope';
+import stamp from '../../util/output/stamp';
+import strlen from '../../util/strlen';
 import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name.ts';
+import { getCommandName } from '../../util/pkg-name';
 
-export default async function ls(client, opts, args) {
-  const {
-    apiUrl,
-    authConfig: { token },
-    output,
-    config: { currentTeam },
-  } = client;
+import { Alias } from '../../types';
+
+interface Options {
+  '--next'?: number;
+}
+
+export default async function ls(
+  client: Client,
+  opts: Options,
+  args: string[]
+) {
+  const { output } = client;
   const { '--next': nextTimestamp } = opts;
 
   let contextName = null;
@@ -36,13 +41,6 @@ export default async function ls(client, opts, args) {
     return 1;
   }
 
-  const now = new Now({
-    apiUrl,
-    token,
-    debug: client.output.isDebugEnabled(),
-    currentTeam,
-    output,
-  });
   const lsStamp = stamp();
 
   if (args.length > 0) {
@@ -56,8 +54,9 @@ export default async function ls(client, opts, args) {
 
   output.spinner(`Fetching aliases under ${chalk.bold(contextName)}`);
 
+  // Get the list of alias
   const { aliases, pagination } = await getAliases(
-    now,
+    client,
     undefined,
     nextTimestamp
   );
@@ -73,21 +72,20 @@ export default async function ls(client, opts, args) {
     );
   }
 
-  now.close();
   return 0;
 }
 
-function printAliasTable(aliases) {
+function printAliasTable(aliases: Alias[]) {
   return `${table(
     [
-      ['source', 'url', 'age'].map(h => chalk.gray(h)),
+      ['source', 'url', 'age'].map(header => chalk.gray(header)),
       ...aliases.map(a => [
         // for legacy reasons, we might have situations
         // where the deployment was deleted and the alias
         // not collected appropriately, and we need to handle it
         a.deployment && a.deployment.url ? a.deployment.url : chalk.gray('–'),
         a.alias,
-        ms(Date.now() - new Date(a.createdAt)),
+        ms(Date.now() - a.createdAt),
       ]),
     ],
     {
