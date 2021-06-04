@@ -145,7 +145,7 @@ export type Deployment = {
 export type Alias = {
   uid: string;
   alias: string;
-  created: string;
+  createdAt: number;
   deployment: {
     id: string;
     url: string;
