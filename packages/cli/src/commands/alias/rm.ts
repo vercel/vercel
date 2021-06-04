@@ -62,8 +62,6 @@ export default async function rm(
 
   const alias = await findAliasByAliasOrId(output, client, aliasOrId);
 
-  const { alias: aliasUrl } = alias;
-
   if (!alias) {
     output.error(
       `Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`
@@ -81,7 +79,7 @@ export default async function rm(
   await removeAliasById(client, alias.uid);
   console.log(
     `${chalk.cyan('> Success!')} Alias ${chalk.bold(
-      aliasUrl
+      alias.alias
     )} removed ${removeStamp()}`
   );
   return 0;
