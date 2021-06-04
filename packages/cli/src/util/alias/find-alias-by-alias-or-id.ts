@@ -8,7 +8,7 @@ export default async function findAliasByAliasOrId(
   client: Client,
   aliasOrId: string
 ) {
-  return client.fetch<Alias>(
+  return client.fetch<Alias | null>(
     `/now/aliases/${encodeURIComponent(getSafeAlias(aliasOrId))}`
   );
 }
