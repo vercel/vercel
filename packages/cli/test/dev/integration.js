@@ -1716,7 +1716,7 @@ test(
       toUrl('/test.bmp', 64, 50),
       null,
       expectHeader('image/bmp'),
-      fetchOpts('image/webp')
+      fetchOpts('image/bmp')
     );
     // animated gif should bypass: serve as-is
     await testPath(
