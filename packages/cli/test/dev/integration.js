@@ -1710,7 +1710,9 @@ test(
       expectHeader('image/svg+xml'),
       fetchOpts('image/webp')
     );
-    // bmp should bypass: serve as-is
+    /* Disabled bmp because `next dev` bypasses
+     * and production will convert. Eventually
+     * we can enable once `next dev` supports it.
     await testPath(
       200,
       toUrl('/test.bmp', 64, 50),
@@ -1718,6 +1720,7 @@ test(
       expectHeader('image/bmp'),
       fetchOpts('image/webp')
     );
+    */
     // animated gif should bypass: serve as-is
     await testPath(
       200,
