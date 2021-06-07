@@ -42,7 +42,7 @@ export default async function doEmailLogin(
   while (!token) {
     try {
       await sleep(ms('1s'));
-      token = await verify(email, verificationToken, params);
+      token = await verify(email, verificationToken, 'Email', params);
     } catch (err) {
       if (err.message !== 'Confirmation incomplete') {
         output.error(err.message);

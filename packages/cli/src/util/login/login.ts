@@ -1,8 +1,6 @@
 import fetch from 'node-fetch';
-import { hostname } from 'os';
 import { InvalidEmail, AccountNotFound } from '../errors-ts';
 import ua from '../ua';
-import { getTitleName } from '../pkg-name';
 import { LoginData } from './types';
 
 export default async function login(
@@ -10,20 +8,13 @@ export default async function login(
   email: string,
   mode: 'login' | 'signup' = 'login'
 ): Promise<LoginData> {
-  const hyphens = new RegExp('-', 'g');
-  const host = hostname().replace(hyphens, ' ').replace('.local', '');
-  const tokenName = `${getTitleName()} CLI on ${host}`;
-
   const response = await fetch(`${apiUrl}/now/registration?mode=${mode}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'User-Agent': ua,
     },
-    body: JSON.stringify({
-      tokenName,
-      email,
-    }),
+    body: JSON.stringify({ email }),
   });
 
   const body = await response.json();
