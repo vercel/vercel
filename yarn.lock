@@ -2116,13 +2116,13 @@
   resolved "https://registry.yarnpkg.com/@vercel/ncc/-/ncc-0.24.0.tgz#a2e8783a185caa99b5d8961a57dfc9665de16296"
   integrity sha512-crqItMcIwCkvdXY/V3/TzrHJQx6nbIaRqE1cOopJhgGX6izvNov40SmD//nS5flfEvdK54YGjwVVq+zG6crjOg==
 
-"@vercel/nft@0.12.2":
-  version "0.12.2"
-  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.12.2.tgz#67ea9f231d24639b3783e3e69bef173659972d3b"
-  integrity sha512-H8n44GboVnJaVVX4+WfuOTAaNLDnUIYH4KpMZcXll7KMNIcg0JTd0IFRsIBe/uvuXisqm6nEANp8Tr3/1dlRQw==
+"@vercel/nft@0.13.1":
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.13.1.tgz#98df07e04620069ba63fff92af490c5842a2f31f"
+  integrity sha512-7pBTfSkwhhcPAeGVsFml5YX7LCZgtocP+zTAknnRK2u/RsV3GGqOD5yw7CtbgTpfjY8NfXWzwoxF1zOUEVsbww==
   dependencies:
     "@mapbox/node-pre-gyp" "^1.0.5"
-    acorn "^8.1.0"
+    acorn "^8.3.0"
     acorn-class-fields "^1.0.0"
     acorn-static-class-features "^1.0.0"
     bindings "^1.4.0"
@@ -2283,10 +2283,10 @@ acorn@^7.1.1:
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-7.2.0.tgz#17ea7e40d7c8640ff54a694c889c26f31704effe"
   integrity sha512-apwXVmYVpQ34m/i71vrApRrRKCWQnZZF1+npOD0WV5xZFfwWOmKGQ2RWlfdy9vWITsenisM8M0Qeq8agcFHNiQ==
 
-acorn@^8.1.0:
-  version "8.1.1"
-  resolved "https://registry.yarnpkg.com/acorn/-/acorn-8.1.1.tgz#fb0026885b9ac9f48bac1e185e4af472971149ff"
-  integrity sha512-xYiIVjNuqtKXMxlRMDc6mZUhXehod4a3gbZ1qRlM7icK4EbxUFNLhWoPblCvFtB2Y9CIqHP3CF/rdxLItaQv8g==
+acorn@^8.3.0:
+  version "8.3.0"
+  resolved "https://registry.yarnpkg.com/acorn/-/acorn-8.3.0.tgz#1193f9b96c4e8232f00b11a9edff81b2c8b98b88"
+  integrity sha512-tqPKHZ5CaBJw0Xmy0ZZvLs1qTV+BNFSyvn77ASXkpBNfIRk8ev26fKrD9iLGwGA9zedPao52GSHzq8lyZG0NUw==
 
 agent-base@4, agent-base@^4.1.0, agent-base@^4.3.0:
   version "4.3.0"
