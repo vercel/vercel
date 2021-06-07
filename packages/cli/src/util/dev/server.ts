@@ -145,6 +145,7 @@ export default class DevServer {
   private devServerPids: Set<number>;
   private projectSettings?: ProjectSettings;
 
+  private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
   private updateBuildersPromise: Promise<void> | null;
@@ -181,6 +182,7 @@ export default class DevServer {
     this.inProgressBuilds = new Map();
     this.devCacheDir = join(getVercelDirectory(cwd), 'cache');
 
+    this.vercelConfigWarning = false;
     this.getVercelConfigPromise = null;
     this.blockingBuildsPromise = null;
     this.updateBuildersPromise = null;
@@ -635,6 +637,20 @@ export default class DevServer {
     }
 
     await this.validateVercelConfig(config);
+
+    // TODO: temporarily strip and warn since `has` is not implemented yet
+    config.routes = (config.routes || []).filter(route => {
+      if ('has' in route) {
+        if (!this.vercelConfigWarning) {
+          this.vercelConfigWarning = true;
+          this.output.warn(
+            `The "has" property in ${config[fileNameSymbol]} will be ignored during development. Deployments will work as expected.`
+          );
+        }
+        return false;
+      }
+      return true;
+    });
 
     this.caseSensitive = hasNewRoutingProperties(config);
     this.apiDir = detectApiDirectory(config.builds || []);
