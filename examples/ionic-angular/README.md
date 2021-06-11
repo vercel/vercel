@@ -6,7 +6,7 @@ This directory is a brief example of an [Ionic Angular](https://ionicframework.c
 
 Deploy your own Ionic Angular project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/ionic-angular)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/ionic-angular)
 
 _Live Example: https://ionic-angular.now-examples.now.sh_
 

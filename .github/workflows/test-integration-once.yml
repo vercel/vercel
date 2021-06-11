@@ -3,7 +3,7 @@ name: E2E
 on:
   push:
     branches:
-    - master
+    - main
     tags:
     - '!*'
   pull_request:
@@ -14,14 +14,20 @@ jobs:
     timeout-minutes: 120
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.13.15'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 12
       - uses: actions/checkout@v2
         with:
           fetch-depth: 100
       - run: git --version
-      - run: git fetch origin master --depth=100
+      - run: git fetch origin main --depth=100
       - run: git fetch origin ${{ github.ref }} --depth=100
-      - run: git diff origin/master...HEAD --name-only
-      - run: yarn install
+      - run: git diff origin/main...HEAD --name-only
+      - run: yarn install --network-timeout 1000000
       - run: yarn run build
       - run: yarn test-integration-once --clean false
         env:

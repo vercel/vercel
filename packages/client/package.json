@@ -1,0 +1,55 @@
+{
+  "name": "@vercel/client",
+  "version": "10.1.1-canary.1",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "homepage": "https://vercel.com",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/client"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test-integration-once": "jest --verbose --runInBand --bail tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
+    "test-unit": "jest --verbose --runInBand --bail tests/unit.*test.*"
+  },
+  "engines": {
+    "node": ">= 12"
+  },
+  "devDependencies": {
+    "@types/async-retry": "1.4.1",
+    "@types/fs-extra": "7.0.0",
+    "@types/jest": "24.0.16",
+    "@types/ms": "0.7.30",
+    "@types/node": "12.0.4",
+    "@types/node-fetch": "2.5.4",
+    "@types/recursive-readdir": "2.2.0",
+    "typescript": "3.9.3"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "verbose": false,
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup/index.ts"
+    ]
+  },
+  "dependencies": {
+    "@vercel/build-utils": "2.11.1-canary.1",
+    "@zeit/fetch": "5.2.0",
+    "async-retry": "1.2.3",
+    "async-sema": "3.0.0",
+    "fs-extra": "8.0.1",
+    "ignore": "4.0.6",
+    "ms": "2.1.2",
+    "node-fetch": "2.6.1",
+    "querystring": "^0.2.0",
+    "recursive-readdir": "2.2.2",
+    "sleep-promise": "8.0.1"
+  }
+}

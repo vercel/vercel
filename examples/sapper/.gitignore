@@ -6,3 +6,5 @@ yarn-error.log
 /__sapper__/
 .env
 .env.build
+
+.vercel

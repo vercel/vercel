@@ -28,3 +28,4 @@ public/
 # Environment Variables
 .env
 .env.build
+.vercel

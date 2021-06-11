@@ -8,7 +8,7 @@ This directory is a brief example of a [Saber](https://saber.land) site that can
 
 Deploy your own Saber project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/master/examples/saber)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/saber)
 
 _Live Example: https://saber.now-examples.now.sh_
 

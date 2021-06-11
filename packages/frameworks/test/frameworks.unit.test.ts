@@ -1,9 +1,11 @@
 import Ajv from 'ajv';
+import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
-import { Framework } from '../';
-const frameworkList = require('../frameworks.json') as Framework[];
+import fetch from 'node-fetch';
+import { URL, URLSearchParams } from 'url';
+import frameworkList from '../src/frameworks';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -34,6 +36,9 @@ const SchemaSettings = {
         value: {
           type: 'string',
         },
+        placeholder: {
+          type: 'string',
+        },
       },
     },
     {
@@ -53,8 +58,15 @@ const Schema = {
   type: 'array',
   items: {
     type: 'object',
-    required: ['name', 'slug', 'logo', 'description', 'settings'],
-    additionalProperties: false,
+    required: [
+      'name',
+      'slug',
+      'logo',
+      'description',
+      'settings',
+      'buildCommand',
+      'devCommand',
+    ],
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
@@ -64,6 +76,7 @@ const Schema = {
       tagline: { type: 'string' },
       website: { type: 'string' },
       description: { type: 'string' },
+      envPrefix: { type: 'string' },
       useRuntime: {
         type: 'object',
         required: ['src', 'use'],
@@ -122,9 +135,25 @@ const Schema = {
           },
         },
       },
+
+      dependency: { type: 'string' },
+      cachePattern: { type: 'string' },
+      buildCommand: { type: ['string', 'null'] },
+      devCommand: { type: ['string', 'null'] },
+      defaultVersion: { type: 'string' },
     },
   },
 };
+
+async function getDeployment(host: string) {
+  const query = new URLSearchParams();
+  query.set('url', host);
+  const res = await fetch(
+    `https://api.vercel.com/v11/deployments/get?${query}`
+  );
+  const body = await res.json();
+  return body;
+}
 
 describe('frameworks', () => {
   it('ensure there is an example for every framework', async () => {
@@ -155,7 +184,7 @@ describe('frameworks', () => {
       .map(f => f.logo)
       .filter(url => {
         const prefix =
-          'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/';
+          'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/';
         const name = url.replace(prefix, '');
         return existsSync(join(__dirname, '..', 'logos', name)) === false;
       });
@@ -172,5 +201,31 @@ describe('frameworks', () => {
         sortNumToSlug.set(f.sort, f.slug);
       }
     });
+  });
+
+  it('ensure unique slug', async () => {
+    const slugs = new Set<string>();
+    for (const { slug } of frameworkList) {
+      if (typeof slug === 'string') {
+        assert(!slugs.has(slug), `Slug "${slug}" is not unique`);
+        slugs.add(slug);
+      }
+    }
+  });
+
+  it('ensure all demo URLs are "public"', async () => {
+    await Promise.all(
+      frameworkList
+        .filter(f => typeof f.demo === 'string')
+        .map(async f => {
+          const url = new URL(f.demo!);
+          const deployment = await getDeployment(url.hostname);
+          assert.equal(
+            deployment.public,
+            true,
+            `Demo URL ${f.demo} is not "public"`
+          );
+        })
+    );
   });
 });

@@ -2,7 +2,7 @@
   "name": "vercel-monorepo",
   "version": "0.0.0",
   "private": true,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "workspaces": {
     "packages": [
       "packages/*"
@@ -24,7 +24,7 @@
     "eslint": "6.2.2",
     "eslint-config-prettier": "6.1.0",
     "eslint-plugin-jest": "23.8.2",
-    "husky": "3.0.4",
+    "husky": "6.0.0",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.1",
@@ -39,12 +39,14 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "node utils/run.js build all",
-    "now-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
+    "vercel-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
+    "pre-commit": "lint-staged",
     "test-unit": "node utils/run.js test-unit",
     "test-integration-cli": "node utils/run.js test-integration-cli",
     "test-integration-once": "node utils/run.js test-integration-once",
     "test-integration-dev": "node utils/run.js test-integration-dev",
-    "lint": "eslint . --ext .ts,.js"
+    "lint": "eslint . --ext .ts,.js",
+    "prepare": "husky install"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [
@@ -56,11 +58,6 @@
       "prettier --write",
       "git add"
     ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
   },
   "prettier": {
     "trailingComma": "es5",
@@ -114,7 +111,7 @@
       },
       {
         "files": [
-          "packages/now-cli/**/*"
+          "packages/cli/**/*"
         ],
         "rules": {
           "lines-between-class-members": 0,
@@ -134,7 +131,7 @@
       },
       {
         "files": [
-          "packages/now-client/**/*"
+          "packages/client/**/*"
         ],
         "rules": {
           "prefer-const": 0,

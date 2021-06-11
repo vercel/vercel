@@ -88,18 +88,9 @@ When you run this script, you'll see all imported files. If anything file is mis
 
 Sometimes you want to test changes to a Builder against an existing project, maybe with `vercel dev` or an actual deployment. You can avoid publishing every Builder change to npm by uploading the Builder as a tarball.
 
-1. Change directory to the desired Builder `cd ./packages/now-node`
+1. Change directory to the desired Builder `cd ./packages/node`
 2. Run `yarn build` to compile typescript and other build steps
 3. Run `npm pack` to create a tarball file
 4. Run `vercel *.tgz` to upload the tarball file and get a URL
 5. Edit any existing `vercel.json` project and replace `use` with the URL
 6. Run `vercel` or `vercel dev` to deploy with the experimental Builder
-
-## Add a New Framework
-
-You can add support for a new Framework by creating a Pull Request for this repository and following the steps below:
-
-1. Add the Framework to the `@vercel/frameworks` package: The file is located in `./packages/frameworks/frameworks.json`. You can copy the structure of an existing one and adjust the required fields. Note that the `settings` property either contains a `value` or a `placeholder`. The `value` property is used when something is not configurable, the `placeholder` is used when something is configurable and can be changed with configuration. An example would be the Output Directory for Hugo, it's `public` by default but can be changed through its config file, so we use `placeholder` with an explanation of what can be used.
-2. Add an example to the `./examples` directory: The name of the directory should equal the slug of the framework used in `@vercel/frameworks`. The `.github/EXAMPLE_README_TEMPLATE.md` file can be used to create a `README.md` file for the example.
-3. Update the `@vercel/static-build` package: The file `./packages/now-static-build/src/frameworks.ts` has to be extended. You can add default routes that will always be applied to projects that use this Framework or specify some paths that will be cached to speed up the build process.
-4. After your Pull Request has been merged and released, other users can select the example on the Vercel dashboard and deploy it.

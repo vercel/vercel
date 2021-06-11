@@ -1,0 +1,24 @@
+{
+  "name": "@vercel/cgi",
+  "version": "1.0.7",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/cgi"
+  },
+  "scripts": {
+    "build": "node build",
+    "prepublishOnly": "node build"
+  },
+  "files": [
+    "index.js",
+    "handler"
+  ],
+  "dependencies": {
+    "fs-extra": "7.0.0"
+  },
+  "devDependencies": {
+    "rmfr": "2.0.0"
+  }
+}

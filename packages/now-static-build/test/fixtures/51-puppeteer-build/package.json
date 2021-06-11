@@ -1,9 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "build": "node build.js"
-  },
-  "dependencies": {
-    "puppeteer": "2.1.1"
-  }
-}
