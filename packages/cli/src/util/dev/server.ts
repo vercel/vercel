@@ -1621,7 +1621,7 @@ export default class DevServer {
         delete origUrl.search;
         origUrl.pathname = dest;
         Object.assign(origUrl.query, uri_args);
-        req.url = url.format(origUrl);
+        req.url = origUrl.path;
         return proxyPass(req, res, upstream, this, nowRequestId, false);
       }
 
