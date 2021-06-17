@@ -59,11 +59,7 @@ import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import {
-  installBuilders,
-  updateBuilders,
-  builderDirPromise,
-} from './builder-cache';
+import { installBuilders, updateBuilders } from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -130,7 +126,6 @@ export default class DevServer {
   private apiDir: string | null;
   private apiExtensions: Set<string>;
   private server: http.Server;
-  private stopping: boolean;
   private buildMatches: Map<string, BuildMatch>;
   private inProgressBuilds: Map<string, Promise<void>>;
   private watcher?: FSWatcher;
@@ -177,7 +172,6 @@ export default class DevServer {
     });
     this.server = http.createServer(this.devServerHandler);
     this.server.timeout = 0; // Disable timeout
-    this.stopping = false;
     this.buildMatches = new Map();
     this.inProgressBuilds = new Map();
     this.devCacheDir = join(getVercelDirectory(cwd), 'cache');
@@ -199,7 +193,6 @@ export default class DevServer {
   }
 
   async exit(code = 1) {
-    await this.stop(code);
     process.exit(code);
   }
 
@@ -818,8 +811,8 @@ export default class DevServer {
   start(...listenSpec: ListenSpec): Promise<void> {
     if (!this.startPromise) {
       this.startPromise = this._start(...listenSpec).catch(err => {
-        this.stop();
-        throw err;
+        console.error(err);
+        process.exit(1);
       });
     }
     return this.startPromise;
@@ -974,77 +967,6 @@ export default class DevServer {
     await devCommandPromise;
 
     this.output.ready(`Available at ${link(this.address)}`);
-  }
-
-  /**
-   * Shuts down the `vercel dev` server, and cleans up any temporary resources.
-   */
-  async stop(exitCode?: number): Promise<void> {
-    const { devProcess } = this;
-    const { debug } = this.output;
-    if (this.stopping) return;
-
-    this.stopping = true;
-
-    if (typeof this.updateBuildersTimeout !== 'undefined') {
-      clearTimeout(this.updateBuildersTimeout);
-    }
-
-    const ops: Promise<any>[] = [];
-
-    for (const match of this.buildMatches.values()) {
-      ops.push(shutdownBuilder(match, this.output));
-    }
-
-    if (devProcess) {
-      ops.push(
-        new Promise<void>((resolve, reject) => {
-          devProcess.once('exit', () => resolve());
-          try {
-            process.kill(devProcess.pid);
-          } catch (err) {
-            if (err.code === 'ESRCH') {
-              // Process already exited
-              return resolve();
-            }
-            reject(err);
-          }
-        })
-      );
-    }
-
-    ops.push(close(this.server));
-
-    if (this.watcher) {
-      debug(`Closing file watcher`);
-      ops.push(this.watcher.close());
-    }
-
-    if (this.updateBuildersPromise) {
-      debug(`Waiting for builders update to complete`);
-      ops.push(this.updateBuildersPromise);
-    }
-
-    for (const pid of this.devServerPids) {
-      ops.push(this.killBuilderDevServer(pid));
-    }
-
-    // Ensure that the builders module cache is created
-    ops.push(builderDirPromise);
-
-    try {
-      await Promise.all(ops);
-    } catch (err) {
-      // Node 8 doesn't have a code for that error
-      if (
-        err.code === 'ERR_SERVER_NOT_RUNNING' ||
-        err.message === 'Not running'
-      ) {
-        process.exit(exitCode || 0);
-      } else {
-        throw err;
-      }
-    }
   }
 
   async killBuilderDevServer(pid: number) {
@@ -1293,16 +1215,9 @@ export default class DevServer {
     res: http.ServerResponse
   ) => {
     await this.startPromise;
-
-    let nowRequestId = generateRequestId(this.podId);
-
-    if (this.stopping) {
-      res.setHeader('Connection', 'close');
-      await this.send404(req, res, nowRequestId);
-      return;
-    }
-
     const method = req.method || 'GET';
+    const nowRequestId = generateRequestId(this.podId);
+
     this.output.debug(`${chalk.bold(method)} ${req.url}`);
 
     try {

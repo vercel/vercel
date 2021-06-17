@@ -108,8 +108,5 @@ export default async function dev(
     systemEnvValues,
   });
 
-  process.once('SIGINT', () => devServer.stop());
-  process.once('SIGTERM', () => devServer.stop());
-
   await devServer.start(...listen);
 }
