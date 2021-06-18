@@ -46,10 +46,10 @@ const {
   isSymbolicLink,
   walkParentDirs,
 } = buildUtils;
-import {
-  makeVercelLauncher,
-  makeAwsLauncher,
-} from '@vercel/node-bridge/launcher';
+
+// @ts-ignore - copied to the `dist` output as-is
+import { makeVercelLauncher, makeAwsLauncher } from './launcher.js';
+
 import { Register, register } from './typescript';
 
 export { shouldServe };
@@ -84,10 +84,10 @@ const tscPath = resolve(
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
 
-const LAUNCHER_FILENAME = '___vc_launcher';
-const BRIDGE_FILENAME = '___vc_bridge';
-const HELPERS_FILENAME = '___vc_helpers';
-const SOURCEMAP_SUPPORT_FILENAME = '___vc_sourcemap_support';
+const LAUNCHER_FILENAME = '___vc_launcher.js';
+const BRIDGE_FILENAME = '___vc_bridge.js';
+const HELPERS_FILENAME = '___vc_helpers.js';
+const SOURCEMAP_SUPPORT_FILENAME = '___vc_sourcemap_support.js';
 
 async function downloadInstallAndBundle({
   files,
@@ -118,6 +118,16 @@ async function downloadInstallAndBundle({
 
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
+}
+
+function renameTStoJS(path: string) {
+  if (path.endsWith('.ts')) {
+    return path.slice(0, -3) + '.js';
+  }
+  if (path.endsWith('.tsx')) {
+    return path.slice(0, -4) + '.js';
+  }
+  return path;
 }
 
 async function compile(
@@ -175,9 +185,7 @@ async function compile(
     }
     const { code, map } = tsCompile(source, path);
     tsCompiled.add(relPath);
-    preparedFiles[
-      relPath.slice(0, -3 - Number(path.endsWith('x'))) + '.js.map'
-    ] = new FileBlob({
+    preparedFiles[renameTStoJS(relPath) + '.map'] = new FileBlob({
       data: JSON.stringify(map),
     });
     source = code;
@@ -259,17 +267,15 @@ async function compile(
         }
       }
     }
-    // Rename .ts -> .js (except for entry)
-    // There is a bug on Windows where entrypoint uses forward slashes
-    // and workPath uses backslashes so we use resolve before comparing.
-    if (
-      resolve(baseDir, path) !== resolve(workPath, entrypoint) &&
-      tsCompiled.has(path)
-    ) {
-      preparedFiles[
-        path.slice(0, -3 - Number(path.endsWith('x'))) + '.js'
-      ] = entry;
-    } else preparedFiles[path] = entry;
+
+    if (tsCompiled.has(path)) {
+      preparedFiles[renameTStoJS(path)] = entry;
+      if (resolve(baseDir, path) !== resolve(workPath, entrypoint)) {
+        preparedFiles[path] = entry;
+      }
+    } else {
+      preparedFiles[path] = entry;
+    }
   }
 
   // Compile ES Modules into CommonJS
@@ -277,6 +283,7 @@ async function compile(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
+      !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
   if (esmPaths.length) {
@@ -371,31 +378,33 @@ export async function build({
 
   const launcher = awsLambdaHandler ? makeAwsLauncher : makeVercelLauncher;
 
+  const launcherSource = launcher({
+    entrypointPath: `./${renameTStoJS(relative(baseDir, entrypointPath))}`,
+    bridgePath: `./${BRIDGE_FILENAME}`,
+    helpersPath: `./${HELPERS_FILENAME}`,
+    sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
+    shouldAddHelpers,
+    shouldAddSourcemapSupport,
+    awsLambdaHandler,
+  });
+
   const launcherFiles: Files = {
-    [`${LAUNCHER_FILENAME}.js`]: new FileBlob({
-      data: launcher({
-        entrypointPath: `./${relative(baseDir, entrypointPath)}`,
-        bridgePath: `./${BRIDGE_FILENAME}`,
-        helpersPath: `./${HELPERS_FILENAME}`,
-        sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
-        shouldAddHelpers,
-        shouldAddSourcemapSupport,
-        awsLambdaHandler,
-      }),
+    [LAUNCHER_FILENAME]: new FileBlob({
+      data: launcherSource,
     }),
-    [`${BRIDGE_FILENAME}.js`]: new FileFsRef({
+    [BRIDGE_FILENAME]: new FileFsRef({
       fsPath: join(__dirname, 'bridge.js'),
     }),
   };
 
   if (shouldAddSourcemapSupport) {
-    launcherFiles[`${SOURCEMAP_SUPPORT_FILENAME}.js`] = new FileFsRef({
+    launcherFiles[SOURCEMAP_SUPPORT_FILENAME] = new FileFsRef({
       fsPath: join(__dirname, 'source-map-support.js'),
     });
   }
 
   if (shouldAddHelpers) {
-    launcherFiles[`${HELPERS_FILENAME}.js`] = new FileFsRef({
+    launcherFiles[HELPERS_FILENAME] = new FileFsRef({
       fsPath: join(__dirname, 'helpers.js'),
     });
   }
@@ -405,7 +414,7 @@ export async function build({
       ...preparedFiles,
       ...launcherFiles,
     },
-    handler: `${LAUNCHER_FILENAME}.launcher`,
+    handler: `${LAUNCHER_FILENAME.slice(0, -3)}.launcher`,
     runtime: nodeVersion.runtime,
   });
 
