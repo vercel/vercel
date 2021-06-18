@@ -14,6 +14,12 @@
     "index.js"
   ],
   "scripts": {
+    "build": "tsc",
     "test-unit": "jest --env node --verbose --runInBand --bail"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.19",
+    "@types/node": "*",
+    "typescript": "3.9.3"
   }
 }

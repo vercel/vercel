@@ -1,13 +1,5 @@
 import { Bridge } from './bridge';
-declare type LauncherConfiguration = {
-  entrypointPath: string;
-  bridgePath: string;
-  helpersPath: string;
-  sourcemapSupportPath: string;
-  shouldAddHelpers?: boolean;
-  shouldAddSourcemapSupport?: boolean;
-  awsLambdaHandler?: string;
-};
+import { LauncherConfiguration } from './types';
 export declare function makeVercelLauncher(
   config: LauncherConfiguration
 ): string;

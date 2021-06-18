@@ -12,6 +12,9 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
+/**
+ * @param {import('./types').VercelProxyEvent} event
+ */
 function normalizeProxyEvent(event) {
   let bodyBuffer;
   const { method, path, headers, encoding, body } = JSON.parse(event.body);
@@ -31,6 +34,9 @@ function normalizeProxyEvent(event) {
   return { isApiGateway: false, method, path, headers, body: bodyBuffer };
 }
 
+/**
+ * @param {import('aws-lambda').APIGatewayProxyEvent} event
+ */
 function normalizeAPIGatewayProxyEvent(event) {
   let bodyBuffer;
   const { httpMethod: method, path, headers, body } = event;
@@ -48,6 +54,9 @@ function normalizeAPIGatewayProxyEvent(event) {
   return { isApiGateway: true, method, path, headers, body: bodyBuffer };
 }
 
+/**
+ * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
+ */
 function normalizeEvent(event) {
   if ('Action' in event) {
     if (event.Action === 'Invoke') {
@@ -61,22 +70,35 @@ function normalizeEvent(event) {
 }
 
 class Bridge {
+  /**
+   * @param {import('./types').ServerLike | null} server
+   * @param {boolean} shouldStoreEvents
+   */
   constructor(server = null, shouldStoreEvents = false) {
     this.server = server;
     this.shouldStoreEvents = shouldStoreEvents;
     this.launcher = this.launcher.bind(this);
-    this.events = {};
     this.reqIdSeed = 1;
+    /**
+     * @type {{ [key: string]: import('./types').VercelProxyRequest }}
+     */
+    this.events = {};
 
     this.listening = new Promise(resolve => {
       this.resolveListening = resolve;
     });
   }
 
+  /**
+   * @param {import('./types').ServerLike} server
+   */
   setServer(server) {
     this.server = server;
   }
 
+  /**
+   * @param {boolean} shouldStoreEvents
+   */
   setStoreEvents(shouldStoreEvents) {
     this.shouldStoreEvents = shouldStoreEvents;
   }
@@ -122,6 +144,12 @@ class Bridge {
     );
   }
 
+  /**
+   *
+   * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
+   * @param {import('aws-lambda').Context} context
+   * @return {Promise<{statusCode: number, headers: import('http').IncomingHttpHeaders,  body: string, encoding: 'base64'}>}
+   */
   async launcher(event, context) {
     context.callbackWaitsForEmptyEventLoop = false;
     const { port } = await this.listening;
@@ -140,6 +168,9 @@ class Bridge {
       const opts = { hostname: '127.0.0.1', port, path, method };
       const req = request(opts, res => {
         const response = res;
+        /**
+         * @type {Buffer[]}
+         */
         const respBodyChunks = [];
         response.on('data', chunk => respBodyChunks.push(Buffer.from(chunk)));
         response.on('error', reject);
@@ -190,6 +221,10 @@ class Bridge {
     });
   }
 
+  /**
+   * @param {string} reqId
+   * @return {import('./types').VercelProxyRequest}
+   */
   consumeEvent(reqId) {
     const event = this.events[reqId];
     delete this.events[reqId];

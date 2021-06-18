@@ -2,6 +2,9 @@ const { parse } = require('url');
 const { createServer, Server } = require('http');
 const { Bridge } = require('./bridge.js');
 
+/**
+ * @param {import('./types').LauncherConfiguration} config
+ */
 function makeVercelLauncher(config) {
   const {
     entrypointPath,
@@ -28,6 +31,9 @@ const func = (${getVercelLauncher(config).toString()})();
 exports.launcher = func.launcher;`;
 }
 
+/**
+ * @param {import('./types').LauncherConfiguration} config
+ */
 function getVercelLauncher({
   entrypointPath,
   helpersPath,
@@ -54,7 +60,11 @@ function getVercelLauncher({
 
     import(entrypointPath)
       .then(listener => {
-        while (listener.default) listener = listener.default;
+        // In some cases we might have nested default props
+        // due to TS => JS
+        for (let i = 0; i < 5; i++) {
+          if (listener.default) listener = listener.default;
+        }
 
         if (typeof listener.listen === 'function') {
           Server.prototype.listen = originalListen;
@@ -107,6 +117,9 @@ function getVercelLauncher({
   };
 }
 
+/**
+ * @param {import('./types').LauncherConfiguration} config
+ */
 function makeAwsLauncher(config) {
   const { entrypointPath, awsLambdaHandler = '' } = config;
   return `const url = require("url");
@@ -115,15 +128,28 @@ const entrypointPath = ${JSON.stringify(entrypointPath)};
 exports.launcher = ${getAwsLauncher(config)}`;
 }
 
+/**
+ * @param {import('./types').LauncherConfiguration} config
+ */
 function getAwsLauncher({ entrypointPath, awsLambdaHandler = '' }) {
-  const funcName = awsLambdaHandler.split('.').pop();
+  const funcName = awsLambdaHandler.split('.').pop() || '';
   if (typeof funcName !== 'string') {
     throw new TypeError('Expected "string"');
   }
 
-  return function (e, context, callback) {
-    const { path, method: httpMethod, body, headers } = JSON.parse(e.body);
+  /**
+   * @param {import('aws-lambda').APIGatewayProxyEvent} e
+   * @param {import('aws-lambda').Context} context
+   * @param {() => void} callback
+   */
+  function internal(e, context, callback) {
+    const { path, method: httpMethod, body, headers } = JSON.parse(
+      e.body || '{}'
+    );
     const { query } = parse(path, true);
+    /**
+     * @type {{[key: string]: string}}
+     */
     const queryStringParameters = {};
     for (const [key, value] of Object.entries(query)) {
       if (typeof value === 'string') {
@@ -143,7 +169,8 @@ function getAwsLauncher({ entrypointPath, awsLambdaHandler = '' }) {
 
     const mod = require(entrypointPath);
     return mod[funcName](awsGatewayEvent, context, callback);
-  };
+  }
+  return internal;
 }
 
 module.exports = {

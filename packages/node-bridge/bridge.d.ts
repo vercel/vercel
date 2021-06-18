@@ -1,39 +1,13 @@
 /// <reference types="node" />
-import { Server, IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
-interface VercelProxyEvent {
-  Action: string;
-  body: string;
-}
-export interface VercelProxyRequest {
-  isApiGateway?: boolean;
-  method: string;
-  path: string;
-  headers: IncomingHttpHeaders;
-  body: Buffer;
-}
-export interface VercelProxyResponse {
-  statusCode: number;
-  headers: OutgoingHttpHeaders;
-  body: string;
-  encoding: BufferEncoding;
-}
-interface ServerLike {
-  timeout?: number;
-  listen: (
-    opts: {
-      host?: string;
-      port?: number;
-    },
-    callback: (this: Server | null) => void
-  ) => Server | void;
-}
+import { Server } from 'http';
+import {
+  VercelProxyRequest,
+  VercelProxyResponse,
+  VercelProxyEvent,
+  ServerLike,
+} from './types';
+
 export declare class Bridge {
-  private server;
-  private listening;
-  private resolveListening;
-  private events;
-  private reqIdSeed;
-  private shouldStoreEvents;
   constructor(server?: ServerLike, shouldStoreEvents?: boolean);
   setServer(server: ServerLike): void;
   setStoreEvents(shouldStoreEvents: boolean): void;
