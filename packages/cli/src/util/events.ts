@@ -2,52 +2,41 @@
 import { URLSearchParams } from 'url';
 
 // Packages
+import retry from 'async-retry';
+import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
-import jsonlines from 'jsonlines';
-import retry from 'async-retry';
+import Client from './client';
+import { getDeployment } from './get-deployment';
+
+export interface FindOpts {
+  direction: 'forward' | 'backward';
+  limit?: number;
+  since?: number;
+  until?: number;
+  follow?: boolean;
+}
+
+export interface PrintEventsOptions {
+  mode: string;
+  onEvent: (event: DeploymentEvent) => void;
+  quiet?: boolean;
+  findOpts: FindOpts;
+}
+
+export interface DeploymentEvent {
+  id: string;
+  created: number;
+  date?: number;
+  serial?: string;
+}
 
 async function printEvents(
-  now,
-  deploymentIdOrURL,
-  currentTeam = null,
-  {
-    mode,
-    onOpen = () => {},
-    onEvent,
-    quiet,
-    debugEnabled,
-    findOpts,
-    output,
-  } = {}
+  client: Client,
+  deploymentIdOrURL: string,
+  { mode, onEvent, quiet, findOpts }: PrintEventsOptions
 ) {
-  const { log, debug } = output;
-
-  let onOpenCalled = false;
-  function callOnOpenOnce() {
-    if (onOpenCalled) return;
-    onOpenCalled = true;
-    onOpen();
-  }
-
-  const query = new URLSearchParams({
-    direction: findOpts.direction,
-    limit: findOpts.limit,
-    since: findOpts.since,
-    until: findOpts.until,
-    follow: findOpts.follow ? '1' : '',
-    format: 'lines',
-  });
-
-  let eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${query}`;
-  let pollUrl = `/v3/now/deployments/${deploymentIdOrURL}`;
-
-  if (currentTeam) {
-    eventsUrl += `&teamId=${currentTeam.id}`;
-    pollUrl += `?teamId=${currentTeam.id}`;
-  }
-
-  debug(`Events ${eventsUrl}`);
+  const { log, debug } = client.output;
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
@@ -59,29 +48,34 @@ async function printEvents(
         debug('Retrying events');
       }
 
-      const eventsRes = await now._fetch(eventsUrl);
+      const query = new URLSearchParams({
+        direction: findOpts.direction,
+        follow: findOpts.follow ? '1' : '',
+        format: 'lines',
+      });
+      if (findOpts.limit) query.set('limit', String(findOpts.limit));
+      if (findOpts.since) query.set('since', String(findOpts.since));
+      if (findOpts.until) query.set('until', String(findOpts.until));
+
+      const eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${query}`;
+      const eventsRes = await client.fetch(eventsUrl, { json: false });
 
       if (eventsRes.ok) {
-        const readable = eventsRes.readable
-          ? await eventsRes.readable()
-          : eventsRes.body;
+        const readable = eventsRes.body;
 
         // handle the event stream and make the promise get rejected
         // if errors occur so we can retry
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           const stream = readable.pipe(jsonlines.parse());
 
-          let poller;
+          let poller: ReturnType<typeof setTimeout>;
 
           if (mode === 'deploy') {
             poller = (function startPoller() {
               return setTimeout(async () => {
                 try {
-                  const pollRes = await now._fetch(pollUrl);
-                  if (!pollRes.ok)
-                    throw new Error(`Response ${pollRes.status}`);
-                  const json = await pollRes.json();
-                  if (json.state === 'READY') {
+                  const json = await getDeployment(client, deploymentIdOrURL);
+                  if (json.readyState === 'READY') {
                     stream.end();
                     finish();
                     return;
@@ -96,10 +90,9 @@ async function printEvents(
           }
 
           let finishCalled = false;
-          function finish(error) {
+          function finish(error?: Error) {
             if (finishCalled) return;
             finishCalled = true;
-            callOnOpenOnce();
             clearTimeout(poller);
             if (error) {
               reject(error);
@@ -110,26 +103,24 @@ async function printEvents(
 
           let latestLogDate = 0;
 
-          const onData = data => {
-            const { event } = data;
-            if (event === 'state' && data.payload.value === 'READY') {
+          const onData = (data: any) => {
+            const { event, payload, date } = data;
+            if (event === 'state' && payload.value === 'READY') {
               if (mode === 'deploy') {
                 stream.end();
                 finish();
               }
             } else {
-              latestLogDate = Math.max(latestLogDate, data.date);
-              const linesPrinted = onEvent(data, callOnOpenOnce);
-              o += linesPrinted || 0;
+              latestLogDate = Math.max(latestLogDate, date);
+              onEvent(data);
             }
           };
 
           let onErrorCalled = false;
-          const onError = err => {
+          const onError = (err: Error) => {
             if (finishCalled || onErrorCalled) return;
             onErrorCalled = true;
             o++;
-            callOnOpenOnce();
 
             const errorMessage = `Deployment event stream error: ${err.message}`;
             if (!findOpts.follow) {
@@ -140,7 +131,6 @@ async function printEvents(
             debug(errorMessage);
             clearTimeout(poller);
             stream.destroy(err);
-            readable.destroy(err);
 
             const retryFindOpts = {
               ...findOpts,
@@ -149,12 +139,10 @@ async function printEvents(
 
             setTimeout(() => {
               // retry without maximum amount nor clear past logs etc
-              printEvents(now, deploymentIdOrURL, currentTeam, {
+              printEvents(client, deploymentIdOrURL, {
                 mode,
-                onOpen,
                 onEvent,
                 quiet,
-                debugEnabled,
                 findOpts: retryFindOpts,
               }).then(resolve, reject);
             }, 2000);
@@ -166,7 +154,6 @@ async function printEvents(
           readable.on('error', onError);
         });
       }
-      callOnOpenOnce();
       const err = new Error(`Deployment events status ${eventsRes.status}`);
 
       if (eventsRes.status < 500) {

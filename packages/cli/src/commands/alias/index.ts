@@ -2,10 +2,11 @@ import chalk from 'chalk';
 
 import { handleError } from '../../util/error';
 
+import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name.ts';
+import { getPkgName } from '../../util/pkg-name';
 
 import ls from './ls';
 import rm from './rm';
@@ -36,6 +37,7 @@ const help = () => {
   )}             Login token
     -S, --scope                         Set a custom scope
     -N, --next                          Show next page of results
+
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.vercel.app')}
@@ -64,13 +66,13 @@ const help = () => {
 };
 
 const COMMAND_CONFIG = {
-  default: 'set',
+  default: ['set'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
   set: ['set'],
 };
 
-export default async function main(client) {
+export default async function main(client: Client) {
   let argv;
 
   try {

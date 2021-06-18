@@ -111,7 +111,6 @@ async function chooseFromDropdown(message: string, exampleList: string[]) {
 
   return listInput({
     message,
-    separator: false,
     choices,
   });
 }

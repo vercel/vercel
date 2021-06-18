@@ -6,7 +6,6 @@ const allPackages = [
   'routing-utils',
   'frameworks',
   'build-utils',
-  'cgi',
   'client',
   'node-bridge',
   'node',

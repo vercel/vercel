@@ -1,5 +1,22 @@
+export type Primitive =
+  | bigint
+  | boolean
+  | null
+  | number
+  | string
+  | symbol
+  | undefined;
+
+export type JSONArray = JSONValue[];
+
+export type JSONValue = Primitive | JSONObject | JSONArray;
+
+export interface JSONObject {
+  [key: string]: JSONValue;
+}
+
 export interface AuthConfig {
-  token: string;
+  token?: string;
   skipWrite?: boolean;
 }
 
@@ -45,18 +62,26 @@ export type User = {
     updatedAt: number;
   };
   name?: string;
+  limited?: boolean;
 };
 
-export type Team = {
+export interface Team {
   id: string;
-  avatar?: string;
+  avatar?: string | null;
   billing: Billing;
   created: string;
   creatorId: string;
   membership: { uid: string; role: 'MEMBER' | 'OWNER'; created: number };
   name: string;
   slug: string;
-};
+  limited?: boolean;
+  saml?: {
+    enforced: boolean;
+    connection?: {
+      state: string;
+    };
+  };
+}
 
 export type Domain = {
   id: string;
@@ -120,7 +145,7 @@ export type Deployment = {
 export type Alias = {
   uid: string;
   alias: string;
-  created: string;
+  createdAt: number;
   deployment: {
     id: string;
     url: string;
@@ -268,3 +293,13 @@ export type ProjectLinkResult =
   | { status: 'linked'; org: Org; project: Project }
   | { status: 'not_linked'; org: null; project: null }
   | { status: 'error'; exitCode: number };
+
+export interface Token {
+  id: string;
+  name: string;
+  type: string;
+  origin?: string;
+  activeAt: number;
+  createdAt: number;
+  teamId?: string;
+}

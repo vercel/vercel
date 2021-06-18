@@ -1,22 +1,28 @@
-import { URLSearchParams } from 'url';
 import { EventEmitter } from 'events';
+import { URLSearchParams } from 'url';
 import { parse as parseUrl } from 'url';
-import fetch, { RequestInit } from 'node-fetch';
+import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
+import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
+import ua from './ua';
 import { Output } from './output/create-output';
 import responseError from './response-error';
-import ua from './ua';
 import printIndications from './print-indications';
-import { AuthConfig, GlobalConfig } from '../types';
-import { NowConfig } from './dev/types';
-import doSsoLogin from './login/sso';
+import reauthenticate from './login/reauthenticate';
+import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
+import { AuthConfig, GlobalConfig, JSONObject } from '../types';
+import { sharedPromise } from './promise';
+import { APIError } from './errors-ts';
+import { bold } from 'chalk';
 
-export interface FetchOptions {
-  body?: NodeJS.ReadableStream | object | string;
-  headers?: { [key: string]: string };
+const isSAMLError = (v: any): v is SAMLError => {
+  return v && v.saml;
+};
+
+export interface FetchOptions extends Omit<RequestInit, 'body'> {
+  body?: BodyInit | JSONObject;
   json?: boolean;
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
   accountId?: string;
@@ -28,8 +34,12 @@ export interface ClientOptions {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: NowConfig;
+  localConfig: VercelConfig;
 }
+
+const isJSONObject = (v: any): v is JSONObject => {
+  return v && typeof v == 'object' && v.constructor === Object;
+};
 
 export default class Client extends EventEmitter {
   argv: string[];
@@ -37,7 +47,7 @@ export default class Client extends EventEmitter {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: NowConfig;
+  localConfig: VercelConfig;
 
   constructor(opts: ClientOptions) {
     super();
@@ -47,7 +57,6 @@ export default class Client extends EventEmitter {
     this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
-    this._onRetry = this._onRetry.bind(this);
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -78,51 +87,43 @@ export default class Client extends EventEmitter {
       }
 
       _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
-
-      delete opts.useCurrentTeam;
-      delete opts.accountId;
     }
 
-    if (opts.json !== false && opts.body && typeof opts.body === 'object') {
-      Object.assign(opts, {
-        body: JSON.stringify(opts.body),
-        headers: Object.assign({}, opts.headers, {
-          'Content-Type': 'application/json',
-        }),
-      });
-    }
+    const headers = new Headers(opts.headers);
+    headers.set('authorization', `Bearer ${this.authConfig.token}`);
+    headers.set('user-agent', ua);
 
-    opts.headers = opts.headers || {};
-    opts.headers.Authorization = `Bearer ${this.authConfig.token}`;
-    opts.headers['user-agent'] = ua;
+    let body;
+    if (isJSONObject(opts.body)) {
+      body = JSON.stringify(opts.body);
+      headers.set('content-type', 'application/json; charset=utf8');
+    } else {
+      body = opts.body;
+    }
 
     const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
     return this.output.time(
       `${opts.method || 'GET'} ${url} ${JSON.stringify(opts.body) || ''}`,
-      fetch(url, opts as RequestInit)
+      fetch(url, { ...opts, headers, body })
     );
   }
 
-  async fetch<T>(url: string, opts: FetchOptions = {}): Promise<T> {
+  fetch(url: string, opts: { json: false }): Promise<Response>;
+  fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
+  fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
+
+      printIndications(res);
 
       if (!res.ok) {
         const error = await responseError(res);
 
-        if (error.saml && error.teamId) {
-          // If a SAML error is encountered then we re-trigger the SAML
-          // authentication flow for the team specified in the error.
-          const result = await doSsoLogin(error.teamId, this);
-
-          if (typeof result === 'number') {
-            this.output.prettyError(error);
-            process.exit(1);
-            return;
-          }
-
-          this.authConfig.token = result;
-          writeToAuthConfigFile(this.authConfig);
+        if (isSAMLError(error)) {
+          // A SAML error means the token is expired, or is not
+          // designated for the requested team, so the user needs
+          // to re-authenticate
+          await this.reauthenticate(error);
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);
@@ -136,21 +137,37 @@ export default class Client extends EventEmitter {
         return res;
       }
 
-      if (!res.headers.get('content-type')) {
+      const contentType = res.headers.get('content-type');
+      if (!contentType) {
         return null;
       }
 
-      printIndications(res);
-
-      return res.headers.get('content-type').includes('application/json')
-        ? res.json()
-        : res;
+      return contentType.includes('application/json') ? res.json() : res;
     }, opts.retry);
   }
 
-  _onRetry(error: Error) {
-    this.output.debug(`Retrying: ${error}\n${error.stack}`);
-  }
+  reauthenticate = sharedPromise(async function (
+    this: Client,
+    error: SAMLError
+  ) {
+    const result = await reauthenticate(this, error);
 
-  close() {}
+    if (typeof result === 'number') {
+      if (error instanceof APIError) {
+        this.output.prettyError(error);
+      } else {
+        this.output.error(
+          `Failed to re-authenticate for ${bold(error.scope)} scope`
+        );
+      }
+      process.exit(1);
+    }
+
+    this.authConfig.token = result;
+    writeToAuthConfigFile(this.authConfig);
+  });
+
+  _onRetry = (error: Error) => {
+    this.output.debug(`Retrying: ${error}\n${error.stack}`);
+  };
 }

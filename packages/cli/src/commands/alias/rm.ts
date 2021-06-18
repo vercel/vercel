@@ -1,23 +1,29 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Now from '../../util';
-import getScope from '../../util/get-scope.ts';
+import Client from '../../util/client';
+import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
-import stamp from '../../util/output/stamp.ts';
-import strlen from '../../util/strlen.ts';
+import stamp from '../../util/output/stamp';
+import strlen from '../../util/strlen';
 import confirm from '../../util/input/confirm';
-import { isValidName } from '../../util/is-valid-name';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
-import { getCommandName } from '../../util/pkg-name.ts';
 
-export default async function rm(client, opts, args) {
-  const {
-    apiUrl,
-    authConfig: { token },
-    output,
-    config: { currentTeam },
-  } = client;
+import { Alias } from '../../types';
+import { Output } from '../../util/output';
+import { isValidName } from '../../util/is-valid-name';
+import { getCommandName } from '../../util/pkg-name';
+
+type Options = {
+  '--yes': boolean;
+};
+
+export default async function rm(
+  client: Client,
+  opts: Partial<Options>,
+  args: string[]
+) {
+  const { output } = client;
 
   let contextName = null;
 
@@ -32,13 +38,6 @@ export default async function rm(client, opts, args) {
     throw err;
   }
 
-  const now = new Now({
-    apiUrl,
-    token,
-    debug: client.output.isDebugEnabled(),
-    currentTeam,
-    output,
-  });
   const [aliasOrId] = args;
 
   if (args.length !== 1) {
@@ -61,7 +60,8 @@ export default async function rm(client, opts, args) {
     return 1;
   }
 
-  const alias = await findAliasByAliasOrId(output, now, aliasOrId);
+  const alias = await findAliasByAliasOrId(output, client, aliasOrId);
+
   if (!alias) {
     output.error(
       `Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`
@@ -76,7 +76,7 @@ export default async function rm(client, opts, args) {
     return 0;
   }
 
-  await removeAliasById(now, alias.uid);
+  await removeAliasById(client, alias.uid);
   console.log(
     `${chalk.cyan('> Success!')} Alias ${chalk.bold(
       alias.alias
@@ -85,7 +85,7 @@ export default async function rm(client, opts, args) {
   return 0;
 }
 
-async function confirmAliasRemove(output, alias) {
+async function confirmAliasRemove(output: Output, alias: Alias) {
   const srcUrl = alias.deployment
     ? chalk.underline(alias.deployment.url)
     : null;
@@ -94,7 +94,7 @@ async function confirmAliasRemove(output, alias) {
       [
         ...(srcUrl ? [srcUrl] : []),
         chalk.underline(alias.alias),
-        chalk.gray(`${ms(new Date() - new Date(alias.created))} ago`),
+        chalk.gray(`${ms(Date.now() - alias.createdAt)} ago`),
       ],
     ],
     {

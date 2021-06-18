@@ -247,7 +247,7 @@ test('convertRedirects', () => {
         },
         {
           type: 'header',
-          key: 'x-pathname',
+          key: 'X-Pathname',
           value: '(?<another>hello|world)',
         },
       ],
@@ -549,7 +549,7 @@ test('convertRewrites', () => {
         },
         {
           type: 'header',
-          key: 'x-pathname',
+          key: 'X-Pathname',
           value: '(?<another>hello|world)',
         },
       ],
@@ -893,7 +893,7 @@ test('convertHeaders', () => {
         },
         {
           type: 'header',
-          key: 'x-pathname',
+          key: 'X-Pathname',
           value: '(?<another>hello|world)',
         },
       ],

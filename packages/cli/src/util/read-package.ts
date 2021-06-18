@@ -1,11 +1,11 @@
 import path from 'path';
 import { CantParseJSONFile } from './errors-ts';
 import readJSONFile from './read-json-file';
-import { NowConfig } from './dev/types';
+import { VercelConfig } from './dev/types';
 import { PackageJson } from '@vercel/build-utils';
 
 interface CustomPackage extends PackageJson {
-  now?: NowConfig;
+  now?: VercelConfig;
 }
 
 export default async function readPackage(file?: string) {

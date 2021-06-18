@@ -7,8 +7,8 @@ import executeLogin from './login';
 import { LoginParams } from './types';
 
 export default async function doEmailLogin(
-  email: string,
-  params: LoginParams
+  params: LoginParams,
+  email: string
 ): Promise<number | string> {
   let securityCode;
   let verificationToken;
@@ -42,7 +42,7 @@ export default async function doEmailLogin(
   while (!token) {
     try {
       await sleep(ms('1s'));
-      token = await verify(email, verificationToken, params);
+      token = await verify(email, verificationToken, 'Email', params);
     } catch (err) {
       if (err.message !== 'Confirmation incomplete') {
         output.error(err.message);

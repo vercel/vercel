@@ -2,14 +2,17 @@ import inquirer from 'inquirer';
 import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
-import { LoginParams } from './types';
+import { LoginParams, SAMLError } from './types';
 import doSsoLogin from './sso';
 import doEmailLogin from './email';
 import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
 
-export default async function prompt(params: LoginParams) {
+export default async function prompt(
+  params: LoginParams,
+  error?: Pick<SAMLError, 'teamId'>
+) {
   let result: number | string = 1;
 
   const choices = [
@@ -17,17 +20,17 @@ export default async function prompt(params: LoginParams) {
     { name: 'Continue with GitLab', value: 'gitlab', short: 'gitlab' },
     { name: 'Continue with Bitbucket', value: 'bitbucket', short: 'bitbucket' },
     { name: 'Continue with Email', value: 'email', short: 'email' },
-    { name: 'Continue with SAML Single Sign-On', value: 'saml', short: 'saml' },
+    { name: 'Continue with SAML Single Sign-On', value: 'sso', short: 'sso' },
   ];
 
-  if (params.ssoUserId) {
-    // Remove SAML login option if we're connecting SAML Profile
+  if (params.ssoUserId || (error && !error.teamId)) {
+    // Remove SAML login option if we're connecting SAML Profile,
+    // or if this is a SAML error for a user / team without SAML
     choices.pop();
   }
 
   const choice = await listInput({
     message: 'Log in to Vercel',
-    separator: false,
     choices,
   });
 
@@ -39,10 +42,10 @@ export default async function prompt(params: LoginParams) {
     result = await doBitbucketLogin(params);
   } else if (choice === 'email') {
     const email = await readInput('Enter your email address');
-    result = await doEmailLogin(email, params);
-  } else if (choice === 'saml') {
-    const slug = await readInput('Enter your Team slug');
-    result = await doSsoLogin(slug, params);
+    result = await doEmailLogin(params, email);
+  } else if (choice === 'sso') {
+    const slug = error?.teamId || (await readInput('Enter your Team slug'));
+    result = await doSsoLogin(params, slug);
   }
 
   return result;

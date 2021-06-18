@@ -6,23 +6,25 @@ import { LoginParams } from './types';
 import prompt from './prompt';
 import verify from './verify';
 import highlight from '../output/highlight';
+import link from '../output/link';
+import eraseLines from '../output/erase-lines';
 
 export default async function doOauthLogin(
+  params: LoginParams,
   url: URL,
-  provider: string,
-  params: LoginParams
+  provider: string
 ): Promise<number | string> {
   const { output } = params;
-
-  output.spinner(
-    `Please complete the ${provider} authentication in your web browser`
-  );
 
   const server = http.createServer();
   const address = await listen(server, 0, '127.0.0.1');
   const { port } = new URL(address);
-  url.searchParams.append('mode', 'login');
-  url.searchParams.append('next', `http://localhost:${port}`);
+  url.searchParams.set('mode', 'login');
+  url.searchParams.set('next', `http://localhost:${port}`);
+
+  output.log(`Please visit the following URL in your web browser:`);
+  output.log(link(url.href));
+  output.spinner(`Waiting for ${provider} authentication to be completed`);
 
   try {
     const [query] = await Promise.all([
@@ -70,6 +72,9 @@ export default async function doOauthLogin(
       open(url.href),
     ]);
 
+    output.stopSpinner();
+    output.print(eraseLines(3));
+
     const loginError = query.get('loginError');
     if (loginError) {
       const err = JSON.parse(loginError);
@@ -98,7 +103,7 @@ export default async function doOauthLogin(
     }
 
     output.spinner('Verifying authentication token');
-    const token = await verify(email, verificationToken, params);
+    const token = await verify(email, verificationToken, provider, params);
     output.success(
       `${provider} authentication complete for ${highlight(email)}`
     );

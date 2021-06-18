@@ -115,8 +115,6 @@ export default async function main(client) {
   try {
     ({ contextName } = await getScope(client));
   } catch (err) {
-    client.close();
-
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
       return 1;
@@ -210,7 +208,6 @@ export default async function main(client) {
           .map(id => chalk.bold(`"${id}"`))
           .join(', ')}. Run ${getCommandName('ls')} to list.`
     );
-    client.close();
     return 1;
   }
 
@@ -233,7 +230,6 @@ export default async function main(client) {
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
       output.log('Aborted');
-      client.close();
       return 1;
     }
   }
@@ -265,7 +261,6 @@ export default async function main(client) {
     console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
   });
 
-  client.close();
   return 0;
 }
 

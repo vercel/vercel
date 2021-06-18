@@ -55,7 +55,7 @@ export interface Deployment {
     | 'DEPLOYING'
     | 'READY'
     | 'ERROR';
-  createdAt: string;
+  createdAt: number;
   createdIn: string;
   env: Dictionary<string>;
   build: {

@@ -27,7 +27,7 @@ import { LambdaSizeExceededError } from '../errors-ts';
 import DevServer from './server';
 import { getBuilder } from './builder-cache';
 import {
-  NowConfig,
+  VercelConfig,
   BuildMatch,
   BuildResult,
   BuilderInputs,
@@ -96,7 +96,7 @@ async function createBuildProcess(
 }
 
 export async function executeBuild(
-  nowConfig: NowConfig,
+  nowConfig: VercelConfig,
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
@@ -383,7 +383,7 @@ export async function executeBuild(
 }
 
 export async function getBuildMatches(
-  nowConfig: NowConfig,
+  nowConfig: VercelConfig,
   cwd: string,
   output: Output,
   devServer: DevServer,
