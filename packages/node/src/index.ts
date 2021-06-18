@@ -146,6 +146,7 @@ async function compile(
   const sourceCache = new Map<string, string | Buffer | null>();
   const fsCache = new Map<string, File>();
   const tsCompiled = new Set<string>();
+  const pkgCache = new Map<string, { type?: string }>();
 
   let shouldAddSourcemapSupport = false;
 
@@ -286,6 +287,23 @@ async function compile(
   if (esmPaths.length) {
     const babelCompile = require('./babel').compile;
     for (const path of esmPaths) {
+      const pathDir = join(workPath, dirname(path));
+      if (!pkgCache.has(pathDir)) {
+        const pathToPkg = await walkParentDirs({
+          base: workPath,
+          start: pathDir,
+          filename: 'package.json',
+        });
+        const pkg = pathToPkg ? require(pathToPkg) : {};
+        pkgCache.set(pathDir, pkg);
+      }
+      const pkg = pkgCache.get(pathDir) || {};
+      if (pkg.type === 'module' && path.endsWith('.js')) {
+        // Found parent package.json indicating this file is already ESM
+        // so we should not transpile to CJS.
+        // https://nodejs.org/api/packages.html#packages_type
+        continue;
+      }
       const filename = basename(path);
       const { data: source } = await FileBlob.fromStream({
         stream: preparedFiles[path].toStream(),
