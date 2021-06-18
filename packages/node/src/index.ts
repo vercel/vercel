@@ -270,9 +270,6 @@ async function compile(
 
     if (tsCompiled.has(path)) {
       preparedFiles[renameTStoJS(path)] = entry;
-      if (resolve(baseDir, path) !== resolve(workPath, entrypoint)) {
-        preparedFiles[path] = entry;
-      }
     } else {
       preparedFiles[path] = entry;
     }

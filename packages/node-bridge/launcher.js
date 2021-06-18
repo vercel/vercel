@@ -54,7 +54,7 @@ function getVercelLauncher({
 
     import(entrypointPath)
       .then(listener => {
-        if (listener.default) listener = listener.default;
+        while (listener.default) listener = listener.default;
 
         if (typeof listener.listen === 'function') {
           Server.prototype.listen = originalListen;
