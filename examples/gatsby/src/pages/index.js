@@ -42,7 +42,7 @@ function Index() {
         which contains a serverless{' '}
         <a href="https://nodejs.org/en/">Node.js (TypeScript)</a> function. See{' '}
         <a href="/api/date">
-          <code>api/date</code> for the Date API with Node.js (TypeScript)
+          <code>api/date</code> for one the Date API with Node.js (TypeScript)
         </a>
         .
       </p>
