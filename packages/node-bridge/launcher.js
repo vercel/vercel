@@ -122,10 +122,10 @@ function getVercelLauncher({
  */
 function makeAwsLauncher(config) {
   const { entrypointPath, awsLambdaHandler = '' } = config;
-  return `const url = require("url");
+  return `const { parse } = require("url");
 const funcName = ${JSON.stringify(awsLambdaHandler.split('.').pop())};
 const entrypointPath = ${JSON.stringify(entrypointPath)};
-exports.launcher = ${getAwsLauncher(config)}`;
+exports.launcher = ${getAwsLauncher(config).toString()}`;
 }
 
 /**
