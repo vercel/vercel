@@ -99,9 +99,9 @@ export const args = {
   '--with-cache': Boolean,
   '--public': Boolean,
   '--no-clipboard': Boolean,
-  '--env': [String],
-  '--build-env': [String],
-  '--meta': [String],
+  '--env': String,
+  '--build-env': String,
+  '--meta': String,
   // This is not an array in favor of matching
   // the config property name.
   '--regions': String,
