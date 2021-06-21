@@ -47,7 +47,7 @@ export default class Client extends EventEmitter {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: VercelConfig;
+  localConfig: VercelConfig | null;
 
   constructor(opts: ClientOptions) {
     super();
