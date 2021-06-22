@@ -43,7 +43,10 @@ export default async (client: Client) => {
 
   let { localConfig } = client;
   if (!localConfig || localConfig instanceof Error) {
-    localConfig = readLocalConfig(paths[0]);
+    const maybeConfig = readLocalConfig(paths[0]);
+    if (maybeConfig) {
+      localConfig = maybeConfig;
+    }
   }
 
   const stats: any = {};
