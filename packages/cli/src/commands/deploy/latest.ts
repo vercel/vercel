@@ -692,12 +692,7 @@ export default async function main(
       output.error(err.message || 'Build failed');
       output.error(
         `Check your logs at https://${now.url}/_logs or run ${getCommandName(
-          `logs ${now.url}`,
-          {
-            // Backticks are interpreted as part of the URL, causing CMD+Click
-            // behavior to fail in editors like VSCode.
-            backticks: false,
-          }
+          `logs ${now.url}`
         )}`
       );
 
