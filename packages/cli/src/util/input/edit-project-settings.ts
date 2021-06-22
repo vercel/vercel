@@ -22,7 +22,7 @@ export default async function editProjectSettings(
   output: Output,
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
-  autoConfirm: boolean
+  autoConfirm?: boolean
 ): Promise<ProjectSettings> {
   // create new settings object, missing values will be filled with `null`
   const settings: ProjectSettings = Object.assign(
