@@ -553,12 +553,8 @@ export default async function main(
       client
     );
 
-    if (
-      deployment instanceof Error &&
-      deployment.code === 'missing_project_settings'
-    ) {
+    if (deployment.code === 'missing_project_settings') {
       let { projectSettings, framework } = deployment;
-
       if (rootDirectory) {
         projectSettings.rootDirectory = rootDirectory;
       }
