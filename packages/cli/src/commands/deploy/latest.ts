@@ -225,7 +225,7 @@ export default async function main(
   contextName: string,
   output: Output,
   stats: any,
-  localConfig: VercelConfig | null,
+  localConfig: VercelConfig,
   args: any
 ) {
   let argv = null;
