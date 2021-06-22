@@ -587,7 +587,8 @@ export default async function main(
     }
 
     if (deployment instanceof NotDomainOwner) {
-      output.error(deployment);
+      // Return a message error deployment
+      output.error(deployment.message);
       return 1;
     }
 
