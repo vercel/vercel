@@ -58,7 +58,10 @@ import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 
-const addProcessEnv = async (log: (str: string) => void, env: any) => {
+const addProcessEnv = async (
+  log: (str: string) => void,
+  env: typeof process.env
+) => {
   let val;
 
   for (const key of Object.keys(env)) {
