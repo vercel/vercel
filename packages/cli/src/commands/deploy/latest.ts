@@ -514,7 +514,7 @@ export default async function main(
   const currentTeam = org?.type === 'team' ? org.id : undefined;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   let deployStamp = stamp();
-  let deployment: any = null;
+  let deployment = null;
 
   try {
     const createArgs = {
