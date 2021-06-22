@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "entrypoint**", "use": "@vercel/node@canary" },
+    { "src": "type-module-package-json/**/*.js", "use": "@vercel/node@canary" }
+  ]
+}
