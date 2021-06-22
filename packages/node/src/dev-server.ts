@@ -106,6 +106,9 @@ async function main() {
     config.helpers === false || buildEnv.NODEJS_HELPERS === '0'
   );
 
+  const proxyServer = createServer(onDevRequest);
+  await listen(proxyServer, 0, '127.0.0.1');
+
   bridge = getVercelLauncher({
     entrypointPath: join(process.cwd(), entrypoint!),
     helpersPath: './helpers',
@@ -113,9 +116,6 @@ async function main() {
     bridgePath: 'not used',
     sourcemapSupportPath: 'not used',
   })();
-
-  const proxyServer = createServer(onDevRequest);
-  await listen(proxyServer, 0, '127.0.0.1');
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {
@@ -157,7 +157,7 @@ export async function onDevRequest(
   };
   if (!bridge) {
     res.statusCode = 500;
-    res.end('Bridge is not defined');
+    res.end('Bridge is not ready, please try again');
     return;
   }
   const result = await bridge.launcher(event, {
