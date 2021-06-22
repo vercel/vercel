@@ -77,7 +77,7 @@ export default async (client: Client) => {
 
   if (localConfig) {
     const { version } = localConfig;
-    const file = highlight(localConfig[fileNameSymbol] as string);
+    const file = highlight(localConfig[fileNameSymbol]!);
     const prop = code('version');
 
     if (version) {
